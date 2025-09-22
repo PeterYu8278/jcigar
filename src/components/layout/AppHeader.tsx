@@ -1,12 +1,13 @@
-// 应用头部组件
+// 应用头部组件 - 雪茄客黑金主题
 import React from 'react'
-import { Layout, Menu, Avatar, Dropdown, Button, Space, Typography } from 'antd'
+import { Layout, Menu, Avatar, Dropdown, Button, Space, Typography, Badge } from 'antd'
 import { 
   UserOutlined, 
   SettingOutlined, 
   LogoutOutlined,
   ShoppingCartOutlined,
-  BellOutlined
+  BellOutlined,
+  CrownOutlined
 } from '@ant-design/icons'
 import { useAuthStore } from '../../store/modules/auth'
 import { logoutUser } from '../../services/firebase/auth'
@@ -47,7 +48,7 @@ const AppHeader: React.FC = () => {
   const adminMenuItems = [
     {
       key: 'dashboard',
-      icon: <UserOutlined />,
+      icon: <CrownOutlined />,
       label: '管理后台',
     },
     ...userMenuItems,
@@ -58,35 +59,119 @@ const AppHeader: React.FC = () => {
       display: 'flex', 
       alignItems: 'center', 
       justifyContent: 'space-between',
-      background: '#fff',
+      background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
       padding: '0 24px',
-      borderBottom: '1px solid #f0f0f0'
+      borderBottom: '2px solid #ffd700',
+      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+      position: 'relative',
+      zIndex: 1000
     }}>
-      <div style={{ display: 'flex', alignItems: 'center' }}>
-        <Typography.Title level={4} style={{ margin: 0, color: '#1890ff' }}>
+      {/* 背景装饰 */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'linear-gradient(90deg, rgba(255, 215, 0, 0.05) 0%, transparent 50%, rgba(255, 215, 0, 0.05) 100%)',
+        pointerEvents: 'none'
+      }} />
+      
+      <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+        <Typography.Title 
+          level={3} 
+          style={{ 
+            margin: 0, 
+            background: 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            fontWeight: 700,
+            fontSize: '24px',
+            letterSpacing: '2px'
+          }}
+        >
           雪茄客
         </Typography.Title>
+        {isAdmin && (
+          <CrownOutlined 
+            style={{ 
+              color: '#ffd700', 
+              marginLeft: 8,
+              fontSize: '16px'
+            }} 
+          />
+        )}
       </div>
 
-      <Space size="middle">
-        <Button type="text" icon={<BellOutlined />} />
-        <Button type="text" icon={<ShoppingCartOutlined />} />
+      <Space size="middle" style={{ position: 'relative' }}>
+        <Badge count={3} size="small" color="#ffd700">
+          <Button 
+            type="text" 
+            icon={<BellOutlined />}
+            style={{ 
+              color: '#c0c0c0',
+              fontSize: '18px'
+            }}
+            className="hover-gold"
+          />
+        </Badge>
+        
+        <Badge count={2} size="small" color="#ffd700">
+          <Button 
+            type="text" 
+            icon={<ShoppingCartOutlined />}
+            style={{ 
+              color: '#c0c0c0',
+              fontSize: '18px'
+            }}
+            className="hover-gold"
+          />
+        </Badge>
         
         <Dropdown 
           menu={{ items: isAdmin ? adminMenuItems : userMenuItems }}
           placement="bottomRight"
-          arrow
+          arrow={{ pointAtCenter: true }}
+          overlayStyle={{
+            background: '#1a1a1a',
+            border: '1px solid #333333',
+            borderRadius: '8px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+          }}
         >
-          <Space style={{ cursor: 'pointer' }}>
+          <Space style={{ cursor: 'pointer' }} className="header-user-space">
             <Avatar 
               src={user?.profile?.avatar} 
               icon={<UserOutlined />}
-              size="small"
+              size="default"
+              style={{
+                border: '2px solid #ffd700',
+                background: 'linear-gradient(135deg, #2d2d2d 0%, #444444 100%)'
+              }}
             />
-            <Text>{user?.displayName}</Text>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <Text style={{ 
+                color: '#f8f8f8', 
+                fontWeight: 600,
+                fontSize: '14px'
+              }}>
+                {user?.displayName}
+              </Text>
+              {isAdmin && (
+                <Text style={{ 
+                  color: '#ffd700', 
+                  fontSize: '12px',
+                  fontWeight: 500
+                }}>
+                  管理员
+                </Text>
+              )}
+            </div>
           </Space>
         </Dropdown>
       </Space>
+      
     </Header>
   )
 }

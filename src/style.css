@@ -1,10 +1,46 @@
+/* 雪茄客黑金主题 - 全局样式 */
 :root {
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
+  /* 字体配置 */
+  font-family: "Inter", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.6;
   font-weight: 400;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  
+  /* 黑金配色变量 */
+  --cigar-black-primary: #0a0a0a;
+  --cigar-black-secondary: #1a1a1a;
+  --cigar-black-tertiary: #2d2d2d;
+  --cigar-black-quaternary: #0f0f0f;
+  
+  --cigar-gold-primary: #ffd700;
+  --cigar-gold-secondary: #ffed4e;
+  --cigar-gold-tertiary: #e6b800;
+  --cigar-gold-accent: #cd853f;
+  
+  --cigar-text-primary: #f8f8f8;
+  --cigar-text-secondary: #c0c0c0;
+  --cigar-text-tertiary: #999999;
+  --cigar-text-quaternary: #666666;
+  
+  --cigar-border-primary: #333333;
+  --cigar-border-secondary: #444444;
+  
+  /* 渐变背景 */
+  --cigar-gradient-primary: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2d2d2d 100%);
+  --cigar-gradient-gold: linear-gradient(135deg, #ffd700 0%, #ffed4e 50%, #e6b800 100%);
+  --cigar-gradient-dark: linear-gradient(135deg, #0a0a0a 0%, #0f0f0f 100%);
+  
+  /* 阴影效果 */
+  --cigar-shadow-primary: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --cigar-shadow-gold: 0 4px 20px rgba(255, 215, 0, 0.15);
+  --cigar-shadow-card: 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
+  
+  /* 动画时长 */
+  --cigar-transition-fast: 0.2s ease-in-out;
+  --cigar-transition-normal: 0.3s ease-in-out;
+  --cigar-transition-slow: 0.5s ease-in-out;
 }
 
 html, body, #root {
@@ -15,16 +51,210 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  color: rgba(0, 0, 0, 0.88);
-  background: #f5f5f5;
+  color: var(--cigar-text-primary);
+  background: var(--cigar-black-primary);
+  overflow-x: hidden;
 }
 
 a {
-  color: inherit;
+  color: var(--cigar-gold-primary);
   text-decoration: none;
+  transition: color var(--cigar-transition-fast);
+}
+
+a:hover {
+  color: var(--cigar-gold-secondary);
 }
 
 /* Ant Design layout background normalization */
 .ant-layout {
-  background: #f5f5f5;
+  background: var(--cigar-black-primary);
+  color: var(--cigar-text-primary);
+}
+
+/* 自定义滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--cigar-black-secondary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--cigar-gold-primary);
+  border-radius: 4px;
+  transition: background var(--cigar-transition-fast);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--cigar-gold-secondary);
+}
+
+/* 自定义组件样式 */
+.cigar-card {
+  background: var(--cigar-black-secondary);
+  border: 1px solid var(--cigar-border-primary);
+  border-radius: 12px;
+  box-shadow: var(--cigar-shadow-card);
+  transition: all var(--cigar-transition-normal);
+}
+
+.cigar-card:hover {
+  border-color: var(--cigar-gold-primary);
+  box-shadow: var(--cigar-shadow-gold);
+  transform: translateY(-2px);
+}
+
+.cigar-button-primary {
+  background: var(--cigar-gradient-gold);
+  border: none;
+  color: var(--cigar-black-primary);
+  font-weight: 600;
+  box-shadow: var(--cigar-shadow-gold);
+  transition: all var(--cigar-transition-normal);
+}
+
+.cigar-button-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.25);
+}
+
+.cigar-text-gradient {
+  background: var(--cigar-gradient-gold);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
+}
+
+.cigar-divider {
+  background: var(--cigar-gradient-gold);
+  height: 2px;
+  border: none;
+  margin: 24px 0;
+}
+
+/* 组件悬停效果 */
+.hover-gold:hover {
+  color: #ffd700 !important;
+  transform: scale(1.1);
+  transition: all 0.3s ease;
+}
+
+.header-user-space:hover {
+  transform: translateY(-1px);
+  transition: all 0.3s ease;
+}
+
+.sider-toggle-button:hover {
+  color: #ffd700 !important;
+  border-color: #ffd700 !important;
+  background: rgba(255, 215, 0, 0.1) !important;
+  transform: scale(1.05);
+  transition: all 0.3s ease;
+}
+
+.cigar-sidebar-menu .ant-menu-item {
+  margin: 4px 8px !important;
+  border-radius: 8px !important;
+  color: #c0c0c0 !important;
+  transition: all 0.3s ease !important;
+}
+
+.cigar-sidebar-menu .ant-menu-item:hover {
+  background: rgba(255, 215, 0, 0.1) !important;
+  color: #ffed4e !important;
+  transform: translateX(4px);
+}
+
+.cigar-sidebar-menu .ant-menu-item-selected {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 215, 0, 0.1) 100%) !important;
+  color: #ffd700 !important;
+  border-right: 3px solid #ffd700 !important;
+  font-weight: 600 !important;
+}
+
+.cigar-sidebar-menu .ant-menu-item-selected::after {
+  display: none !important;
+}
+
+.cigar-sidebar-menu .ant-menu-item-icon {
+  font-size: 16px !important;
+}
+
+.cigar-sidebar-menu .ant-divider {
+  background: linear-gradient(90deg, transparent 0%, #333333 50%, transparent 100%) !important;
+  margin: 16px 8px !important;
+}
+
+.footer-link:hover {
+  color: #ffd700 !important;
+  transform: translateY(-1px);
+  transition: all 0.3s ease;
+}
+
+.login-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(255, 215, 0, 0.4) !important;
+  transition: all 0.3s ease;
+}
+
+.ant-input:focus,
+.ant-input-focused {
+  border-color: #ffd700 !important;
+  box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.2) !important;
+}
+
+.ant-input::placeholder {
+  color: #666666 !important;
+}
+
+.home-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4) !important;
+  transition: all 0.3s ease;
+}
+
+.home-button-secondary:hover {
+  background: rgba(255, 215, 0, 0.2) !important;
+  border-color: #ffd700 !important;
+  transform: translateY(-2px);
+  transition: all 0.3s ease;
+}
+
+.feature-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4) !important;
+  transition: all 0.3s ease;
+}
+
+.cigar-card:hover {
+  border-color: rgba(255, 215, 0, 0.5) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 215, 0, 0.1) !important;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  :root {
+    font-size: 14px;
+  }
+  
+  .cigar-card {
+    margin: 8px;
+    border-radius: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    font-size: 13px;
+  }
+  
+  .cigar-card {
+    margin: 4px;
+    border-radius: 6px;
+  }
 }
