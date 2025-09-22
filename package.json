@@ -1,0 +1,31 @@
+{
+  "name": "cigar-app-2",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "build:fast": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^4.7.0",
+    "typescript": "~5.8.3",
+    "vite": "^5.4.20",
+    "vite-plugin-imp": "^2.4.0"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^6.0.2",
+    "antd": "^5.27.4",
+    "axios": "^1.12.2",
+    "cloudinary": "^2.7.0",
+    "dayjs": "^1.11.18",
+    "firebase": "^12.3.0",
+    "react-router-dom": "^7.9.1",
+    "zustand": "^5.0.8"
+  }
+}
