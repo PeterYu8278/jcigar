@@ -142,7 +142,7 @@ const MobileBottomNav: React.FC = () => {
         pointerEvents: 'none'
       }} />
 
-      {navItems.map((item) => {
+        {navItems.map((item) => {
         const active = isActive(item.key)
         
         return (
@@ -155,17 +155,29 @@ const MobileBottomNav: React.FC = () => {
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              padding: '8px 12px',
-              borderRadius: '12px',
-              minWidth: navItems.length > 4 ? '50px' : '60px',
-              transition: 'all 0.3s ease',
+              padding: 'clamp(6px, 2vw, 8px) clamp(8px, 2vw, 12px)',
+              borderRadius: 'clamp(8px, 2vw, 12px)',
+              minWidth: navItems.length > 4 ? 'clamp(45px, 10vw, 50px)' : 'clamp(55px, 12vw, 60px)',
+              minHeight: 'clamp(50px, 12vw, 60px)',
+              transition: 'all 0.2s ease',
               position: 'relative',
               background: active 
-                ? 'linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%)'
+                ? 'linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 215, 0, 0.08) 100%)'
                 : 'transparent',
-              border: active ? '1px solid rgba(255, 215, 0, 0.3)' : '1px solid transparent'
+              border: active ? '1px solid rgba(255, 215, 0, 0.4)' : '1px solid transparent',
+              boxShadow: active ? '0 2px 8px rgba(255, 215, 0, 0.2)' : 'none'
             }}
             className="mobile-nav-item"
+            onTouchStart={(e) => {
+              e.currentTarget.style.transform = 'scale(0.95)'
+              e.currentTarget.style.background = 'rgba(255, 215, 0, 0.15)'
+            }}
+            onTouchEnd={(e) => {
+              e.currentTarget.style.transform = 'scale(1)'
+              e.currentTarget.style.background = active 
+                ? 'linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 215, 0, 0.08) 100%)'
+                : 'transparent'
+            }}
           >
             {item.badge && (
               <Badge 
@@ -182,21 +194,26 @@ const MobileBottomNav: React.FC = () => {
             )}
             
             <div style={{
-              fontSize: '20px',
+              fontSize: 'clamp(18px, 4.5vw, 22px)',
               color: active ? '#ffd700' : '#c0c0c0',
-              marginBottom: '4px',
-              transition: 'all 0.3s ease'
+              marginBottom: 'clamp(2px, 1vw, 4px)',
+              transition: 'all 0.2s ease',
+              filter: active ? 'drop-shadow(0 0 6px rgba(255, 215, 0, 0.6))' : 'none'
             }}>
               {item.icon}
             </div>
             
             <div style={{
-              fontSize: '11px',
+              fontSize: 'clamp(9px, 2.2vw, 11px)',
               color: active ? '#ffd700' : '#999999',
-              fontWeight: active ? 600 : 400,
+              fontWeight: active ? 700 : 500,
               textAlign: 'center',
-              lineHeight: 1.2,
-              transition: 'all 0.3s ease'
+              lineHeight: 1.1,
+              transition: 'all 0.2s ease',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              maxWidth: '100%'
             }}>
               {item.label}
             </div>
