@@ -1,9 +1,9 @@
 // 登录页面
 import React, { useState } from 'react'
-import { Form, Input, Button, Card, Typography, Space, message } from 'antd'
-import { UserOutlined, LockOutlined } from '@ant-design/icons'
+import { Form, Input, Button, Card, Typography, Space, message, Divider } from 'antd'
+import { UserOutlined, LockOutlined, GoogleOutlined } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { loginUser } from '../../services/firebase/auth'
+import { loginWithEmailOrPhone, loginWithGoogle } from '../../services/firebase/auth'
 import { useAuthStore } from '../../store/modules/auth'
 
 const { Title, Text } = Typography
@@ -19,7 +19,7 @@ const Login: React.FC = () => {
   const onFinish = async (values: { email: string; password: string }) => {
     setLoading(true)
     try {
-      const result = await loginUser(values.email, values.password)
+      const result = await loginWithEmailOrPhone(values.email, values.password)
       if (result.success) {
         message.success('登录成功！')
         navigate(from, { replace: true })
@@ -28,6 +28,21 @@ const Login: React.FC = () => {
       }
     } catch (error) {
       message.error('登录失败，请重试')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const onGoogle = async () => {
+    setLoading(true)
+    try {
+      const res = await loginWithGoogle()
+      if (res.success) {
+        message.success('已使用 Google 登录')
+        navigate(from, { replace: true })
+      } else {
+        message.error((res as any).error?.message || 'Google 登录失败')
+      }
     } finally {
       setLoading(false)
     }
@@ -96,13 +111,12 @@ const Login: React.FC = () => {
             <Form.Item
               name="email"
               rules={[
-                { required: true, message: '请输入邮箱地址!' },
-                { type: 'email', message: '请输入有效的邮箱地址!' }
+                { required: true, message: '请输入邮箱或手机号!' }
               ]}
             >
               <Input
                 prefix={<UserOutlined style={{ color: '#ffd700' }} />}
-                placeholder="邮箱地址"
+                placeholder="邮箱或手机号"
                 style={{
                   background: 'rgba(45, 45, 45, 0.8)',
                   border: '1px solid #444444',
@@ -149,6 +163,16 @@ const Login: React.FC = () => {
                 登录
               </Button>
             </Form.Item>
+
+            <Divider style={{ color: '#c0c0c0' }}>或</Divider>
+            <Button
+              icon={<GoogleOutlined />}
+              onClick={onGoogle}
+              loading={loading}
+              style={{ width: '100%' }}
+            >
+              使用 Google 登录
+            </Button>
           </Form>
 
           <div style={{ textAlign: 'center', paddingBottom: '20px' }}>

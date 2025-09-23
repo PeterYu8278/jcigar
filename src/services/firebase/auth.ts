@@ -4,15 +4,17 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  updateProfile
+  updateProfile,
+  GoogleAuthProvider,
+  signInWithPopup
 } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, getDocs, query, where, limit } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
 import type { User } from '../../types';
 
 // 用户注册
-export const registerUser = async (email: string, password: string, displayName: string) => {
+export const registerUser = async (email: string, password: string, displayName: string, phone?: string) => {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
@@ -26,6 +28,7 @@ export const registerUser = async (email: string, password: string, displayName:
       displayName,
       role: 'member',
       profile: {
+        phone: phone ?? undefined,
         preferences: {
           language: 'zh',
           notifications: true,
@@ -72,6 +75,76 @@ export const loginUser = async (email: string, password: string) => {
       : code === 'auth/invalid-email' ? '邮箱格式不正确'
       : err?.message || '登录失败'
     return { success: false, error: new Error(message), code } as { success: false; error: Error; code?: string };
+  }
+};
+
+// 允许使用邮箱或手机号 + 密码登录
+export const loginWithEmailOrPhone = async (identifier: string, password: string) => {
+  try {
+    let email = identifier.trim();
+    // 如果不是邮箱，则按手机号处理（支持+和数字，长度7-15）
+    if (!email.includes('@')) {
+      const normalized = identifier.replace(/\s+/g, '');
+      const phonePattern = /^\+?\d{7,15}$/;
+      if (!phonePattern.test(normalized)) {
+        return { success: false, error: new Error('请输入有效的邮箱或手机号') } as { success: false; error: Error };
+      }
+      // 查找 Firestore 中绑定该手机号的用户
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('profile.phone', '==', normalized), limit(1));
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        return { success: false, error: new Error('未找到绑定该手机号的账户') } as { success: false; error: Error };
+      }
+      const userDoc = snap.docs[0];
+      email = (userDoc.data() as any)?.email;
+      if (!email) {
+        return { success: false, error: new Error('该手机号未绑定邮箱账户') } as { success: false; error: Error };
+      }
+    }
+    return await loginUser(email, password);
+  } catch (error) {
+    const err = error as any;
+    console.error('邮箱/手机号登录失败:', err);
+    return { success: false, error: err as Error } as { success: false; error: Error };
+  }
+};
+
+// 使用 Google 登录（首次登录自动创建用户文档）
+export const loginWithGoogle = async () => {
+  try {
+    const provider = new GoogleAuthProvider();
+    const credential = await signInWithPopup(auth, provider);
+    const user = credential.user;
+
+    // 确保 Firestore 中存在用户文档
+    const ref = doc(db, 'users', user.uid);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      const userData: Omit<User, 'id'> = {
+        email: user.email || '',
+        displayName: user.displayName || '未命名用户',
+        role: 'member',
+        profile: {
+          phone: undefined,
+          preferences: { language: 'zh', notifications: true },
+        },
+        membership: {
+          level: 'bronze',
+          joinDate: new Date(),
+          lastActive: new Date(),
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      await setDoc(ref, userData);
+    }
+
+    return { success: true, user };
+  } catch (error) {
+    const err = error as any
+    console.error('Google 登录失败:', err);
+    return { success: false, error: err as Error } as { success: false; error: Error };
   }
 };
 

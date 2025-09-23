@@ -12,10 +12,11 @@ const Register: React.FC = () => {
   const navigate = useNavigate()
 
   const onFinish = async (values: { 
-    email: string; 
+    email?: string; 
     password: string; 
     confirmPassword: string;
     displayName: string;
+    phone: string;
   }) => {
     if (values.password !== values.confirmPassword) {
       message.error('两次输入的密码不一致')
@@ -24,7 +25,7 @@ const Register: React.FC = () => {
 
     setLoading(true)
     try {
-      const result = await registerUser(values.email, values.password, values.displayName)
+      const result = await registerUser(values.email || '', values.password, values.displayName, values.phone)
       if (result.success) {
         message.success('注册成功！请登录')
         navigate('/login')
@@ -72,15 +73,28 @@ const Register: React.FC = () => {
             </Form.Item>
 
             <Form.Item
+              name="phone"
+              rules={[
+                { required: true, message: '请输入手机号码!' },
+                { pattern: /^\+?\d{7,15}$/, message: '请输入有效的手机号(7-15位数字，可含+)' }
+              ]}
+              getValueFromEvent={(e) => e.target.value.replace(/[^\d+]/g, '')}
+            >
+              <Input
+                prefix={<UserOutlined />}
+                placeholder="手机号码"
+              />
+            </Form.Item>
+
+            <Form.Item
               name="email"
               rules={[
-                { required: true, message: '请输入邮箱地址!' },
                 { type: 'email', message: '请输入有效的邮箱地址!' }
               ]}
             >
               <Input
                 prefix={<MailOutlined />}
-                placeholder="邮箱地址"
+                placeholder="邮箱地址（可选）"
               />
             </Form.Item>
 

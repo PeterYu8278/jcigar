@@ -26,6 +26,7 @@ const AdminInventory: React.FC = () => {
   const [inventoryLogs, setInventoryLogs] = useState<InventoryLog[]>([])
   const [orders, setOrders] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
+  const [viewingReference, setViewingReference] = useState<string | null>(null)
 
   const [keyword, setKeyword] = useState('')
   const [originFilter, setOriginFilter] = useState<string | undefined>()
@@ -217,13 +218,43 @@ const AdminInventory: React.FC = () => {
     { title: '产品', dataIndex: 'cigarId', key: 'cigarId', render: (id: string) => items.find(i => i.id === id)?.name || id },
     { title: '类型', dataIndex: 'type', key: 'type', render: (t: string) => t === 'in' ? '入库' : '出库' },
     { title: '数量', dataIndex: 'quantity', key: 'quantity' },
-    { title: '单号', dataIndex: 'referenceNo', key: 'referenceNo', render: (v: any) => v || '-' },
+    { 
+      title: '单号', 
+      dataIndex: 'referenceNo', 
+      key: 'referenceNo', 
+      render: (v: any) => v ? (
+        <Button type="link" onClick={() => setViewingReference(v)}>
+          {v}
+        </Button>
+      ) : '-'
+    },
     { title: '原因', dataIndex: 'reason', key: 'reason', render: (v: any) => v || '-' },
     { title: '操作人', dataIndex: 'operatorId', key: 'operatorId', render: (v: any) => v || '-' },
   ]
 
   const inLogs = useMemo(() => inventoryLogs.filter(l => (l as any).type === 'in'), [inventoryLogs])
   const outLogs = useMemo(() => inventoryLogs.filter(l => (l as any).type === 'out'), [inventoryLogs])
+  
+  // 按单号分组的入库记录
+  const referenceGroups = useMemo(() => {
+    const groups: Record<string, InventoryLog[]> = {}
+    inLogs.forEach(log => {
+      const refNo = (log as any).referenceNo
+      if (refNo) {
+        if (!groups[refNo]) {
+          groups[refNo] = []
+        }
+        groups[refNo].push(log)
+      }
+    })
+    return groups
+  }, [inLogs])
+  
+  // 当前查看的单号相关记录
+  const currentReferenceLogs = useMemo(() => {
+    if (!viewingReference) return []
+    return referenceGroups[viewingReference] || []
+  }, [viewingReference, referenceGroups])
 
   const outFromOrders = useMemo(() => {
     // 将订单按商品拆分为出库行
@@ -623,6 +654,34 @@ const AdminInventory: React.FC = () => {
         okButtonProps={{ danger: true }}
       >
         确认删除产品 {(deleting as any)?.name}？该操作不可撤销。
+      </Modal>
+
+      {/* 单号详情弹窗 */}
+      <Modal
+        title={`单号详情 - ${viewingReference}`}
+        open={!!viewingReference}
+        onCancel={() => setViewingReference(null)}
+        footer={null}
+        width={800}
+      >
+        <Table
+          columns={[
+            { title: '时间', dataIndex: 'createdAt', key: 'createdAt', render: (v: any) => v ? new Date(v).toLocaleString() : '-' },
+            { title: '产品', dataIndex: 'cigarId', key: 'cigarId', render: (id: string) => items.find(i => i.id === id)?.name || id },
+            { title: '数量', dataIndex: 'quantity', key: 'quantity' },
+            { title: '原因', dataIndex: 'reason', key: 'reason', render: (v: any) => v || '-' },
+            { title: '操作人', dataIndex: 'operatorId', key: 'operatorId', render: (v: any) => v || '-' },
+          ]}
+          dataSource={currentReferenceLogs}
+          rowKey="id"
+          pagination={false}
+          size="small"
+        />
+        <div style={{ marginTop: 16, padding: 12, background: '#f5f5f5', borderRadius: 6 }}>
+          <div style={{ fontWeight: 'bold', marginBottom: 8 }}>单号汇总</div>
+          <div>总产品种类：{currentReferenceLogs.length} 种</div>
+          <div>总入库数量：{currentReferenceLogs.reduce((sum, log) => sum + (log.quantity || 0), 0)} 支</div>
+        </div>
       </Modal>
     </div>
   )

@@ -137,6 +137,19 @@ export const getUserById = async (id: string): Promise<User | null> => {
   return getDocument<User>(COLLECTIONS.USERS, id);
 };
 
+export const getUsersByIds = async (ids: string[]): Promise<User[]> => {
+  try {
+    if (!ids || ids.length === 0) return []
+    // Firestore 无法直接 by ids 批量查询非索引字段，此处简化为并发 get
+    const tasks = ids.map(id => getUserById(id))
+    const results = await Promise.all(tasks)
+    return results.filter(Boolean) as User[]
+  } catch (error) {
+    console.error('批量获取用户失败:', error)
+    return []
+  }
+}
+
 // 雪茄相关操作
 export const getCigars = async (): Promise<Cigar[]> => {
   try {

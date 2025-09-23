@@ -187,6 +187,7 @@ const AdminUsers: React.FC = () => {
               email: record.email,
               role: record.role,
               level: record.membership?.level,
+              phone: (record as any)?.profile?.phone,
             })
           }}>
             编辑
@@ -389,7 +390,7 @@ const AdminUsers: React.FC = () => {
         onOk={() => form.submit()}
         confirmLoading={loading}
       >
-        <Form form={form} layout="vertical" onFinish={async (values: { displayName: string; email: string; role: User['role']; level: User['membership']['level'] }) => {
+        <Form form={form} layout="vertical" onFinish={async (values: { displayName: string; email?: string; role: User['role']; level: User['membership']['level']; phone: string }) => {
           setLoading(true)
           try {
             if (editing) {
@@ -398,14 +399,15 @@ const AdminUsers: React.FC = () => {
                 email: values.email,
                 role: values.role,
                 membership: { ...editing.membership, level: values.level },
-              })
+                profile: { ...(editing as any).profile, phone: values.phone },
+              } as any)
               if (res.success) message.success('已保存')
             } else {
               const res = await createDocument<User>(COLLECTIONS.USERS, {
                 displayName: values.displayName,
                 email: values.email,
                 role: values.role,
-                profile: { preferences: { language: 'zh', notifications: true } },
+                profile: { phone: values.phone, preferences: { language: 'zh', notifications: true } },
                 membership: { level: values.level, joinDate: new Date(), lastActive: new Date() },
                 createdAt: new Date(),
                 updatedAt: new Date(),
@@ -423,17 +425,26 @@ const AdminUsers: React.FC = () => {
           <Form.Item label="姓名" name="displayName" rules={[{ required: true, message: '请输入姓名' }]}>
             <Input />
           </Form.Item>
-          <Form.Item label="邮箱" name="email" rules={[{ required: true, message: '请输入邮箱' }, { type: 'email', message: '邮箱格式不正确' }]}>
-            <Input />
+          <Form.Item label="手机" name="phone" rules={[{ required: true, message: '请输入手机号码' }, { pattern: /^\+?\d{7,15}$/, message: '请输入有效的手机号(7-15位数字，可含+)' }]}> 
+            <Input 
+              onChange={(e) => {
+                const value = e.target.value.replace(/[^\d+]/g, '')
+                e.target.value = value
+                form.setFieldValue('phone', value)
+              }}
+            />
           </Form.Item>
-          <Form.Item label="角色" name="role" rules={[{ required: true }]}> 
+          <Form.Item label="邮箱" name="email" rules={[{ type: 'email', message: '邮箱格式不正确' }]}> 
+            <Input placeholder="可选" />
+          </Form.Item>
+          <Form.Item label="角色" name="role" rules={[{ required: true }]} initialValue="member"> 
             <Select>
               <Option value="admin">管理员</Option>
               <Option value="member">会员</Option>
               <Option value="guest">游客</Option>
             </Select>
           </Form.Item>
-          <Form.Item label="会员等级" name="level" rules={[{ required: true }]}> 
+          <Form.Item label="会员等级" name="level" rules={[{ required: true }]} initialValue="bronze"> 
             <Select>
               <Option value="bronze">青铜</Option>
               <Option value="silver">白银</Option>

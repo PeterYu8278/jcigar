@@ -1,10 +1,12 @@
 // 活动管理页面
 import React, { useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
-import { Table, Button, Tag, Space, Typography, Input, Select, DatePicker, message, Modal, Form, InputNumber, Switch, Dropdown, Checkbox, Upload, Spin, Descriptions, Progress } from 'antd'
+import { Table, Button, Tag, Space, Typography, Input, Select, DatePicker, message, Modal, Form, InputNumber, Switch, Dropdown, Checkbox, Upload, Spin, Descriptions, Progress, Tabs } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, EyeOutlined, DownloadOutlined, UploadOutlined, UserOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import type { Event, User, Cigar } from '../../../types'
-import { getEvents, createDocument, updateDocument, deleteDocument, COLLECTIONS, getUsers, registerForEvent, unregisterFromEvent, getCigars, createOrdersFromEventAllocations, getAllOrders } from '../../../services/firebase/firestore'
+import { getEvents, createDocument, updateDocument, deleteDocument, COLLECTIONS, getUsers, registerForEvent, unregisterFromEvent, getCigars, createOrdersFromEventAllocations, getAllOrders, getUsersByIds } from '../../../services/firebase/firestore'
+import ParticipantsList from '../../../components/admin/ParticipantsList'
+import ParticipantsSummary from '../../../components/admin/ParticipantsSummary'
 
 const { Title } = Typography
 const { Search } = Input
@@ -21,10 +23,91 @@ const AdminEvents: React.FC = () => {
   const [participantsLoading, setParticipantsLoading] = useState(false)
   const [cigars, setCigars] = useState<Cigar[]>([])
   const [allocSaving, setAllocSaving] = useState<string | null>(null)
+  const [activeViewTab, setActiveViewTab] = useState<string>('overview')
+  const [isEditingDetails, setIsEditingDetails] = useState(false)
+  const [editForm, setEditForm] = useState<any>({})
   const getCigarPriceById = (id?: string) => {
     if (!id) return 0
     const c = cigars.find(x => x.id === id)
     return c?.price ?? 0
+  }
+
+  const handleSaveField = async (fieldName: string) => {
+    if (!viewing) return
+    
+    try {
+      const toDateOrNull = (val: any) => {
+        if (!val) return null
+        if ((val as any).toDate && typeof (val as any).toDate === 'function') {
+          const d = (val as any).toDate()
+          return isNaN(d?.getTime?.() || NaN) ? null : d
+        }
+        if (val instanceof Date) return isNaN(val.getTime()) ? null : val
+        const d = new Date(val)
+        return isNaN(d.getTime()) ? null : d
+      }
+
+      let updateData: any = {}
+      
+      switch (fieldName) {
+        case 'title':
+          updateData.title = editForm.title
+          break
+        case 'description':
+          updateData.description = editForm.description
+          break
+        case 'status':
+          updateData.status = editForm.status
+          break
+        case 'startDate':
+          updateData.schedule = {
+            ...(viewing as any).schedule,
+            startDate: toDateOrNull(editForm.startDate)
+          }
+          break
+        case 'endDate':
+          updateData.schedule = {
+            ...(viewing as any).schedule,
+            endDate: toDateOrNull(editForm.endDate)
+          }
+          break
+        case 'locationName':
+          updateData.location = {
+            ...(viewing as any).location,
+            name: editForm.locationName
+          }
+          break
+        case 'fee':
+          updateData.participants = {
+            ...(viewing as any).participants,
+            fee: editForm.fee
+          }
+          break
+        case 'maxParticipants':
+          updateData.participants = {
+            ...(viewing as any).participants,
+            maxParticipants: editForm.maxParticipants
+          }
+          break
+      }
+
+      updateData.updatedAt = new Date()
+
+      const res = await updateDocument(COLLECTIONS.EVENTS, viewing.id, updateData)
+      if (res.success) {
+        message.success('已保存')
+        const list = await getEvents()
+        setEvents(list)
+        const updatedEvent = list.find(e => e.id === viewing.id)
+        if (updatedEvent) {
+          setViewing(updatedEvent)
+        }
+      } else {
+        message.error('保存失败')
+      }
+    } catch (error) {
+      message.error('保存失败')
+    }
   }
   const [viewing, setViewing] = useState<Event | null>(null)
   const [manualAddLoading, setManualAddLoading] = useState(false)
@@ -123,7 +206,11 @@ const AdminEvents: React.FC = () => {
     ;(async () => {
       setLoading(true)
       try {
-        const list = await getEvents()
+        const [list, users, cigars] = await Promise.all([
+          getEvents(),
+          getUsers(),
+          getCigars()
+        ])
         
         // 自动调整所有活动的状态
         const updatedEvents = []
@@ -133,6 +220,8 @@ const AdminEvents: React.FC = () => {
         }
         
         setEvents(updatedEvents)
+        setParticipantsUsers(users)
+        setCigars(cigars)
         const os = await getAllOrders()
         setOrders(os)
       } finally {
@@ -231,7 +320,11 @@ const AdminEvents: React.FC = () => {
       render: (_: any, record: any) => (
         <div>
           <div style={{ marginBottom: 4 }}>
-            {((record?.participants as any)?.registered || []).length}/{(record?.participants as any)?.maxParticipants || 0} 人
+            {(() => {
+              const registered = ((record?.participants as any)?.registered || []).length
+              const maxParticipants = (record?.participants as any)?.maxParticipants || 0
+              return maxParticipants === 0 ? `${registered}/∞ 人` : `${registered}/${maxParticipants} 人`
+            })()}
           </div>
           <div style={{ fontSize: '12px', color: '#666' }}>
             费用: ¥{(record?.participants as any)?.fee ?? 0}
@@ -265,7 +358,7 @@ const AdminEvents: React.FC = () => {
       render: (_: any, record: any) => (
         <Button type="link" icon={<EyeOutlined />} size="small" onClick={() => setViewing(record)}>
           查看详情
-        </Button>
+          </Button>
       ),
     },
   ]
@@ -332,8 +425,8 @@ const AdminEvents: React.FC = () => {
           </Dropdown>
           <Button onClick={() => { setKeyword(''); setStatusFilter(undefined); setSelectedRowKeys([]) }}>重置筛选</Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => { setCreating(true); form.resetFields() }}>
-            创建活动
-          </Button>
+          创建活动
+        </Button>
         </Space>
       </div>
 
@@ -367,7 +460,7 @@ const AdminEvents: React.FC = () => {
       {/* eslint-disable react-hooks/rules-of-hooks */}
       {(() => null)()}
       {/**/}
-      
+
       <Table
         columns={columns}
         dataSource={filtered}
@@ -424,62 +517,200 @@ const AdminEvents: React.FC = () => {
         open={!!viewing}
         onCancel={() => setViewing(null)}
         footer={null}
-        width={800}
+        width={900}
       >
         {viewing && (
-          <div>
+          <Tabs
+            activeKey={activeViewTab}
+            onChange={(k) => setActiveViewTab(k)}
+            items={[
+              {
+                key: 'overview',
+                label: '概览',
+                children: (
+                  <div>
             <Descriptions bordered column={2} size="small">
               <Descriptions.Item label="活动名称" span={2}>
-                <span style={{ fontWeight: 'bold', fontSize: '16px' }}>{viewing.title}</span>
+                {isEditingDetails ? (
+                  <Input
+                    value={editForm.title}
+                    onChange={(e) => setEditForm({...editForm, title: e.target.value})}
+                    onPressEnter={async () => {
+                      await handleSaveField('title')
+                    }}
+                    onBlur={async () => {
+                      await handleSaveField('title')
+                    }}
+                    autoFocus
+                  />
+                ) : (
+                  <span style={{ fontWeight: 'bold', fontSize: '16px' }}>
+                    {viewing.title}
+                  </span>
+                )}
               </Descriptions.Item>
               <Descriptions.Item label="活动描述" span={2}>
-                <div style={{ maxHeight: '100px', overflow: 'auto' }}>
-                  {(viewing as any).description || '暂无描述'}
-                </div>
+                {isEditingDetails ? (
+                  <Input.TextArea
+                    value={editForm.description}
+                    onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+                    onPressEnter={async () => {
+                      await handleSaveField('description')
+                    }}
+                    onBlur={async () => {
+                      await handleSaveField('description')
+                    }}
+                    autoFocus
+                    rows={3}
+                  />
+                ) : (
+                  <div style={{ maxHeight: '100px', overflow: 'auto' }}>
+                    {(viewing as any).description || '暂无描述'}
+                  </div>
+                )}
               </Descriptions.Item>
               <Descriptions.Item label="活动状态" span={1}>
-                <Tag color={
-                  viewing.status === 'published' ? 'blue' :
-                  viewing.status === 'ongoing' ? 'green' :
-                  viewing.status === 'completed' ? 'default' :
-                  viewing.status === 'cancelled' ? 'red' : 'default'
-                }>
-                  {viewing.status === 'published' ? '已发布' :
-                   viewing.status === 'ongoing' ? '进行中' :
-                   viewing.status === 'completed' ? '已结束' :
-                   viewing.status === 'cancelled' ? '已取消' :
-                   viewing.status === 'draft' ? '草稿' : viewing.status}
-                </Tag>
+                {isEditingDetails ? (
+                  <Select
+                    value={editForm.status}
+                    onChange={async (value) => {
+                      setEditForm({...editForm, status: value})
+                      await handleSaveField('status')
+                    }}
+                    style={{ width: '100%' }}
+                    autoFocus
+                  >
+                    <Option value="draft">草稿</Option>
+                    <Option value="published">已发布</Option>
+                    <Option value="ongoing">进行中</Option>
+                    <Option value="completed">已结束</Option>
+                    <Option value="cancelled">已取消</Option>
+                  </Select>
+                ) : (
+                  <Tag 
+                    color={
+                      viewing.status === 'published' ? 'blue' :
+                      viewing.status === 'ongoing' ? 'green' :
+                      viewing.status === 'completed' ? 'default' :
+                      viewing.status === 'cancelled' ? 'red' : 'default'
+                    }
+                  >
+                    {viewing.status === 'published' ? '已发布' :
+                     viewing.status === 'ongoing' ? '进行中' :
+                     viewing.status === 'completed' ? '已结束' :
+                     viewing.status === 'cancelled' ? '已取消' :
+                     viewing.status === 'draft' ? '草稿' : viewing.status}
+                  </Tag>
+                )}
               </Descriptions.Item>
               <Descriptions.Item label="开始时间" span={1}>
-                {(() => {
-                  const s = (viewing as any)?.schedule?.startDate
-                  const sd = (s as any)?.toDate ? (s as any).toDate() : s
-                  return sd ? new Date(sd).toLocaleString() : '-'
-                })()}
+                {isEditingDetails ? (
+                  <DatePicker
+                    value={editForm.startDate}
+                    onChange={async (date) => {
+                      setEditForm({...editForm, startDate: date})
+                      await handleSaveField('startDate')
+                    }}
+                    style={{ width: '100%' }}
+                    autoFocus
+                    showTime
+                  />
+                ) : (
+                  <span>
+                    {(() => {
+                      const s = (viewing as any)?.schedule?.startDate
+                      const sd = (s as any)?.toDate ? (s as any).toDate() : s
+                      return sd ? new Date(sd).toLocaleString() : '-'
+                    })()}
+                  </span>
+                )}
               </Descriptions.Item>
               <Descriptions.Item label="结束时间" span={1}>
-                {(() => {
-                  const e = (viewing as any)?.schedule?.endDate
-                  const ed = (e as any)?.toDate ? (e as any).toDate() : e
-                  return ed ? new Date(ed).toLocaleString() : '-'
-                })()}
+                {isEditingDetails ? (
+                  <DatePicker
+                    value={editForm.endDate}
+                    onChange={async (date) => {
+                      setEditForm({...editForm, endDate: date})
+                      await handleSaveField('endDate')
+                    }}
+                    style={{ width: '100%' }}
+                    autoFocus
+                    showTime
+                  />
+                ) : (
+                  <span>
+                    {(() => {
+                      const e = (viewing as any)?.schedule?.endDate
+                      const ed = (e as any)?.toDate ? (e as any).toDate() : e
+                      return ed ? new Date(ed).toLocaleString() : '-'
+                    })()}
+                  </span>
+                )}
               </Descriptions.Item>
               <Descriptions.Item label="活动地点" span={2}>
-                {(viewing as any)?.location?.name || '-'}
-                {(viewing as any)?.location?.address && (
-                  <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-                    {(viewing as any).location.address}
+                {isEditingDetails ? (
+                  <Input
+                    value={editForm.locationName}
+                    onChange={(e) => setEditForm({...editForm, locationName: e.target.value})}
+                    onPressEnter={async () => {
+                      await handleSaveField('locationName')
+                    }}
+                    onBlur={async () => {
+                      await handleSaveField('locationName')
+                    }}
+                    autoFocus
+                  />
+                ) : (
+                  <div>
+                    {(viewing as any)?.location?.name || '-'}
+                    {(viewing as any)?.location?.address && (
+                      <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                        {(viewing as any).location.address}
+                      </div>
+                    )}
                   </div>
                 )}
               </Descriptions.Item>
               <Descriptions.Item label="参与费用" span={1}>
-                <span style={{ color: '#f5222d', fontWeight: 'bold' }}>
-                  ¥{(viewing as any)?.participants?.fee ?? 0}
-                </span>
+                {isEditingDetails ? (
+                  <InputNumber
+                    value={editForm.fee}
+                    onChange={async (value) => {
+                      setEditForm({...editForm, fee: value})
+                      await handleSaveField('fee')
+                    }}
+                    style={{ width: '100%' }}
+                    autoFocus
+                    min={0}
+                    addonBefore="¥"
+                  />
+                ) : (
+                  <span style={{ color: '#f5222d', fontWeight: 'bold' }}>
+                    ¥{(viewing as any)?.participants?.fee ?? 0}
+                  </span>
+                )}
               </Descriptions.Item>
               <Descriptions.Item label="人数限制" span={1}>
-                {(viewing as any)?.participants?.maxParticipants ?? 0} 人
+                {isEditingDetails ? (
+                  <InputNumber
+                    value={editForm.maxParticipants}
+                    onChange={async (value) => {
+                      setEditForm({...editForm, maxParticipants: value})
+                      await handleSaveField('maxParticipants')
+                    }}
+                    style={{ width: '100%' }}
+                    autoFocus
+                    min={0}
+                    addonAfter="人"
+                  />
+                ) : (
+                  <span>
+                    {(() => {
+                      const maxP = (viewing as any)?.participants?.maxParticipants ?? 0
+                      return maxP === 0 ? '无人数限制' : `${maxP} 人`
+                    })()}
+                  </span>
+                )}
               </Descriptions.Item>
               <Descriptions.Item label="已报名人数" span={1}>
                 <span style={{ color: '#52c41a', fontWeight: 'bold' }}>
@@ -514,39 +745,46 @@ const AdminEvents: React.FC = () => {
                 <Button 
                   type="primary" 
                   icon={<EditOutlined />}
-                  onClick={() => {
-                    setViewing(null)
-                    setEditing(viewing)
-                    // 填充表单数据
-                    form.setFieldsValue({
-                      title: viewing.title,
-                      description: (viewing as any).description || '',
-                      locationName: (viewing as any)?.location?.name || '',
-                      startDate: (() => {
-                        const startDate = (viewing as any)?.schedule?.startDate
-                        return startDate ? dayjs(startDate) : null
-                      })(),
-                      endDate: (() => {
-                        const endDate = (viewing as any)?.schedule?.endDate
-                        return endDate ? dayjs(endDate) : null
-                      })(),
-                      fee: (viewing as any)?.participants?.fee ?? 0,
-                      maxParticipants: (viewing as any)?.participants?.maxParticipants ?? 0,
-                      status: viewing.status,
-                    })
+                  onClick={async () => {
+                    if (isEditingDetails) {
+                      // 完成编辑模式
+                      setIsEditingDetails(false)
+                      setEditForm({})
+                    } else {
+                      // 进入编辑模式
+                      setIsEditingDetails(true)
+                      setEditForm({
+                        title: viewing.title,
+                        description: (viewing as any).description || '',
+                        status: viewing.status,
+                        startDate: (() => {
+                          const startDate = (viewing as any)?.schedule?.startDate
+                          return startDate ? dayjs(startDate) : null
+                        })(),
+                        endDate: (() => {
+                          const endDate = (viewing as any)?.schedule?.endDate
+                          return endDate ? dayjs(endDate) : null
+                        })(),
+                        locationName: (viewing as any)?.location?.name || '',
+                        fee: (viewing as any)?.participants?.fee ?? 0,
+                        maxParticipants: (viewing as any)?.participants?.maxParticipants ?? 0,
+                      })
+                    }
                   }}
                 >
-                  编辑活动
+                  {isEditingDetails ? '完成编辑' : '编辑活动'}
                 </Button>
-                <Button 
-                  icon={<UserOutlined />}
-                  onClick={() => {
-                    setViewing(null)
-                    setParticipantsEvent(viewing)
-                  }}
-                >
-                  参与者管理
-                </Button>
+                {isEditingDetails && (
+                  <Button 
+                    onClick={() => {
+                      setIsEditingDetails(false)
+                      setEditForm({})
+                    }}
+                  >
+                    取消编辑
+                  </Button>
+                )}
+                
                 <Dropdown
                   menu={{
                     items: [
@@ -583,12 +821,215 @@ const AdminEvents: React.FC = () => {
                 >
                   删除活动
                 </Button>
-                <Button onClick={() => setViewing(null)}>
-                  关闭
-                </Button>
               </Space>
             </div>
-          </div>
+                  </div>
+                ),
+              },
+              {
+                key: 'participants',
+                label: '参与者管理',
+                children: (
+                  <div>
+                    <div style={{ marginBottom: 12, color: '#666' }}>
+                      已报名：{((viewing as any)?.participants?.registered || []).length} / {(viewing as any)?.participants?.maxParticipants || 0}
+                    </div>
+                    {/* 直接渲染“参与者弹窗”的主体内容 */}
+                    {(() => {
+                      // 临时把 viewing 映射到 participantsEvent 相关渲染所需的变量
+                      const participantsLike = viewing as any
+                      return (
+                        <div>
+                          <div style={{ marginBottom: 16 }}>
+                            <Space.Compact style={{ width: '100%' }}>
+                              <Select
+                                showSearch
+                                allowClear
+                                placeholder="输入姓名/邮箱/手机号或用户ID进行搜索并选择"
+                                style={{ width: '100%' }}
+                                value={manualAddValue || undefined}
+                                onSearch={(val) => setManualAddValue(val)}
+                                onChange={(val) => setManualAddValue(val || '')}
+                                onSelect={(val) => setManualAddValue(String(val))}
+                                filterOption={(input, option) => {
+                                  const keyword = (input || '').toLowerCase()
+                                  const searchable = String((option as any)?.searchText || '').toLowerCase()
+                                  return searchable.includes(keyword)
+                                }}
+                                notFoundContent={manualAddValue && manualAddValue.trim() !== '' ? '无匹配' : '暂无数据'}
+                                options={(manualAddValue && manualAddValue.trim() !== '' ? participantsUsers : []).map(u => {
+                                  const isRegistered = ((viewing as any)?.participants?.registered || []).includes(u.id)
+                                  return {
+                                    value: u.id,
+                                    searchText: `${u.displayName || ''} ${(u as any)?.profile?.phone || ''} ${u.email || ''} ${u.id}`.trim(),
+                                    label: (
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ flex: 1, textAlign: 'left' }}>{u.displayName || '未命名'}</span>
+                                        <span style={{ flex: 2, textAlign: 'left', color: '#999', fontSize: '12px' }}>
+                                          {(u as any)?.profile?.phone || '无手机号'}
+                                        </span>
+                                        <span style={{ flex: 6, textAlign: 'left', color: '#999', fontSize: '12px' }}>
+                                          {u.email || '无邮箱'}
+                                        </span>
+                                        {isRegistered && (
+                                          <CheckCircleOutlined style={{ color: '#52c41a', marginLeft: 8 }} />
+                                        )}
+                                      </div>
+                                    )
+                                  }
+                                })}
+                              />
+                              <Button type="primary" loading={manualAddLoading} onClick={async () => {
+                                if (!viewing) return
+                                const raw = manualAddValue.trim()
+                                if (!raw) return
+                                setManualAddLoading(true)
+                                try {
+                                  let userId = raw
+                                  const byId = participantsUsers.find(u => u.id === raw)
+                                  if (!byId) {
+                                    if (raw.includes('@')) {
+                                      const match = participantsUsers.find(u => u.email?.toLowerCase() === raw.toLowerCase())
+                                      if (!match) { message.error('未找到该邮箱对应的用户'); return }
+                                      userId = match.id
+                                    } else if (/^\+?\d[\d\s-]{5,}$/.test(raw)) {
+                                      const match = participantsUsers.find(u => ((u as any)?.profile?.phone || '').replace(/\s|-/g,'') === raw.replace(/\s|-/g,''))
+                                      if (!match) { message.error('未找到该手机号对应的用户'); return }
+                                      userId = match.id
+                                    } else {
+                                      const matches = participantsUsers.filter(u => (u.displayName || '').toLowerCase().includes(raw.toLowerCase()))
+                                      if (matches.length === 1) userId = matches[0].id
+                                      else { message.info('请从下拉列表选择唯一的用户'); return }
+                                    }
+                                  }
+                                  const res = await registerForEvent((participantsLike as any).id, userId)
+                                  if ((res as any)?.success) {
+                                    message.success('已添加参与者')
+                                    const list = await getEvents()
+                                    setEvents(list)
+                                    const next = list.find(e => e.id === (participantsLike as any).id) as any
+                                    setViewing(next)
+                                    setManualAddValue('')
+                                  } else {
+                                    message.error('添加失败')
+                                  }
+                                } finally {
+                                  setManualAddLoading(false)
+                                }
+                              }}>添加</Button>
+                            </Space.Compact>
+                          </div>
+
+                          <div style={{ marginBottom: 16 }}>
+                            <Space>
+                              <Button 
+                                icon={<CheckCircleOutlined />}
+                                type="primary"
+                                onClick={async () => {
+                                  if (!viewing) return
+                                  const orderResult = await createOrdersFromEventAllocations((participantsLike as any).id);
+                                  if (orderResult.success) {
+                                    if (orderResult.createdOrders > 0) {
+                                      message.success(`已为活动创建 ${orderResult.createdOrders} 个订单`);
+                                    } else {
+                                      message.info('没有参与者分配了雪茄，无法创建订单');
+                                    }
+                                  } else {
+                                    message.error('创建订单失败：' + (orderResult.error?.message || '未知错误'));
+                                  }
+                                }}
+                              >
+                                创建订单
+                              </Button>
+                              <Button 
+                                icon={<DownloadOutlined />}
+                                onClick={() => {
+                                  if (!viewing) return
+                                  const header = ['userId','displayName','phone','email','cigarName','quantity','amount']
+                                  const rows = (((participantsLike as any)?.participants?.registered || []) as string[]).map((id) => {
+                                    const u = participantsUsers.find(x => x.id === id)
+                                    const alloc = (participantsLike as any)?.allocations?.[id]
+                                    const cigar = cigars.find(c => c.id === alloc?.cigarId)
+                                    return [
+                                      id, 
+                                      u?.displayName || '', 
+                                      (u as any)?.profile?.phone || '',
+                                      u?.email || '',
+                                      cigar?.name || '',
+                                      alloc?.quantity || 0,
+                                      alloc?.amount || 0
+                                    ]
+                                  })
+                                  const csv = [header.join(','), ...rows.map(r => r.map(x => `"${String(x ?? '').replace(/"/g,'""')}"`).join(','))].join('\n')
+                                  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+                                  const url = URL.createObjectURL(blob)
+                                  const a = document.createElement('a')
+                                  a.href = url
+                                  a.download = `participants-${(participantsLike as any)?.title || 'event'}.csv`
+                                  a.click()
+                                  URL.revokeObjectURL(url)
+                                }}
+                              >
+                                导出分配清单
+                              </Button>
+                              <Upload
+                                accept=".csv"
+                                beforeUpload={async (file) => {
+                                  if (!viewing) return false
+                                  const text = await file.text()
+                                  const lines = text.split(/\r?\n/).filter(Boolean)
+                                  const ids = lines.slice(1).map(l => l.split(',')[0].replace(/(^\"|\"$)/g,'')).filter(Boolean)
+                                  const uniq = Array.from(new Set(ids))
+                                  const merged = Array.from(new Set([...(participantsLike as any)?.participants?.registered || [], ...uniq]))
+                                  await updateDocument(COLLECTIONS.EVENTS, (participantsLike as any).id, { 'participants.registered': merged } as any)
+                                  message.success(`已导入 ${uniq.length} 条`)
+                                  const list = await getEvents()
+                                  setEvents(list)
+                                  const next = list.find(e => e.id === (participantsLike as any).id) as any
+                                  setViewing(next)
+                                  return false
+                                }}
+                                showUploadList={false}
+                              >
+                                <Button icon={<UploadOutlined />}>导入报名名单</Button>
+                              </Upload>
+                            </Space>
+                          </div>
+
+                          <div style={{ 
+                            maxHeight: 400, 
+                            overflow: 'auto', 
+                            border: '1px solid #f0f0f0', 
+                            borderRadius: 6,
+                            background: '#fafafa'
+                          }}>
+                            <ParticipantsList
+                              event={participantsLike}
+                              participantsUsers={participantsUsers}
+                              cigars={cigars}
+                              participantsLoading={participantsLoading}
+                              allocSaving={allocSaving}
+                              onEventUpdate={(updatedEvent) => {
+                                setViewing(updatedEvent)
+                                setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e))
+                              }}
+                              onAllocSavingChange={setAllocSaving}
+                              getCigarPriceById={getCigarPriceById}
+                            />
+                          </div>
+
+                          <ParticipantsSummary
+                            event={participantsLike}
+                            getCigarPriceById={getCigarPriceById}
+                          />
+                        </div>
+                      )
+                    })()}
+                  </div>
+                ),
+              }
+            ]}
+          />
         )}
       </Modal>
 
@@ -597,7 +1038,7 @@ const AdminEvents: React.FC = () => {
         title={
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span>参与者管理</span>
-            <div style={{ fontSize: 14, color: '#666' }}>
+            <div style={{ fontSize: 14, color: '#666',marginRight: 30 }}>
               已报名：{((participantsEvent as any)?.participants?.registered || []).length} / {(participantsEvent as any)?.participants?.maxParticipants || 0}
             </div>
           </div>
@@ -609,56 +1050,60 @@ const AdminEvents: React.FC = () => {
       >
         <div style={{ marginBottom: 16 }}>
           <Space.Compact style={{ width: '100%' }}>
-            <Input 
-              placeholder="输入用户ID或邮箱添加参与者"
-              value={manualAddValue}
-              onChange={(e) => setManualAddValue(e.target.value)}
-              onPressEnter={async () => {
-                if (!participantsEvent) return
-                const val = manualAddValue.trim()
-                if (!val) return
-                setManualAddLoading(true)
-                try {
-                  // 支持用邮箱查找映射到 userId
-                  let userId = val
-                  if (val.includes('@')) {
-                    const match = participantsUsers.find(u => u.email?.toLowerCase() === val.toLowerCase())
-                    if (!match) {
-                      message.error('未找到该邮箱对应的用户')
-                      return
-                    }
-                    userId = match.id
-                  }
-                  const res = await registerForEvent((participantsEvent as any).id, userId)
-                  if (res.success) {
-                    message.success('已添加参与者')
-                    const list = await getEvents()
-                    setEvents(list)
-                    setParticipantsEvent(list.find(e => e.id === (participantsEvent as any).id) || null)
-                    setManualAddValue('')
-                  } else {
-                    message.error('添加失败')
-                  }
-                } finally {
-                  setManualAddLoading(false)
-                }
+            <Select
+              showSearch
+              allowClear
+              placeholder="输入姓名/邮箱/手机号或用户ID进行搜索并选择"
+              style={{ width: '100%' }}
+              value={manualAddValue || undefined}
+              onSearch={(val) => setManualAddValue(val)}
+              onChange={(val) => setManualAddValue(val || '')}
+              onSelect={(val) => setManualAddValue(String(val))}
+              filterOption={(input, option) => {
+                const keyword = (input || '').toLowerCase()
+                const searchable = String((option as any)?.searchText || '').toLowerCase()
+                return searchable.includes(keyword)
               }}
+               notFoundContent={manualAddValue && manualAddValue.trim() !== '' ? '无匹配' : '暂无数据'}
+                options={(manualAddValue && manualAddValue.trim() !== '' ? participantsUsers : []).map(u => ({
+                  value: u.id,
+                  // 用于搜索匹配的纯文本字段
+                  searchText: `${u.displayName || ''} ${(u as any)?.profile?.phone || ''} ${u.email || ''} ${u.id}`.trim(),
+                  label: (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ flex: 1, textAlign: 'left' }}>{u.displayName || '未命名'}</span>
+                      <span style={{ flex: 2, textAlign: 'left', color: '#999', fontSize: '12px' }}>
+                        {(u as any)?.profile?.phone || '无手机号'}
+                      </span>
+                      <span style={{ flex: 6, textAlign: 'left', color: '#999', fontSize: '12px' }}>
+                        {u.email || '无邮箱'}
+                      </span>
+                    </div>
+                  )
+                }))}
             />
             <Button type="primary" loading={manualAddLoading} onClick={async () => {
               if (!participantsEvent) return
-              const val = manualAddValue.trim()
-              if (!val) return
+              const raw = manualAddValue.trim()
+              if (!raw) return
               setManualAddLoading(true)
               try {
-                // 支持用邮箱查找映射到 userId
-                let userId = val
-                if (val.includes('@')) {
-                  const match = participantsUsers.find(u => u.email?.toLowerCase() === val.toLowerCase())
-                  if (!match) {
-                    message.error('未找到该邮箱对应的用户')
-                    return
+                let userId = raw
+                const byId = participantsUsers.find(u => u.id === raw)
+                if (!byId) {
+                  if (raw.includes('@')) {
+                    const match = participantsUsers.find(u => u.email?.toLowerCase() === raw.toLowerCase())
+                    if (!match) { message.error('未找到该邮箱对应的用户'); return }
+                    userId = match.id
+                  } else if (/^\+?\d[\d\s-]{5,}$/.test(raw)) {
+                    const match = participantsUsers.find(u => ((u as any)?.profile?.phone || '').replace(/\s|-/g,'') === raw.replace(/\s|-/g,''))
+                    if (!match) { message.error('未找到该手机号对应的用户'); return }
+                    userId = match.id
+                  } else {
+                    const matches = participantsUsers.filter(u => (u.displayName || '').toLowerCase().includes(raw.toLowerCase()))
+                    if (matches.length === 1) userId = matches[0].id
+                    else { message.info('请从下拉列表选择唯一的用户'); return }
                   }
-                  userId = match.id
                 }
                 const res = await registerForEvent((participantsEvent as any).id, userId)
                 if (res.success) {
@@ -701,8 +1146,8 @@ const AdminEvents: React.FC = () => {
             <Button 
               icon={<DownloadOutlined />}
               onClick={() => {
-                if (!participantsEvent) return
-                const header = ['userId','displayName','email','cigarName','quantity','amount']
+              if (!participantsEvent) return
+                const header = ['userId','displayName','phone','email','cigarName','quantity','amount']
                 const rows = (((participantsEvent as any)?.participants?.registered || []) as string[]).map((id) => {
                   const u = participantsUsers.find(x => x.id === id)
                   const alloc = (participantsEvent as any)?.allocations?.[id]
@@ -710,20 +1155,21 @@ const AdminEvents: React.FC = () => {
                   return [
                     id, 
                     u?.displayName || '', 
+                    (u as any)?.profile?.phone || '',
                     u?.email || '',
                     cigar?.name || '',
                     alloc?.quantity || 0,
                     alloc?.amount || 0
                   ]
                 })
-                const csv = [header.join(','), ...rows.map(r => r.map(x => `"${String(x ?? '').replace(/"/g,'""')}"`).join(','))].join('\n')
-                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-                const url = URL.createObjectURL(blob)
-                const a = document.createElement('a')
-                a.href = url
+              const csv = [header.join(','), ...rows.map(r => r.map(x => `"${String(x ?? '').replace(/"/g,'""')}"`).join(','))].join('\n')
+              const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
                 a.download = `participants-${(participantsEvent as any)?.title || 'event'}.csv`
-                a.click()
-                URL.revokeObjectURL(url)
+              a.click()
+              URL.revokeObjectURL(url)
               }}
             >
               导出分配清单
@@ -758,148 +1204,25 @@ const AdminEvents: React.FC = () => {
           borderRadius: 6,
           background: '#fafafa'
         }}>
-          {participantsLoading ? (
-            <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
-              <Spin size="large" />
-              <div style={{ marginTop: 16 }}>加载参与者信息中...</div>
-            </div>
-          ) : (
-            <div style={{ padding: 12 }}>
-              {(((participantsEvent as any)?.participants?.registered || []) as string[]).length === 0 ? (
-                <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
-                  <UserOutlined style={{ fontSize: 48, marginBottom: 16 }} />
-                  <div>暂无参与者</div>
-                </div>
-              ) : (
-                (((participantsEvent as any)?.participants?.registered || []) as string[]).map((uid, index) => {
-                  const u = participantsUsers.find(x => x.id === uid)
-                  const alloc = (participantsEvent as any)?.allocations?.[uid]
-                  const cigar = cigars.find(c => c.id === alloc?.cigarId)
-                  return (
-                    <div 
-                      key={uid} 
-                      style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: 12, 
-                        padding: '12px 16px',
-                        marginBottom: 8,
-                        background: '#fff',
-                        borderRadius: 6,
-                        border: '1px solid #e8e8e8',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                      }}
-                    >
-                      <div style={{ minWidth: 40, textAlign: 'center', color: '#999', fontSize: 12 }}>
-                        #{index + 1}
-                      </div>
-                      <div style={{ minWidth: 200, flex: 1 }}>
-                        <div style={{ fontWeight: 500, marginBottom: 4 }}>
-                          {u ? u.displayName : '未知用户'}
-                        </div>
-                        <div style={{ fontSize: 12, color: '#666' }}>
-                          {u ? u.email : uid}
-                        </div>
-                      </div>
-                      <div style={{ minWidth: 220 }}>
-                        <Select
-                          placeholder="选择雪茄型号"
-                          style={{ width: '100%' }}
-                          value={alloc?.cigarId}
-                          onChange={async (val) => {
-                            const current = (participantsEvent as any)?.allocations?.[uid]
-                            const quantity = current?.quantity || 1
-                            const amount = getCigarPriceById(val) * quantity
-                            const updated = { ...(participantsEvent as any).allocations, [uid]: { ...current, cigarId: val, amount } }
-                            setAllocSaving(uid)
-                            await updateDocument(COLLECTIONS.EVENTS, (participantsEvent as any).id, { allocations: updated } as any)
-                            const list = await getEvents();
-                            const next = list.find(e => e.id === (participantsEvent as any).id) as any
-                            setParticipantsEvent(next)
-                            setAllocSaving(null)
-                          }}
-                          options={cigars.map(c => ({ 
-                            label: `${c.name} (${c.size}) - ¥${c.price}`, 
-                            value: c.id 
-                          }))}
-                        />
-                      </div>
-                      <div style={{ minWidth: 100 }}>
-                        <InputNumber
-                          min={1}
-                          max={99}
-                          value={alloc?.quantity || 1}
-                          onChange={async (val) => {
-                            const current = (participantsEvent as any)?.allocations?.[uid] || {}
-                            const qty = Number(val) || 1
-                            const amount = getCigarPriceById(current?.cigarId) * qty
-                            const updated = { ...(participantsEvent as any).allocations, [uid]: { ...current, quantity: qty, amount } }
-                            setAllocSaving(uid)
-                            await updateDocument(COLLECTIONS.EVENTS, (participantsEvent as any).id, { allocations: updated } as any)
-                            const list = await getEvents();
-                            const next = list.find(e => e.id === (participantsEvent as any).id) as any
-                            setParticipantsEvent(next)
-                            setAllocSaving(null)
-                          }}
-                          style={{ width: '100%' }}
-                          addonAfter="支"
-                        />
-                      </div>
-                      <div style={{ minWidth: 120, textAlign: 'right' }}>
-                        <div style={{ fontSize: 16, fontWeight: 600, color: '#fa541c' }}>
-                          ¥{(() => {
-                            if (alloc?.amount != null) return alloc.amount
-                            const qty = alloc?.quantity || 1
-                            return getCigarPriceById(alloc?.cigarId) * qty
-                          })()}
-                        </div>
-                        {cigar && (
-                          <div style={{ fontSize: 12, color: '#999' }}>
-                            {cigar.name}
-                          </div>
-                        )}
-                      </div>
-                      <div style={{ minWidth: 60, textAlign: 'center' }}>
-                        {allocSaving === uid ? (
-                          <Spin size="small" />
-                        ) : (
-                          <CheckCircleOutlined style={{ color: '#52c41a' }} />
-                        )}
-                      </div>
-                    </div>
-                  )
-                })
-              )}
-            </div>
-          )}
+          <ParticipantsList
+            event={participantsEvent}
+            participantsUsers={participantsUsers}
+            cigars={cigars}
+            participantsLoading={participantsLoading}
+            allocSaving={allocSaving}
+            onEventUpdate={(updatedEvent) => {
+              setParticipantsEvent(updatedEvent)
+              setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e))
+            }}
+            onAllocSavingChange={setAllocSaving}
+            getCigarPriceById={getCigarPriceById}
+          />
         </div>
 
-        {/* 总金额汇总 */}
-        {(((participantsEvent as any)?.participants?.registered || []) as string[]).length > 0 && (
-          <div style={{ 
-            marginTop: 16, 
-            padding: 16, 
-            background: '#f6ffed', 
-            border: '1px solid #b7eb8f', 
-            borderRadius: 6,
-            textAlign: 'right'
-          }}>
-            <div style={{ fontSize: 18, fontWeight: 600, color: '#389e0d' }}>
-              总金额：¥{(() => {
-                const total = (((participantsEvent as any)?.participants?.registered || []) as string[]).reduce((sum, uid) => {
-                  const alloc = (participantsEvent as any)?.allocations?.[uid]
-                  if (alloc?.amount != null) return sum + alloc.amount
-                  const qty = alloc?.quantity || 1
-                  return sum + (getCigarPriceById(alloc?.cigarId) * qty)
-                }, 0)
-                return total
-              })()}
-            </div>
-            <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-              共 {(((participantsEvent as any)?.participants?.registered || []) as string[]).length} 位参与者
-            </div>
-          </div>
-        )}
+        <ParticipantsSummary
+          event={participantsEvent}
+          getCigarPriceById={getCigarPriceById}
+        />
       </Modal>
 
       {/* 创建/编辑 弹窗 */}
