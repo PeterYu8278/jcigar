@@ -94,7 +94,7 @@ const Register: React.FC = () => {
             >
               <Input
                 prefix={<MailOutlined />}
-                placeholder="邮箱地址（可选）"
+                placeholder="邮箱地址（选填）"
               />
             </Form.Item>
 

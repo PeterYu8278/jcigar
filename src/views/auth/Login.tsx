@@ -111,8 +111,25 @@ const Login: React.FC = () => {
             <Form.Item
               name="email"
               rules={[
-                { required: true, message: '请输入邮箱或手机号!' }
+                { required: true, message: '请输入邮箱或手机号!' },
+                {
+                  validator: (_, value) => {
+                    if (!value) return Promise.resolve()
+                    const v = String(value).trim()
+                    const isEmail = /.+@.+\..+/.test(v)
+                    const isPhone = /^\+?\d{7,15}$/.test(v)
+                    return (isEmail || isPhone) ? Promise.resolve() : Promise.reject(new Error('请输入有效的邮箱或手机号'))
+                  }
+                }
               ]}
+              getValueFromEvent={(e) => {
+                const raw = e?.target?.value ?? ''
+                // 如果不包含字母和 @，按手机号输入处理，保留数字和+
+                if (!/[a-zA-Z@]/.test(raw)) {
+                  return String(raw).replace(/[^\d+]/g, '')
+                }
+                return raw
+              }}
             >
               <Input
                 prefix={<UserOutlined style={{ color: '#ffd700' }} />}

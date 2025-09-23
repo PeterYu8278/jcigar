@@ -119,12 +119,6 @@ const AdminInventory: React.FC = () => {
 
   const columnsAll = [
     {
-      title: '产品ID',
-      dataIndex: 'id',
-      key: 'id',
-      width: 80,
-    },
-    {
       title: '雪茄名称',
       dataIndex: 'name',
       key: 'name',
@@ -181,33 +175,20 @@ const AdminInventory: React.FC = () => {
       title: '操作',
       key: 'action',
       render: (_: any, record: any) => (
-        <Space size="small">
-          <Button type="link" icon={<EditOutlined />} size="small" onClick={() => {
-            setEditing(record)
-            form.setFieldsValue({
-              name: record.name,
-              brand: record.brand,
-              origin: record.origin,
-              size: record.size,
-              strength: record.strength,
-              price: record.price,
-              stock: (record as any)?.inventory?.stock ?? 0,
-              minStock: (record as any)?.inventory?.minStock ?? 0,
-              reserved: (record as any)?.inventory?.reserved ?? 0,
-            })
-          }}>
-            编辑
-          </Button>
-          <Button type="link" size="small" onClick={() => { setAdjustingIn(record); adjForm.setFieldsValue({ quantity: 1, reason: '入库' }) }}>
-            入库
-          </Button>
-          <Button type="link" size="small" onClick={() => { setAdjustingOut(record); adjForm.setFieldsValue({ quantity: 1, reason: '出库' }) }}>
-            出库
-          </Button>
-          <Button type="link" danger icon={<DeleteOutlined />} size="small" onClick={() => setDeleting(record)}>
-            删除
-          </Button>
-        </Space>
+        <Button size="small" onClick={() => {
+          setEditing(record)
+          form.setFieldsValue({
+            name: record.name,
+            brand: record.brand,
+            origin: record.origin,
+            size: record.size,
+            strength: record.strength,
+            price: record.price,
+            stock: (record as any)?.inventory?.stock ?? 0,
+            minStock: (record as any)?.inventory?.minStock ?? 0,
+            reserved: (record as any)?.inventory?.reserved ?? 0,
+          })
+        }}>查看</Button>
       ),
     },
   ]
@@ -305,48 +286,41 @@ const AdminInventory: React.FC = () => {
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <Space>
-                  <Dropdown
-                    menu={{
-                      items: [
-                        {
-                          key: 'export',
-                          label: '导出 CSV',
-                          icon: <DownloadOutlined />,
-                          onClick: () => {
-                            const header = ['id','name','brand','origin','size','strength','price','stock','reserved','minStock']
-                            const rows = filtered.map((r: any) => [
-                              r.id, r.name, r.brand, r.origin, r.size, r.strength, r.price,
-                              r?.inventory?.stock ?? 0, r?.inventory?.reserved ?? 0, r?.inventory?.minStock ?? 0,
-                            ])
-                            const csv = [header.join(','), ...rows.map(r => r.map(x => `"${String(x ?? '').replace(/"/g,'""')}"`).join(','))].join('\n')
-                            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-                            const url = URL.createObjectURL(blob)
-                            const a = document.createElement('a')
-                            a.href = url
-                            a.download = 'inventory.csv'
-                            a.click()
-                            URL.revokeObjectURL(url)
-                          }
-                        },
-                        { type: 'divider', key: 'd1' },
-                        {
-                          key: 'columns',
-                          label: (
-                            <div style={{ padding: 8 }}>
-                              <div style={{ fontWeight: 500, marginBottom: 8 }}>列显示</div>
-                              {Object.keys(visibleCols).map((k) => (
-                                <div key={k} style={{ marginBottom: 4 }}>
-                                  <Checkbox checked={visibleCols[k] !== false} onChange={(e) => setVisibleCols(v => ({ ...v, [k]: e.target.checked }))}>{k}</Checkbox>
-                                </div>
-                              ))}
-                            </div>
-                          )
+                  {selectedRowKeys.length > 1 && (
+                    <>
+                      <Button onClick={async () => {
+                        setLoading(true)
+                        try {
+                          await Promise.all(selectedRowKeys.map(id => updateDocument(COLLECTIONS.CIGARS, String(id), { status: 'inactive' } as any)))
+                          message.success('已批量禁用')
+                          const list = await getCigars()
+                          setItems(list)
+                          setSelectedRowKeys([])
+                        } finally {
+                          setLoading(false)
                         }
-                      ]
-                    }}
-                  >
-                    <Button>更多</Button>
-                  </Dropdown>
+                      }}>批量禁用</Button>
+                      <Button danger onClick={() => {
+                        Modal.confirm({
+                          title: '批量删除确认',
+                          content: `确定删除选中的 ${selectedRowKeys.length} 个产品吗？`,
+                          okButtonProps: { danger: true },
+                          onOk: async () => {
+                            setLoading(true)
+                            try {
+                              await Promise.all(selectedRowKeys.map(id => deleteDocument(COLLECTIONS.CIGARS, String(id))))
+                              message.success('已批量删除')
+                              const list = await getCigars()
+                              setItems(list)
+                              setSelectedRowKeys([])
+                            } finally {
+                              setLoading(false)
+                            }
+                          }
+                        })
+                      }}>批量删除</Button>
+                    </>
+                  )}
                   <Button onClick={() => { setKeyword(''); setOriginFilter(undefined); setStrengthFilter(undefined); setStatusFilter(undefined); setSelectedRowKeys([]) }}>重置筛选</Button>
                   <Button type="primary" icon={<PlusOutlined />} onClick={() => { setCreating(true); form.resetFields() }}>
                     添加产品
@@ -473,7 +447,7 @@ const AdminInventory: React.FC = () => {
                   )}
                 </Form.List>
                 <Form.Item label="单号" name="referenceNo">
-                  <Input placeholder="请输入入库单号（可选）" />
+                  <Input placeholder="请输入入库单号（选填）" />
                 </Form.Item>
                 <Form.Item label="原因" name="reason">
                   <Input placeholder="例如：采购入库" />
@@ -515,8 +489,40 @@ const AdminInventory: React.FC = () => {
         title={editing ? '编辑产品' : '添加产品'}
         open={creating || !!editing}
         onCancel={() => { setCreating(false); setEditing(null) }}
-        onOk={() => form.submit()}
-        confirmLoading={loading}
+        footer={(
+          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+            <Space>
+              {editing && (
+                <>
+                  <Button danger onClick={() => {
+                    Modal.confirm({
+                      title: '删除产品',
+                      content: `确定删除产品 ${(editing as any)?.name || ''} 吗？`,
+                      okButtonProps: { danger: true },
+                      onOk: async () => {
+                        setLoading(true)
+                        try {
+                          const res = await deleteDocument(COLLECTIONS.CIGARS, (editing as any).id)
+                          if (res.success) {
+                            message.success('已删除')
+                            setItems(await getCigars())
+                            setEditing(null)
+                          }
+                        } finally {
+                          setLoading(false)
+                        }
+                      }
+                    })
+                  }}>删除</Button>
+                </>
+              )}
+            </Space>
+            <Space>
+              <Button onClick={() => { setCreating(false); setEditing(null) }}>取消</Button>
+              <Button type="primary" loading={loading} onClick={() => form.submit()}>确认</Button>
+            </Space>
+          </div>
+        )}
       >
         <Form form={form} layout="vertical" onFinish={async (values: any) => {
           setLoading(true)
@@ -623,7 +629,7 @@ const AdminInventory: React.FC = () => {
           </Form.Item>
           {adjustingIn && (
             <Form.Item label="单号" name="referenceNo">
-              <Input placeholder="请输入入库单号（可选）" />
+              <Input placeholder="请输入入库单号（选填）" />
             </Form.Item>
           )}
           <Form.Item label="原因" name="reason">

@@ -206,7 +206,7 @@ const AdminFinance: React.FC = () => {
               value={totalRevenue}
               prefix={<DollarOutlined />}
               valueStyle={{ color: '#3f8600' }}
-              suffix="CNY"
+              suffix="RM"
             />
           </Card>
         </Col>
@@ -217,7 +217,7 @@ const AdminFinance: React.FC = () => {
               value={totalExpenses}
               prefix={<ShoppingOutlined />}
               valueStyle={{ color: '#cf1322' }}
-              suffix="CNY"
+              suffix="RM"
             />
           </Card>
         </Col>
@@ -228,7 +228,7 @@ const AdminFinance: React.FC = () => {
               value={netProfit}
               prefix={netProfit >= 0 ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
               valueStyle={{ color: netProfit >= 0 ? '#3f8600' : '#cf1322' }}
-              suffix="CNY"
+              suffix="RM"
             />
           </Card>
         </Col>
@@ -271,6 +271,7 @@ const AdminFinance: React.FC = () => {
             value={currencyFilter}
             onChange={setCurrencyFilter}
           >
+            <Option value="RM">马币</Option>
             <Option value="CNY">人民币</Option>
             <Option value="USD">美元</Option>
           </Select>
@@ -390,8 +391,9 @@ const AdminFinance: React.FC = () => {
           <Form.Item label="金额" name="amount" rules={[{ required: true, message: '请输入金额' }]}>
             <InputNumber style={{ width: '100%' }} placeholder="输入金额" />
           </Form.Item>
-          <Form.Item label="货币" name="currency" rules={[{ required: true, message: '请选择货币' }]} initialValue="CNY">
+          <Form.Item label="货币" name="currency" rules={[{ required: true, message: '请选择货币' }]} initialValue="RM">
             <Select>
+              <Option value="RM">马币</Option>
               <Option value="CNY">人民币</Option>
               <Option value="USD">美元</Option>
             </Select>
@@ -400,10 +402,10 @@ const AdminFinance: React.FC = () => {
             <Input.TextArea rows={3} placeholder="输入交易描述" />
           </Form.Item>
           <Form.Item label="关联ID" name="relatedId">
-            <Input placeholder="关联的订单ID或活动ID（可选）" />
+            <Input placeholder="关联的订单ID或活动ID（选填）" />
           </Form.Item>
           <Form.Item label="用户ID" name="userId">
-            <Input placeholder="相关用户ID（可选）" />
+            <Input placeholder="相关用户ID（选填）" />
           </Form.Item>
         </Form>
       </Modal>

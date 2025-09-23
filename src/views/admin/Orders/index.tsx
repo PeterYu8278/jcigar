@@ -614,10 +614,10 @@ const AdminOrders: React.FC = () => {
           </Form.List>
 
           <Form.Item label="备注" name="note">
-            <Input placeholder="备注（可选）" />
+            <Input placeholder="备注（选填）" />
           </Form.Item>
           <Form.Item label="配送地址" name="address">
-            <Input placeholder="配送地址（可选）" />
+            <Input placeholder="配送地址（选填）" />
           </Form.Item>
           <Form.Item label="支付方式" name="paymentMethod" initialValue="bank_transfer">
             <Select>

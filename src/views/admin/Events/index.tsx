@@ -267,12 +267,6 @@ const AdminEvents: React.FC = () => {
 
   const columnsAll = [
     {
-      title: '活动ID',
-      dataIndex: 'id',
-      key: 'id',
-      width: 80,
-    },
-    {
       title: '活动名称',
       dataIndex: 'title',
       key: 'title',
@@ -350,6 +344,27 @@ const AdminEvents: React.FC = () => {
           {getStatusText(status)}
         </Tag>
       ),
+      filterIcon: (filtered: boolean) => (
+        <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />
+      ),
+      filterDropdown: (props: any) => {
+        const { setSelectedKeys, selectedKeys, confirm, clearFilters } = props as any
+        return (
+          <div style={{ padding: 8 }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 140 }}>
+              <Button size="small" type={(selectedKeys[0] === undefined) ? 'primary' : 'text'} onClick={() => { setSelectedKeys([]); clearFilters?.(); confirm({ closeDropdown: true }) }}>全部</Button>
+              <Button size="small" type={selectedKeys[0] === 'draft' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['draft']); confirm({ closeDropdown: true }) }}>草稿</Button>
+              <Button size="small" type={selectedKeys[0] === 'published' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['published']); confirm({ closeDropdown: true }) }}>已发布</Button>
+              <Button size="small" type={selectedKeys[0] === 'ongoing' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['ongoing']); confirm({ closeDropdown: true }) }}>进行中</Button>
+              <Button size="small" type={selectedKeys[0] === 'completed' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['completed']); confirm({ closeDropdown: true }) }}>已结束</Button>
+              <Button size="small" type={selectedKeys[0] === 'cancelled' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['cancelled']); confirm({ closeDropdown: true }) }}>已取消</Button>
+            </div>
+          </div>
+        )
+      },
+      onFilter: (value: any, record: any) => {
+        return !value || record.status === value
+      },
     },
     {
       title: '操作',
@@ -357,7 +372,6 @@ const AdminEvents: React.FC = () => {
       width: 100,
       render: (_: any, record: any) => (
         <Button type="link" icon={<EyeOutlined />} size="small" onClick={() => setViewing(record)}>
-          查看详情
           </Button>
       ),
     },
@@ -369,60 +383,41 @@ const AdminEvents: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Title level={2}>活动管理</Title>
         <Space>
-          <Dropdown
-            menu={{
-              items: [
-                {
-                  key: 'export',
-                  label: '导出 CSV',
-                  onClick: () => {
-                    const data = filtered
-                    const header = ['id','title','startDate','endDate','location.name','fee','maxParticipants','registered','status']
-                    const rows = data.map((e: any) => [
-                      e.id,
-                      e.title,
-                      e?.schedule?.startDate || '',
-                      e?.schedule?.endDate || '',
-                      e?.location?.name || '',
-                      e?.participants?.fee ?? 0,
-                      e?.participants?.maxParticipants ?? 0,
-                      (e?.participants?.registered || []).length,
-                      e.status,
-                    ])
-                    const csv = [header.join(','), ...rows.map(r => r.map(x => `"${String(x ?? '').replace(/"/g,'""')}"`).join(','))].join('\n')
-                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-                    const url = URL.createObjectURL(blob)
-                    const a = document.createElement('a')
-                    a.href = url
-                    a.download = 'events.csv'
-                    a.click()
-                    URL.revokeObjectURL(url)
-                  },
-                },
-                { type: 'divider', key: 'd1' },
-                {
-                  key: 'columns',
-                  label: (
-                    <div style={{ padding: 8 }}>
-                      <div style={{ fontWeight: 500, marginBottom: 8 }}>列显示</div>
-                      {Object.keys(visibleCols).map((k) => (
-                        <div key={k} style={{ marginBottom: 4 }}>
-                          <Checkbox
-                            checked={visibleCols[k] !== false}
-                            onChange={(e) => setVisibleCols(v => ({ ...v, [k]: e.target.checked }))}
-                          >
-                            {k}
-                          </Checkbox>
-                        </div>
-                      ))}
-                    </div>
-                  ),
-                },
-              ],
-            }}
-          >
-            <Button>更多</Button>
-          </Dropdown>
+          {selectedRowKeys.length > 1 && (
+            <>
+              <Button onClick={async () => {
+                setLoading(true)
+                try {
+                  await Promise.all(selectedRowKeys.map(id => updateDocument(COLLECTIONS.EVENTS, String(id), { status: 'cancelled' } as any)))
+                  message.success('已批量取消')
+                  const list = await getEvents()
+                  setEvents(list)
+                  setSelectedRowKeys([])
+                } finally {
+                  setLoading(false)
+                }
+              }}>批量取消</Button>
+              <Button danger onClick={() => {
+                Modal.confirm({
+                  title: '批量删除确认',
+                  content: `确定删除选中的 ${selectedRowKeys.length} 个活动吗？`,
+                  okButtonProps: { danger: true },
+                  onOk: async () => {
+                    setLoading(true)
+                    try {
+                      await Promise.all(selectedRowKeys.map(id => deleteDocument(COLLECTIONS.EVENTS, String(id))))
+                      message.success('已批量删除')
+                      const list = await getEvents()
+                      setEvents(list)
+                      setSelectedRowKeys([])
+                    } finally {
+                      setLoading(false)
+                    }
+                  }
+                })
+              }}>批量删除</Button>
+            </>
+          )}
           <Button onClick={() => { setKeyword(''); setStatusFilter(undefined); setSelectedRowKeys([]) }}>重置筛选</Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => { setCreating(true); form.resetFields() }}>
           创建活动
@@ -441,13 +436,7 @@ const AdminEvents: React.FC = () => {
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
           />
-          <Select placeholder="选择状态" style={{ width: 120 }} allowClear value={statusFilter} onChange={setStatusFilter}>
-            <Option value="draft">草稿</Option>
-            <Option value="published">已发布</Option>
-            <Option value="ongoing">进行中</Option>
-            <Option value="completed">已结束</Option>
-            <Option value="cancelled">已取消</Option>
-          </Select>
+          
           <DatePicker placeholder="开始日期" />
           <DatePicker placeholder="结束日期" />
           <Button type="primary" icon={<SearchOutlined />}>
@@ -467,41 +456,6 @@ const AdminEvents: React.FC = () => {
         rowKey="id"
         loading={loading}
         rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
-        title={() => (
-          <Space>
-            <Button disabled={selectedRowKeys.length === 0} onClick={async () => {
-              setLoading(true)
-              try {
-                await Promise.all(selectedRowKeys.map(id => updateDocument<Event>(COLLECTIONS.EVENTS, String(id), { status: 'cancelled' } as any)))
-                message.success('已批量设置为取消')
-                const list = await getEvents()
-                setEvents(list)
-                setSelectedRowKeys([])
-              } finally {
-                setLoading(false)
-              }
-            }}>批量取消</Button>
-            <Button danger disabled={selectedRowKeys.length === 0} onClick={() => {
-              Modal.confirm({
-                title: '批量删除确认',
-                content: `确定删除选中的 ${selectedRowKeys.length} 个活动吗？`,
-                okButtonProps: { danger: true },
-                onOk: async () => {
-                  setLoading(true)
-                  try {
-                    await Promise.all(selectedRowKeys.map(id => deleteDocument(COLLECTIONS.EVENTS, String(id))))
-                    message.success('已批量删除')
-                    const list = await getEvents()
-                    setEvents(list)
-                    setSelectedRowKeys([])
-                  } finally {
-                    setLoading(false)
-                  }
-                }
-              })
-            }}>批量删除</Button>
-          </Space>
-        )}
         pagination={{
           total: events.length,
           pageSize: 10,

@@ -112,7 +112,7 @@ export interface Transaction {
   id: string;
   type: 'sale' | 'purchase' | 'event_fee' | 'refund';
   amount: number;
-  currency: 'CNY' | 'USD';
+  currency: 'RM' | 'USD' | 'CNY';
   description: string;
   relatedId?: string; // order ID or event ID
   userId?: string;

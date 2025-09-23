@@ -107,7 +107,12 @@ const MobileBottomNav: React.FC = () => {
     if (path === '/') {
       return location.pathname === '/'
     }
-    return location.pathname.startsWith(path)
+    // 父级路由如 '/admin' 仅在完全匹配时高亮，避免与其子路由同时高亮
+    if (path === '/admin') {
+      return location.pathname === '/admin'
+    }
+    // 其他项：精确匹配或以 path/ 开头（避免 '/admin' 命中 '/adminX'）
+    return location.pathname === path || location.pathname.startsWith(path + '/')
   }
 
   return (

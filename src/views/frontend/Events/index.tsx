@@ -134,7 +134,7 @@ const Events: React.FC = () => {
                       </Text>
                     </Space>
                     
-                    {/* 可选：结束时间展示 */}
+                    {/* 选填：结束时间展示 */}
                     
                     <Space>
                       <EnvironmentOutlined />
