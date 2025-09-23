@@ -46,20 +46,34 @@ const Events: React.FC = () => {
   }
 
   return (
-    <div style={{ padding: '24px' }}>
-      <Title level={2}>聚会活动</Title>
-      <Paragraph type="secondary">
-        参与我们的雪茄聚会活动，与同好分享品鉴心得
-      </Paragraph>
+    <div style={{ padding: '0' }}>
+      <div style={{ marginBottom: 20, padding: '0 4px' }}>
+        <Title level={2} style={{ marginBottom: 8 }}>聚会活动</Title>
+        <Paragraph type="secondary" style={{ fontSize: 'clamp(13px, 3vw, 15px)', marginBottom: 0 }}>
+          参与我们的雪茄聚会活动，与同好分享品鉴心得
+        </Paragraph>
+      </div>
 
       <Row gutter={[16, 16]}>
         {events.map((event) => (
-          <Col span={8} key={event.id}>
+          <Col xs={24} sm={12} lg={8} key={event.id}>
             <Card
+              className="cigar-card"
               hoverable
               cover={
-                <div style={{ height: 200, background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <CalendarOutlined style={{ fontSize: '48px', color: '#ccc' }} />
+                <div style={{ 
+                  height: 'clamp(150px, 25vw, 200px)', 
+                  background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.9) 0%, rgba(45, 45, 45, 0.8) 100%)', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  border: '1px solid rgba(255, 215, 0, 0.2)'
+                }}>
+                  <CalendarOutlined style={{ 
+                    fontSize: 'clamp(36px, 8vw, 48px)', 
+                    color: 'rgba(255, 215, 0, 0.6)',
+                    filter: 'drop-shadow(0 0 8px rgba(255, 215, 0, 0.3))'
+                  }} />
                 </div>
               }
               actions={[
@@ -67,6 +81,16 @@ const Events: React.FC = () => {
                   type="primary" 
                   disabled={event.status === 'completed' || !user}
                   loading={loadingId === event.id}
+                  block
+                  style={{
+                    height: '44px',
+                    background: 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: '#0a0a0a',
+                    fontWeight: 600,
+                    fontSize: '14px'
+                  }}
                   onClick={async () => {
                     if (!user) {
                       message.info('请先登录后再报名')
@@ -110,58 +134,94 @@ const Events: React.FC = () => {
             >
               <Card.Meta
                 title={
-                  <Space>
-                    {event.title}
-                    <Tag color={getStatusColor(event.status)}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <Text strong style={{ fontSize: 'clamp(14px, 3.5vw, 16px)', lineHeight: 1.3 }}>
+                      {event.title}
+                    </Text>
+                    <Tag 
+                      color={getStatusColor(event.status)}
+                      style={{ 
+                        fontSize: '11px', 
+                        padding: '2px 6px',
+                        alignSelf: 'flex-start'
+                      }}
+                    >
                       {getStatusText(event.status)}
                     </Tag>
-                  </Space>
+                  </div>
                 }
                 description={
                   <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                    <Paragraph ellipsis={{ rows: 2 }}>
+                    <Paragraph 
+                      ellipsis={{ rows: 2 }}
+                      style={{ 
+                        fontSize: 'clamp(12px, 2.8vw, 14px)', 
+                        lineHeight: 1.4, 
+                        marginBottom: 12 
+                      }}
+                    >
                       {event.description}
                     </Paragraph>
                     
-                    <Space>
-                      <CalendarOutlined />
-                      <Text>
-                        {(() => {
-                          const d = (event as any)?.schedule?.startDate as any
-                          const dateVal = (d as any)?.toDate ? (d as any).toDate() : d
-                          return dateVal ? new Date(dateVal).toLocaleDateString() : '-'
-                        })()}
-                      </Text>
-                    </Space>
+                    <div style={{ display: 'grid', gap: '8px' }}>
+                      <Space size="small">
+                        <CalendarOutlined style={{ color: '#ffd700', fontSize: '14px' }} />
+                        <Text style={{ fontSize: '12px', color: '#c0c0c0' }}>
+                          {(() => {
+                            const d = (event as any)?.schedule?.startDate as any
+                            const dateVal = (d as any)?.toDate ? (d as any).toDate() : d
+                            return dateVal ? new Date(dateVal).toLocaleDateString() : '-'
+                          })()}
+                        </Text>
+                      </Space>
+                      
+                      <Space size="small">
+                        <EnvironmentOutlined style={{ color: '#ffd700', fontSize: '14px' }} />
+                        <Text style={{ fontSize: '12px', color: '#c0c0c0' }}>
+                          {(event as any)?.location?.name || '-'}
+                        </Text>
+                      </Space>
+                      
+                      <Space size="small">
+                        <DollarOutlined style={{ color: '#ffd700', fontSize: '14px' }} />
+                        <Text strong style={{ fontSize: '12px', color: '#ffd700' }}>
+                          ¥{(event as any)?.participants?.fee ?? 0}
+                        </Text>
+                      </Space>
+                      
+                      <Space size="small">
+                        <TeamOutlined style={{ color: '#ffd700', fontSize: '14px' }} />
+                        <Text style={{ fontSize: '12px', color: '#c0c0c0' }}>
+                          {(() => {
+                            const reg = (event as any)?.participants?.registered || []
+                            const max = (event as any)?.participants?.maxParticipants || 0
+                            return `${reg.length}/${max} 人`
+                          })()}
+                        </Text>
+                      </Space>
+                    </div>
                     
-                    {/* 可选：结束时间展示 */}
-                    
-                    <Space>
-                      <EnvironmentOutlined />
-                      <Text>{(event as any)?.location?.name || '-'}</Text>
-                    </Space>
-                    
-                    <Space>
-                      <DollarOutlined />
-                      <Text strong>¥{(event as any)?.participants?.fee ?? 0}</Text>
-                    </Space>
-                    
-                    <Space>
-                      <TeamOutlined />
-                      <Text>
-                        {(() => {
-                          const reg = (event as any)?.participants?.registered || []
-                          const max = (event as any)?.participants?.maxParticipants || 0
-                          return `${reg.length}/${max} 人`
-                        })()}
-                      </Text>
-                    </Space>
-                    
-                    <div style={{ display: 'flex', alignItems: 'center', marginTop: 8 }}>
-                      <Avatar size="small" style={{ marginRight: 8 }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      marginTop: 12,
+                      paddingTop: 8,
+                      borderTop: '1px solid rgba(255, 215, 0, 0.1)'
+                    }}>
+                      <Avatar 
+                        size="small" 
+                        style={{ 
+                          marginRight: 8,
+                          background: 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)',
+                          color: '#0a0a0a',
+                          fontSize: '10px'
+                        }}
+                      >
                         {String((event as any)?.organizerId || '主').slice(0,1)}
                       </Avatar>
-                      <Text type="secondary">主办：{(event as any)?.organizerId || '-'}</Text>
+                      <Text type="secondary" style={{ fontSize: '11px' }}>
+                        主办：{(event as any)?.organizerId || '-'}
+                      </Text>
                     </div>
                   </Space>
                 }

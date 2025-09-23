@@ -78,11 +78,12 @@ const AppHeader: React.FC = () => {
       alignItems: 'center', 
       justifyContent: 'space-between',
       background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
-      padding: '0 24px',
+      padding: '0 clamp(12px, 4vw, 24px)',
       borderBottom: '2px solid #ffd700',
       boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
       position: 'relative',
-      zIndex: 1000
+      zIndex: 1000,
+      height: 'clamp(56px, 10vw, 64px)'
     }}>
       {/* 背景装饰 */}
       <div style={{
@@ -95,7 +96,7 @@ const AppHeader: React.FC = () => {
         pointerEvents: 'none'
       }} />
       
-      <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+      <div style={{ display: 'flex', alignItems: 'center', position: 'relative', flex: 1, minWidth: 0 }}>
         <Typography.Title 
           level={3} 
           style={{ 
@@ -105,8 +106,8 @@ const AppHeader: React.FC = () => {
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
             fontWeight: 700,
-            fontSize: '24px',
-            letterSpacing: '2px'
+            fontSize: 'clamp(18px, 5vw, 24px)',
+            letterSpacing: 'clamp(1px, 0.3vw, 2px)'
           }}
         >
           雪茄客
@@ -115,14 +116,14 @@ const AppHeader: React.FC = () => {
           <CrownOutlined 
             style={{ 
               color: '#ffd700', 
-              marginLeft: 8,
-              fontSize: '16px'
+              marginLeft: 6,
+              fontSize: 'clamp(14px, 3vw, 16px)'
             }} 
           />
         )}
       </div>
 
-      <Space size="middle" style={{ position: 'relative' }}>
+      <Space size="small" style={{ position: 'relative' }}>
         {/* 管理员视图切换按钮 - 仅在手机端显示 */}
         {isAdmin && (
           <Button 
@@ -131,39 +132,48 @@ const AppHeader: React.FC = () => {
             onClick={handleViewToggle}
             style={{ 
               color: isInAdminPanel ? '#ffd700' : '#c0c0c0',
-              fontSize: '18px',
+              fontSize: 'clamp(16px, 4vw, 18px)',
               border: isInAdminPanel ? '1px solid #ffd700' : '1px solid #333333',
-              borderRadius: '8px',
-              padding: '8px 12px'
+              borderRadius: '6px',
+              padding: 'clamp(6px, 2vw, 8px) clamp(8px, 2vw, 12px)',
+              minWidth: '36px',
+              height: '36px'
             }}
             className="hover-gold mobile-view-toggle"
             title={isInAdminPanel ? '切换到前端' : '切换到管理后台'}
           />
         )}
 
-        <Badge count={3} size="small" color="#ffd700">
-          <Button 
-            type="text" 
-            icon={<BellOutlined />}
-            style={{ 
-              color: '#c0c0c0',
-              fontSize: '18px'
-            }}
-            className="hover-gold"
-          />
-        </Badge>
-        
-        <Badge count={2} size="small" color="#ffd700">
-          <Button 
-            type="text" 
-            icon={<ShoppingCartOutlined />}
-            style={{ 
-              color: '#c0c0c0',
-              fontSize: '18px'
-            }}
-            className="hover-gold"
-          />
-        </Badge>
+        {/* 移动端隐藏通知和购物车图标 */}
+        <div className="desktop-header-icons">
+          <Badge count={3} size="small" color="#ffd700">
+            <Button 
+              type="text" 
+              icon={<BellOutlined />}
+              style={{ 
+                color: '#c0c0c0',
+                fontSize: '18px',
+                width: '40px',
+                height: '40px'
+              }}
+              className="hover-gold"
+            />
+          </Badge>
+          
+          <Badge count={2} size="small" color="#ffd700">
+            <Button 
+              type="text" 
+              icon={<ShoppingCartOutlined />}
+              style={{ 
+                color: '#c0c0c0',
+                fontSize: '18px',
+                width: '40px',
+                height: '40px'
+              }}
+              className="hover-gold"
+            />
+          </Badge>
+        </div>
         
         <Dropdown 
           menu={{ items: isAdmin ? adminMenuItems : userMenuItems }}
@@ -180,24 +190,38 @@ const AppHeader: React.FC = () => {
             <Avatar 
               src={user?.profile?.avatar} 
               icon={<UserOutlined />}
-              size="default"
+              size={window.innerWidth <= 768 ? 'default' : 'default'}
               style={{
                 border: '2px solid #ffd700',
-                background: 'linear-gradient(135deg, #2d2d2d 0%, #444444 100%)'
+                background: 'linear-gradient(135deg, #2d2d2d 0%, #444444 100%)',
+                width: 'clamp(32px, 8vw, 40px)',
+                height: 'clamp(32px, 8vw, 40px)'
               }}
             />
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+            <div 
+              style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'flex-start',
+                minWidth: 0
+              }}
+              className="header-user-info"
+            >
               <Text style={{ 
                 color: '#f8f8f8', 
                 fontWeight: 600,
-                fontSize: '14px'
+                fontSize: 'clamp(12px, 3vw, 14px)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                maxWidth: 'clamp(80px, 20vw, 120px)'
               }}>
                 {user?.displayName}
               </Text>
               {isAdmin && (
                 <Text style={{ 
                   color: '#ffd700', 
-                  fontSize: '12px',
+                  fontSize: 'clamp(10px, 2.5vw, 12px)',
                   fontWeight: 500
                 }}>
                   管理员

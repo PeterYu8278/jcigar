@@ -58,22 +58,22 @@ function App() {
         <Layout style={{ background: 'transparent' }}>
           {user && <AppSider />}
           <Layout style={{ 
-            padding: '0 24px 24px',
+            padding: 'clamp(12px, 3vw, 24px)',
             background: 'transparent'
           }}>
             <Content
               style={{
-                padding: 24,
+                padding: 'clamp(12px, 4vw, 24px)',
                 margin: 0,
                 minHeight: 280,
                 background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.8) 0%, rgba(45, 45, 45, 0.6) 100%)',
-                borderRadius: '16px',
+                borderRadius: 'clamp(12px, 3vw, 16px)',
                 border: '1px solid rgba(255, 215, 0, 0.1)',
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
                 backdropFilter: 'blur(10px)',
                 position: 'relative',
                 overflow: 'hidden',
-                paddingBottom: '90px' // 为底部导航留出空间
+                paddingBottom: 'clamp(70px, 15vw, 90px)' // 为底部导航留出空间
               }}
             >
               {/* 内容区域背景装饰 */}
