@@ -4,6 +4,7 @@ import { Layout } from 'antd'
 import AppHeader from './components/layout/AppHeader'
 import AppSider from './components/layout/AppSider'
 import AppFooter from './components/layout/AppFooter'
+import MobileBottomNav from './components/layout/MobileBottomNav'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import { useAuthStore } from './store/modules/auth'
 
@@ -71,7 +72,8 @@ function App() {
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
                 backdropFilter: 'blur(10px)',
                 position: 'relative',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                paddingBottom: '90px' // 为底部导航留出空间
               }}
             >
               {/* 内容区域背景装饰 */}
@@ -113,6 +115,9 @@ function App() {
             {user && <AppFooter />}
           </Layout>
         </Layout>
+        
+        {/* 手机端底部导航 */}
+        {user && <MobileBottomNav />}
       </Layout>
     </Router>
   )

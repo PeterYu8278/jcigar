@@ -246,6 +246,45 @@ a:hover {
     margin: 8px;
     border-radius: 8px;
   }
+
+  /* 手机端显示视图切换按钮 */
+  .mobile-view-toggle {
+    display: inline-flex !important;
+  }
+
+  /* 手机端显示底部导航 */
+  .mobile-bottom-nav {
+    display: flex !important;
+  }
+
+  /* 手机端隐藏侧边栏 */
+  .ant-layout-sider {
+    display: none !important;
+  }
+
+  /* 手机端隐藏桌面端页脚 */
+  .ant-layout-footer:not(.mobile-bottom-nav) {
+    display: none !important;
+  }
+
+  /* 手机端调整内容区域 */
+  .ant-layout-content {
+    margin-left: 0 !important;
+    padding: 16px !important;
+    padding-bottom: 90px !important; /* 为底部导航留出空间 */
+  }
+}
+
+@media (min-width: 769px) {
+  /* 桌面端隐藏视图切换按钮 */
+  .mobile-view-toggle {
+    display: none !important;
+  }
+
+  /* 桌面端隐藏底部导航 */
+  .mobile-bottom-nav {
+    display: none !important;
+  }
 }
 
 @media (max-width: 480px) {
@@ -257,4 +296,62 @@ a:hover {
     margin: 4px;
     border-radius: 6px;
   }
+
+  /* 小屏手机端优化 */
+  .mobile-view-toggle {
+    padding: 6px 10px !important;
+    font-size: 16px !important;
+  }
+
+  /* 小屏手机端底部导航优化 */
+  .mobile-bottom-nav {
+    height: 65px !important;
+    padding: 6px 12px !important;
+  }
+
+  .mobile-nav-item {
+    min-width: 50px !important;
+    padding: 6px 8px !important;
+  }
+
+  .mobile-nav-item .anticon {
+    font-size: 18px !important;
+  }
+
+  .mobile-nav-item div:last-child {
+    font-size: 10px !important;
+  }
+
+  /* 5个导航项的特殊优化 */
+  .mobile-bottom-nav[data-nav-count="5"] {
+    padding: 6px 8px !important;
+  }
+
+  .mobile-bottom-nav[data-nav-count="5"] .mobile-nav-item {
+    min-width: 45px !important;
+    padding: 6px 6px !important;
+  }
+
+  .mobile-bottom-nav[data-nav-count="5"] .mobile-nav-item div:last-child {
+    font-size: 9px !important;
+  }
+}
+
+/* 底部导航交互样式 */
+.mobile-nav-item:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 215, 0, 0.1) !important;
+  border-color: rgba(255, 215, 0, 0.2) !important;
+}
+
+.mobile-nav-item:active {
+  transform: translateY(0);
+}
+
+/* 底部导航徽章样式 */
+.mobile-bottom-nav .ant-badge-count {
+  background: #ffd700 !important;
+  color: #1a1a1a !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3) !important;
 }

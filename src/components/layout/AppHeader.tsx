@@ -7,20 +7,38 @@ import {
   LogoutOutlined,
   ShoppingCartOutlined,
   BellOutlined,
-  CrownOutlined
+  CrownOutlined,
+  HomeOutlined,
+  DashboardOutlined,
+  AppstoreOutlined
 } from '@ant-design/icons'
 import { useAuthStore } from '../../store/modules/auth'
 import { logoutUser } from '../../services/firebase/auth'
+import { useNavigate, useLocation } from 'react-router-dom'
 
 const { Header } = Layout
 const { Text } = Typography
 
 const AppHeader: React.FC = () => {
   const { user, isAdmin, logout } = useAuthStore()
+  const navigate = useNavigate()
+  const location = useLocation()
 
   const handleLogout = async () => {
     await logoutUser()
     logout()
+  }
+
+  // 判断当前是否在管理后台
+  const isInAdminPanel = location.pathname.startsWith('/admin')
+
+  // 视图切换处理函数
+  const handleViewToggle = () => {
+    if (isInAdminPanel) {
+      navigate('/') // 切换到前端
+    } else {
+      navigate('/admin') // 切换到管理后台
+    }
   }
 
   const userMenuItems = [
@@ -105,6 +123,24 @@ const AppHeader: React.FC = () => {
       </div>
 
       <Space size="middle" style={{ position: 'relative' }}>
+        {/* 管理员视图切换按钮 - 仅在手机端显示 */}
+        {isAdmin && (
+          <Button 
+            type="text" 
+            icon={isInAdminPanel ? <HomeOutlined /> : <DashboardOutlined />}
+            onClick={handleViewToggle}
+            style={{ 
+              color: isInAdminPanel ? '#ffd700' : '#c0c0c0',
+              fontSize: '18px',
+              border: isInAdminPanel ? '1px solid #ffd700' : '1px solid #333333',
+              borderRadius: '8px',
+              padding: '8px 12px'
+            }}
+            className="hover-gold mobile-view-toggle"
+            title={isInAdminPanel ? '切换到前端' : '切换到管理后台'}
+          />
+        )}
+
         <Badge count={3} size="small" color="#ffd700">
           <Button 
             type="text" 
