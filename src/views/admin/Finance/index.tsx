@@ -391,11 +391,11 @@ const AdminFinance: React.FC = () => {
           <Form.Item label="金额" name="amount" rules={[{ required: true, message: '请输入金额' }]}>
             <InputNumber style={{ width: '100%' }} placeholder="输入金额" />
           </Form.Item>
-          <Form.Item label="货币" name="currency" rules={[{ required: true, message: '请选择货币' }]} initialValue="RM">
+          <Form.Item label="Currency" name="currency" rules={[{ required: true, message: 'Please select currency' }]} initialValue="RM">
             <Select>
-              <Option value="RM">马币</Option>
-              <Option value="CNY">人民币</Option>
-              <Option value="USD">美元</Option>
+              <Option value="RM">Malaysian Ringgit</Option>
+              <Option value="CNY">Chinese Yuan</Option>
+              <Option value="USD">US Dollar</Option>
             </Select>
           </Form.Item>
           <Form.Item label="描述" name="description" rules={[{ required: true, message: '请输入描述' }]}>

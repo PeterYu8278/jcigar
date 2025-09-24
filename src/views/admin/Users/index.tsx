@@ -387,9 +387,9 @@ const AdminUsers: React.FC = () => {
               style={{ width: 160 }}
               onChange={(v) => setRoleFilter(v)}
             >
-            <Option value="admin">管理员</Option>
-            <Option value="member">会员</Option>
-            <Option value="guest">游客</Option>
+            <Option value="admin">Admin</Option>
+            <Option value="member">Member</Option>
+            <Option value="guest">Guest</Option>
           </Select>
             <Select
               allowClear
@@ -398,10 +398,10 @@ const AdminUsers: React.FC = () => {
               style={{ width: 160 }}
               onChange={(v) => setLevelFilter(v)}
             >
-            <Option value="bronze">青铜</Option>
-            <Option value="silver">白银</Option>
-            <Option value="gold">黄金</Option>
-            <Option value="platinum">铂金</Option>
+            <Option value="bronze">Bronze</Option>
+            <Option value="silver">Silver</Option>
+            <Option value="gold">Gold</Option>
+            <Option value="platinum">Platinum</Option>
           </Select>
             <Select
               allowClear
@@ -410,8 +410,8 @@ const AdminUsers: React.FC = () => {
               style={{ width: 160 }}
               onChange={(v) => setStatusFilter(v)}
             >
-            <Option value="active">活跃</Option>
-              <Option value="inactive">不活跃</Option>
+            <Option value="active">Active</Option>
+              <Option value="inactive">Inactive</Option>
           </Select>
           <Button type="primary" icon={<SearchOutlined />}>
             搜索

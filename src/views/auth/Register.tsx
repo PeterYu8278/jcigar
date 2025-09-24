@@ -19,7 +19,7 @@ const Register: React.FC = () => {
     phone: string;
   }) => {
     if (values.password !== values.confirmPassword) {
-      message.error('两次输入的密码不一致')
+      message.error('Passwords do not match')
       return
     }
 
@@ -27,13 +27,13 @@ const Register: React.FC = () => {
     try {
       const result = await registerUser(values.email || '', values.password, values.displayName, values.phone)
       if (result.success) {
-        message.success('注册成功！请登录')
+        message.success('Registration successful! Please log in')
         navigate('/login')
       } else {
-        message.error((result as any).error?.message || '注册失败')
+        message.error((result as any).error?.message || 'Registration failed')
       }
     } catch (error) {
-      message.error('注册失败，请重试')
+      message.error('Registration failed, please try again')
     } finally {
       setLoading(false)
     }
@@ -53,7 +53,7 @@ const Register: React.FC = () => {
             <Title level={2} style={{ color: '#1890ff', marginBottom: 8 }}>
               Gentleman Club
             </Title>
-            <Text type="secondary">创建您的账户，加入Gentleman Club社区</Text>
+            <Text type="secondary">Create your account and join the Gentleman Club community</Text>
           </div>
 
           <Form
@@ -64,60 +64,60 @@ const Register: React.FC = () => {
           >
             <Form.Item
               name="displayName"
-              rules={[{ required: true, message: '请输入您的姓名!' }]}
+              rules={[{ required: true, message: 'Please enter your name!' }]}
             >
               <Input
                 prefix={<UserOutlined />}
-                placeholder="姓名"
+                placeholder="Full Name"
               />
             </Form.Item>
 
             <Form.Item
               name="phone"
               rules={[
-                { required: true, message: '请输入手机号码!' },
-                { pattern: /^\+?\d{7,15}$/, message: '请输入有效的手机号(7-15位数字，可含+)' }
+                { required: true, message: 'Please enter phone number!' },
+                { pattern: /^\+?\d{7,15}$/, message: 'Please enter a valid phone number (7-15 digits, + allowed)' }
               ]}
               getValueFromEvent={(e) => e.target.value.replace(/[^\d+]/g, '')}
             >
               <Input
                 prefix={<UserOutlined />}
-                placeholder="手机号码"
+                placeholder="Phone Number"
               />
             </Form.Item>
 
             <Form.Item
               name="email"
               rules={[
-                { type: 'email', message: '请输入有效的邮箱地址!' }
+                { type: 'email', message: 'Please enter a valid email address!' }
               ]}
             >
               <Input
                 prefix={<MailOutlined />}
-                placeholder="邮箱地址（选填）"
+                placeholder="Email Address (Optional)"
               />
             </Form.Item>
 
             <Form.Item
               name="password"
               rules={[
-                { required: true, message: '请输入密码!' },
-                { min: 6, message: '密码至少6位!' }
+                { required: true, message: 'Please enter password!' },
+                { min: 6, message: 'Password must be at least 6 characters!' }
               ]}
             >
               <Input.Password
                 prefix={<LockOutlined />}
-                placeholder="密码"
+                placeholder="Password"
               />
             </Form.Item>
 
             <Form.Item
               name="confirmPassword"
-              rules={[{ required: true, message: '请确认密码!' }]}
+              rules={[{ required: true, message: 'Please confirm password!' }]}
             >
               <Input.Password
                 prefix={<LockOutlined />}
-                placeholder="确认密码"
+                placeholder="Confirm Password"
               />
             </Form.Item>
 
@@ -128,16 +128,16 @@ const Register: React.FC = () => {
                 loading={loading}
                 style={{ width: '100%' }}
               >
-                注册
+                Register
               </Button>
             </Form.Item>
           </Form>
 
           <div style={{ textAlign: 'center' }}>
             <Text type="secondary">
-              已有账户？{' '}
+              Already have an account?{' '}
               <Button type="link" onClick={() => navigate('/login')}>
-                立即登录
+                Login Now
               </Button>
             </Text>
           </div>

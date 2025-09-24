@@ -237,9 +237,9 @@ const AdminOrders: React.FC = () => {
   return (
     <div style={{ padding: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Title level={2}>订单管理</Title>
+        <Title level={2}>Order Management</Title>
         <Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => { setCreating(true); createForm.resetFields(); createForm.setFieldsValue({ items: [{ cigarId: undefined, quantity: 1 }], paymentMethod: 'bank_transfer' }) }}>手动创建订单</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => { setCreating(true); createForm.resetFields(); createForm.setFieldsValue({ items: [{ cigarId: undefined, quantity: 1 }], paymentMethod: 'bank_transfer' }) }}>Create Order Manually</Button>
           
           <Button onClick={() => { 
             setKeyword('')
@@ -248,7 +248,7 @@ const AdminOrders: React.FC = () => {
             setDateRange(null)
             setSelectedRowKeys([])
           }}>
-            重置筛选
+            Reset Filters
           </Button>
         </Space>
       </div>

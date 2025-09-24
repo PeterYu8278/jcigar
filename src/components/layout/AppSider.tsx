@@ -33,22 +33,22 @@ const AppSider: React.FC = () => {
     {
       key: '/',
       icon: <HomeOutlined />,
-      label: '首页',
+      label: 'Home',
     },
     {
       key: '/events',
       icon: <CalendarOutlined />,
-      label: '聚会活动',
+      label: 'Events',
     },
     {
       key: '/shop',
       icon: <ShoppingOutlined />,
-      label: '购买雪茄',
+      label: 'Buy Cigars',
     },
     {
       key: '/profile',
       icon: <UserOutlined />,
-      label: '个人档案',
+      label: 'Profile',
     },
   ]
 
@@ -57,32 +57,32 @@ const AppSider: React.FC = () => {
     {
       key: '/admin',
       icon: <DashboardOutlined />,
-      label: '仪表板',
+      label: 'Dashboard',
     },
     {
       key: '/admin/users',
       icon: <TeamOutlined />,
-      label: '用户管理',
+      label: 'User Management',
     },
     {
       key: '/admin/events',
       icon: <CalendarOutlined />,
-      label: '活动管理',
+      label: 'Event Management',
     },
     {
       key: '/admin/orders',
       icon: <ShoppingCartOutlined />,
-      label: '订单管理',
+      label: 'Order Management',
     },
     {
       key: '/admin/inventory',
       icon: <DatabaseOutlined />,
-      label: '库存管理',
+      label: 'Inventory Management',
     },
     {
       key: '/admin/finance',
       icon: <DollarOutlined />,
-      label: '财务管理',
+      label: 'Finance Management',
     },
   ]
 

@@ -21,13 +21,13 @@ const Login: React.FC = () => {
     try {
       const result = await loginWithEmailOrPhone(values.email, values.password)
       if (result.success) {
-        message.success('登录成功！')
+        message.success('Login successful!')
         navigate(from, { replace: true })
       } else {
-        message.error((result as any).error?.message || '登录失败')
+        message.error((result as any).error?.message || 'Login failed')
       }
     } catch (error) {
-      message.error('登录失败，请重试')
+      message.error('Login failed, please try again')
     } finally {
       setLoading(false)
     }
@@ -38,10 +38,10 @@ const Login: React.FC = () => {
     try {
       const res = await loginWithGoogle()
       if (res.success) {
-        message.success('已使用 Google 登录')
+        message.success('Logged in with Google')
         navigate(from, { replace: true })
       } else {
-        message.error((res as any).error?.message || 'Google 登录失败')
+        message.error((res as any).error?.message || 'Google login failed')
       }
     } finally {
       setLoading(false)
@@ -97,7 +97,7 @@ const Login: React.FC = () => {
               Gentleman Club
             </Title>
             <Text style={{ color: '#c0c0c0', fontSize: '16px' }}>
-              欢迎回来，请登录您的账户
+              Welcome back, please log in to your account
             </Text>
           </div>
 
@@ -111,14 +111,14 @@ const Login: React.FC = () => {
             <Form.Item
               name="email"
               rules={[
-                { required: true, message: '请输入邮箱或手机号!' },
+                { required: true, message: 'Please enter email or phone number!' },
                 {
                   validator: (_, value) => {
                     if (!value) return Promise.resolve()
                     const v = String(value).trim()
                     const isEmail = /.+@.+\..+/.test(v)
                     const isPhone = /^\+?\d{7,15}$/.test(v)
-                    return (isEmail || isPhone) ? Promise.resolve() : Promise.reject(new Error('请输入有效的邮箱或手机号'))
+                    return (isEmail || isPhone) ? Promise.resolve() : Promise.reject(new Error('Please enter a valid email or phone number'))
                   }
                 }
               ]}
@@ -133,7 +133,7 @@ const Login: React.FC = () => {
             >
               <Input
                 prefix={<UserOutlined style={{ color: '#ffd700' }} />}
-                placeholder="邮箱或手机号"
+                placeholder="Email or Phone Number"
                 style={{
                   background: 'rgba(45, 45, 45, 0.8)',
                   border: '1px solid #444444',
@@ -149,7 +149,7 @@ const Login: React.FC = () => {
             >
               <Input.Password
                 prefix={<LockOutlined style={{ color: '#ffd700' }} />}
-                placeholder="密码"
+                placeholder="Password"
                 style={{
                   background: 'rgba(45, 45, 45, 0.8)',
                   border: '1px solid #444444',
@@ -177,24 +177,24 @@ const Login: React.FC = () => {
                 }}
                 className="login-button"
               >
-                登录
+                Login
               </Button>
             </Form.Item>
 
-            <Divider style={{ color: '#c0c0c0' }}>或</Divider>
+            <Divider style={{ color: '#c0c0c0' }}>or</Divider>
             <Button
               icon={<GoogleOutlined />}
               onClick={onGoogle}
               loading={loading}
               style={{ width: '100%' }}
             >
-              使用 Google 登录
+              Login with Google
             </Button>
           </Form>
 
           <div style={{ textAlign: 'center', paddingBottom: '20px' }}>
             <Text style={{ color: '#999999' }}>
-              还没有账户？{' '}
+              Don't have an account?{' '}
               <Button 
                 type="link" 
                 onClick={() => navigate('/register')}
@@ -204,7 +204,7 @@ const Login: React.FC = () => {
                   padding: 0
                 }}
               >
-                立即注册
+                Register Now
               </Button>
             </Text>
           </div>

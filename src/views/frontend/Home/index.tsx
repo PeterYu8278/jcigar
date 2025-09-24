@@ -41,7 +41,7 @@ const Home: React.FC = () => {
     <div style={{ padding: '24px' }}>
       {/* 顶部标题栏 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0, color: '#f8f8f8' }}>首页</Title>
+        <Title level={4} style={{ margin: 0, color: '#f8f8f8' }}>Home</Title>
         <Button type="text" style={{ color: '#ffd700' }}>
           <svg fill="currentColor" width="22" height="22" viewBox="0 0 256 256" aria-hidden>
             <path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Z" />
@@ -84,10 +84,10 @@ const Home: React.FC = () => {
               fontWeight: 700,
               fontSize: '36px'
             }}>
-              欢迎来到Gentleman Club社区
+              Welcome to Gentleman Club Community
             </Title>
             <Paragraph style={{ color: '#c0c0c0', fontSize: '18px', marginBottom: 32, lineHeight: 1.8 }}>
-              探索世界顶级雪茄，参与专业聚会，与同好分享品鉴心得
+              Explore world-class cigars, join professional gatherings, and share tasting experiences with fellow enthusiasts
             </Paragraph>
           </Col>
           <Col span={8} style={{ textAlign: 'center' }}>
@@ -149,11 +149,11 @@ const Home: React.FC = () => {
               }} />
               <div>
                 <div style={{ color: '#ffffff', fontSize: 20, fontWeight: 700 }}>Ethan</div>
-                <div style={{ color: '#D4AF37', fontSize: 12, fontWeight: 700 }}>尊贵会员</div>
+                <div style={{ color: '#D4AF37', fontSize: 12, fontWeight: 700 }}>Premium Member</div>
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }}>会员编号</div>
+              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }}>Member ID</div>
               <div style={{ color: '#ffffff', fontSize: 16, fontWeight: 700, letterSpacing: 2 }}>C8888</div>
             </div>
           </div>
@@ -168,9 +168,9 @@ const Home: React.FC = () => {
       {/* 商品导航 */}
       <div style={{ marginTop: 32, marginBottom: 32 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <Title level={4} style={{ margin: 0, color: '#f8f8f8' }}>商品导航</Title>
+          <Title level={4} style={{ margin: 0, color: '#f8f8f8' }}>Product Navigation</Title>
           <Button type="link" style={{ color: '#ffd700', fontWeight: 600, paddingRight: 0 }}>
-            查看全部
+            View All
           </Button>
         </div>
         <Row gutter={[16, 16]}>
@@ -193,9 +193,9 @@ const Home: React.FC = () => {
       {/* 热门雪茄 - 横向滚动 */}
       <div style={{ marginBottom: 32 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <Title level={4} style={{ margin: '0 0 16px', color: '#f8f8f8' }}>热门雪茄</Title>
+          <Title level={4} style={{ margin: '0 0 16px', color: '#f8f8f8' }}>Popular Cigars</Title>
           <Button type="link" style={{ color: '#ffd700', fontWeight: 600, paddingRight: 0 }}>
-            查看全部
+            View All
           </Button>
         </div>
         <div style={{ display: 'flex', overflowX: 'auto', gap: 16, paddingBottom: 8 }}>
@@ -216,9 +216,9 @@ const Home: React.FC = () => {
       {/* 最新活动 列表（真实数据） */}
       <div style={{ marginBottom: 32 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <Title level={4} style={{ margin: '0 0 16px', color: '#f8f8f8' }}>最新活动</Title>
+          <Title level={4} style={{ margin: '0 0 16px', color: '#f8f8f8' }}>Latest Events</Title>
           <Button type="link" style={{ color: '#ffd700', fontWeight: 600, paddingRight: 0 }}>
-            查看全部
+            View All
           </Button>
         </div>
         {loadingEvents ? (
@@ -246,14 +246,14 @@ const Home: React.FC = () => {
                       )}
                     </div>
                     <Button type="primary" size="small" style={{ background: '#D4AF37', border: 'none', color: '#0a0a0a', fontWeight: 700 }} onClick={() => navigate('/events')}>
-                      报名
+                      Register
                     </Button>
                   </div>
                 )
               })
             ) : (
               <Card style={{ background: 'rgba(30,30,30,0.6)', borderRadius: 12, border: '1px solid rgba(255,215,0,0.2)', color: '#c0c0c0' }}>
-                暂无活动
+                No events available
               </Card>
             )}
           </Space>
@@ -262,13 +262,13 @@ const Home: React.FC = () => {
 
       {/* 快速导航 */}
       <div style={{ marginBottom: 8 }}>
-        <Title level={4} style={{ margin: '0 0 16px', color: '#f8f8f8' }}>快速导航</Title>
+        <Title level={4} style={{ margin: '0 0 16px', color: '#f8f8f8' }}>Quick Navigation</Title>
         <Row gutter={[16, 16]}>
           {[
-            { title: '预订活动', icon: <CalendarOutlined /> },
-            { title: '分店导航', icon: <TeamOutlined /> },
-            { title: '好友邀请', icon: <StarOutlined /> },
-            { title: '积分兑换', icon: <TrophyOutlined /> },
+            { title: 'Book Event', icon: <CalendarOutlined /> },
+            { title: 'Branch Locator', icon: <TeamOutlined /> },
+            { title: 'Friend Invite', icon: <StarOutlined /> },
+            { title: 'Points Exchange', icon: <TrophyOutlined /> },
           ].map((f) => (
             <Col xs={6} key={f.title}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, background: 'rgba(30,30,30,0.6)', borderRadius: 12, padding: 12, textAlign: 'center', border: '1px solid rgba(255,215,0,0.2)' }}>

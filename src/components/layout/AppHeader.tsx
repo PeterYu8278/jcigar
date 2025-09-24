@@ -45,12 +45,12 @@ const AppHeader: React.FC = () => {
     {
       key: 'profile',
       icon: <UserOutlined />,
-      label: '个人资料',
+      label: 'Profile',
     },
     {
       key: 'settings',
       icon: <SettingOutlined />,
-      label: '设置',
+      label: 'Settings',
     },
     {
       type: 'divider' as const,
@@ -58,7 +58,7 @@ const AppHeader: React.FC = () => {
     {
       key: 'logout',
       icon: <LogoutOutlined />,
-      label: '退出登录',
+      label: 'Logout',
       onClick: handleLogout,
     },
   ]
@@ -67,7 +67,7 @@ const AppHeader: React.FC = () => {
     {
       key: 'dashboard',
       icon: <CrownOutlined />,
-      label: '管理后台',
+      label: 'Admin Panel',
     },
     ...userMenuItems,
   ]
@@ -130,7 +130,7 @@ const AppHeader: React.FC = () => {
               padding: '8px 12px'
             }}
             className="hover-gold mobile-view-toggle"
-            title={isInAdminPanel ? '切换到前端' : '切换到管理后台'}
+            title={isInAdminPanel ? 'Switch to Frontend' : 'Switch to Admin Panel'}
           />
         )}
 
@@ -193,7 +193,7 @@ const AppHeader: React.FC = () => {
                   fontSize: '12px',
                   fontWeight: 500
                 }}>
-                  管理员
+                  Admin
                 </Text>
               )}
             </div>
