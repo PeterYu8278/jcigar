@@ -97,12 +97,12 @@ const AdminDashboard: React.FC = () => {
 
       </div>
 
-      <h1 style={{ fontSize: 22, fontWeight: 800,backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent' , paddingInline: 8, marginBottom: 12 }}>概况</h1>
+      <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', paddingInline: 8, marginBottom: 12 }}>概况</h1>
 
       {/* 三个概览卡片 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
         {[{label:'总会员数', value: totalUsers.toLocaleString()}, {label:'本月订单', value: monthlyOrders.toLocaleString()}, {label:'本月收入', value: `RM${monthlyRevenue.toLocaleString()}`}] .map((card, idx) => (
-          <div key={idx} style={{ borderRadius: 12, padding: 12, textAlign: 'center', background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)', border: '1px solid rgba(244,175,37,0.1)' }}>
+          <div key={idx} style={{ borderRadius: 12, padding: 12, textAlign: 'center', backgroundColor: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)', border: '1px solid rgba(244,175,37,0.1)' }}>
             <div style={{ fontSize: 12, color: '#A0A0A0' }}>{card.label}</div>
             <div style={{ marginTop: 6, fontSize: 24, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{card.value}</div>
           </div>
