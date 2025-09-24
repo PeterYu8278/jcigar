@@ -1,6 +1,6 @@
-// 首页组件 - 雪茄客黑金主题
-import React from 'react'
-import { Row, Col, Card, Typography, Button, Space, Statistic, Badge } from 'antd'
+// 首页组件 - Gentleman Club黑金主题
+import React, { useEffect, useState } from 'react'
+import { Row, Col, Card, Typography, Button, Space, Statistic, Badge, Spin } from 'antd'
 import { 
   CalendarOutlined, 
   ShoppingOutlined, 
@@ -14,12 +14,40 @@ import {
 const { Title, Paragraph, Text } = Typography
 
 import { useNavigate } from 'react-router-dom'
+import { getUpcomingEvents } from '../../../services/firebase/firestore'
+import type { Event } from '../../../types'
 
 const Home: React.FC = () => {
   const navigate = useNavigate()
+  const [events, setEvents] = useState<Event[]>([])
+  const [loadingEvents, setLoadingEvents] = useState<boolean>(false)
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoadingEvents(true)
+        const list = await getUpcomingEvents()
+        setEvents(Array.isArray(list) ? list : [])
+      } catch (e) {
+        setEvents([])
+      } finally {
+        setLoadingEvents(false)
+      }
+    }
+    load()
+  }, [])
   
   return (
     <div style={{ padding: '24px' }}>
+      {/* 顶部标题栏 */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <Title level={4} style={{ margin: 0, color: '#f8f8f8' }}>首页</Title>
+        <Button type="text" style={{ color: '#ffd700' }}>
+          <svg fill="currentColor" width="22" height="22" viewBox="0 0 256 256" aria-hidden>
+            <path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Z" />
+          </svg>
+        </Button>
+      </div>
       {/* 欢迎横幅 */}
       <Card 
         className="cigar-card"
@@ -45,6 +73,7 @@ const Home: React.FC = () => {
         
         <Row align="middle" style={{ position: 'relative', zIndex: 1 }}>
           <Col span={16}>
+          
             <Title level={1} style={{ 
               color: '#f8f8f8', 
               marginBottom: 16,
@@ -55,47 +84,11 @@ const Home: React.FC = () => {
               fontWeight: 700,
               fontSize: '36px'
             }}>
-              欢迎来到雪茄客社区
+              欢迎来到Gentleman Club社区
             </Title>
             <Paragraph style={{ color: '#c0c0c0', fontSize: '18px', marginBottom: 32, lineHeight: 1.8 }}>
               探索世界顶级雪茄，参与专业聚会，与同好分享品鉴心得
             </Paragraph>
-            <Space size="large">
-              <Button 
-                type="primary" 
-                size="large" 
-                icon={<CalendarOutlined />} 
-                onClick={() => navigate('/events')}
-                style={{
-                  height: '48px',
-                  background: 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)',
-                  border: 'none',
-                  borderRadius: '12px',
-                  color: '#0a0a0a',
-                  fontWeight: 600,
-                  boxShadow: '0 4px 20px rgba(255, 215, 0, 0.3)'
-                }}
-                className="home-button"
-              >
-                查看活动
-              </Button>
-              <Button 
-                size="large" 
-                icon={<ShoppingOutlined />} 
-                style={{ 
-                  height: '48px',
-                  background: 'rgba(255, 215, 0, 0.1)', 
-                  border: '2px solid rgba(255, 215, 0, 0.3)', 
-                  color: '#ffd700',
-                  borderRadius: '12px',
-                  fontWeight: 600
-                }}
-                onClick={() => navigate('/shop')}
-                className="home-button-secondary"
-              >
-                购买雪茄
-              </Button>
-            </Space>
           </Col>
           <Col span={8} style={{ textAlign: 'center' }}>
             <div style={{ position: 'relative' }}>
@@ -114,191 +107,180 @@ const Home: React.FC = () => {
             </div>
           </Col>
         </Row>
+        {/* 会员卡 UI */}
+      <div style={{
+        position: 'relative',
+        borderRadius: 20,
+        background: 'linear-gradient(145deg, #1A1A1A 0%, #0A0A0A 100%)',
+        border: '1px solid rgba(212, 175, 55, 0.25)',
+        overflow: 'hidden',
+        marginBottom: 32
+      }}>
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'radial-gradient(circle at 15% 25%, rgba(212,175,55,0.15), transparent 40%), radial-gradient(circle at 85% 75%, rgba(212,175,55,0.1), transparent 40%)'
+        }} />
+        <div style={{ position: 'relative', zIndex: 1, padding: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: '#ffffff', letterSpacing: 1 }}>Gentleman Club</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#D4AF37', letterSpacing: 2 }}>CIGAR CONNOISSEUR</div>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.9)', padding: 6, borderRadius: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.4)', border: '1px solid #e5e5e5' }}>
+              <img
+                alt="QR"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVJ9RVgiXPkTSwaLVtyY4Z62iTlHDeyRsNa19-pbVMhV4dGBqlH0gdC_scADusy1v2lXMReZKqH8beb8_M8GMA12D5_J8CZnhxq3enXKtnSw3zECg8Y_U3SNVPIJoDSAljWQmI-kI9H-50FfXknlf0QgMvQlC1u0zafr2bdpQZ43oCcPF1hQ4jeqq023InZMSfmHwg3OwJaU0bXCZ3ndo-2BZ8oSgMmbjXwfFe_94OMwl8jckSBvLjtyF_whbk41OUuhTyj9Dcqpw6"
+                style={{ width: 64, height: 64 }}
+              />
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{
+                width: 56,
+                height: 56,
+                borderRadius: '50%',
+                backgroundImage: 'url(https://lh3.googleusercontent.com/aida-public/AB6AXuDs5P-wl44y-z3P55qwZDWCSmApe-9yEsTNGmr02UNzEVBeCMwE7hIq_ikKnzQespBptCZg7RY1P5pvidROpLwXpyUdWETLOFTJYuGtSIN_2d53icCJctg5HZDPl5zRc3QfbeMOn0fl6RWLZplcDWF9frxhgWKf4-RKyNaQsWhBGRCkTAVvLMDnCcZUDGLg-c8YjnHcY8-gFFEmIaa-bHoz3lEcP-SgonuSLCTv4Fa7-_dYYF8uQ3H5a7nAxZocj7UyH0Jl9CAQQWET)',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                border: '2px solid #D4AF37',
+                boxShadow: '0 6px 16px rgba(0,0,0,0.5)'
+              }} />
+              <div>
+                <div style={{ color: '#ffffff', fontSize: 20, fontWeight: 700 }}>Ethan</div>
+                <div style={{ color: '#D4AF37', fontSize: 12, fontWeight: 700 }}>尊贵会员</div>
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }}>会员编号</div>
+              <div style={{ color: '#ffffff', fontSize: 16, fontWeight: 700, letterSpacing: 2 }}>C8888</div>
+            </div>
+          </div>
+        </div>
+      </div>
       </Card>
 
-      {/* 统计数据 */}
-      <Row gutter={[24, 24]} style={{ marginBottom: 32 }}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card className="cigar-card" style={{ textAlign: 'center' }}>
-            <Statistic
-              title={<Text style={{ color: '#c0c0c0' }}>活跃会员</Text>}
-              value={1128}
-              prefix={<TeamOutlined style={{ color: '#ffd700' }} />}
-              valueStyle={{ color: '#ffd700', fontSize: '28px', fontWeight: 700 }}
-              suffix={<Text style={{ color: '#999999' }}>人</Text>}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card className="cigar-card" style={{ textAlign: 'center' }}>
-            <Statistic
-              title={<Text style={{ color: '#c0c0c0' }}>本月活动</Text>}
-              value={15}
-              prefix={<CalendarOutlined style={{ color: '#ffd700' }} />}
-              valueStyle={{ color: '#ffd700', fontSize: '28px', fontWeight: 700 }}
-              suffix={<Text style={{ color: '#999999' }}>场</Text>}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card className="cigar-card" style={{ textAlign: 'center' }}>
-            <Statistic
-              title={<Text style={{ color: '#c0c0c0' }}>雪茄品种</Text>}
-              value={286}
-              prefix={<ShoppingOutlined style={{ color: '#ffd700' }} />}
-              valueStyle={{ color: '#ffd700', fontSize: '28px', fontWeight: 700 }}
-              suffix={<Text style={{ color: '#999999' }}>种</Text>}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card className="cigar-card" style={{ textAlign: 'center' }}>
-            <Statistic
-              title={<Text style={{ color: '#c0c0c0' }}>社区评分</Text>}
-              value={4.8}
-              precision={1}
-              prefix={<StarOutlined style={{ color: '#ffd700' }} />}
-              suffix={<Text style={{ color: '#999999' }}>/ 5.0</Text>}
-              valueStyle={{ color: '#ffd700', fontSize: '28px', fontWeight: 700 }}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      {/* 功能卡片 */}
-      <Row gutter={[24, 24]}>
-        <Col xs={24} lg={12}>
-          <Card
-            className="cigar-card"
-            title={
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <CalendarOutlined style={{ color: '#ffd700' }} />
-                <Text style={{ color: '#f8f8f8', fontSize: '18px', fontWeight: 600 }}>最新活动</Text>
-              </div>
-            }
-            extra={
-              <Button 
-                type="link" 
-                onClick={() => navigate('/events')}
-                style={{ color: '#ffd700', fontWeight: 600 }}
-              >
-                查看更多
-              </Button>
-            }
-            hoverable
-          >
-            <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <div style={{ position: 'relative', display: 'inline-block' }}>
-                <CalendarOutlined style={{ 
-                  fontSize: '64px', 
-                  color: '#ffd700', 
-                  marginBottom: 20,
-                  filter: 'drop-shadow(0 0 10px rgba(255, 215, 0, 0.3))'
-                }} />
-                <Badge 
-                  count="热门" 
-                  style={{ 
-                    backgroundColor: '#ffd700',
-                    color: '#0a0a0a',
-                    fontWeight: 600
-                  }}
-                  offset={[-10, 10]}
-                />
-              </div>
-              <Title level={3} style={{ color: '#f8f8f8', marginBottom: 16 }}>
-                古巴雪茄品鉴会
-              </Title>
-              <Paragraph style={{ color: '#c0c0c0', fontSize: '16px', marginBottom: 24 }}>
-                时间：2024年10月15日<br />
-                地点：上海雪茄俱乐部<br />
-                费用：¥200/人
-              </Paragraph>
-              <Button 
-                type="primary"
-                style={{
-                  height: '40px',
-                  background: 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: '#0a0a0a',
-                  fontWeight: 600,
-                  boxShadow: '0 4px 15px rgba(255, 215, 0, 0.3)'
-                }}
-                className="feature-button"
-              >
-                立即报名
-              </Button>
-            </div>
-          </Card>
-        </Col>
-        
-        <Col xs={24} lg={12}>
-          <Card
-            className="cigar-card"
-            title={
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <ShoppingOutlined style={{ color: '#ffd700' }} />
-                <Text style={{ color: '#f8f8f8', fontSize: '18px', fontWeight: 600 }}>热门雪茄</Text>
-              </div>
-            }
-            extra={
-              <Button 
-                type="link" 
-                onClick={() => navigate('/shop')}
-                style={{ color: '#ffd700', fontWeight: 600 }}
-              >
-                查看更多
-              </Button>
-            }
-            hoverable
-          >
-            <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <div style={{ position: 'relative', display: 'inline-block' }}>
-                <TrophyOutlined style={{ 
-                  fontSize: '64px', 
-                  color: '#ffd700', 
-                  marginBottom: 20,
-                  filter: 'drop-shadow(0 0 10px rgba(255, 215, 0, 0.3))'
-                }} />
-                <Badge 
-                  count="推荐" 
-                  style={{ 
-                    backgroundColor: '#ffd700',
-                    color: '#0a0a0a',
-                    fontWeight: 600
-                  }}
-                  offset={[-10, 10]}
-                />
-              </div>
-              <Title level={3} style={{ color: '#f8f8f8', marginBottom: 16 }}>
-                Cohiba Behike 52
-              </Title>
-              <Paragraph style={{ color: '#c0c0c0', fontSize: '16px', marginBottom: 24 }}>
-                产地：古巴<br />
-                强度：中等偏强<br />
-                价格：¥580
-              </Paragraph>
-              <Button 
-                type="primary"
-                style={{
-                  height: '40px',
-                  background: 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: '#0a0a0a',
-                  fontWeight: 600,
-                  boxShadow: '0 4px 15px rgba(255, 215, 0, 0.3)'
-                }}
-                className="feature-button"
-              >
-                立即购买
-              </Button>
-            </div>
-          </Card>
-        </Col>
-      </Row>
       
-    </div>
+
+      {/* 功能卡片 - 已移除旧“最新活动”卡片，改为下方新列表 */}
+
+      {/* 商品导航 */}
+      <div style={{ marginTop: 32, marginBottom: 32 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <Title level={4} style={{ margin: 0, color: '#f8f8f8' }}>商品导航</Title>
+          <Button type="link" style={{ color: '#ffd700', fontWeight: 600, paddingRight: 0 }}>
+            查看全部
+          </Button>
+        </div>
+        <Row gutter={[16, 16]}>
+          {[
+            { name: '高希霸', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBIu_k8y8X7w7V6U5T4S3R2Q1P0Z9Y8x8w8v8u8t8s8r8q8p7o7n7m7l7k7j_i_h_g' },
+            { name: '帕特加斯', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD7x7W6v6U5T4S3R2Q1P0Z9Y8x8w8v8u8t8s8r8q8p7o7n7m7l7k7j_i_h_g_f' },
+            { name: '蒙特', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCz8r7q6p5o4n3m2l1k0j_i_h_g_f_e_d_c_b_a_z_y_x_w_v_u_t_s_r_q_p_o' },
+            { name: '罗密欧', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD0l0k1j_i_h_g_f_e_d_c_b_a_z_y_x_w_v_u_t_s_r_q_p_o_n_m_l_k_j' },
+          ].map((b) => (
+            <Col xs={6} key={b.name} style={{ textAlign: 'center' }}>
+              <div style={{ width: 48, height: 48, borderRadius: 24, background: 'rgba(30,30,30,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px', border: '2px solid rgba(255,215,0,0.2)' }}>
+                <img src={b.img} alt={b.name} style={{ width: 36, height: 36, objectFit: 'contain' }} />
+              </div>
+              <div style={{ fontSize: 12, color: '#f0f0f0' }}>{b.name}</div>
+            </Col>
+          ))}
+        </Row>
+      </div>
+
+      {/* 热门雪茄 - 横向滚动 */}
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <Title level={4} style={{ margin: '0 0 16px', color: '#f8f8f8' }}>热门雪茄</Title>
+          <Button type="link" style={{ color: '#ffd700', fontWeight: 600, paddingRight: 0 }}>
+            查看全部
+          </Button>
+        </div>
+        <div style={{ display: 'flex', overflowX: 'auto', gap: 16, paddingBottom: 8 }}>
+          {[
+            { name: '高希霸 Behike', price: 'RM1,888', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDewnAUejRKwMqvfBd6D1XYCYb6e1bHT4EMa32ffMwOq2kYtoUtYiXbrhB-kvCwIHPPFLJ4xHP8DqJo2SjSxzCttrqZzb3n-Fj4J-OuBHbhbCXNKz1nadbvLMqAxZE6VFMVf0uEjrPuNz9nELRZRjhNZkZ_DigrNhgW5SwOQXiDpqxHqjCWHjyAecETKR7mAa5pg4-HuAuh6QKh-EEPpC69-ZrlqOxfIZqDvEWGyNJKBKgrRiUCB5K2Ze5epbRzTDtak-k_0AV6htej' },
+            { name: '帕特加斯 D系列', price: 'RM888', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBTLERvBearfV-iCSv2pYSL1EAVhlK4GHAHDfLzs8djn-3JCx0vE-dmdAvbntg22hzDsyYYMmPXHL8vBd-qksaR1EOC0RyitWSvwiWLGZLqAwljCF1xho4YPA8X7NKpkwWzlGwEFL3L9sWk4_BiMtb1FVYjgw8S9wewx3W69XLz5DOmcfJqGsvEwo3OjXZQyz8jyGhOt-hjq0CYwPymvNQsnaBvOXfuKNNJ2yYGHmZxfVN2vHnzPmUog8rOnpEr5A8qGjPQz1BDUlPc' },
+            { name: '蒙特 2号', price: 'RM998', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD9o8p7q6o5n4m3l2k1j0i-h_g_f_e_d_c_b_a_z_y_x_w_v_u_t_s_r_q_p_o_n_m_l' },
+          ].map((p) => (
+            <div key={p.name} style={{ flex: '0 0 160px', background: 'rgba(30,30,30,0.6)', borderRadius: 12, padding: 16, textAlign: 'center', border: '1px solid rgba(255,215,0,0.2)' }}>
+              <img src={p.img} alt={p.name} style={{ width: 96, height: 96, objectFit: 'contain', marginBottom: 8 }} />
+              <div style={{ fontWeight: 600, color: '#f8f8f8', fontSize: 14 }}>{p.name}</div>
+              <div style={{ color: '#D4AF37', fontWeight: 700, fontSize: 14 }}>{p.price}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 最新活动 列表（真实数据） */}
+      <div style={{ marginBottom: 32 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <Title level={4} style={{ margin: '0 0 16px', color: '#f8f8f8' }}>最新活动</Title>
+          <Button type="link" style={{ color: '#ffd700', fontWeight: 600, paddingRight: 0 }}>
+            查看全部
+          </Button>
+        </div>
+        {loadingEvents ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
+            <Spin />
+          </div>
+        ) : (
+          <Space direction="vertical" size={16} style={{ width: '100%' }}>
+            {events && events.length > 0 ? (
+              (events.slice(0, 5)).map((ev) => {
+                const name = (ev as any)?.name || (ev as any)?.title || '活动'
+                const start = (ev as any)?.schedule?.startDate
+                const dateObj = start?.toDate && typeof start.toDate === 'function' ? start.toDate() : (start ? new Date(start) : undefined)
+                const dateText = dateObj ? dateObj.toLocaleDateString() : ''
+                const desc = (ev as any)?.description || ''
+                const img = (ev as any)?.coverImage || (ev as any)?.banner || 'https://via.placeholder.com/160x160?text=Event'
+                return (
+                  <div key={ev.id} style={{ display: 'flex', gap: 16, alignItems: 'center', background: 'rgba(30,30,30,0.6)', padding: 16, borderRadius: 12, border: '1px solid rgba(255,215,0,0.2)' }}>
+                    <img src={img} alt={name} style={{ width: 80, height: 80, borderRadius: 8, objectFit: 'cover' }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, color: '#f8f8f8' }}>{name}</div>
+                      <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>{dateText}</div>
+                      {desc && (
+                        <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{desc}</div>
+                      )}
+                    </div>
+                    <Button type="primary" size="small" style={{ background: '#D4AF37', border: 'none', color: '#0a0a0a', fontWeight: 700 }} onClick={() => navigate('/events')}>
+                      报名
+                    </Button>
+                  </div>
+                )
+              })
+            ) : (
+              <Card style={{ background: 'rgba(30,30,30,0.6)', borderRadius: 12, border: '1px solid rgba(255,215,0,0.2)', color: '#c0c0c0' }}>
+                暂无活动
+              </Card>
+            )}
+          </Space>
+        )}
+      </div>
+
+      {/* 快速导航 */}
+      <div style={{ marginBottom: 8 }}>
+        <Title level={4} style={{ margin: '0 0 16px', color: '#f8f8f8' }}>快速导航</Title>
+        <Row gutter={[16, 16]}>
+          {[
+            { title: '预订活动', icon: <CalendarOutlined /> },
+            { title: '分店导航', icon: <TeamOutlined /> },
+            { title: '好友邀请', icon: <StarOutlined /> },
+            { title: '积分兑换', icon: <TrophyOutlined /> },
+          ].map((f) => (
+            <Col xs={6} key={f.title}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, background: 'rgba(30,30,30,0.6)', borderRadius: 12, padding: 12, textAlign: 'center', border: '1px solid rgba(255,215,0,0.2)' }}>
+                <div style={{ color: '#D4AF37', fontSize: 24 }}>{f.icon}</div>
+                <div style={{ fontSize: 12, color: '#f8f8f8', fontWeight: 600 }}>{f.title}</div>
+              </div>
+            </Col>
+          ))}
+        </Row>
+      </div>
+
+      </div>
   )
 }
 

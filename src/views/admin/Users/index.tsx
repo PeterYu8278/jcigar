@@ -1,6 +1,6 @@
 // 用户管理页面
 import React, { useEffect, useMemo, useState } from 'react'
-import { Table, Button, Tag, Space, Typography, Input, Select, message, Modal, Form, Switch, Dropdown, Checkbox, Row, Col } from 'antd'
+import { Table, Button, Tag, Space, Typography, Input, Select, message, Modal, Form, Switch, Dropdown, Checkbox, Row, Col, Spin } from 'antd'
 import { EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
 
 const { Title } = Typography
@@ -21,8 +21,10 @@ const AdminUsers: React.FC = () => {
   const [keyword, setKeyword] = useState('')
   const [roleFilter, setRoleFilter] = useState<string | undefined>()
   const [levelFilter, setLevelFilter] = useState<string | undefined>()
+  const [statusFilter, setStatusFilter] = useState<string | undefined>()
   const [statusMap, setStatusMap] = useState<Record<string, 'active' | 'inactive'>>({})
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
+  const [isMobile, setIsMobile] = useState<boolean>(false)
   const [visibleCols, setVisibleCols] = useState<Record<string, boolean>>(() => {
     const saved = localStorage.getItem('users.visibleCols')
     if (saved) {
@@ -52,6 +54,13 @@ const AdminUsers: React.FC = () => {
         setLoading(false)
       }
     })()
+  }, [])
+
+  useEffect(() => {
+    const update = () => setIsMobile(window.innerWidth < 768)
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
   }, [])
 
   const getRoleColor = (role: string) => {
@@ -201,9 +210,9 @@ const AdminUsers: React.FC = () => {
         const status = statusMap[record.id] || record.status || 'active'
         return (
           <Space>
-            <Tag color={getStatusColor(status)}>
-              {getStatusText(status)}
-            </Tag>
+        <Tag color={getStatusColor(status)}>
+          {getStatusText(status)}
+        </Tag>
             <Switch
               checked={status === 'active'}
               onChange={async (checked) => {
@@ -256,6 +265,43 @@ const AdminUsers: React.FC = () => {
   ]
   const columns = allColumns.filter(c => visibleCols[c.key as string] !== false)
 
+  const filteredUsers = useMemo(() => {
+    const kw = keyword.trim().toLowerCase()
+    return users.filter(u => {
+      const passKw = !kw || u.displayName?.toLowerCase().includes(kw) || (u.email || '').toLowerCase().includes(kw) || ((u as any)?.profile?.phone || '').includes(keyword.trim())
+      const passRole = !roleFilter || u.role === roleFilter
+      const passLevel = !levelFilter || u.membership?.level === levelFilter
+      const status = statusMap[u.id] || (u as any).status || 'active'
+      const passStatus = !statusFilter || status === statusFilter
+      return passKw && passRole && passLevel && passStatus
+    })
+  }, [users, keyword, roleFilter, levelFilter, statusFilter])
+
+  const groupedByInitial = useMemo(() => {
+    const groups: Record<string, User[]> = {}
+    for (const u of filteredUsers) {
+      const name = u.displayName || ''
+      const ch = name.trim().charAt(0).toUpperCase()
+      const key = ch && /[A-Z]/.test(ch) ? ch : '#'
+      if (!groups[key]) groups[key] = []
+      groups[key].push(u)
+    }
+    const sortedKeys = Object.keys(groups).sort()
+    return sortedKeys.map(k => ({ key: k, items: groups[k].sort((a, b) => (a.displayName || '').localeCompare(b.displayName || '')) }))
+  }, [filteredUsers])
+
+  const alphaIndex = useMemo(() => {
+    const letters = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i))
+    return [...letters, '#']
+  }, [])
+
+  const [alphaY, setAlphaY] = useState<number>(typeof window !== 'undefined' ? window.innerHeight / 2 : 300)
+
+  const maskPhone = (phone?: string) => {
+    if (!phone) return ''
+    return phone.replace(/(\d{3})\d+(\d{2})/, '$1****$2')
+  }
+
   // 持久化列显示设置
   useEffect(() => {
     try {
@@ -265,6 +311,7 @@ const AdminUsers: React.FC = () => {
 
   return (
     <div style={{ padding: '24px' }}>
+      {!isMobile && (
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Title level={2}>用户管理</Title>
         <Space>
@@ -316,11 +363,13 @@ const AdminUsers: React.FC = () => {
           form.resetFields()
         }}>
           添加用户
-          </Button>
+        </Button>
         </Space>
       </div>
+      )}
 
-      {/* 搜索和筛选 */}
+      {/* 桌面：搜索和筛选 */}
+      {!isMobile && (
       <div style={{ marginBottom: 16, padding: '16px', background: '#fafafa', borderRadius: '6px' }}>
         <Space size="middle" wrap>
           <Search
@@ -328,39 +377,248 @@ const AdminUsers: React.FC = () => {
             allowClear
             style={{ width: 300 }}
             prefix={<SearchOutlined />}
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-          />
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+            />
+            <Select
+              allowClear
+              placeholder="选择角色"
+              value={roleFilter}
+              style={{ width: 160 }}
+              onChange={(v) => setRoleFilter(v)}
+            >
+            <Option value="admin">管理员</Option>
+            <Option value="member">会员</Option>
+            <Option value="guest">游客</Option>
+          </Select>
+            <Select
+              allowClear
+              placeholder="选择等级"
+              value={levelFilter}
+              style={{ width: 160 }}
+              onChange={(v) => setLevelFilter(v)}
+            >
+            <Option value="bronze">青铜</Option>
+            <Option value="silver">白银</Option>
+            <Option value="gold">黄金</Option>
+            <Option value="platinum">铂金</Option>
+          </Select>
+            <Select
+              allowClear
+              placeholder="选择状态"
+              value={statusFilter}
+              style={{ width: 160 }}
+              onChange={(v) => setStatusFilter(v)}
+            >
+            <Option value="active">活跃</Option>
+              <Option value="inactive">不活跃</Option>
+          </Select>
           <Button type="primary" icon={<SearchOutlined />}>
             搜索
           </Button>
         </Space>
       </div>
+      )}
 
+      {/* 桌面：表格 */}
+      {!isMobile && (
       <Table
         columns={columns}
-        dataSource={users.filter(u => {
-          const kw = keyword.trim().toLowerCase()
-          const passKw = !kw || u.displayName?.toLowerCase().includes(kw) || u.email?.toLowerCase().includes(kw)
-          const passRole = !roleFilter || u.role === roleFilter
-          const passLevel = !levelFilter || u.membership?.level === levelFilter
-          return passKw && passRole && passLevel
-        })}
+          dataSource={filteredUsers}
         rowKey="id"
-        loading={loading}
-        rowSelection={{
-          selectedRowKeys,
-          onChange: setSelectedRowKeys,
-        }}
-        
+          loading={loading}
+          rowSelection={{
+            selectedRowKeys,
+            onChange: setSelectedRowKeys,
+          }}
         pagination={{
-          total: users.length,
+            total: filteredUsers.length,
           pageSize: 10,
           showSizeChanger: true,
           showQuickJumper: true,
           showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
         }}
       />
+      )}
+
+      {/* 移动端：列表视图 */}
+      {isMobile && (
+        <div>
+          {/* 顶部栏 */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <Title level={4} style={{ margin: 0, color: '#fff' }}>会员管理</Title>
+            <div style={{ width: 32 }} />
+          </div>
+          {/* 搜索框 */}
+          <div style={{ position: 'relative', marginBottom: 12 }}>
+            <Search
+              placeholder="搜索会员"
+              allowClear
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              style={{ width: '100%' }}
+              prefix={<SearchOutlined />}
+            />
+          </div>
+          {/* 筛选与添加 */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', overflowX: 'auto', paddingBottom: 8, marginBottom: 12 }}>
+            <Dropdown
+              menu={{
+                items: [
+                  { key: 'all', label: '全部' },
+                  { key: 'admin', label: '管理员' },
+                  { key: 'member', label: '会员' },
+                  { key: 'guest', label: '游客' },
+                ],
+                onClick: ({ key }) => setRoleFilter(key === 'all' ? undefined : (key as string)),
+              }}
+            >
+              <Button shape="round">
+                角色{roleFilter ? `：${getRoleText(roleFilter)}` : ''}
+              </Button>
+            </Dropdown>
+            <Dropdown
+              menu={{
+                items: [
+                  { key: 'all', label: '全部' },
+                  { key: 'bronze', label: '青铜' },
+                  { key: 'silver', label: '白银' },
+                  { key: 'gold', label: '黄金' },
+                  { key: 'platinum', label: '铂金' },
+                ],
+                onClick: ({ key }) => setLevelFilter(key === 'all' ? undefined : (key as string)),
+              }}
+            >
+              <Button shape="round">
+                等级{levelFilter ? `：${getMembershipText(levelFilter)}` : ''}
+              </Button>
+            </Dropdown>
+            <Dropdown
+              menu={{
+                items: [
+                  { key: 'all', label: '全部' },
+                  { key: 'active', label: '活跃' },
+                  { key: 'inactive', label: '不活跃' },
+                ],
+                onClick: ({ key }) => setStatusFilter(key === 'all' ? undefined : (key as string)),
+              }}
+            >
+              <Button shape="round">
+                状态{statusFilter ? `：${getStatusText(statusFilter)}` : ''}
+              </Button>
+            </Dropdown>
+            <div style={{ flex: 1 }} />
+            <Button type="primary" shape="round" icon={<PlusOutlined />} onClick={() => { setCreating(true); form.resetFields() }}>添加新用户</Button>
+          </div>
+
+          {loading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
+              <Spin />
+            </div>
+          ) : (
+            <div>
+              {groupedByInitial.map(group => (
+                <div key={group.key} id={`group-${group.key}`} style={{ marginBottom: 12 }}>
+                  <div style={{ color: '#f4af25', fontWeight: 600, marginBottom: 8 }}>{group.key}</div>
+                  {group.items.map((u) => {
+                    const status = statusMap[u.id] || (u as any).status || 'active'
+                    const level = u.membership?.level || 'bronze'
+                    return (
+                      <div key={u.id} style={{ borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', padding: 12, marginBottom: 8, backdropFilter: 'blur(6px)' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <div style={{ fontWeight: 700, color: '#f0f0f0' }}>{u.displayName || '-'}</div>
+                              <span style={{ borderRadius: 999, background: 'rgba(148,148,148,0.2)', padding: '2px 8px', fontSize: 12, color: '#ddd' }}>{getMembershipText(level)}</span>
+                            </div>
+                            <div style={{ marginTop: 4, fontSize: 12, color: '#aaa' }}>{maskPhone((u as any)?.profile?.phone)}</div>
+                            <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ width: 8, height: 8, borderRadius: 999, background: status === 'active' ? '#52c41a' : '#ff4d4f', display: 'inline-block' }} />
+                              <span style={{ fontSize: 12, color: '#ccc' }}>{getStatusText(status)}</span>
+                            </div>
+                          </div>
+                          <Button type="primary" onClick={() => {
+                            setEditing(u)
+                            form.setFieldsValue({
+                              displayName: u.displayName,
+                              email: u.email,
+                              role: u.role,
+                              level: u.membership?.level,
+                              phone: (u as any)?.profile?.phone,
+                            })
+                          }}>查看</Button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ))}
+              {groupedByInitial.length === 0 && (
+                <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>暂无数据</div>
+              )}
+              {/* 右侧字母索引（可拖动浮动） */}
+              <div
+                style={{
+                  position: 'fixed',
+                  right: 3,
+                  top: alphaY,
+                  transform: 'translateY(-30%)',
+                  padding: 6,
+                  zIndex: 1000,
+                  background: 'rgba(0,0,0,0.35)',
+                  border: '1px solid rgba(255,215,0,0.25)',
+                  borderRadius: 12,
+                  backdropFilter: 'blur(6px)',
+                  WebkitBackdropFilter: 'blur(6px)',
+                  boxShadow: '0 6px 20px rgba(0,0,0,0.25)'
+                }}
+                onTouchStart={(e) => {
+                  if (!e.touches || e.touches.length === 0) return
+                  const touch = e.touches[0]
+                  const vh = typeof window !== 'undefined' ? window.innerHeight : 800
+                  const min = 48
+                  const max = vh - 96
+                  const next = Math.max(min, Math.min(max, touch.clientY))
+                  setAlphaY(next)
+                }}
+                onTouchMove={(e) => {
+                  if (!e.touches || e.touches.length === 0) return
+                  const touch = e.touches[0]
+                  const vh = typeof window !== 'undefined' ? window.innerHeight : 800
+                  const min = 48
+                  const max = vh - 96
+                  const next = Math.max(min, Math.min(max, touch.clientY))
+                  setAlphaY(next)
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}>
+                  {alphaIndex.map(letter => {
+                    const enabled = groupedByInitial.some(g => g.key === letter)
+                    return (
+                      <a
+                        key={letter}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          const el = document.getElementById(`group-${letter}`)
+                          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        }}
+                        style={{
+                          color: enabled ? '#f4af25' : '#777',
+                          textDecoration: 'none',
+                          padding: '2px 4px',
+                          cursor: enabled ? 'pointer' : 'default',
+                        }}
+                      >
+                        {letter}
+                      </a>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 创建/编辑弹窗复用 */}
       <Modal

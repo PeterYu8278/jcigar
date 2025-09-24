@@ -1,10 +1,10 @@
 // 订单管理页面
 import React, { useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
-import { Table, Button, Tag, Space, Typography, Input, Select, DatePicker, message, Modal, Form, InputNumber, Switch, Dropdown, Checkbox, Descriptions } from 'antd'
+import { Table, Button, Tag, Space, Typography, Input, Select, DatePicker, message, Modal, Form, InputNumber, Switch, Descriptions } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, EyeOutlined, ShoppingOutlined } from '@ant-design/icons'
 import type { Order, User, Cigar } from '../../../types'
-import { getAllOrders, getUsers, getCigars, updateDocument, deleteDocument, COLLECTIONS, createDirectSaleOrder } from '../../../services/firebase/firestore'
+import { getAllOrders, getUsers, getCigars, updateDocument, deleteDocument, COLLECTIONS, createDirectSaleOrder, createDocument } from '../../../services/firebase/firestore'
 
 const { Title } = Typography
 const { Search } = Input
@@ -26,17 +26,7 @@ const AdminOrders: React.FC = () => {
   const [paymentFilter, setPaymentFilter] = useState<string | undefined>()
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null)
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
-  const [visibleCols, setVisibleCols] = useState<Record<string, boolean>>({
-    id: true,
-    userId: true,
-    items: true,
-    total: true,
-    status: true,
-    payment: true,
-    shipping: true,
-    createdAt: true,
-    action: true,
-  })
+  
 
   useEffect(() => {
     loadData()
@@ -114,7 +104,19 @@ const AdminOrders: React.FC = () => {
 
   const getUserInfo = (userId: string) => {
     const user = users.find(u => u.id === userId)
-    return user ? `${user.displayName} (${user.email})` : userId
+    if (!user) return userId
+    const name = user.displayName || user.email || user.id
+    const email = user.email || ''
+    return email ? `${name} (${email})` : name
+  }
+
+  const getUserName = (userId: string) => {
+    const user = users.find(u => u.id === userId)
+    return user ? (user.displayName || user.email || user.id) : userId
+  }
+  const getUserPhone = (userId: string) => {
+    const user = users.find(u => u.id === userId) as any
+    return user ? (user?.profile?.phone || '') : ''
   }
 
   const getCigarInfo = (cigarId: string) => {
@@ -140,7 +142,8 @@ const AdminOrders: React.FC = () => {
       key: 'userId',
       render: (userId: string) => (
         <div>
-          <div style={{ fontWeight: 'bold' }}>{getUserInfo(userId)}</div>
+          <div style={{ fontWeight: 'bold' }}>{getUserName(userId)}</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>{getUserPhone(userId) || '-'}</div>
         </div>
       ),
     },
@@ -168,7 +171,7 @@ const AdminOrders: React.FC = () => {
       key: 'total',
       render: (total: number) => (
         <span style={{ fontWeight: 'bold', color: '#1890ff' }}>
-          ¥{total.toFixed(2)}
+          RM{total.toFixed(2)}
         </span>
       ),
     },
@@ -216,7 +219,20 @@ const AdminOrders: React.FC = () => {
       ),
     },
   ]
-  const columns = columnsAll.filter(c => visibleCols[c.key as string] !== false)
+  const columns = columnsAll
+
+  const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
+  const [sortDesc, setSortDesc] = useState<boolean>(true)
+
+  const filteredSorted = useMemo(() => {
+    const list = [...filtered]
+    list.sort((a, b) => {
+      const ta = new Date(a.createdAt as any).getTime()
+      const tb = new Date(b.createdAt as any).getTime()
+      return sortDesc ? (tb - ta) : (ta - tb)
+    })
+    return list
+  }, [filtered, sortDesc])
 
   return (
     <div style={{ padding: '24px' }}>
@@ -224,58 +240,7 @@ const AdminOrders: React.FC = () => {
         <Title level={2}>订单管理</Title>
         <Space>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => { setCreating(true); createForm.resetFields(); createForm.setFieldsValue({ items: [{ cigarId: undefined, quantity: 1 }], paymentMethod: 'bank_transfer' }) }}>手动创建订单</Button>
-          <Dropdown
-            menu={{
-              items: [
-                {
-                  key: 'export',
-                  label: '导出 CSV',
-                  onClick: () => {
-                    const data = filtered
-                    const header = ['id','userId','total','status','payment.method','shipping.address','createdAt']
-                    const rows = data.map((order: Order) => [
-                      order.id,
-                      getUserInfo(order.userId),
-                      order.total,
-                      order.status,
-                      order.payment.method,
-                      order.shipping.address,
-                      dayjs(order.createdAt).format('YYYY-MM-DD HH:mm'),
-                    ])
-                    const csv = [header.join(','), ...rows.map(r => r.map(x => `"${String(x ?? '').replace(/"/g,'""')}"`).join(','))].join('\n')
-                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-                    const url = URL.createObjectURL(blob)
-                    const a = document.createElement('a')
-                    a.href = url
-                    a.download = 'orders.csv'
-                    a.click()
-                    URL.revokeObjectURL(url)
-                  },
-                },
-                { type: 'divider', key: 'd1' },
-                {
-                  key: 'columns',
-                  label: (
-                    <div style={{ padding: 8 }}>
-                      <div style={{ fontWeight: 500, marginBottom: 8 }}>列显示</div>
-                      {Object.keys(visibleCols).map((k) => (
-                        <div key={k} style={{ marginBottom: 4 }}>
-                          <Checkbox
-                            checked={visibleCols[k] !== false}
-                            onChange={(e) => setVisibleCols(v => ({ ...v, [k]: e.target.checked }))}
-                          >
-                            {k}
-                          </Checkbox>
-                        </div>
-                      ))}
-                    </div>
-                  ),
-                },
-              ],
-            }}
-          >
-            <Button>更多</Button>
-          </Dropdown>
+          
           <Button onClick={() => { 
             setKeyword('')
             setStatusFilter(undefined)
@@ -289,103 +254,202 @@ const AdminOrders: React.FC = () => {
       </div>
 
       {/* 搜索和筛选 */}
-      <div style={{ marginBottom: 16, padding: '16px', background: '#fafafa', borderRadius: '6px' }}>
-        <Space size="middle" wrap>
-          <Search
-            placeholder="搜索订单ID、用户姓名或邮箱"
-            allowClear
-            style={{ width: 300 }}
-            prefix={<SearchOutlined />}
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-          />
-          <Select placeholder="选择状态" style={{ width: 120 }} allowClear value={statusFilter} onChange={setStatusFilter}>
-            <Option value="pending">待确认</Option>
-            <Option value="confirmed">已确认</Option>
-            <Option value="shipped">已发货</Option>
-            <Option value="delivered">已送达</Option>
-            <Option value="cancelled">已取消</Option>
-          </Select>
-          <Select placeholder="支付方式" style={{ width: 120 }} allowClear value={paymentFilter} onChange={setPaymentFilter}>
-            <Option value="credit">信用卡</Option>
-            <Option value="paypal">PayPal</Option>
-            <Option value="bank_transfer">银行转账</Option>
-          </Select>
-          <DatePicker.RangePicker 
-            placeholder={['开始日期', '结束日期']}
-            value={dateRange}
-            onChange={setDateRange}
-          />
-          <Button type="primary" icon={<SearchOutlined />}>
-            搜索
-          </Button>
-        </Space>
-      </div>
-
-      <Table
-        columns={columns}
-        dataSource={filtered}
-        rowKey="id"
-        loading={loading}
-        rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
-        title={() => (
-          <Space>
-            <Button disabled={selectedRowKeys.length === 0} onClick={async () => {
-              setLoading(true)
-              try {
-                await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'confirmed' } as any)))
-                message.success('已批量确认')
-                loadData()
-                setSelectedRowKeys([])
-              } finally {
-                setLoading(false)
-              }
-            }}>
-              批量确认
-            </Button>
-            <Button disabled={selectedRowKeys.length === 0} onClick={async () => {
-              setLoading(true)
-              try {
-                await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'cancelled' } as any)))
-                message.success('已批量取消')
-                loadData()
-                setSelectedRowKeys([])
-              } finally {
-                setLoading(false)
-              }
-            }}>
-              批量取消
-            </Button>
-            <Button danger disabled={selectedRowKeys.length === 0} onClick={() => {
-              Modal.confirm({
-                title: '批量删除确认',
-                content: `确定删除选中的 ${selectedRowKeys.length} 个订单吗？`,
-                okButtonProps: { danger: true },
-                onOk: async () => {
-                  setLoading(true)
-                  try {
-                    await Promise.all(selectedRowKeys.map(id => deleteDocument(COLLECTIONS.ORDERS, String(id))))
-                    message.success('已批量删除')
-                    loadData()
-                    setSelectedRowKeys([])
-                  } finally {
-                    setLoading(false)
-                  }
-                }
-              })
-            }}>
-              批量删除
+      {!isMobile ? (
+        <div style={{ marginBottom: 16, padding: '16px', background: '#fafafa', borderRadius: '6px' }}>
+          <Space size="middle" wrap>
+            <Search
+              placeholder="搜索订单ID、用户姓名或邮箱"
+              allowClear
+              style={{ width: 300 }}
+              prefix={<SearchOutlined />}
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+            />
+            <Select placeholder="选择状态" style={{ width: 120 }} allowClear value={statusFilter} onChange={setStatusFilter}>
+              <Option value="pending">待确认</Option>
+              <Option value="confirmed">已确认</Option>
+              <Option value="shipped">已发货</Option>
+              <Option value="delivered">已送达</Option>
+              <Option value="cancelled">已取消</Option>
+            </Select>
+            <Select placeholder="支付方式" style={{ width: 120 }} allowClear value={paymentFilter} onChange={setPaymentFilter}>
+              <Option value="credit">信用卡</Option>
+              <Option value="paypal">PayPal</Option>
+              <Option value="bank_transfer">银行转账</Option>
+            </Select>
+            <DatePicker.RangePicker 
+              placeholder={['开始日期', '结束日期']}
+              value={dateRange}
+              onChange={setDateRange}
+            />
+            <Button type="primary" icon={<SearchOutlined />}>
+              搜索
             </Button>
           </Space>
-        )}
-        pagination={{
-          total: filtered.length,
-          pageSize: 10,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
-        }}
-      />
+        </div>
+      ) : (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ marginBottom: 8 }}>
+            <Search
+              placeholder="搜索订单ID、用户姓名或邮箱"
+              allowClear
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+            />
+          </div>
+          <div style={{ marginBottom: 8 }}>
+            <DatePicker.RangePicker
+              style={{ width: '100%' }}
+              placeholder={['开始日期', '结束日期']}
+              value={dateRange}
+              onChange={setDateRange}
+            />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+          <div style={{ position: 'relative', width: '48%' }}>
+            <Select
+              placeholder="全部状态"
+              allowClear
+              value={statusFilter}
+              onChange={setStatusFilter}
+              style={{ width: '100%' }}
+            >
+              <Option value="pending">处理中</Option>
+              <Option value="confirmed">已确认</Option>
+              <Option value="shipped">已发货</Option>
+              <Option value="delivered">已完成</Option>
+              <Option value="cancelled">已取消</Option>
+            </Select>
+          </div>
+          <div style={{ position: 'relative', width: '48%' }}>
+            <Select
+              placeholder="支付方式"
+              allowClear
+              value={paymentFilter}
+              onChange={setPaymentFilter}
+              style={{ width: '100%' }}
+            >
+              <Option value="bank_transfer">银行转账</Option>
+              <Option value="credit">信用卡</Option>
+              <Option value="paypal">PayPal</Option>
+            </Select>
+          </div>
+            <Button type="link" onClick={() => setSortDesc(v => !v)} style={{ color: '#f4af25', paddingInline: 6 }}>
+              排序
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {!isMobile ? (
+        <Table
+          columns={columns}
+          dataSource={filteredSorted}
+          rowKey="id"
+          loading={loading}
+          rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
+          title={() => (
+            <Space>
+              <Button disabled={selectedRowKeys.length === 0} onClick={async () => {
+                setLoading(true)
+                try {
+                  await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'confirmed' } as any)))
+                  message.success('已批量确认')
+                  loadData()
+                  setSelectedRowKeys([])
+                } finally {
+                  setLoading(false)
+                }
+              }}>
+                批量确认
+              </Button>
+              <Button disabled={selectedRowKeys.length === 0} onClick={async () => {
+                setLoading(true)
+                try {
+                  await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'delivered' } as any)))
+                  message.success('已批量标记送达')
+                  loadData()
+                  setSelectedRowKeys([])
+                } finally {
+                  setLoading(false)
+                }
+              }}>
+                批量送达
+              </Button>
+              <Button disabled={selectedRowKeys.length === 0} onClick={async () => {
+                setLoading(true)
+                try {
+                  await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'cancelled' } as any)))
+                  message.success('已批量取消')
+                  loadData()
+                  setSelectedRowKeys([])
+                } finally {
+                  setLoading(false)
+                }
+              }}>
+                批量取消
+              </Button>
+              <Button danger disabled={selectedRowKeys.length === 0} onClick={() => {
+                Modal.confirm({
+                  title: '批量删除确认',
+                  content: `确定删除选中的 ${selectedRowKeys.length} 个订单吗？`,
+                  okButtonProps: { danger: true },
+                  onOk: async () => {
+                    setLoading(true)
+                    try {
+                      await Promise.all(selectedRowKeys.map(id => deleteDocument(COLLECTIONS.ORDERS, String(id))))
+                      message.success('已批量删除')
+                      loadData()
+                      setSelectedRowKeys([])
+                    } finally {
+                      setLoading(false)
+                    }
+                  }
+                })
+              }}>
+                批量删除
+              </Button>
+            </Space>
+          )}
+          pagination={{
+            total: filteredSorted.length,
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
+          }}
+        />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {filteredSorted.map(order => (
+            <div key={order.id} style={{ border: '1px solid rgba(244,175,37,0.2)', borderRadius: 12, padding: 12, background: 'rgba(34,28,16,0.5)', backdropFilter: 'blur(10px)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>订单号: {order.id}</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>{dayjs(order.createdAt).format('YYYY-MM-DD')}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{getUserName(order.userId)}</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>{getUserPhone(order.userId) || '-'}</div>
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 600, color: getStatusColor(order.status) === 'green' ? '#34d399' : getStatusColor(order.status) === 'red' ? '#f87171' : getStatusColor(order.status) === 'orange' ? '#fb923c' : getStatusColor(order.status) === 'blue' ? '#60a5fa' : '#a78bfa' }}>
+                  {getStatusText(order.status)}
+                </span>
+              </div>
+              
+              <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                <div style={{ fontSize: 16, fontWeight: 800, color: '#f4af25' }}>RM {order.total.toFixed(2)}</div>
+                <Button type="primary" style={{ background: 'linear-gradient(145deg, #f4d03f, #d4af37)', color: '#221c10', boxShadow: '0 4px 15px rgba(244,175,37,0.4)', borderRadius: 9999 }} size="small" onClick={() => { setViewing(order); setIsEditingInView(false) }}>
+                  查看详情
+                </Button>
+              </div>
+            </div>
+          ))}
+          {filteredSorted.length === 0 && (
+            <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>暂无数据</div>
+          )}
+        </div>
+      )}
 
       {/* 查看订单详情 */}
       <Modal
@@ -407,7 +471,7 @@ const AdminOrders: React.FC = () => {
                     <Button danger onClick={async () => { await updateDocument(COLLECTIONS.ORDERS, viewing.id, { status: 'cancelled' } as any); message.success('订单已取消'); loadData() }}>取消订单</Button>
                   </>
                 )}
-                <Button type={isEditingInView ? 'default' : 'primary'} onClick={() => { setIsEditingInView(v => !v); form.setFieldsValue({ status: viewing.status, trackingNumber: viewing.shipping.trackingNumber || '' }) }}>{isEditingInView ? '完成' : '编辑'}</Button>
+                <Button type={isEditingInView ? 'default' : 'primary'} onClick={() => { setIsEditingInView(v => !v); form.setFieldsValue({ status: viewing.status, trackingNumber: viewing.shipping.trackingNumber || '', addItems: [{ cigarId: undefined, quantity: 1 }] }) }}>{isEditingInView ? '完成' : '编辑'}</Button>
                 <Button danger onClick={() => {
                   Modal.confirm({
                     title: '删除订单确认',
@@ -436,7 +500,7 @@ const AdminOrders: React.FC = () => {
               </Descriptions.Item>
               <Descriptions.Item label="总金额">
                 <span style={{ fontWeight: 'bold', color: '#1890ff' }}>
-                  ¥{viewing.total.toFixed(2)}
+                  RM{viewing.total.toFixed(2)}
                 </span>
               </Descriptions.Item>
               <Descriptions.Item label="支付方式">
@@ -480,12 +544,12 @@ const AdminOrders: React.FC = () => {
                     title: '单价',
                     dataIndex: 'price',
                     key: 'price',
-                    render: (price: number) => `¥${price.toFixed(2)}`,
+                    render: (price: number) => `RM${price.toFixed(2)}`,
                   },
                   {
                     title: '小计',
                     key: 'subtotal',
-                    render: (_, item) => `¥${(item.price * item.quantity).toFixed(2)}`,
+                    render: (_, item) => `RM${(item.price * item.quantity).toFixed(2)}`,
                   },
                 ]}
                 pagination={false}
@@ -498,8 +562,21 @@ const AdminOrders: React.FC = () => {
                   if (!viewing) return
                   setLoading(true)
                   try {
+                    // 处理新增商品
+                    const addLines: { cigarId: string; quantity: number }[] = (values.addItems || []).filter((it: any) => it?.cigarId && it?.quantity > 0)
+                    const cigarMap = new Map(cigars.map(c => [c.id, c]))
+                    const addItems = addLines.map(l => {
+                      const cg = cigarMap.get(l.cigarId)
+                      const price = (cg as any)?.price ?? 0
+                      return { cigarId: l.cigarId, quantity: Math.max(1, Math.floor(l.quantity || 1)), price }
+                    }) as any
+                    const mergedItems = [...(viewing.items || []), ...addItems]
+                    const newTotal = mergedItems.reduce((sum, it) => sum + (it.price || 0) * (it.quantity || 0), 0)
+
                     const updateData: Partial<Order> = {
                       status: values.status,
+                      items: mergedItems as any,
+                      total: newTotal,
                       shipping: {
                         ...viewing.shipping,
                         trackingNumber: values.trackingNumber,
@@ -507,6 +584,23 @@ const AdminOrders: React.FC = () => {
                     }
                     const res = await updateDocument<Order>(COLLECTIONS.ORDERS, viewing.id, updateData)
                     if (res.success) {
+                      // 同步库存出库与出库日志
+                      for (const it of addItems as any[]) {
+                        const cigar = cigarMap.get(it.cigarId) as any
+                        if (!cigar) continue
+                        const current = (cigar?.inventory?.stock ?? 0)
+                        const next = Math.max(0, current - (it.quantity || 0))
+                        await updateDocument(COLLECTIONS.CIGARS, cigar.id, { inventory: { ...cigar.inventory, stock: next } } as any)
+                        await createDocument(COLLECTIONS.INVENTORY_LOGS, {
+                          cigarId: cigar.id,
+                          type: 'out',
+                          quantity: it.quantity || 0,
+                          reason: '订单出库',
+                          referenceNo: viewing.id,
+                          operatorId: 'system',
+                          createdAt: new Date(),
+                        } as any)
+                      }
                       message.success('订单已更新')
                       loadData()
                     }
@@ -526,6 +620,44 @@ const AdminOrders: React.FC = () => {
                   <Form.Item label="运单号" name="trackingNumber">
                     <Input placeholder="输入运单号" />
                   </Form.Item>
+                  <Form.List name="addItems" initialValue={[{ cigarId: undefined, quantity: 1 }]}>
+                    {(fields, { add, remove }) => (
+                      <div>
+                        <Title level={5}>添加商品</Title>
+                        {fields.map((field) => (
+                          <Space key={`add-${field.key}`} align="baseline" style={{ display: 'flex', marginBottom: 8 }}>
+                            <Form.Item
+                              {...field}
+                              name={[field.name, 'cigarId']}
+                              fieldKey={[field.fieldKey!, 'cigarId'] as any}
+                              rules={[{ required: true, message: '请选择商品' }]}
+                              style={{ minWidth: 280 }}
+                            >
+                              <Select placeholder="请选择商品">
+                                {cigars.map(c => (
+                                  <Select.Option key={c.id} value={c.id}>{c.name} - RM{(c as any)?.price ?? 0}</Select.Option>
+                                ))}
+                              </Select>
+                            </Form.Item>
+                            <Form.Item
+                              {...field}
+                              name={[field.name, 'quantity']}
+                              fieldKey={[field.fieldKey!, 'quantity'] as any}
+                              rules={[{ required: true, message: '请输入数量' }]}
+                            >
+                              <InputNumber min={1} placeholder="数量" />
+                            </Form.Item>
+                            {fields.length > 1 && (
+                              <Button danger onClick={() => remove(field.name)}>移除</Button>
+                            )}
+                          </Space>
+                        ))}
+                        <Form.Item>
+                          <Button type="dashed" onClick={() => add({ quantity: 1 })} icon={<PlusOutlined />}>添加商品</Button>
+                        </Form.Item>
+                      </div>
+                    )}
+                  </Form.List>
                   <Form.Item>
                     <Space>
                       <Button type="primary" onClick={() => form.submit()} loading={loading}>保存</Button>
@@ -570,7 +702,7 @@ const AdminOrders: React.FC = () => {
           <Form.Item label="选择用户" name="userId" rules={[{ required: true, message: '请选择用户' }]}> 
             <Select showSearch placeholder="请选择用户">
               {users.map(u => (
-                <Select.Option key={u.id} value={u.id}>{u.displayName} ({u.email})</Select.Option>
+                <Select.Option key={u.id} value={u.id}>{u.displayName} ({u.profile?.phone})</Select.Option>
               ))}
             </Select>
           </Form.Item>
@@ -579,7 +711,7 @@ const AdminOrders: React.FC = () => {
             {(fields, { add, remove }) => (
               <div>
                 {fields.map((field) => (
-                  <Space key={field.key} align="baseline" style={{ display: 'flex', marginBottom: 8 }}>
+                  <Space key={`create-${field.key}`} align="baseline" style={{ display: 'flex', marginBottom: 8 }}>
                     <Form.Item
                       {...field}
                       name={[field.name, 'cigarId']}
@@ -589,7 +721,7 @@ const AdminOrders: React.FC = () => {
                     >
                       <Select placeholder="请选择商品">
                         {cigars.map(c => (
-                          <Select.Option key={c.id} value={c.id}>{c.name} - ¥{c.price}</Select.Option>
+                          <Select.Option key={c.id} value={c.id}>{c.name} - RM{c.price}</Select.Option>
                         ))}
                       </Select>
                     </Form.Item>

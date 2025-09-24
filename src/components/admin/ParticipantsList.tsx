@@ -96,7 +96,7 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                   onAllocSavingChange(null)
                 }}
                 options={cigars.map(c => ({ 
-                  label: `${c.name} (${c.size}) - ¥${c.price}`, 
+                  label: `${c.name} (${c.size}) - RM${c.price}`, 
                   value: c.id 
                 }))}
               />
@@ -122,7 +122,7 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
             </div>
             <div style={{ minWidth: 80, textAlign: 'right' }}>
               <div style={{ fontSize: 16, fontWeight: 600, color: '#fa541c' }}>
-                ¥{(() => {
+                RM{(() => {
                   if (allocation?.amount != null) return allocation.amount
                   const qty = allocation?.quantity || 1
                   return getCigarPriceById(allocation?.cigarId) * qty

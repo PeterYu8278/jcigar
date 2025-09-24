@@ -30,6 +30,7 @@ const { Content } = Layout
 
 function App() {
   const { user, isAdmin } = useAuthStore()
+  const isDesktop = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(min-width: 992px)').matches : true
 
   return (
     <Router>
@@ -58,17 +59,15 @@ function App() {
         <Layout style={{ background: 'transparent' }}>
           {user && <AppSider />}
           <Layout style={{ 
-            padding: '0 24px 24px',
-            background: 'transparent'
+            background: 'transparent',
+            marginLeft: user && isDesktop ? 240 : 0
           }}>
             <Content
               style={{
                 padding: 24,
                 margin: 0,
                 minHeight: 280,
-                background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.8) 0%, rgba(45, 45, 45, 0.6) 100%)',
-                borderRadius: '16px',
-                border: '1px solid rgba(255, 215, 0, 0.1)',
+                background: 'radial-gradient(ellipse at top, #3c2f1a, #121212)' ,
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
                 backdropFilter: 'blur(10px)',
                 position: 'relative',

@@ -1,4 +1,4 @@
-// 雪茄客黑金主题配置
+// Gentleman Club黑金主题配置
 import type { ThemeConfig } from 'antd'
 
 export const cigarTheme: ThemeConfig = {

@@ -1,4 +1,4 @@
-// 应用侧边栏组件 - 雪茄客黑金主题
+// 应用侧边栏组件 - Gentleman Club黑金主题
 import React, { useState } from 'react'
 import { Layout, Menu, Button, Typography, Divider } from 'antd'
 import { useNavigate, useLocation } from 'react-router-dom'
@@ -102,11 +102,17 @@ const AppSider: React.FC = () => {
       trigger={null} 
       collapsible 
       collapsed={collapsed}
+      width={240}
+      collapsedWidth={64}
       style={{
         background: 'linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%)',
         borderRight: '2px solid #ffd700',
         boxShadow: '2px 0 8px rgba(0, 0, 0, 0.3)',
-        position: 'relative'
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        height: '100vh',
+        zIndex: 2000
       }}
     >
       {/* 背景装饰 */}
@@ -140,7 +146,7 @@ const AppSider: React.FC = () => {
               fontSize: '16px',
               letterSpacing: '1px'
             }}>
-              雪茄客
+              Gentleman Club
             </Text>
           </div>
         )}
@@ -150,8 +156,8 @@ const AppSider: React.FC = () => {
           onClick={() => setCollapsed(!collapsed)}
           style={{ 
             fontSize: '16px', 
-            width: 64, 
-            height: 64,
+            width: 48, 
+            height: 48,
             color: '#c0c0c0',
             border: '1px solid #333333',
             borderRadius: '8px'

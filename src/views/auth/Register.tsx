@@ -51,9 +51,9 @@ const Register: React.FC = () => {
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
           <div style={{ textAlign: 'center' }}>
             <Title level={2} style={{ color: '#1890ff', marginBottom: 8 }}>
-              雪茄客
+              Gentleman Club
             </Title>
-            <Text type="secondary">创建您的账户，加入雪茄客社区</Text>
+            <Text type="secondary">创建您的账户，加入Gentleman Club社区</Text>
           </div>
 
           <Form

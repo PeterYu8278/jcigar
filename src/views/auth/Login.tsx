@@ -94,7 +94,7 @@ const Login: React.FC = () => {
               fontWeight: 700,
               letterSpacing: '2px'
             }}>
-              雪茄客
+              Gentleman Club
             </Title>
             <Text style={{ color: '#c0c0c0', fontSize: '16px' }}>
               欢迎回来，请登录您的账户

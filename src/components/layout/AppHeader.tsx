@@ -1,4 +1,4 @@
-// 应用头部组件 - 雪茄客黑金主题
+// 应用头部组件 - Gentleman Club黑金主题
 import React from 'react'
 import { Layout, Menu, Avatar, Dropdown, Button, Space, Typography, Badge } from 'antd'
 import { 
@@ -81,7 +81,8 @@ const AppHeader: React.FC = () => {
       padding: '0 24px',
       borderBottom: '2px solid #ffd700',
       boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-      position: 'relative',
+      position: 'sticky',
+      top: 0,
       zIndex: 1000
     }}>
       {/* 背景装饰 */}
@@ -109,17 +110,9 @@ const AppHeader: React.FC = () => {
             letterSpacing: '2px'
           }}
         >
-          雪茄客
+        
         </Typography.Title>
-        {isAdmin && (
-          <CrownOutlined 
-            style={{ 
-              color: '#ffd700', 
-              marginLeft: 8,
-              fontSize: '16px'
-            }} 
-          />
-        )}
+        
       </div>
 
       <Space size="middle" style={{ position: 'relative' }}>

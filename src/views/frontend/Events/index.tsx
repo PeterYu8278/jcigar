@@ -143,7 +143,7 @@ const Events: React.FC = () => {
                     
                     <Space>
                       <DollarOutlined />
-                      <Text strong>¥{(event as any)?.participants?.fee ?? 0}</Text>
+                      <Text strong>RM{(event as any)?.participants?.fee ?? 0}</Text>
                     </Space>
                     
                     <Space>

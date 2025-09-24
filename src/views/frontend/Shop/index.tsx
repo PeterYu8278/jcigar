@@ -117,7 +117,7 @@ const Shop: React.FC = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
                         <Text strong style={{ fontSize: '18px', color: '#f5222d' }}>
-                          ¥{cigar.price}
+                          RM{cigar.price}
                         </Text>
                       </div>
                       <div>

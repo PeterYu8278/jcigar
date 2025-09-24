@@ -149,6 +149,8 @@ const AdminEvents: React.FC = () => {
     return map
   }, [orders])
 
+  const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
+
   // 自动调整活动状态根据日期
   const autoAdjustEventStatus = async (event: Event) => {
     const now = new Date()
@@ -321,7 +323,7 @@ const AdminEvents: React.FC = () => {
             })()}
           </div>
           <div style={{ fontSize: '12px', color: '#666' }}>
-            费用: ¥{(record?.participants as any)?.fee ?? 0}
+            费用: RM{(record?.participants as any)?.fee ?? 0}
           </div>
         </div>
       ),
@@ -331,7 +333,7 @@ const AdminEvents: React.FC = () => {
       key: 'revenue',
       render: (_: any, record: any) => (
         <div style={{ fontWeight: 600, color: '#389e0d' }}>
-          ¥{revenueMap[(record as any).id] ?? 0}
+          RM{revenueMap[(record as any).id] ?? 0}
         </div>
       ),
     },
@@ -371,7 +373,7 @@ const AdminEvents: React.FC = () => {
       key: 'action',
       width: 100,
       render: (_: any, record: any) => (
-        <Button type="link" icon={<EyeOutlined />} size="small" onClick={() => setViewing(record)}>
+          <Button type="link" icon={<EyeOutlined />} size="small" onClick={() => setViewing(record)}>
           </Button>
       ),
     },
@@ -426,6 +428,7 @@ const AdminEvents: React.FC = () => {
       </div>
 
       {/* 搜索和筛选 */}
+      {!isMobile ? (
       <div style={{ marginBottom: 16, padding: '16px', background: '#fafafa', borderRadius: '6px' }}>
         <Space size="middle" wrap>
           <Search
@@ -433,10 +436,9 @@ const AdminEvents: React.FC = () => {
             allowClear
             style={{ width: 300 }}
             prefix={<SearchOutlined />}
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-          />
-          
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+            />
           <DatePicker placeholder="开始日期" />
           <DatePicker placeholder="结束日期" />
           <Button type="primary" icon={<SearchOutlined />}>
@@ -444,18 +446,38 @@ const AdminEvents: React.FC = () => {
           </Button>
         </Space>
       </div>
+      ) : (
+        <div style={{ padding: '0 4px', marginBottom: 12 }}>
+          <div style={{ position: 'relative', marginBottom: 8 }}>
+            <Search
+              placeholder="搜索活动"
+              allowClear
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+            <Button type="primary" ghost onClick={() => setStatusFilter(undefined)}>全部</Button>
+            <Button onClick={() => setStatusFilter('published')}>即将开始</Button>
+            <Button onClick={() => setStatusFilter('ongoing')}>进行中</Button>
+            <Button onClick={() => setStatusFilter('completed')}>已结束</Button>
+            <Button onClick={() => setStatusFilter('draft')}>草稿</Button>
+          </div>
+        </div>
+      )}
 
       {/** 过滤后的数据 */}
       {/* eslint-disable react-hooks/rules-of-hooks */}
       {(() => null)()}
       {/**/}
-
+      
+      {!isMobile ? (
       <Table
         columns={columns}
-        dataSource={filtered}
+          dataSource={filtered}
         rowKey="id"
-        loading={loading}
-        rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
+          loading={loading}
+          rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
         pagination={{
           total: events.length,
           pageSize: 10,
@@ -464,6 +486,57 @@ const AdminEvents: React.FC = () => {
           showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
         }}
       />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {filtered.map(ev => (
+            <div key={ev.id} style={{ position: 'relative', overflow: 'hidden', border: '1px solid rgba(244,175,37,0.2)', borderRadius: 16 }}>
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(17,17,17,0.6), rgba(34,34,34,0.2))' }} />
+              <div style={{ position: 'relative', padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
+                  <div style={{ width: 96, height: 96, borderRadius: 10, border: '2px solid rgba(244,175,37,0.3)', overflow: 'hidden', flexShrink: 0, background: 'rgba(255,255,255,0.08)' }}>
+                    <img
+                      alt="Cigar tasting event"
+                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuD3TPYA6HpEVbfOqeAlldyTpfRbZwZ9wVZj9g8I86EoGVp8OK7y3oaPnOiU6GHKmfigRsbbWXOQwVYSJCIbWhineKZyQ_uhh7CJnxR77vabe8ahQ9evdKcCVOKrY_vTtZMJ-ROZjjwVtgXWgMUOb0oLSUYvKJwxxaMvS07GvaklyNsDauAMi0All4B5FdXY5GJd5aUXsIcZ0qgD7FM9qbryFWovrU9DUGHTSTTPHjBKGzOc9q_DNLQ8HVfN70au4uIyFXy9D5Az6Rnt"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  </div>
+                  
+                  <div style={{ flex: 1 }}>
+                    {/* 参与人数 + 状态 同行显示 */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>{ev.title}</div>
+                      <div style={{ fontSize: 12, color: '#f4af25', fontWeight: 600 }}>参与人数: {(((ev as any)?.participants?.registered || []).length)}</div>
+                      
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }}>
+                      {(() => {
+                        const s = (ev as any)?.schedule?.startDate
+                        const e = (ev as any)?.schedule?.endDate
+                        const sd = (s as any)?.toDate ? (s as any).toDate() : s
+                        const ed = (e as any)?.toDate ? (e as any).toDate() : e
+                        const time = sd && ed ? `${dayjs(sd).format('YYYY-MM-DD HH:mm')} - ${dayjs(ed).format('HH:mm')}` : '-'
+                        const loc = (ev as any)?.location?.name || ''
+                        return `${time} | ${loc}`
+                      })()}
+                    </div>
+                    <span style={{ fontSize: 12, padding: '2px 8px', borderRadius: 9999, background: ev.status === 'published' ? 'rgba(34,197,94,0.2)' : ev.status === 'ongoing' ? 'rgba(56,189,248,0.2)' : ev.status === 'completed' ? 'rgba(148,163,184,0.2)' : 'rgba(244,63,94,0.2)', color: ev.status === 'published' ? '#34d399' : ev.status === 'ongoing' ? '#38bdf8' : ev.status === 'completed' ? '#94a3b8' : '#f87171' }}>
+                        {getStatusText(ev.status)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ padding: '2px 8px',display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8 }}>
+                  <Button type="primary" style={{ background: 'linear-gradient(to bottom, #f4af25, #c78d1a)'}} size="small" onClick={() => setViewing(ev)}>编辑</Button>
+                </div>
+              </div>
+            </div>
+          ))}
+          {filtered.length === 0 && (
+            <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>暂无数据</div>
+          )}
+        </div>
+      )}
 
       {/* 查看活动详情 */}
       <Modal
@@ -482,7 +555,7 @@ const AdminEvents: React.FC = () => {
                 key: 'overview',
                 label: '概览',
                 children: (
-                  <div>
+            <div>
             <Descriptions bordered column={2} size="small">
               <Descriptions.Item label="活动名称" span={2}>
                 {isEditingDetails ? (
@@ -520,7 +593,7 @@ const AdminEvents: React.FC = () => {
                 ) : (
                   <div style={{ maxHeight: '100px', overflow: 'auto' }}>
                     {(viewing as any).description || '暂无描述'}
-                  </div>
+            </div>
                 )}
               </Descriptions.Item>
               <Descriptions.Item label="活动状态" span={1}>
@@ -571,9 +644,9 @@ const AdminEvents: React.FC = () => {
                   />
                 ) : (
                   <span>
-                    {(() => {
-                      const s = (viewing as any)?.schedule?.startDate
-                      const sd = (s as any)?.toDate ? (s as any).toDate() : s
+              {(() => {
+                const s = (viewing as any)?.schedule?.startDate
+                const sd = (s as any)?.toDate ? (s as any).toDate() : s
                       return sd ? new Date(sd).toLocaleString() : '-'
                     })()}
                   </span>
@@ -595,9 +668,9 @@ const AdminEvents: React.FC = () => {
                   <span>
                     {(() => {
                       const e = (viewing as any)?.schedule?.endDate
-                      const ed = (e as any)?.toDate ? (e as any).toDate() : e
+                const ed = (e as any)?.toDate ? (e as any).toDate() : e
                       return ed ? new Date(ed).toLocaleString() : '-'
-                    })()}
+              })()}
                   </span>
                 )}
               </Descriptions.Item>
@@ -615,14 +688,14 @@ const AdminEvents: React.FC = () => {
                     autoFocus
                   />
                 ) : (
-                  <div>
+            <div>
                     {(viewing as any)?.location?.name || '-'}
                     {(viewing as any)?.location?.address && (
                       <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
                         {(viewing as any).location.address}
-                      </div>
+            </div>
                     )}
-                  </div>
+            </div>
                 )}
               </Descriptions.Item>
               <Descriptions.Item label="参与费用" span={1}>
@@ -636,11 +709,11 @@ const AdminEvents: React.FC = () => {
                     style={{ width: '100%' }}
                     autoFocus
                     min={0}
-                    addonBefore="¥"
+                    addonBefore="RM"
                   />
                 ) : (
                   <span style={{ color: '#f5222d', fontWeight: 'bold' }}>
-                    ¥{(viewing as any)?.participants?.fee ?? 0}
+                    RM{(viewing as any)?.participants?.fee ?? 0}
                   </span>
                 )}
               </Descriptions.Item>
@@ -777,23 +850,23 @@ const AdminEvents: React.FC = () => {
                 </Button>
               </Space>
             </div>
-                  </div>
+            </div>
                 ),
               },
               {
                 key: 'participants',
                 label: '参与者管理',
                 children: (
-                  <div>
+            <div>
                     <div style={{ marginBottom: 12, color: '#666' }}>
                       已报名：{((viewing as any)?.participants?.registered || []).length} / {(viewing as any)?.participants?.maxParticipants || 0}
-                    </div>
+            </div>
                     {/* 直接渲染“参与者弹窗”的主体内容 */}
                     {(() => {
                       // 临时把 viewing 映射到 participantsEvent 相关渲染所需的变量
                       const participantsLike = viewing as any
                       return (
-                        <div>
+            <div>
                           <div style={{ marginBottom: 16 }}>
                             <Space.Compact style={{ width: '100%' }}>
                               <Select
@@ -828,7 +901,7 @@ const AdminEvents: React.FC = () => {
                                         {isRegistered && (
                                           <CheckCircleOutlined style={{ color: '#52c41a', marginLeft: 8 }} />
                                         )}
-                                      </div>
+            </div>
                                     )
                                   }
                                 })}
@@ -872,7 +945,7 @@ const AdminEvents: React.FC = () => {
                                 }
                               }}>添加</Button>
                             </Space.Compact>
-                          </div>
+            </div>
 
                           <div style={{ marginBottom: 16 }}>
                             <Space>
@@ -947,7 +1020,7 @@ const AdminEvents: React.FC = () => {
                               >
                                 <Button icon={<UploadOutlined />}>导入报名名单</Button>
                               </Upload>
-                            </Space>
+          </Space>
                           </div>
 
                           <div style={{ 
@@ -1004,7 +1077,7 @@ const AdminEvents: React.FC = () => {
       >
         <div style={{ marginBottom: 16 }}>
           <Space.Compact style={{ width: '100%' }}>
-            <Select
+                    <Select
               showSearch
               allowClear
               placeholder="输入姓名/邮箱/手机号或用户ID进行搜索并选择"
@@ -1032,8 +1105,8 @@ const AdminEvents: React.FC = () => {
                       <span style={{ flex: 6, textAlign: 'left', color: '#999', fontSize: '12px' }}>
                         {u.email || '无邮箱'}
                       </span>
-                    </div>
-                  )
+                  </div>
+                )
                 }))}
             />
             <Button type="primary" loading={manualAddLoading} onClick={async () => {
@@ -1048,7 +1121,7 @@ const AdminEvents: React.FC = () => {
                   if (raw.includes('@')) {
                     const match = participantsUsers.find(u => u.email?.toLowerCase() === raw.toLowerCase())
                     if (!match) { message.error('未找到该邮箱对应的用户'); return }
-                    userId = match.id
+                  userId = match.id
                   } else if (/^\+?\d[\d\s-]{5,}$/.test(raw)) {
                     const match = participantsUsers.find(u => ((u as any)?.profile?.phone || '').replace(/\s|-/g,'') === raw.replace(/\s|-/g,''))
                     if (!match) { message.error('未找到该手机号对应的用户'); return }
@@ -1082,7 +1155,7 @@ const AdminEvents: React.FC = () => {
               icon={<CheckCircleOutlined />}
               type="primary"
               onClick={async () => {
-                if (!participantsEvent) return
+              if (!participantsEvent) return
                 const orderResult = await createOrdersFromEventAllocations((participantsEvent as any).id);
                 if (orderResult.success) {
                   if (orderResult.createdOrders > 0) {
@@ -1102,8 +1175,8 @@ const AdminEvents: React.FC = () => {
               onClick={() => {
               if (!participantsEvent) return
                 const header = ['userId','displayName','phone','email','cigarName','quantity','amount']
-                const rows = (((participantsEvent as any)?.participants?.registered || []) as string[]).map((id) => {
-                  const u = participantsUsers.find(x => x.id === id)
+              const rows = (((participantsEvent as any)?.participants?.registered || []) as string[]).map((id) => {
+                const u = participantsUsers.find(x => x.id === id)
                   const alloc = (participantsEvent as any)?.allocations?.[id]
                   const cigar = cigars.find(c => c.id === alloc?.cigarId)
                   return [
@@ -1115,7 +1188,7 @@ const AdminEvents: React.FC = () => {
                     alloc?.quantity || 0,
                     alloc?.amount || 0
                   ]
-                })
+              })
               const csv = [header.join(','), ...rows.map(r => r.map(x => `"${String(x ?? '').replace(/"/g,'""')}"`).join(','))].join('\n')
               const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
               const url = URL.createObjectURL(blob)
@@ -1263,7 +1336,7 @@ const AdminEvents: React.FC = () => {
           <Form.Item label="结束日期" name="endDate" rules={[{ required: true, message: '请选择结束日期' }]}>
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item label="费用 (¥)" name="fee">
+          <Form.Item label="费用 (RM)" name="fee">
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item label="人数上限" name="maxParticipants">

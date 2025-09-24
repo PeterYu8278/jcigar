@@ -33,7 +33,7 @@ const ParticipantsSummary: React.FC<ParticipantsSummaryProps> = ({
       textAlign: 'right'
     }}>
       <div style={{ fontSize: 18, fontWeight: 600, color: '#389e0d' }}>
-        总金额：¥{totalAmount}
+        总金额：RM{totalAmount}
       </div>
       <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
         共 {registeredParticipants.length} 位参与者

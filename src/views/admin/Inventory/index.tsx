@@ -1,6 +1,6 @@
 // 库存管理页面
 import React, { useEffect, useMemo, useState } from 'react'
-import { Table, Button, Tag, Space, Typography, Input, Select, Progress, Modal, Form, InputNumber, message, Dropdown, Checkbox, Tabs, Card } from 'antd'
+import { Table, Button, Tag, Space, Typography, Input, Select, Progress, Modal, Form, InputNumber, message, Dropdown, Checkbox, Tabs, Card, Upload } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, WarningOutlined, UploadOutlined, DownloadOutlined, MinusCircleOutlined } from '@ant-design/icons'
 import type { Cigar, InventoryLog } from '../../../types'
 import { getCigars, createDocument, updateDocument, deleteDocument, COLLECTIONS, getAllInventoryLogs, getAllOrders, getUsers } from '../../../services/firebase/firestore'
@@ -27,6 +27,7 @@ const AdminInventory: React.FC = () => {
   const [orders, setOrders] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
   const [viewingReference, setViewingReference] = useState<string | null>(null)
+  const [imageList, setImageList] = useState<any[]>([])
 
   const [keyword, setKeyword] = useState('')
   const [originFilter, setOriginFilter] = useState<string | undefined>()
@@ -147,7 +148,7 @@ const AdminInventory: React.FC = () => {
       title: '价格',
       dataIndex: 'price',
       key: 'price',
-      render: (price: number) => `¥${price}`,
+      render: (price: number) => `RM${price}`,
       sorter: (a: any, b: any) => a.price - b.price,
     },
     {
@@ -272,6 +273,24 @@ const AdminInventory: React.FC = () => {
     { title: '来源', dataIndex: 'source', key: 'source', render: (s: string) => s === 'event' ? '活动' : '直接销售' },
   ]
 
+  const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
+
+  const brands = useMemo(() => {
+    return Array.from(new Set(items.map(i => i.brand).filter(Boolean))) as string[]
+  }, [items])
+
+  const groupedByBrand = useMemo(() => {
+    const map: Record<string, { display: string; items: Cigar[] }> = {}
+    for (const it of filtered) {
+      const raw = (it.brand || '其他').trim()
+      const lower = raw.toLowerCase()
+      if (!map[lower]) map[lower] = { display: raw, items: [] }
+      map[lower].items.push(it)
+    }
+    const keys = Object.keys(map).sort((a, b) => map[a].display.localeCompare(map[b].display, undefined, { sensitivity: 'base' }))
+    return keys.map(k => ({ key: map[k].display, items: map[k].items.sort((a, b) => (a.name || '').localeCompare(b.name || '')) }))
+  }, [filtered])
+
   return (
     <div style={{ padding: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -285,7 +304,7 @@ const AdminInventory: React.FC = () => {
           children: (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <Space>
+        <Space>
                   {selectedRowKeys.length > 1 && (
                     <>
                       <Button onClick={async () => {
@@ -323,56 +342,160 @@ const AdminInventory: React.FC = () => {
                   )}
                   <Button onClick={() => { setKeyword(''); setOriginFilter(undefined); setStrengthFilter(undefined); setStatusFilter(undefined); setSelectedRowKeys([]) }}>重置筛选</Button>
                   <Button type="primary" icon={<PlusOutlined />} onClick={() => { setCreating(true); form.resetFields() }}>
-                    添加产品
-                  </Button>
+            添加产品
+          </Button>
                   <Button icon={<WarningOutlined />}>库存预警</Button>
-                </Space>
-              </div>
+        </Space>
+      </div>
 
-              <div style={{ marginBottom: 16, padding: '16px', background: '#fafafa', borderRadius: '6px' }}>
-                <Space size="middle" wrap>
-                  <Search
-                    placeholder="搜索产品名称或品牌"
-                    allowClear
-                    style={{ width: 300 }}
-                    prefix={<SearchOutlined />}
-                    value={keyword}
-                    onChange={(e) => setKeyword(e.target.value)}
-                  />
-                  <Select placeholder="选择产地" style={{ width: 140 }} allowClear value={originFilter} onChange={setOriginFilter}>
-                    {[...new Set(items.map(i => i.origin).filter(Boolean))].map(org => (
-                      <Option key={org} value={org}>{org}</Option>
-                    ))}
-                  </Select>
-                  <Select placeholder="选择强度" style={{ width: 120 }} allowClear value={strengthFilter} onChange={setStrengthFilter}>
-                    <Option value="mild">温和</Option>
-                    <Option value="medium">中等</Option>
-                    <Option value="full">浓郁</Option>
-                  </Select>
-                  <Select placeholder="库存状态" style={{ width: 140 }} allowClear value={statusFilter} onChange={setStatusFilter}>
-                    <Option value="normal">正常</Option>
-                    <Option value="low">库存偏低</Option>
-                    <Option value="critical">库存告急</Option>
-                  </Select>
-                </Space>
-              </div>
+              {!isMobile && (
+      <div style={{ marginBottom: 16, padding: '16px', background: '#fafafa', borderRadius: '6px' }}>
+        <Space size="middle" wrap>
+          <Search
+            placeholder="搜索产品名称或品牌"
+            allowClear
+            style={{ width: 300 }}
+            prefix={<SearchOutlined />}
+                      value={keyword}
+                      onChange={(e) => setKeyword(e.target.value)}
+                    />
+                    <Select placeholder="选择产地" style={{ width: 140 }} allowClear value={originFilter} onChange={setOriginFilter}>
+                      {[...new Set(items.map(i => i.origin).filter(Boolean))].map(org => (
+                        <Option key={org} value={org}>{org}</Option>
+                      ))}
+          </Select>
+                    <Select placeholder="选择强度" style={{ width: 120 }} allowClear value={strengthFilter} onChange={setStrengthFilter}>
+            <Option value="mild">温和</Option>
+            <Option value="medium">中等</Option>
+            <Option value="full">浓郁</Option>
+          </Select>
+                    <Select placeholder="库存状态" style={{ width: 140 }} allowClear value={statusFilter} onChange={setStatusFilter}>
+            <Option value="normal">正常</Option>
+            <Option value="low">库存偏低</Option>
+            <Option value="critical">库存告急</Option>
+          </Select>
+        </Space>
+      </div>
+              )}
 
-              {(() => null)()}
+              {/* Mobile search + pills */}
+              {isMobile && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
+                  <div style={{ position: 'relative' }}>
+                    <Search
+                      placeholder="搜索品牌或商品"
+                      allowClear
+                      style={{ width: '100%' }}
+                      prefix={<SearchOutlined style={{ color: '#f4af25' }} />}
+                      value={keyword}
+                      onChange={(e) => setKeyword(e.target.value)}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <Select
+                      placeholder="所有品牌"
+                      allowClear
+                      value={originFilter as any}
+                      onChange={setOriginFilter}
+                      style={{ flex: 1 }}
+                    >
+                      {[...new Set(items.map(i => i.origin).filter(Boolean))].map(org => (
+                        <Option key={org} value={org}>{org}</Option>
+                      ))}
+                    </Select>
+                    <Select
+                      placeholder="库存状态"
+                      allowClear
+                      value={statusFilter as any}
+                      onChange={setStatusFilter}
+                      style={{ flex: 1 }}
+                    >
+                      <Option value="normal">正常</Option>
+                      <Option value="low">低库存</Option>
+                      <Option value="critical">缺货</Option>
+                    </Select>
+                    <Button type="primary" ghost onClick={() => setStatusFilter('low')}>低库存</Button>
+                  </div>
+                </div>
+              )}
 
-              <Table
-                columns={columns}
-                dataSource={filtered}
-                rowKey="id"
-                loading={loading}
-                rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
-                pagination={{
-                  total: items.length,
-                  pageSize: 10,
-                  showSizeChanger: true,
-                  showQuickJumper: true,
-                  showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
-                }}
-              />
+              {!isMobile ? (
+      <Table
+        columns={columns}
+                  dataSource={filtered}
+        rowKey="id"
+                  loading={loading}
+                  rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
+        pagination={{
+                    total: items.length,
+          pageSize: 10,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
+        }}
+      />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                  {groupedByBrand.map(group => (
+                    <div key={group.key} style={{ border: '1px solid rgba(244,175,37,0.2)', borderRadius: 16, overflow: 'hidden', background: 'rgba(0,0,0,0.2)', boxShadow: '0 10px 30px rgba(0,0,0,0.25)' }}>
+                      <div style={{ padding: 12, background: 'rgba(0,0,0,0.3)' }}>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>{group.key}</div>
+                      </div>
+                      <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {group.items.map(record => (
+                          <div key={record.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                            <div style={{ width: 80, height: 80, borderRadius: 10, overflow: 'hidden', background: 'rgba(255,255,255,0.08)', flexShrink: 0 }}>
+                              {/* 占位图，可接入真实图片字段 */}
+                              <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))' }} />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontWeight: 700, color: '#fff' }}>{record.name}</div>
+                              <div style={{ fontSize: 12, color: 'rgba(224,214,196,0.6)' }}>{record.size || ''} {record.size ? '|' : ''} SKU: {(record as any)?.sku || record.id}</div>
+                              <div style={{ fontWeight: 700, color: '#f4af25', marginTop: 2 }}>RM{record.price?.toLocaleString?.() || record.price}</div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, marginTop: 4 }}>
+                                {(() => {
+                                  const st = ((record as any)?.inventory?.stock ?? 0) <= ((record as any)?.inventory?.minStock ?? 0)
+                                    ? 'critical' : ((record as any)?.inventory?.stock ?? 0) <= (((record as any)?.inventory?.minStock ?? 0) * 1.5)
+                                    ? 'low' : 'normal'
+                                  const color = st === 'normal' ? '#16a34a' : st === 'low' ? '#f59e0b' : '#ef4444'
+                                  const text = st === 'normal' ? '充足' : st === 'low' ? '低库存' : '缺货'
+                                  return (
+                                    <>
+                                      <span style={{ width: 8, height: 8, borderRadius: 9999, background: color, display: 'inline-block' }} />
+                                      <span style={{ color }}>{text}</span>
+                                      <span style={{ color: 'rgba(224,214,196,0.6)' }}>|</span>
+                                      <span style={{ color: '#fff' }}>{((record as any)?.inventory?.stock ?? 0)} 件</span>
+                                    </>
+                                  )
+                                })()}
+                              </div>
+                            </div>
+                            <Button type="primary" style={{ background: 'linear-gradient(to bottom, #f4af25, #c78d1a)', color: '#221c10' }} shape="circle" onClick={() => {
+                              setEditing(record)
+                              form.setFieldsValue({
+                                name: (record as any).name,
+                                brand: (record as any).brand,
+                                origin: (record as any).origin,
+                                size: (record as any).size,
+                                strength: (record as any).strength,
+                                price: (record as any).price,
+                                stock: (record as any)?.inventory?.stock ?? 0,
+                                minStock: (record as any)?.inventory?.minStock ?? 0,
+                                reserved: (record as any)?.inventory?.reserved ?? 0,
+                              })
+                            }}>
+                              编辑
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {groupedByBrand.length === 0 && (
+                    <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>暂无数据</div>
+                  )}
+                </div>
+              )}
             </div>
           )
         },
@@ -424,7 +547,7 @@ const AdminInventory: React.FC = () => {
                           >
                             <Select placeholder="请选择产品">
                               {items.map(i => (
-                                <Option key={i.id} value={i.id}>{i.name} - ¥{i.price}（库存：{(i as any)?.inventory?.stock ?? 0}）</Option>
+                                <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（库存：{(i as any)?.inventory?.stock ?? 0}）</Option>
                               ))}
                             </Select>
                           </Form.Item>
@@ -471,15 +594,94 @@ const AdminInventory: React.FC = () => {
           key: 'out',
           label: '出库',
           children: (
-            <Card>
-              <Table
-                title={() => '出库记录（来源订单）'}
-                columns={outOrderColumns}
-                dataSource={outFromOrders}
-                rowKey="id"
-                pagination={{ pageSize: 10 }}
-              />
-            </Card>
+            <div>
+              <Card style={{ marginBottom: 16 }}>
+                <Form form={outForm} layout="vertical" onFinish={async (values: { referenceNo?: string; reason?: string; items: { cigarId: string; quantity: number }[] }) => {
+                  const lines = (values.items || []).filter(it => it?.cigarId && it?.quantity > 0)
+                  if (lines.length === 0) { message.warning('请添加至少一条出库明细'); return }
+                  setLoading(true)
+                  try {
+                    for (const line of lines) {
+                      const target = items.find(i => i.id === line.cigarId) as any
+                      if (!target) continue
+                      const qty = Math.max(1, Math.floor(line.quantity || 1))
+                      const current = target?.inventory?.stock ?? 0
+                      const next = Math.max(0, current - qty)
+                      await updateDocument(COLLECTIONS.CIGARS, target.id, { inventory: { ...target.inventory, stock: next } } as any)
+                      await createDocument(COLLECTIONS.INVENTORY_LOGS, {
+                        cigarId: target.id,
+                        type: 'out',
+                        quantity: qty,
+                        reason: values.reason || '出库',
+                        referenceNo: values.referenceNo,
+                        operatorId: 'system',
+                        createdAt: new Date(),
+                      } as any)
+                    }
+                    message.success('出库成功')
+                    outForm.resetFields()
+                    setItems(await getCigars())
+                    setInventoryLogs(await getAllInventoryLogs())
+                  } finally {
+                    setLoading(false)
+                  }
+                }}>
+                  <Form.List name="items" initialValue={[{ cigarId: undefined, quantity: 1 }]}> 
+                    {(fields, { add, remove }) => (
+                      <div>
+                        {fields.map(({ key, name, ...restField }) => (
+                          <Space key={key} align="baseline" style={{ display: 'flex', marginBottom: 8 }}>
+                            <Form.Item
+                              {...restField}
+                              name={[name, 'cigarId']}
+                              rules={[{ required: true, message: '请选择产品' }]}
+                              style={{ minWidth: 320 }}
+                            >
+                              <Select placeholder="请选择产品">
+                                {items.map(i => (
+                                  <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（库存：{(i as any)?.inventory?.stock ?? 0}）</Option>
+                                ))}
+                              </Select>
+                            </Form.Item>
+                            <Form.Item
+                              {...restField}
+                              name={[name, 'quantity']}
+                              rules={[{ required: true, message: '请输入数量' }]}
+                            >
+                              <InputNumber min={1} placeholder="数量" />
+                            </Form.Item>
+                            {fields.length > 1 && (
+                              <MinusCircleOutlined onClick={() => remove(name)} />
+                            )}
+                          </Space>
+                        ))}
+                        <Form.Item>
+                          <Button type="dashed" onClick={() => add({ quantity: 1 })} icon={<PlusOutlined />}>新增明细</Button>
+                        </Form.Item>
+                      </div>
+                    )}
+                  </Form.List>
+                  <Form.Item label="单号" name="referenceNo">
+                    <Input placeholder="请输入出库单号（选填）" />
+                  </Form.Item>
+                  <Form.Item label="原因" name="reason">
+                    <Input placeholder="例如：销售出库" />
+                  </Form.Item>
+                  <Form.Item>
+                    <Button type="primary" htmlType="submit" loading={loading}>确认出库</Button>
+                  </Form.Item>
+                </Form>
+              </Card>
+              <Card>
+                <Table
+                  title={() => '出库记录（来源订单）'}
+                  columns={outOrderColumns}
+                  dataSource={outFromOrders}
+                  rowKey="id"
+                  pagination={{ pageSize: 10 }}
+                />
+              </Card>
+            </div>
           )
         }
       ]} />
@@ -489,7 +691,12 @@ const AdminInventory: React.FC = () => {
         title={editing ? '编辑产品' : '添加产品'}
         open={creating || !!editing}
         onCancel={() => { setCreating(false); setEditing(null) }}
-        footer={(
+        width={isMobile ? '100%' : 600}
+        footer={isMobile ? (
+          <div style={{ padding: '8px 0' }}>
+            <Button type="primary" block loading={loading} onClick={() => form.submit()} style={{ background: 'linear-gradient(to bottom, #f4af25, #c78d1a)', color: '#221c10', boxShadow: '0 4px 15px -5px rgba(244,175,37,0.5)' }}>保存</Button>
+          </div>
+        ) : (
           <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
             <Space>
               {editing && (
@@ -524,7 +731,28 @@ const AdminInventory: React.FC = () => {
           </div>
         )}
       >
-        <Form form={form} layout="vertical" onFinish={async (values: any) => {
+        <div style={{ maxWidth: isMobile ? 520 : 'unset', margin: isMobile ? '0 auto' : undefined }}>
+          {/* 图片上传占位 */}
+          {isMobile && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <Upload
+                listType="picture-card"
+                fileList={imageList}
+                beforeUpload={() => false}
+                onChange={({ fileList }) => setImageList(fileList)}
+                showUploadList={{ showPreviewIcon: false }}
+              >
+                {imageList.length === 0 && (
+                  <div style={{ width: 96, height: 96, border: '2px dashed rgba(244,175,37,0.5)', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(34,28,16,0.5)', color: 'rgba(244,175,37,0.7)' }}>
+                    上传
+                  </div>
+                )}
+              </Upload>
+              <div style={{ fontSize: 12, color: 'rgba(244,175,37,0.8)' }}>上传产品图片</div>
+            </div>
+          )}
+        </div>
+        <Form form={form} layout="horizontal" labelCol={{ flex: '100px' }} wrapperCol={{ flex: 'auto' }} onFinish={async (values: any) => {
           setLoading(true)
           try {
             const payload: Partial<Cigar> = {
@@ -534,9 +762,10 @@ const AdminInventory: React.FC = () => {
               size: values.size,
               strength: values.strength,
               price: values.price,
+              sku: values.sku,
               inventory: {
-                stock: values.stock ?? 0,
-                reserved: values.reserved ?? 0,
+                // 库存为系统自动计算：编辑时保留原值；新增初始化为0
+                stock: editing ? ((editing as any)?.inventory?.stock ?? 0) : 0,
                 minStock: values.minStock ?? 0,
               } as any,
               updatedAt: new Date(),
@@ -556,33 +785,33 @@ const AdminInventory: React.FC = () => {
             setLoading(false)
           }
         }}>
-          <Form.Item label="名称" name="name" rules={[{ required: true, message: '请输入名称' }]}>
+          <Form.Item label={isMobile ? '产品名称' : '名称'} name="name" rules={[{ required: true, message: '请输入名称' }]}> 
+            <Input />
+          </Form.Item>
+          <Form.Item label="SKU" name="sku">
             <Input />
           </Form.Item>
           <Form.Item label="品牌" name="brand" rules={[{ required: true, message: '请输入品牌' }]}>
             <Input />
           </Form.Item>
-          <Form.Item label="产地" name="origin" rules={[{ required: true, message: '请输入产地' }]}>
+          <Form.Item label="产地" name="origin" rules={[{ required: true, message: '请输入产地' }]}> 
             <Input />
           </Form.Item>
-          <Form.Item label="尺寸" name="size" rules={[{ required: true, message: '请输入尺寸' }]}>
+          <Form.Item label={isMobile ? '规格' : '尺寸'} name="size" rules={[{ required: true, message: '请输入尺寸' }]}> 
             <Input />
           </Form.Item>
-          <Form.Item label="强度" name="strength" rules={[{ required: true, message: '请选择强度' }]}>
+          <Form.Item label="强度" name="strength" rules={[{ required: true, message: '请选择强度' }]}> 
             <Select>
               <Option value="mild">温和</Option>
               <Option value="medium">中等</Option>
               <Option value="full">浓郁</Option>
             </Select>
           </Form.Item>
-          <Form.Item label="价格 (¥)" name="price" rules={[{ required: true, message: '请输入价格' }]}>
+          <Form.Item label="价格 (RM)" name="price" rules={[{ required: true, message: '请输入价格' }]}> 
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item label="当前库存" name="stock">
-            <InputNumber min={0} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item label="已预留" name="reserved">
-            <InputNumber min={0} style={{ width: '100%' }} />
+          <Form.Item label={isMobile ? '库存' : '当前库存'} name="stock"> 
+            <InputNumber min={0} style={{ width: '100%' }} disabled readOnly />
           </Form.Item>
           <Form.Item label="最低库存" name="minStock">
             <InputNumber min={0} style={{ width: '100%' }} />

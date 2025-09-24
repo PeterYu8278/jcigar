@@ -198,7 +198,7 @@ const Profile: React.FC = () => {
                     <br />
                     <Text type="secondary">2024-10-20</Text>
                   </div>
-                  <Text strong>¥580</Text>
+                  <Text strong>RM580</Text>
                 </div>
               </div>
               
@@ -209,7 +209,7 @@ const Profile: React.FC = () => {
                     <br />
                     <Text type="secondary">2024-10-18</Text>
                   </div>
-                  <Text strong>¥320</Text>
+                  <Text strong>RM320</Text>
                 </div>
               </div>
             </Space>

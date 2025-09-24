@@ -77,7 +77,7 @@ const AdminFinance: React.FC = () => {
     const isIncome = amount > 0
     return (
       <span style={{ color: isIncome ? '#52c41a' : '#f5222d' }}>
-        {isIncome ? '+' : ''}¥{Math.abs(amount)}
+        {isIncome ? '+' : ''}RM{Math.abs(amount)}
       </span>
     )
   }

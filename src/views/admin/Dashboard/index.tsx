@@ -1,19 +1,7 @@
-// 管理后台仪表板
+// 管理后台仪表板（自定义样式版本）
 import React, { useEffect, useState } from 'react'
-import { Row, Col, Card, Typography, Statistic, Progress, Table, Tag, Space, Button, List, Avatar, message, Spin } from 'antd'
-import { 
-  UserOutlined, 
-  ShoppingOutlined, 
-  CalendarOutlined,
-  DollarOutlined,
-  ArrowUpOutlined,
-  ArrowDownOutlined,
-  EyeOutlined,
-  PlusOutlined,
-  DatabaseOutlined,
-  BarChartOutlined,
-  ReloadOutlined
-} from '@ant-design/icons'
+import { Typography, Button, message, Spin } from 'antd'
+import { ReloadOutlined, PlusOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { 
@@ -81,7 +69,7 @@ const AdminDashboard: React.FC = () => {
     .filter(t => t.amount > 0 && dayjs(t.createdAt).format('YYYY-MM') === currentMonth)
     .reduce((sum, t) => sum + t.amount, 0)
   
-  // 最近订单（取前5个）
+  // 最近订单（前5个），拆分完成/未完成
   const recentOrders = orders
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 5)
@@ -89,315 +77,162 @@ const AdminDashboard: React.FC = () => {
       ...order,
       user: users.find(u => u.id === order.userId)?.displayName || '未知用户'
     }))
+  const completedOrders = recentOrders.filter(o => o.status === 'delivered')
+  const pendingOrders = recentOrders.filter(o => o.status !== 'delivered')
+
+  const [activeTab, setActiveTab] = useState<'completed' | 'pending'>('completed')
+
+  // 低库存统计
+  const lowStockCount = cigars.reduce((count, c) => {
+    const stock = (c as any)?.inventory?.stock ?? 0
+    const min = (c as any)?.inventory?.minStock ?? 0
+    return count + (stock <= min ? 1 : 0)
+  }, 0)
 
 
   return (
-    <div style={{ padding: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Title level={2}>仪表板</Title>
-        <Button 
-          icon={<ReloadOutlined />} 
-          onClick={loadDashboardData}
-          loading={loading}
-        >
-          刷新数据
-        </Button>
+    <div style={{ minHeight: '100vh'}}>
+      {/* 顶部 */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+
       </div>
-      
-      {/* 统计卡片 */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="总用户数"
-              value={totalUsers}
-              prefix={<UserOutlined />}
-              valueStyle={{ color: '#1890ff' }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="本月订单"
-              value={monthlyOrders}
-              prefix={<ShoppingOutlined />}
-              valueStyle={{ color: '#52c41a' }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="进行中活动"
-              value={activeEvents}
-              prefix={<CalendarOutlined />}
-              valueStyle={{ color: '#faad14' }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="本月收入"
-              value={monthlyRevenue}
-              prefix={<DollarOutlined />}
-              valueStyle={{ color: '#f5222d' }}
-              suffix="CNY"
-            />
-          </Card>
-        </Col>
-      </Row>
 
-      <Row gutter={[16, 16]}>
-        {/* 快速操作 */}
-        <Col span={12}>
-          <Card title="快速操作" extra={<PlusOutlined />}>
-            <Space direction="vertical" style={{ width: '100%' }}>
-              <Button 
-                type="primary" 
-                block 
-                icon={<PlusOutlined />}
-                onClick={() => navigate('/admin/events')}
-              >
-                创建活动
-              </Button>
-              <Button 
-                block 
-                icon={<ShoppingOutlined />}
-                onClick={() => navigate('/admin/orders')}
-              >
-                查看订单
-              </Button>
-              <Button 
-                block 
-                icon={<UserOutlined />}
-                onClick={() => navigate('/admin/users')}
-              >
-                用户管理
-              </Button>
-              <Button 
-                block 
-                icon={<DatabaseOutlined />}
-                onClick={() => navigate('/admin/inventory')}
-              >
-                库存管理
-              </Button>
-            </Space>
-          </Card>
-        </Col>
+      <h1 style={{ fontSize: 22, fontWeight: 800,backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent' , paddingInline: 8, marginBottom: 12 }}>概况</h1>
 
-        {/* 系统状态 */}
-        <Col span={12}>
-          <Card title="系统状态" extra={<BarChartOutlined />}>
-            <Space direction="vertical" style={{ width: '100%' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>总订单数</span>
-                <span style={{ fontWeight: 'bold' }}>{totalOrders}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>总收入</span>
-                <span style={{ fontWeight: 'bold', color: '#52c41a' }}>¥{totalRevenue.toLocaleString()}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>雪茄品种</span>
-                <span style={{ fontWeight: 'bold' }}>{cigars.length}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>活跃活动</span>
-                <span style={{ fontWeight: 'bold' }}>{activeEvents}</span>
-              </div>
-            </Space>
-          </Card>
-        </Col>
-      </Row>
+      {/* 三个概览卡片 */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
+        {[{label:'总会员数', value: totalUsers.toLocaleString()}, {label:'本月订单', value: monthlyOrders.toLocaleString()}, {label:'本月收入', value: `RM${monthlyRevenue.toLocaleString()}`}] .map((card, idx) => (
+          <div key={idx} style={{ borderRadius: 12, padding: 12, textAlign: 'center', background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)', border: '1px solid rgba(244,175,37,0.1)' }}>
+            <div style={{ fontSize: 12, color: '#A0A0A0' }}>{card.label}</div>
+            <div style={{ marginTop: 6, fontSize: 24, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{card.value}</div>
+          </div>
+        ))}
+      </div>
 
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        {/* 库存状态 */}
-        <Col span={12}>
-          <Card 
-            title="库存状态" 
-            extra={
-              <Button type="link" onClick={() => navigate('/admin/inventory')}>
-                查看详情
-              </Button>
+      {/* 快速操作 */}
+      <div style={{ marginBottom: 16 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 800, color: '#EAEAEA', paddingInline: 8 }}>快速操作</h2>
+        <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+          <button onClick={() => navigate('/admin/events')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 12, padding: 12, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, boxShadow: '0 4px 15px rgba(244,175,37,0.35)' }}>
+            <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v6h6a1 1 0 110 2h-6v6a1 1 0 11-2 0v-6H3a1 1 0 110-2h6V3a1 1 0 011-1z"/></svg>
+            <span>创建活动</span>
+          </button>
+          <button onClick={() => navigate('/admin/orders')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 12, padding: 12, background: 'rgba(255,255,255,0.05)', color: '#EAEAEA', border: '1px solid rgba(244,175,37,0.1)' }}>
+            <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path clipRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h14a1 1 0 001-1V4a1 1 0 00-1-1H3zm12 11H5V5h10v9z" fillRule="evenodd"></path><path d="M9 7a1 1 0 100 2h2a1 1 0 100-2H9z"></path></svg>
+            <span>查看订单</span>
+          </button>
+          <button onClick={() => navigate('/admin/users')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 12, padding: 12, background: 'rgba(255,255,255,0.05)', color: '#EAEAEA', border: '1px solid rgba(244,175,37,0.1)' }}>
+            <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path clipRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" fillRule="evenodd"></path></svg>
+            <span>创建用户</span>
+          </button>
+          <button onClick={() => navigate('/admin/inventory')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 12, padding: 12, background: 'rgba(255,255,255,0.05)', color: '#EAEAEA', border: '1px solid rgba(244,175,37,0.1)' }}>
+            <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M5 8a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z"></path><path clipRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V3zm2 2v10h10V5H5z" fillRule="evenodd"></path></svg>
+            <span>库存管理</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 订单标签页 */}
+      <div style={{ marginBottom: 16, paddingInline: 8 }}>
+        <div style={{ display: 'flex', borderBottom: '1px solid rgba(244,175,37,0.2)' }}>
+          {(['completed','pending'] as const).map((tabKey) => {
+            const isActive = activeTab === tabKey
+            const baseStyle: React.CSSProperties = {
+              flex: 1,
+              padding: '10px 0',
+              fontWeight: 800,
+              fontSize: 12,
+              outline: 'none',
+              borderBottom: isActive ? '2px solid #f4af25' : '2px solid transparent',
+              cursor: 'pointer',
+              background: 'none',
+              border: 'none',
             }
-          >
-            <Space direction="vertical" style={{ width: '100%' }}>
-              {cigars.slice(0, 5).map(cigar => {
-                const stockPercentage = (cigar.inventory.stock / (cigar.inventory.stock + cigar.inventory.reserved)) * 100
-                const isLowStock = stockPercentage < 30
-                return (
-                  <div key={cigar.id}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                      <span>{cigar.name}</span>
-                      <span>{cigar.inventory.stock}支</span>
-                    </div>
-                    <Progress 
-                      percent={Math.round(stockPercentage)} 
-                      status={isLowStock ? 'exception' : 'active'}
-                      showInfo={false}
-                    />
-                  </div>
-                )
-              })}
-              {cigars.length === 0 && (
-                <div style={{ textAlign: 'center', color: '#999', padding: '20px 0' }}>
-                  暂无雪茄库存数据
-                </div>
-              )}
-            </Space>
-          </Card>
-        </Col>
-
-        {/* 最近订单 */}
-        <Col span={12}>
-          <Card 
-            title="最近订单" 
-            extra={
-              <Button type="link" onClick={() => navigate('/admin/orders')}>
-                查看全部
-              </Button>
+            const activeStyle: React.CSSProperties = {
+              color: 'transparent',
+              backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+              WebkitBackgroundClip: 'text',
             }
-          >
-            {loading ? (
-              <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                <Spin />
+            const inactiveStyle: React.CSSProperties = {
+              color: '#A0A0A0',
+            }
+            return (
+              <button
+                key={tabKey}
+                onClick={() => setActiveTab(tabKey)}
+                style={{ ...baseStyle, ...(isActive ? activeStyle : inactiveStyle) }}
+              >
+                {tabKey === 'completed' ? '已完成订单' : '未完成订单'}
+              </button>
+            )
+          })}
+        </div>
+        <div style={{ marginTop: 12 }}>
+          {(activeTab === 'completed' ? completedOrders : pendingOrders).map((order) => (
+            <div key={order.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(244,175,37,0.1)', marginBottom: 8 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 9999, background: 'rgba(45,39,26,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <img alt="avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqh6yOfMjU5qQSoCZPZvRqAiz-okAgrdu0FpYXfw5uHOQsuU4n9sXB0tgWxKp0S0CeRoIfGobj8db5AYyR99MzIRYRhGQ6FTM8hDdbqiekQypZbWKI-hdGzfS2pxYZNJ6bYvPj6CXp9XlDHxFyPDtN3i6CETf5OL_Cwg7QBM79IF0fAn-CPEBxheKV9HTDuDr0eao0xcYzNAf_ho8FNb9cgnap5ZOygDZktOCV_aV3y2MBiYrxtLFdefqLos7npLS50yvMaM7cH9MK" style={{ width: 48, height: 48, borderRadius: 9999 }} />
               </div>
-            ) : recentOrders.length > 0 ? (
-              <List
-                dataSource={recentOrders}
-                renderItem={(order) => (
-                  <List.Item
-                    actions={[
-                      <Button 
-                        type="link" 
-                        size="small" 
-                        icon={<EyeOutlined />}
-                        onClick={() => navigate('/admin/orders')}
-                      >
-                        查看
-                      </Button>
-                    ]}
-                  >
-                    <List.Item.Meta
-                      title={
-                        <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>
-                          {order.id.substring(0, 8)}...
-                        </span>
-                      }
-                      description={
-                        <div>
-                          <div>{order.user}</div>
-                          <div style={{ fontSize: '12px', color: '#666' }}>
-                            {dayjs(order.createdAt).format('MM-DD HH:mm')}
-                          </div>
-                        </div>
-                      }
-                    />
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: 'bold', color: '#52c41a' }}>
-                        ¥{order.total.toFixed(2)}
-                      </div>
-                      <Tag color={
-                        order.status === 'delivered' ? 'green' :
-                        order.status === 'pending' ? 'orange' :
-                        order.status === 'shipped' ? 'blue' :
-                        order.status === 'confirmed' ? 'cyan' : 'default'
-                      }>
-                        {order.status === 'delivered' ? '已送达' :
-                         order.status === 'pending' ? '待确认' :
-                         order.status === 'shipped' ? '已发货' :
-                         order.status === 'confirmed' ? '已确认' : order.status}
-                      </Tag>
-                    </div>
-                  </List.Item>
-                )}
-              />
-            ) : (
-              <div style={{ textAlign: 'center', color: '#999', padding: '40px 0' }}>
-                暂无订单数据
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, color: '#EAEAEA' }}>{order.user}</div>
+                <div style={{ fontSize: 12, color: '#A0A0A0' }}>订单 #{String(order.id).slice(0, 8)}</div>
               </div>
-            )}
-          </Card>
-        </Col>
-      </Row>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontWeight: 800, color: '#FDE08D' }}>RM{order.total.toFixed(2)}</div>
+                <span style={{ fontSize: 12, padding: '2px 8px', borderRadius: 9999, background: order.status === 'delivered' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)', color: order.status === 'delivered' ? '#22c55e' : '#ef4444' }}>
+                  {order.status === 'delivered' ? '已完成' : '未完成'}
+                </span>
+              </div>
+            </div>
+          ))}
+          {(activeTab === 'completed' ? completedOrders : pendingOrders).length === 0 && (
+            <div style={{ color: '#999', textAlign: 'center', padding: '20px 0' }}>暂无已完成订单</div>
+          )}
+        </div>
+      </div>
 
       {/* 最近活动 */}
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        <Col span={24}>
-          <Card 
-            title="最近活动" 
-            extra={
-              <Button type="link" onClick={() => navigate('/admin/events')}>
-                查看全部
-              </Button>
-            }
-          >
-            {loading ? (
-              <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                <Spin />
+      <div style={{ marginBottom: 16 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 800, color: '#EAEAEA', paddingInline: 8 }}>最近活动</h2>
+        <div style={{ marginTop: 8, borderRadius: 12, padding: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(244,175,37,0.1)' }}>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '24px 0' }}><Spin /></div>
+          ) : events.length > 0 ? (
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+              <img alt="event" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqZ66H4cXQr5mFjjZyArt6LdIb2BIhk4GF2JHKx2UCbrmxHNifoFkgto2LG8dL9qzuUPUV1f-BSFt8puUWcvCTY9TDHmgNLRVDHbY5AQDcoEfpA2UCkA7yw2LW8wyULzH1uKlNeWPJWxeQz9OJLA1t1bX9m6isA9rQp2vMKu50gx-ykzHIEFQYiHCFdw6JtNhTVBYbcmO0OXa-tiLBaQCRrKo2931k70O13w9CwSQqcROyUsbO70ENYAHrnobDtbOq44lMixgFghpH" style={{ width: 96, height: 96, objectFit: 'cover', borderRadius: 8 }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 800, color: '#EAEAEA' }}>{events[0].title}</div>
+                <div style={{ fontSize: 12, color: '#A0A0A0', marginTop: 4 }}>
+                  {(() => {
+                    const startDate = (events[0].schedule.startDate as any)?.toDate ? (events[0].schedule.startDate as any).toDate() : events[0].schedule.startDate
+                    return startDate ? dayjs(startDate).format('YYYY年MM月DD日') : '未设置时间'
+                  })()}
+                </div>
+                <div style={{ fontSize: 12, color: '#A0A0A0', marginTop: 4 }}>
+                  已有 {((events[0] as any).participants?.registered || []).length} / {(events[0] as any).participants?.maxParticipants || 0} 人报名
+                </div>
               </div>
-            ) : events.length > 0 ? (
-              <List
-                dataSource={events.slice(0, 5)}
-                renderItem={(event) => (
-                  <List.Item
-                    actions={[
-                      <Button 
-                        type="link" 
-                        size="small" 
-                        icon={<EyeOutlined />}
-                        onClick={() => navigate('/admin/events')}
-                      >
-                        查看
-                      </Button>
-                    ]}
-                  >
-                    <List.Item.Meta
-                      title={event.title}
-                      description={
-                        <div>
-                          <div>{(event as any).description || '暂无描述'}</div>
-                          <div style={{ fontSize: '12px', color: '#666', marginTop: 4 }}>
-                            {(() => {
-                              const startDate = (event.schedule.startDate as any)?.toDate ? 
-                                (event.schedule.startDate as any).toDate() : 
-                                event.schedule.startDate
-                              return startDate ? dayjs(startDate).format('YYYY-MM-DD') : '未设置时间'
-                            })()}
-                          </div>
-                        </div>
-                      }
-                    />
-                    <div style={{ textAlign: 'right' }}>
-                      <Tag color={
-                        event.status === 'published' ? 'blue' :
-                        event.status === 'ongoing' ? 'green' :
-                        event.status === 'completed' ? 'default' :
-                        event.status === 'cancelled' ? 'red' : 'default'
-                      }>
-                        {event.status === 'published' ? '已发布' :
-                         event.status === 'ongoing' ? '进行中' :
-                         event.status === 'completed' ? '已结束' :
-                         event.status === 'cancelled' ? '已取消' :
-                         event.status === 'draft' ? '草稿' : event.status}
-                      </Tag>
-                      <div style={{ fontSize: '12px', color: '#666', marginTop: 4 }}>
-                        {((event as any).participants?.registered || []).length}/{(event as any).participants?.maxParticipants || 0} 人
-                      </div>
-                    </div>
-                  </List.Item>
-                )}
-              />
-            ) : (
-              <div style={{ textAlign: 'center', color: '#999', padding: '40px 0' }}>
-                暂无活动数据
-              </div>
-            )}
-          </Card>
-        </Col>
-      </Row>
+            </div>
+          ) : (
+            <div style={{ color: '#999', textAlign: 'center', padding: '20px 0' }}>暂无活动数据</div>
+          )}
+        </div>
+      </div>
+
+      {/* 库存状态 */}
+      <div>
+        <h2 style={{ fontSize: 16, fontWeight: 800, color: '#EAEAEA', paddingInline: 8 }}>库存状态</h2>
+        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: 12, padding: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(244,175,37,0.1)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 48, height: 48, borderRadius: 9999, background: 'rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444' }}>!</div>
+            <div>
+              <div style={{ fontWeight: 700, color: '#EAEAEA' }}>低库存警告</div>
+              <div style={{ fontSize: 12, color: '#A0A0A0' }}>有 <span style={{ fontWeight: 800, color: '#ef4444' }}>{lowStockCount}</span> 种商品库存紧张</div>
+            </div>
+          </div>
+          <div style={{ color: '#A0A0A0' }}>&gt;</div>
+        </div>
+      </div>
     </div>
   )
 }

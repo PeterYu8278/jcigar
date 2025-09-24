@@ -1,4 +1,4 @@
-// 应用底部组件 - 雪茄客黑金主题
+// 应用底部组件 - Gentleman Club黑金主题
 import React from 'react'
 import { Layout, Typography, Space, Divider } from 'antd'
 import { HeartOutlined, GithubOutlined, MailOutlined } from '@ant-design/icons'
@@ -40,7 +40,7 @@ const AppFooter: React.FC = () => {
               fontWeight: 700,
               letterSpacing: '2px'
             }}>
-              雪茄客
+              Gentleman Club
             </Text>
             <div style={{ marginTop: '8px' }}>
               <Text style={{ color: '#c0c0c0', fontSize: '14px' }}>
@@ -108,7 +108,7 @@ const AppFooter: React.FC = () => {
               justifyContent: 'center',
               gap: '4px'
             }}>
-              © 2024 雪茄客管理平台 · Created with 
+              © 2024 Gentleman Club管理平台 · Created with 
               <HeartOutlined style={{ color: '#ffd700' }} /> 
               by JEP Ventures
             </Text>
