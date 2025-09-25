@@ -18,7 +18,7 @@ import {
   FireOutlined
 } from '@ant-design/icons'
 import { useAuthStore } from '../../store/modules/auth'
-import { useLanguage } from '../../contexts/LanguageContext'
+import { useTranslation } from 'react-i18next'
 
 const { Sider } = Layout
 const { Text } = Typography
@@ -28,29 +28,29 @@ const AppSider: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { isAdmin } = useAuthStore()
-  const { t } = useLanguage()
+  const { t } = useTranslation()
 
   // 前端菜单项
   const frontendMenuItems = [
     {
       key: '/',
       icon: <HomeOutlined />,
-      label: t('common.home'),
+      label: t('navigation.home'),
     },
     {
       key: '/events',
       icon: <CalendarOutlined />,
-      label: t('common.events'),
+      label: t('navigation.events'),
     },
     {
       key: '/shop',
       icon: <ShoppingOutlined />,
-      label: t('common.buyCigars'),
+      label: t('navigation.shop'),
     },
     {
       key: '/profile',
       icon: <UserOutlined />,
-      label: t('common.profile'),
+      label: '个人档案',
     },
   ]
 
@@ -59,32 +59,32 @@ const AppSider: React.FC = () => {
     {
       key: '/admin',
       icon: <DashboardOutlined />,
-      label: t('common.dashboard'),
+      label: t('navigation.dashboard'),
     },
     {
       key: '/admin/users',
       icon: <TeamOutlined />,
-      label: t('common.userManagement'),
+      label: t('navigation.users'),
     },
     {
       key: '/admin/events',
       icon: <CalendarOutlined />,
-      label: t('common.eventManagement'),
+      label: t('navigation.events'),
     },
     {
       key: '/admin/orders',
       icon: <ShoppingCartOutlined />,
-      label: t('common.orderManagement'),
+      label: t('navigation.orders'),
     },
     {
       key: '/admin/inventory',
       icon: <DatabaseOutlined />,
-      label: t('common.inventoryManagement'),
+      label: t('navigation.inventory'),
     },
     {
       key: '/admin/finance',
       icon: <DollarOutlined />,
-      label: t('common.financeManagement'),
+      label: t('navigation.finance'),
     },
   ]
 

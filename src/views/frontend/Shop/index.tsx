@@ -5,10 +5,12 @@ import { ShoppingCartOutlined, HeartOutlined } from '@ant-design/icons'
 import type { Cigar } from '../../../types'
 import { getCigars } from '../../../services/firebase/firestore'
 import { useCartStore } from '../../../store/modules'
+import { useTranslation } from 'react-i18next'
 
 const { Title, Paragraph, Text } = Typography
 
 const Shop: React.FC = () => {
+  const { t } = useTranslation()
   const [cigars, setCigars] = useState<Cigar[]>([])
   const [loading, setLoading] = useState(false)
   const { quantities, setQuantity, addToCart, toggleWishlist, wishlist } = useCartStore()
@@ -36,18 +38,18 @@ const Shop: React.FC = () => {
 
   const getStrengthText = (strength: string) => {
     switch (strength) {
-      case 'mild': return '温和'
-      case 'medium': return '中等'
-      case 'full': return '浓郁'
-      default: return '未知'
+      case 'mild': return t('shop.mild')
+      case 'medium': return t('shop.medium')
+      case 'full': return t('shop.full')
+      default: return t('shop.unknown')
     }
   }
 
   return (
     <div style={{ padding: '24px' }}>
-      <Title level={2}>雪茄商店</Title>
+      <Title level={2} style={{ margin: 10, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent'}}>{t('navigation.shop')}</Title>
       <Paragraph type="secondary">
-        精选世界顶级雪茄，品质保证，专业存储
+        {t('shop.subtitle')}
       </Paragraph>
 
       <Row gutter={[16, 16]}>
@@ -73,12 +75,12 @@ const Shop: React.FC = () => {
                     addToCart(cigar.id, quantities[cigar.id] || 1)
                     // eslint-disable-next-line no-alert
                     alert(`已加入购物车：${cigar.name} x ${quantities[cigar.id] || 1}`)
-                  }}>
-                    加入购物车
+                  }} style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}>
+                    {t('shop.addToCart')}
                   </Button>
                 </Space>,
                 <Button icon={<HeartOutlined />} type={wishlist[cigar.id] ? 'primary' : 'default'} onClick={() => toggleWishlist(cigar.id)}>
-                  收藏
+                  {t('shop.wishlist')}
                 </Button>
               ]}
             >
@@ -103,15 +105,15 @@ const Shop: React.FC = () => {
                     </Paragraph>
                     
                     <div>
-                      <Text>产地：{cigar.origin}</Text>
+                      <Text>{t('shop.origin')}：{cigar.origin}</Text>
                     </div>
                     
                     <div>
-                      <Text>尺寸：{cigar.size}</Text>
+                      <Text>{t('shop.size')}：{cigar.size}</Text>
                     </div>
                     
                     <div>
-                      <Text>库存：{(cigar as any)?.inventory?.stock ?? 0} 支</Text>
+                      <Text>{t('shop.stock')}：{(cigar as any)?.inventory?.stock ?? 0} {t('shop.sticks')}</Text>
                     </div>
                     
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -122,7 +124,7 @@ const Shop: React.FC = () => {
                       </div>
                       <div>
                         <Text type="secondary">
-                          ★ {(cigar as any)?.metadata?.rating ?? '-'} ({(cigar as any)?.metadata?.reviews ?? 0}评价)
+                          ★ {(cigar as any)?.metadata?.rating ?? '-'} ({(cigar as any)?.metadata?.reviews ?? 0}{t('shop.reviews')})
                         </Text>
                       </div>
                     </div>

@@ -7,12 +7,14 @@ import type { Event, User, Cigar } from '../../../types'
 import { getEvents, createDocument, updateDocument, deleteDocument, COLLECTIONS, getUsers, registerForEvent, unregisterFromEvent, getCigars, createOrdersFromEventAllocations, getAllOrders, getUsersByIds } from '../../../services/firebase/firestore'
 import ParticipantsList from '../../../components/admin/ParticipantsList'
 import ParticipantsSummary from '../../../components/admin/ParticipantsSummary'
+import { useTranslation } from 'react-i18next'
 
 const { Title } = Typography
 const { Search } = Input
 const { Option } = Select
 
 const AdminEvents: React.FC = () => {
+  const { t } = useTranslation()
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(false)
   const [creating, setCreating] = useState(false)
@@ -95,7 +97,7 @@ const AdminEvents: React.FC = () => {
 
       const res = await updateDocument(COLLECTIONS.EVENTS, viewing.id, updateData)
       if (res.success) {
-        message.success('Saved')
+        message.success('已保存')
         const list = await getEvents()
         setEvents(list)
         const updatedEvent = list.find(e => e.id === viewing.id)
@@ -103,7 +105,7 @@ const AdminEvents: React.FC = () => {
           setViewing(updatedEvent)
         }
       } else {
-        message.error('Save failed')
+        message.error('保存失败')
       }
     } catch (error) {
       message.error('保存失败')
@@ -166,17 +168,17 @@ const AdminEvents: React.FC = () => {
     let newStatus = event.status
     
     if (now < startDate) {
-      // Event not started
+      // 活动未开始
       if (event.status === 'published') {
         newStatus = 'published'
       }
     } else if (now >= startDate && now <= endDate) {
-      // Event in progress
+      // 活动进行中
       if (event.status === 'published') {
         newStatus = 'ongoing'
       }
     } else if (now > endDate) {
-      // Event ended
+      // 活动已结束
       if (event.status === 'published' || event.status === 'ongoing') {
         newStatus = 'completed'
         // 自动创建订单
@@ -197,7 +199,7 @@ const AdminEvents: React.FC = () => {
         await updateDocument(COLLECTIONS.EVENTS, event.id, { status: newStatus } as any)
         return newStatus
       } catch (error) {
-        console.error('更新活动状态失败:', error)
+        console.error(t('events.statusUpdateFailed'), error)
       }
     }
     
@@ -254,12 +256,12 @@ const AdminEvents: React.FC = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'draft': return '草稿'
-      case 'published': return '已发布'
-      case 'ongoing': return '进行中'
-      case 'completed': return '已结束'
-      case 'cancelled': return '已取消'
-      default: return '未知'
+      case 'draft': return t('events.draft')
+      case 'published': return t('events.published')
+      case 'ongoing': return t('events.ongoing')
+      case 'completed': return t('events.completed')
+      case 'cancelled': return t('events.cancelled')
+      default: return t('profile.unknown')
     }
   }
 
@@ -269,7 +271,7 @@ const AdminEvents: React.FC = () => {
 
   const columnsAll = [
     {
-      title: '活动名称',
+      title: t('events.eventName'),
       dataIndex: 'title',
       key: 'title',
       render: (title: string, record: any) => (
@@ -284,7 +286,7 @@ const AdminEvents: React.FC = () => {
       ),
     },
     {
-      title: '活动时间',
+      title: t('events.eventTime'),
       key: 'schedule',
       render: (_: any, record: any) => (
         <div>
@@ -306,12 +308,12 @@ const AdminEvents: React.FC = () => {
       ),
     },
     {
-      title: '地点',
+      title: t('events.location'),
       dataIndex: ['location','name'],
       key: 'location',
     },
     {
-      title: '报名情况',
+      title: t('events.registration'),
       key: 'registration',
       render: (_: any, record: any) => (
         <div>
@@ -319,17 +321,17 @@ const AdminEvents: React.FC = () => {
             {(() => {
               const registered = ((record?.participants as any)?.registered || []).length
               const maxParticipants = (record?.participants as any)?.maxParticipants || 0
-              return maxParticipants === 0 ? `${registered}/∞ 人` : `${registered}/${maxParticipants} 人`
+              return maxParticipants === 0 ? `${registered}/∞ ${t('events.people')}` : `${registered}/${maxParticipants} ${t('events.people')}`
             })()}
           </div>
           <div style={{ fontSize: '12px', color: '#666' }}>
-            费用: RM{(record?.participants as any)?.fee ?? 0}
+            {t('events.fee')}: RM{(record?.participants as any)?.fee ?? 0}
           </div>
         </div>
       ),
     },
     {
-      title: '活动收入',
+      title: t('events.revenue'),
       key: 'revenue',
       render: (_: any, record: any) => (
         <div style={{ fontWeight: 600, color: '#389e0d' }}>
@@ -338,7 +340,7 @@ const AdminEvents: React.FC = () => {
       ),
     },
     {
-      title: '状态',
+      title: t('events.status'),
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => (
@@ -354,12 +356,12 @@ const AdminEvents: React.FC = () => {
         return (
           <div style={{ padding: 8 }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 140 }}>
-              <Button size="small" type={(selectedKeys[0] === undefined) ? 'primary' : 'text'} onClick={() => { setSelectedKeys([]); clearFilters?.(); confirm({ closeDropdown: true }) }}>全部</Button>
-              <Button size="small" type={selectedKeys[0] === 'draft' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['draft']); confirm({ closeDropdown: true }) }}>草稿</Button>
-              <Button size="small" type={selectedKeys[0] === 'published' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['published']); confirm({ closeDropdown: true }) }}>已发布</Button>
-              <Button size="small" type={selectedKeys[0] === 'ongoing' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['ongoing']); confirm({ closeDropdown: true }) }}>进行中</Button>
-              <Button size="small" type={selectedKeys[0] === 'completed' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['completed']); confirm({ closeDropdown: true }) }}>已结束</Button>
-              <Button size="small" type={selectedKeys[0] === 'cancelled' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['cancelled']); confirm({ closeDropdown: true }) }}>已取消</Button>
+              <Button size="small" type={(selectedKeys[0] === undefined) ? 'primary' : 'text'} onClick={() => { setSelectedKeys([]); clearFilters?.(); confirm({ closeDropdown: true }) }}>{t('common.all')}</Button>
+              <Button size="small" type={selectedKeys[0] === 'draft' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['draft']); confirm({ closeDropdown: true }) }}>{t('events.draft')}</Button>
+              <Button size="small" type={selectedKeys[0] === 'published' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['published']); confirm({ closeDropdown: true }) }}>{t('events.published')}</Button>
+              <Button size="small" type={selectedKeys[0] === 'ongoing' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['ongoing']); confirm({ closeDropdown: true }) }}>{t('events.ongoing')}</Button>
+              <Button size="small" type={selectedKeys[0] === 'completed' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['completed']); confirm({ closeDropdown: true }) }}>{t('events.completed')}</Button>
+              <Button size="small" type={selectedKeys[0] === 'cancelled' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['cancelled']); confirm({ closeDropdown: true }) }}>{t('events.cancelled')}</Button>
             </div>
           </div>
         )
@@ -369,12 +371,14 @@ const AdminEvents: React.FC = () => {
       },
     },
     {
-      title: '操作',
+      title: t('common.action'),
       key: 'action',
       width: 100,
       render: (_: any, record: any) => (
+        <Space size="small" style={{ justifyContent: 'center', width: '100%' }}>
           <Button type="link" icon={<EyeOutlined />} size="small" onClick={() => setViewing(record)}>
           </Button>
+        </Space>
       ),
     },
   ]
@@ -383,7 +387,7 @@ const AdminEvents: React.FC = () => {
   return (
     <div style={{ padding: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Title level={2}>活动管理</Title>
+        <Title level={2} style={{ marginBottom: 10, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent'}}>{t('navigation.events')}</Title>
         <Space>
           {selectedRowKeys.length > 1 && (
             <>
@@ -391,24 +395,24 @@ const AdminEvents: React.FC = () => {
                 setLoading(true)
                 try {
                   await Promise.all(selectedRowKeys.map(id => updateDocument(COLLECTIONS.EVENTS, String(id), { status: 'cancelled' } as any)))
-                  message.success('已批量取消')
+                  message.success(t('common.batchCancelled'));
                   const list = await getEvents()
                   setEvents(list)
                   setSelectedRowKeys([])
                 } finally {
                   setLoading(false)
                 }
-              }}>批量取消</Button>
+              }}>{t('common.batchCancelled')}</Button>
               <Button danger onClick={() => {
                 Modal.confirm({
-                  title: '批量删除确认',
-                  content: `确定删除选中的 ${selectedRowKeys.length} 个活动吗？`,
+                  title: t('common.batchDeleteConfirm'),
+                  content: t('common.batchDeleteContent', { count: selectedRowKeys.length }),
                   okButtonProps: { danger: true },
                   onOk: async () => {
                     setLoading(true)
                     try {
                       await Promise.all(selectedRowKeys.map(id => deleteDocument(COLLECTIONS.EVENTS, String(id))))
-                      message.success('已批量删除')
+                      message.success(t('common.batchDeleted'));
                       const list = await getEvents()
                       setEvents(list)
                       setSelectedRowKeys([])
@@ -417,12 +421,12 @@ const AdminEvents: React.FC = () => {
                     }
                   }
                 })
-              }}>批量删除</Button>
+              }}>{t('common.batchDeleted')}</Button>
             </>
           )}
-          <Button onClick={() => { setKeyword(''); setStatusFilter(undefined); setSelectedRowKeys([]) }}>重置筛选</Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => { setCreating(true); form.resetFields() }}>
-          创建活动
+          <Button onClick={() => { setKeyword(''); setStatusFilter(undefined); setSelectedRowKeys([]) }}>{t('common.resetFilters')}</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => { setCreating(true); form.resetFields() }} style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}>
+            {t('dashboard.createEvent')}
         </Button>
         </Space>
       </div>
@@ -432,36 +436,64 @@ const AdminEvents: React.FC = () => {
       <div style={{ marginBottom: 16, padding: '16px', background: '#fafafa', borderRadius: '6px' }}>
         <Space size="middle" wrap>
           <Search
-            placeholder="搜索活动名称或主办方"
+            placeholder={t('events.searchByNameOrOrganizer')}
             allowClear
             style={{ width: 300 }}
             prefix={<SearchOutlined />}
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-            />
-          <DatePicker placeholder="开始日期" />
-          <DatePicker placeholder="结束日期" />
-          <Button type="primary" icon={<SearchOutlined />}>
-            搜索
-          </Button>
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+          />
+          <DatePicker placeholder={t('events.startDate')} />
+          <DatePicker placeholder={t('events.endDate')} />
+          <Button type="primary" icon={<SearchOutlined />}>{t('common.search')}</Button>
         </Space>
       </div>
       ) : (
         <div style={{ padding: '0 4px', marginBottom: 12 }}>
           <div style={{ position: 'relative', marginBottom: 8 }}>
             <Search
-              placeholder="搜索活动"
+              placeholder={t('common.searchPlaceholder')}
               allowClear
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
             />
           </div>
           <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
-            <Button type="primary" ghost onClick={() => setStatusFilter(undefined)}>全部</Button>
-            <Button onClick={() => setStatusFilter('published')}>即将开始</Button>
-            <Button onClick={() => setStatusFilter('ongoing')}>进行中</Button>
-            <Button onClick={() => setStatusFilter('completed')}>已结束</Button>
-            <Button onClick={() => setStatusFilter('draft')}>草稿</Button>
+            <Button 
+              type={statusFilter === undefined ? "primary" : "default"}
+              onClick={() => setStatusFilter(undefined)}
+              style={statusFilter === undefined ? { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' } : {}}
+            >
+              {t('common.all')}
+            </Button>
+            <Button 
+              type={statusFilter === 'published' ? "primary" : "default"}
+              onClick={() => setStatusFilter('published')}
+              style={statusFilter === 'published' ? { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' } : {}}
+            >
+              {t('events.upcoming')}
+            </Button>
+            <Button 
+              type={statusFilter === 'ongoing' ? "primary" : "default"}
+              onClick={() => setStatusFilter('ongoing')}
+              style={statusFilter === 'ongoing' ? { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' } : {}}
+            >
+              {t('events.ongoing')}
+            </Button>
+            <Button 
+              type={statusFilter === 'completed' ? "primary" : "default"}
+              onClick={() => setStatusFilter('completed')}
+              style={statusFilter === 'completed' ? { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' } : {}}
+            >
+              {t('events.completed')}
+            </Button>
+            <Button 
+              type={statusFilter === 'draft' ? "primary" : "default"}
+              onClick={() => setStatusFilter('draft')}
+              style={statusFilter === 'draft' ? { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' } : {}}
+            >
+              {t('events.draft')}
+            </Button>
           </div>
         </div>
       )}
@@ -474,10 +506,10 @@ const AdminEvents: React.FC = () => {
       {!isMobile ? (
       <Table
         columns={columns}
-          dataSource={filtered}
+        dataSource={filtered}
         rowKey="id"
-          loading={loading}
-          rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
+        loading={loading}
+        rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
         pagination={{
           total: events.length,
           pageSize: 10,
@@ -505,7 +537,7 @@ const AdminEvents: React.FC = () => {
                     {/* 参与人数 + 状态 同行显示 */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>{ev.title}</div>
-                      <div style={{ fontSize: 12, color: '#f4af25', fontWeight: 600 }}>参与人数: {(((ev as any)?.participants?.registered || []).length)}</div>
+                      <div style={{ fontSize: 12, color: '#f4af25', fontWeight: 600 }}> {t('events.participants')}: {(((ev as any)?.participants?.registered || []).length)}</div>
                       
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -527,20 +559,20 @@ const AdminEvents: React.FC = () => {
                   </div>
                 </div>
                 <div style={{ padding: '2px 8px',display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8 }}>
-                  <Button type="primary" style={{ background: 'linear-gradient(to bottom, #f4af25, #c78d1a)'}} size="small" onClick={() => setViewing(ev)}>编辑</Button>
+                  <Button type="primary" style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }} size="small" onClick={() => setViewing(ev)}>{t('common.edit')}</Button>
                 </div>
               </div>
             </div>
           ))}
           {filtered.length === 0 && (
-            <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>暂无数据</div>
+            <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
           )}
         </div>
       )}
 
       {/* 查看活动详情 */}
       <Modal
-        title="活动详情"
+        title={t('events.eventDetails')}
         open={!!viewing}
         onCancel={() => setViewing(null)}
         footer={null}
@@ -553,11 +585,11 @@ const AdminEvents: React.FC = () => {
             items={[
               {
                 key: 'overview',
-                label: '概览',
+                label: t('common.overview'),
                 children: (
             <div>
             <Descriptions bordered column={2} size="small">
-              <Descriptions.Item label="活动名称" span={2}>
+              <Descriptions.Item label={t('events.eventName')} span={2}>
                 {isEditingDetails ? (
                   <Input
                     value={editForm.title}
@@ -576,7 +608,7 @@ const AdminEvents: React.FC = () => {
                   </span>
                 )}
               </Descriptions.Item>
-              <Descriptions.Item label="活动描述" span={2}>
+              <Descriptions.Item label={t('events.description')} span={2}>
                 {isEditingDetails ? (
                   <Input.TextArea
                     value={editForm.description}
@@ -592,11 +624,11 @@ const AdminEvents: React.FC = () => {
                   />
                 ) : (
                   <div style={{ maxHeight: '100px', overflow: 'auto' }}>
-                    {(viewing as any).description || '暂无描述'}
+                    {(viewing as any).description || t('common.noDescription')}
             </div>
                 )}
               </Descriptions.Item>
-              <Descriptions.Item label="活动状态" span={1}>
+              <Descriptions.Item label={t('events.status')} span={1}>
                 {isEditingDetails ? (
                   <Select
                     value={editForm.status}
@@ -607,11 +639,11 @@ const AdminEvents: React.FC = () => {
                     style={{ width: '100%' }}
                     autoFocus
                   >
-                    <Option value="draft">草稿</Option>
-                    <Option value="published">已发布</Option>
-                    <Option value="ongoing">进行中</Option>
-                    <Option value="completed">已结束</Option>
-                    <Option value="cancelled">已取消</Option>
+                    <Option value="draft">{t('events.draft')}</Option>
+                    <Option value="published">{t('events.published')}</Option>
+                    <Option value="ongoing">{t('events.ongoing')}</Option>
+                    <Option value="completed">{t('events.completed')}</Option>
+                    <Option value="cancelled">{t('events.cancelled')}</Option>
                   </Select>
                 ) : (
                   <Tag 
@@ -622,15 +654,15 @@ const AdminEvents: React.FC = () => {
                       viewing.status === 'cancelled' ? 'red' : 'default'
                     }
                   >
-                    {viewing.status === 'published' ? '已发布' :
-                     viewing.status === 'ongoing' ? '进行中' :
-                     viewing.status === 'completed' ? '已结束' :
-                     viewing.status === 'cancelled' ? '已取消' :
-                     viewing.status === 'draft' ? '草稿' : viewing.status}
+                    {viewing.status === 'published' ? t('events.published') :
+                     viewing.status === 'ongoing' ? t('events.ongoing') :
+                     viewing.status === 'completed' ? t('events.completed') :
+                     viewing.status === 'cancelled' ? t('events.cancelled') :
+                     viewing.status === 'draft' ? t('events.draft') : viewing.status}
                   </Tag>
                 )}
               </Descriptions.Item>
-              <Descriptions.Item label="开始时间" span={1}>
+              <Descriptions.Item label={t('events.startTime')} span={1}>
                 {isEditingDetails ? (
                   <DatePicker
                     value={editForm.startDate}
@@ -652,7 +684,7 @@ const AdminEvents: React.FC = () => {
                   </span>
                 )}
               </Descriptions.Item>
-              <Descriptions.Item label="结束时间" span={1}>
+              <Descriptions.Item label={t('events.endTime')} span={1}>
                 {isEditingDetails ? (
                   <DatePicker
                     value={editForm.endDate}
@@ -674,7 +706,7 @@ const AdminEvents: React.FC = () => {
                   </span>
                 )}
               </Descriptions.Item>
-              <Descriptions.Item label="活动地点" span={2}>
+              <Descriptions.Item label={t('events.location')} span={2}>
                 {isEditingDetails ? (
                   <Input
                     value={editForm.locationName}
@@ -698,7 +730,7 @@ const AdminEvents: React.FC = () => {
             </div>
                 )}
               </Descriptions.Item>
-              <Descriptions.Item label="参与费用" span={1}>
+              <Descriptions.Item label={t('events.fee')} span={1}>
                 {isEditingDetails ? (
                   <InputNumber
                     value={editForm.fee}
@@ -717,7 +749,7 @@ const AdminEvents: React.FC = () => {
                   </span>
                 )}
               </Descriptions.Item>
-              <Descriptions.Item label="人数限制" span={1}>
+              <Descriptions.Item label={t('events.maxParticipants')} span={1}>
                 {isEditingDetails ? (
                   <InputNumber
                     value={editForm.maxParticipants}
@@ -728,23 +760,23 @@ const AdminEvents: React.FC = () => {
                     style={{ width: '100%' }}
                     autoFocus
                     min={0}
-                    addonAfter="人"
+                    addonAfter={t('events.people')}
                   />
                 ) : (
                   <span>
                     {(() => {
                       const maxP = (viewing as any)?.participants?.maxParticipants ?? 0
-                      return maxP === 0 ? '无人数限制' : `${maxP} 人`
+                      return maxP === 0 ? t('events.noLimit') : `${maxP} ${t('events.people')}`
                     })()}
                   </span>
                 )}
               </Descriptions.Item>
-              <Descriptions.Item label="已报名人数" span={1}>
+              <Descriptions.Item label={t('events.currentParticipants')} span={1}>
                 <span style={{ color: '#52c41a', fontWeight: 'bold' }}>
-                  {((viewing as any)?.participants?.registered || []).length} 人
+                  {((viewing as any)?.participants?.registered || []).length} {t('events.people')}
                 </span>
               </Descriptions.Item>
-              <Descriptions.Item label="报名进度" span={1}>
+              <Descriptions.Item label={t('events.registrationProgress')} span={1}>
                 {(() => {
                   const registered = ((viewing as any)?.participants?.registered || []).length
                   const max = (viewing as any)?.participants?.maxParticipants ?? 0
@@ -758,10 +790,10 @@ const AdminEvents: React.FC = () => {
                   )
                 })()}
               </Descriptions.Item>
-              <Descriptions.Item label="创建时间" span={1}>
+              <Descriptions.Item label={t('events.createdAt')} span={1}>
                 {(viewing as any)?.createdAt ? new Date((viewing as any).createdAt).toLocaleString() : '-'}
               </Descriptions.Item>
-              <Descriptions.Item label="更新时间" span={1}>
+              <Descriptions.Item label={t('events.updatedAt')} span={1}>
                 {(viewing as any)?.updatedAt ? new Date((viewing as any).updatedAt).toLocaleString() : '-'}
               </Descriptions.Item>
             </Descriptions>
@@ -799,7 +831,7 @@ const AdminEvents: React.FC = () => {
                     }
                   }}
                 >
-                  {isEditingDetails ? '完成编辑' : '编辑活动'}
+                  {isEditingDetails ? t('common.completeEdit') : t('common.editEvent')}
                 </Button>
                 {isEditingDetails && (
                   <Button 
@@ -808,35 +840,35 @@ const AdminEvents: React.FC = () => {
                       setEditForm({})
                     }}
                   >
-                    取消编辑
+                    {t('common.cancelEdit')}
                   </Button>
                 )}
                 
                 <Dropdown
                   menu={{
                     items: [
-                      { key: 'draft', label: '设为草稿', onClick: async () => { 
+                      { key: 'draft', label: t('common.setToDraft'), onClick: async () => { 
                         await updateDocument(COLLECTIONS.EVENTS, viewing.id, { status: 'draft' } as any); 
-                        message.success('已设为草稿'); 
+                        message.success(t('common.setToDraft')); 
                         setEvents(await getEvents())
                         setViewing(null)
                       }},
-                      { key: 'published', label: '设为发布', onClick: async () => { 
+                      { key: 'published', label: t('common.setToPublished'), onClick: async () => { 
                         await updateDocument(COLLECTIONS.EVENTS, viewing.id, { status: 'published' } as any); 
-                        message.success('已发布'); 
+                        message.success(t('common.setToPublished')); 
                         setEvents(await getEvents())
                         setViewing(null)
                       }},
-                      { key: 'cancelled', label: '设为取消', onClick: async () => { 
+                      { key: 'cancelled', label: t('common.setToCancelled'), onClick: async () => { 
                         await updateDocument(COLLECTIONS.EVENTS, viewing.id, { status: 'cancelled' } as any); 
-                        message.success('已取消'); 
+                        message.success(t('common.setToCancelled')); 
                         setEvents(await getEvents())
                         setViewing(null)
                       }},
                     ]
                   }}
                 >
-                  <Button>快速状态</Button>
+                  <Button>{t('common.quickStatus')}</Button>
                 </Dropdown>
                 <Button 
                   danger 
@@ -846,7 +878,7 @@ const AdminEvents: React.FC = () => {
                     setDeleting(viewing)
                   }}
                 >
-                  删除活动
+                  {t('common.deleteEvent')}
                 </Button>
               </Space>
             </div>
@@ -855,11 +887,11 @@ const AdminEvents: React.FC = () => {
               },
               {
                 key: 'participants',
-                label: '参与者管理',
+                label: t('common.participantsManagement'),
                 children: (
             <div>
                     <div style={{ marginBottom: 12, color: '#666' }}>
-                      已报名：{((viewing as any)?.participants?.registered || []).length} / {(viewing as any)?.participants?.maxParticipants || 0}
+                      {t('common.registered')}: {((viewing as any)?.participants?.registered || []).length} / {(viewing as any)?.participants?.maxParticipants || 0}
             </div>
                     {/* 直接渲染“参与者弹窗”的主体内容 */}
                     {(() => {
@@ -872,7 +904,7 @@ const AdminEvents: React.FC = () => {
                               <Select
                                 showSearch
                                 allowClear
-                                placeholder="输入姓名/邮箱/手机号或用户ID进行搜索并选择"
+                                placeholder={t('common.pleaseInputNameEmailPhoneOrUserId')}
                                 style={{ width: '100%' }}
                                 value={manualAddValue || undefined}
                                 onSearch={(val) => setManualAddValue(val)}
@@ -883,7 +915,7 @@ const AdminEvents: React.FC = () => {
                                   const searchable = String((option as any)?.searchText || '').toLowerCase()
                                   return searchable.includes(keyword)
                                 }}
-                                notFoundContent={manualAddValue && manualAddValue.trim() !== '' ? '无匹配' : '暂无数据'}
+                                notFoundContent={manualAddValue && manualAddValue.trim() !== '' ? t('common.noMatch') : t('common.noData')}
                                 options={(manualAddValue && manualAddValue.trim() !== '' ? participantsUsers : []).map(u => {
                                   const isRegistered = ((viewing as any)?.participants?.registered || []).includes(u.id)
                                   return {
@@ -891,12 +923,12 @@ const AdminEvents: React.FC = () => {
                                     searchText: `${u.displayName || ''} ${(u as any)?.profile?.phone || ''} ${u.email || ''} ${u.id}`.trim(),
                                     label: (
                                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span style={{ flex: 1, textAlign: 'left' }}>{u.displayName || '未命名'}</span>
+                                        <span style={{ flex: 1, textAlign: 'left' }}>{u.displayName || t('common.unnamed')}</span>
                                         <span style={{ flex: 2, textAlign: 'left', color: '#999', fontSize: '12px' }}>
-                                          {(u as any)?.profile?.phone || '无手机号'}
+                                          {(u as any)?.profile?.phone || t('common.noPhone')}
                                         </span>
                                         <span style={{ flex: 6, textAlign: 'left', color: '#999', fontSize: '12px' }}>
-                                          {u.email || '无邮箱'}
+                                          {u.email || t('common.noEmail')}
                                         </span>
                                         {isRegistered && (
                                           <CheckCircleOutlined style={{ color: '#52c41a', marginLeft: 8 }} />
@@ -917,33 +949,33 @@ const AdminEvents: React.FC = () => {
                                   if (!byId) {
                                     if (raw.includes('@')) {
                                       const match = participantsUsers.find(u => u.email?.toLowerCase() === raw.toLowerCase())
-                                      if (!match) { message.error('未找到该邮箱对应的用户'); return }
+                                      if (!match) { message.error(t('common.userNotFound')); return }
                                       userId = match.id
                                     } else if (/^\+?\d[\d\s-]{5,}$/.test(raw)) {
                                       const match = participantsUsers.find(u => ((u as any)?.profile?.phone || '').replace(/\s|-/g,'') === raw.replace(/\s|-/g,''))
-                                      if (!match) { message.error('未找到该手机号对应的用户'); return }
+                                      if (!match) { message.error(t('common.userNotFound')); return }
                                       userId = match.id
                                     } else {
                                       const matches = participantsUsers.filter(u => (u.displayName || '').toLowerCase().includes(raw.toLowerCase()))
                                       if (matches.length === 1) userId = matches[0].id
-                                      else { message.info('请从下拉列表选择唯一的用户'); return }
+                                      else { message.info(t('common.pleaseSelectUniqueUser')); return }
                                     }
                                   }
                                   const res = await registerForEvent((participantsLike as any).id, userId)
                                   if ((res as any)?.success) {
-                                    message.success('已添加参与者')
-                                    const list = await getEvents()
-                                    setEvents(list)
+                                    message.success(t('common.participantAdded'))
+                    const list = await getEvents()
+                    setEvents(list)
                                     const next = list.find(e => e.id === (participantsLike as any).id) as any
                                     setViewing(next)
                                     setManualAddValue('')
                                   } else {
-                                    message.error('添加失败')
+                                    message.error(t('common.addFailed'))
                                   }
-                                } finally {
+                  } finally {
                                   setManualAddLoading(false)
                                 }
-                              }}>添加</Button>
+                              }}>{t('common.add')}</Button>
                             </Space.Compact>
             </div>
 
@@ -957,16 +989,16 @@ const AdminEvents: React.FC = () => {
                                   const orderResult = await createOrdersFromEventAllocations((participantsLike as any).id);
                                   if (orderResult.success) {
                                     if (orderResult.createdOrders > 0) {
-                                      message.success(`已为活动创建 ${orderResult.createdOrders} 个订单`);
+                                      message.success(`${t('common.ordersCreated')} ${orderResult.createdOrders} ${t('common.forEvent')}`);
                                     } else {
-                                      message.info('没有参与者分配了雪茄，无法创建订单');
+                                      message.info(t('common.noParticipantsAssignedCigars'));
                                     }
                                   } else {
-                                    message.error('创建订单失败：' + (orderResult.error?.message || '未知错误'));
+                                    message.error(t('common.createOrdersFailed') + (orderResult.error?.message || t('common.unknownError')));
                                   }
                                 }}
                               >
-                                创建订单
+                                {t('common.createOrders')}
                               </Button>
                               <Button 
                                 icon={<DownloadOutlined />}
@@ -997,7 +1029,7 @@ const AdminEvents: React.FC = () => {
                                   URL.revokeObjectURL(url)
                                 }}
                               >
-                                导出分配清单
+                                {t('common.exportAllocations')}
                               </Button>
                               <Upload
                                 accept=".csv"
@@ -1009,7 +1041,7 @@ const AdminEvents: React.FC = () => {
                                   const uniq = Array.from(new Set(ids))
                                   const merged = Array.from(new Set([...(participantsLike as any)?.participants?.registered || [], ...uniq]))
                                   await updateDocument(COLLECTIONS.EVENTS, (participantsLike as any).id, { 'participants.registered': merged } as any)
-                                  message.success(`已导入 ${uniq.length} 条`)
+                                  message.success(`${t('common.imported')} ${uniq.length} ${t('common.items')}`)
                                   const list = await getEvents()
                                   setEvents(list)
                                   const next = list.find(e => e.id === (participantsLike as any).id) as any
@@ -1018,7 +1050,7 @@ const AdminEvents: React.FC = () => {
                                 }}
                                 showUploadList={false}
                               >
-                                <Button icon={<UploadOutlined />}>导入报名名单</Button>
+                                <Button icon={<UploadOutlined />}>{t('common.importParticipants')}</Button>
                               </Upload>
           </Space>
                           </div>
@@ -1064,9 +1096,9 @@ const AdminEvents: React.FC = () => {
       <Modal
         title={
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span>参与者管理</span>
+            <span>{t('common.participantsManagement')}</span>
             <div style={{ fontSize: 14, color: '#666',marginRight: 30 }}>
-              已报名：{((participantsEvent as any)?.participants?.registered || []).length} / {(participantsEvent as any)?.participants?.maxParticipants || 0}
+              {t('common.registered')}：{((participantsEvent as any)?.participants?.registered || []).length} / {(participantsEvent as any)?.participants?.maxParticipants || 0}
             </div>
           </div>
         }
@@ -1080,7 +1112,7 @@ const AdminEvents: React.FC = () => {
                     <Select
               showSearch
               allowClear
-              placeholder="输入姓名/邮箱/手机号或用户ID进行搜索并选择"
+              placeholder={t('common.pleaseInputNameEmailPhoneOrUserId')}
               style={{ width: '100%' }}
               value={manualAddValue || undefined}
               onSearch={(val) => setManualAddValue(val)}
@@ -1091,21 +1123,21 @@ const AdminEvents: React.FC = () => {
                 const searchable = String((option as any)?.searchText || '').toLowerCase()
                 return searchable.includes(keyword)
               }}
-               notFoundContent={manualAddValue && manualAddValue.trim() !== '' ? '无匹配' : '暂无数据'}
+               notFoundContent={manualAddValue && manualAddValue.trim() !== '' ? t('common.noMatch') : t('common.noData')}
                 options={(manualAddValue && manualAddValue.trim() !== '' ? participantsUsers : []).map(u => ({
                   value: u.id,
                   // 用于搜索匹配的纯文本字段
                   searchText: `${u.displayName || ''} ${(u as any)?.profile?.phone || ''} ${u.email || ''} ${u.id}`.trim(),
                   label: (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ flex: 1, textAlign: 'left' }}>{u.displayName || '未命名'}</span>
+                      <span style={{ flex: 1, textAlign: 'left' }}>{u.displayName || t('common.unnamed')}</span>
                       <span style={{ flex: 2, textAlign: 'left', color: '#999', fontSize: '12px' }}>
-                        {(u as any)?.profile?.phone || '无手机号'}
+                        {(u as any)?.profile?.phone || t('common.noPhone')}
                       </span>
                       <span style={{ flex: 6, textAlign: 'left', color: '#999', fontSize: '12px' }}>
-                        {u.email || '无邮箱'}
+                        {u.email || t('common.noEmail')}
                       </span>
-                  </div>
+          </div>
                 )
                 }))}
             />
@@ -1120,34 +1152,34 @@ const AdminEvents: React.FC = () => {
                 if (!byId) {
                   if (raw.includes('@')) {
                     const match = participantsUsers.find(u => u.email?.toLowerCase() === raw.toLowerCase())
-                    if (!match) { message.error('未找到该邮箱对应的用户'); return }
+                    if (!match) { message.error(t('common.userNotFound')); return }
                   userId = match.id
                   } else if (/^\+?\d[\d\s-]{5,}$/.test(raw)) {
                     const match = participantsUsers.find(u => ((u as any)?.profile?.phone || '').replace(/\s|-/g,'') === raw.replace(/\s|-/g,''))
-                    if (!match) { message.error('未找到该手机号对应的用户'); return }
+                    if (!match) { message.error(t('common.userNotFound')); return }
                     userId = match.id
                   } else {
                     const matches = participantsUsers.filter(u => (u.displayName || '').toLowerCase().includes(raw.toLowerCase()))
                     if (matches.length === 1) userId = matches[0].id
-                    else { message.info('请从下拉列表选择唯一的用户'); return }
+                    else { message.info(t('common.pleaseSelectUniqueUser')); return }
                   }
                 }
                 const res = await registerForEvent((participantsEvent as any).id, userId)
                 if (res.success) {
-                  message.success('已添加参与者')
+                  message.success(t('common.participantAdded'));
                   const list = await getEvents()
                   setEvents(list)
                   setParticipantsEvent(list.find(e => e.id === (participantsEvent as any).id) || null)
                   setManualAddValue('')
                 } else {
-                  message.error('添加失败')
+                  message.error(t('common.addFailed'));
                 }
               } finally {
                 setManualAddLoading(false)
               }
-            }}>添加</Button>
+            }}>{t('common.add')}</Button>
           </Space.Compact>
-        </div>
+          </div>
 
         <div style={{ marginBottom: 16 }}>
           <Space>
@@ -1159,16 +1191,16 @@ const AdminEvents: React.FC = () => {
                 const orderResult = await createOrdersFromEventAllocations((participantsEvent as any).id);
                 if (orderResult.success) {
                   if (orderResult.createdOrders > 0) {
-                    message.success(`已为活动创建 ${orderResult.createdOrders} 个订单`);
+                    message.success(`${t('common.ordersCreated')} ${orderResult.createdOrders} ${t('common.forEvent')}`);
                   } else {
-                    message.info('没有参与者分配了雪茄，无法创建订单');
+                    message.info(t('common.noParticipantsAssignedCigars'));
                   }
                 } else {
-                  message.error('创建订单失败：' + (orderResult.error?.message || '未知错误'));
+                  message.error(t('common.createOrdersFailed') + ' ' + (orderResult.error?.message || t('common.unknownError')));
                 }
               }}
             >
-              创建订单
+              {t('common.createOrders')}
             </Button>
             <Button 
               icon={<DownloadOutlined />}
@@ -1199,7 +1231,7 @@ const AdminEvents: React.FC = () => {
               URL.revokeObjectURL(url)
               }}
             >
-              导出分配清单
+              {t('common.exportAllocations')}
             </Button>
             <Upload
               accept=".csv"
@@ -1211,7 +1243,7 @@ const AdminEvents: React.FC = () => {
                 const uniq = Array.from(new Set(ids))
                 const merged = Array.from(new Set([...(participantsEvent as any)?.participants?.registered || [], ...uniq]))
                 await updateDocument(COLLECTIONS.EVENTS, (participantsEvent as any).id, { 'participants.registered': merged } as any)
-                message.success(`已导入 ${uniq.length} 条`)
+                message.success(`${t('common.imported')} ${uniq.length} ${t('common.条')}`);
                 const list = await getEvents()
                 setEvents(list)
                 setParticipantsEvent(list.find(e => e.id === (participantsEvent as any).id) || null)
@@ -1219,7 +1251,7 @@ const AdminEvents: React.FC = () => {
               }}
               showUploadList={false}
             >
-              <Button icon={<UploadOutlined />}>导入报名名单</Button>
+              <Button icon={<UploadOutlined />}>{t('common.importParticipants')}</Button>
             </Upload>
           </Space>
         </div>
@@ -1254,7 +1286,7 @@ const AdminEvents: React.FC = () => {
 
       {/* 创建/编辑 弹窗 */}
       <Modal
-        title={editing ? '编辑活动' : '创建活动'}
+        title={editing ? t('common.edit') : t('common.add')}
         open={creating || !!editing}
         onCancel={() => { setCreating(false); setEditing(null) }}
         onOk={() => form.submit()}
@@ -1298,20 +1330,20 @@ const AdminEvents: React.FC = () => {
                   const orderResult = await createOrdersFromEventAllocations(editing.id);
                   if (orderResult.success) {
                     if (orderResult.createdOrders > 0) {
-                      message.success(`活动已保存并结束，已自动创建 ${orderResult.createdOrders} 个订单`);
+                      message.success(`${t('common.eventSavedAndEnded')} ${orderResult.createdOrders} ${t('common.ordersCreated')}`);
                     } else {
-                      message.success('活动已保存并结束');
+                      message.success(t('common.eventSavedAndEnded'));
                     }
                   } else {
-                    message.warning('活动已保存并结束，但订单创建失败：' + (orderResult.error?.message || '未知错误'));
+                    message.warning(t('common.eventSavedAndEnded') + ' ' + (orderResult.error?.message || t('common.unknownError')));
                   }
                 } else {
-                  message.success('Saved')
+                  message.success(t('common.saved'))
                 }
               }
             } else {
               await createDocument<Event>(COLLECTIONS.EVENTS, { ...payload, createdAt: new Date() } as any)
-              message.success('已创建')
+              message.success(t('common.created'))
             }
             const list = await getEvents()
             setEvents(list)
@@ -1321,34 +1353,34 @@ const AdminEvents: React.FC = () => {
             setLoading(false)
           }
         }}>
-          <Form.Item label="活动名称" name="title" rules={[{ required: true, message: '请输入活动名称' }]}>
+          <Form.Item label={t('common.eventName')} name="title" rules={[{ required: true, message: t('common.pleaseInputEventName') }]}>
             <Input />
           </Form.Item>
-          <Form.Item label="描述" name="description">
+          <Form.Item label={t('common.description')} name="description">
             <Input.TextArea rows={3} />
           </Form.Item>
-          <Form.Item label="地点名称" name="locationName" rules={[{ required: true, message: '请输入地点名称' }]}>
+          <Form.Item label={t('common.locationName')} name="locationName" rules={[{ required: true, message: t('common.pleaseInputLocationName') }]}>
             <Input />
           </Form.Item>
-          <Form.Item label="开始日期" name="startDate" rules={[{ required: true, message: '请选择开始日期' }]}>
+          <Form.Item label={t('common.startDate')} name="startDate" rules={[{ required: true, message: t('common.pleaseSelectStartDate') }]}>
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item label="结束日期" name="endDate" rules={[{ required: true, message: '请选择结束日期' }]}>
+          <Form.Item label={t('common.endDate')} name="endDate" rules={[{ required: true, message: t('common.pleaseSelectEndDate') }]}>
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item label="费用 (RM)" name="fee">
+          <Form.Item label={t('common.fee')} name="fee">
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item label="人数上限" name="maxParticipants">
+          <Form.Item label={t('common.maxParticipants')} name="maxParticipants">
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item label="状态" name="status" initialValue={'draft'}>
+          <Form.Item label={t('common.status')} name="status" initialValue={'draft'}>
             <Select>
-              <Option value="draft">草稿</Option>
-              <Option value="published">已发布</Option>
-              <Option value="ongoing">进行中</Option>
-              <Option value="completed">已结束</Option>
-              <Option value="cancelled">已取消</Option>
+              <Option value="draft">{t('common.draft')}</Option>
+              <Option value="published">{t('common.published')}</Option>
+              <Option value="ongoing">{t('common.ongoing')}</Option>
+              <Option value="completed">{t('common.completed')}</Option>
+              <Option value="cancelled">{t('common.cancelled')}</Option>
             </Select>
           </Form.Item>
         </Form>
@@ -1356,7 +1388,7 @@ const AdminEvents: React.FC = () => {
 
       {/* 删除确认 */}
       <Modal
-        title="删除活动"
+        title={t('common.deleteEvent')}
         open={!!deleting}
         onCancel={() => setDeleting(null)}
         onOk={async () => {
@@ -1365,7 +1397,7 @@ const AdminEvents: React.FC = () => {
           try {
             const res = await deleteDocument(COLLECTIONS.EVENTS, deleting.id)
             if (res.success) {
-              message.success('已删除')
+              message.success(t('common.deleted'))
               const list = await getEvents()
               setEvents(list)
             }
@@ -1376,7 +1408,7 @@ const AdminEvents: React.FC = () => {
         }}
         okButtonProps={{ danger: true }}
       >
-        确认删除活动 {deleting?.title}？该操作不可撤销。
+        {t('common.confirmDeleteEvent')} {deleting?.title}？{t('common.thisOperationCannotBeUndone')}
       </Modal>
     </div>
   )

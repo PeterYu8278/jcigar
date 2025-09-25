@@ -34,11 +34,11 @@ function App() {
 
   return (
     <Router>
-        <Layout style={{ 
-          minHeight: '100vh',
-          background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2d2d2d 100%)',
-          position: 'relative'
-        }}>
+      <Layout style={{ 
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2d2d2d 100%)',
+        position: 'relative'
+      }}>
         {/* 全局背景装饰 */}
         <div style={{
           position: 'fixed',
@@ -117,8 +117,8 @@ function App() {
         
         {/* 手机端底部导航 */}
         {user && <MobileBottomNav />}
-        </Layout>
-      </Router>
+      </Layout>
+    </Router>
   )
 }
 

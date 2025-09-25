@@ -13,11 +13,13 @@ import {
   getAllInventoryLogs
 } from '../../../services/firebase/firestore'
 import type { User, Order, Event, Transaction, Cigar } from '../../../types'
+import { useTranslation } from 'react-i18next'
 
 const { Title } = Typography
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [loading, setLoading] = useState(false)
   const [users, setUsers] = useState<User[]>([])
   const [orders, setOrders] = useState<Order[]>([])
@@ -50,7 +52,7 @@ const AdminDashboard: React.FC = () => {
       setCigars(cigarsData)
       setInventoryLogs(inventoryLogsData)
     } catch (error) {
-      message.error('Failed to load data')
+      message.error(t('messages.dataLoadFailed'))
     } finally {
       setLoading(false)
     }
@@ -75,7 +77,7 @@ const AdminDashboard: React.FC = () => {
     .slice(0, 5)
     .map(order => ({
       ...order,
-      user: users.find(u => u.id === order.userId)?.displayName || 'Unknown User'
+      user: users.find(u => u.id === order.userId)?.displayName || t('dashboard.unknownUser')
     }))
   const completedOrders = recentOrders.filter(o => o.status === 'delivered')
   const pendingOrders = recentOrders.filter(o => o.status !== 'delivered')
@@ -97,11 +99,11 @@ const AdminDashboard: React.FC = () => {
 
       </div>
 
-      <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', paddingInline: 8, marginBottom: 12 }}>Overview</h1>
+      <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', paddingInline: 8, marginBottom: 12 }}>{t('dashboard.overview')}</h1>
 
       {/* 三个概览卡片 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
-        {[{label:'Total Members', value: totalUsers.toLocaleString()}, {label:'Monthly Orders', value: monthlyOrders.toLocaleString()}, {label:'Monthly Revenue', value: `RM${monthlyRevenue.toLocaleString()}`}] .map((card, idx) => (
+        {[{label: t('dashboard.totalMembers'), value: totalUsers.toLocaleString()}, {label: t('dashboard.monthlyOrders'), value: monthlyOrders.toLocaleString()}, {label: t('dashboard.monthlyRevenue'), value: `RM${monthlyRevenue.toLocaleString()}`}] .map((card, idx) => (
           <div key={idx} style={{ borderRadius: 12, padding: 12, textAlign: 'center', backgroundColor: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)', border: '1px solid rgba(244,175,37,0.1)' }}>
             <div style={{ fontSize: 12, color: '#A0A0A0' }}>{card.label}</div>
             <div style={{ marginTop: 6, fontSize: 24, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{card.value}</div>
@@ -111,26 +113,26 @@ const AdminDashboard: React.FC = () => {
 
       {/* 快速操作 */}
       <div style={{ marginBottom: 16 }}>
-        <h2 style={{ fontSize: 16, fontWeight: 800, color: '#EAEAEA', paddingInline: 8 }}>Quick Actions</h2>
+        <h2 style={{ fontSize: 16, fontWeight: 800, color: '#EAEAEA', paddingInline: 8 }}>{t('dashboard.quickActions')}</h2>
         <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
           <button onClick={() => navigate('/admin/events')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 12, padding: 12, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, boxShadow: '0 4px 15px rgba(244,175,37,0.35)' }}>
             <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v6h6a1 1 0 110 2h-6v6a1 1 0 11-2 0v-6H3a1 1 0 110-2h6V3a1 1 0 011-1z"/></svg>
-            <span>Create Event</span>
+            <span>{t('dashboard.createEvent')}</span>
           </button>
           <button onClick={() => navigate('/admin/orders')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 12, padding: 12, background: 'rgba(255,255,255,0.05)', color: '#EAEAEA', border: '1px solid rgba(244,175,37,0.1)' }}>
             <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path clipRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h14a1 1 0 001-1V4a1 1 0 00-1-1H3zm12 11H5V5h10v9z" fillRule="evenodd"></path><path d="M9 7a1 1 0 100 2h2a1 1 0 100-2H9z"></path></svg>
-            <span>View Orders</span>
+            <span>{t('dashboard.viewOrders')}</span>
           </button>
           <button onClick={() => navigate('/admin/users')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 12, padding: 12, background: 'rgba(255,255,255,0.05)', color: '#EAEAEA', border: '1px solid rgba(244,175,37,0.1)' }}>
             <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path clipRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" fillRule="evenodd"></path></svg>
-            <span>Create User</span>
+            <span>{t('dashboard.createUser')}</span>
           </button>
           <button onClick={() => navigate('/admin/inventory')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 12, padding: 12, background: 'rgba(255,255,255,0.05)', color: '#EAEAEA', border: '1px solid rgba(244,175,37,0.1)' }}>
             <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M5 8a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z"></path><path clipRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V3zm2 2v10h10V5H5z" fillRule="evenodd"></path></svg>
-            <span>Inventory Management</span>
+            <span>{t('dashboard.inventoryManagement')}</span>
           </button>
-        </div>
-      </div>
+            </div>
+            </div>
 
       {/* 订单标签页 */}
       <div style={{ marginBottom: 16, paddingInline: 8 }}>
@@ -140,7 +142,7 @@ const AdminDashboard: React.FC = () => {
             const baseStyle: React.CSSProperties = {
               flex: 1,
               padding: '10px 0',
-              fontWeight: 800,
+                fontWeight: 800,
               fontSize: 12,
               outline: 'none',
               borderBottom: isActive ? '2px solid #f4af25' : '2px solid transparent',
@@ -151,7 +153,7 @@ const AdminDashboard: React.FC = () => {
             const activeStyle: React.CSSProperties = {
               color: 'transparent',
               backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-              WebkitBackgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
             }
             const inactiveStyle: React.CSSProperties = {
               color: '#A0A0A0',
@@ -162,7 +164,7 @@ const AdminDashboard: React.FC = () => {
                 onClick={() => setActiveTab(tabKey)}
                 style={{ ...baseStyle, ...(isActive ? activeStyle : inactiveStyle) }}
               >
-                {tabKey === 'completed' ? 'Completed Orders' : 'Pending Orders'}
+                {tabKey === 'completed' ? t('dashboard.completedOrders') : t('dashboard.pendingOrders')}
               </button>
             )
           })}
@@ -175,25 +177,25 @@ const AdminDashboard: React.FC = () => {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, color: '#EAEAEA' }}>{order.user}</div>
-                <div style={{ fontSize: 12, color: '#A0A0A0' }}>Order #{String(order.id).slice(0, 8)}</div>
-              </div>
+                <div style={{ fontSize: 12, color: '#A0A0A0' }}>{t('dashboard.orderNumber')} #{String(order.id).slice(0, 8)}</div>
+                </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontWeight: 800, color: '#FDE08D' }}>RM{order.total.toFixed(2)}</div>
                 <span style={{ fontSize: 12, padding: '2px 8px', borderRadius: 9999, background: order.status === 'delivered' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)', color: order.status === 'delivered' ? '#22c55e' : '#ef4444' }}>
-                  {order.status === 'delivered' ? 'Completed' : 'Pending'}
+                  {order.status === 'delivered' ? t('dashboard.completed') : t('dashboard.pending')}
                 </span>
               </div>
             </div>
           ))}
           {(activeTab === 'completed' ? completedOrders : pendingOrders).length === 0 && (
-            <div style={{ color: '#999', textAlign: 'center', padding: '20px 0' }}>No completed orders</div>
+            <div style={{ color: '#999', textAlign: 'center', padding: '20px 0' }}>{t('dashboard.noCompletedOrders')}</div>
           )}
         </div>
       </div>
 
       {/* 最近活动 */}
       <div style={{ marginBottom: 16 }}>
-        <h2 style={{ fontSize: 16, fontWeight: 800, color: '#EAEAEA', paddingInline: 8 }}>Recent Events</h2>
+        <h2 style={{ fontSize: 16, fontWeight: 800, color: '#EAEAEA', paddingInline: 8 }}>{t('dashboard.recentActivities')}</h2>
         <div style={{ marginTop: 8, borderRadius: 12, padding: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(244,175,37,0.1)' }}>
           {loading ? (
             <div style={{ textAlign: 'center', padding: '24px 0' }}><Spin /></div>
@@ -205,34 +207,37 @@ const AdminDashboard: React.FC = () => {
                 <div style={{ fontSize: 12, color: '#A0A0A0', marginTop: 4 }}>
                   {(() => {
                     const startDate = (events[0].schedule.startDate as any)?.toDate ? (events[0].schedule.startDate as any).toDate() : events[0].schedule.startDate
-                    return startDate ? dayjs(startDate).format('YYYY-MM-DD') : 'Time not set'
+                    return startDate ? dayjs(startDate).format('YYYY-MM-DD') : t('dashboard.noTimeSet')
                   })()}
                 </div>
                 <div style={{ fontSize: 12, color: '#A0A0A0', marginTop: 4 }}>
-                  {((events[0] as any).participants?.registered || []).length} / {(events[0] as any).participants?.maxParticipants || 0} participants registered
+                  {t('dashboard.registeredCount', { 
+                    registered: ((events[0] as any).participants?.registered || []).length,
+                    max: (events[0] as any).participants?.maxParticipants || 0
+                  })}
                 </div>
               </div>
-            </div>
+                          </div>
           ) : (
-            <div style={{ color: '#999', textAlign: 'center', padding: '20px 0' }}>No event data</div>
+            <div style={{ color: '#999', textAlign: 'center', padding: '20px 0' }}>{t('dashboard.noEventData')}</div>
           )}
-        </div>
-      </div>
+              </div>
+              </div>
 
       {/* 库存状态 */}
       <div>
-        <h2 style={{ fontSize: 16, fontWeight: 800, color: '#EAEAEA', paddingInline: 8 }}>Inventory Status</h2>
+        <h2 style={{ fontSize: 16, fontWeight: 800, color: '#EAEAEA', paddingInline: 8 }}>{t('dashboard.stockStatus')}</h2>
         <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: 12, padding: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(244,175,37,0.1)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 48, height: 48, borderRadius: 9999, background: 'rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444' }}>!</div>
-            <div>
-              <div style={{ fontWeight: 700, color: '#EAEAEA' }}>Low Stock Warning</div>
-              <div style={{ fontSize: 12, color: '#A0A0A0' }}><span style={{ fontWeight: 800, color: '#ef4444' }}>{lowStockCount}</span> products have low stock</div>
-            </div>
-          </div>
+                        <div>
+              <div style={{ fontWeight: 700, color: '#EAEAEA' }}>{t('dashboard.lowStockWarning')}</div>
+              <div style={{ fontSize: 12, color: '#A0A0A0' }}>{t('dashboard.lowStockCount', { count: lowStockCount })}</div>
+                          </div>
+                        </div>
           <div style={{ color: '#A0A0A0' }}>&gt;</div>
-        </div>
-      </div>
+                      </div>
+                    </div>
     </div>
   )
 }

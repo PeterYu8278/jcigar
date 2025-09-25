@@ -2,16 +2,16 @@ import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
 
-// Import translation files
-import zhCommon from '../locales/zh/common.json'
-import enCommon from '../locales/en/common.json'
+// 导入语言资源
+import zhCN from './locales/zh-CN.json'
+import enUS from './locales/en-US.json'
 
 const resources = {
-  zh: {
-    common: zhCommon
+  'zh-CN': {
+    translation: zhCN
   },
-  en: {
-    common: enCommon
+  'en-US': {
+    translation: enUS
   }
 }
 
@@ -20,26 +20,16 @@ i18n
   .use(initReactI18next)
   .init({
     resources,
-    fallbackLng: 'en',
-    debug: true,
+    fallbackLng: 'zh-CN',
+    debug: import.meta.env.DEV,
     
-    // Language detection options
+    interpolation: {
+      escapeValue: false, // React已经处理了XSS
+    },
+    
     detection: {
       order: ['localStorage', 'navigator', 'htmlTag'],
       caches: ['localStorage'],
-    },
-
-    interpolation: {
-      escapeValue: false, // React already does escaping
-    },
-
-    // Namespace configuration
-    defaultNS: 'common',
-    ns: ['common'],
-
-    // React i18next options
-    react: {
-      useSuspense: false,
     },
   })
 

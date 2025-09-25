@@ -2,11 +2,13 @@
 import React from 'react'
 import { Layout, Typography, Space, Divider } from 'antd'
 import { HeartOutlined, GithubOutlined, MailOutlined } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 
 const { Footer } = Layout
 const { Text, Link } = Typography
 
 const AppFooter: React.FC = () => {
+  const { t } = useTranslation()
   return (
     <Footer style={{ 
       textAlign: 'center', 
@@ -44,7 +46,7 @@ const AppFooter: React.FC = () => {
             </Text>
             <div style={{ marginTop: '8px' }}>
               <Text style={{ color: '#c0c0c0', fontSize: '14px' }}>
-                尊贵雪茄体验 · 品质生活方式
+                {t('footer.tagline')}
               </Text>
             </div>
           </div>
@@ -69,7 +71,7 @@ const AppFooter: React.FC = () => {
               className="footer-link"
             >
               <GithubOutlined style={{ marginRight: '4px' }} />
-              隐私政策
+              {t('footer.privacyPolicy')}
             </Link>
             <Link 
               href="#" 
@@ -81,7 +83,7 @@ const AppFooter: React.FC = () => {
               }}
               className="footer-link"
             >
-              服务条款
+              {t('footer.termsOfService')}
             </Link>
             <Link 
               href="#" 
@@ -94,7 +96,7 @@ const AppFooter: React.FC = () => {
               className="footer-link"
             >
               <MailOutlined style={{ marginRight: '4px' }} />
-              联系我们
+              {t('footer.contactUs')}
             </Link>
           </Space>
           
@@ -108,9 +110,9 @@ const AppFooter: React.FC = () => {
               justifyContent: 'center',
               gap: '4px'
             }}>
-              © 2024 Gentleman Club管理平台 · Created with 
+              {t('footer.copyright')} 
               <HeartOutlined style={{ color: '#ffd700' }} /> 
-              by JEP Ventures
+              {t('footer.byJepVentures')}
             </Text>
           </div>
         </Space>

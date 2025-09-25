@@ -3,6 +3,7 @@ import { Spin, Select, InputNumber, Button, Modal, message } from 'antd'
 import { CheckCircleOutlined, UserOutlined } from '@ant-design/icons'
 import type { User, Cigar, Event } from '../../types'
 import { updateDocument, COLLECTIONS, unregisterFromEvent } from '../../services/firebase/firestore'
+import { useTranslation } from 'react-i18next'
 
 interface ParticipantsListProps {
   event: Event | null
@@ -25,6 +26,7 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
   onAllocSavingChange,
   getCigarPriceById
 }) => {
+  const { t } = useTranslation()
   if (!event) return null
 
   const registeredParticipants = (event as any)?.participants?.registered || []
@@ -33,7 +35,7 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
     return (
       <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
         <Spin size="large" />
-        <div style={{ marginTop: 16 }}>加载参与者信息中...</div>
+        <div style={{ marginTop: 16 }}>{t('participants.loadingParticipants')}</div>
       </div>
     )
   }
@@ -42,7 +44,7 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
     return (
       <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
         <UserOutlined style={{ fontSize: 48, marginBottom: 16 }} />
-        <div>暂无参与者</div>
+        <div>{t('participants.noParticipants')}</div>
       </div>
     )
   }
@@ -74,7 +76,7 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
             </div>
             <div style={{ minWidth: 150, flex: 1 }}>
               <div style={{ fontWeight: 500, color: '#666', marginBottom: 4 }}>
-                {user ? user.displayName : '未知用户'}
+                {user ? user.displayName : t('participants.unknownUser')}
               </div>
               <div style={{ fontSize: 12, color: '#666' }}>
                 {user ? ((user as any)?.profile?.phone || user.email || uid) : uid}
@@ -82,7 +84,7 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
             </div>
             <div style={{ minWidth: 220 }}>
               <Select
-                placeholder="选择雪茄型号"
+                placeholder={t('participants.selectCigarModel')}
                 style={{ width: '100%' }}
                 value={allocation?.cigarId}
                 onChange={async (val) => {
@@ -117,7 +119,7 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                   onAllocSavingChange(null)
                 }}
                 style={{ width: '100%' }}
-                addonAfter={<span style={{ color: '#666' }}>支</span>}
+                addonAfter={<span style={{ color: '#666' }}>{t('participants.pieces')}</span>}
               />
             </div>
             <div style={{ minWidth: 80, textAlign: 'right' }}>
@@ -137,13 +139,13 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
               )}
               <Button size="small" danger onClick={async () => {
                 Modal.confirm({
-                  title: '移除报名者',
-                  content: `确定移除该报名者吗？`,
+                  title: t('participants.removeParticipant'),
+                  content: t('participants.confirmRemoveParticipant'),
                   okButtonProps: { danger: true },
                   onOk: async () => {
                     const res = await unregisterFromEvent((event as any).id, uid)
                     if ((res as any)?.success) {
-                      message.success('已移除')
+                      message.success(t('participants.removed'))
                       // 刷新事件数据
                       const updatedParticipants = registeredParticipants.filter((id: string) => id !== uid)
                       const updatedAllocations = { ...(event as any).allocations }
@@ -154,11 +156,11 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                         allocations: updatedAllocations
                       } as Event)
                     } else {
-                      message.error('移除失败')
+                      message.error(t('participants.removeFailed'))
                     }
                   }
                 })
-              }}>移除</Button>
+              }}>{t('participants.removeParticipant')}</Button>
             </div>
           </div>
         )

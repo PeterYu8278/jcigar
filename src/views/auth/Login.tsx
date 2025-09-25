@@ -5,6 +5,7 @@ import { UserOutlined, LockOutlined, GoogleOutlined } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { loginWithEmailOrPhone, loginWithGoogle } from '../../services/firebase/auth'
 import { useAuthStore } from '../../store/modules/auth'
+import { useTranslation } from 'react-i18next'
 
 const { Title, Text } = Typography
 
@@ -13,6 +14,7 @@ const Login: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { setUser } = useAuthStore()
+  const { t } = useTranslation()
 
   const from = location.state?.from?.pathname || '/'
 
@@ -21,13 +23,13 @@ const Login: React.FC = () => {
     try {
       const result = await loginWithEmailOrPhone(values.email, values.password)
       if (result.success) {
-        message.success('Login successful!')
+        message.success(t('auth.loginSuccess'))
         navigate(from, { replace: true })
       } else {
-        message.error((result as any).error?.message || 'Login failed')
+        message.error((result as any).error?.message || t('auth.loginFailed'))
       }
     } catch (error) {
-      message.error('Login failed, please try again')
+      message.error(t('auth.loginFailed'))
     } finally {
       setLoading(false)
     }
@@ -38,10 +40,10 @@ const Login: React.FC = () => {
     try {
       const res = await loginWithGoogle()
       if (res.success) {
-        message.success('Logged in with Google')
+        message.success('已使用 Google 登录')
         navigate(from, { replace: true })
       } else {
-        message.error((res as any).error?.message || 'Google login failed')
+        message.error((res as any).error?.message || 'Google 登录失败')
       }
     } finally {
       setLoading(false)
@@ -97,7 +99,7 @@ const Login: React.FC = () => {
               Gentleman Club
             </Title>
             <Text style={{ color: '#c0c0c0', fontSize: '16px' }}>
-              Welcome back, please log in to your account
+              {t('auth.welcomeBack')}
             </Text>
           </div>
 
@@ -111,14 +113,14 @@ const Login: React.FC = () => {
             <Form.Item
               name="email"
               rules={[
-                { required: true, message: 'Please enter email or phone number!' },
+                { required: true, message: t('auth.emailRequired') },
                 {
                   validator: (_, value) => {
                     if (!value) return Promise.resolve()
                     const v = String(value).trim()
                     const isEmail = /.+@.+\..+/.test(v)
                     const isPhone = /^\+?\d{7,15}$/.test(v)
-                    return (isEmail || isPhone) ? Promise.resolve() : Promise.reject(new Error('Please enter a valid email or phone number'))
+                    return (isEmail || isPhone) ? Promise.resolve() : Promise.reject(new Error(t('auth.emailInvalid')))
                   }
                 }
               ]}
@@ -133,7 +135,7 @@ const Login: React.FC = () => {
             >
               <Input
                 prefix={<UserOutlined style={{ color: '#ffd700' }} />}
-                placeholder="Email or Phone Number"
+                placeholder={t('auth.email')}
                 style={{
                   background: 'rgba(45, 45, 45, 0.8)',
                   border: '1px solid #444444',
@@ -145,11 +147,11 @@ const Login: React.FC = () => {
 
             <Form.Item
               name="password"
-              rules={[{ required: true, message: '请输入密码!' }]}
+              rules={[{ required: true, message: t('auth.passwordRequired') }]}
             >
               <Input.Password
                 prefix={<LockOutlined style={{ color: '#ffd700' }} />}
-                placeholder="Password"
+                placeholder={t('auth.password')}
                 style={{
                   background: 'rgba(45, 45, 45, 0.8)',
                   border: '1px solid #444444',
@@ -167,34 +169,34 @@ const Login: React.FC = () => {
                 style={{ 
                   width: '100%',
                   height: '48px',
-                  background: 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)',
+                  background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
                   border: 'none',
                   borderRadius: '8px',
-                  color: '#0a0a0a',
+                  color: '#221c10',
                   fontSize: '16px',
                   fontWeight: 600,
                   boxShadow: '0 4px 20px rgba(255, 215, 0, 0.3)'
                 }}
                 className="login-button"
               >
-                Login
+                {t('auth.login')}
               </Button>
             </Form.Item>
 
-            <Divider style={{ color: '#c0c0c0' }}>or</Divider>
+            <Divider style={{ color: '#c0c0c0' }}>{t('common.or')}</Divider>
             <Button
               icon={<GoogleOutlined />}
               onClick={onGoogle}
               loading={loading}
               style={{ width: '100%' }}
             >
-              Login with Google
+              {t('auth.loginWithGoogle')}
             </Button>
           </Form>
 
           <div style={{ textAlign: 'center', paddingBottom: '20px' }}>
             <Text style={{ color: '#999999' }}>
-              Don't have an account?{' '}
+              {t('auth.noAccount')}{' '}
               <Button 
                 type="link" 
                 onClick={() => navigate('/register')}
@@ -204,7 +206,7 @@ const Login: React.FC = () => {
                   padding: 0
                 }}
               >
-                Register Now
+                {t('auth.registerNow')}
               </Button>
             </Text>
           </div>

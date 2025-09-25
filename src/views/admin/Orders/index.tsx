@@ -5,12 +5,14 @@ import { Table, Button, Tag, Space, Typography, Input, Select, DatePicker, messa
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, EyeOutlined, ShoppingOutlined } from '@ant-design/icons'
 import type { Order, User, Cigar } from '../../../types'
 import { getAllOrders, getUsers, getCigars, updateDocument, deleteDocument, COLLECTIONS, createDirectSaleOrder, createDocument } from '../../../services/firebase/firestore'
+import { useTranslation } from 'react-i18next'
 
 const { Title } = Typography
 const { Search } = Input
 const { Option } = Select
 
 const AdminOrders: React.FC = () => {
+  const { t } = useTranslation()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(false)
   const [viewing, setViewing] = useState<Order | null>(null)
@@ -44,7 +46,7 @@ const AdminOrders: React.FC = () => {
       setUsers(usersData)
       setCigars(cigarsData)
     } catch (error) {
-      message.error('Failed to load data')
+      message.error(t('messages.dataLoadFailed'))
     } finally {
       setLoading(false)
     }
@@ -84,21 +86,21 @@ const AdminOrders: React.FC = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'pending': return 'Pending'
-      case 'confirmed': return 'Confirmed'
-      case 'shipped': return 'Shipped'
-      case 'delivered': return 'Delivered'
-      case 'cancelled': return 'Cancelled'
-      default: return 'Unknown'
+      case 'pending': return t('ordersAdmin.status.pending')
+      case 'confirmed': return t('ordersAdmin.status.confirmed')
+      case 'shipped': return t('ordersAdmin.status.shipped')
+      case 'delivered': return t('ordersAdmin.status.delivered')
+      case 'cancelled': return t('ordersAdmin.status.cancelled')
+      default: return t('profile.unknown')
     }
   }
 
   const getPaymentText = (method: string) => {
     switch (method) {
-      case 'credit': return 'Credit Card'
+      case 'credit': return t('ordersAdmin.payment.credit')
       case 'paypal': return 'PayPal'
-      case 'bank_transfer': return '银行转账'
-      default: return 'Unknown'
+      case 'bank_transfer': return t('ordersAdmin.payment.bankTransfer')
+      default: return t('profile.unknown')
     }
   }
 
@@ -126,7 +128,7 @@ const AdminOrders: React.FC = () => {
 
   const columnsAll = [
     {
-      title: '订单ID',
+      title: t('ordersAdmin.orderId'),
       dataIndex: 'id',
       key: 'id',
       width: 100,
@@ -137,7 +139,7 @@ const AdminOrders: React.FC = () => {
       ),
     },
     {
-      title: '用户',
+      title: t('ordersAdmin.user'),
       dataIndex: 'userId',
       key: 'userId',
       render: (userId: string) => (
@@ -148,7 +150,7 @@ const AdminOrders: React.FC = () => {
       ),
     },
     {
-      title: '商品',
+      title: t('ordersAdmin.items'),
       key: 'items',
       render: (_: any, record: Order) => (
         <div>
@@ -159,14 +161,14 @@ const AdminOrders: React.FC = () => {
           ))}
           {record.items.length > 2 && (
             <div style={{ fontSize: '11px', color: '#666' }}>
-              +{record.items.length - 2} 更多...
+              +{record.items.length - 2} {t('common.more')}
             </div>
           )}
         </div>
       ),
     },
     {
-      title: '总金额',
+      title: t('ordersAdmin.totalAmount'),
       dataIndex: 'total',
       key: 'total',
       render: (total: number) => (
@@ -176,7 +178,7 @@ const AdminOrders: React.FC = () => {
       ),
     },
     {
-      title: '状态',
+      title: t('ordersAdmin.status.title'),
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => (
@@ -186,13 +188,13 @@ const AdminOrders: React.FC = () => {
       ),
     },
     {
-      title: '支付方式',
+      title: t('ordersAdmin.payment.title'),
       dataIndex: ['payment', 'method'],
       key: 'payment',
       render: (method: string) => getPaymentText(method),
     },
     {
-      title: '配送地址',
+      title: t('ordersAdmin.address'),
       dataIndex: ['shipping', 'address'],
       key: 'shipping',
       render: (address: string) => (
@@ -202,18 +204,17 @@ const AdminOrders: React.FC = () => {
       ),
     },
     {
-      title: '创建时间',
+      title: t('ordersAdmin.createdAt'),
       dataIndex: 'createdAt',
       key: 'createdAt',
       render: (date: Date) => dayjs(date).format('YYYY-MM-DD HH:mm'),
     },
     {
-      title: '操作',
+      title: t('ordersAdmin.actions'),
       key: 'action',
       render: (_: any, record: Order) => (
-        <Space size="small">
+        <Space size="small" style={{ justifyContent: 'center', width: '100%' }}>
           <Button type="link" icon={<EyeOutlined />} size="small" onClick={() => { setViewing(record); setIsEditingInView(false) }}>
-            查看
           </Button>
         </Space>
       ),
@@ -237,9 +238,9 @@ const AdminOrders: React.FC = () => {
   return (
     <div style={{ padding: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Title level={2}>Order Management</Title>
+        <Title level={2} style={{ margin: 10, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent'}}>{t('navigation.orders')}</Title>
         <Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => { setCreating(true); createForm.resetFields(); createForm.setFieldsValue({ items: [{ cigarId: undefined, quantity: 1 }], paymentMethod: 'bank_transfer' }) }}>Create Order Manually</Button>
+          <Button type='primary' icon={<PlusOutlined />} onClick={() => { setCreating(true); createForm.resetFields(); createForm.setFieldsValue({ items: [{ cigarId: undefined, quantity: 1 }], paymentMethod: 'bank_transfer' }) }} style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}>{t('ordersAdmin.createManual')}</Button>
           
           <Button onClick={() => { 
             setKeyword('')
@@ -248,50 +249,50 @@ const AdminOrders: React.FC = () => {
             setDateRange(null)
             setSelectedRowKeys([])
           }}>
-            Reset Filters
+            {t('common.resetFilters')}
           </Button>
         </Space>
       </div>
 
       {/* 搜索和筛选 */}
       {!isMobile ? (
-        <div style={{ marginBottom: 16, padding: '16px', background: '#fafafa', borderRadius: '6px' }}>
-          <Space size="middle" wrap>
-            <Search
-              placeholder="搜索订单ID、用户姓名或邮箱"
-              allowClear
-              style={{ width: 300 }}
-              prefix={<SearchOutlined />}
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-            />
-            <Select placeholder="选择状态" style={{ width: 120 }} allowClear value={statusFilter} onChange={setStatusFilter}>
-              <Option value="pending">待确认</Option>
-              <Option value="confirmed">已确认</Option>
-              <Option value="shipped">已发货</Option>
-              <Option value="delivered">已送达</Option>
-              <Option value="cancelled">已取消</Option>
-            </Select>
-            <Select placeholder="支付方式" style={{ width: 120 }} allowClear value={paymentFilter} onChange={setPaymentFilter}>
-              <Option value="credit">信用卡</Option>
-              <Option value="paypal">PayPal</Option>
-              <Option value="bank_transfer">银行转账</Option>
-            </Select>
-            <DatePicker.RangePicker 
-              placeholder={['开始日期', '结束日期']}
-              value={dateRange}
-              onChange={setDateRange}
-            />
-            <Button type="primary" icon={<SearchOutlined />}>
-              搜索
-            </Button>
-          </Space>
-        </div>
+      <div style={{ marginBottom: 16, padding: '16px', background: '#fafafa', borderRadius: '6px' }}>
+        <Space size="middle" wrap>
+          <Search
+              placeholder={t('ordersAdmin.searchPlaceholder')}
+            allowClear
+            style={{ width: 300 }}
+            prefix={<SearchOutlined />}
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+          />
+            <Select placeholder={t('ordersAdmin.selectStatus')} style={{ width: 120 }} allowClear value={statusFilter} onChange={setStatusFilter}>
+              <Option value="pending">{t('ordersAdmin.status.pending')}</Option>
+              <Option value="confirmed">{t('ordersAdmin.status.confirmed')}</Option>
+              <Option value="shipped">{t('ordersAdmin.status.shipped')}</Option>
+              <Option value="delivered">{t('ordersAdmin.status.delivered')}</Option>
+              <Option value="cancelled">{t('ordersAdmin.status.cancelled')}</Option>
+          </Select>
+            <Select placeholder={t('ordersAdmin.payment.title')} style={{ width: 120 }} allowClear value={paymentFilter} onChange={setPaymentFilter}>
+              <Option value="credit">{t('ordersAdmin.payment.credit')}</Option>
+            <Option value="paypal">PayPal</Option>
+              <Option value="bank_transfer">{t('ordersAdmin.payment.bankTransfer')}</Option>
+          </Select>
+          <DatePicker.RangePicker 
+              placeholder={[t('common.startDate'), t('common.endDate')]}
+            value={dateRange}
+            onChange={setDateRange}
+          />
+          <Button type='primary' icon={<SearchOutlined />} style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}>
+              {t('common.search')}
+          </Button>
+        </Space>
+      </div>
       ) : (
         <div style={{ marginBottom: 12 }}>
           <div style={{ marginBottom: 8 }}>
             <Search
-              placeholder="搜索订单ID、用户姓名或邮箱"
+              placeholder={t('ordersAdmin.searchPlaceholder')}
               allowClear
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
@@ -300,7 +301,7 @@ const AdminOrders: React.FC = () => {
           <div style={{ marginBottom: 8 }}>
             <DatePicker.RangePicker
               style={{ width: '100%' }}
-              placeholder={['开始日期', '结束日期']}
+              placeholder={[t('common.startDate'), t('common.endDate')]}
               value={dateRange}
               onChange={setDateRange}
             />
@@ -308,124 +309,122 @@ const AdminOrders: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
           <div style={{ position: 'relative', width: '48%' }}>
             <Select
-              placeholder="全部状态"
+              placeholder={t('ordersAdmin.allStatus')}
               allowClear
               value={statusFilter}
               onChange={setStatusFilter}
               style={{ width: '100%' }}
             >
-              <Option value="pending">处理中</Option>
-              <Option value="confirmed">已确认</Option>
-              <Option value="shipped">已发货</Option>
-              <Option value="delivered">已完成</Option>
-              <Option value="cancelled">已取消</Option>
+              <Option value="pending">{t('ordersAdmin.status.pending')}</Option>
+              <Option value="confirmed">{t('ordersAdmin.status.confirmed')}</Option>
+              <Option value="shipped">{t('ordersAdmin.status.shipped')}</Option>
+              <Option value="delivered">{t('ordersAdmin.status.delivered')}</Option>
+              <Option value="cancelled">{t('ordersAdmin.status.cancelled')}</Option>
             </Select>
           </div>
           <div style={{ position: 'relative', width: '48%' }}>
             <Select
-              placeholder="支付方式"
+              placeholder={t('ordersAdmin.payment.title')}
               allowClear
               value={paymentFilter}
               onChange={setPaymentFilter}
               style={{ width: '100%' }}
             >
-              <Option value="bank_transfer">银行转账</Option>
-              <Option value="credit">信用卡</Option>
+              <Option value="bank_transfer">{t('ordersAdmin.payment.bankTransfer')}</Option>
+              <Option value="credit">{t('ordersAdmin.payment.credit')}</Option>
               <Option value="paypal">PayPal</Option>
             </Select>
           </div>
-            <Button type="link" onClick={() => setSortDesc(v => !v)} style={{ color: '#f4af25', paddingInline: 6 }}>
-              排序
-            </Button>
+            
           </div>
         </div>
       )}
 
       {!isMobile ? (
-        <Table
-          columns={columns}
+      <Table
+        columns={columns}
           dataSource={filteredSorted}
-          rowKey="id"
-          loading={loading}
-          rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
-          title={() => (
-            <Space>
-              <Button disabled={selectedRowKeys.length === 0} onClick={async () => {
-                setLoading(true)
-                try {
-                  await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'confirmed' } as any)))
-                  message.success('已批量确认')
-                  loadData()
-                  setSelectedRowKeys([])
-                } finally {
-                  setLoading(false)
-                }
-              }}>
-                批量确认
-              </Button>
+        rowKey="id"
+        loading={loading}
+        rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
+        title={() => (
+          <Space>
+            <Button disabled={selectedRowKeys.length === 0} onClick={async () => {
+              setLoading(true)
+              try {
+                await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'confirmed' } as any)))
+                  message.success(t('ordersAdmin.batchConfirmed'))
+                loadData()
+                setSelectedRowKeys([])
+              } finally {
+                setLoading(false)
+              }
+            }}>
+                {t('ordersAdmin.batchConfirm')}
+            </Button>
               <Button disabled={selectedRowKeys.length === 0} onClick={async () => {
                 setLoading(true)
                 try {
                   await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'delivered' } as any)))
-                  message.success('已批量标记送达')
-                  loadData()
-                  setSelectedRowKeys([])
-                } finally {
-                  setLoading(false)
-                }
-              }}>
-                批量送达
-              </Button>
-              <Button disabled={selectedRowKeys.length === 0} onClick={async () => {
-                setLoading(true)
-                try {
-                  await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'cancelled' } as any)))
-                  message.success('已批量取消')
-                  loadData()
-                  setSelectedRowKeys([])
-                } finally {
-                  setLoading(false)
-                }
-              }}>
-                批量取消
-              </Button>
-              <Button danger disabled={selectedRowKeys.length === 0} onClick={() => {
-                Modal.confirm({
-                  title: '批量删除确认',
-                  content: `确定删除选中的 ${selectedRowKeys.length} 个订单吗？`,
-                  okButtonProps: { danger: true },
-                  onOk: async () => {
-                    setLoading(true)
-                    try {
-                      await Promise.all(selectedRowKeys.map(id => deleteDocument(COLLECTIONS.ORDERS, String(id))))
-                      message.success('已批量删除')
-                      loadData()
-                      setSelectedRowKeys([])
-                    } finally {
-                      setLoading(false)
-                    }
+                  message.success(t('ordersAdmin.batchDelivered'))
+                loadData()
+                setSelectedRowKeys([])
+              } finally {
+                setLoading(false)
+              }
+            }}>
+                {t('ordersAdmin.batchDeliver')}
+            </Button>
+            <Button disabled={selectedRowKeys.length === 0} onClick={async () => {
+              setLoading(true)
+              try {
+                await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'cancelled' } as any)))
+                  message.success(t('ordersAdmin.batchCancelled'))
+                loadData()
+                setSelectedRowKeys([])
+              } finally {
+                setLoading(false)
+              }
+            }}>
+                {t('ordersAdmin.batchCancel')}
+            </Button>
+            <Button danger disabled={selectedRowKeys.length === 0} onClick={() => {
+              Modal.confirm({
+                  title: t('ordersAdmin.batchDeleteConfirm'),
+                  content: t('ordersAdmin.batchDeleteContent', { count: selectedRowKeys.length }),
+                okButtonProps: { danger: true },
+                onOk: async () => {
+                  setLoading(true)
+                  try {
+                    await Promise.all(selectedRowKeys.map(id => deleteDocument(COLLECTIONS.ORDERS, String(id))))
+                      message.success(t('ordersAdmin.batchDeleted'))
+                    loadData()
+                    setSelectedRowKeys([])
+                  } finally {
+                    setLoading(false)
                   }
-                })
-              }}>
-                批量删除
-              </Button>
-            </Space>
-          )}
-          pagination={{
+                }
+              })
+            }}>
+                {t('ordersAdmin.batchDelete')}
+            </Button>
+          </Space>
+        )}
+        pagination={{
             total: filteredSorted.length,
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
-          }}
-        />
+          pageSize: 10,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
+        }}
+      />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {filteredSorted.map(order => (
             <div key={order.id} style={{ border: '1px solid rgba(244,175,37,0.2)', borderRadius: 12, padding: 12, background: 'rgba(34,28,16,0.5)', backdropFilter: 'blur(10px)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>订单号: {order.id}</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>{t('ordersAdmin.orderNo')}: {order.id}</div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>{dayjs(order.createdAt).format('YYYY-MM-DD')}</div>
                 </div>
                 <div>
@@ -439,21 +438,21 @@ const AdminOrders: React.FC = () => {
               
               <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <div style={{ fontSize: 16, fontWeight: 800, color: '#f4af25' }}>RM {order.total.toFixed(2)}</div>
-                <Button type="primary" style={{ background: 'linear-gradient(145deg, #f4d03f, #d4af37)', color: '#221c10', boxShadow: '0 4px 15px rgba(244,175,37,0.4)', borderRadius: 9999 }} size="small" onClick={() => { setViewing(order); setIsEditingInView(false) }}>
-                  查看详情
+                <Button type="primary" style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }} size="small" onClick={() => { setViewing(order); setIsEditingInView(false) }}>
+                  {t('common.viewDetails')}
                 </Button>
               </div>
             </div>
           ))}
           {filteredSorted.length === 0 && (
-            <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>暂无数据</div>
+            <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
           )}
         </div>
       )}
 
       {/* 查看订单详情 */}
       <Modal
-        title="订单详情"
+        title={t('ordersAdmin.orderDetails')}
         open={!!viewing}
         onCancel={() => { setViewing(null); setIsEditingInView(false) }}
         footer={null}
@@ -465,89 +464,89 @@ const AdminOrders: React.FC = () => {
               <Space>
                 {!isEditingInView && (
                   <>
-                    <Button onClick={async () => { await updateDocument(COLLECTIONS.ORDERS, viewing.id, { status: 'confirmed' } as any); message.success('订单已确认'); loadData() }}>确认订单</Button>
-                    <Button onClick={async () => { await updateDocument(COLLECTIONS.ORDERS, viewing.id, { status: 'shipped' } as any); message.success('订单已发货'); loadData() }}>标记发货</Button>
-                    <Button onClick={async () => { await updateDocument(COLLECTIONS.ORDERS, viewing.id, { status: 'delivered' } as any); message.success('订单已送达'); loadData() }}>标记送达</Button>
-                    <Button danger onClick={async () => { await updateDocument(COLLECTIONS.ORDERS, viewing.id, { status: 'cancelled' } as any); message.success('订单已取消'); loadData() }}>取消订单</Button>
+                    <Button onClick={async () => { await updateDocument(COLLECTIONS.ORDERS, viewing.id, { status: 'confirmed' } as any); message.success(t('ordersAdmin.orderConfirmed')); loadData() }}>{t('ordersAdmin.confirmOrder')}</Button>
+                    <Button onClick={async () => { await updateDocument(COLLECTIONS.ORDERS, viewing.id, { status: 'shipped' } as any); message.success(t('ordersAdmin.orderShipped')); loadData() }}>{t('ordersAdmin.markShipped')}</Button>
+                    <Button onClick={async () => { await updateDocument(COLLECTIONS.ORDERS, viewing.id, { status: 'delivered' } as any); message.success(t('ordersAdmin.orderDelivered')); loadData() }}>{t('ordersAdmin.markDelivered')}</Button>
+                    <Button danger onClick={async () => { await updateDocument(COLLECTIONS.ORDERS, viewing.id, { status: 'cancelled' } as any); message.success(t('ordersAdmin.orderCancelled')); loadData() }}>{t('ordersAdmin.cancelOrder')}</Button>
                   </>
                 )}
-                <Button type={isEditingInView ? 'default' : 'primary'} onClick={() => { setIsEditingInView(v => !v); form.setFieldsValue({ status: viewing.status, trackingNumber: viewing.shipping.trackingNumber || '', addItems: [{ cigarId: undefined, quantity: 1 }] }) }}>{isEditingInView ? '完成' : '编辑'}</Button>
+                <Button type={isEditingInView ? 'default' : 'primary'} onClick={() => { setIsEditingInView(v => !v); form.setFieldsValue({ status: viewing.status, trackingNumber: viewing.shipping.trackingNumber || '', addItems: [{ cigarId: undefined, quantity: 1 }] }) }}>{isEditingInView ? t('common.done') : t('common.edit')}</Button>
                 <Button danger onClick={() => {
                   Modal.confirm({
-                    title: '删除订单确认',
-                    content: `确认删除订单 ${viewing.id} 吗？`,
+                    title: t('ordersAdmin.deleteConfirm'),
+                    content: t('ordersAdmin.deleteContent', { id: viewing.id }),
                     okButtonProps: { danger: true },
                     onOk: async () => {
                       const res = await deleteDocument(COLLECTIONS.ORDERS, viewing.id)
-                      if (res.success) { message.success('订单已删除'); setViewing(null); loadData() }
+                      if (res.success) { message.success(t('ordersAdmin.deleted')); setViewing(null); loadData() }
                     }
                   })
-                }}>删除</Button>
-                <Button onClick={() => { setViewing(null); setIsEditingInView(false) }}>关闭</Button>
+                }}>{t('common.delete')}</Button>
+                <Button onClick={() => { setViewing(null); setIsEditingInView(false) }}>{t('common.close')}</Button>
               </Space>
             </div>
             <Descriptions bordered column={2} size="small">
-              <Descriptions.Item label="订单ID" span={2}>
+              <Descriptions.Item label={t('ordersAdmin.orderId')} span={2}>
                 <span style={{ fontFamily: 'monospace' }}>{viewing.id}</span>
               </Descriptions.Item>
-              <Descriptions.Item label="用户">
+              <Descriptions.Item label={t('ordersAdmin.user')}>
                 {getUserInfo(viewing.userId)}
               </Descriptions.Item>
-              <Descriptions.Item label="订单状态">
+              <Descriptions.Item label={t('ordersAdmin.status.title')}>
                 <Tag color={getStatusColor(viewing.status)}>
                   {getStatusText(viewing.status)}
                 </Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="总金额">
+              <Descriptions.Item label={t('ordersAdmin.totalAmount')}>
                 <span style={{ fontWeight: 'bold', color: '#1890ff' }}>
                   RM{viewing.total.toFixed(2)}
                 </span>
               </Descriptions.Item>
-              <Descriptions.Item label="支付方式">
+              <Descriptions.Item label={t('ordersAdmin.payment.title')}>
                 {getPaymentText(viewing.payment.method)}
               </Descriptions.Item>
-              <Descriptions.Item label="交易ID">
+              <Descriptions.Item label={t('ordersAdmin.transactionId')}>
                 {viewing.payment.transactionId || '-'}
               </Descriptions.Item>
-              <Descriptions.Item label="支付时间">
+              <Descriptions.Item label={t('ordersAdmin.paidAt')}>
                 {viewing.payment.paidAt ? dayjs(viewing.payment.paidAt).format('YYYY-MM-DD HH:mm') : '-'}
               </Descriptions.Item>
-              <Descriptions.Item label="配送地址" span={2}>
+              <Descriptions.Item label={t('ordersAdmin.address')} span={2}>
                 {viewing.shipping.address || '-'}
               </Descriptions.Item>
-              <Descriptions.Item label="运单号">
+              <Descriptions.Item label={t('ordersAdmin.trackingNumber')}>
                 {viewing.shipping.trackingNumber || '-'}
               </Descriptions.Item>
-              <Descriptions.Item label="创建时间">
+              <Descriptions.Item label={t('ordersAdmin.createdAt')}>
                 {dayjs(viewing.createdAt).format('YYYY-MM-DD HH:mm:ss')}
               </Descriptions.Item>
             </Descriptions>
             
             <div style={{ marginTop: 16 }}>
-              <Title level={5}>商品明细</Title>
+              <Title level={5}>{t('ordersAdmin.itemDetails')}</Title>
               <Table
                 size="small"
                 dataSource={viewing.items}
                 rowKey={(item) => `${viewing.id}_${item.cigarId}`}
                 columns={[
                   {
-                    title: '雪茄',
+                    title: t('ordersAdmin.item.cigar'),
                     key: 'cigar',
                     render: (_, item) => getCigarInfo(item.cigarId),
                   },
                   {
-                    title: '数量',
+                    title: t('ordersAdmin.item.quantity'),
                     dataIndex: 'quantity',
                     key: 'quantity',
                   },
                   {
-                    title: '单价',
+                    title: t('ordersAdmin.item.price'),
                     dataIndex: 'price',
                     key: 'price',
                     render: (price: number) => `RM${price.toFixed(2)}`,
                   },
                   {
-                    title: '小计',
+                    title: t('ordersAdmin.item.subtotal'),
                     key: 'subtotal',
                     render: (_, item) => `RM${(item.price * item.quantity).toFixed(2)}`,
                   },
@@ -557,11 +556,11 @@ const AdminOrders: React.FC = () => {
             </div>
             {isEditingInView && (
               <div style={{ marginTop: 16 }}>
-                <Title level={5}>编辑</Title>
-                <Form form={form} layout="vertical" onFinish={async (values: any) => {
+                <Title level={5}>{t('common.edit')}</Title>
+        <Form form={form} layout="vertical" onFinish={async (values: any) => {
                   if (!viewing) return
-                  setLoading(true)
-                  try {
+          setLoading(true)
+          try {
                     // 处理新增商品
                     const addLines: { cigarId: string; quantity: number }[] = (values.addItems || []).filter((it: any) => it?.cigarId && it?.quantity > 0)
                     const cigarMap = new Map(cigars.map(c => [c.id, c]))
@@ -573,17 +572,17 @@ const AdminOrders: React.FC = () => {
                     const mergedItems = [...(viewing.items || []), ...addItems]
                     const newTotal = mergedItems.reduce((sum, it) => sum + (it.price || 0) * (it.quantity || 0), 0)
 
-                    const updateData: Partial<Order> = {
-                      status: values.status,
+            const updateData: Partial<Order> = {
+              status: values.status,
                       items: mergedItems as any,
                       total: newTotal,
-                      shipping: {
+              shipping: {
                         ...viewing.shipping,
-                        trackingNumber: values.trackingNumber,
-                      }
-                    }
+                trackingNumber: values.trackingNumber,
+              }
+            }
                     const res = await updateDocument<Order>(COLLECTIONS.ORDERS, viewing.id, updateData)
-                    if (res.success) {
+            if (res.success) {
                       // 同步库存出库与出库日志
                       for (const it of addItems as any[]) {
                         const cigar = cigarMap.get(it.cigarId) as any
@@ -601,69 +600,69 @@ const AdminOrders: React.FC = () => {
                           createdAt: new Date(),
                         } as any)
                       }
-                      message.success('订单已更新')
-                      loadData()
-                    }
-                  } finally {
-                    setLoading(false)
-                  }
-                }}>
-                  <Form.Item label="订单状态" name="status" rules={[{ required: true, message: '请选择订单状态' }]}>
-                    <Select>
-                      <Option value="pending">待确认</Option>
-                      <Option value="confirmed">已确认</Option>
-                      <Option value="shipped">已发货</Option>
-                      <Option value="delivered">已送达</Option>
-                      <Option value="cancelled">已取消</Option>
-                    </Select>
-                  </Form.Item>
-                  <Form.Item label="运单号" name="trackingNumber">
-                    <Input placeholder="输入运单号" />
-                  </Form.Item>
+                      message.success(t('ordersAdmin.updated'))
+              loadData()
+            }
+          } finally {
+            setLoading(false)
+          }
+        }}>
+                  <Form.Item label={t('ordersAdmin.status.title')} name="status" rules={[{ required: true, message: t('ordersAdmin.pleaseSelectStatus') }]}>
+            <Select>
+                      <Option value="pending">{t('ordersAdmin.status.pending')}</Option>
+                      <Option value="confirmed">{t('ordersAdmin.status.confirmed')}</Option>
+                      <Option value="shipped">{t('ordersAdmin.status.shipped')}</Option>
+                      <Option value="delivered">{t('ordersAdmin.status.delivered')}</Option>
+                      <Option value="cancelled">{t('ordersAdmin.status.cancelled')}</Option>
+            </Select>
+          </Form.Item>
+                  <Form.Item label={t('ordersAdmin.trackingNumber')} name="trackingNumber">
+                    <Input placeholder={t('ordersAdmin.enterTrackingNo')} />
+          </Form.Item>
                   <Form.List name="addItems" initialValue={[{ cigarId: undefined, quantity: 1 }]}>
                     {(fields, { add, remove }) => (
                       <div>
-                        <Title level={5}>添加商品</Title>
+                        <Title level={5}>{t('ordersAdmin.addItems')}</Title>
                         {fields.map((field) => (
                           <Space key={`add-${field.key}`} align="baseline" style={{ display: 'flex', marginBottom: 8 }}>
                             <Form.Item
                               {...field}
                               name={[field.name, 'cigarId']}
                               fieldKey={[field.fieldKey!, 'cigarId'] as any}
-                              rules={[{ required: true, message: '请选择商品' }]}
+                              rules={[{ required: true, message: t('ordersAdmin.pleaseSelectItem') }]}
                               style={{ minWidth: 280 }}
                             >
-                              <Select placeholder="请选择商品">
+                              <Select placeholder={t('ordersAdmin.selectItem')}>
                                 {cigars.map(c => (
                                   <Select.Option key={c.id} value={c.id}>{c.name} - RM{(c as any)?.price ?? 0}</Select.Option>
                                 ))}
-                              </Select>
-                            </Form.Item>
+            </Select>
+          </Form.Item>
                             <Form.Item
                               {...field}
                               name={[field.name, 'quantity']}
                               fieldKey={[field.fieldKey!, 'quantity'] as any}
-                              rules={[{ required: true, message: '请输入数量' }]}
+                              rules={[{ required: true, message: t('ordersAdmin.pleaseEnterQuantity') }]}
                             >
-                              <InputNumber min={1} placeholder="数量" />
+                              <InputNumber min={1} placeholder={t('ordersAdmin.quantity')} />
                             </Form.Item>
                             {fields.length > 1 && (
-                              <Button danger onClick={() => remove(field.name)}>移除</Button>
+                              <Button danger onClick={() => remove(field.name)}>{t('common.remove')}</Button>
                             )}
                           </Space>
                         ))}
                         <Form.Item>
-                          <Button type="dashed" onClick={() => add({ quantity: 1 })} icon={<PlusOutlined />}>添加商品</Button>
+                          <Button type="dashed" onClick={() => add({ quantity: 1 })} icon={<PlusOutlined />}>{t('ordersAdmin.addItem')}</Button>
                         </Form.Item>
                       </div>
                     )}
                   </Form.List>
                   <Form.Item>
                     <Space>
-                      <Button type="primary" onClick={() => form.submit()} loading={loading}>保存</Button>
+                      <Button type='primary' onClick={() => form.submit()} loading={loading} style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}>{t('common.save')}</Button>
                     </Space>
-                  </Form.Item>
-                </Form>
+          </Form.Item>
+        </Form>
               </div>
             )}
           </div>
@@ -672,7 +671,7 @@ const AdminOrders: React.FC = () => {
 
       {/* 手动创建订单 */}
       <Modal
-        title="手动创建订单"
+        title={t('ordersAdmin.createManual')}
         open={creating}
         onCancel={() => setCreating(false)}
         onOk={() => createForm.submit()}
@@ -682,25 +681,25 @@ const AdminOrders: React.FC = () => {
         <Form form={createForm} layout="vertical" onFinish={async (values: any) => {
           const userId: string = values.userId
           const items: { cigarId: string; quantity: number }[] = (values.items || []).filter((it: any) => it?.cigarId && it?.quantity > 0)
-          if (!userId) { message.warning('请选择用户'); return }
-          if (items.length === 0) { message.warning('请添加至少一件商品'); return }
+          if (!userId) { message.warning(t('ordersAdmin.pleaseSelectUser')); return }
+          if (items.length === 0) { message.warning(t('ordersAdmin.pleaseAddAtLeastOneItem')); return }
           setLoading(true)
           try {
             const res = await createDirectSaleOrder({ userId, items, note: values.note })
             if (res.success) {
-              message.success('订单已创建')
+              message.success(t('ordersAdmin.created'))
               setCreating(false)
               createForm.resetFields()
               loadData()
             } else {
-              message.error('创建失败')
+              message.error(t('ordersAdmin.createFailed'))
             }
           } finally {
             setLoading(false)
           }
         }}>
-          <Form.Item label="选择用户" name="userId" rules={[{ required: true, message: '请选择用户' }]}> 
-            <Select showSearch placeholder="请选择用户">
+          <Form.Item label={t('ordersAdmin.selectUser')} name="userId" rules={[{ required: true, message: t('ordersAdmin.pleaseSelectUser') }]}> 
+            <Select showSearch placeholder={t('ordersAdmin.selectUser')}>
               {users.map(u => (
                 <Select.Option key={u.id} value={u.id}>{u.displayName} ({u.profile?.phone})</Select.Option>
               ))}
@@ -716,10 +715,10 @@ const AdminOrders: React.FC = () => {
                       {...field}
                       name={[field.name, 'cigarId']}
                       fieldKey={[field.fieldKey!, 'cigarId'] as any}
-                      rules={[{ required: true, message: '请选择商品' }]}
+                      rules={[{ required: true, message: t('ordersAdmin.pleaseSelectItem') }]}
                       style={{ minWidth: 320 }}
                     >
-                      <Select placeholder="请选择商品">
+                      <Select placeholder={t('ordersAdmin.selectItem')}>
                         {cigars.map(c => (
                           <Select.Option key={c.id} value={c.id}>{c.name} - RM{c.price}</Select.Option>
                         ))}
@@ -729,32 +728,32 @@ const AdminOrders: React.FC = () => {
                       {...field}
                       name={[field.name, 'quantity']}
                       fieldKey={[field.fieldKey!, 'quantity'] as any}
-                      rules={[{ required: true, message: '请输入数量' }]}
+                      rules={[{ required: true, message: t('ordersAdmin.pleaseEnterQuantity') }]}
                     >
-                      <InputNumber min={1} placeholder="数量" />
+                      <InputNumber min={1} placeholder={t('ordersAdmin.quantity')} />
                     </Form.Item>
                     {fields.length > 1 && (
-                      <Button danger onClick={() => remove(field.name)}>移除</Button>
+                      <Button danger onClick={() => remove(field.name)}>{t('common.remove')}</Button>
                     )}
                   </Space>
                 ))}
                 <Form.Item>
-                  <Button type="dashed" onClick={() => add({ quantity: 1 })} icon={<PlusOutlined />}>添加商品</Button>
+                  <Button type="dashed" onClick={() => add({ quantity: 1 })} icon={<PlusOutlined />}>{t('ordersAdmin.addItem')}</Button>
                 </Form.Item>
               </div>
             )}
           </Form.List>
 
-          <Form.Item label="备注" name="note">
-            <Input placeholder="备注（选填）" />
+          <Form.Item label={t('ordersAdmin.note')} name="note">
+            <Input placeholder={t('ordersAdmin.noteOptional')} />
           </Form.Item>
-          <Form.Item label="配送地址" name="address">
-            <Input placeholder="配送地址（选填）" />
+          <Form.Item label={t('ordersAdmin.address')} name="address">
+            <Input placeholder={t('ordersAdmin.addressOptional')} />
           </Form.Item>
-          <Form.Item label="支付方式" name="paymentMethod" initialValue="bank_transfer">
+          <Form.Item label={t('ordersAdmin.payment.title')} name="paymentMethod" initialValue="bank_transfer">
             <Select>
-              <Select.Option value="bank_transfer">银行转账</Select.Option>
-              <Select.Option value="credit">信用卡</Select.Option>
+              <Select.Option value="bank_transfer">{t('ordersAdmin.payment.bankTransfer')}</Select.Option>
+              <Select.Option value="credit">{t('ordersAdmin.payment.credit')}</Select.Option>
               <Select.Option value="paypal">PayPal</Select.Option>
             </Select>
           </Form.Item>

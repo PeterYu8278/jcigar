@@ -4,12 +4,14 @@ import { Form, Input, Button, Card, Typography, Space, message } from 'antd'
 import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { registerUser } from '../../services/firebase/auth'
+import { useTranslation } from 'react-i18next'
 
 const { Title, Text } = Typography
 
 const Register: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
   const onFinish = async (values: { 
     email?: string; 
@@ -19,7 +21,7 @@ const Register: React.FC = () => {
     phone: string;
   }) => {
     if (values.password !== values.confirmPassword) {
-      message.error('Passwords do not match')
+      message.error('两次输入的密码不一致')
       return
     }
 
@@ -27,13 +29,13 @@ const Register: React.FC = () => {
     try {
       const result = await registerUser(values.email || '', values.password, values.displayName, values.phone)
       if (result.success) {
-        message.success('Registration successful! Please log in')
+        message.success('注册成功！请登录')
         navigate('/login')
       } else {
-        message.error((result as any).error?.message || 'Registration failed')
+        message.error((result as any).error?.message || '注册失败')
       }
     } catch (error) {
-      message.error('Registration failed, please try again')
+      message.error('注册失败，请重试')
     } finally {
       setLoading(false)
     }
@@ -53,7 +55,7 @@ const Register: React.FC = () => {
             <Title level={2} style={{ color: '#1890ff', marginBottom: 8 }}>
               Gentleman Club
             </Title>
-            <Text type="secondary">Create your account and join the Gentleman Club community</Text>
+            <Text type="secondary">创建您的账户，加入Gentleman Club社区</Text>
           </div>
 
           <Form
@@ -64,60 +66,60 @@ const Register: React.FC = () => {
           >
             <Form.Item
               name="displayName"
-              rules={[{ required: true, message: 'Please enter your name!' }]}
+              rules={[{ required: true, message: '请输入您的姓名!' }]}
             >
               <Input
                 prefix={<UserOutlined />}
-                placeholder="Full Name"
+                placeholder="姓名"
               />
             </Form.Item>
 
             <Form.Item
               name="phone"
               rules={[
-                { required: true, message: 'Please enter phone number!' },
-                { pattern: /^\+?\d{7,15}$/, message: 'Please enter a valid phone number (7-15 digits, + allowed)' }
+                { required: true, message: '请输入手机号码!' },
+                { pattern: /^\+?\d{7,15}$/, message: '请输入有效的手机号(7-15位数字，可含+)' }
               ]}
               getValueFromEvent={(e) => e.target.value.replace(/[^\d+]/g, '')}
             >
               <Input
                 prefix={<UserOutlined />}
-                placeholder="Phone Number"
+                placeholder="手机号码"
               />
             </Form.Item>
 
             <Form.Item
               name="email"
               rules={[
-                { type: 'email', message: 'Please enter a valid email address!' }
+                { type: 'email', message: '请输入有效的邮箱地址!' }
               ]}
             >
               <Input
                 prefix={<MailOutlined />}
-                placeholder="Email Address (Optional)"
+                placeholder="邮箱地址（选填）"
               />
             </Form.Item>
 
             <Form.Item
               name="password"
               rules={[
-                { required: true, message: 'Please enter password!' },
-                { min: 6, message: 'Password must be at least 6 characters!' }
+                { required: true, message: '请输入密码!' },
+                { min: 6, message: '密码至少6位!' }
               ]}
             >
               <Input.Password
                 prefix={<LockOutlined />}
-                placeholder="Password"
+                placeholder={t('auth.password')}
               />
             </Form.Item>
 
             <Form.Item
               name="confirmPassword"
-              rules={[{ required: true, message: 'Please confirm password!' }]}
+              rules={[{ required: true, message: t('auth.confirmPasswordRequired') }]}
             >
               <Input.Password
                 prefix={<LockOutlined />}
-                placeholder="Confirm Password"
+                placeholder={t('auth.confirmPassword')}
               />
             </Form.Item>
 
@@ -126,18 +128,18 @@ const Register: React.FC = () => {
                 type="primary"
                 htmlType="submit"
                 loading={loading}
-                style={{ width: '100%' }}
+                style={{ width: '100%', background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}
               >
-                Register
+                {t('auth.register')}
               </Button>
             </Form.Item>
           </Form>
 
           <div style={{ textAlign: 'center' }}>
             <Text type="secondary">
-              Already have an account?{' '}
+              已有账户？{' '}
               <Button type="link" onClick={() => navigate('/login')}>
-                Login Now
+                立即登录
               </Button>
             </Text>
           </div>

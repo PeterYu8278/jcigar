@@ -14,18 +14,20 @@ const { Title, Paragraph, Text } = Typography
 import { useAuthStore } from '../../../store/modules/auth'
 import { updateDocument } from '../../../services/firebase/firestore'
 import type { User } from '../../../types'
+import { useTranslation } from 'react-i18next'
 
 const Profile: React.FC = () => {
   const { user, setUser } = useAuthStore()
+  const { t } = useTranslation()
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [form] = Form.useForm()
 
-  // Mock user statistics
+  // 模拟用户统计数据
   const userStats = [
-    { title: 'Events Attended', value: 12, icon: <CalendarOutlined /> },
-    { title: 'Cigars Purchased', value: 28, icon: <ShoppingOutlined /> },
-    { title: 'Community Points', value: 1580, icon: <TrophyOutlined /> },
+    { title: t('profile.eventsJoined'), value: 12, icon: <CalendarOutlined /> },
+    { title: t('profile.cigarsPurchased'), value: 28, icon: <ShoppingOutlined /> },
+    { title: t('profile.communityPoints'), value: 1580, icon: <TrophyOutlined /> },
   ]
 
   const getMembershipColor = (level: string) => {
@@ -40,17 +42,17 @@ const Profile: React.FC = () => {
 
   const getMembershipText = (level: string) => {
     switch (level) {
-      case 'bronze': return 'Bronze Member'
-      case 'silver': return 'Silver Member'
-      case 'gold': return 'Gold Member'
-      case 'platinum': return 'Platinum Member'
-      default: return 'Regular Member'
+      case 'bronze': return t('profile.bronzeMember')
+      case 'silver': return t('profile.silverMember')
+      case 'gold': return t('profile.goldMember')
+      case 'platinum': return t('profile.platinumMember')
+      default: return t('profile.regularMember')
     }
   }
 
   return (
     <div style={{ padding: '24px' }}>
-      <Title level={2}>个人档案</Title>
+      <Title level={2} style={{ marginBottom: 10, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent'}}>{t('navigation.profile')}</Title>
 
       <Row gutter={[16, 16]}>
         {/* 用户信息卡片 */}
@@ -67,7 +69,7 @@ const Profile: React.FC = () => {
                   />
                   <div>
                     <Title level={4} style={{ margin: 0 }}>
-                      {user?.displayName || '未设置姓名'}
+                      {user?.displayName || t('profile.noNameSet')}
                     </Title>
                     <Tag color={getMembershipColor(user?.membership?.level || 'bronze')}>
                       {getMembershipText(user?.membership?.level || 'bronze')}
@@ -79,37 +81,37 @@ const Profile: React.FC = () => {
               <Col span={18}>
                 <Space direction="vertical" size="middle" style={{ width: '100%' }}>
                   <div>
-                    <Title level={5}>基本信息</Title>
+                    <Title level={5} >{t('profile.basicInfo')}</Title>
                     <Space direction="vertical" size="small">
                       <div>
-                        <Text strong>邮箱：</Text>
-                        <Text>{user?.email}</Text>
+                        <Text strong>{t('auth.email')}:</Text>
+                        <Text> {user?.email}</Text>
                       </div>
                       <div>
-                        <Text strong>手机：</Text>
-                        <Text>{user?.profile?.phone || '未设置'}</Text>
+                        <Text strong>{t('auth.phone')}:</Text>
+                        <Text> {user?.profile?.phone || t('profile.notSet')}</Text>
                       </div>
                       <div>
-                        <Text strong>加入时间：</Text>
-                        <Text>{user?.membership?.joinDate ? new Date(user.membership.joinDate).toLocaleDateString() : '未知'}</Text>
+                        <Text strong>{t('profile.memberSince')}:</Text>
+                        <Text> {user?.membership?.joinDate ? new Date(user.membership.joinDate).toLocaleDateString() : t('profile.unknown')}</Text>
                       </div>
                       <div>
-                        <Text strong>最后活跃：</Text>
-                        <Text>{user?.membership?.lastActive ? new Date(user.membership.lastActive).toLocaleDateString() : '未知'}</Text>
+                        <Text strong>{t('profile.lastLogin')}:</Text>
+                        <Text> {user?.membership?.lastActive ? new Date(user.membership.lastActive).toLocaleDateString() : t('profile.unknown')}</Text>
                       </div>
                     </Space>
                   </div>
 
                   <div>
-                    <Title level={5}>偏好设置</Title>
+                    <Title level={5}>{t('profile.preferences')}</Title>
                     <Space direction="vertical" size="small">
                       <div>
-                        <Text strong>语言：</Text>
-                        <Text>{user?.profile?.preferences?.language === 'zh' ? '中文' : 'English'}</Text>
+                        <Text strong>{t('profile.languageLabel')}:</Text>
+                        <Text> {user?.profile?.preferences?.language === 'zh' ? t('language.chinese') : t('language.english')}</Text>
                       </div>
                       <div>
-                        <Text strong>通知：</Text>
-                        <Text>{user?.profile?.preferences?.notifications ? '开启' : '关闭'}</Text>
+                        <Text strong>{t('profile.notificationsLabel')}:</Text>
+                        <Text> {user?.profile?.preferences?.notifications ? t('common.yes') : t('common.no')}</Text>
                       </div>
                     </Space>
                   </div>
@@ -118,6 +120,7 @@ const Profile: React.FC = () => {
                     <Button 
                       type="primary" 
                       icon={<EditOutlined />} 
+                      style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}
                       onClick={() => {
                         if (!user) return
                         form.setFieldsValue({
@@ -129,7 +132,7 @@ const Profile: React.FC = () => {
                       }}
                       disabled={!user}
                     >
-                      编辑资料
+                      {t('profile.editProfile')}
                     </Button>
                   </div>
                 </Space>
@@ -140,7 +143,7 @@ const Profile: React.FC = () => {
 
         {/* 统计数据 */}
         <Col span={8}>
-          <Card title="我的统计" style={{ height: '100%' }}>
+          <Card title={t('profile.myStats')} style={{ height: '100%' }}>
             <Space direction="vertical" size="large" style={{ width: '100%' }}>
               {userStats.map((stat, index) => (
                 <div key={index} style={{ textAlign: 'center' }}>
@@ -160,7 +163,7 @@ const Profile: React.FC = () => {
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         {/* 最近活动 */}
         <Col span={12}>
-          <Card title="最近参加的活动">
+          <Card title={t('profile.recentEvents')}>
             <Space direction="vertical" size="middle" style={{ width: '100%' }}>
               <div style={{ padding: '12px', background: '#f9f9f9', borderRadius: '6px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -169,7 +172,7 @@ const Profile: React.FC = () => {
                     <br />
                     <Text type="secondary">2024-10-15</Text>
                   </div>
-                  <Tag color="green">已参加</Tag>
+                  <Tag color="green">{t('profile.joinedTag')}</Tag>
                 </div>
               </div>
               
@@ -180,7 +183,7 @@ const Profile: React.FC = () => {
                     <br />
                     <Text type="secondary">2024-10-22</Text>
                   </div>
-                  <Tag color="blue">已报名</Tag>
+                  <Tag color="blue">{t('profile.registeredTag')}</Tag>
                 </div>
               </div>
             </Space>
@@ -189,7 +192,7 @@ const Profile: React.FC = () => {
 
         {/* 最近购买 */}
         <Col span={12}>
-          <Card title="最近购买">
+          <Card title={t('profile.recentPurchases')}>
             <Space direction="vertical" size="middle" style={{ width: '100%' }}>
               <div style={{ padding: '12px', background: '#f9f9f9', borderRadius: '6px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -218,7 +221,7 @@ const Profile: React.FC = () => {
       </Row>
 
       <Modal
-        title="编辑资料"
+        title={t('profile.editProfile')}
         open={editing}
         onCancel={() => setEditing(false)}
         onOk={() => form.submit()}
@@ -244,12 +247,12 @@ const Profile: React.FC = () => {
               }
               const res = await updateDocument<User>('users', user.id, payload)
               if (res.success) {
-                message.success('保存成功')
+                message.success(t('profile.saveSuccess'))
                 // 更新本地 store 中的 user
                 setUser({ ...(user as User), ...payload })
                 setEditing(false)
               } else {
-                message.error('保存失败，请稍后重试')
+                message.error(t('profile.saveFailed'))
               }
             } finally {
               setSaving(false)
@@ -257,18 +260,18 @@ const Profile: React.FC = () => {
           }}
         >
           <Form.Item
-            label="姓名"
+            label={t('profile.nameLabel')}
             name="displayName"
-            rules={[{ required: true, message: '请输入您的姓名' }]}
+            rules={[{ required: true, message: t('profile.nameRequired') }]}
           >
-            <Input placeholder="请输入姓名" />
+            <Input placeholder={t('profile.namePlaceholder')} />
           </Form.Item>
 
-          <Form.Item label="手机" name="phone">
-            <Input placeholder="请输入手机号码" />
+          <Form.Item label={t('profile.phoneLabel')} name="phone">
+            <Input placeholder={t('profile.phonePlaceholder')} />
           </Form.Item>
 
-          <Form.Item label="开启通知" name="notifications" valuePropName="checked">
+          <Form.Item label={t('profile.notificationsToggle')} name="notifications" valuePropName="checked">
             <Switch />
           </Form.Item>
         </Form>

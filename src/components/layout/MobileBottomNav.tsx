@@ -13,6 +13,7 @@ import {
   DollarOutlined
 } from '@ant-design/icons'
 import { useAuthStore } from '../../store/modules/auth'
+import { useTranslation } from 'react-i18next'
 
 const { Footer } = Layout
 
@@ -20,31 +21,31 @@ const MobileBottomNav: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { isAdmin } = useAuthStore()
-
+  const { t } = useTranslation()
   // 普通用户导航项
   const frontendNavItems = [
     {
       key: '/',
       icon: <HomeOutlined />,
-      label: '首页',
+      label: t('navigation.home'),
       badge: null
     },
     {
       key: '/events',
       icon: <CalendarOutlined />,
-      label: '聚会活动',
+      label: t('navigation.events'),
       badge: null
     },
     {
       key: '/shop',
       icon: <ShoppingCartOutlined />,
-      label: '购买雪茄',
+      label: t('navigation.shop'),
       badge: 2
     },
     {
       key: '/profile',
       icon: <UserOutlined />,
-      label: '个人档案',
+      label: t('navigation.profile'),
       badge: null
     }
   ]
@@ -54,31 +55,31 @@ const MobileBottomNav: React.FC = () => {
     {
       key: '/admin',
       icon: <DashboardOutlined />,
-      label: '仪表板',
+      label: t('navigation.dashboard'),
       badge: null
     },
     {
       key: '/admin/users',
       icon: <TeamOutlined />,
-      label: '用户管理',
+      label: t('navigation.users'),
       badge: null
     },
     {
       key: '/admin/events',
       icon: <CalendarOutlined />,
-      label: '活动管理',
+      label: t('navigation.events'),
       badge: null
     },
     {
       key: '/admin/orders',
       icon: <ShoppingCartOutlined />,
-      label: '订单管理',
+      label: t('navigation.orders'),
       badge: 5
     },
     {
       key: '/admin/inventory',
       icon: <DatabaseOutlined />,
-      label: '库存管理',
+      label: t('navigation.inventory'),
       badge: null
     }
   ]

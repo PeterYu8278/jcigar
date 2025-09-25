@@ -1,76 +1,45 @@
 import React from 'react'
-import { Button, Dropdown, Space } from 'antd'
+import { Select, Space } from 'antd'
 import { GlobalOutlined } from '@ant-design/icons'
-import type { MenuProps } from 'antd'
-import { useLanguage } from '../../contexts/LanguageContext'
+import { useI18nStore, type SupportedLanguage } from '../../store/modules/i18n'
+import { useTranslation } from 'react-i18next'
 
 const LanguageSwitcher: React.FC = () => {
-  const { language, setLanguage, t } = useLanguage()
+  const { language, setLanguage } = useI18nStore()
+  const { t } = useTranslation()
 
-  const items: MenuProps['items'] = [
+  const languageOptions = [
     {
-      key: 'zh',
+      value: 'zh-CN' as SupportedLanguage,
       label: (
         <Space>
-          <span>🇨🇳</span>
-          <span>{t('common.chinese')}</span>
+          <span>{t('language.chinese')}</span>
         </Space>
-      ),
+      )
     },
     {
-      key: 'en',
+      value: 'en-US' as SupportedLanguage,
       label: (
         <Space>
-          <span>🇺🇸</span>
-          <span>{t('common.english')}</span>
+          <span>{t('language.english')}</span>
         </Space>
-      ),
-    },
+      )
+    }
   ]
 
-  const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
-    setLanguage(key)
-  }
-
-  const getCurrentLanguageFlag = () => {
-    return language === 'zh' ? '🇨🇳' : '🇺🇸'
-  }
-
-  const getCurrentLanguageText = () => {
-    return language === 'zh' ? t('common.chinese') : t('common.english')
+  const handleLanguageChange = (value: SupportedLanguage) => {
+    setLanguage(value)
   }
 
   return (
-    <Dropdown
-      menu={{ items, onClick: handleMenuClick }}
-      placement="bottomRight"
-      arrow={{ pointAtCenter: true }}
-      overlayStyle={{
-        background: '#1a1a1a',
-        border: '1px solid #333333',
-        borderRadius: '8px',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
-      }}
-    >
-      <Button 
-        type="text" 
-        icon={<GlobalOutlined />}
-        style={{ 
-          color: '#c0c0c0',
-          fontSize: '16px',
-          border: '1px solid #333333',
-          borderRadius: '8px',
-          padding: '8px 12px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}
-        className="hover-gold"
-      >
-        <span>{getCurrentLanguageFlag()}</span>
-        <span>{getCurrentLanguageText()}</span>
-      </Button>
-    </Dropdown>
+    <Select
+      value={language}
+      onChange={handleLanguageChange}
+      options={languageOptions}
+      style={{ minWidth: 70 }}
+      suffixIcon={<GlobalOutlined />}
+      size="small"
+    />
   )
 }
 

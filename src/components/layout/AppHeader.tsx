@@ -16,7 +16,7 @@ import { useAuthStore } from '../../store/modules/auth'
 import { logoutUser } from '../../services/firebase/auth'
 import { useNavigate, useLocation } from 'react-router-dom'
 import LanguageSwitcher from '../common/LanguageSwitcher'
-import { useLanguage } from '../../contexts/LanguageContext'
+import { useTranslation } from 'react-i18next'
 
 const { Header } = Layout
 const { Text } = Typography
@@ -25,6 +25,7 @@ const AppHeader: React.FC = () => {
   const { user, isAdmin, logout } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
+  const { t } = useTranslation()
 
   const handleLogout = async () => {
     await logoutUser()
@@ -47,12 +48,12 @@ const AppHeader: React.FC = () => {
     {
       key: 'profile',
       icon: <UserOutlined />,
-      label: 'Profile',
+      label: t('navigation.profile'),
     },
     {
       key: 'settings',
       icon: <SettingOutlined />,
-      label: 'Settings',
+      label: t('common.settings'),
     },
     {
       type: 'divider' as const,
@@ -60,7 +61,7 @@ const AppHeader: React.FC = () => {
     {
       key: 'logout',
       icon: <LogoutOutlined />,
-      label: 'Logout',
+      label: t('auth.logout'),
       onClick: handleLogout,
     },
   ]
@@ -69,7 +70,7 @@ const AppHeader: React.FC = () => {
     {
       key: 'dashboard',
       icon: <CrownOutlined />,
-      label: 'Admin Panel',
+      label: t('navigation.admin'),
     },
     ...userMenuItems,
   ]
@@ -135,7 +136,7 @@ const AppHeader: React.FC = () => {
               padding: '8px 12px'
             }}
             className="hover-gold mobile-view-toggle"
-            title={isInAdminPanel ? 'Switch to Frontend' : 'Switch to Admin Panel'}
+            title={isInAdminPanel ? t('navigation.home') : t('navigation.admin')}
           />
         )}
 
@@ -198,7 +199,7 @@ const AppHeader: React.FC = () => {
                   fontSize: '12px',
                   fontWeight: 500
                 }}>
-                  Admin
+                  {t('auth.role')}
                 </Text>
               )}
             </div>

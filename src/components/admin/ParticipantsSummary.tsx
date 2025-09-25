@@ -1,5 +1,6 @@
 import React from 'react'
 import type { Event } from '../../types'
+import { useTranslation } from 'react-i18next'
 
 interface ParticipantsSummaryProps {
   event: Event | null
@@ -10,6 +11,7 @@ const ParticipantsSummary: React.FC<ParticipantsSummaryProps> = ({
   event,
   getCigarPriceById
 }) => {
+  const { t } = useTranslation()
   if (!event) return null
 
   const registeredParticipants = (event as any)?.participants?.registered || []
@@ -33,10 +35,10 @@ const ParticipantsSummary: React.FC<ParticipantsSummaryProps> = ({
       textAlign: 'right'
     }}>
       <div style={{ fontSize: 18, fontWeight: 600, color: '#389e0d' }}>
-        总金额：RM{totalAmount}
+        {t('participants.totalAmount')}：RM{totalAmount}
       </div>
       <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-        共 {registeredParticipants.length} 位参与者
+        {t('participants.participantsCount', { count: registeredParticipants.length })}
       </div>
     </div>
   )

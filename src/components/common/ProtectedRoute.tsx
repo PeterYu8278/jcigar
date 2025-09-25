@@ -5,6 +5,7 @@ import { Spin, Result, Button, message } from 'antd'
 import { useAuthStore } from '../../store/modules/auth'
 import type { UserRole } from '../../types'
 import { canAccessRoute } from '../../config/permissions'
+import { useTranslation } from 'react-i18next'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -19,10 +20,18 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { user, loading, initializeAuth } = useAuthStore()
   const location = useLocation()
+  const { t } = useTranslation()
 
   useEffect(() => {
     initializeAuth()
   }, [initializeAuth])
+
+  // 处理未登录的情况
+  useEffect(() => {
+    if (!loading && requireAuth && !user) {
+      message.info(t('auth.pleaseLogin'))
+    }
+  }, [loading, requireAuth, user, t])
 
   // 加载中状态
   if (loading) {
@@ -40,7 +49,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // 需要认证但未登录
   if (requireAuth && !user) {
-    message.info('请先登录后访问该页面')
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
@@ -50,10 +58,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       <Result
         status="403"
         title="403"
-        subTitle="抱歉，您没有权限访问此页面。"
+        subTitle={t('messages.accessDenied')}
         extra={
-          <Button type="primary" onClick={() => window.history.back()}>
-            返回上一页
+          <Button type="primary" onClick={() => window.history.back()} style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}>
+            {t('common.back')}
           </Button>
         }
       />
@@ -66,10 +74,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       <Result
         status="403"
         title="403"
-        subTitle="您的用户角色无权访问此页面。"
+        subTitle={t('messages.noPermission')}
         extra={
-          <Button type="primary" onClick={() => window.history.back()}>
-            返回上一页
+          <Button type="primary" onClick={() => window.history.back()} style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}>
+            {t('common.back')}
           </Button>
         }
       />

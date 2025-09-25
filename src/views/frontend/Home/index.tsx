@@ -16,10 +16,11 @@ const { Title, Paragraph, Text } = Typography
 import { useNavigate } from 'react-router-dom'
 import { getUpcomingEvents } from '../../../services/firebase/firestore'
 import type { Event } from '../../../types'
-import BasicTranslationTest from '../../../components/common/BasicTranslationTest'
+import { useTranslation } from 'react-i18next'
 
 const Home: React.FC = () => {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [events, setEvents] = useState<Event[]>([])
   const [loadingEvents, setLoadingEvents] = useState<boolean>(false)
 
@@ -40,12 +41,9 @@ const Home: React.FC = () => {
   
   return (
     <div style={{ padding: '24px' }}>
-      {/* 翻译测试组件 */}
-      <BasicTranslationTest />
-      
       {/* 顶部标题栏 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0, color: '#f8f8f8' }}>Home</Title>
+        <Title level={4} style={{ margin: 0, color: '#f8f8f8' }}>{t('navigation.home')}</Title>
         <Button type="text" style={{ color: '#ffd700' }}>
           <svg fill="currentColor" width="22" height="22" viewBox="0 0 256 256" aria-hidden>
             <path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Z" />
@@ -88,10 +86,10 @@ const Home: React.FC = () => {
               fontWeight: 700,
               fontSize: '36px'
             }}>
-              Welcome to Gentleman Club Community
+              {t('home.welcomeTitle')}
             </Title>
             <Paragraph style={{ color: '#c0c0c0', fontSize: '18px', marginBottom: 32, lineHeight: 1.8 }}>
-              Experience world-cigars and exclusive gatherings with like-minded fellowship.
+              {t('home.welcomeSubtitle')}
             </Paragraph>
           </Col>
           <Col span={8} style={{ textAlign: 'center' }}>
@@ -153,11 +151,11 @@ const Home: React.FC = () => {
               }} />
               <div>
                 <div style={{ color: '#ffffff', fontSize: 20, fontWeight: 700 }}>Ethan</div>
-                <div style={{ color: '#D4AF37', fontSize: 12, fontWeight: 700 }}>Premium Member</div>
+                <div style={{ color: '#D4AF37', fontSize: 12, fontWeight: 700 }}>{t('home.vipMember')}</div>
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }}>Member ID</div>
+              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }}>{t('home.memberId')}</div>
               <div style={{ color: '#ffffff', fontSize: 16, fontWeight: 700, letterSpacing: 2 }}>C8888</div>
             </div>
           </div>
@@ -172,9 +170,9 @@ const Home: React.FC = () => {
       {/* 商品导航 */}
       <div style={{ marginTop: 32, marginBottom: 32 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <Title level={4} style={{ margin: 0, color: '#f8f8f8' }}>Product Navigation</Title>
+          <Title level={4} style={{ margin: 0, color: '#f8f8f8' }}>{t('home.productNavigation')}</Title>
           <Button type="link" style={{ color: '#ffd700', fontWeight: 600, paddingRight: 0 }}>
-            View All
+            {t('home.viewAll')}
           </Button>
         </div>
         <Row gutter={[16, 16]}>
@@ -189,17 +187,17 @@ const Home: React.FC = () => {
                 <img src={b.img} alt={b.name} style={{ width: 36, height: 36, objectFit: 'contain' }} />
               </div>
               <div style={{ fontSize: 12, color: '#f0f0f0' }}>{b.name}</div>
-            </Col>
+        </Col>
           ))}
-        </Row>
+      </Row>
       </div>
 
       {/* 热门雪茄 - 横向滚动 */}
       <div style={{ marginBottom: 32 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <Title level={4} style={{ margin: '0 0 16px', color: '#f8f8f8' }}>Popular Cigars</Title>
+          <Title level={4} style={{ margin: '0 0 16px', color: '#f8f8f8' }}>{t('home.popularCigars')}</Title>
           <Button type="link" style={{ color: '#ffd700', fontWeight: 600, paddingRight: 0 }}>
-            View All
+            {t('home.viewAll')}
           </Button>
         </div>
         <div style={{ display: 'flex', overflowX: 'auto', gap: 16, paddingBottom: 8 }}>
@@ -220,9 +218,9 @@ const Home: React.FC = () => {
       {/* 最新活动 列表（真实数据） */}
       <div style={{ marginBottom: 32 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <Title level={4} style={{ margin: '0 0 16px', color: '#f8f8f8' }}>Latest Events</Title>
+          <Title level={4} style={{ margin: '0 0 16px', color: '#f8f8f8' }}>{t('home.latestEvents')}</Title>
           <Button type="link" style={{ color: '#ffd700', fontWeight: 600, paddingRight: 0 }}>
-            View All
+            {t('home.viewAll')}
           </Button>
         </div>
         {loadingEvents ? (
@@ -250,15 +248,15 @@ const Home: React.FC = () => {
                       )}
                     </div>
                     <Button type="primary" size="small" style={{ background: '#D4AF37', border: 'none', color: '#0a0a0a', fontWeight: 700 }} onClick={() => navigate('/events')}>
-                      Register
+                      {t('events.join')}
                     </Button>
-                  </div>
+            </div>
                 )
               })
             ) : (
               <Card style={{ background: 'rgba(30,30,30,0.6)', borderRadius: 12, border: '1px solid rgba(255,215,0,0.2)', color: '#c0c0c0' }}>
-                No events available
-              </Card>
+                {t('home.noEvents')}
+          </Card>
             )}
           </Space>
         )}
@@ -266,25 +264,25 @@ const Home: React.FC = () => {
 
       {/* 快速导航 */}
       <div style={{ marginBottom: 8 }}>
-        <Title level={4} style={{ margin: '0 0 16px', color: '#f8f8f8' }}>Quick Navigation</Title>
+        <Title level={4} style={{ margin: '0 0 16px', color: '#f8f8f8' }}>{t('home.quickNavigation')}</Title>
         <Row gutter={[16, 16]}>
           {[
-            { title: 'Book Event', icon: <CalendarOutlined /> },
-            { title: 'Branch Locator', icon: <TeamOutlined /> },
-            { title: 'Friend Invite', icon: <StarOutlined /> },
-            { title: 'Points Exchange', icon: <TrophyOutlined /> },
+            { title: t('home.bookEvent'), icon: <CalendarOutlined /> },
+            { title: t('home.storeNavigation'), icon: <TeamOutlined /> },
+            { title: t('home.friendInvite'), icon: <StarOutlined /> },
+            { title: t('home.pointsExchange'), icon: <TrophyOutlined /> },
           ].map((f) => (
             <Col xs={6} key={f.title}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, background: 'rgba(30,30,30,0.6)', borderRadius: 12, padding: 12, textAlign: 'center', border: '1px solid rgba(255,215,0,0.2)' }}>
                 <div style={{ color: '#D4AF37', fontSize: 24 }}>{f.icon}</div>
                 <div style={{ fontSize: 12, color: '#f8f8f8', fontWeight: 600 }}>{f.title}</div>
-              </div>
-            </Col>
+            </div>
+        </Col>
           ))}
-        </Row>
-      </div>
+      </Row>
+    </div>
 
-      </div>
+    </div>
   )
 }
 
