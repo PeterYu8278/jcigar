@@ -70,10 +70,10 @@ const AdminInventory: React.FC = () => {
 
   const getStrengthText = (strength: string) => {
     switch (strength) {
-      case 'mild': return '温和'
-      case 'medium': return '中等'
-      case 'full': return '浓郁'
-      default: return '未知'
+      case 'mild': return 'Mild'
+      case 'medium': return 'Medium'
+      case 'full': return 'Full'
+      default: return 'Unknown'
     }
   }
 
@@ -88,10 +88,10 @@ const AdminInventory: React.FC = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'normal': return '正常'
-      case 'low': return '库存偏低'
-      case 'critical': return '库存告急'
-      default: return '未知'
+      case 'normal': return 'Normal'
+      case 'low': return 'Low Stock'
+      case 'critical': return 'Critical Stock'
+      default: return 'Unknown'
     }
   }
 
@@ -120,7 +120,7 @@ const AdminInventory: React.FC = () => {
 
   const columnsAll = [
     {
-      title: '雪茄名称',
+      title: 'Cigar Name',
       dataIndex: 'name',
       key: 'name',
       render: (name: string, record: any) => (
@@ -133,7 +133,7 @@ const AdminInventory: React.FC = () => {
       ),
     },
     {
-      title: '规格',
+      title: 'Specification',
       key: 'spec',
       render: (_: any, record: any) => (
         <div>
@@ -145,20 +145,20 @@ const AdminInventory: React.FC = () => {
       ),
     },
     {
-      title: '价格',
+      title: 'Price',
       dataIndex: 'price',
       key: 'price',
       render: (price: number) => `RM${price}`,
       sorter: (a: any, b: any) => a.price - b.price,
     },
     {
-      title: '库存状态',
+      title: 'Stock Status',
       key: 'stockStatus',
       render: (_: any, record: any) => (
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-            <span>当前库存: {(record as any)?.inventory?.stock ?? 0}</span>
-            <span>已预留: {(record as any)?.inventory?.reserved ?? 0}</span>
+            <span>Current Stock: {(record as any)?.inventory?.stock ?? 0}</span>
+            <span>Reserved: {(record as any)?.inventory?.reserved ?? 0}</span>
           </div>
           <Progress
             percent={getStockProgress((record as any)?.inventory?.stock ?? 0, (record as any)?.inventory?.minStock ?? 0)}
@@ -173,7 +173,7 @@ const AdminInventory: React.FC = () => {
       ),
     },
     {
-      title: '操作',
+      title: 'Actions',
       key: 'action',
       render: (_: any, record: any) => (
         <Button size="small" onClick={() => {
@@ -189,19 +189,19 @@ const AdminInventory: React.FC = () => {
             minStock: (record as any)?.inventory?.minStock ?? 0,
             reserved: (record as any)?.inventory?.reserved ?? 0,
           })
-        }}>查看</Button>
+        }}>View</Button>
       ),
     },
   ]
   const columns = columnsAll.filter(c => visibleCols[c.key as string] !== false)
 
   const logColumns = [
-    { title: '时间', dataIndex: 'createdAt', key: 'createdAt', render: (v: any) => v ? new Date(v).toLocaleString() : '-' },
-    { title: '产品', dataIndex: 'cigarId', key: 'cigarId', render: (id: string) => items.find(i => i.id === id)?.name || id },
-    { title: '类型', dataIndex: 'type', key: 'type', render: (t: string) => t === 'in' ? '入库' : '出库' },
-    { title: '数量', dataIndex: 'quantity', key: 'quantity' },
+    { title: 'Time', dataIndex: 'createdAt', key: 'createdAt', render: (v: any) => v ? new Date(v).toLocaleString() : '-' },
+    { title: 'Product', dataIndex: 'cigarId', key: 'cigarId', render: (id: string) => items.find(i => i.id === id)?.name || id },
+    { title: 'Type', dataIndex: 'type', key: 'type', render: (t: string) => t === 'in' ? 'Inbound' : 'Outbound' },
+    { title: 'Quantity', dataIndex: 'quantity', key: 'quantity' },
     { 
-      title: '单号', 
+      title: 'Reference No', 
       dataIndex: 'referenceNo', 
       key: 'referenceNo', 
       render: (v: any) => v ? (
@@ -210,8 +210,8 @@ const AdminInventory: React.FC = () => {
         </Button>
       ) : '-'
     },
-    { title: '原因', dataIndex: 'reason', key: 'reason', render: (v: any) => v || '-' },
-    { title: '操作人', dataIndex: 'operatorId', key: 'operatorId', render: (v: any) => v || '-' },
+    { title: 'Reason', dataIndex: 'reason', key: 'reason', render: (v: any) => v || '-' },
+    { title: 'Operator', dataIndex: 'operatorId', key: 'operatorId', render: (v: any) => v || '-' },
   ]
 
   const inLogs = useMemo(() => inventoryLogs.filter(l => (l as any).type === 'in'), [inventoryLogs])
@@ -265,11 +265,11 @@ const AdminInventory: React.FC = () => {
   }, [orders, users, items])
 
   const outOrderColumns = [
-    { title: '时间', dataIndex: 'createdAt', key: 'createdAt', render: (v: any) => v ? new Date(v).toLocaleString() : '-' },
+    { title: 'Time', dataIndex: 'createdAt', key: 'createdAt', render: (v: any) => v ? new Date(v).toLocaleString() : '-' },
     { title: '订单ID', dataIndex: 'orderId', key: 'orderId' },
     { title: '用户', dataIndex: 'user', key: 'user' },
     { title: '产品', dataIndex: 'cigarName', key: 'cigarName' },
-    { title: '数量', dataIndex: 'quantity', key: 'quantity' },
+    { title: 'Quantity', dataIndex: 'quantity', key: 'quantity' },
     { title: '来源', dataIndex: 'source', key: 'source', render: (s: string) => s === 'event' ? '活动' : '直接销售' },
   ]
 
@@ -901,11 +901,11 @@ const AdminInventory: React.FC = () => {
       >
         <Table
           columns={[
-            { title: '时间', dataIndex: 'createdAt', key: 'createdAt', render: (v: any) => v ? new Date(v).toLocaleString() : '-' },
-            { title: '产品', dataIndex: 'cigarId', key: 'cigarId', render: (id: string) => items.find(i => i.id === id)?.name || id },
-            { title: '数量', dataIndex: 'quantity', key: 'quantity' },
-            { title: '原因', dataIndex: 'reason', key: 'reason', render: (v: any) => v || '-' },
-            { title: '操作人', dataIndex: 'operatorId', key: 'operatorId', render: (v: any) => v || '-' },
+            { title: 'Time', dataIndex: 'createdAt', key: 'createdAt', render: (v: any) => v ? new Date(v).toLocaleString() : '-' },
+            { title: 'Product', dataIndex: 'cigarId', key: 'cigarId', render: (id: string) => items.find(i => i.id === id)?.name || id },
+            { title: 'Quantity', dataIndex: 'quantity', key: 'quantity' },
+            { title: 'Reason', dataIndex: 'reason', key: 'reason', render: (v: any) => v || '-' },
+            { title: 'Operator', dataIndex: 'operatorId', key: 'operatorId', render: (v: any) => v || '-' },
           ]}
           dataSource={currentReferenceLogs}
           rowKey="id"

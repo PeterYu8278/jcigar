@@ -49,7 +49,7 @@ const AdminUsers: React.FC = () => {
         const list = await getUsers()
         setUsers(list)
       } catch (e) {
-        message.error('加载用户失败')
+        message.error('Failed to load users')
       } finally {
         setLoading(false)
       }
@@ -74,10 +74,10 @@ const AdminUsers: React.FC = () => {
 
   const getRoleText = (role: string) => {
     switch (role) {
-      case 'admin': return '管理员'
-      case 'member': return '会员'
-      case 'guest': return '游客'
-      default: return '未知'
+      case 'admin': return 'Admin'
+      case 'member': return 'Member'
+      case 'guest': return 'Guest'
+      default: return 'Unknown'
     }
   }
 
@@ -93,11 +93,11 @@ const AdminUsers: React.FC = () => {
 
   const getMembershipText = (level: string) => {
     switch (level) {
-      case 'bronze': return '青铜'
-      case 'silver': return '白银'
-      case 'gold': return '黄金'
-      case 'platinum': return '铂金'
-      default: return '普通'
+      case 'bronze': return 'Bronze'
+      case 'silver': return 'Silver'
+      case 'gold': return 'Gold'
+      case 'platinum': return 'Platinum'
+      default: return 'Regular'
     }
   }
 
@@ -111,21 +111,21 @@ const AdminUsers: React.FC = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'active': return '活跃'
-      case 'inactive': return '非活跃'
-      default: return '未知'
+      case 'active': return 'Active'
+      case 'inactive': return 'Inactive'
+      default: return 'Unknown'
     }
   }
 
   const allColumns = [
     {
-      title: '用户ID',
+      title: 'User ID',
       dataIndex: 'id',
       key: 'id',
       width: 80,
     },
     {
-      title: '姓名',
+      title: 'Name',
       dataIndex: 'displayName',
       key: 'displayName',
       render: (_: any, record: any) => (
@@ -136,12 +136,12 @@ const AdminUsers: React.FC = () => {
       ),
     },
     {
-      title: '邮箱',
+      title: 'Email',
       dataIndex: 'email',
       key: 'email',
     },
     {
-      title: '角色',
+      title: 'Role',
       dataIndex: 'role',
       key: 'role',
       render: (role: string) => (
@@ -157,10 +157,10 @@ const AdminUsers: React.FC = () => {
         return (
         <div style={{ padding: 8 }} onClick={(e) => e.stopPropagation()}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 120 }}>
-            <Button size="small" type={(selectedKeys[0] === undefined) ? 'primary' : 'text'} onClick={() => { setSelectedKeys([]); clearFilters?.(); confirm({ closeDropdown: true }) }}>全部</Button>
-            <Button size="small" type={selectedKeys[0] === 'admin' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['admin']); confirm({ closeDropdown: true }) }}>管理员</Button>
-            <Button size="small" type={selectedKeys[0] === 'member' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['member']); confirm({ closeDropdown: true }) }}>会员</Button>
-            <Button size="small" type={selectedKeys[0] === 'guest' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['guest']); confirm({ closeDropdown: true }) }}>游客</Button>
+            <Button size="small" type={(selectedKeys[0] === undefined) ? 'primary' : 'text'} onClick={() => { setSelectedKeys([]); clearFilters?.(); confirm({ closeDropdown: true }) }}>All</Button>
+            <Button size="small" type={selectedKeys[0] === 'admin' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['admin']); confirm({ closeDropdown: true }) }}>Admin</Button>
+            <Button size="small" type={selectedKeys[0] === 'member' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['member']); confirm({ closeDropdown: true }) }}>Member</Button>
+            <Button size="small" type={selectedKeys[0] === 'guest' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['guest']); confirm({ closeDropdown: true }) }}>Guest</Button>
           </div>
         </div>
         )
@@ -170,7 +170,7 @@ const AdminUsers: React.FC = () => {
       },
     },
     {
-      title: '等级',
+      title: 'Level',
       dataIndex: ['membership', 'level'],
       key: 'membership',
       render: (level: string) => (
@@ -186,11 +186,11 @@ const AdminUsers: React.FC = () => {
         return (
           <div style={{ padding: 8 }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 120 }}>
-              <Button size="small" type={(selectedKeys[0] === undefined) ? 'primary' : 'text'} onClick={() => { setSelectedKeys([]); clearFilters?.(); confirm({ closeDropdown: true }) }}>全部</Button>
-              <Button size="small" type={selectedKeys[0] === 'bronze' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['bronze']); confirm({ closeDropdown: true }) }}>青铜</Button>
-              <Button size="small" type={selectedKeys[0] === 'silver' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['silver']); confirm({ closeDropdown: true }) }}>白银</Button>
-              <Button size="small" type={selectedKeys[0] === 'gold' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['gold']); confirm({ closeDropdown: true }) }}>黄金</Button>
-              <Button size="small" type={selectedKeys[0] === 'platinum' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['platinum']); confirm({ closeDropdown: true }) }}>铂金</Button>
+              <Button size="small" type={(selectedKeys[0] === undefined) ? 'primary' : 'text'} onClick={() => { setSelectedKeys([]); clearFilters?.(); confirm({ closeDropdown: true }) }}>All</Button>
+              <Button size="small" type={selectedKeys[0] === 'bronze' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['bronze']); confirm({ closeDropdown: true }) }}>Bronze</Button>
+              <Button size="small" type={selectedKeys[0] === 'silver' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['silver']); confirm({ closeDropdown: true }) }}>Silver</Button>
+              <Button size="small" type={selectedKeys[0] === 'gold' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['gold']); confirm({ closeDropdown: true }) }}>Gold</Button>
+              <Button size="small" type={selectedKeys[0] === 'platinum' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['platinum']); confirm({ closeDropdown: true }) }}>Platinum</Button>
             </div>
           </div>
         )
@@ -203,7 +203,7 @@ const AdminUsers: React.FC = () => {
     // 在移动端隐藏“最后活跃”列
     // { title: '最后活跃', dataIndex: 'lastActive', key: 'lastActive', responsive: ['md'] as any },
     {
-      title: '状态',
+      title: 'Status',
       dataIndex: 'status',
       key: 'status',
       render: (_: any, record: any) => {
@@ -219,7 +219,7 @@ const AdminUsers: React.FC = () => {
                 const next = checked ? 'active' : 'inactive'
                 setStatusMap((m) => ({ ...m, [record.id]: next }))
                 const res = await updateDocument<User>(COLLECTIONS.USERS, record.id, { status: next } as any)
-                if (res.success) message.success('已更新状态')
+                if (res.success) message.success('Status updated')
               }}
               size="small"
             />
@@ -234,9 +234,9 @@ const AdminUsers: React.FC = () => {
         return (
           <div style={{ padding: 8 }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 120 }}>
-              <Button size="small" type={(selectedKeys[0] === undefined) ? 'primary' : 'text'} onClick={() => { setSelectedKeys([]); clearFilters?.(); confirm({ closeDropdown: true }) }}>全部</Button>
-              <Button size="small" type={selectedKeys[0] === 'active' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['active']); confirm({ closeDropdown: true }) }}>活跃</Button>
-              <Button size="small" type={selectedKeys[0] === 'inactive' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['inactive']); confirm({ closeDropdown: true }) }}>非活跃</Button>
+              <Button size="small" type={(selectedKeys[0] === undefined) ? 'primary' : 'text'} onClick={() => { setSelectedKeys([]); clearFilters?.(); confirm({ closeDropdown: true }) }}>All</Button>
+              <Button size="small" type={selectedKeys[0] === 'active' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['active']); confirm({ closeDropdown: true }) }}>Active</Button>
+              <Button size="small" type={selectedKeys[0] === 'inactive' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['inactive']); confirm({ closeDropdown: true }) }}>Inactive</Button>
             </div>
           </div>
         )
@@ -247,7 +247,7 @@ const AdminUsers: React.FC = () => {
       },
     },
     {
-      title: '操作',
+      title: 'Actions',
       key: 'action',
       render: (_: any, record: any) => (
         <Button size="small" onClick={() => {
@@ -259,7 +259,7 @@ const AdminUsers: React.FC = () => {
             level: record.membership?.level,
             phone: (record as any)?.profile?.phone,
           })
-        }}>查看</Button>
+        }}>View</Button>
       ),
     },
   ]
@@ -313,7 +313,7 @@ const AdminUsers: React.FC = () => {
     <div style={{ padding: '24px' }}>
       {!isMobile && (
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Title level={2}>用户管理</Title>
+        <Title level={2}>User Management</Title>
         <Space>
           {selectedRowKeys.length > 1 && (
             <>
@@ -321,24 +321,24 @@ const AdminUsers: React.FC = () => {
                 setLoading(true)
                 try {
                   await Promise.all(selectedRowKeys.map(id => updateDocument<User>(COLLECTIONS.USERS, String(id), { status: 'inactive' } as any)))
-                  message.success('已批量禁用')
+                  message.success('Batch disabled')
                   const list = await getUsers()
                   setUsers(list)
                   setSelectedRowKeys([])
                 } finally {
                   setLoading(false)
                 }
-              }}>批量禁用</Button>
+              }}>Batch Disable</Button>
               <Button danger onClick={async () => {
                 Modal.confirm({
-                  title: '批量删除确认',
-                  content: `确定删除选中的 ${selectedRowKeys.length} 个用户吗？`,
+                  title: 'Batch Delete Confirmation',
+                  content: `Are you sure you want to delete ${selectedRowKeys.length} selected users?`,
                   okButtonProps: { danger: true },
                   onOk: async () => {
                     setLoading(true)
                     try {
                       await Promise.all(selectedRowKeys.map(id => deleteDocument(COLLECTIONS.USERS, String(id))))
-                      message.success('已批量删除')
+                      message.success('Batch deleted')
                       const list = await getUsers()
                       setUsers(list)
                       setSelectedRowKeys([])
@@ -347,7 +347,7 @@ const AdminUsers: React.FC = () => {
                     }
                   }
                 })
-              }}>批量删除</Button>
+              }}>Batch Delete</Button>
             </>
           )}
 
@@ -356,13 +356,13 @@ const AdminUsers: React.FC = () => {
             setRoleFilter(undefined)
             setLevelFilter(undefined)
             setSelectedRowKeys([])
-          }}>重置筛选</Button>
+          }}>Reset Filters</Button>
 
           <Button type="primary" icon={<PlusOutlined />} onClick={() => {
           setCreating(true)
           form.resetFields()
         }}>
-          添加用户
+          Add User
         </Button>
         </Space>
       </div>
@@ -373,7 +373,7 @@ const AdminUsers: React.FC = () => {
       <div style={{ marginBottom: 16, padding: '16px', background: '#fafafa', borderRadius: '6px' }}>
         <Space size="middle" wrap>
           <Search
-            placeholder="搜索用户姓名或邮箱"
+            placeholder="Search user name or email"
             allowClear
             style={{ width: 300 }}
             prefix={<SearchOutlined />}
@@ -382,7 +382,7 @@ const AdminUsers: React.FC = () => {
             />
             <Select
               allowClear
-              placeholder="选择角色"
+              placeholder="Select Role"
               value={roleFilter}
               style={{ width: 160 }}
               onChange={(v) => setRoleFilter(v)}
@@ -393,7 +393,7 @@ const AdminUsers: React.FC = () => {
           </Select>
             <Select
               allowClear
-              placeholder="选择等级"
+              placeholder="Select Level"
               value={levelFilter}
               style={{ width: 160 }}
               onChange={(v) => setLevelFilter(v)}
@@ -405,7 +405,7 @@ const AdminUsers: React.FC = () => {
           </Select>
             <Select
               allowClear
-              placeholder="选择状态"
+              placeholder="Select Status"
               value={statusFilter}
               style={{ width: 160 }}
               onChange={(v) => setStatusFilter(v)}
@@ -414,7 +414,7 @@ const AdminUsers: React.FC = () => {
               <Option value="inactive">Inactive</Option>
           </Select>
           <Button type="primary" icon={<SearchOutlined />}>
-            搜索
+            Search
           </Button>
         </Space>
       </div>
@@ -436,7 +436,7 @@ const AdminUsers: React.FC = () => {
           pageSize: 10,
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
+          showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`,
         }}
       />
       )}
@@ -446,13 +446,13 @@ const AdminUsers: React.FC = () => {
         <div>
           {/* 顶部栏 */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <Title level={4} style={{ margin: 0, color: '#fff' }}>会员管理</Title>
+            <Title level={4} style={{ margin: 0, color: '#fff' }}>Member Management</Title>
             <div style={{ width: 32 }} />
           </div>
           {/* 搜索框 */}
           <div style={{ position: 'relative', marginBottom: 12 }}>
             <Search
-              placeholder="搜索会员"
+              placeholder="Search members"
               allowClear
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
@@ -465,50 +465,50 @@ const AdminUsers: React.FC = () => {
             <Dropdown
               menu={{
                 items: [
-                  { key: 'all', label: '全部' },
-                  { key: 'admin', label: '管理员' },
-                  { key: 'member', label: '会员' },
-                  { key: 'guest', label: '游客' },
+                  { key: 'all', label: 'All' },
+                  { key: 'admin', label: 'Admin' },
+                  { key: 'member', label: 'Member' },
+                  { key: 'guest', label: 'Guest' },
                 ],
                 onClick: ({ key }) => setRoleFilter(key === 'all' ? undefined : (key as string)),
               }}
             >
               <Button shape="round">
-                角色{roleFilter ? `：${getRoleText(roleFilter)}` : ''}
+                Role{roleFilter ? `: ${getRoleText(roleFilter)}` : ''}
               </Button>
             </Dropdown>
             <Dropdown
               menu={{
                 items: [
-                  { key: 'all', label: '全部' },
-                  { key: 'bronze', label: '青铜' },
-                  { key: 'silver', label: '白银' },
-                  { key: 'gold', label: '黄金' },
-                  { key: 'platinum', label: '铂金' },
+                  { key: 'all', label: 'All' },
+                  { key: 'bronze', label: 'Bronze' },
+                  { key: 'silver', label: 'Silver' },
+                  { key: 'gold', label: 'Gold' },
+                  { key: 'platinum', label: 'Platinum' },
                 ],
                 onClick: ({ key }) => setLevelFilter(key === 'all' ? undefined : (key as string)),
               }}
             >
               <Button shape="round">
-                等级{levelFilter ? `：${getMembershipText(levelFilter)}` : ''}
+                Level{levelFilter ? `: ${getMembershipText(levelFilter)}` : ''}
               </Button>
             </Dropdown>
             <Dropdown
               menu={{
                 items: [
-                  { key: 'all', label: '全部' },
-                  { key: 'active', label: '活跃' },
-                  { key: 'inactive', label: '不活跃' },
+                  { key: 'all', label: 'All' },
+                  { key: 'active', label: 'Active' },
+                  { key: 'inactive', label: 'Inactive' },
                 ],
                 onClick: ({ key }) => setStatusFilter(key === 'all' ? undefined : (key as string)),
               }}
             >
               <Button shape="round">
-                状态{statusFilter ? `：${getStatusText(statusFilter)}` : ''}
+                Status{statusFilter ? `: ${getStatusText(statusFilter)}` : ''}
               </Button>
             </Dropdown>
             <div style={{ flex: 1 }} />
-            <Button type="primary" shape="round" icon={<PlusOutlined />} onClick={() => { setCreating(true); form.resetFields() }}>添加新用户</Button>
+            <Button type="primary" shape="round" icon={<PlusOutlined />} onClick={() => { setCreating(true); form.resetFields() }}>Add New User</Button>
           </div>
 
           {loading ? (
@@ -546,7 +546,7 @@ const AdminUsers: React.FC = () => {
                               level: u.membership?.level,
                               phone: (u as any)?.profile?.phone,
                             })
-                          }}>查看</Button>
+                          }}>View</Button>
                         </div>
                       </div>
                     )
@@ -554,7 +554,7 @@ const AdminUsers: React.FC = () => {
                 </div>
               ))}
               {groupedByInitial.length === 0 && (
-                <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>暂无数据</div>
+                <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>No data</div>
               )}
               {/* 右侧字母索引（可拖动浮动） */}
               <div
@@ -622,7 +622,7 @@ const AdminUsers: React.FC = () => {
 
       {/* 创建/编辑弹窗复用 */}
       <Modal
-        title={editing ? '编辑用户' : '添加用户'}
+        title={editing ? 'Edit User' : 'Add User'}
         open={creating || !!editing}
         onCancel={() => { setCreating(false); setEditing(null) }}
         footer={(
@@ -631,22 +631,22 @@ const AdminUsers: React.FC = () => {
               {editing && (
                 <>
                   <Button onClick={async () => {
-                    if (!editing?.email) { message.warning('该用户无邮箱'); return }
+                    if (!editing?.email) { message.warning('This user has no email'); return }
                     const res = await sendPasswordResetEmailFor(editing.email)
-                    if (res.success) message.success('已发送密码重置邮件')
-                    else message.error(res.error?.message || '发送失败')
-                  }}>重置密码</Button>
+                    if (res.success) message.success('Password reset email sent')
+                    else message.error(res.error?.message || 'Failed to send')
+                  }}>Reset Password</Button>
                   <Button danger onClick={() => {
                     Modal.confirm({
-                      title: '删除用户',
-                      content: `确定删除用户 ${editing?.displayName || ''} 吗？`,
+                      title: 'Delete User',
+                      content: `Are you sure you want to delete user ${editing?.displayName || ''}?`,
                       okButtonProps: { danger: true },
                       onOk: async () => {
                         setLoading(true)
                         try {
                           const res = await deleteDocument(COLLECTIONS.USERS, (editing as any).id)
                           if (res.success) {
-                            message.success('已删除')
+                            message.success('Deleted')
                             const list = await getUsers()
                             setUsers(list)
                             setEditing(null)
@@ -656,7 +656,7 @@ const AdminUsers: React.FC = () => {
                         }
                       }
                     })
-                  }}>删除</Button>
+                  }}>Delete</Button>
                 </>
               )}
             </Space>
