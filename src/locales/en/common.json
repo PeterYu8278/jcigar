@@ -1,6 +1,5 @@
 {
-  "common": {
-    "home": "Home",
+  "home": "Home",
     "events": "Events",
     "buyCigars": "Buy Cigars",
     "profile": "Profile",
@@ -260,5 +259,4 @@
     "language": "Language",
     "chinese": "中文",
     "english": "English"
-  }
 }

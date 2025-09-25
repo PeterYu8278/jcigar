@@ -1,6 +1,5 @@
 {
-  "common": {
-    "home": "首页",
+  "home": "首页",
     "events": "聚会活动",
     "buyCigars": "购买雪茄",
     "profile": "个人档案",
@@ -260,5 +259,4 @@
     "language": "语言",
     "chinese": "中文",
     "english": "English"
-  }
 }
