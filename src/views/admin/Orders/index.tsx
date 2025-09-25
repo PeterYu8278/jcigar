@@ -44,7 +44,7 @@ const AdminOrders: React.FC = () => {
       setUsers(usersData)
       setCigars(cigarsData)
     } catch (error) {
-      message.error('加载数据失败')
+      message.error('Failed to load data')
     } finally {
       setLoading(false)
     }
@@ -84,21 +84,21 @@ const AdminOrders: React.FC = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'pending': return '待确认'
-      case 'confirmed': return '已确认'
-      case 'shipped': return '已发货'
-      case 'delivered': return '已送达'
-      case 'cancelled': return '已取消'
-      default: return '未知'
+      case 'pending': return 'Pending'
+      case 'confirmed': return 'Confirmed'
+      case 'shipped': return 'Shipped'
+      case 'delivered': return 'Delivered'
+      case 'cancelled': return 'Cancelled'
+      default: return 'Unknown'
     }
   }
 
   const getPaymentText = (method: string) => {
     switch (method) {
-      case 'credit': return '信用卡'
+      case 'credit': return 'Credit Card'
       case 'paypal': return 'PayPal'
       case 'bank_transfer': return '银行转账'
-      default: return '未知'
+      default: return 'Unknown'
     }
   }
 

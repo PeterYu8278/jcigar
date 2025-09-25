@@ -95,7 +95,7 @@ const AdminEvents: React.FC = () => {
 
       const res = await updateDocument(COLLECTIONS.EVENTS, viewing.id, updateData)
       if (res.success) {
-        message.success('已保存')
+        message.success('Saved')
         const list = await getEvents()
         setEvents(list)
         const updatedEvent = list.find(e => e.id === viewing.id)
@@ -103,7 +103,7 @@ const AdminEvents: React.FC = () => {
           setViewing(updatedEvent)
         }
       } else {
-        message.error('保存失败')
+        message.error('Save failed')
       }
     } catch (error) {
       message.error('保存失败')
@@ -166,17 +166,17 @@ const AdminEvents: React.FC = () => {
     let newStatus = event.status
     
     if (now < startDate) {
-      // 活动未开始
+      // Event not started
       if (event.status === 'published') {
         newStatus = 'published'
       }
     } else if (now >= startDate && now <= endDate) {
-      // 活动进行中
+      // Event in progress
       if (event.status === 'published') {
         newStatus = 'ongoing'
       }
     } else if (now > endDate) {
-      // 活动已结束
+      // Event ended
       if (event.status === 'published' || event.status === 'ongoing') {
         newStatus = 'completed'
         // 自动创建订单
@@ -1306,7 +1306,7 @@ const AdminEvents: React.FC = () => {
                     message.warning('活动已保存并结束，但订单创建失败：' + (orderResult.error?.message || '未知错误'));
                   }
                 } else {
-                  message.success('已保存')
+                  message.success('Saved')
                 }
               }
             } else {

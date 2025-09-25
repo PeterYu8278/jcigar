@@ -17,12 +17,12 @@ const AdminFinance: React.FC = () => {
   const [viewing, setViewing] = useState<Transaction | null>(null)
   const [form] = Form.useForm()
   
-  // 筛选状态
+  // Filter state
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null)
   const [typeFilter, setTypeFilter] = useState<string | undefined>()
   const [currencyFilter, setCurrencyFilter] = useState<string | undefined>()
 
-  // 加载数据
+  // Load data
   useEffect(() => {
     loadTransactions()
   }, [])
@@ -33,13 +33,13 @@ const AdminFinance: React.FC = () => {
       const data = await getAllTransactions()
       setTransactions(data)
     } catch (error) {
-      message.error('加载交易记录失败')
+      message.error('Failed to load transaction records')
     } finally {
       setLoading(false)
     }
   }
 
-  // 筛选后的数据
+  // Filtered data
   const filteredTransactions = useMemo(() => {
     return transactions.filter(transaction => {
       const passDate = !dateRange || !dateRange[0] || !dateRange[1] || (

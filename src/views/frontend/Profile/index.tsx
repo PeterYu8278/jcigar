@@ -21,11 +21,11 @@ const Profile: React.FC = () => {
   const [saving, setSaving] = useState(false)
   const [form] = Form.useForm()
 
-  // 模拟用户统计数据
+  // Mock user statistics
   const userStats = [
-    { title: '参加活动', value: 12, icon: <CalendarOutlined /> },
-    { title: '购买雪茄', value: 28, icon: <ShoppingOutlined /> },
-    { title: '社区积分', value: 1580, icon: <TrophyOutlined /> },
+    { title: 'Events Attended', value: 12, icon: <CalendarOutlined /> },
+    { title: 'Cigars Purchased', value: 28, icon: <ShoppingOutlined /> },
+    { title: 'Community Points', value: 1580, icon: <TrophyOutlined /> },
   ]
 
   const getMembershipColor = (level: string) => {
@@ -40,11 +40,11 @@ const Profile: React.FC = () => {
 
   const getMembershipText = (level: string) => {
     switch (level) {
-      case 'bronze': return '青铜会员'
-      case 'silver': return '白银会员'
-      case 'gold': return '黄金会员'
-      case 'platinum': return '铂金会员'
-      default: return '普通会员'
+      case 'bronze': return 'Bronze Member'
+      case 'silver': return 'Silver Member'
+      case 'gold': return 'Gold Member'
+      case 'platinum': return 'Platinum Member'
+      default: return 'Regular Member'
     }
   }
 
