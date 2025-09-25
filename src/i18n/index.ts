@@ -21,7 +21,7 @@ i18n
   .init({
     resources,
     fallbackLng: 'en',
-    debug: false,
+    debug: true,
     
     // Language detection options
     detection: {

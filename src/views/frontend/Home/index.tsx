@@ -16,7 +16,7 @@ const { Title, Paragraph, Text } = Typography
 import { useNavigate } from 'react-router-dom'
 import { getUpcomingEvents } from '../../../services/firebase/firestore'
 import type { Event } from '../../../types'
-import TranslationTest from '../../../components/common/TranslationTest'
+import SimpleTranslationTest from '../../../components/common/SimpleTranslationTest'
 
 const Home: React.FC = () => {
   const navigate = useNavigate()
@@ -41,7 +41,7 @@ const Home: React.FC = () => {
   return (
     <div style={{ padding: '24px' }}>
       {/* 翻译测试组件 */}
-      <TranslationTest />
+      <SimpleTranslationTest />
       
       {/* 顶部标题栏 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>

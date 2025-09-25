@@ -51,7 +51,7 @@ const TranslationTest: React.FC = () => {
               color: language === 'zh' ? '#000000' : '#ffd700'
             }}
           >
-            🇨🇳 中文
+            中文
           </Button>
           
           <Button 
@@ -63,7 +63,7 @@ const TranslationTest: React.FC = () => {
               color: language === 'en' ? '#000000' : '#ffd700'
             }}
           >
-            🇺🇸 English
+            English
           </Button>
         </Space>
       </Space>
