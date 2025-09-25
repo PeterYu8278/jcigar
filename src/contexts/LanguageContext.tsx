@@ -16,17 +16,24 @@ interface LanguageProviderProps {
 export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) => {
   const { i18n, t } = useTranslation()
   const [language, setLanguageState] = useState(i18n.language || 'en')
+  const [key, setKey] = useState(0) // Force re-render key
 
-  const setLanguage = (lang: string) => {
-    i18n.changeLanguage(lang)
-    setLanguageState(lang)
-    localStorage.setItem('i18nextLng', lang)
+  const setLanguage = async (lang: string) => {
+    try {
+      await i18n.changeLanguage(lang)
+      setLanguageState(lang)
+      setKey(prev => prev + 1) // Force re-render
+      localStorage.setItem('i18nextLng', lang)
+    } catch (error) {
+      console.error('Failed to change language:', error)
+    }
   }
 
   useEffect(() => {
     // Listen for language changes
     const handleLanguageChange = (lng: string) => {
       setLanguageState(lng)
+      setKey(prev => prev + 1) // Force re-render
     }
 
     i18n.on('languageChanged', handleLanguageChange)
@@ -43,7 +50,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
   }
 
   return (
-    <LanguageContext.Provider value={value}>
+    <LanguageContext.Provider value={value} key={key}>
       {children}
     </LanguageContext.Provider>
   )

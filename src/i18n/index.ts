@@ -8,10 +8,10 @@ import enCommon from '../locales/en/common.json'
 
 const resources = {
   zh: {
-    common: zhCommon.common
+    common: zhCommon
   },
   en: {
-    common: enCommon.common
+    common: enCommon
   }
 }
 

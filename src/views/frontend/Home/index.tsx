@@ -16,6 +16,7 @@ const { Title, Paragraph, Text } = Typography
 import { useNavigate } from 'react-router-dom'
 import { getUpcomingEvents } from '../../../services/firebase/firestore'
 import type { Event } from '../../../types'
+import TranslationTest from '../../../components/common/TranslationTest'
 
 const Home: React.FC = () => {
   const navigate = useNavigate()
@@ -39,6 +40,9 @@ const Home: React.FC = () => {
   
   return (
     <div style={{ padding: '24px' }}>
+      {/* 翻译测试组件 */}
+      <TranslationTest />
+      
       {/* 顶部标题栏 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <Title level={4} style={{ margin: 0, color: '#f8f8f8' }}>Home</Title>
@@ -87,7 +91,7 @@ const Home: React.FC = () => {
               Welcome to Gentleman Club Community
             </Title>
             <Paragraph style={{ color: '#c0c0c0', fontSize: '18px', marginBottom: 32, lineHeight: 1.8 }}>
-              Explore world-class cigars, join professional gatherings, and share tasting experiences with fellow enthusiasts
+              Experience world-cigars and exclusive gatherings with like-minded fellowship.
             </Paragraph>
           </Col>
           <Col span={8} style={{ textAlign: 'center' }}>
