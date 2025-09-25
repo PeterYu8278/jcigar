@@ -18,6 +18,7 @@ import {
   FireOutlined
 } from '@ant-design/icons'
 import { useAuthStore } from '../../store/modules/auth'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 const { Sider } = Layout
 const { Text } = Typography
@@ -27,28 +28,29 @@ const AppSider: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { isAdmin } = useAuthStore()
+  const { t } = useLanguage()
 
   // 前端菜单项
   const frontendMenuItems = [
     {
       key: '/',
       icon: <HomeOutlined />,
-      label: 'Home',
+      label: t('common.home'),
     },
     {
       key: '/events',
       icon: <CalendarOutlined />,
-      label: 'Events',
+      label: t('common.events'),
     },
     {
       key: '/shop',
       icon: <ShoppingOutlined />,
-      label: 'Buy Cigars',
+      label: t('common.buyCigars'),
     },
     {
       key: '/profile',
       icon: <UserOutlined />,
-      label: 'Profile',
+      label: t('common.profile'),
     },
   ]
 
@@ -57,32 +59,32 @@ const AppSider: React.FC = () => {
     {
       key: '/admin',
       icon: <DashboardOutlined />,
-      label: 'Dashboard',
+      label: t('common.dashboard'),
     },
     {
       key: '/admin/users',
       icon: <TeamOutlined />,
-      label: 'User Management',
+      label: t('common.userManagement'),
     },
     {
       key: '/admin/events',
       icon: <CalendarOutlined />,
-      label: 'Event Management',
+      label: t('common.eventManagement'),
     },
     {
       key: '/admin/orders',
       icon: <ShoppingCartOutlined />,
-      label: 'Order Management',
+      label: t('common.orderManagement'),
     },
     {
       key: '/admin/inventory',
       icon: <DatabaseOutlined />,
-      label: 'Inventory Management',
+      label: t('common.inventoryManagement'),
     },
     {
       key: '/admin/finance',
       icon: <DollarOutlined />,
-      label: 'Finance Management',
+      label: t('common.financeManagement'),
     },
   ]
 

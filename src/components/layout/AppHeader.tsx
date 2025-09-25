@@ -15,6 +15,8 @@ import {
 import { useAuthStore } from '../../store/modules/auth'
 import { logoutUser } from '../../services/firebase/auth'
 import { useNavigate, useLocation } from 'react-router-dom'
+import LanguageSwitcher from '../common/LanguageSwitcher'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 const { Header } = Layout
 const { Text } = Typography
@@ -116,6 +118,9 @@ const AppHeader: React.FC = () => {
       </div>
 
       <Space size="middle" style={{ position: 'relative' }}>
+        {/* 语言切换器 */}
+        <LanguageSwitcher />
+        
         {/* 管理员视图切换按钮 - 仅在手机端显示 */}
         {isAdmin && (
           <Button 
