@@ -1,19 +1,19 @@
 import React from 'react'
 import { ConfigProvider } from 'antd'
-import zhfrom 'antd/locale/zh_CN'
+import zhCN from 'antd/locale/zh_CN'
 import enUS from 'antd/locale/en_US'
 import { cigarTheme } from '../../config/theme'
-import { useLanguage } from '../../contexts/LanguageContext'
+import { useTranslation } from 'react-i18next'
 
 interface DynamicConfigProviderProps {
   children: React.ReactNode
 }
 
 const DynamicConfigProvider: React.FC<DynamicConfigProviderProps> = ({ children }) => {
-  const { language } = useLanguage()
+  const { i18n } = useTranslation()
   
   const getAntdLocale = () => {
-    return language === 'zh' ? zhCN : enUS
+    return i18n.language === 'zh' ? zhCN : enUS
   }
 
   return (

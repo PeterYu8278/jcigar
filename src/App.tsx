@@ -6,7 +6,6 @@ import AppSider from './components/layout/AppSider'
 import AppFooter from './components/layout/AppFooter'
 import MobileBottomNav from './components/layout/MobileBottomNav'
 import ProtectedRoute from './components/common/ProtectedRoute'
-import DynamicConfigProvider from './components/common/DynamicConfigProvider'
 import { useAuthStore } from './store/modules/auth'
 
 // 前端页面
@@ -34,8 +33,7 @@ function App() {
   const isDesktop = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(min-width: 992px)').matches : true
 
   return (
-    <DynamicConfigProvider>
-      <Router>
+    <Router>
         <Layout style={{ 
           minHeight: '100vh',
           background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2d2d2d 100%)',
@@ -121,7 +119,6 @@ function App() {
         {user && <MobileBottomNav />}
         </Layout>
       </Router>
-    </DynamicConfigProvider>
   )
 }
 
