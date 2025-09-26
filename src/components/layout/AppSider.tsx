@@ -23,12 +23,22 @@ import { useTranslation } from 'react-i18next'
 const { Sider } = Layout
 const { Text } = Typography
 
-const AppSider: React.FC = () => {
+interface AppSiderProps {
+  onCollapseChange?: (collapsed: boolean) => void
+}
+
+const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
   const [collapsed, setCollapsed] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const { isAdmin } = useAuthStore()
   const { t } = useTranslation()
+
+  // 处理侧边栏收起/展开
+  const handleCollapseChange = (collapsed: boolean) => {
+    setCollapsed(collapsed)
+    onCollapseChange?.(collapsed)
+  }
 
   // 前端菜单项
   const frontendMenuItems = [
@@ -155,7 +165,7 @@ const AppSider: React.FC = () => {
         <Button
           type="text"
           icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={() => handleCollapseChange(!collapsed)}
           style={{ 
             fontSize: '16px', 
             width: 48, 

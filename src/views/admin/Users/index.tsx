@@ -1,7 +1,7 @@
 // 用户管理页面
 import React, { useEffect, useMemo, useState } from 'react'
 import { Table, Button, Tag, Space, Typography, Input, Select, message, Modal, Form, Switch, Dropdown, Checkbox, Row, Col, Spin } from 'antd'
-import { EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined, EyeOutlined } from '@ant-design/icons'
+import { EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined, EyeOutlined, ArrowLeftOutlined } from '@ant-design/icons'
 
 const { Title } = Typography
 const { Search } = Input
@@ -11,6 +11,20 @@ import { getUsers, createDocument, updateDocument, deleteDocument, COLLECTIONS }
 import type { User } from '../../../types'
 import { sendPasswordResetEmailFor } from '../../../services/firebase/auth'
 import { useTranslation } from 'react-i18next'
+
+// CSS样式对象
+const glassmorphismInputStyle = {
+  width: '100%',
+  padding: '8px 12px',
+  marginTop: '4px',
+  color: '#FFFFFF',
+  background: 'transparent',
+  border: 'none',
+  borderBottom: '2px solid rgba(244, 175, 37, 0.5)',
+  borderRadius: 0,
+  fontSize: '16px',
+  transition: 'border-color 0.3s ease'
+}
 
 const AdminUsers: React.FC = () => {
   const { t } = useTranslation()
@@ -307,6 +321,18 @@ const AdminUsers: React.FC = () => {
     return phone.replace(/(\d{3})\d+(\d{2})/, '$1****$2')
   }
 
+  // 玻璃拟态输入框样式
+  const glassmorphismInputStyle = {
+    background: 'transparent',
+    border: 'none',
+    borderBottom: '2px solid rgba(244, 175, 37, 0.5)',
+    borderRadius: 0,
+    color: '#FFFFFF',
+    fontSize: '16px',
+    paddingLeft: 0,
+    paddingRight: 0
+  }
+
   // 持久化列显示设置
   useEffect(() => {
     try {
@@ -318,7 +344,7 @@ const AdminUsers: React.FC = () => {
     <div style={{ padding: '24px' }}>
       {!isMobile && (
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Title level={2}>{t('navigation.users')}</Title>
+        <Title level={2} style={{ marginTop: 0, marginBottom: 0, marginLeft: 0, marginRight: 0, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent'}}>{t('navigation.users')}</Title>
         <Space>
           {selectedRowKeys.length > 1 && (
             <>
@@ -630,49 +656,10 @@ const AdminUsers: React.FC = () => {
         title={editing ? t('usersAdmin.editUser') : t('usersAdmin.addUser')}
         open={creating || !!editing}
         onCancel={() => { setCreating(false); setEditing(null) }}
-        footer={(
-          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-            <Space>
-              {editing && (
-                <>
-                  <Button onClick={async () => {
-                    if (!editing?.email) { message.warning(t('usersAdmin.noEmail')); return }
-                    const res = await sendPasswordResetEmailFor(editing.email)
-                    if (res.success) message.success(t('usersAdmin.passwordResetSent'))
-                    else message.error(res.error?.message || t('usersAdmin.sendFailed'))
-                  }}>{t('common.resetPassword')}</Button>
-                  <Button danger onClick={() => {
-                    Modal.confirm({
-                      title: t('usersAdmin.deleteUser'),
-                      content: t('usersAdmin.deleteUserContent', { name: editing?.displayName || '' }),
-                      okButtonProps: { danger: true },
-                      onOk: async () => {
-                        setLoading(true)
-                        try {
-                          const res = await deleteDocument(COLLECTIONS.USERS, (editing as any).id)
-                          if (res.success) {
-                            message.success(t('usersAdmin.deleted'))
-                            const list = await getUsers()
-                            setUsers(list)
-                            setEditing(null)
-                          }
-                        } finally {
-                          setLoading(false)
-                        }
-                      }
-                    })
-                  }}>{t('common.delete')}</Button>
-                </>
-              )}
-            </Space>
-            <Space>
-              <Button onClick={() => { setCreating(false); setEditing(null) }}>{t('common.cancel')}</Button>
-              <Button type='primary' loading={loading} onClick={() => form.submit()} style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}>{t('common.confirm')}</Button>
-            </Space>
-          </div>
-        )}
+        onOk={() => form.submit()}
+        confirmLoading={loading}
       >
-        <Form form={form} layout="vertical" onFinish={async (values: { displayName: string; email?: string; role: User['role']; level: User['membership']['level']; phone: string }) => {
+        <Form form={form} layout="vertical" onFinish={async (values) => {
           setLoading(true)
           try {
             if (editing) {
@@ -704,23 +691,44 @@ const AdminUsers: React.FC = () => {
             setLoading(false)
           }
         }}>
-          <Form.Item label={t('common.name')} name="displayName" rules={[{ required: true, message: t('profile.nameRequired') }]}>
+          <Form.Item 
+            label={t('common.name')} 
+            name="displayName" 
+            rules={[{ required: true, message: t('profile.nameRequired') }]}
+          >
             <Input />
           </Form.Item>
-          <Form.Item label={t('common.phone')} name="phone" rules={[{ required: true, message: t('profile.phoneRequired') }, { pattern: /^\+?\d{7,15}$/, message: t('profile.phoneInvalid') }]}> 
+          <Form.Item 
+            label={t('auth.email')} 
+            name="email"
+          >
             <Input />
           </Form.Item>
-          <Form.Item label={t('common.email')} name="email" rules={[{ type: 'email', message: t('auth.emailInvalid') }]}> 
-            <Input placeholder={t('common.optional')} />
+          <Form.Item 
+            label={t('auth.phone')} 
+            name="phone" 
+            rules={[{ required: true, message: t('profile.phoneRequired') }]}
+          >
+            <Input />
           </Form.Item>
-          <Form.Item label={t('usersAdmin.role')} name="role" rules={[{ required: true }]} initialValue="member"> 
+          <Form.Item 
+            label={t('usersAdmin.role')} 
+            name="role" 
+            rules={[{ required: true }]} 
+            initialValue="member"
+          >
             <Select>
               <Option value="admin">{t('common.admin')}</Option>
               <Option value="member">{t('common.member')}</Option>
               <Option value="guest">{t('common.guest')}</Option>
             </Select>
           </Form.Item>
-          <Form.Item label={t('usersAdmin.membershipLevel')} name="level" rules={[{ required: true }]} initialValue="bronze"> 
+          <Form.Item 
+            label={t('usersAdmin.membershipLevel')} 
+            name="level" 
+            rules={[{ required: true }]} 
+            initialValue="bronze"
+          >
             <Select>
               <Option value="bronze">{t('usersAdmin.bronzeMember')}</Option>
               <Option value="silver">{t('usersAdmin.silverMember')}</Option>
@@ -728,7 +736,6 @@ const AdminUsers: React.FC = () => {
               <Option value="platinum">{t('usersAdmin.platinumMember')}</Option>
             </Select>
           </Form.Item>
-          
         </Form>
       </Modal>
 

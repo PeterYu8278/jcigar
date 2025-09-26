@@ -180,18 +180,18 @@ const AdminInventory: React.FC = () => {
       render: (_: any, record: any) => (
         <Space size="small" style={{ justifyContent: 'center', width: '100%' }}>
           <Button type="link" icon={<EyeOutlined />} size="small" onClick={() => {
-              setEditing(record)
-              form.setFieldsValue({
-                name: record.name,
-                brand: record.brand,
-                origin: record.origin,
-                size: record.size,
-                strength: record.strength,
-                price: record.price,
-                stock: (record as any)?.inventory?.stock ?? 0,
-                minStock: (record as any)?.inventory?.minStock ?? 0,
-                reserved: (record as any)?.inventory?.reserved ?? 0,
-              })
+            setEditing(record)
+            form.setFieldsValue({
+              name: record.name,
+              brand: record.brand,
+              origin: record.origin,
+              size: record.size,
+              strength: record.strength,
+              price: record.price,
+              stock: (record as any)?.inventory?.stock ?? 0,
+              minStock: (record as any)?.inventory?.minStock ?? 0,
+              reserved: (record as any)?.inventory?.reserved ?? 0,
+            })
           }}>
           </Button>
         </Space>
@@ -341,7 +341,7 @@ const AdminInventory: React.FC = () => {
           {activeTab === 'list' && (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Space>
+                <Space>
                   {selectedRowKeys.length > 1 && (
                     <>
                       <Button onClick={async () => {
@@ -377,41 +377,41 @@ const AdminInventory: React.FC = () => {
                       }}>{t('inventory.batchDelete')}</Button>
                     </>
                   )}
-        </Space>
-        </div>
+                </Space>
+              </div>
 
               {!isMobile && (
-       <div style={{ marginBottom: 16, padding: '16px', background: '#fafafa', borderRadius: '6px' }}>
-         <Space size="middle" wrap>
-           <Search
+              <div style={{ marginBottom: 16, padding: '16px', background: '#fafafa', borderRadius: '6px' }}>
+                <Space size="middle" wrap>
+                  <Search
                placeholder={t('inventory.search')}
-             allowClear
-             style={{ width: 300 }}
-             prefix={<SearchOutlined />}
-                     value={keyword}
-                     onChange={(e) => setKeyword(e.target.value)}
-                   />
+                    allowClear
+                    style={{ width: 300 }}
+                    prefix={<SearchOutlined />}
+                    value={keyword}
+                    onChange={(e) => setKeyword(e.target.value)}
+                  />
                    <Select placeholder={t('inventory.origin')} style={{ width: 140 }} allowClear value={originFilter} onChange={setOriginFilter}>
-                     {[...new Set(items.map(i => i.origin).filter(Boolean))].map(org => (
-                       <Option key={org} value={org}>{org}</Option>
-                     ))}
-           </Select>
+                    {[...new Set(items.map(i => i.origin).filter(Boolean))].map(org => (
+                      <Option key={org} value={org}>{org}</Option>
+                    ))}
+                  </Select>
                    <Select placeholder={t('inventory.strength')} style={{ width: 120 }} allowClear value={strengthFilter} onChange={setStrengthFilter}>
              <Option value="mild">{t('inventory.mild')} </Option>
              <Option value="medium">{t('inventory.medium')}</Option>
              <Option value="full">{t('inventory.full')}</Option>
-           </Select>
+                  </Select>
                    <Select placeholder= {t('inventory.stockStatus')} style={{ width: 140 }} allowClear value={statusFilter} onChange={setStatusFilter}>
              <Option value="normal">{t('inventory.stockNormal')}</Option>
              <Option value="low">{t('inventory.stockLow')}</Option>
              <Option value="critical">{t('inventory.stockCritical')}</Option>
-           </Select>
+                  </Select>
            <Button onClick={() => { setKeyword(''); setOriginFilter(undefined); setStrengthFilter(undefined); setStatusFilter(undefined); setSelectedRowKeys([]) }} style={{ color: '#000000' }}>{t('common.resetFilters')}</Button>
            <Button type="primary" icon={<PlusOutlined />} onClick={() => { setCreating(true); form.resetFields() }} style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}>
              {t('inventory.addProduct')}
            </Button>
-         </Space>
-       </div>
+                </Space>
+              </div>
               )}
 
               {/* Mobile search + pills */}
@@ -461,20 +461,20 @@ const AdminInventory: React.FC = () => {
               )}
 
               {!isMobile ? (
-      <Table
-        columns={columns}
+              <Table
+                columns={columns}
                 dataSource={filtered}
-        rowKey="id"
+                rowKey="id"
                 loading={loading}
                 rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
-        pagination={{
+                pagination={{
                   total: items.length,
-          pageSize: 10,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
-        }}
-      />
+                  pageSize: 10,
+                  showSizeChanger: true,
+                  showQuickJumper: true,
+                  showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
+                }}
+              />
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                   {groupedByBrand.map(group => (

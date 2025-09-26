@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import { Table, Button, Tag, Space, Typography, Input, Select, DatePicker, message, Modal, Form, InputNumber, Switch, Descriptions } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, EyeOutlined, ShoppingOutlined } from '@ant-design/icons'
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, EyeOutlined, ShoppingOutlined, ArrowLeftOutlined } from '@ant-design/icons'
 import type { Order, User, Cigar } from '../../../types'
 import { getAllOrders, getUsers, getCigars, updateDocument, deleteDocument, COLLECTIONS, createDirectSaleOrder, createDocument } from '../../../services/firebase/firestore'
 import { useTranslation } from 'react-i18next'
@@ -133,7 +133,7 @@ const AdminOrders: React.FC = () => {
       key: 'id',
       width: 100,
       render: (id: string) => (
-        <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>
+        <span style={{ fontFamily: 'monospace', fontSize: '12px', wordBreak: 'break-all', whiteSpace: 'normal' }}>
           {id.substring(0, 8)}...
         </span>
       ),
@@ -426,10 +426,10 @@ const AdminOrders: React.FC = () => {
                 <div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>{t('ordersAdmin.orderNo')}: {order.id}</div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>{dayjs(order.createdAt).format('YYYY-MM-DD')}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{getUserName(order.userId)} {getUserPhone(order.userId) || '-'}</div>
+
                 </div>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{getUserName(order.userId)}</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>{getUserPhone(order.userId) || '-'}</div>
                 </div>
                 <span style={{ fontSize: 12, fontWeight: 600, color: getStatusColor(order.status) === 'green' ? '#34d399' : getStatusColor(order.status) === 'red' ? '#f87171' : getStatusColor(order.status) === 'orange' ? '#fb923c' : getStatusColor(order.status) === 'blue' ? '#60a5fa' : '#a78bfa' }}>
                   {getStatusText(order.status)}
@@ -452,107 +452,366 @@ const AdminOrders: React.FC = () => {
 
       {/* 查看订单详情 */}
       <Modal
-        title={t('ordersAdmin.orderDetails')}
+        title={null}
         open={!!viewing}
         onCancel={() => { setViewing(null); setIsEditingInView(false) }}
         footer={null}
-        width={820}
+        width={isMobile ? '100%' : 820}
+        style={{ 
+          top: isMobile ? 0 : 20,
+          border: 'none',
+          boxShadow: 'none'
+        }}
+        styles={{
+          body: { 
+            padding: 0, 
+            background: 'linear-gradient(180deg, #221c10 0%, #181611 0%)', 
+            minHeight: isMobile ? '100vh' : 'auto' 
+          },
+          mask: { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
+          content: {
+            border: 'none',
+            boxShadow: 'none',
+            background: 'linear-gradient(180deg, #221c10 0%, #181611 0%)'
+          }
+        }}
+        className="order-details-modal"
+        closable={false}
+        
       >
         {viewing && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
-              <Space>
-                {!isEditingInView && (
-                  <>
-                    <Button onClick={async () => { await updateDocument(COLLECTIONS.ORDERS, viewing.id, { status: 'confirmed' } as any); message.success(t('ordersAdmin.orderConfirmed')); loadData() }}>{t('ordersAdmin.confirmOrder')}</Button>
-                    <Button onClick={async () => { await updateDocument(COLLECTIONS.ORDERS, viewing.id, { status: 'shipped' } as any); message.success(t('ordersAdmin.orderShipped')); loadData() }}>{t('ordersAdmin.markShipped')}</Button>
-                    <Button onClick={async () => { await updateDocument(COLLECTIONS.ORDERS, viewing.id, { status: 'delivered' } as any); message.success(t('ordersAdmin.orderDelivered')); loadData() }}>{t('ordersAdmin.markDelivered')}</Button>
-                    <Button danger onClick={async () => { await updateDocument(COLLECTIONS.ORDERS, viewing.id, { status: 'cancelled' } as any); message.success(t('ordersAdmin.orderCancelled')); loadData() }}>{t('ordersAdmin.cancelOrder')}</Button>
-                  </>
-                )}
-                <Button type={isEditingInView ? 'default' : 'primary'} onClick={() => { setIsEditingInView(v => !v); form.setFieldsValue({ status: viewing.status, trackingNumber: viewing.shipping.trackingNumber || '', addItems: [{ cigarId: undefined, quantity: 1 }] }) }}>{isEditingInView ? t('common.done') : t('common.edit')}</Button>
-                <Button danger onClick={() => {
-                  Modal.confirm({
-                    title: t('ordersAdmin.deleteConfirm'),
-                    content: t('ordersAdmin.deleteContent', { id: viewing.id }),
-                    okButtonProps: { danger: true },
-                    onOk: async () => {
-                      const res = await deleteDocument(COLLECTIONS.ORDERS, viewing.id)
-                      if (res.success) { message.success(t('ordersAdmin.deleted')); setViewing(null); loadData() }
-                    }
-                  })
-                }}>{t('common.delete')}</Button>
-                <Button onClick={() => { setViewing(null); setIsEditingInView(false) }}>{t('common.close')}</Button>
-              </Space>
+          <div style={{ 
+            background: 'transparent', 
+            minHeight: isMobile ? '100vh' : 'auto',
+            color: '#FFFFFF'
+          }}>
+            {/* Header */}
+            <div style={{ 
+              position: 'sticky', 
+              top: 0, 
+              zIndex: 10, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between', 
+              padding: '16px',
+              background: 'transparent',
+              backdropFilter: 'blur(10px)'
+            }}>
+              <Button 
+                type="text" 
+                icon={<ArrowLeftOutlined />}
+                onClick={() => { setViewing(null); setIsEditingInView(false) }}
+                style={{ color: '#FFFFFF', fontSize: '20px' }}
+              />
+              <h1 style={{ 
+                fontSize: '18px', 
+                fontWeight: 'bold', 
+                color: '#FFFFFF', 
+                margin: 0
+              }}>
+                {t('ordersAdmin.orderDetails')}
+              </h1>
+              <Button 
+                type="text" 
+                onClick={() => { setViewing(null); setIsEditingInView(false) }}
+                style={{ color: '#FFFFFF', fontSize: '32px', minWidth: 'auto' }}
+              >
+                ×
+              </Button>
             </div>
-            <Descriptions bordered column={2} size="small">
-              <Descriptions.Item label={t('ordersAdmin.orderId')} span={2}>
-                <span style={{ fontFamily: 'monospace' }}>{viewing.id}</span>
-              </Descriptions.Item>
-              <Descriptions.Item label={t('ordersAdmin.user')}>
-                {getUserInfo(viewing.userId)}
-              </Descriptions.Item>
-              <Descriptions.Item label={t('ordersAdmin.status.title')}>
-                <Tag color={getStatusColor(viewing.status)}>
+
+            {/* Content */}
+            <div style={{ padding: '0 16px 28px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                
+                {/* 商品列表 */}
+                <section style={{
+                  padding: '16px',
+                  borderRadius: '12px',
+                  background: 'rgba(39, 35, 27, 0.5)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(57, 51, 40, 0.7)'
+                }}>
+                  <h2 style={{ 
+                    fontSize: '18px', 
+                    fontWeight: 'bold', 
+                    color: '#FFFFFF', 
+                    marginBottom: '16px',
+                    margin: '0 0 16px 0'
+                  }}>
+                    {t('ordersAdmin.itemDetails')}
+                  </h2>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {viewing.items.map((item, index) => {
+                      const cigar = cigars.find(c => c.id === item.cigarId)
+                      return (
+                        <li key={`${viewing.id}_${item.cigarId}`} style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '16px' 
+                        }}>
+                          <div style={{
+                            width: '80px',
+                            height: '80px',
+                            borderRadius: '8px',
+                            background: 'rgba(244, 175, 37, 0.1)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '24px',
+                            color: '#f4af25'
+                          }}>
+                            🚬
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <p style={{ 
+                              fontWeight: 'bold', 
+                              color: '#FFFFFF', 
+                              margin: '0 0 4px 0',
+                              fontSize: '14px'
+                            }}>
+                              {cigar?.name || item.cigarId}
+                            </p>
+                            <p style={{ 
+                              fontSize: '12px', 
+                              color: '#bab09c',
+                              margin: 0
+                            }}>
+                              {t('ordersAdmin.item.quantity')}: {item.quantity}
+                            </p>
+                          </div>
+                          <p style={{ 
+                            fontWeight: '600', 
+                            color: '#FFFFFF',
+                            margin: 0,
+                            fontSize: '14px'
+                          }}>
+                            RM{item.price.toFixed(2)}
+                          </p>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                  <div style={{ 
+                    marginTop: '16px', 
+                    paddingTop: '16px', 
+                    borderTop: '1px solid #393328',
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center' 
+                  }}>
+                    <p style={{ color: '#bab09c', margin: 0, fontSize: '14px' }}>
+                      {t('ordersAdmin.totalAmount')}:
+                    </p>
+                    <p style={{ 
+                      fontSize: '20px', 
+                      fontWeight: 'bold', 
+                      color: '#f4af25',
+                      margin: 0
+                    }}>
+                      RM{viewing.total.toFixed(2)}
+                    </p>
+                  </div>
+                </section>
+
+                {/* 订单信息 */}
+                <section style={{
+                  padding: '16px',
+                  borderRadius: '12px',
+                  background: 'rgba(39, 35, 27, 0.5)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(57, 51, 40, 0.7)'
+                }}>
+                  <h2 style={{ 
+                    fontSize: '18px', 
+                    fontWeight: 'bold', 
+                    color: '#FFFFFF', 
+                    marginBottom: '16px',
+                    margin: '0 0 16px 0'
+                  }}>
+                    {t('ordersAdmin.orderInfo')}
+                  </h2>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
+                      <p style={{ color: '#bab09c', margin: 0 }}>{t('ordersAdmin.orderId')}</p>
+                      <p style={{ color: '#FFFFFF', margin: 0, fontFamily: 'monospace', justifyContent: "right", wordBreak: 'break-all', whiteSpace: 'normal' }}>{viewing.id}</p>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
+                      <p style={{ color: '#bab09c', margin: 0 }}>{t('ordersAdmin.status.title')}</p>
+                      <Tag color={getStatusColor(viewing.status)} style={{ margin: 0 }}>
                   {getStatusText(viewing.status)}
                 </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label={t('ordersAdmin.totalAmount')}>
-                <span style={{ fontWeight: 'bold', color: '#1890ff' }}>
-                  RM{viewing.total.toFixed(2)}
-                </span>
-              </Descriptions.Item>
-              <Descriptions.Item label={t('ordersAdmin.payment.title')}>
-                {getPaymentText(viewing.payment.method)}
-              </Descriptions.Item>
-              <Descriptions.Item label={t('ordersAdmin.transactionId')}>
-                {viewing.payment.transactionId || '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label={t('ordersAdmin.paidAt')}>
-                {viewing.payment.paidAt ? dayjs(viewing.payment.paidAt).format('YYYY-MM-DD HH:mm') : '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label={t('ordersAdmin.address')} span={2}>
-                {viewing.shipping.address || '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label={t('ordersAdmin.trackingNumber')}>
-                {viewing.shipping.trackingNumber || '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label={t('ordersAdmin.createdAt')}>
-                {dayjs(viewing.createdAt).format('YYYY-MM-DD HH:mm:ss')}
-              </Descriptions.Item>
-            </Descriptions>
-            
-            <div style={{ marginTop: 16 }}>
-              <Title level={5}>{t('ordersAdmin.itemDetails')}</Title>
-              <Table
-                size="small"
-                dataSource={viewing.items}
-                rowKey={(item) => `${viewing.id}_${item.cigarId}`}
-                columns={[
-                  {
-                    title: t('ordersAdmin.item.cigar'),
-                    key: 'cigar',
-                    render: (_, item) => getCigarInfo(item.cigarId),
-                  },
-                  {
-                    title: t('ordersAdmin.item.quantity'),
-                    dataIndex: 'quantity',
-                    key: 'quantity',
-                  },
-                  {
-                    title: t('ordersAdmin.item.price'),
-                    dataIndex: 'price',
-                    key: 'price',
-                    render: (price: number) => `RM${price.toFixed(2)}`,
-                  },
-                  {
-                    title: t('ordersAdmin.item.subtotal'),
-                    key: 'subtotal',
-                    render: (_, item) => `RM${(item.price * item.quantity).toFixed(2)}`,
-                  },
-                ]}
-                pagination={false}
-              />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
+                      <p style={{ color: '#bab09c', margin: 0 }}>{t('ordersAdmin.createdAt')}</p>
+                      <p style={{ color: '#FFFFFF', margin: 0 }}>{dayjs(viewing.createdAt).format('YYYY-MM-DD HH:mm:ss')}</p>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
+                      <p style={{ color: '#bab09c', margin: 0 }}>{t('ordersAdmin.payment.title')}</p>
+                      <p style={{ color: '#FFFFFF', margin: 0 }}>{getPaymentText(viewing.payment.method)}</p>
+                    </div>
+                    {viewing.payment.transactionId && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
+                        <p style={{ color: '#bab09c', margin: 0 }}>{t('ordersAdmin.transactionId')}</p>
+                        <p style={{ color: '#FFFFFF', margin: 0, fontFamily: 'monospace', wordBreak: 'break-all', whiteSpace: 'normal' }}>{viewing.payment.transactionId}</p>
+                      </div>
+                    )}
+                    {viewing.payment.paidAt && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
+                        <p style={{ color: '#bab09c', margin: 0 }}>{t('ordersAdmin.paidAt')}</p>
+                        <p style={{ color: '#FFFFFF', margin: 0 }}>{dayjs(viewing.payment.paidAt).format('YYYY-MM-DD HH:mm')}</p>
+                      </div>
+                    )}
+                    {viewing.shipping.trackingNumber && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
+                        <p style={{ color: '#bab09c', margin: 0 }}>{t('ordersAdmin.trackingNumber')}</p>
+                        <p style={{ color: '#FFFFFF', margin: 0, fontFamily: 'monospace', wordBreak: 'break-all', whiteSpace: 'normal' }}>{viewing.shipping.trackingNumber}</p>
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                {/* 收货信息 */}
+                <section style={{
+                  padding: '16px',
+                  borderRadius: '12px',
+                  background: 'rgba(39, 35, 27, 0.5)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(57, 51, 40, 0.7)'
+                }}>
+                  <h2 style={{ 
+                    fontSize: '18px', 
+                    fontWeight: 'bold', 
+                    color: '#FFFFFF', 
+                    marginBottom: '16px',
+                    margin: '0 0 16px 0'
+                  }}>
+                    {t('ordersAdmin.shippingInfo')}
+                  </h2>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
+                      <p style={{ color: '#bab09c', margin: 0 }}>{t('ordersAdmin.user')}</p>
+                      <p style={{ color: '#FFFFFF', margin: 0 }}>{getUserName(viewing.userId)}</p>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
+                      <p style={{ color: '#bab09c', margin: 0 }}>{t('ordersAdmin.phone')}</p>
+                      <p style={{ color: '#FFFFFF', margin: 0 }}>{getUserPhone(viewing.userId) || '-'}</p>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '14px' }}>
+                      <p style={{ color: '#bab09c', margin: 0, whiteSpace: 'nowrap', marginRight: '16px' }}>{t('ordersAdmin.address')}</p>
+                      <p style={{ color: '#FFFFFF', margin: 0, textAlign: 'right' }}>{viewing.shipping.address || '-'}</p>
+                    </div>
+                  </div>
+                </section>
+            </div>
+          </div>
+
+            {/* Action Buttons */}
+            <div style={{
+              position: 'fixed',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              zIndex: 10,
+              background: 'rgba(24, 22, 17, 0.8)',
+              backdropFilter: 'blur(10px)',
+              padding: '12px 16px',
+              borderTop: '1px solid #393328'
+            }}>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                {!isEditingInView && (
+                  <>
+                    <Button 
+                      onClick={async () => { 
+                        await updateDocument(COLLECTIONS.ORDERS, viewing.id, { status: 'confirmed' } as any); 
+                        message.success(t('ordersAdmin.orderConfirmed')); 
+                        loadData() 
+                      }}
+                      style={{ 
+                        flex: 1, 
+                        height: '40px',
+                        background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                        color: '#221c10',
+                        fontWeight: 'bold',
+                        border: 'none'
+                      }}
+                    >
+                      {t('ordersAdmin.confirmOrder')}
+                    </Button>
+                    <Button 
+                      onClick={async () => { 
+                        await updateDocument(COLLECTIONS.ORDERS, viewing.id, { status: 'shipped' } as any); 
+                        message.success(t('ordersAdmin.orderShipped')); 
+                        loadData() 
+                      }}
+                      style={{ 
+                        flex: 1, 
+                        height: '40px',
+                        background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                        color: '#221c10',
+                        fontWeight: 'bold',
+                        border: 'none'
+                      }}
+                    >
+                      {t('ordersAdmin.markShipped')}
+                    </Button>
+                    <Button 
+                      onClick={async () => { 
+                        await updateDocument(COLLECTIONS.ORDERS, viewing.id, { status: 'delivered' } as any); 
+                        message.success(t('ordersAdmin.orderDelivered')); 
+                        loadData() 
+                      }}
+                      style={{ 
+                        flex: 1, 
+                        height: '40px',
+                        background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                        color: '#221c10',
+                        fontWeight: 'bold',
+                        border: 'none'
+                      }}
+                    >
+                      {t('ordersAdmin.markDelivered')}
+                    </Button>
+                  </>
+                )}
+                <Button 
+                  type={isEditingInView ? 'default' : 'primary'} 
+                  onClick={() => { 
+                    setIsEditingInView(v => !v); 
+                    form.setFieldsValue({ 
+                      status: viewing.status, 
+                      trackingNumber: viewing.shipping.trackingNumber || '', 
+                      addItems: [{ cigarId: undefined, quantity: 1 }] 
+                    }) 
+                  }}
+                  style={{ 
+                    height: '40px',
+                    background: isEditingInView ? undefined : 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                    color: isEditingInView ? undefined : '#221c10',
+                    fontWeight: 'bold',
+                    border: isEditingInView ? undefined : 'none'
+                  }}
+                >
+                  {isEditingInView ? t('common.done') : t('common.edit')}
+                </Button>
+                <Button 
+                  danger 
+                  onClick={() => {
+                    Modal.confirm({
+                      title: t('ordersAdmin.deleteConfirm'),
+                      content: t('ordersAdmin.deleteContent', { id: viewing.id }),
+                      okButtonProps: { danger: true },
+                      onOk: async () => {
+                        const res = await deleteDocument(COLLECTIONS.ORDERS, viewing.id)
+                        if (res.success) { message.success(t('ordersAdmin.deleted')); setViewing(null); loadData() }
+                      }
+                    })
+                  }}
+                  style={{ height: '40px' }}
+                >
+                  {t('common.delete')}
+                </Button>
+              </div>
             </div>
             {isEditingInView && (
               <div style={{ marginTop: 16 }}>

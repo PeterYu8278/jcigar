@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Layout } from 'antd'
 import AppHeader from './components/layout/AppHeader'
@@ -31,6 +31,7 @@ const { Content } = Layout
 function App() {
   const { user, isAdmin } = useAuthStore()
   const isDesktop = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(min-width: 992px)').matches : true
+  const [siderCollapsed, setSiderCollapsed] = useState(false)
 
   return (
     <Router>
@@ -57,10 +58,10 @@ function App() {
         
         {user && <AppHeader />}
         <Layout style={{ background: 'transparent' }}>
-          {user && <AppSider />}
+          {user && <AppSider onCollapseChange={setSiderCollapsed} />}
           <Layout style={{ 
             background: 'transparent',
-            marginLeft: user && isDesktop ? 240 : 0
+            marginLeft: user && isDesktop ? (siderCollapsed ? 64 : 240) : 0
           }}>
             <Content
               style={{

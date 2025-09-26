@@ -427,7 +427,7 @@ const AdminEvents: React.FC = () => {
           <Button onClick={() => { setKeyword(''); setStatusFilter(undefined); setSelectedRowKeys([]) }}>{t('common.resetFilters')}</Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => { setCreating(true); form.resetFields() }} style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}>
             {t('dashboard.createEvent')}
-        </Button>
+          </Button>
         </Space>
       </div>
 
@@ -537,11 +537,11 @@ const AdminEvents: React.FC = () => {
                     {/* 参与人数 + 状态 同行显示 */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>{ev.title}</div>
-                      <div style={{ fontSize: 12, color: '#f4af25', fontWeight: 600 }}> {t('events.participants')}: {(((ev as any)?.participants?.registered || []).length)}</div>
                       
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }}>
+                    <div style={{ fontSize: 12, color: '#f4af25', fontWeight: 600 }}> {t('events.participants')}: {(((ev as any)?.participants?.registered || []).length)}</div>
                       {(() => {
                         const s = (ev as any)?.schedule?.startDate
                         const e = (ev as any)?.schedule?.endDate
