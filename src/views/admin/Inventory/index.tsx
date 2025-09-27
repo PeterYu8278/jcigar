@@ -335,7 +335,7 @@ const AdminInventory: React.FC = () => {
               </button>
             )
           })}
-        </div>
+      </div>
         <div style={{ marginTop: 12 }}>
           {activeTab === 'list' && (
             <div>

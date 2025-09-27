@@ -232,9 +232,9 @@ const AdminUsers: React.FC = () => {
         const status = statusMap[record.id] || record.status || 'active'
         return (
           <Space>
-        <Tag color={getStatusColor(status)}>
-          {getStatusText(status)}
-        </Tag>
+            <Tag color={getStatusColor(status)}>
+              {getStatusText(status)}
+            </Tag>
             <Switch
               checked={status === 'active'}
               onChange={async (checked) => {
@@ -291,11 +291,11 @@ const AdminUsers: React.FC = () => {
   const columns = allColumns.filter(c => visibleCols[c.key as string] !== false)
 
   const filteredUsers = useMemo(() => {
-    const kw = keyword.trim().toLowerCase()
+                      const kw = keyword.trim().toLowerCase()
     return users.filter(u => {
       const passKw = !kw || u.displayName?.toLowerCase().includes(kw) || (u.email || '').toLowerCase().includes(kw) || ((u as any)?.profile?.phone || '').includes(keyword.trim())
-      const passRole = !roleFilter || u.role === roleFilter
-      const passLevel = !levelFilter || u.membership?.level === levelFilter
+                      const passRole = !roleFilter || u.role === roleFilter
+                      const passLevel = !levelFilter || u.membership?.level === levelFilter
       const status = statusMap[u.id] || (u as any).status || 'active'
       const passStatus = !statusFilter || status === statusFilter
       return passKw && passRole && passLevel && passStatus
@@ -1282,37 +1282,37 @@ const AdminUsers: React.FC = () => {
           margin: -24
         }}>
           <Form form={form} layout="vertical" onFinish={async (values) => {
-            setLoading(true)
-            try {
-              if (editing) {
-                const res = await updateDocument<User>(COLLECTIONS.USERS, editing.id, {
-                  displayName: values.displayName,
-                  email: values.email,
-                  role: values.role,
-                  membership: { ...editing.membership, level: values.level },
-                  profile: { ...(editing as any).profile, phone: values.phone },
-                } as any)
+          setLoading(true)
+          try {
+            if (editing) {
+              const res = await updateDocument<User>(COLLECTIONS.USERS, editing.id, {
+                displayName: values.displayName,
+                email: values.email,
+                role: values.role,
+                membership: { ...editing.membership, level: values.level },
+                profile: { ...(editing as any).profile, phone: values.phone },
+              } as any)
                 if (res.success) message.success(t('usersAdmin.saved'))
-              } else {
-                const res = await createDocument<User>(COLLECTIONS.USERS, {
-                  displayName: values.displayName,
-                  email: values.email,
-                  role: values.role,
-                  profile: { phone: values.phone, preferences: { language: 'zh', notifications: true } },
-                  membership: { level: values.level, joinDate: new Date(), lastActive: new Date() },
-                  createdAt: new Date(),
-                  updatedAt: new Date(),
-                } as any)
+            } else {
+              const res = await createDocument<User>(COLLECTIONS.USERS, {
+                displayName: values.displayName,
+                email: values.email,
+                role: values.role,
+                profile: { phone: values.phone, preferences: { language: 'zh', notifications: true } },
+                membership: { level: values.level, joinDate: new Date(), lastActive: new Date() },
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              } as any)
                 if ((res as any).success) message.success(t('usersAdmin.created'))
-              }
-              const list = await getUsers()
-              setUsers(list)
-              setCreating(false)
-              setEditing(null)
-            } finally {
-              setLoading(false)
             }
-          }}>
+            const list = await getUsers()
+            setUsers(list)
+            setCreating(false)
+            setEditing(null)
+          } finally {
+            setLoading(false)
+          }
+        }}>
             <div style={{ marginBottom: 32 }}>
               <Form.Item 
                 name="displayName" 
@@ -1360,7 +1360,7 @@ const AdminUsers: React.FC = () => {
                     />
                   </div>
                 </div>
-              </Form.Item>
+          </Form.Item>
             </div>
 
             <div style={{ marginBottom: 32 }}>
@@ -1394,7 +1394,7 @@ const AdminUsers: React.FC = () => {
                     }}>
                       ✉️
                     </span>
-                    <Input 
+            <Input 
                       style={{
                         background: 'transparent',
                         color: '#fff',
@@ -1409,7 +1409,7 @@ const AdminUsers: React.FC = () => {
                     />
                   </div>
                 </div>
-              </Form.Item>
+          </Form.Item>
             </div>
 
             <div style={{ marginBottom: 32 }}>
@@ -1459,7 +1459,7 @@ const AdminUsers: React.FC = () => {
                     />
                   </div>
                 </div>
-              </Form.Item>
+          </Form.Item>
             </div>
 
             <div style={{ marginBottom: 32 }}>
@@ -1508,10 +1508,10 @@ const AdminUsers: React.FC = () => {
                       <Option value="admin">{t('common.admin')}</Option>
                       <Option value="member">{t('common.member')}</Option>
                       <Option value="guest">{t('common.guest')}</Option>
-                    </Select>
+            </Select>
                   </div>
                 </div>
-              </Form.Item>
+          </Form.Item>
             </div>
 
             <div style={{ marginBottom: 32 }}>
@@ -1561,10 +1561,10 @@ const AdminUsers: React.FC = () => {
                       <Option value="silver">{t('usersAdmin.silverMember')}</Option>
                       <Option value="gold">{t('usersAdmin.goldMember')}</Option>
                       <Option value="platinum">{t('usersAdmin.platinumMember')}</Option>
-                    </Select>
+            </Select>
                   </div>
                 </div>
-              </Form.Item>
+          </Form.Item>
             </div>
 
             <div style={{ marginTop: 64 }}>
@@ -1599,7 +1599,7 @@ const AdminUsers: React.FC = () => {
                 {loading ? '保存中...' : '保存更改'}
               </button>
             </div>
-          </Form>
+        </Form>
         </div>
       </Modal>
 

@@ -163,7 +163,9 @@ const MobileBottomNav: React.FC = () => {
               cursor: 'pointer',
               padding: '8px 12px',
               borderRadius: '12px',
-              minWidth: navItems.length > 4 ? '50px' : '60px',
+              width: navItems.length > 4 ? '60px' : '80px',
+              minWidth: navItems.length > 4 ? '60px' : '80px',
+              maxWidth: navItems.length > 4 ? '60px' : '80px',
               transition: 'all 0.3s ease',
               position: 'relative',
               background: active 
