@@ -290,7 +290,7 @@
     "english": "English"
   },
   "home": {
-    "welcomeTitle": "Welcome to Gentleman Club Community",
+    "welcomeTitle": "Welcome to Gentleman Club",
     "welcomeSubtitle": "Explore world-class cigars, join professional gatherings, and share tasting experiences with fellow enthusiasts",
     "vipMember": "VIP Member",
     "memberId": "Member ID",
@@ -368,7 +368,7 @@
     "saved": "User saved successfully",
     "created": "User created successfully",
     "memberDetails": "Member Details",
-    "editMemberInfo": "Edit Member Info",
+    "editProfile": "Edit Profile",
     "points": "Points",
     "purchaseRecords": "Purchase Records",
     "pointsRecords": "Points Records",

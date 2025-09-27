@@ -114,6 +114,11 @@ export const loginWithEmailOrPhone = async (identifier: string, password: string
 export const loginWithGoogle = async () => {
   try {
     const provider = new GoogleAuthProvider();
+    
+    // 添加额外的OAuth参数
+    provider.addScope('email');
+    provider.addScope('profile');
+    
     const credential = await signInWithPopup(auth, provider);
     const user = credential.user;
 
@@ -144,6 +149,14 @@ export const loginWithGoogle = async () => {
   } catch (error) {
     const err = error as any
     console.error('Google 登录失败:', err);
+    
+    // 提供更详细的错误信息
+    if (err.code === 'auth/unauthorized-domain') {
+      console.error('域名未授权。请在Firebase控制台中添加当前域名到授权域名列表。');
+      console.error('当前域名:', window.location.origin);
+      console.error('请访问: https://console.firebase.google.com/project/cigar-56871/authentication/settings');
+    }
+    
     return { success: false, error: err as Error } as { success: false; error: Error };
   }
 };

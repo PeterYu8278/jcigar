@@ -6,7 +6,12 @@ import {
   EditOutlined, 
   CalendarOutlined,
   ShoppingOutlined,
-  TrophyOutlined
+  TrophyOutlined,
+  EyeOutlined,
+  ArrowLeftOutlined,
+  PhoneOutlined,
+  MailOutlined,
+  CrownOutlined
 } from '@ant-design/icons'
 
 const { Title, Paragraph, Text } = Typography
@@ -15,6 +20,7 @@ import { useAuthStore } from '../../../store/modules/auth'
 import { updateDocument } from '../../../services/firebase/firestore'
 import type { User } from '../../../types'
 import { useTranslation } from 'react-i18next'
+import { MemberProfileCard } from '../../../components/common/MemberProfileCard'
 
 const Profile: React.FC = () => {
   const { user, setUser } = useAuthStore()
@@ -22,6 +28,8 @@ const Profile: React.FC = () => {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [form] = Form.useForm()
+  const [showMemberCard, setShowMemberCard] = useState(false) // 控制头像/会员卡切换
+  const [activeTab, setActiveTab] = useState<'purchase' | 'points' | 'activity' | 'referral'>('purchase') // 标签状态
 
   // 模拟用户统计数据
   const userStats = [
@@ -51,76 +59,36 @@ const Profile: React.FC = () => {
   }
 
   return (
-    <div style={{ padding: '24px' }}>
-      <Title level={2} style={{ marginBottom: 10, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent'}}>{t('navigation.profile')}</Title>
-
-      <Row gutter={[16, 16]}>
-        {/* 用户信息卡片 */}
-        <Col span={16}>
-          <Card>
-            <Row gutter={[16, 16]}>
-              <Col span={6}>
-                <div style={{ textAlign: 'center' }}>
-                  <Avatar 
-                    size={120} 
-                    src={user?.profile?.avatar}
-                    icon={<UserOutlined />}
-                    style={{ marginBottom: 16 }}
-                  />
-                  <div>
-                    <Title level={4} style={{ margin: 0 }}>
-                      {user?.displayName || t('profile.noNameSet')}
-                    </Title>
-                    <Tag color={getMembershipColor(user?.membership?.level || 'bronze')}>
-                      {getMembershipText(user?.membership?.level || 'bronze')}
-                    </Tag>
-                  </div>
-                </div>
-              </Col>
-              
-              <Col span={18}>
-                <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-                  <div>
-                    <Title level={5} >{t('profile.basicInfo')}</Title>
-                    <Space direction="vertical" size="small">
-                      <div>
-                        <Text strong>{t('auth.email')}:</Text>
-                        <Text> {user?.email}</Text>
-                      </div>
-                      <div>
-                        <Text strong>{t('auth.phone')}:</Text>
-                        <Text> {user?.profile?.phone || t('profile.notSet')}</Text>
-                      </div>
-                      <div>
-                        <Text strong>{t('profile.memberSince')}:</Text>
-                        <Text> {user?.membership?.joinDate ? new Date(user.membership.joinDate).toLocaleDateString() : t('profile.unknown')}</Text>
-                      </div>
-                      <div>
-                        <Text strong>{t('profile.lastLogin')}:</Text>
-                        <Text> {user?.membership?.lastActive ? new Date(user.membership.lastActive).toLocaleDateString() : t('profile.unknown')}</Text>
-                      </div>
-                    </Space>
-                  </div>
-
-                  <div>
-                    <Title level={5}>{t('profile.preferences')}</Title>
-                    <Space direction="vertical" size="small">
-                      <div>
-                        <Text strong>{t('profile.languageLabel')}:</Text>
-                        <Text> {user?.profile?.preferences?.language === 'zh' ? t('language.chinese') : t('language.english')}</Text>
-                      </div>
-                      <div>
-                        <Text strong>{t('profile.notificationsLabel')}:</Text>
-                        <Text> {user?.profile?.preferences?.notifications ? t('common.yes') : t('common.no')}</Text>
-                      </div>
-                    </Space>
-                  </div>
-
-                  <div>
-                    <Button 
-                      type="primary" 
-                      icon={<EditOutlined />} 
-                      style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}
+    <div style={{
+      background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
+      minHeight: '100vh',
+      color: '#FFFFFF',
+      padding: '0'
+    }}>
+      {/* Header */}
+      <div style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 10,
+                        display: 'flex',
+                        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '16px',
+        background: 'transparent',
+        backdropFilter: 'blur(10px)'
+      }}>
+        <div style={{ width: '40px' }} /> {/* 占位符保持居中 */}
+        <h1 style={{
+          fontSize: '18px',
+          fontWeight: 'bold',
+          color: '#FFFFFF',
+          margin: 0
+        }}>
+          {t('navigation.profile')}
+        </h1>
+        <Button
+          type="text"
+          icon={<EditOutlined />}
                       onClick={() => {
                         if (!user) return
                         form.setFieldsValue({
@@ -130,95 +98,317 @@ const Profile: React.FC = () => {
                         })
                         setEditing(true)
                       }}
-                      disabled={!user}
-                    >
-                      {t('profile.editProfile')}
-                    </Button>
-                  </div>
-                </Space>
-              </Col>
-            </Row>
-          </Card>
-        </Col>
+          style={{ color: '#FFFFFF', fontSize: '20px' }}
+        />
+      </div>
 
-        {/* 统计数据 */}
-        <Col span={8}>
-          <Card title={t('profile.myStats')} style={{ height: '100%' }}>
-            <Space direction="vertical" size="large" style={{ width: '100%' }}>
-              {userStats.map((stat, index) => (
-                <div key={index} style={{ textAlign: 'center' }}>
-                  <Statistic
-                    title={stat.title}
-                    value={stat.value}
-                    prefix={stat.icon}
-                    valueStyle={{ color: '#1890ff' }}
-                  />
+      {/* User Profile Section */}
+      <div style={{ padding: '24px', textAlign: 'center',
+            marginBottom: '10px'}}>
+        {/* Avatar/Member Card Toggle */}
+        <MemberProfileCard
+          user={user}
+          showMemberCard={showMemberCard}
+          onToggleMemberCard={setShowMemberCard}
+          getMembershipText={getMembershipText}
+        />
+
+        {/* User Info */}
+        <div style={{ textAlign: 'center', marginBottom: '24px', marginTop: '24px' }}>
+          <h2 style={{
+            fontSize: '24px',
+            fontWeight: 'bold',
+            color: '#FFFFFF',
+            margin: '0 0 8px 0'
+          }}>
+            {user?.displayName || t('profile.noNameSet')}
+          </h2>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '16px',
+            marginBottom: '8px',
+            color: 'rgba(255, 255, 255, 0.7)'
+          }}>
+            <span>{t('profile.membershipLevel')}: {getMembershipText(user?.membership?.level || 'bronze')}</span>
+            <div style={{ width: '1px', height: '16px', background: 'rgba(255, 255, 255, 0.2)' }} />
+            <span>{t('profile.points')}: {(user?.membership as any)?.points || 0}</span>
+          </div>
+          <div style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.6)' }}>
+            <p style={{ margin: '4px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <MailOutlined /> {user?.email || '-'}
+            </p>
+            <p style={{ margin: '4px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <PhoneOutlined /> {user?.profile?.phone || t('profile.notSet')}
+            </p>
+          </div>
+        </div>
+
+
+        {/* Stats Section */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(3, 1fr)', 
+          gap: '16px', 
+          marginBottom: '24px' 
+        }}>
+          {userStats.map((stat, index) => (
+            <div key={index} style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: '12px',
+              padding: '16px',
+              border: '1px solid rgba(244, 175, 37, 0.2)',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '24px', marginBottom: '8px', color: '#F4AF25' }}>
+                {stat.icon}
+              </div>
+              <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#FFFFFF', marginBottom: '4px' }}>
+                {stat.value}
+              </div>
+              <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                {stat.title}
+              </div>
                 </div>
               ))}
-            </Space>
-          </Card>
-        </Col>
-      </Row>
+        </div>
+      </div>
 
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        {/* 最近活动 */}
-        <Col span={12}>
-          <Card title={t('profile.recentEvents')}>
-            <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-              <div style={{ padding: '12px', background: '#f9f9f9', borderRadius: '6px' }}>
+      {/* Recent Activities */}
+      <div style={{ padding: '0 16px' }}>
+        <div style={{
+          display: 'flex',
+          borderBottom: '1px solid rgba(244,175,37,0.2)',
+          marginBottom: '24px'
+        }}>
+          {(['purchase', 'points', 'activity', 'referral'] as const).map((tabKey) => {
+            const isActive = activeTab === tabKey
+            const baseStyle: React.CSSProperties = {
+              flex: 1,
+              padding: '10px 0',
+              fontWeight: 800,
+              fontSize: 12,
+              outline: 'none',
+              borderBottom: '2px solid transparent',
+              cursor: 'pointer',
+              background: 'none',
+              border: 'none',
+              position: 'relative' as const,
+            }
+            const activeStyle: React.CSSProperties = {
+              color: 'transparent',
+              backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+              WebkitBackgroundClip: 'text',
+            }
+            const inactiveStyle: React.CSSProperties = {
+              color: '#A0A0A0',
+            }
+
+            const getTabLabel = (key: string) => {
+              switch (key) {
+                case 'purchase': return t('usersAdmin.purchaseRecords')
+                case 'points': return t('usersAdmin.pointsRecords')
+                case 'activity': return t('usersAdmin.activityRecords')
+                case 'referral': return t('usersAdmin.referralRecords')
+                default: return ''
+              }
+            }
+
+            return (
+              <button
+                key={tabKey}
+                onClick={() => setActiveTab(tabKey)}
+                style={{ ...baseStyle, ...(isActive ? activeStyle : inactiveStyle) }}
+              >
+                {getTabLabel(tabKey)}
+                {isActive && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: '2px',
+                    background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                    borderRadius: '1px'
+                  }} />
+                )}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Records List */}
+        <div style={{ paddingBottom: '24px' }}>
+          {activeTab === 'purchase' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '8px',
+                padding: '16px',
+                border: '1px solid rgba(244, 175, 37, 0.2)'
+              }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <Text strong>古巴雪茄品鉴会</Text>
-                    <br />
-                    <Text type="secondary">2024-10-15</Text>
+                    <div style={{ fontWeight: '600', color: '#FFFFFF', marginBottom: '4px' }}>
+                      Cohiba Behike 52
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                      2024-10-20
+                    </div>
                   </div>
-                  <Tag color="green">{t('profile.joinedTag')}</Tag>
+                  <div style={{ fontWeight: 'bold', color: '#F4AF25' }}>RM580</div>
                 </div>
               </div>
               
-              <div style={{ padding: '12px', background: '#f9f9f9', borderRadius: '6px' }}>
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '8px',
+                padding: '16px',
+                border: '1px solid rgba(244, 175, 37, 0.2)'
+              }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <Text strong>威士忌与雪茄搭配品鉴</Text>
-                    <br />
-                    <Text type="secondary">2024-10-22</Text>
+                    <div style={{ fontWeight: '600', color: '#FFFFFF', marginBottom: '4px' }}>
+                      Montecristo No.2
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                      2024-10-18
+                    </div>
                   </div>
-                  <Tag color="blue">{t('profile.registeredTag')}</Tag>
+                  <div style={{ fontWeight: 'bold', color: '#F4AF25' }}>RM320</div>
                 </div>
               </div>
-            </Space>
-          </Card>
-        </Col>
+            </div>
+          )}
 
-        {/* 最近购买 */}
-        <Col span={12}>
-          <Card title={t('profile.recentPurchases')}>
-            <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-              <div style={{ padding: '12px', background: '#f9f9f9', borderRadius: '6px' }}>
+          {activeTab === 'points' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '8px',
+                padding: '16px',
+                border: '1px solid rgba(244, 175, 37, 0.2)'
+              }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <Text strong>Cohiba Behike 52</Text>
-                    <br />
-                    <Text type="secondary">2024-10-20</Text>
+                    <div style={{ fontWeight: '600', color: '#FFFFFF', marginBottom: '4px' }}>
+                      购买雪茄获得积分
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                      2024-10-20
+                    </div>
                   </div>
-                  <Text strong>RM580</Text>
+                  <div style={{ fontWeight: 'bold', color: '#F4AF25' }}>+58</div>
                 </div>
               </div>
               
-              <div style={{ padding: '12px', background: '#f9f9f9', borderRadius: '6px' }}>
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '8px',
+                padding: '16px',
+                border: '1px solid rgba(244, 175, 37, 0.2)'
+              }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <Text strong>Montecristo No.2</Text>
-                    <br />
-                    <Text type="secondary">2024-10-18</Text>
+                    <div style={{ fontWeight: '600', color: '#FFFFFF', marginBottom: '4px' }}>
+                      参与活动获得积分
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                      2024-10-18
+                    </div>
                   </div>
-                  <Text strong>RM320</Text>
+                  <div style={{ fontWeight: 'bold', color: '#F4AF25' }}>+25</div>
                 </div>
               </div>
-            </Space>
-          </Card>
-        </Col>
-      </Row>
+            </div>
+          )}
+
+          {activeTab === 'activity' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '8px',
+                padding: '16px',
+                border: '1px solid rgba(244, 175, 37, 0.2)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: '600', color: '#FFFFFF', marginBottom: '4px' }}>
+                      古巴雪茄品鉴会
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                      2024-10-15
+                    </div>
+                  </div>
+                  <Tag color="green" style={{ fontSize: '10px' }}>{t('profile.joinedTag')}</Tag>
+                </div>
+              </div>
+              
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '8px',
+                padding: '16px',
+                border: '1px solid rgba(244, 175, 37, 0.2)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: '600', color: '#FFFFFF', marginBottom: '4px' }}>
+                      威士忌与雪茄搭配品鉴
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                      2024-10-22
+                    </div>
+                  </div>
+                  <Tag color="blue" style={{ fontSize: '10px' }}>{t('profile.registeredTag')}</Tag>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'referral' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '8px',
+                padding: '16px',
+                border: '1px solid rgba(244, 175, 37, 0.2)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: '600', color: '#FFFFFF', marginBottom: '4px' }}>
+                      推荐好友注册
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                      2024-10-15
+                    </div>
+                  </div>
+                  <div style={{ fontWeight: 'bold', color: '#F4AF25' }}>+100</div>
+                </div>
+              </div>
+              
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '8px',
+                padding: '16px',
+                border: '1px solid rgba(244, 175, 37, 0.2)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: '600', color: '#FFFFFF', marginBottom: '4px' }}>
+                      好友首次购买
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                      2024-10-10
+                    </div>
+                  </div>
+                  <div style={{ fontWeight: 'bold', color: '#F4AF25' }}>+50</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       <Modal
         title={t('profile.editProfile')}
@@ -275,8 +465,8 @@ const Profile: React.FC = () => {
             <Switch />
           </Form.Item>
         </Form>
-      </Modal>
-    </div>
+        </Modal>
+      </div>
   )
 }
 

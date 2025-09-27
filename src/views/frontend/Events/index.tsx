@@ -6,7 +6,8 @@ import {
   EnvironmentOutlined, 
   TeamOutlined,
   ClockCircleOutlined,
-  DollarOutlined 
+  DollarOutlined,
+  ArrowLeftOutlined
 } from '@ant-design/icons'
 
 const { Title, Paragraph, Text } = Typography
@@ -48,131 +49,175 @@ const Events: React.FC = () => {
   }
 
   return (
-    <div style={{ padding: '24px' }}>
-      <Title level={2} style={{ margin: 10, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent'}}>{t('navigation.events')}</Title>
-      <Paragraph type="secondary">
-        {t('events.subtitle')}
-      </Paragraph>
+    <div style={{ 
+      minHeight: '100vh',
+    }}>
+      {/* Header */}
+      <div style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 10,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '1px',
+        background: 'transparent',
+        backdropFilter: 'blur(10px)'
+      }}>
+        
+        <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', marginBottom: 12 }}>{t('navigation.events')}</h1>
+        
+      </div>
 
-      <Row gutter={[16, 16]}>
+      {/* Main Content */}
+      <div style={{ 
+        flex: 1, 
+        overflowY: 'auto', 
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '24px'
+      }}>
         {events.map((event) => (
-          <Col span={8} key={event.id}>
-            <Card
-              hoverable
-              cover={
-                <div style={{ height: 200, background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <CalendarOutlined style={{ fontSize: '48px', color: '#ccc' }} />
-                </div>
-              }
-              actions={[
-                <Button 
-                  type="primary" 
-                  disabled={event.status === 'completed' || !user}
-                  loading={loadingId === event.id}
-                  style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}
-                  onClick={async () => {
-                    if (!user) {
-                      message.info('请先登录后再报名')
-                      return
+          <div 
+            key={event.id}
+            style={{
+              position: 'relative',
+              overflow: 'hidden',
+              borderRadius: '12px',
+              boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)',
+              height: '192px',
+              cursor: 'pointer',
+              transition: 'transform 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.02)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)'
+            }}
+          >
+            {/* Background Image */}
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuCHkrz9j7PM4w5oJ-Ev89VkzHjq_v56FKnoLokAM_pzgzM6iNfbhlUqD41_YlPuL4JuB_cB8FzngJx-Ha2y__35Q0NvH6BwubyOXdY9GvnvbwOpdZ6Edy1OyMJPkfG6-efD4YBYLZSO1BFlMu6u6T3Vujsd4rKIgWOwxgLHVkDsWwS72e271qwxZ4vothKhf_zW-CiGBhoIQQsvWO9zQCYJuVevXIVGOwLdkBIDO_b0EdZISgCxP0RGVW71K71lUAE_lwj27PQZiuVb")',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              transition: 'transform 0.5s ease'
+            }} />
+            
+            {/* Overlay */}
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'rgba(0, 0, 0, 0.3)',
+              backdropFilter: 'blur(1px)'
+            }} />
+            
+            {/* Content */}
+            <div style={{
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'flex-end',
+              padding: '24px',
+              height: '100%'
+            }}>
+              <h2 style={{
+                color: '#FFFFFF',
+                fontSize: '20px',
+                fontWeight: 'bold',
+                lineHeight: '1.2',
+                margin: 0,
+                marginBottom: '4px'
+              }}>
+                {event.title}
+              </h2>
+              
+              <p style={{
+                color: 'rgba(255, 255, 255, 0.8)',
+                fontSize: '14px',
+                margin: 0,
+                marginBottom: '16px'
+              }}>
+                {(() => {
+                  const d = (event as any)?.schedule?.startDate as any
+                  const dateVal = (d as any)?.toDate ? (d as any).toDate() : d
+                  return dateVal ? new Date(dateVal).toLocaleDateString('zh-CN', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  }) : '-'
+                })()}
+              </p>
+              
+              <button
+                disabled={event.status === 'completed' || !user}
+                style={{
+                  alignSelf: 'flex-start',
+                  background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                  color: '#111',
+                  fontWeight: 'bold',
+                  padding: '8px 24px',
+                  borderRadius: '9999px',
+                  cursor: event.status === 'completed' || !user ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 4px 15px rgba(244, 175, 37, 0.3)',
+                  transition: 'all 0.3s ease',
+                  opacity: event.status === 'completed' || !user ? 0.6 : 1
+                }}
+                onMouseEnter={(e) => {
+                  if (event.status !== 'completed' && user) {
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(244, 175, 37, 0.5)'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (event.status !== 'completed' && user) {
+                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(244, 175, 37, 0.3)'
+                  }
+                }}
+                onClick={async () => {
+                  if (!user) {
+                    message.info('请先登录后再报名')
+                    return
+                  }
+                  const max = (event as any)?.participants?.maxParticipants || 0
+                  const registeredIds = event.participants?.registered || []
+                  const isFull = max > 0 && registeredIds.length >= max
+                  if (!isFull) {
+                    // ok
+                  } else if (!registeredIds.includes(user.id)) {
+                    message.warning(t('events.fullCapacity'))
+                    return
+                  }
+                  try {
+                    setLoadingId(event.id)
+                    const isRegistered = registeredIds.includes(user.id)
+                    const res = isRegistered
+                      ? await unregisterFromEvent(event.id, user.id)
+                      : await registerForEvent(event.id, user.id)
+                    if (res.success) {
+                      message.success(isRegistered ? t('events.unregistered') : t('events.registered'))
+                      const updated = await getEvents()
+                      setEvents(updated)
+                    } else {
+                      message.error(t('messages.operationFailed'))
                     }
-                    const max = (event as any)?.participants?.maxParticipants || 0
-                    const registeredIds = event.participants?.registered || []
-                    const isFull = max > 0 && registeredIds.length >= max
-                    if (!isFull) {
-                      // ok
-                    } else if (!registeredIds.includes(user.id)) {
-                      message.warning(t('events.fullCapacity'))
-                      return
-                    }
-                    try {
-                      setLoadingId(event.id)
-                      const isRegistered = registeredIds.includes(user.id)
-                      const res = isRegistered
-                        ? await unregisterFromEvent(event.id, user.id)
-                        : await registerForEvent(event.id, user.id)
-                      if (res.success) {
-                        message.success(isRegistered ? t('events.unregistered') : t('events.registered'))
-                        const updated = await getEvents()
-                        setEvents(updated)
-                      } else {
-                        message.error(t('messages.operationFailed'))
-                      }
-                    } finally {
-                      setLoadingId(null)
-                    }
-                  }}
-                >
-                  {(() => {
-                    if (event.status === 'completed') return t('events.completed')
-                    if (!user) return t('auth.pleaseLogin')
-                    const registeredIds = event.participants?.registered || []
-                    return registeredIds.includes(user.id) ? t('events.leave') : t('events.join')
-                  })()}
-                </Button>
-              ]}
-            >
-              <Card.Meta
-                title={
-                  <Space>
-                    {event.title}
-                    <Tag color={getStatusColor(event.status)}>
-                      {getStatusText(event.status)}
-                    </Tag>
-                  </Space>
-                }
-                description={
-                  <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                    <Paragraph ellipsis={{ rows: 2 }}>
-                      {event.description}
-                    </Paragraph>
-                    
-                    <Space>
-                      <CalendarOutlined />
-                      <Text>
-                        {(() => {
-                          const d = (event as any)?.schedule?.startDate as any
-                          const dateVal = (d as any)?.toDate ? (d as any).toDate() : d
-                          return dateVal ? new Date(dateVal).toLocaleDateString() : '-'
-                        })()}
-                      </Text>
-                    </Space>
-                    
-                    {/* 选填：结束时间展示 */}
-                    
-                    <Space>
-                      <EnvironmentOutlined />
-                      <Text>{(event as any)?.location?.name || '-'}</Text>
-                    </Space>
-                    
-                    <Space>
-                      <DollarOutlined />
-                      <Text strong>RM{(event as any)?.participants?.fee ?? 0}</Text>
-                    </Space>
-                    
-                    <Space>
-                      <TeamOutlined />
-                      <Text>
-                        {(() => {
-                          const reg = (event as any)?.participants?.registered || []
-                          const max = (event as any)?.participants?.maxParticipants || 0
-                          return `${reg.length}/${max} ${t('events.people')}`
-                        })()}
-                      </Text>
-                    </Space>
-                    
-                    <div style={{ display: 'flex', alignItems: 'center', marginTop: 8 }}>
-                      <Avatar size="small" style={{ marginRight: 8 }}>
-                        {String((event as any)?.organizerId || '主').slice(0,1)}
-                      </Avatar>
-                      <Text type="secondary">{t('events.organizer')}: {(event as any)?.organizerId || '-'}</Text>
+                  } finally {
+                    setLoadingId(null)
+                  }
+                }}
+              >
+                {loadingId === event.id ? '处理中...' : (() => {
+                  if (event.status === 'completed') return t('events.completed')
+                  if (!user) return t('auth.pleaseLogin')
+                  const registeredIds = event.participants?.registered || []
+                  return registeredIds.includes(user.id) ? t('events.leave') : t('events.join')
+                })()}
+              </button>
+            </div>
                     </div>
-                  </Space>
-                }
-              />
-            </Card>
-          </Col>
         ))}
-      </Row>
+      </div>
     </div>
   )
 }

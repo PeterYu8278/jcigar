@@ -276,7 +276,7 @@
     "english": "English"
   },
   "home": {
-    "welcomeTitle": "欢迎来到Gentleman Club社区",
+    "welcomeTitle": "欢迎来到Gentleman Club",
     "welcomeSubtitle": "探索世界顶级雪茄，参与专业聚会，与同好分享品鉴心得",
     "vipMember": "尊贵会员",
     "memberId": "会员编号",
@@ -354,7 +354,7 @@
     "saved": "用户保存成功",
     "created": "用户创建成功",
     "memberDetails": "会员详情",
-    "editMemberInfo": "编辑会员信息",
+    "editProfile": "编辑资料",
     "points": "积分",
     "purchaseRecords": "消费记录",
     "pointsRecords": "积分记录",

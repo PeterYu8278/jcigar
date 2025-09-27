@@ -78,7 +78,7 @@ const Shop: React.FC = () => {
             pointerEvents: 'none'
           }}>
             <SearchOutlined />
-          </div>
+                </div>
           <Input
             placeholder="搜索品牌"
             value={searchKeyword}
@@ -94,8 +94,8 @@ const Shop: React.FC = () => {
               fontSize: '16px'
             }}
           />
-        </div>
-      </div>
+                    </div>
+                    </div>
 
       {/* Filter Pills */}
       <div style={{ marginBottom: '16px' }}>
@@ -129,8 +129,8 @@ const Shop: React.FC = () => {
             </button>
           ))}
         </div>
-      </div>
-
+                    </div>
+                    
       {/* Price Range */}
       <div style={{ 
         padding: '16px', 
@@ -152,10 +152,10 @@ const Shop: React.FC = () => {
             fontWeight: '500', 
             color: '#F4AF25'
           }}>
-            ¥{priceRange[0]} - ¥{priceRange[1]}
+            RM{priceRange[0]} - RM{priceRange[1]}
           </span>
-        </div>
-        
+                    </div>
+                    
         <div style={{ marginBottom: '16px' }}>
           <Slider
             range
@@ -171,18 +171,8 @@ const Shop: React.FC = () => {
             railStyle={{ background: '#4a4a4a' }}
           />
         </div>
-        
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          fontSize: '12px', 
-          color: '#999999'
-        }}>
-          <span>¥0</span>
-          <span>¥2000+</span>
-        </div>
-      </div>
-
+                    </div>
+                    
       {/* Recommended Brands */}
       <div style={{ marginBottom: '16px' }}>
         <h2 style={{ 
@@ -232,10 +222,10 @@ const Shop: React.FC = () => {
               }}>
                 {brand.name}
               </p>
-            </div>
+                      </div>
           ))}
-        </div>
-      </div>
+                      </div>
+                    </div>
 
       {/* Popular Brands */}
       <div>

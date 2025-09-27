@@ -17,12 +17,23 @@ import { useNavigate } from 'react-router-dom'
 import { getUpcomingEvents } from '../../../services/firebase/firestore'
 import type { Event } from '../../../types'
 import { useTranslation } from 'react-i18next'
+import { useAuthStore } from '../../../store/modules/auth'
+import { useQRCode } from '../../../hooks/useQRCode'
+import { QRCodeDisplay } from '../../../components/common/QRCodeDisplay'
 
 const Home: React.FC = () => {
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const { user } = useAuthStore()
   const [events, setEvents] = useState<Event[]>([])
   const [loadingEvents, setLoadingEvents] = useState<boolean>(false)
+  
+  // QR Code Hook - 基于用户ID自动生成
+  const { qrCodeDataURL, loading: qrLoading, error: qrError } = useQRCode({
+    memberId: user?.id,
+    memberName: user?.displayName,
+    autoGenerate: true
+  })
 
   useEffect(() => {
     const load = async () => {
@@ -40,21 +51,14 @@ const Home: React.FC = () => {
   }, [])
   
   return (
-    <div style={{ padding: '24px' }}>
+    <div style={{ minHeight: '100vh' }}>
       {/* 顶部标题栏 */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0, color: '#f8f8f8' }}>{t('navigation.home')}</Title>
-        <Button type="text" style={{ color: '#ffd700' }}>
-          <svg fill="currentColor" width="22" height="22" viewBox="0 0 256 256" aria-hidden>
-            <path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Z" />
-          </svg>
-        </Button>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
       </div>
       {/* 欢迎横幅 */}
       <Card 
         className="cigar-card"
         style={{ 
-          marginBottom: 32, 
           background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.9) 0%, rgba(45, 45, 45, 0.8) 100%)',
           border: '2px solid rgba(255, 215, 0, 0.3)',
           borderRadius: '20px',
@@ -73,50 +77,47 @@ const Home: React.FC = () => {
           pointerEvents: 'none'
         }} />
         
-        <Row align="middle" style={{ position: 'relative', zIndex: 1 }}>
-          <Col span={16}>
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          {/* 欢迎标题 - 独立一行 */}
+          <h1 style={{ 
+            color: '#f8f8f8', 
+            background: 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            fontWeight: 700,
+            fontSize: '24px',
+            textAlign: 'left',
+            margin: 0,
+            padding: 0,
+            lineHeight: 1.8
+          }}>
+            {t('home.welcomeTitle')}
+          </h1>
           
-            <Title level={1} style={{ 
-              color: '#f8f8f8', 
-              marginBottom: 16,
-              background: 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              fontWeight: 700,
-              fontSize: '36px'
-            }}>
-              {t('home.welcomeTitle')}
-            </Title>
-            <Paragraph style={{ color: '#c0c0c0', fontSize: '18px', marginBottom: 32, lineHeight: 1.8 }}>
-              {t('home.welcomeSubtitle')}
-            </Paragraph>
-          </Col>
-          <Col span={8} style={{ textAlign: 'center' }}>
-            <div style={{ position: 'relative' }}>
+          {/* 副标题和火焰图标 - 并排显示 */}
+          <Row align="middle" justify="center" style={{ marginBottom: 3 }}>
+            <Col span={16}>
+              <Paragraph style={{ color: '#c0c0c0', fontSize: '12px', lineHeight: 1.4, textAlign: 'left' }}>
+                {t('home.welcomeSubtitle')}
+              </Paragraph>
+            </Col>
+            <Col span={8} style={{ textAlign: 'center' }}>
               <FireOutlined style={{ 
-                fontSize: '120px', 
+                fontSize: '55px', 
                 color: 'rgba(255, 215, 0, 0.6)',
                 filter: 'drop-shadow(0 0 20px rgba(255, 215, 0, 0.3))'
               }} />
-              <CrownOutlined style={{
-                position: 'absolute',
-                top: '20px',
-                right: '20px',
-                fontSize: '24px',
-                color: '#ffd700'
-              }} />
-            </div>
-          </Col>
-        </Row>
+            </Col>
+          </Row>
+        </div>
         {/* 会员卡 UI */}
       <div style={{
         position: 'relative',
         borderRadius: 20,
         background: 'linear-gradient(145deg, #1A1A1A 0%, #0A0A0A 100%)',
         border: '1px solid rgba(212, 175, 55, 0.25)',
-        overflow: 'hidden',
-        marginBottom: 32
+        overflow: 'hidden'
       }}>
         <div style={{
           position: 'absolute',
@@ -129,13 +130,13 @@ const Home: React.FC = () => {
               <div style={{ fontSize: 22, fontWeight: 700, color: '#ffffff', letterSpacing: 1 }}>Gentleman Club</div>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#D4AF37', letterSpacing: 2 }}>CIGAR CONNOISSEUR</div>
             </div>
-            <div style={{ background: 'rgba(255,255,255,0.9)', padding: 6, borderRadius: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.4)', border: '1px solid #e5e5e5' }}>
-              <img
-                alt="QR"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVJ9RVgiXPkTSwaLVtyY4Z62iTlHDeyRsNa19-pbVMhV4dGBqlH0gdC_scADusy1v2lXMReZKqH8beb8_M8GMA12D5_J8CZnhxq3enXKtnSw3zECg8Y_U3SNVPIJoDSAljWQmI-kI9H-50FfXknlf0QgMvQlC1u0zafr2bdpQZ43oCcPF1hQ4jeqq023InZMSfmHwg3OwJaU0bXCZ3ndo-2BZ8oSgMmbjXwfFe_94OMwl8jckSBvLjtyF_whbk41OUuhTyj9Dcqpw6"
-                style={{ width: 64, height: 64 }}
-              />
-            </div>
+            <QRCodeDisplay
+              qrCodeDataURL={qrCodeDataURL}
+              loading={qrLoading}
+              error={qrError}
+              size={54}
+              showPlaceholder={true}
+            />
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -143,20 +144,32 @@ const Home: React.FC = () => {
                 width: 56,
                 height: 56,
                 borderRadius: '50%',
-                backgroundImage: 'url(https://lh3.googleusercontent.com/aida-public/AB6AXuDs5P-wl44y-z3P55qwZDWCSmApe-9yEsTNGmr02UNzEVBeCMwE7hIq_ikKnzQespBptCZg7RY1P5pvidROpLwXpyUdWETLOFTJYuGtSIN_2d53icCJctg5HZDPl5zRc3QfbeMOn0fl6RWLZplcDWF9frxhgWKf4-RKyNaQsWhBGRCkTAVvLMDnCcZUDGLg-c8YjnHcY8-gFFEmIaa-bHoz3lEcP-SgonuSLCTv4Fa7-_dYYF8uQ3H5a7nAxZocj7UyH0Jl9CAQQWET)',
+                backgroundImage: user?.profile?.avatar ? `url(${user.profile.avatar})` : 'url(https://lh3.googleusercontent.com/aida-public/AB6AXuDs5P-wl44y-z3P55qwZDWCSmApe-9yEsTNGmr02UNzEVBeCMwE7hIq_ikKnzQespBptCZg7RY1P5pvidROpLwXpyUdWETLOFTJYuGtSIN_2d53icCJctg5HZDPl5zRc3QfbeMOn0fl6RWLZplcDWF9frxhgWKf4-RKyNaQsWhBGRCkTAVvLMDnCcZUDGLg-c8YjnHcY8-gFFEmIaa-bHoz3lEcP-SgonuSLCTv4Fa7-_dYYF8uQ3H5a7nAxZocj7UyH0Jl9CAQQWET)',
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 border: '2px solid #D4AF37',
                 boxShadow: '0 6px 16px rgba(0,0,0,0.5)'
               }} />
               <div>
-                <div style={{ color: '#ffffff', fontSize: 20, fontWeight: 700 }}>Ethan</div>
-                <div style={{ color: '#D4AF37', fontSize: 12, fontWeight: 700 }}>{t('home.vipMember')}</div>
+                <div style={{ color: '#ffffff', fontSize: 20, fontWeight: 700 }}>{user?.displayName || '会员'}</div>
+                <div style={{ color: '#D4AF37', fontSize: 12, fontWeight: 700 }}>
+                  {user?.membership?.level === 'bronze' ? t('profile.bronzeMember') :
+                   user?.membership?.level === 'silver' ? t('profile.silverMember') :
+                   user?.membership?.level === 'gold' ? t('profile.goldMember') :
+                   user?.membership?.level === 'platinum' ? t('profile.platinumMember') :
+                   t('home.vipMember')}
+                </div>
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }}>{t('home.memberId')}</div>
-              <div style={{ color: '#ffffff', fontSize: 16, fontWeight: 700, letterSpacing: 2 }}>C8888</div>
+              <div style={{ color: '#ffffff', fontSize: 16, fontWeight: 700, letterSpacing: 2 }}>
+                {user?.id ? `C${user.id.slice(-4).toUpperCase()}` : 'C0000'}
+              </div>
+              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 4 }}>积分</div>
+              <div style={{ color: '#D4AF37', fontSize: 14, fontWeight: 700 }}>
+                {(user?.membership as any)?.points || 0}
+              </div>
             </div>
           </div>
         </div>

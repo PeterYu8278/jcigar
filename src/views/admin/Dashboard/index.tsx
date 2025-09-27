@@ -82,7 +82,7 @@ const AdminDashboard: React.FC = () => {
   const completedOrders = recentOrders.filter(o => o.status === 'delivered')
   const pendingOrders = recentOrders.filter(o => o.status !== 'delivered')
 
-  const [activeTab, setActiveTab] = useState<'completed' | 'pending'>('completed')
+  const [activeTab, setActiveTab] = useState<'completed' | 'pending'>('pending')
 
   // 低库存统计
   const lowStockCount = cigars.reduce((count, c) => {
@@ -137,7 +137,7 @@ const AdminDashboard: React.FC = () => {
       {/* 订单标签页 */}
       <div style={{ marginBottom: 16, paddingInline: 8 }}>
         <div style={{ display: 'flex', borderBottom: '1px solid rgba(244,175,37,0.2)' }}>
-          {(['completed','pending'] as const).map((tabKey) => {
+          {(['pending','completed'] as const).map((tabKey) => {
             const isActive = activeTab === tabKey
             const baseStyle: React.CSSProperties = {
               flex: 1,
@@ -145,10 +145,11 @@ const AdminDashboard: React.FC = () => {
                 fontWeight: 800,
               fontSize: 12,
               outline: 'none',
-              borderBottom: isActive ? '2px solid #f4af25' : '2px solid transparent',
+              borderBottom: '2px solid transparent',
               cursor: 'pointer',
               background: 'none',
               border: 'none',
+              position: 'relative' as const,
             }
             const activeStyle: React.CSSProperties = {
               color: 'transparent',
@@ -165,6 +166,17 @@ const AdminDashboard: React.FC = () => {
                 style={{ ...baseStyle, ...(isActive ? activeStyle : inactiveStyle) }}
               >
                 {tabKey === 'completed' ? t('dashboard.completedOrders') : t('dashboard.pendingOrders')}
+                {isActive && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: '2px',
+                    background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                    borderRadius: '1px'
+                  }} />
+                )}
               </button>
             )
           })}

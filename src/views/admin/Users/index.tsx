@@ -1,7 +1,8 @@
 // 用户管理页面
 import React, { useEffect, useMemo, useState } from 'react'
 import { Table, Button, Tag, Space, Typography, Input, Select, message, Modal, Form, Switch, Dropdown, Checkbox, Row, Col, Spin } from 'antd'
-import { EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined, EyeOutlined, ArrowLeftOutlined } from '@ant-design/icons'
+import { EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined, EyeOutlined, ArrowLeftOutlined, CalendarOutlined, ShoppingOutlined, TrophyOutlined } from '@ant-design/icons'
+import { MemberProfileCard } from '../../../components/common/MemberProfileCard'
 
 const { Title } = Typography
 const { Search } = Input
@@ -63,6 +64,7 @@ const AdminUsers: React.FC = () => {
     }
   })
   const [activeTab, setActiveTab] = useState<'purchase' | 'points' | 'activity' | 'referral'>('purchase')
+  const [showMemberCard, setShowMemberCard] = useState(false) // 控制头像/会员卡切换
 
   useEffect(() => {
     ;(async () => {
@@ -232,9 +234,9 @@ const AdminUsers: React.FC = () => {
         const status = statusMap[record.id] || record.status || 'active'
         return (
           <Space>
-            <Tag color={getStatusColor(status)}>
-              {getStatusText(status)}
-            </Tag>
+        <Tag color={getStatusColor(status)}>
+          {getStatusText(status)}
+        </Tag>
             <Switch
               checked={status === 'active'}
               onChange={async (checked) => {
@@ -731,42 +733,16 @@ const AdminUsers: React.FC = () => {
 
             {/* User Profile Section */}
             <div style={{ padding: '24px', textAlign: 'center' }}>
-              {/* Avatar */}
-              <div style={{ position: 'relative', display: 'inline-block', marginBottom: '16px' }}>
-                <div style={{
-                  width: '128px',
-                  height: '128px',
-                  borderRadius: '50%',
-                  background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '48px',
-                  color: '#221c10',
-                  fontWeight: 'bold',
-                  boxShadow: '0 8px 32px rgba(244, 175, 37, 0.3)'
-                }}>
-                  {editing.displayName?.charAt(0)?.toUpperCase() || 'U'}
-                </div>
-                <div style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  right: 0,
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  border: '2px solid #221c10'
-                }}>
-                  <span style={{ color: '#221c10', fontSize: '16px' }}>👑</span>
-                </div>
-              </div>
+              {/* Avatar/Member Card Toggle */}
+              <MemberProfileCard
+                user={editing}
+                showMemberCard={showMemberCard}
+                onToggleMemberCard={setShowMemberCard}
+                getMembershipText={getMembershipText}
+              />
 
               {/* User Info */}
-              <div style={{ textAlign: 'center' }}>
+              <div style={{ textAlign: 'center' , marginTop: '24px'}}>
                 <h2 style={{
                   fontSize: '24px',
                   fontWeight: 'bold',
@@ -822,104 +798,105 @@ const AdminUsers: React.FC = () => {
                   transition: 'all 0.2s ease'
                 }}
               >
-                {t('usersAdmin.editMemberInfo')}
+                {t('usersAdmin.editProfile')}
               </button>
+            </div>
+
+            {/* Stats Section */}
+            <div style={{ padding: '0 24px 24px 24px' }}>
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(3, 1fr)', 
+                gap: '16px', 
+                marginBottom: '24px' 
+              }}>
+                {[
+                  { title: t('profile.eventsJoined'), value: 12, icon: <CalendarOutlined /> },
+                  { title: t('profile.cigarsPurchased'), value: 28, icon: <ShoppingOutlined /> },
+                  { title: t('profile.communityPoints'), value: 1580, icon: <TrophyOutlined /> },
+                ].map((stat, index) => (
+                  <div key={index} style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    border: '1px solid rgba(244, 175, 37, 0.2)',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '24px', marginBottom: '8px', color: '#F4AF25' }}>
+                      {stat.icon}
+                    </div>
+                    <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#FFFFFF', marginBottom: '4px' }}>
+                      {stat.value}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                      {stat.title}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Tabs Section */}
             <div style={{ padding: '0 16px' }}>
               <div style={{
-                borderBottom: '1px solid rgba(244, 175, 37, 0.2)',
+                display: 'flex',
+                borderBottom: '1px solid rgba(244,175,37,0.2)',
                 marginBottom: '24px'
               }}>
-                <div style={{
-                  display: 'flex',
-                  gap: '16px',
-                  overflowX: 'auto',
-                  paddingBottom: '16px'
-                }}>
-                  <button 
-                    style={{
-                      padding: '16px 4px',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      color: activeTab === 'purchase' ? '#F4AF25' : 'rgba(255, 255, 255, 0.6)',
-                      borderBottom: '2px solid transparent',
-                      whiteSpace: activeTab === 'purchase' ? 'nowrap' : 'none',
-                      position: 'relative' as const,
-                      backgroundImage: activeTab === 'purchase' ? 'linear-gradient(to right,#FDE08D,#C48D3A)' : 'none',
-                      backgroundSize: activeTab === 'purchase' ? '100% 2px' : 'none',
-                      backgroundRepeat: activeTab === 'purchase' ? 'no-repeat' : 'none',
-                      backgroundPosition: activeTab === 'purchase' ? 'bottom' : 'none',
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer'
-                    }}
-                    onClick={() => setActiveTab('purchase')}
-                  >
-                    {t('usersAdmin.purchaseRecords')}
-                  </button>
-                  <button 
-                    style={{
-                      padding: '16px 4px',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      color: activeTab === 'points' ? '#F4AF25' : 'rgba(255, 255, 255, 0.6)',
-                      borderBottom: '2px solid transparent',
-                      whiteSpace: activeTab === 'points' ? 'nowrap' : 'none',
-                      backgroundImage: activeTab === 'points' ? 'linear-gradient(to right,#FDE08D,#C48D3A)' : 'none',
-                      backgroundSize: activeTab === 'points' ? '100% 2px' : 'none',
-                      backgroundRepeat: activeTab === 'points' ? 'no-repeat' : 'none',
-                      backgroundPosition: activeTab === 'points' ? 'bottom' : 'none',
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer'
-                    }}
-                    onClick={() => setActiveTab('points')}
-                  >
-                    {t('usersAdmin.pointsRecords')}
-                  </button>
-                  <button 
-                    style={{
-                      padding: '16px 4px',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      color: activeTab === 'activity' ? '#F4AF25' : 'rgba(255, 255, 255, 0.6)',
-                      borderBottom: '2px solid transparent',
-                      whiteSpace: activeTab === 'activity' ? 'nowrap' : 'none',
-                      backgroundImage: activeTab === 'activity' ? 'linear-gradient(to right,#FDE08D,#C48D3A)' : 'none',
-                      backgroundSize: activeTab === 'activity' ? '100% 2px' : 'none',
-                      backgroundRepeat: activeTab === 'activity' ? 'no-repeat' : 'none',
-                      backgroundPosition: activeTab === 'activity' ? 'bottom' : 'none',
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer'
-                    }}
-                    onClick={() => setActiveTab('activity')}
-                  >
-                    {t('usersAdmin.activityRecords')}
-                  </button>
-                  <button 
-                    style={{
-                      padding: '16px 4px',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      color: activeTab === 'referral' ? '#F4AF25' : 'rgba(255, 255, 255, 0.6)',
-                      borderBottom: '2px solid transparent',
-                      whiteSpace: activeTab === 'referral' ? 'nowrap' : 'none',
-                      backgroundImage: activeTab === 'referral' ? 'linear-gradient(to right,#FDE08D,#C48D3A)' : 'none',
-                      backgroundSize: activeTab === 'referral' ? '100% 2px' : 'none',
-                      backgroundRepeat: activeTab === 'referral' ? 'no-repeat' : 'none',
-                      backgroundPosition: activeTab === 'referral' ? 'bottom' : 'none',
-                      background:  'transparent',
-                      border: 'none',
-                      cursor: 'pointer'
-                    }}
-                    onClick={() => setActiveTab('referral')}
-                  >
-                    {t('usersAdmin.referralRecords')}
-                  </button>
-                </div>
+                {(['purchase', 'points', 'activity', 'referral'] as const).map((tabKey) => {
+                  const isActive = activeTab === tabKey
+                  const baseStyle: React.CSSProperties = {
+                    flex: 1,
+                    padding: '10px 0',
+                    fontWeight: 800,
+                    fontSize: 12,
+                    outline: 'none',
+                    borderBottom: isActive ? '2px solid transparent' : '2px solid transparent',
+                    cursor: 'pointer',
+                    background: 'none',
+                    border: 'none',
+                    position: 'relative' as const,
+                  }
+                  const activeStyle: React.CSSProperties = {
+                    color: 'transparent',
+                    backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                    WebkitBackgroundClip: 'text',
+                  }
+                  const inactiveStyle: React.CSSProperties = {
+                    color: '#A0A0A0',
+                  }
+                  
+                  const getTabLabel = (key: string) => {
+                    switch (key) {
+                      case 'purchase': return t('usersAdmin.purchaseRecords')
+                      case 'points': return t('usersAdmin.pointsRecords')
+                      case 'activity': return t('usersAdmin.activityRecords')
+                      case 'referral': return t('usersAdmin.referralRecords')
+                      default: return ''
+                    }
+                  }
+                  
+                  return (
+                    <button
+                      key={tabKey}
+                      onClick={() => setActiveTab(tabKey)}
+                      style={{ ...baseStyle, ...(isActive ? activeStyle : inactiveStyle) }}
+                    >
+                      {getTabLabel(tabKey)}
+                      {isActive && (
+                        <div style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          height: '2px',
+                          background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                          borderRadius: '1px'
+                        }} />
+                      )}
+                    </button>
+                  )
+                })}
               </div>
 
               {/* Records List */}
