@@ -171,7 +171,16 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
             transformOrigin: 'center center',
             animation: isRotating 
               ? `cardSlideIn${rotationDirection === 'left' ? 'Left' : 'Right'} 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards`
-              : 'none'
+              : 'none',
+            // 金色多层阴影效果
+            boxShadow: `
+              0 0 20px rgba(212, 175, 55, 0.3),
+              0 0 40px rgba(212, 175, 55, 0.2),
+              0 0 60px rgba(212, 175, 55, 0.1),
+              0 8px 32px rgba(212, 175, 55, 0.15),
+              0 16px 48px rgba(212, 175, 55, 0.1),
+              0 24px 64px rgba(212, 175, 55, 0.05)
+            `
           }}>
             {/* 背景装饰 */}
             <div style={{
@@ -265,7 +274,14 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
               fontSize: '48px',
               color: '#221c10',
               fontWeight: 'bold',
-              boxShadow: '0 8px 32px rgba(244, 175, 37, 0.3)',
+              // 金色多层阴影效果
+              boxShadow: `
+                0 0 20px rgba(212, 175, 55, 0.4),
+                0 0 40px rgba(212, 175, 55, 0.3),
+                0 0 60px rgba(212, 175, 55, 0.2),
+                0 8px 32px rgba(212, 175, 55, 0.25),
+                0 16px 48px rgba(212, 175, 55, 0.15)
+              `,
               border: '3px solid rgba(244, 175, 37, 0.3)',
               transition: 'all 0.3s ease'
             }}>
@@ -282,7 +298,13 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              border: '2px solid #221c10'
+              border: '2px solid #221c10',
+              // 金色阴影效果
+              boxShadow: `
+                0 0 12px rgba(212, 175, 55, 0.5),
+                0 0 24px rgba(212, 175, 55, 0.3),
+                0 4px 16px rgba(212, 175, 55, 0.2)
+              `
             }}>
               <CrownOutlined style={{ color: '#221c10', fontSize: '16px' }} />
             </div>
