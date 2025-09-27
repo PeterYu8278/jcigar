@@ -297,13 +297,12 @@ const AdminInventory: React.FC = () => {
   }, [filtered])
 
   return (
-    <div style={{ padding: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Title level={2} style={{ margin: 10, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent'}}>{t('navigation.inventory')}</Title>
-      </div>
-
+    <div style={{ minHeight: '10vh'}}>
+      
+           <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', paddingInline: 0, marginBottom: 12 }}>{t('navigation.inventory')}</h1>
+ 
       {/* 自定义标签页 */}
-      <div style={{ marginBottom: 16 }}>
+      <div style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', borderBottom: '1px solid rgba(244,175,37,0.2)' }}>
           {(['list', 'in', 'out'] as const).map((tabKey) => {
             const isActive = activeTab === tabKey
@@ -407,9 +406,10 @@ const AdminInventory: React.FC = () => {
              <Option value="critical">{t('inventory.stockCritical')}</Option>
                   </Select>
            <Button onClick={() => { setKeyword(''); setOriginFilter(undefined); setStrengthFilter(undefined); setStatusFilter(undefined); setSelectedRowKeys([]) }} style={{ color: '#000000' }}>{t('common.resetFilters')}</Button>
-           <Button type="primary" icon={<PlusOutlined />} onClick={() => { setCreating(true); form.resetFields() }} style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}>
+           <button onClick={() => { setCreating(true); form.resetFields() }} style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 8, padding: '8px 16px', background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, cursor: 'pointer' }}>
+             <PlusOutlined />
              {t('inventory.addProduct')}
-           </Button>
+           </button>
                 </Space>
               </div>
               )}
@@ -426,9 +426,10 @@ const AdminInventory: React.FC = () => {
                       value={keyword}
                       onChange={(e) => setKeyword(e.target.value)}
                     />
-                    <Button type="primary" icon={<PlusOutlined />} onClick={() => { setCreating(true); form.resetFields() }} style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}>
+                    <button onClick={() => { setCreating(true); form.resetFields() }} style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 8, padding: '8px 16px', background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, cursor: 'pointer' }}>
+                      <PlusOutlined />
                       {t('inventory.addProduct')}
-                    </Button>
+                    </button>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <Select
@@ -511,7 +512,7 @@ const AdminInventory: React.FC = () => {
                                 })()}
                               </div>
                             </div>
-                            <Button type="primary" style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }} onClick={() => {
+                            <button style={{ padding: '4px 8px', borderRadius: 6, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => {
                               setEditing(record)
                               form.setFieldsValue({
                                 name: (record as any).name,
@@ -526,7 +527,7 @@ const AdminInventory: React.FC = () => {
                               })
                             }}>
                               {t('common.edit')}
-                            </Button>
+                            </button>
                           </div>
                         ))}
                       </div>
@@ -613,7 +614,7 @@ const AdminInventory: React.FC = () => {
                   <Input placeholder={t('inventory.forExample') + t('inventory.purchaseInStock')} />
                 </Form.Item>
                 <Form.Item>
-                  <Button type="primary" htmlType="submit" loading={loading} style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}>{t('inventory.confirmInStock')}</Button>
+                  <button type="submit" disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease', opacity: loading ? 0.6 : 1 }}>{t('inventory.confirmInStock')}</button>
                 </Form.Item>
               </Form>
               <Table
@@ -701,7 +702,7 @@ const AdminInventory: React.FC = () => {
                     <Input placeholder={t('inventory.forExample') + t('inventory.salesOutStock')} />
                   </Form.Item>
                   <Form.Item>
-                    <Button type="primary" htmlType="submit" loading={loading} style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}>{t('inventory.confirmOutStock')}</Button>
+                    <button type="submit" disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease', opacity: loading ? 0.6 : 1 }}>{t('inventory.confirmOutStock')}</button>
                   </Form.Item>
                 </Form>
               </Card>
@@ -727,7 +728,7 @@ const AdminInventory: React.FC = () => {
         width={isMobile ? '100%' : 600}
         footer={isMobile ? (
           <div style={{ padding: '8px 0' }}>
-            <Button type="primary" block loading={loading} onClick={() => form.submit()} style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10', boxShadow: '0 4px 15px -5px rgba(244,175,37,0.5)' }}>{t('common.save')}</Button>
+            <button disabled={loading} onClick={() => form.submit()} style={{ width: '100%', padding: '12px', borderRadius: 8, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease', opacity: loading ? 0.6 : 1, boxShadow: '0 4px 15px -5px rgba(244,175,37,0.5)' }}>{t('common.save')}</button>
           </div>
         ) : (
           <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
@@ -759,7 +760,7 @@ const AdminInventory: React.FC = () => {
             </Space>
             <Space>
               <Button onClick={() => { setCreating(false); setEditing(null) }}>{t('common.cancel')}</Button>
-              <Button type="primary" loading={loading} onClick={() => form.submit()} style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}>{t('common.confirm')}</Button>
+              <button disabled={loading} onClick={() => form.submit()} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease', opacity: loading ? 0.6 : 1 }}>{t('common.confirm')}</button>
             </Space>
           </div>
         )}

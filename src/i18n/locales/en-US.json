@@ -366,7 +366,17 @@
     "platinumMember": "Platinum Member",
     "membershipLevel": "Membership Level",
     "saved": "User saved successfully",
-    "created": "User created successfully"
+    "created": "User created successfully",
+    "memberDetails": "Member Details",
+    "editMemberInfo": "Edit Member Info",
+    "points": "Points",
+    "purchaseRecords": "Purchase Records",
+    "pointsRecords": "Points Records",
+    "activityRecords": "Activity Records",
+    "referralRecords": "Referral Records",
+    "purchaseCigar": "Purchase Cigar",
+    "attendTasting": "Attend Tasting",
+    "purchaseAccessories": "Purchase Accessories"
   },
 
   "ordersAdmin": {

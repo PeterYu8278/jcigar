@@ -1,4 +1,4 @@
-// Gentleman Club黑金主题配置
+// 雪茄客黑金主题配置
 import type { ThemeConfig } from 'antd'
 
 export const cigarTheme: ThemeConfig = {
@@ -82,10 +82,10 @@ export const cigarTheme: ThemeConfig = {
       darkItemColor: '#c0c0c0',
     },
     Button: {
-      primaryShadow: '0 2px 0 rgba(255, 215, 0, 1)',
-      defaultShadow: '0 2px 0 rgba(0, 0, 0, 1)',
-      dangerShadow: '0 2px 0 rgba(255, 77, 79, 1)',
-      primaryColor: '#00ff00',
+      primaryShadow: '0 2px 0 rgba(255, 215, 0, 0.1)',
+      defaultShadow: '0 2px 0 rgba(0, 0, 0, 0.02)',
+      dangerShadow: '0 2px 0 rgba(255, 77, 79, 0.1)',
+      primaryColor: '#000000',
     },
     Card: {
       colorBgContainer: '#1a1a1a',

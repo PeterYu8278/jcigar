@@ -236,11 +236,15 @@ const AdminOrders: React.FC = () => {
   }, [filtered, sortDesc])
 
   return (
-    <div style={{ padding: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Title level={2} style={{ margin: 10, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent'}}>{t('navigation.orders')}</Title>
+    <div style={{ minHeight: '100vh' }}>
+      <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', marginBottom: 12 }}>{t('navigation.orders')}</h1>
+      
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 16 }}>
         <Space>
-          <Button type='primary' icon={<PlusOutlined />} onClick={() => { setCreating(true); createForm.resetFields(); createForm.setFieldsValue({ items: [{ cigarId: undefined, quantity: 1 }], paymentMethod: 'bank_transfer' }) }} style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}>{t('ordersAdmin.createManual')}</Button>
+          <button onClick={() => { setCreating(true); createForm.resetFields(); createForm.setFieldsValue({ items: [{ cigarId: undefined, quantity: 1 }], paymentMethod: 'bank_transfer' }) }} style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 8, padding: '8px 16px', background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, cursor: 'pointer' }}>
+            <PlusOutlined />
+            {t('ordersAdmin.createManual')}
+          </button>
           
           <Button onClick={() => { 
             setKeyword('')
@@ -283,9 +287,10 @@ const AdminOrders: React.FC = () => {
             value={dateRange}
             onChange={setDateRange}
           />
-          <Button type='primary' icon={<SearchOutlined />} style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}>
-              {t('common.search')}
-          </Button>
+          <button style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease' }}>
+            <SearchOutlined />
+            {t('common.search')}
+          </button>
         </Space>
       </div>
       ) : (
@@ -438,9 +443,9 @@ const AdminOrders: React.FC = () => {
               
               <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <div style={{ fontSize: 16, fontWeight: 800, color: '#f4af25' }}>RM {order.total.toFixed(2)}</div>
-                <Button type="primary" style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }} size="small" onClick={() => { setViewing(order); setIsEditingInView(false) }}>
+                <button style={{ padding: '4px 8px', borderRadius: 6, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10', fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => { setViewing(order); setIsEditingInView(false) }}>
                   {t('common.viewDetails')}
-                </Button>
+                </button>
               </div>
             </div>
           ))}
@@ -721,7 +726,7 @@ const AdminOrders: React.FC = () => {
               <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                 {!isEditingInView && (
                   <>
-                    <Button 
+                    <button 
                       onClick={async () => { 
                         await updateDocument(COLLECTIONS.ORDERS, viewing.id, { status: 'confirmed' } as any); 
                         message.success(t('ordersAdmin.orderConfirmed')); 
@@ -731,14 +736,17 @@ const AdminOrders: React.FC = () => {
                         flex: 1, 
                         height: '40px',
                         background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-                        color: '#221c10',
+                        color: '#111',
                         fontWeight: 'bold',
-                        border: 'none'
+                        border: 'none',
+                        borderRadius: 8,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
                       }}
                     >
                       {t('ordersAdmin.confirmOrder')}
-                    </Button>
-                    <Button 
+                    </button>
+                    <button 
                       onClick={async () => { 
                         await updateDocument(COLLECTIONS.ORDERS, viewing.id, { status: 'shipped' } as any); 
                         message.success(t('ordersAdmin.orderShipped')); 
@@ -748,14 +756,17 @@ const AdminOrders: React.FC = () => {
                         flex: 1, 
                         height: '40px',
                         background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-                        color: '#221c10',
+                        color: '#111',
                         fontWeight: 'bold',
-                        border: 'none'
+                        border: 'none',
+                        borderRadius: 8,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
                       }}
                     >
                       {t('ordersAdmin.markShipped')}
-                    </Button>
-                    <Button 
+                    </button>
+                    <button 
                       onClick={async () => { 
                         await updateDocument(COLLECTIONS.ORDERS, viewing.id, { status: 'delivered' } as any); 
                         message.success(t('ordersAdmin.orderDelivered')); 
@@ -765,35 +776,39 @@ const AdminOrders: React.FC = () => {
                         flex: 1, 
                         height: '40px',
                         background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-                        color: '#221c10',
+                        color: '#111',
                         fontWeight: 'bold',
-                        border: 'none'
+                        border: 'none',
+                        borderRadius: 8,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
                       }}
                     >
                       {t('ordersAdmin.markDelivered')}
-                    </Button>
+                    </button>
                   </>
                 )}
-                <Button 
-                  type={isEditingInView ? 'default' : 'primary'} 
+                <button 
                   onClick={() => { 
                     setIsEditingInView(v => !v); 
                     form.setFieldsValue({ 
                       status: viewing.status, 
-                      trackingNumber: viewing.shipping.trackingNumber || '', 
-                      addItems: [{ cigarId: undefined, quantity: 1 }] 
+                      trackingNumber: viewing.shipping.trackingNumber || ''
                     }) 
                   }}
                   style={{ 
                     height: '40px',
-                    background: isEditingInView ? undefined : 'linear-gradient(to right,#FDE08D,#C48D3A)',
-                    color: isEditingInView ? undefined : '#221c10',
+                    background: isEditingInView ? 'rgba(255, 255, 255, 0.1)' : 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                    color: isEditingInView ? '#ccc' : '#111',
                     fontWeight: 'bold',
-                    border: isEditingInView ? undefined : 'none'
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
                   }}
                 >
                   {isEditingInView ? t('common.done') : t('common.edit')}
-                </Button>
+                </button>
                 <Button 
                   danger 
                   onClick={() => {
@@ -820,21 +835,8 @@ const AdminOrders: React.FC = () => {
                   if (!viewing) return
           setLoading(true)
           try {
-                    // 处理新增商品
-                    const addLines: { cigarId: string; quantity: number }[] = (values.addItems || []).filter((it: any) => it?.cigarId && it?.quantity > 0)
-                    const cigarMap = new Map(cigars.map(c => [c.id, c]))
-                    const addItems = addLines.map(l => {
-                      const cg = cigarMap.get(l.cigarId)
-                      const price = (cg as any)?.price ?? 0
-                      return { cigarId: l.cigarId, quantity: Math.max(1, Math.floor(l.quantity || 1)), price }
-                    }) as any
-                    const mergedItems = [...(viewing.items || []), ...addItems]
-                    const newTotal = mergedItems.reduce((sum, it) => sum + (it.price || 0) * (it.quantity || 0), 0)
-
             const updateData: Partial<Order> = {
               status: values.status,
-                      items: mergedItems as any,
-                      total: newTotal,
               shipping: {
                         ...viewing.shipping,
                 trackingNumber: values.trackingNumber,
@@ -842,23 +844,6 @@ const AdminOrders: React.FC = () => {
             }
                     const res = await updateDocument<Order>(COLLECTIONS.ORDERS, viewing.id, updateData)
             if (res.success) {
-                      // 同步库存出库与出库日志
-                      for (const it of addItems as any[]) {
-                        const cigar = cigarMap.get(it.cigarId) as any
-                        if (!cigar) continue
-                        const current = (cigar?.inventory?.stock ?? 0)
-                        const next = Math.max(0, current - (it.quantity || 0))
-                        await updateDocument(COLLECTIONS.CIGARS, cigar.id, { inventory: { ...cigar.inventory, stock: next } } as any)
-                        await createDocument(COLLECTIONS.INVENTORY_LOGS, {
-                          cigarId: cigar.id,
-                          type: 'out',
-                          quantity: it.quantity || 0,
-                          reason: '订单出库',
-                          referenceNo: viewing.id,
-                          operatorId: 'system',
-                          createdAt: new Date(),
-                        } as any)
-                      }
                       message.success(t('ordersAdmin.updated'))
               loadData()
             }
@@ -878,47 +863,9 @@ const AdminOrders: React.FC = () => {
                   <Form.Item label={t('ordersAdmin.trackingNumber')} name="trackingNumber">
                     <Input placeholder={t('ordersAdmin.enterTrackingNo')} />
           </Form.Item>
-                  <Form.List name="addItems" initialValue={[{ cigarId: undefined, quantity: 1 }]}>
-                    {(fields, { add, remove }) => (
-                      <div>
-                        <Title level={5}>{t('ordersAdmin.addItems')}</Title>
-                        {fields.map((field) => (
-                          <Space key={`add-${field.key}`} align="baseline" style={{ display: 'flex', marginBottom: 8 }}>
-                            <Form.Item
-                              {...field}
-                              name={[field.name, 'cigarId']}
-                              fieldKey={[field.fieldKey!, 'cigarId'] as any}
-                              rules={[{ required: true, message: t('ordersAdmin.pleaseSelectItem') }]}
-                              style={{ minWidth: 280 }}
-                            >
-                              <Select placeholder={t('ordersAdmin.selectItem')}>
-                                {cigars.map(c => (
-                                  <Select.Option key={c.id} value={c.id}>{c.name} - RM{(c as any)?.price ?? 0}</Select.Option>
-                                ))}
-            </Select>
-          </Form.Item>
-                            <Form.Item
-                              {...field}
-                              name={[field.name, 'quantity']}
-                              fieldKey={[field.fieldKey!, 'quantity'] as any}
-                              rules={[{ required: true, message: t('ordersAdmin.pleaseEnterQuantity') }]}
-                            >
-                              <InputNumber min={1} placeholder={t('ordersAdmin.quantity')} />
-                            </Form.Item>
-                            {fields.length > 1 && (
-                              <Button danger onClick={() => remove(field.name)}>{t('common.remove')}</Button>
-                            )}
-                          </Space>
-                        ))}
-                        <Form.Item>
-                          <Button type="dashed" onClick={() => add({ quantity: 1 })} icon={<PlusOutlined />}>{t('ordersAdmin.addItem')}</Button>
-                        </Form.Item>
-                      </div>
-                    )}
-                  </Form.List>
                   <Form.Item>
                     <Space>
-                      <Button type='primary' onClick={() => form.submit()} loading={loading} style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}>{t('common.save')}</Button>
+                      <button onClick={() => form.submit()} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease', opacity: loading ? 0.6 : 1 }}>{t('common.save')}</button>
                     </Space>
           </Form.Item>
         </Form>

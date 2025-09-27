@@ -352,7 +352,17 @@
     "platinumMember": "铂金会员",
     "membershipLevel": "会员等级",
     "saved": "用户保存成功",
-    "created": "用户创建成功"
+    "created": "用户创建成功",
+    "memberDetails": "会员详情",
+    "editMemberInfo": "编辑会员信息",
+    "points": "积分",
+    "purchaseRecords": "消费记录",
+    "pointsRecords": "积分记录",
+    "activityRecords": "活动记录",
+    "referralRecords": "引荐人记录",
+    "purchaseCigar": "购买雪茄",
+    "attendTasting": "参加品鉴会",
+    "purchaseAccessories": "购买雪茄配件"
   },
   
   "ordersAdmin": {

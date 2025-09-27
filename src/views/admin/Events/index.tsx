@@ -356,12 +356,102 @@ const AdminEvents: React.FC = () => {
         return (
           <div style={{ padding: 8 }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 140 }}>
-              <Button size="small" type={(selectedKeys[0] === undefined) ? 'primary' : 'text'} onClick={() => { setSelectedKeys([]); clearFilters?.(); confirm({ closeDropdown: true }) }}>{t('common.all')}</Button>
-              <Button size="small" type={selectedKeys[0] === 'draft' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['draft']); confirm({ closeDropdown: true }) }}>{t('events.draft')}</Button>
-              <Button size="small" type={selectedKeys[0] === 'published' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['published']); confirm({ closeDropdown: true }) }}>{t('events.published')}</Button>
-              <Button size="small" type={selectedKeys[0] === 'ongoing' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['ongoing']); confirm({ closeDropdown: true }) }}>{t('events.ongoing')}</Button>
-              <Button size="small" type={selectedKeys[0] === 'completed' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['completed']); confirm({ closeDropdown: true }) }}>{t('events.completed')}</Button>
-              <Button size="small" type={selectedKeys[0] === 'cancelled' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['cancelled']); confirm({ closeDropdown: true }) }}>{t('events.cancelled')}</Button>
+              <button 
+                style={{ 
+                  padding: '4px 8px', 
+                  borderRadius: 4, 
+                  fontSize: 12, 
+                  cursor: 'pointer', 
+                  transition: 'all 0.2s ease',
+                  ...(selectedKeys[0] === undefined ? 
+                    { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600 } : 
+                    { background: 'transparent', color: '#666' }
+                  )
+                }} 
+                onClick={() => { setSelectedKeys([]); clearFilters?.(); confirm({ closeDropdown: true }) }}
+              >
+                {t('common.all')}
+              </button>
+              <button 
+                style={{ 
+                  padding: '4px 8px', 
+                  borderRadius: 4, 
+                  fontSize: 12, 
+                  cursor: 'pointer', 
+                  transition: 'all 0.2s ease',
+                  ...(selectedKeys[0] === 'draft' ? 
+                    { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600 } : 
+                    { background: 'transparent', color: '#666' }
+                  )
+                }} 
+                onClick={() => { setSelectedKeys(['draft']); confirm({ closeDropdown: true }) }}
+              >
+                {t('events.draft')}
+              </button>
+              <button 
+                style={{ 
+                  padding: '4px 8px', 
+                  borderRadius: 4, 
+                  fontSize: 12, 
+                  cursor: 'pointer', 
+                  transition: 'all 0.2s ease',
+                  ...(selectedKeys[0] === 'published' ? 
+                    { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600 } : 
+                    { background: 'transparent', color: '#666' }
+                  )
+                }} 
+                onClick={() => { setSelectedKeys(['published']); confirm({ closeDropdown: true }) }}
+              >
+                {t('events.published')}
+              </button>
+              <button 
+                style={{ 
+                  padding: '4px 8px', 
+                  borderRadius: 4, 
+                  fontSize: 12, 
+                  cursor: 'pointer', 
+                  transition: 'all 0.2s ease',
+                  ...(selectedKeys[0] === 'ongoing' ? 
+                    { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600 } : 
+                    { background: 'transparent', color: '#666' }
+                  )
+                }} 
+                onClick={() => { setSelectedKeys(['ongoing']); confirm({ closeDropdown: true }) }}
+              >
+                {t('events.ongoing')}
+              </button>
+              <button 
+                style={{ 
+                  padding: '4px 8px', 
+                  borderRadius: 4, 
+                  fontSize: 12, 
+                  cursor: 'pointer', 
+                  transition: 'all 0.2s ease',
+                  ...(selectedKeys[0] === 'completed' ? 
+                    { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600 } : 
+                    { background: 'transparent', color: '#666' }
+                  )
+                }} 
+                onClick={() => { setSelectedKeys(['completed']); confirm({ closeDropdown: true }) }}
+              >
+                {t('events.completed')}
+              </button>
+              <button 
+                style={{ 
+                  padding: '4px 8px', 
+                  borderRadius: 4, 
+                  fontSize: 12, 
+                  cursor: 'pointer', 
+                  transition: 'all 0.2s ease',
+                  ...(selectedKeys[0] === 'cancelled' ? 
+                    { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600 } : 
+                    { background: 'transparent', color: '#666' }
+                  )
+                }} 
+                onClick={() => { setSelectedKeys(['cancelled']); confirm({ closeDropdown: true }) }}
+              >
+                {t('events.cancelled')}
+              </button>
             </div>
           </div>
         )
@@ -376,8 +466,9 @@ const AdminEvents: React.FC = () => {
       width: 100,
       render: (_: any, record: any) => (
         <Space size="small" style={{ justifyContent: 'center', width: '100%' }}>
-          <Button type="link" icon={<EyeOutlined />} size="small" onClick={() => setViewing(record)}>
-          </Button>
+          <button style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', padding: '4px 8px', borderRadius: 6, background: 'transparent', color: '#666', cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => setViewing(record)}>
+            <EyeOutlined />
+          </button>
         </Space>
       ),
     },
@@ -385,13 +476,14 @@ const AdminEvents: React.FC = () => {
   const columns = columnsAll.filter(c => visibleCols[c.key as string] !== false)
 
   return (
-    <div style={{ padding: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Title level={2} style={{ marginBottom: 10, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent'}}>{t('navigation.events')}</Title>
+    <div style={{ minHeight: '100vh' }}>
+      <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', marginBottom: 12 }}>{t('navigation.events')}</h1>
+      
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 16 }}>
         <Space>
           {selectedRowKeys.length > 1 && (
             <>
-              <Button onClick={async () => {
+              <button onClick={async () => {
                 setLoading(true)
                 try {
                   await Promise.all(selectedRowKeys.map(id => updateDocument(COLLECTIONS.EVENTS, String(id), { status: 'cancelled' } as any)))
@@ -402,8 +494,10 @@ const AdminEvents: React.FC = () => {
                 } finally {
                   setLoading(false)
                 }
-              }}>{t('common.batchCancelled')}</Button>
-              <Button danger onClick={() => {
+              }} style={{ padding: '8px 16px', borderRadius: 8, background: '#fff', color: '#000', cursor: 'pointer', transition: 'all 0.2s ease' }}>
+                {t('common.batchCancelled')}
+              </button>
+              <button onClick={() => {
                 Modal.confirm({
                   title: t('common.batchDeleteConfirm'),
                   content: t('common.batchDeleteContent', { count: selectedRowKeys.length }),
@@ -421,13 +515,19 @@ const AdminEvents: React.FC = () => {
                     }
                   }
                 })
-              }}>{t('common.batchDeleted')}</Button>
+              }} style={{ padding: '8px 16px', borderRadius: 8, background: '#ff4d4f', color: '#fff', cursor: 'pointer', transition: 'all 0.2s ease' }}>
+                {t('common.batchDelete')}
+              </button>
             </>
           )}
-          <Button onClick={() => { setKeyword(''); setStatusFilter(undefined); setSelectedRowKeys([]) }}>{t('common.resetFilters')}</Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => { setCreating(true); form.resetFields() }} style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}>
+          <button onClick={() => { setKeyword(''); setStatusFilter(undefined); setSelectedRowKeys([]) }} style={{ padding: '8px 16px', borderRadius: 8, background: '#fff', color: '#000', cursor: 'pointer', transition: 'all 0.2s ease' }}>
+            {t('common.resetFilters')}
+          </button>
+          
+          <button onClick={() => { setCreating(true); form.resetFields() }} style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 8, padding: '8px 16px', background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, cursor: 'pointer' }}>
+            <PlusOutlined />
             {t('dashboard.createEvent')}
-          </Button>
+          </button>
         </Space>
       </div>
 
@@ -445,7 +545,10 @@ const AdminEvents: React.FC = () => {
           />
           <DatePicker placeholder={t('events.startDate')} />
           <DatePicker placeholder={t('events.endDate')} />
-          <Button type="primary" icon={<SearchOutlined />}>{t('common.search')}</Button>
+          <button style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease' }}>
+            <SearchOutlined />
+            {t('common.search')}
+          </button>
         </Space>
       </div>
       ) : (
@@ -459,41 +562,51 @@ const AdminEvents: React.FC = () => {
             />
           </div>
           <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
-            <Button 
-              type={statusFilter === undefined ? "primary" : "default"}
+            <button 
               onClick={() => setStatusFilter(undefined)}
-              style={statusFilter === undefined ? { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' } : {}}
+              style={statusFilter === undefined ? 
+                { padding: '6px 12px', borderRadius: 6, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease' } : 
+                { padding: '6px 12px', borderRadius: 6, background: 'rgba(255,255,255,0.1)', color: '#ccc', cursor: 'pointer', transition: 'all 0.2s ease' }
+              }
             >
               {t('common.all')}
-            </Button>
-            <Button 
-              type={statusFilter === 'published' ? "primary" : "default"}
+            </button>
+            <button 
               onClick={() => setStatusFilter('published')}
-              style={statusFilter === 'published' ? { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' } : {}}
+              style={statusFilter === 'published' ? 
+                { padding: '6px 12px', borderRadius: 6, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease' } : 
+                { padding: '6px 12px', borderRadius: 6, background: 'rgba(255,255,255,0.1)', color: '#ccc', cursor: 'pointer', transition: 'all 0.2s ease' }
+              }
             >
               {t('events.upcoming')}
-            </Button>
-            <Button 
-              type={statusFilter === 'ongoing' ? "primary" : "default"}
+            </button>
+            <button 
               onClick={() => setStatusFilter('ongoing')}
-              style={statusFilter === 'ongoing' ? { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' } : {}}
+              style={statusFilter === 'ongoing' ? 
+                { padding: '6px 12px', borderRadius: 6, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease' } : 
+                { padding: '6px 12px', borderRadius: 6, background: 'rgba(255,255,255,0.1)', color: '#ccc', cursor: 'pointer', transition: 'all 0.2s ease' }
+              }
             >
               {t('events.ongoing')}
-            </Button>
-            <Button 
-              type={statusFilter === 'completed' ? "primary" : "default"}
+            </button>
+            <button 
               onClick={() => setStatusFilter('completed')}
-              style={statusFilter === 'completed' ? { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' } : {}}
+              style={statusFilter === 'completed' ? 
+                { padding: '6px 12px', borderRadius: 6, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease' } : 
+                { padding: '6px 12px', borderRadius: 6, background: 'rgba(255,255,255,0.1)', color: '#ccc', cursor: 'pointer', transition: 'all 0.2s ease' }
+              }
             >
               {t('events.completed')}
-            </Button>
-            <Button 
-              type={statusFilter === 'draft' ? "primary" : "default"}
+            </button>
+            <button 
               onClick={() => setStatusFilter('draft')}
-              style={statusFilter === 'draft' ? { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' } : {}}
+              style={statusFilter === 'draft' ? 
+                { padding: '6px 12px', borderRadius: 6, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease' } : 
+                { padding: '6px 12px', borderRadius: 6, background: 'rgba(255,255,255,0.1)', color: '#ccc', cursor: 'pointer', transition: 'all 0.2s ease' }
+              }
             >
               {t('events.draft')}
-            </Button>
+            </button>
           </div>
         </div>
       )}
@@ -530,8 +643,8 @@ const AdminEvents: React.FC = () => {
                       alt="Cigar tasting event"
                       src="https://lh3.googleusercontent.com/aida-public/AB6AXuD3TPYA6HpEVbfOqeAlldyTpfRbZwZ9wVZj9g8I86EoGVp8OK7y3oaPnOiU6GHKmfigRsbbWXOQwVYSJCIbWhineKZyQ_uhh7CJnxR77vabe8ahQ9evdKcCVOKrY_vTtZMJ-ROZjjwVtgXWgMUOb0oLSUYvKJwxxaMvS07GvaklyNsDauAMi0All4B5FdXY5GJd5aUXsIcZ0qgD7FM9qbryFWovrU9DUGHTSTTPHjBKGzOc9q_DNLQ8HVfN70au4uIyFXy9D5Az6Rnt"
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                  </div>
+      />
+    </div>
                   
                   <div style={{ flex: 1 }}>
                     {/* 参与人数 + 状态 同行显示 */}
@@ -559,7 +672,9 @@ const AdminEvents: React.FC = () => {
                   </div>
                 </div>
                 <div style={{ padding: '2px 8px',display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8 }}>
-                  <Button type="primary" style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }} size="small" onClick={() => setViewing(ev)}>{t('common.edit')}</Button>
+                  <button style={{ padding: '4px 8px', borderRadius: 6, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10', fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => setViewing(ev)}>
+                    {t('common.edit')}
+                  </button>
                 </div>
               </div>
             </div>
@@ -801,9 +916,8 @@ const AdminEvents: React.FC = () => {
             {/* 操作按钮区域 */}
             <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #f0f0f0' }}>
               <Space wrap>
-                <Button 
-                  type="primary" 
-                  icon={<EditOutlined />}
+                <button 
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease' }}
                   onClick={async () => {
                     if (isEditingDetails) {
                       // 完成编辑模式
@@ -831,17 +945,19 @@ const AdminEvents: React.FC = () => {
                     }
                   }}
                 >
+                  <EditOutlined />
                   {isEditingDetails ? t('common.completeEdit') : t('common.editEvent')}
-                </Button>
+                </button>
                 {isEditingDetails && (
-                  <Button 
+                  <button 
+                    style={{ padding: '8px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.1)', color: '#ccc', cursor: 'pointer', transition: 'all 0.2s ease' }}
                     onClick={() => {
                       setIsEditingDetails(false)
                       setEditForm({})
                     }}
                   >
                     {t('common.cancelEdit')}
-                  </Button>
+                  </button>
                 )}
                 
                 <Dropdown
@@ -868,18 +984,20 @@ const AdminEvents: React.FC = () => {
                     ]
                   }}
                 >
-                  <Button>{t('common.quickStatus')}</Button>
+                  <button style={{ padding: '8px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.1)', color: '#ccc', cursor: 'pointer', transition: 'all 0.2s ease' }}>
+                    {t('common.quickStatus')}
+                  </button>
                 </Dropdown>
-                <Button 
-                  danger 
-                  icon={<DeleteOutlined />}
+                <button 
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, background: '#ff4d4f', color: '#fff', cursor: 'pointer', transition: 'all 0.2s ease' }}
                   onClick={() => {
                     setViewing(null)
                     setDeleting(viewing)
                   }}
                 >
+                  <DeleteOutlined />
                   {t('common.deleteEvent')}
-                </Button>
+                </button>
               </Space>
             </div>
             </div>
@@ -938,52 +1056,57 @@ const AdminEvents: React.FC = () => {
                                   }
                                 })}
                               />
-                              <Button type="primary" loading={manualAddLoading} onClick={async () => {
-                                if (!viewing) return
-                                const raw = manualAddValue.trim()
-                                if (!raw) return
-                                setManualAddLoading(true)
-                                try {
-                                  let userId = raw
-                                  const byId = participantsUsers.find(u => u.id === raw)
-                                  if (!byId) {
-                                    if (raw.includes('@')) {
-                                      const match = participantsUsers.find(u => u.email?.toLowerCase() === raw.toLowerCase())
-                                      if (!match) { message.error(t('common.userNotFound')); return }
-                                      userId = match.id
-                                    } else if (/^\+?\d[\d\s-]{5,}$/.test(raw)) {
-                                      const match = participantsUsers.find(u => ((u as any)?.profile?.phone || '').replace(/\s|-/g,'') === raw.replace(/\s|-/g,''))
-                                      if (!match) { message.error(t('common.userNotFound')); return }
-                                      userId = match.id
-                                    } else {
-                                      const matches = participantsUsers.filter(u => (u.displayName || '').toLowerCase().includes(raw.toLowerCase()))
-                                      if (matches.length === 1) userId = matches[0].id
-                                      else { message.info(t('common.pleaseSelectUniqueUser')); return }
+                              <button 
+                                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease', opacity: manualAddLoading ? 0.6 : 1 }}
+                                disabled={manualAddLoading}
+                                onClick={async () => {
+                                  if (!viewing) return
+                                  const raw = manualAddValue.trim()
+                                  if (!raw) return
+                                  setManualAddLoading(true)
+                                  try {
+                                    let userId = raw
+                                    const byId = participantsUsers.find(u => u.id === raw)
+                                    if (!byId) {
+                                      if (raw.includes('@')) {
+                                        const match = participantsUsers.find(u => u.email?.toLowerCase() === raw.toLowerCase())
+                                        if (!match) { message.error(t('common.userNotFound')); return }
+                                        userId = match.id
+                                      } else if (/^\+?\d[\d\s-]{5,}$/.test(raw)) {
+                                        const match = participantsUsers.find(u => ((u as any)?.profile?.phone || '').replace(/\s|-/g,'') === raw.replace(/\s|-/g,''))
+                                        if (!match) { message.error(t('common.userNotFound')); return }
+                                        userId = match.id
+                                      } else {
+                                        const matches = participantsUsers.filter(u => (u.displayName || '').toLowerCase().includes(raw.toLowerCase()))
+                                        if (matches.length === 1) userId = matches[0].id
+                                        else { message.info(t('common.pleaseSelectUniqueUser')); return }
+                                      }
                                     }
-                                  }
-                                  const res = await registerForEvent((participantsLike as any).id, userId)
-                                  if ((res as any)?.success) {
-                                    message.success(t('common.participantAdded'))
+                                    const res = await registerForEvent((participantsLike as any).id, userId)
+                                    if ((res as any)?.success) {
+                                      message.success(t('common.participantAdded'))
                     const list = await getEvents()
                     setEvents(list)
-                                    const next = list.find(e => e.id === (participantsLike as any).id) as any
-                                    setViewing(next)
-                                    setManualAddValue('')
-                                  } else {
-                                    message.error(t('common.addFailed'))
-                                  }
+                                      const next = list.find(e => e.id === (participantsLike as any).id) as any
+                                      setViewing(next)
+                                      setManualAddValue('')
+                                    } else {
+                                      message.error(t('common.addFailed'))
+                                    }
                   } finally {
-                                  setManualAddLoading(false)
-                                }
-                              }}>{t('common.add')}</Button>
+                                    setManualAddLoading(false)
+                                  }
+                                }}
+                              >
+                                {manualAddLoading ? '...' : t('common.add')}
+                              </button>
                             </Space.Compact>
             </div>
 
                           <div style={{ marginBottom: 16 }}>
                             <Space>
-                              <Button 
-                                icon={<CheckCircleOutlined />}
-                                type="primary"
+                              <button 
+                                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease' }}
                                 onClick={async () => {
                                   if (!viewing) return
                                   const orderResult = await createOrdersFromEventAllocations((participantsLike as any).id);
@@ -998,10 +1121,11 @@ const AdminEvents: React.FC = () => {
                                   }
                                 }}
                               >
+                                <CheckCircleOutlined />
                                 {t('common.createOrders')}
-                              </Button>
-                              <Button 
-                                icon={<DownloadOutlined />}
+                              </button>
+                              <button 
+                                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.1)', color: '#ccc', cursor: 'pointer', transition: 'all 0.2s ease' }}
                                 onClick={() => {
                                   if (!viewing) return
                                   const header = ['userId','displayName','phone','email','cigarName','quantity','amount']
@@ -1029,8 +1153,9 @@ const AdminEvents: React.FC = () => {
                                   URL.revokeObjectURL(url)
                                 }}
                               >
+                                <DownloadOutlined />
                                 {t('common.exportAllocations')}
-                              </Button>
+                              </button>
                               <Upload
                                 accept=".csv"
                                 beforeUpload={async (file) => {
@@ -1050,7 +1175,10 @@ const AdminEvents: React.FC = () => {
                                 }}
                                 showUploadList={false}
                               >
-                                <Button icon={<UploadOutlined />}>{t('common.importParticipants')}</Button>
+                                <button style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.1)', color: '#ccc', cursor: 'pointer', transition: 'all 0.2s ease' }}>
+                                  <UploadOutlined />
+                                  {t('common.importParticipants')}
+                                </button>
                               </Upload>
           </Space>
                           </div>

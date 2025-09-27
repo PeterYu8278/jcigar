@@ -20,10 +20,15 @@ const glassmorphismInputStyle = {
   color: '#FFFFFF',
   background: 'transparent',
   border: 'none',
-  borderBottom: '2px solid rgba(244, 175, 37, 0.5)',
+  borderBottom: '2px solid transparent',
   borderRadius: 0,
   fontSize: '16px',
-  transition: 'border-color 0.3s ease'
+  transition: 'border-color 0.3s ease',
+  position: 'relative' as const,
+  backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+  backgroundSize: '100% 2px',
+  backgroundRepeat: 'no-repeat',
+  backgroundPosition: 'bottom'
 }
 
 const AdminUsers: React.FC = () => {
@@ -57,6 +62,7 @@ const AdminUsers: React.FC = () => {
     action: true,
     }
   })
+  const [activeTab, setActiveTab] = useState<'purchase' | 'points' | 'activity' | 'referral'>('purchase')
 
   useEffect(() => {
     ;(async () => {
@@ -226,9 +232,9 @@ const AdminUsers: React.FC = () => {
         const status = statusMap[record.id] || record.status || 'active'
         return (
           <Space>
-            <Tag color={getStatusColor(status)}>
-              {getStatusText(status)}
-            </Tag>
+        <Tag color={getStatusColor(status)}>
+          {getStatusText(status)}
+        </Tag>
             <Switch
               checked={status === 'active'}
               onChange={async (checked) => {
@@ -325,12 +331,17 @@ const AdminUsers: React.FC = () => {
   const glassmorphismInputStyle = {
     background: 'transparent',
     border: 'none',
-    borderBottom: '2px solid rgba(244, 175, 37, 0.5)',
+    borderBottom: '2px solid transparent',
     borderRadius: 0,
     color: '#FFFFFF',
     fontSize: '16px',
     paddingLeft: 0,
-    paddingRight: 0
+    paddingRight: 0,
+    position: 'relative' as const,
+    backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+    backgroundSize: '100% 2px',
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'bottom'
   }
 
   // 持久化列显示设置
@@ -341,7 +352,7 @@ const AdminUsers: React.FC = () => {
   }, [visibleCols])
 
   return (
-    <div style={{ padding: '24px' }}>
+    <div style={{ paddingRight: '24px' }}>
       {!isMobile && (
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Title level={2} style={{ marginTop: 0, marginBottom: 0, marginLeft: 0, marginRight: 0, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent'}}>{t('navigation.users')}</Title>
@@ -389,12 +400,13 @@ const AdminUsers: React.FC = () => {
             setSelectedRowKeys([])
           }}>{t('common.resetFilters')}</Button>
 
-          <Button type='primary' icon={<PlusOutlined />} onClick={() => {
+          <button onClick={() => {
           setCreating(true)
           form.resetFields()
-        }} style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}>
+        }} style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 8, padding: '8px 16px', background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, cursor: 'pointer' }}>
+          <PlusOutlined />
           {t('usersAdmin.addUser')}
-          </Button>
+        </button>
         </Space>
       </div>
       )}
@@ -444,9 +456,10 @@ const AdminUsers: React.FC = () => {
             <Option value="active">{t('usersAdmin.active')}</Option>
               <Option value="inactive">{t('usersAdmin.inactive')}</Option>
           </Select>
-          <Button type='primary' icon={<SearchOutlined />} style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}>
+          <button style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease' }}>
+            <SearchOutlined />
             {t('common.search')}
-          </Button>
+          </button>
         </Space>
       </div>
       )}
@@ -477,8 +490,8 @@ const AdminUsers: React.FC = () => {
         <div>
           {/* 顶部栏 */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <Title level={2} style={{ marginTop: 0, marginBottom: 0, marginLeft: 0, marginRight: 0, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent'}}>{t('navigation.users')}</Title>
-            <div style={{ width: 32 }} />
+            <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', marginBottom: 12 }}>{t('navigation.users')}</h1>
+          <div style={{ width: 32 }} />
           </div>
           {/* 搜索框 */}
           <div style={{ position: 'relative', marginBottom: 12 }}>
@@ -539,7 +552,7 @@ const AdminUsers: React.FC = () => {
               </Button>
             </Dropdown>
             <div style={{ flex: 1 }} />
-            <Button type='primary' shape='round' icon={<PlusOutlined />} onClick={() => { setCreating(true); form.resetFields() }} style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}>{t('usersAdmin.addUser')}</Button>
+            <button onClick={() => { setCreating(true); form.resetFields() }} style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 8, padding: '8px 16px', background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, cursor: 'pointer' }}>{t('usersAdmin.addUser')}</button>
           </div>
 
           {loading ? (
@@ -568,7 +581,7 @@ const AdminUsers: React.FC = () => {
                               <span style={{ fontSize: 12, color: '#ccc' }}>{getStatusText(status)}</span>
                             </div>
                           </div>
-                          <Button type="primary" style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }} onClick={() => {
+                          <button style={{ padding: '4px 8px', borderRadius: 6, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10', fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => {
                             setEditing(u)
                             form.setFieldsValue({
                               displayName: u.displayName,
@@ -577,10 +590,10 @@ const AdminUsers: React.FC = () => {
                               level: u.membership?.level,
                               phone: (u as any)?.profile?.phone,
                             })
-                          }}>{t('common.viewDetails')}</Button>
+                          }}>{t('common.viewDetails')}</button>
                         </div>
-                      </div>
-                    )
+    </div>
+  )
                   })}
                 </div>
               ))}
@@ -651,92 +664,943 @@ const AdminUsers: React.FC = () => {
         </div>
       )}
 
-      {/* 创建/编辑弹窗复用 */}
+      {/* 查看用户详情弹窗 */}
       <Modal
-        title={editing ? t('usersAdmin.editUser') : t('usersAdmin.addUser')}
-        open={creating || !!editing}
-        onCancel={() => { setCreating(false); setEditing(null) }}
-        onOk={() => form.submit()}
-        confirmLoading={loading}
-      >
-        <Form form={form} layout="vertical" onFinish={async (values) => {
-          setLoading(true)
-          try {
-            if (editing) {
-              const res = await updateDocument<User>(COLLECTIONS.USERS, editing.id, {
-                displayName: values.displayName,
-                email: values.email,
-                role: values.role,
-                membership: { ...editing.membership, level: values.level },
-                profile: { ...(editing as any).profile, phone: values.phone },
-              } as any)
-              if (res.success) message.success(t('usersAdmin.saved'))
-            } else {
-              const res = await createDocument<User>(COLLECTIONS.USERS, {
-                displayName: values.displayName,
-                email: values.email,
-                role: values.role,
-                profile: { phone: values.phone, preferences: { language: 'zh', notifications: true } },
-                membership: { level: values.level, joinDate: new Date(), lastActive: new Date() },
-                createdAt: new Date(),
-                updatedAt: new Date(),
-              } as any)
-              if ((res as any).success) message.success(t('usersAdmin.created'))
-            }
-            const list = await getUsers()
-            setUsers(list)
-            setCreating(false)
-            setEditing(null)
-          } finally {
-            setLoading(false)
+        title={null}
+        open={!!editing}
+        onCancel={() => setEditing(null)}
+        footer={null}
+        width={isMobile ? '100%' : 480}
+        style={{ top: isMobile ? 0 : 20 }}
+        styles={{
+          body: {
+            padding: 0,
+            background: 'linear-gradient(180deg, #221c10 0%, #181611 0%)',
+            minHeight: isMobile ? '100vh' : 'auto'
+          },
+          mask: { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
+          content: {
+            border: 'none',
+            boxShadow: 'none',
+            background: 'linear-gradient(180deg, #221c10 0%, #181611 0%)'
           }
+        }}
+        className="user-detail-modal"
+        closable={false}
+      >
+        {editing && (
+          <div style={{
+            background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
+            minHeight: isMobile ? '100vh' : 'auto',
+            color: '#FFFFFF'
+          }}>
+            {/* Header */}
+            <div style={{
+              position: 'sticky',
+              top: 0,
+              zIndex: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '16px',
+              background: 'transparent',
+              backdropFilter: 'blur(10px)'
+            }}>
+              <Button
+                type="text"
+                icon={<ArrowLeftOutlined />}
+                onClick={() => setEditing(null)}
+                style={{ color: '#FFFFFF', fontSize: '20px' }}
+              />
+              <h1 style={{
+                fontSize: '18px',
+                fontWeight: 'bold',
+                color: '#FFFFFF',
+                margin: 0
+              }}>
+                {t('usersAdmin.memberDetails')}
+              </h1>
+              <Button
+                type="text"
+                onClick={() => setEditing(null)}
+                style={{ color: '#FFFFFF', fontSize: '20px', minWidth: 'auto' }}
+              >
+                ×
+              </Button>
+            </div>
+
+            {/* User Profile Section */}
+            <div style={{ padding: '24px', textAlign: 'center' }}>
+              {/* Avatar */}
+              <div style={{ position: 'relative', display: 'inline-block', marginBottom: '16px' }}>
+                <div style={{
+                  width: '128px',
+                  height: '128px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '48px',
+                  color: '#221c10',
+                  fontWeight: 'bold',
+                  boxShadow: '0 8px 32px rgba(244, 175, 37, 0.3)'
+                }}>
+                  {editing.displayName?.charAt(0)?.toUpperCase() || 'U'}
+                </div>
+                <div style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  right: 0,
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '2px solid #221c10'
+                }}>
+                  <span style={{ color: '#221c10', fontSize: '16px' }}>👑</span>
+                </div>
+              </div>
+
+              {/* User Info */}
+              <div style={{ textAlign: 'center' }}>
+                <h2 style={{
+                  fontSize: '24px',
+                  fontWeight: 'bold',
+                  color: '#FFFFFF',
+                  margin: '0 0 8px 0'
+                }}>
+                  {editing.displayName || '-'}
+                </h2>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '16px',
+                  marginBottom: '8px',
+                  color: 'rgba(255, 255, 255, 0.7)'
+                }}>
+                  <span>{t('usersAdmin.membershipLevel')}: {getMembershipText(editing.membership?.level || 'bronze')}</span>
+                  <div style={{ width: '1px', height: '16px', background: 'rgba(255, 255, 255, 0.2)' }} />
+                  <span>{t('usersAdmin.points')}: 1250</span>
+                </div>
+                <div style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                  <p>{t('auth.email')}: {editing.email || '-'}</p>
+                  <p>{t('auth.phone')}: {(editing as any)?.profile?.phone || '-'}</p>
+                </div>
+              </div>
+
+              {/* Edit Button */}
+              <button
+                onClick={() => {
+                  setCreating(true)
+                  form.setFieldsValue({
+                    displayName: editing.displayName,
+                    email: editing.email,
+                    role: editing.role,
+                    level: editing.membership?.level,
+                    phone: (editing as any)?.profile?.phone,
+                  })
+                  setEditing(null)
+                }}
+                style={{
+                  width: '100%',
+                  maxWidth: '320px',
+                  height: '48px',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: '#111',
+                  textTransform: 'uppercase',
+                  marginTop: '16px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {t('usersAdmin.editMemberInfo')}
+              </button>
+            </div>
+
+            {/* Tabs Section */}
+            <div style={{ padding: '0 16px' }}>
+              <div style={{
+                borderBottom: '1px solid rgba(244, 175, 37, 0.2)',
+                marginBottom: '24px'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  gap: '16px',
+                  overflowX: 'auto',
+                  paddingBottom: '16px'
+                }}>
+                  <button 
+                    style={{
+                      padding: '16px 4px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: activeTab === 'purchase' ? '#F4AF25' : 'rgba(255, 255, 255, 0.6)',
+                      borderBottom: '2px solid transparent',
+                      whiteSpace: activeTab === 'purchase' ? 'nowrap' : 'none',
+                      position: 'relative' as const,
+                      backgroundImage: activeTab === 'purchase' ? 'linear-gradient(to right,#FDE08D,#C48D3A)' : 'none',
+                      backgroundSize: activeTab === 'purchase' ? '100% 2px' : 'none',
+                      backgroundRepeat: activeTab === 'purchase' ? 'no-repeat' : 'none',
+                      backgroundPosition: activeTab === 'purchase' ? 'bottom' : 'none',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => setActiveTab('purchase')}
+                  >
+                    {t('usersAdmin.purchaseRecords')}
+                  </button>
+                  <button 
+                    style={{
+                      padding: '16px 4px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: activeTab === 'points' ? '#F4AF25' : 'rgba(255, 255, 255, 0.6)',
+                      borderBottom: '2px solid transparent',
+                      whiteSpace: activeTab === 'points' ? 'nowrap' : 'none',
+                      backgroundImage: activeTab === 'points' ? 'linear-gradient(to right,#FDE08D,#C48D3A)' : 'none',
+                      backgroundSize: activeTab === 'points' ? '100% 2px' : 'none',
+                      backgroundRepeat: activeTab === 'points' ? 'no-repeat' : 'none',
+                      backgroundPosition: activeTab === 'points' ? 'bottom' : 'none',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => setActiveTab('points')}
+                  >
+                    {t('usersAdmin.pointsRecords')}
+                  </button>
+                  <button 
+                    style={{
+                      padding: '16px 4px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: activeTab === 'activity' ? '#F4AF25' : 'rgba(255, 255, 255, 0.6)',
+                      borderBottom: '2px solid transparent',
+                      whiteSpace: activeTab === 'activity' ? 'nowrap' : 'none',
+                      backgroundImage: activeTab === 'activity' ? 'linear-gradient(to right,#FDE08D,#C48D3A)' : 'none',
+                      backgroundSize: activeTab === 'activity' ? '100% 2px' : 'none',
+                      backgroundRepeat: activeTab === 'activity' ? 'no-repeat' : 'none',
+                      backgroundPosition: activeTab === 'activity' ? 'bottom' : 'none',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => setActiveTab('activity')}
+                  >
+                    {t('usersAdmin.activityRecords')}
+                  </button>
+                  <button 
+                    style={{
+                      padding: '16px 4px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: activeTab === 'referral' ? '#F4AF25' : 'rgba(255, 255, 255, 0.6)',
+                      borderBottom: '2px solid transparent',
+                      whiteSpace: activeTab === 'referral' ? 'nowrap' : 'none',
+                      backgroundImage: activeTab === 'referral' ? 'linear-gradient(to right,#FDE08D,#C48D3A)' : 'none',
+                      backgroundSize: activeTab === 'referral' ? '100% 2px' : 'none',
+                      backgroundRepeat: activeTab === 'referral' ? 'no-repeat' : 'none',
+                      backgroundPosition: activeTab === 'referral' ? 'bottom' : 'none',
+                      background:  'transparent',
+                      border: 'none',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => setActiveTab('referral')}
+                  >
+                    {t('usersAdmin.referralRecords')}
+                  </button>
+                </div>
+              </div>
+
+              {/* Records List */}
+              <div style={{ paddingBottom: '24px' }}>
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px'
+                }}>
+                  {activeTab === 'purchase' && (
+                    <>
+                      {/* Sample Purchase Record 1 */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '16px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '8px',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <p style={{
+                            fontWeight: '600',
+                            color: '#FFFFFF',
+                            margin: 0
+                          }}>
+                            {t('usersAdmin.purchaseCigar')}
+                          </p>
+                          <p style={{
+                            fontSize: '12px',
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            margin: '4px 0 0 0'
+                          }}>
+                            2024-01-15
+                          </p>
+                        </div>
+                        <p style={{
+                          fontSize: '18px',
+                          fontWeight: 'bold',
+                          color: '#F4AF25',
+                          margin: 0
+                        }}>
+                          - ￥1500
+                        </p>
+                      </div>
+
+                      {/* Sample Purchase Record 2 */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '16px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '8px',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <p style={{
+                            fontWeight: '600',
+                            color: '#FFFFFF',
+                            margin: 0
+                          }}>
+                            {t('usersAdmin.attendTasting')}
+                          </p>
+                          <p style={{
+                            fontSize: '12px',
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            margin: '4px 0 0 0'
+                          }}>
+                            2023-12-20
+                          </p>
+                        </div>
+                        <p style={{
+                          fontSize: '18px',
+                          fontWeight: 'bold',
+                          color: '#F4AF25',
+                          margin: 0
+                        }}>
+                          - ￥500
+                        </p>
+                      </div>
+
+                      {/* Sample Purchase Record 3 */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '16px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '8px',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <p style={{
+                            fontWeight: '600',
+                            color: '#FFFFFF',
+                            margin: 0
+                          }}>
+                            {t('usersAdmin.purchaseAccessories')}
+                          </p>
+                          <p style={{
+                            fontSize: '12px',
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            margin: '4px 0 0 0'
+                          }}>
+                            2023-11-05
+                          </p>
+                        </div>
+                        <p style={{
+                          fontSize: '18px',
+                          fontWeight: 'bold',
+                          color: '#F4AF25',
+                          margin: 0
+                        }}>
+                          - ￥300
+                        </p>
+                      </div>
+                    </>
+                  )}
+
+                  {activeTab === 'points' && (
+                    <>
+                      {/* Sample Points Record 1 */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '16px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '8px',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <p style={{
+                            fontWeight: '600',
+                            color: '#FFFFFF',
+                            margin: 0
+                          }}>
+                            购买雪茄获得积分
+                          </p>
+                          <p style={{
+                            fontSize: '12px',
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            margin: '4px 0 0 0'
+                          }}>
+                            2024-01-15
+                          </p>
+                        </div>
+                        <p style={{
+                          fontSize: '18px',
+                          fontWeight: 'bold',
+                          color: '#52c41a',
+                          margin: 0
+                        }}>
+                          + 150
+                        </p>
+                      </div>
+
+                      {/* Sample Points Record 2 */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '16px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '8px',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <p style={{
+                            fontWeight: '600',
+                            color: '#FFFFFF',
+                            margin: 0
+                          }}>
+                            参加品鉴会获得积分
+                          </p>
+                          <p style={{
+                            fontSize: '12px',
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            margin: '4px 0 0 0'
+                          }}>
+                            2023-12-20
+                          </p>
+                        </div>
+                        <p style={{
+                          fontSize: '18px',
+                          fontWeight: 'bold',
+                          color: '#52c41a',
+                          margin: 0
+                        }}>
+                          + 50
+                        </p>
+                      </div>
+                    </>
+                  )}
+
+                  {activeTab === 'activity' && (
+                    <>
+                      {/* Sample Activity Record 1 */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '16px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '8px',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <p style={{
+                            fontWeight: '600',
+                            color: '#FFFFFF',
+                            margin: 0
+                          }}>
+                            参加雪茄品鉴会
+                          </p>
+                          <p style={{
+                            fontSize: '12px',
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            margin: '4px 0 0 0'
+                          }}>
+                            2024-01-20
+                          </p>
+                        </div>
+                        <p style={{
+                          fontSize: '14px',
+                          fontWeight: 'bold',
+                          color: '#1890ff',
+                          margin: 0
+                        }}>
+                          已参加
+                        </p>
+                      </div>
+
+                      {/* Sample Activity Record 2 */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '16px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '8px',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <p style={{
+                            fontWeight: '600',
+                            color: '#FFFFFF',
+                            margin: 0
+                          }}>
+                            会员等级升级
+                          </p>
+                          <p style={{
+                            fontSize: '12px',
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            margin: '4px 0 0 0'
+                          }}>
+                            2023-12-15
+                          </p>
+                        </div>
+                        <p style={{
+                          fontSize: '14px',
+                          fontWeight: 'bold',
+                          color: '#f4af25',
+                          margin: 0
+                        }}>
+                          青铜 → 白银
+                        </p>
+                      </div>
+                    </>
+                  )}
+
+                  {activeTab === 'referral' && (
+                    <>
+                      {/* Sample Referral Record 1 */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '16px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '8px',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <p style={{
+                            fontWeight: '600',
+                            color: '#FFFFFF',
+                            margin: 0
+                          }}>
+                            推荐好友：张三
+                          </p>
+                          <p style={{
+                            fontSize: '12px',
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            margin: '4px 0 0 0'
+                          }}>
+                            2024-01-10
+                          </p>
+                        </div>
+                        <p style={{
+                          fontSize: '18px',
+                          fontWeight: 'bold',
+                          color: '#52c41a',
+                          margin: 0
+                        }}>
+                          + 100
+                        </p>
+                      </div>
+
+                      {/* Sample Referral Record 2 */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '16px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '8px',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <p style={{
+                            fontWeight: '600',
+                            color: '#FFFFFF',
+                            margin: 0
+                          }}>
+                            推荐好友：李四
+                          </p>
+                          <p style={{
+                            fontSize: '12px',
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            margin: '4px 0 0 0'
+                          }}>
+                            2023-11-25
+                          </p>
+                        </div>
+                        <p style={{
+                          fontSize: '18px',
+                          fontWeight: 'bold',
+                          color: '#52c41a',
+                          margin: 0
+                        }}>
+                          + 100
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* 创建/编辑弹窗 */}
+      <Modal
+        title={creating ? t('usersAdmin.addUser') : t('usersAdmin.editUser')}
+        open={creating}
+        onCancel={() => { setCreating(false) }}
+        footer={null}
+        width={400}
+        style={{ top: 20 }}
+      >
+        <div style={{ 
+          background: 'linear-gradient(165deg, #2a2a2a 0%, #1a1a1a 100%)',
+          borderRadius: 16,
+          padding: 24,
+          margin: -24
         }}>
-          <Form.Item 
-            label={t('common.name')} 
-            name="displayName" 
-            rules={[{ required: true, message: t('profile.nameRequired') }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item 
-            label={t('auth.email')} 
-            name="email"
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item 
-            label={t('auth.phone')} 
-            name="phone" 
-            rules={[{ required: true, message: t('profile.phoneRequired') }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item 
-            label={t('usersAdmin.role')} 
-            name="role" 
-            rules={[{ required: true }]} 
-            initialValue="member"
-          >
-            <Select>
-              <Option value="admin">{t('common.admin')}</Option>
-              <Option value="member">{t('common.member')}</Option>
-              <Option value="guest">{t('common.guest')}</Option>
-            </Select>
-          </Form.Item>
-          <Form.Item 
-            label={t('usersAdmin.membershipLevel')} 
-            name="level" 
-            rules={[{ required: true }]} 
-            initialValue="bronze"
-          >
-            <Select>
-              <Option value="bronze">{t('usersAdmin.bronzeMember')}</Option>
-              <Option value="silver">{t('usersAdmin.silverMember')}</Option>
-              <Option value="gold">{t('usersAdmin.goldMember')}</Option>
-              <Option value="platinum">{t('usersAdmin.platinumMember')}</Option>
-            </Select>
-          </Form.Item>
-        </Form>
+          <Form form={form} layout="vertical" onFinish={async (values) => {
+            setLoading(true)
+            try {
+              if (editing) {
+                const res = await updateDocument<User>(COLLECTIONS.USERS, editing.id, {
+                  displayName: values.displayName,
+                  email: values.email,
+                  role: values.role,
+                  membership: { ...editing.membership, level: values.level },
+                  profile: { ...(editing as any).profile, phone: values.phone },
+                } as any)
+                if (res.success) message.success(t('usersAdmin.saved'))
+              } else {
+                const res = await createDocument<User>(COLLECTIONS.USERS, {
+                  displayName: values.displayName,
+                  email: values.email,
+                  role: values.role,
+                  profile: { phone: values.phone, preferences: { language: 'zh', notifications: true } },
+                  membership: { level: values.level, joinDate: new Date(), lastActive: new Date() },
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                } as any)
+                if ((res as any).success) message.success(t('usersAdmin.created'))
+              }
+              const list = await getUsers()
+              setUsers(list)
+              setCreating(false)
+              setEditing(null)
+            } finally {
+              setLoading(false)
+            }
+          }}>
+            <div style={{ marginBottom: 32 }}>
+              <Form.Item 
+                name="displayName" 
+                rules={[{ required: true, message: t('profile.nameRequired') }]}
+                style={{ marginBottom: 0 }}
+              >
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(244, 175, 37, 0.2)',
+                  borderRadius: 12,
+                  padding: 24,
+                  transition: 'all 0.3s ease'
+                }}>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: 14, 
+                    fontWeight: 500, 
+                    color: 'rgba(244, 175, 37, 0.8)', 
+                    marginBottom: 8 
+                  }}>
+                    {t('common.name')}
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ 
+                      fontSize: 20, 
+                      color: 'rgba(244, 175, 37, 0.7)',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}>
+                      👤
+                    </span>
+                    <Input 
+                      style={{
+                        background: 'transparent',
+                        color: '#fff',
+                        border: 'none',
+                        borderBottom: '2px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: 0,
+                        padding: '8px 0',
+                        fontSize: 16,
+                        boxShadow: 'none'
+                      }}
+                      placeholder="请输入姓名"
+                    />
+                  </div>
+                </div>
+              </Form.Item>
+            </div>
+
+            <div style={{ marginBottom: 32 }}>
+              <Form.Item 
+                name="email"
+                style={{ marginBottom: 0 }}
+              >
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(244, 175, 37, 0.2)',
+                  borderRadius: 12,
+                  padding: 24,
+                  transition: 'all 0.3s ease'
+                }}>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: 14, 
+                    fontWeight: 500, 
+                    color: 'rgba(244, 175, 37, 0.8)', 
+                    marginBottom: 8 
+                  }}>
+                    {t('auth.email')}
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ 
+                      fontSize: 20, 
+                      color: 'rgba(244, 175, 37, 0.7)',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}>
+                      ✉️
+                    </span>
+                    <Input 
+                      style={{
+                        background: 'transparent',
+                        color: '#fff',
+                        border: 'none',
+                        borderBottom: '2px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: 0,
+                        padding: '8px 0',
+                        fontSize: 16,
+                        boxShadow: 'none'
+                      }}
+                      placeholder="请输入邮箱"
+                    />
+                  </div>
+                </div>
+              </Form.Item>
+            </div>
+
+            <div style={{ marginBottom: 32 }}>
+              <Form.Item 
+                name="phone" 
+                rules={[{ required: true, message: t('profile.phoneRequired') }]}
+                style={{ marginBottom: 0 }}
+              >
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(244, 175, 37, 0.2)',
+                  borderRadius: 12,
+                  padding: 24,
+                  transition: 'all 0.3s ease'
+                }}>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: 14, 
+                    fontWeight: 500, 
+                    color: 'rgba(244, 175, 37, 0.8)', 
+                    marginBottom: 8 
+                  }}>
+                    {t('auth.phone')}
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ 
+                      fontSize: 20, 
+                      color: 'rgba(244, 175, 37, 0.7)',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}>
+                      📱
+                    </span>
+                    <Input 
+                      style={{
+                        background: 'transparent',
+                        color: '#fff',
+                        border: 'none',
+                        borderBottom: '2px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: 0,
+                        padding: '8px 0',
+                        fontSize: 16,
+                        boxShadow: 'none'
+                      }}
+                      placeholder="请输入手机号"
+                    />
+                  </div>
+                </div>
+              </Form.Item>
+            </div>
+
+            <div style={{ marginBottom: 32 }}>
+              <Form.Item 
+                name="role" 
+                rules={[{ required: true }]} 
+                initialValue="member"
+                style={{ marginBottom: 0 }}
+              >
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(244, 175, 37, 0.2)',
+                  borderRadius: 12,
+                  padding: 24,
+                  transition: 'all 0.3s ease'
+                }}>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: 14, 
+                    fontWeight: 500, 
+                    color: 'rgba(244, 175, 37, 0.8)', 
+                    marginBottom: 8 
+                  }}>
+                    {t('usersAdmin.role')}
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ 
+                      fontSize: 20, 
+                      color: 'rgba(244, 175, 37, 0.7)',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}>
+                      👥
+                    </span>
+                    <Select
+                      style={{ 
+                        flex: 1,
+                        background: 'transparent'
+                      }}
+                      dropdownStyle={{
+                        background: '#2a2a2a',
+                        border: '1px solid rgba(244, 175, 37, 0.2)'
+                      }}
+                    >
+                      <Option value="admin">{t('common.admin')}</Option>
+                      <Option value="member">{t('common.member')}</Option>
+                      <Option value="guest">{t('common.guest')}</Option>
+                    </Select>
+                  </div>
+                </div>
+              </Form.Item>
+            </div>
+
+            <div style={{ marginBottom: 32 }}>
+              <Form.Item 
+                name="level" 
+                rules={[{ required: true }]} 
+                initialValue="bronze"
+                style={{ marginBottom: 0 }}
+              >
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(244, 175, 37, 0.2)',
+                  borderRadius: 12,
+                  padding: 24,
+                  transition: 'all 0.3s ease'
+                }}>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: 14, 
+                    fontWeight: 500, 
+                    color: 'rgba(244, 175, 37, 0.8)', 
+                    marginBottom: 8 
+                  }}>
+                    {t('usersAdmin.membershipLevel')}
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ 
+                      fontSize: 20, 
+                      color: 'rgba(244, 175, 37, 0.7)',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}>
+                      🏆
+                    </span>
+                    <Select
+                      style={{ 
+                        flex: 1,
+                        background: 'transparent'
+                      }}
+                      dropdownStyle={{
+                        background: '#2a2a2a',
+                        border: '1px solid rgba(244, 175, 37, 0.2)'
+                      }}
+                    >
+                      <Option value="bronze">{t('usersAdmin.bronzeMember')}</Option>
+                      <Option value="silver">{t('usersAdmin.silverMember')}</Option>
+                      <Option value="gold">{t('usersAdmin.goldMember')}</Option>
+                      <Option value="platinum">{t('usersAdmin.platinumMember')}</Option>
+                    </Select>
+                  </div>
+                </div>
+              </Form.Item>
+            </div>
+
+            <div style={{ marginTop: 64 }}>
+              <button
+                type="submit"
+                disabled={loading}
+                style={{
+                  width: '100%',
+                  padding: '16px',
+                  fontSize: 16,
+                  fontWeight: 'bold',
+                  color: '#1a1a1a',
+                  textTransform: 'uppercase',
+                  borderRadius: 8,
+                  background: 'linear-gradient(to right, #DAA520, #F4AF25, #DAA520)',
+                  backgroundSize: '200% auto',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 10px 25px -5px rgba(244, 175, 37, 0.3), 0 8px 10px -6px rgba(244, 175, 37, 0.2)',
+                  opacity: loading ? 0.6 : 1
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundPosition = 'right center'
+                  e.currentTarget.style.transform = 'scale(1.02)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundPosition = 'left center'
+                  e.currentTarget.style.transform = 'scale(1)'
+                }}
+              >
+                {loading ? '保存中...' : '保存更改'}
+              </button>
+            </div>
+          </Form>
+        </div>
       </Modal>
 
       {/* 删除确认 */}
