@@ -16,7 +16,9 @@
     "@vitejs/plugin-react": "^4.7.0",
     "typescript": "~5.8.3",
     "vite": "^5.4.20",
-    "vite-plugin-imp": "^2.4.0"
+    "vite-plugin-imp": "^2.4.0",
+    "vite-plugin-pwa": "^1.0.3",
+    "workbox-window": "^7.3.0"
   },
   "dependencies": {
     "@ant-design/icons": "^6.0.2",

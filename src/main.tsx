@@ -6,6 +6,10 @@ import './style.css'
 import { cigarTheme } from './config/theme'
 import './i18n' // 初始化国际化
 import LocalizedApp from './components/common/LocalizedApp'
+import { initializePWA } from './utils/pwa'
+
+// 初始化PWA
+initializePWA().catch(console.error);
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

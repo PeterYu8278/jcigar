@@ -1,0 +1,11 @@
+<svg width="144" height="144" viewBox="0 0 144 144" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#FDE08D;stop-opacity:1" />
+        <stop offset="100%" style="stop-color:#D4AF37;stop-opacity:1" />
+      </linearGradient>
+    </defs>
+    <rect width="144" height="144" rx="28.8" fill="#1A1A1A"/>
+    <circle cx="72" cy="72" r="43.199999999999996" fill="url(#goldGradient)"/>
+    <text x="72" y="86.39999999999999" text-anchor="middle" fill="#1A1A1A" font-family="serif" font-weight="bold" font-size="36">GC</text>
+  </svg>
