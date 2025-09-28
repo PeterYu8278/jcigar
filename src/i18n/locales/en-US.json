@@ -588,7 +588,8 @@
     "brandNameRequired": "Brand name is required",
     "brandCountryRequired": "Brand country is required",
     "foundedYearInvalid": "Founded year must be a valid number",
-    "brandWebsiteInvalid": "Please input a valid website URL"
+    "brandWebsiteInvalid": "Please input a valid website URL",
+    "pleaseSelectBrand": "Please select brand"
   },
   "financeAdmin": {
     "title": "Financial Management",

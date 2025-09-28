@@ -731,7 +731,7 @@ const AdminUsers: React.FC = () => {
             </div>
 
             {/* User Profile Section */}
-            <div style={{ padding: '24px', textAlign: 'center' }}>
+            <div style={{ alignItems: 'center', textAlign: 'center' }}>
               {/* Avatar/Member Card Toggle */}
               <MemberProfileCard
                 user={editing}

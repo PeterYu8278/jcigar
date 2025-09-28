@@ -39,6 +39,7 @@ const AdminInventory: React.FC = () => {
   const [brandForm] = Form.useForm()
 
   const [keyword, setKeyword] = useState('')
+  const [brandFilter, setBrandFilter] = useState<string | undefined>()
   const [originFilter, setOriginFilter] = useState<string | undefined>()
   const [strengthFilter, setStrengthFilter] = useState<string | undefined>()
   const [statusFilter, setStatusFilter] = useState<string | undefined>()
@@ -120,27 +121,43 @@ const AdminInventory: React.FC = () => {
     return items.filter(i => {
       const kw = keyword.trim().toLowerCase()
       const passKw = !kw || i.name?.toLowerCase().includes(kw) || i.brand?.toLowerCase().includes(kw)
+      const passBrand = !brandFilter || i.brand === brandFilter
       const passOrigin = !originFilter || i.origin === originFilter
       const status = ((i as any)?.inventory?.stock ?? 0) <= ((i as any)?.inventory?.minStock ?? 0) ? 'critical' : ((i as any)?.inventory?.stock ?? 0) <= (((i as any)?.inventory?.minStock ?? 0) * 1.5) ? 'low' : 'normal'
       const passStatus = !statusFilter || status === statusFilter
       const passStrength = !strengthFilter || i.strength === strengthFilter
-      return passKw && passOrigin && passStatus && passStrength
+      return passKw && passBrand && passOrigin && passStatus && passStrength
     })
-  }, [items, keyword, originFilter, strengthFilter, statusFilter])
+  }, [items, keyword, brandFilter, originFilter, strengthFilter, statusFilter])
 
   const columnsAll = [
     {
       title: t('inventory.cigarName'),
       dataIndex: 'name',
       key: 'name',
-      render: (name: string, record: any) => (
-        <div>
-          <div style={{ fontWeight: 'bold' }}>{name}</div>
-          <div style={{ fontSize: '12px', color: '#666' }}>
-            {record.brand} - {record.origin}
+      render: (name: string, record: any) => {
+        // 根据品牌名称找到对应的品牌信息
+        const brandInfo = brandList.find(brand => brand.name === record.brand)
+        return (
+          <div>
+            <div style={{ fontWeight: 'bold' }}>{name}</div>
+            <div style={{ fontSize: '12px', color: '#666', display: 'flex', alignItems: 'center', gap: 4 }}>
+              {brandInfo?.logo && (
+                <img 
+                  src={brandInfo.logo} 
+                  alt={record.brand} 
+                  style={{ width: 16, height: 16, borderRadius: 2 }}
+                />
+              )}
+              <span>{record.brand}</span>
+              {brandInfo?.country && (
+                <span style={{ color: '#999' }}>- {brandInfo.country}</span>
+              )}
+              <span>- {record.origin}</span>
+            </div>
           </div>
-        </div>
-      ),
+        )
+      },
     },
     {
       title: t('inventory.spec'),
@@ -398,6 +415,24 @@ const AdminInventory: React.FC = () => {
                     value={keyword}
                     onChange={(e) => setKeyword(e.target.value)}
                   />
+                   <Select placeholder={t('inventory.brand')} style={{ width: 140 }} allowClear value={brandFilter} onChange={setBrandFilter}>
+                    {brandList
+                      .filter(brand => brand.status === 'active')
+                      .map(brand => (
+                        <Option key={brand.id} value={brand.name}>
+                          <Space>
+                            {brand.logo && (
+                              <img 
+                                src={brand.logo} 
+                                alt={brand.name} 
+                                style={{ width: 16, height: 16, borderRadius: 2 }}
+                              />
+                            )}
+                            <span>{brand.name}</span>
+                          </Space>
+                        </Option>
+                      ))}
+                  </Select>
                    <Select placeholder={t('inventory.origin')} style={{ width: 140 }} allowClear value={originFilter} onChange={setOriginFilter}>
                     {[...new Set(items.map(i => i.origin).filter(Boolean))].map(org => (
                       <Option key={org} value={org}>{org}</Option>
@@ -413,7 +448,7 @@ const AdminInventory: React.FC = () => {
              <Option value="low">{t('inventory.stockLow')}</Option>
              <Option value="critical">{t('inventory.stockCritical')}</Option>
                   </Select>
-           <Button onClick={() => { setKeyword(''); setOriginFilter(undefined); setStrengthFilter(undefined); setStatusFilter(undefined); setSelectedRowKeys([]) }} style={{ color: '#000000' }}>{t('common.resetFilters')}</Button>
+           <Button onClick={() => { setKeyword(''); setBrandFilter(undefined); setOriginFilter(undefined); setStrengthFilter(undefined); setStatusFilter(undefined); setSelectedRowKeys([]) }} style={{ color: '#000000' }}>{t('common.resetFilters')}</Button>
            <button onClick={() => { setCreating(true); form.resetFields() }} style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 8, padding: '8px 16px', background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, cursor: 'pointer' }}>
              <PlusOutlined />
              {t('inventory.addProduct')}
@@ -897,9 +932,13 @@ const AdminInventory: React.FC = () => {
         <Form form={form} layout="horizontal" labelCol={{ flex: '100px' }} wrapperCol={{ flex: 'auto' }} onFinish={async (values: any) => {
           setLoading(true)
           try {
+            // 根据品牌名称找到对应的品牌ID
+            const selectedBrand = brandList.find(brand => brand.name === values.brand)
+            
             const payload: Partial<Cigar> = {
               name: values.name,
               brand: values.brand,
+              brandId: selectedBrand?.id, // 添加品牌ID关联
               origin: values.origin,
               size: values.size,
               strength: values.strength,
@@ -934,7 +973,40 @@ const AdminInventory: React.FC = () => {
             <Input />
           </Form.Item>
           <Form.Item label={t('inventory.brand')} name="brand" rules={[{ required: true, message: t('common.pleaseInputBrand') }]}>
-            <Input />
+            <Select
+              placeholder={t('inventory.pleaseSelectBrand')}
+              showSearch
+              filterOption={(input, option) => {
+                const children = option?.children as any
+                if (typeof children === 'string') {
+                  return children.toLowerCase().includes(input.toLowerCase())
+                }
+                if (Array.isArray(children)) {
+                  return children.some((child: any) => 
+                    typeof child === 'string' && child.toLowerCase().includes(input.toLowerCase())
+                  )
+                }
+                return false
+              }}
+            >
+              {brandList
+                .filter(brand => brand.status === 'active')
+                .map(brand => (
+                  <Option key={brand.id} value={brand.name}>
+                    <Space>
+                      {brand.logo && (
+                        <img 
+                          src={brand.logo} 
+                          alt={brand.name} 
+                          style={{ width: 20, height: 20, borderRadius: 2 }}
+                        />
+                      )}
+                      <span>{brand.name}</span>
+                      <span style={{ color: '#999', fontSize: '12px' }}>({brand.country})</span>
+                    </Space>
+                  </Option>
+                ))}
+            </Select>
           </Form.Item>
           <Form.Item label={t('inventory.origin')} name="origin" rules={[{ required: true, message: t('common.pleaseInputOrigin') }]}>
             <Input />

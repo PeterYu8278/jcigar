@@ -574,7 +574,8 @@
     "brandNameRequired": "品牌名称不能为空",
     "brandCountryRequired": "品牌国家不能为空",
     "foundedYearInvalid": "成立年份必须是有效数字",
-    "brandWebsiteInvalid": "请输入有效的网站地址"
+    "brandWebsiteInvalid": "请输入有效的网站地址",
+    "pleaseSelectBrand": "请选择品牌"
   },
   "financeAdmin": {
     "title": "财务管理",

@@ -102,8 +102,7 @@ const Profile: React.FC = () => {
       </div>
 
       {/* User Profile Section */}
-      <div style={{ padding: '24px', textAlign: 'center',
-            marginBottom: '10px'}}>
+      <div style={{alignItems: 'center', textAlign: 'center', marginBottom: '10px'}}>
         {/* Avatar/Member Card Toggle */}
         <MemberProfileCard
           user={user}
