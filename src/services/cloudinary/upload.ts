@@ -1,5 +1,5 @@
 // Cloudinary 上传服务
-import cloudinary from './config'
+import { cloudinaryConfig, loadCloudinary } from './config'
 
 export interface UploadResult {
   public_id: string
@@ -44,6 +44,10 @@ export const uploadFile = async (
       }
     }
 
+    // 加载 Cloudinary
+    const cloudinary = await loadCloudinary()
+
+    // 创建上传预设
     const uploadOptions = {
       folder,
       resource_type,
@@ -57,27 +61,46 @@ export const uploadFile = async (
 
     let result
     if (file instanceof File) {
-      // 上传 File 对象 - 需要转换为 base64
-      const reader = new FileReader()
-      const base64Promise = new Promise<string>((resolve, reject) => {
-        reader.onload = () => resolve(reader.result as string)
-        reader.onerror = reject
+      // 上传 File 对象 - 使用 Cloudinary 的 upload 方法
+      result = await new Promise((resolve, reject) => {
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('upload_preset', 'ml_default') // 需要创建无签名上传预设
+        formData.append('folder', folder)
+        
+        fetch(`https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloud_name}/image/upload`, {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => resolve(data))
+        .catch(error => reject(error))
       })
-      reader.readAsDataURL(file)
-      const base64String = await base64Promise
-      result = await cloudinary.uploader.upload(base64String, uploadOptions)
     } else {
       // 上传 base64 字符串
-      result = await cloudinary.uploader.upload(file, uploadOptions)
+      result = await new Promise((resolve, reject) => {
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('upload_preset', 'ml_default')
+        formData.append('folder', folder)
+        
+        fetch(`https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloud_name}/image/upload`, {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => resolve(data))
+        .catch(error => reject(error))
+      })
     }
 
     return {
-      public_id: result.public_id,
-      secure_url: result.secure_url,
-      width: result.width,
-      height: result.height,
-      format: result.format,
-      bytes: result.bytes
+      public_id: (result as any).public_id,
+      secure_url: (result as any).secure_url,
+      width: (result as any).width,
+      height: (result as any).height,
+      format: (result as any).format,
+      bytes: (result as any).bytes
     }
   } catch (error) {
     console.error('Cloudinary 上传失败:', error)
@@ -92,8 +115,10 @@ export const uploadFile = async (
  */
 export const deleteFile = async (publicId: string): Promise<boolean> => {
   try {
-    const result = await cloudinary.uploader.destroy(publicId)
-    return result.result === 'ok'
+    // 注意：删除文件需要服务器端API密钥，这里只是示例
+    // 在实际应用中，应该通过后端API来删除文件
+    console.warn('删除文件功能需要在服务器端实现')
+    return false
   } catch (error) {
     console.error('Cloudinary 删除失败:', error)
     return false
@@ -126,15 +151,25 @@ export const getOptimizedImageUrl = (
     gravity = 'auto'
   } = options
 
-  return cloudinary.url(publicId, {
-    width,
-    height,
-    quality,
-    format,
-    crop,
-    gravity,
-    secure: true
-  })
+  // 构建 Cloudinary URL
+  let url = `https://res.cloudinary.com/${cloudinaryConfig.cloud_name}/image/upload`
+  
+  // 添加转换参数
+  const transformations = []
+  if (width) transformations.push(`w_${width}`)
+  if (height) transformations.push(`h_${height}`)
+  if (quality) transformations.push(`q_${quality}`)
+  if (format !== 'auto') transformations.push(`f_${format}`)
+  if (crop) transformations.push(`c_${crop}`)
+  if (gravity) transformations.push(`g_${gravity}`)
+  
+  if (transformations.length > 0) {
+    url += `/${transformations.join(',')}`
+  }
+  
+  url += `/${publicId}`
+  
+  return url
 }
 
 /**

@@ -1,11 +1,10 @@
 // Cloudinary React Hook
 import { useState, useCallback } from 'react'
-import { uploadFile, deleteFile } from '../services/cloudinary'
+import { uploadFile } from '../services/cloudinary'
 import type { UploadResult, UploadOptions } from '../services/cloudinary'
 
 export interface UseCloudinaryReturn {
-  upload: (file: File | string, options?: UploadOptions) => Promise<UploadResult>
-  delete: (publicId: string) => Promise<boolean>
+  upload: (file: File, options?: UploadOptions) => Promise<UploadResult>
   uploading: boolean
   error: string | null
 }
@@ -15,7 +14,7 @@ export const useCloudinary = (): UseCloudinaryReturn => {
   const [error, setError] = useState<string | null>(null)
 
   const upload = useCallback(async (
-    file: File | string,
+    file: File,
     options?: UploadOptions
   ): Promise<UploadResult> => {
     setUploading(true)
@@ -33,22 +32,8 @@ export const useCloudinary = (): UseCloudinaryReturn => {
     }
   }, [])
 
-  const deleteFileById = useCallback(async (publicId: string): Promise<boolean> => {
-    setError(null)
-    
-    try {
-      const result = await deleteFile(publicId)
-      return result
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '删除失败'
-      setError(errorMessage)
-      return false
-    }
-  }, [])
-
   return {
     upload,
-    delete: deleteFileById,
     uploading,
     error
   }

@@ -1,0 +1,164 @@
+// 简化的 Cloudinary 上传服务
+export interface UploadResult {
+  public_id: string
+  secure_url: string
+  width: number
+  height: number
+  format: string
+  bytes: number
+}
+
+export interface UploadOptions {
+  folder?: string
+  max_bytes?: number
+}
+
+const CLOUD_NAME = 'dy2zb1n41'
+const UPLOAD_PRESET = 'ml_default' // 需要在 Cloudinary Dashboard 中创建
+
+/**
+ * 上传文件到 Cloudinary（无签名上传）
+ * @param file 要上传的文件
+ * @param options 上传选项
+ * @returns Promise<UploadResult>
+ */
+export const uploadFile = async (
+  file: File,
+  options: UploadOptions = {}
+): Promise<UploadResult> => {
+  try {
+    const {
+      folder = 'cigar-app',
+      max_bytes = 10 * 1024 * 1024 // 10MB
+    } = options
+
+    // 检查文件大小
+    if (file.size > max_bytes) {
+      throw new Error(`文件大小不能超过 ${max_bytes / 1024 / 1024}MB`)
+    }
+
+    // 检查文件类型
+    if (!file.type.startsWith('image/')) {
+      throw new Error('请选择图片文件')
+    }
+
+    // 创建 FormData
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('upload_preset', UPLOAD_PRESET)
+    formData.append('folder', folder)
+
+    // 上传到 Cloudinary
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+      {
+        method: 'POST',
+        body: formData
+      }
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error?.message || '上传失败')
+    }
+
+    const result = await response.json()
+
+    return {
+      public_id: result.public_id,
+      secure_url: result.secure_url,
+      width: result.width,
+      height: result.height,
+      format: result.format,
+      bytes: result.bytes
+    }
+  } catch (error) {
+    console.error('Cloudinary 上传失败:', error)
+    throw new Error(error instanceof Error ? error.message : '文件上传失败，请重试')
+  }
+}
+
+/**
+ * 生成图片的优化 URL
+ * @param publicId 图片的 public_id
+ * @param options 转换选项
+ * @returns 优化后的图片 URL
+ */
+export const getOptimizedImageUrl = (
+  publicId: string,
+  options: {
+    width?: number
+    height?: number
+    quality?: string | number
+    format?: string
+    crop?: string
+    gravity?: string
+  } = {}
+): string => {
+  const {
+    width,
+    height,
+    quality = 'auto',
+    format = 'auto',
+    crop = 'fill',
+    gravity = 'auto'
+  } = options
+
+  // 构建 Cloudinary URL
+  let url = `https://res.cloudinary.com/${CLOUD_NAME}/image/upload`
+  
+  // 添加转换参数
+  const transformations = []
+  if (width) transformations.push(`w_${width}`)
+  if (height) transformations.push(`h_${height}`)
+  if (quality) transformations.push(`q_${quality}`)
+  if (format !== 'auto') transformations.push(`f_${format}`)
+  if (crop) transformations.push(`c_${crop}`)
+  if (gravity) transformations.push(`g_${gravity}`)
+  
+  if (transformations.length > 0) {
+    url += `/${transformations.join(',')}`
+  }
+  
+  url += `/${publicId}`
+  
+  return url
+}
+
+/**
+ * 生成缩略图 URL
+ * @param publicId 图片的 public_id
+ * @param size 缩略图尺寸
+ * @returns 缩略图 URL
+ */
+export const getThumbnailUrl = (
+  publicId: string,
+  size: number = 150
+): string => {
+  return getOptimizedImageUrl(publicId, {
+    width: size,
+    height: size,
+    crop: 'fill',
+    gravity: 'face'
+  })
+}
+
+/**
+ * 生成品牌 logo URL
+ * @param publicId 图片的 public_id
+ * @param size logo 尺寸
+ * @returns logo URL
+ */
+export const getBrandLogoUrl = (
+  publicId: string,
+  size: number = 200
+): string => {
+  return getOptimizedImageUrl(publicId, {
+    width: size,
+    height: size,
+    crop: 'fill',
+    gravity: 'center',
+    quality: 'auto',
+    format: 'auto'
+  })
+}

@@ -14,24 +14,35 @@ const CloudinaryTest: React.FC = () => {
 
   const testConnection = async () => {
     try {
-      // 创建一个简单的测试图片（1x1像素的透明PNG）
-      const testImageData = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+      // 创建一个简单的测试图片文件
+      const canvas = document.createElement('canvas')
+      canvas.width = 100
+      canvas.height = 100
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        ctx.fillStyle = '#FFD700'
+        ctx.fillRect(0, 0, 100, 100)
+        ctx.fillStyle = '#000'
+        ctx.font = '20px Arial'
+        ctx.textAlign = 'center'
+        ctx.fillText('TEST', 50, 55)
+      }
       
-      const result = await upload(testImageData, {
-        folder: 'test',
-        transformation: {
-          width: 100,
-          height: 100,
-          crop: 'fill',
-          quality: 'auto'
+      canvas.toBlob(async (blob) => {
+        if (blob) {
+          const testFile = new File([blob], 'test.png', { type: 'image/png' })
+          
+          const result = await upload(testFile, {
+            folder: 'test'
+          })
+          
+          setTestResult('✅ Cloudinary 连接成功！')
+          setTestImageUrl(result.secure_url)
+          message.success('Cloudinary 测试成功！')
+          
+          console.log('Cloudinary 测试结果:', result)
         }
-      })
-      
-      setTestResult('✅ Cloudinary 连接成功！')
-      setTestImageUrl(result.secure_url)
-      message.success('Cloudinary 测试成功！')
-      
-      console.log('Cloudinary 测试结果:', result)
+      }, 'image/png')
     } catch (err) {
       setTestResult('❌ Cloudinary 连接失败')
       message.error('Cloudinary 测试失败')

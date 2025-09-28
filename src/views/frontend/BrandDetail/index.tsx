@@ -98,16 +98,22 @@ const BrandDetail: React.FC = () => {
       setLoading(true)
       try {
         const brandData = await getBrandById(brandId)
-        setBrand(brandData)
         
-        // 如果获取到品牌数据，使用品牌名称查询产品
-        if (brandData?.name) {
+        if (brandData) {
+          setBrand(brandData)
+          // 如果获取到品牌数据，使用品牌名称查询产品
           const cigarsData = await getCigarsByBrand(brandData.name)
           setProducts(cigarsData)
+        } else {
+          // 如果品牌不存在，设置为null以显示错误页面
+          setBrand(null)
+          setProducts([])
         }
       } catch (error) {
         console.error('加载品牌数据失败:', error)
         message.error('加载品牌信息失败')
+        setBrand(null)
+        setProducts([])
       } finally {
         setLoading(false)
       }

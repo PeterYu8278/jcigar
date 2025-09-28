@@ -50,13 +50,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
     try {
       const result: UploadResult = await upload(file, {
-        folder,
-        transformation: {
-          width: 1200,
-          height: 1200,
-          crop: 'limit',
-          quality: 'auto'
-        }
+        folder
       })
       
       onChange?.(result.secure_url)
