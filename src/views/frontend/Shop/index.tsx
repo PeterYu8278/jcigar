@@ -162,14 +162,239 @@ const Shop: React.FC = () => {
         </div>
                     </div>
                     
+      {/* 推荐品牌 */}
+      <div style={{ marginBottom: '32px' }}>
+        <h2 style={{ 
+          fontSize: '18px', 
+          fontWeight: 'bold', 
+          color: '#fff', 
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <span style={{ color: '#F4AF25' }}>🔥</span>
+          推荐品牌
+        </h2>
+        <div style={{ 
+          display: 'flex', 
+          gap: '12px', 
+          overflowX: 'auto', 
+          paddingBottom: '8px',
+          marginBottom: '-8px'
+        }}>
+          {brands
+            .filter(brand => brand.status === 'active')
+            .slice(0, 6)
+            .map((brand) => (
+              <div 
+                key={brand.id} 
+                style={{ 
+                  flex: '0 0 120px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '12px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease'
+                }}
+                onClick={() => navigate(`/brand/${brand.id}`)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 8px 25px rgba(244, 175, 37, 0.2)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = 'none'
+                }}
+              >
+                <div 
+                  style={{
+                    width: '60px',
+                    height: '60px',
+                    borderRadius: '50%',
+                    background: 'rgba(30,30,30,0.7)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '2px solid rgba(255,215,0,0.2)',
+                    overflow: 'hidden'
+                  }}
+                >
+                  {brand.logo ? (
+                    <img 
+                      src={brand.logo} 
+                      alt={brand.name} 
+                      style={{ width: '50px', height: '50px', objectFit: 'contain' }} 
+                    />
+                  ) : (
+                    <div style={{ 
+                      width: '50px', 
+                      height: '50px', 
+                      borderRadius: '50%', 
+                      background: 'linear-gradient(45deg, #FFD700, #B8860B)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#000',
+                      fontWeight: 'bold',
+                      fontSize: '16px'
+                    }}>
+                      {brand.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div style={{ 
+                  fontSize: '12px', 
+                  color: '#f0f0f0', 
+                  fontWeight: '600',
+                  textAlign: 'center',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  width: '100%'
+                }}>
+                  {brand.name}
+                </div>
+                <div style={{ 
+                  fontSize: '10px', 
+                  color: '#999',
+                  textAlign: 'center'
+                }}>
+                  {brand.country || brand.origin || ''}
+                </div>
+              </div>
+            ))}
+        </div>
+      </div>
+
+      {/* 热门品牌 */}
+      <div style={{ marginBottom: '32px' }}>
+        <h2 style={{ 
+          fontSize: '18px', 
+          fontWeight: 'bold', 
+          color: '#fff', 
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <span style={{ color: '#F4AF25' }}>⭐</span>
+          热门品牌
+        </h2>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(4, 1fr)', 
+          gap: '12px'
+        }}>
+          {brands
+            .filter(brand => brand.status === 'active')
+            .slice(6, 10)
+            .map((brand) => (
+              <div 
+                key={brand.id} 
+                style={{ 
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '16px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease'
+                }}
+                onClick={() => navigate(`/brand/${brand.id}`)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 8px 25px rgba(244, 175, 37, 0.2)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = 'none'
+                }}
+              >
+                <div 
+                  style={{
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '50%',
+                    background: 'rgba(30,30,30,0.7)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '2px solid rgba(255,215,0,0.2)',
+                    overflow: 'hidden'
+                  }}
+                >
+                  {brand.logo ? (
+                    <img 
+                      src={brand.logo} 
+                      alt={brand.name} 
+                      style={{ width: '70px', height: '70px', objectFit: 'contain' }} 
+                    />
+                  ) : (
+                    <div style={{ 
+                      width: '70px', 
+                      height: '70px', 
+                      borderRadius: '50%', 
+                      background: 'linear-gradient(45deg, #FFD700, #B8860B)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#000',
+                      fontWeight: 'bold',
+                      fontSize: '20px'
+                    }}>
+                      {brand.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#f0f0f0', 
+                  fontWeight: '600',
+                  textAlign: 'center',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  width: '100%'
+                }}>
+                  {brand.name}
+                </div>
+                <div style={{ 
+                  fontSize: '11px', 
+                  color: '#999',
+                  textAlign: 'center'
+                }}>
+                  {brand.country || brand.origin || ''}
+                </div>
+              </div>
+            ))}
+        </div>
+      </div>
+
       {/* 商品展示 */}
       <div>
         <h2 style={{ 
-          fontSize: '16px', 
+          fontSize: '18px', 
           fontWeight: 'bold', 
           color: '#fff', 
-          marginBottom: '16px'
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
         }}>
+          <span style={{ color: '#F4AF25' }}>🛍️</span>
           精选商品
         </h2>
         <div style={{ 

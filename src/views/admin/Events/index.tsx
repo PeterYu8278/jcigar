@@ -136,6 +136,7 @@ const AdminEvents: React.FC = () => {
     location: true,
     registration: true,
     revenue: true,
+    status: true,
     action: true,
   })
 
@@ -276,12 +277,7 @@ const AdminEvents: React.FC = () => {
       key: 'title',
       render: (title: string, record: any) => (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-            <div style={{ fontWeight: 'bold' }}>{title}</div>
-            <Tag color={getStatusColor(record.status)} style={{ fontSize: '11px', marginLeft: 8 }}>
-              {getStatusText(record.status)}
-            </Tag>
-          </div>
+          <div style={{ fontWeight: 'bold' }}>{title}</div>
           <div style={{ fontSize: '12px', color: '#666' }}>
             {(record.description || '').length > 50 
               ? `${record.description.substring(0, 50)}...` 
@@ -343,6 +339,127 @@ const AdminEvents: React.FC = () => {
           RM{revenueMap[(record as any).id] ?? 0}
         </div>
       ),
+    },
+    {
+      title: t('events.status'),
+      dataIndex: 'status',
+      key: 'status',
+      render: (status: string) => (
+        <Tag color={getStatusColor(status)}>
+          {getStatusText(status)}
+        </Tag>
+      ),
+      filterIcon: (filtered: boolean) => (
+        <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />
+      ),
+      filterDropdown: (props: any) => {
+        const { setSelectedKeys, selectedKeys, confirm, clearFilters } = props as any
+        return (
+          <div style={{ padding: 8 }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 140 }}>
+              <button 
+                style={{ 
+                  padding: '4px 8px', 
+                  borderRadius: 4, 
+                  fontSize: 12, 
+                  cursor: 'pointer', 
+                  transition: 'all 0.2s ease',
+                  ...(selectedKeys[0] === undefined ? 
+                    { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600 } : 
+                    { background: 'transparent', color: '#666' }
+                  )
+                }} 
+                onClick={() => { setSelectedKeys([]); clearFilters?.(); confirm({ closeDropdown: true }) }}
+              >
+                {t('common.all')}
+              </button>
+              <button 
+                style={{ 
+                  padding: '4px 8px', 
+                  borderRadius: 4, 
+                  fontSize: 12, 
+                  cursor: 'pointer', 
+                  transition: 'all 0.2s ease',
+                  ...(selectedKeys[0] === 'draft' ? 
+                    { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600 } : 
+                    { background: 'transparent', color: '#666' }
+                  )
+                }} 
+                onClick={() => { setSelectedKeys(['draft']); confirm({ closeDropdown: true }) }}
+              >
+                {t('events.draft')}
+              </button>
+              <button 
+                style={{ 
+                  padding: '4px 8px', 
+                  borderRadius: 4, 
+                  fontSize: 12, 
+                  cursor: 'pointer', 
+                  transition: 'all 0.2s ease',
+                  ...(selectedKeys[0] === 'published' ? 
+                    { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600 } : 
+                    { background: 'transparent', color: '#666' }
+                  )
+                }} 
+                onClick={() => { setSelectedKeys(['published']); confirm({ closeDropdown: true }) }}
+              >
+                {t('events.published')}
+              </button>
+              <button 
+                style={{ 
+                  padding: '4px 8px', 
+                  borderRadius: 4, 
+                  fontSize: 12, 
+                  cursor: 'pointer', 
+                  transition: 'all 0.2s ease',
+                  ...(selectedKeys[0] === 'ongoing' ? 
+                    { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600 } : 
+                    { background: 'transparent', color: '#666' }
+                  )
+                }} 
+                onClick={() => { setSelectedKeys(['ongoing']); confirm({ closeDropdown: true }) }}
+              >
+                {t('events.ongoing')}
+              </button>
+              <button 
+                style={{ 
+                  padding: '4px 8px', 
+                  borderRadius: 4, 
+                  fontSize: 12, 
+                  cursor: 'pointer', 
+                  transition: 'all 0.2s ease',
+                  ...(selectedKeys[0] === 'completed' ? 
+                    { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600 } : 
+                    { background: 'transparent', color: '#666' }
+                  )
+                }} 
+                onClick={() => { setSelectedKeys(['completed']); confirm({ closeDropdown: true }) }}
+              >
+                {t('events.completed')}
+              </button>
+              <button 
+                style={{ 
+                  padding: '4px 8px', 
+                  borderRadius: 4, 
+                  fontSize: 12, 
+                  cursor: 'pointer', 
+                  transition: 'all 0.2s ease',
+                  ...(selectedKeys[0] === 'cancelled' ? 
+                    { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600 } : 
+                    { background: 'transparent', color: '#666' }
+                  )
+                }} 
+                onClick={() => { setSelectedKeys(['cancelled']); confirm({ closeDropdown: true }) }}
+              >
+                {t('events.cancelled')}
+              </button>
+            </div>
+          </div>
+        )
+      },
+      onFilter: (value: any, record: any) => {
+        return !value || record.status === value
+      },
     },
     {
       title: t('common.action'),
@@ -531,14 +648,15 @@ const AdminEvents: React.FC = () => {
     </div>
                   
                   <div style={{ flex: 1 }}>
-                    {/* 参与人数 + 状态 同行显示 */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>{ev.title}</div>
-                      
+                    {/* 活动名称 + 状态 同行显示 */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', flex: 1, marginRight: 8 }}>{ev.title}</div>
+                      <span style={{ fontSize: 12, padding: '2px 8px', borderRadius: 9999, background: ev.status === 'published' ? 'rgba(34,197,94,0.2)' : ev.status === 'ongoing' ? 'rgba(56,189,248,0.2)' : ev.status === 'completed' ? 'rgba(148,163,184,0.2)' : 'rgba(244,63,94,0.2)', color: ev.status === 'published' ? '#34d399' : ev.status === 'ongoing' ? '#38bdf8' : ev.status === 'completed' ? '#94a3b8' : '#f87171', flexShrink: 0 }}>
+                        {getStatusText(ev.status)}
+                      </span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }}>
-                    <div style={{ fontSize: 12, color: '#f4af25', fontWeight: 600 }}> {t('events.participants')}: {(((ev as any)?.participants?.registered || []).length)}</div>
+                      <div style={{ fontSize: 12, color: '#f4af25', fontWeight: 600, marginBottom: 4 }}> {t('events.participants')}: {(((ev as any)?.participants?.registered || []).length)}</div>
                       {(() => {
                         const s = (ev as any)?.schedule?.startDate
                         const e = (ev as any)?.schedule?.endDate
@@ -548,10 +666,6 @@ const AdminEvents: React.FC = () => {
                         const loc = (ev as any)?.location?.name || ''
                         return `${time} | ${loc}`
                       })()}
-                    </div>
-                    <span style={{ fontSize: 12, padding: '2px 8px', borderRadius: 9999, background: ev.status === 'published' ? 'rgba(34,197,94,0.2)' : ev.status === 'ongoing' ? 'rgba(56,189,248,0.2)' : ev.status === 'completed' ? 'rgba(148,163,184,0.2)' : 'rgba(244,63,94,0.2)', color: ev.status === 'published' ? '#34d399' : ev.status === 'ongoing' ? '#38bdf8' : ev.status === 'completed' ? '#94a3b8' : '#f87171' }}>
-                        {getStatusText(ev.status)}
-                      </span>
                     </div>
                   </div>
                 </div>

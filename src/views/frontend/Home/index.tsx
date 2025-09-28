@@ -142,13 +142,15 @@ const Home: React.FC = () => {
           </Row>
         </div>
         {/* 会员卡 UI - 使用MemberProfileCard组件 */}
-        <MemberProfileCard
-          user={user}
-          showMemberCard={true}
-          onToggleMemberCard={() => {}} // 主页不需要切换功能
-          getMembershipText={getMembershipText}
-          style={{ margin: '0 auto' }}
-        />
+        <div style={{ padding: '0 0px 0px 0px' }}>
+          <MemberProfileCard
+            user={user}
+            showMemberCard={true}
+            onToggleMemberCard={() => {}} // 主页不需要切换功能
+            getMembershipText={getMembershipText}
+            style={{ margin: '0 auto' }}
+          />
+        </div>
       </Card>
 
       
