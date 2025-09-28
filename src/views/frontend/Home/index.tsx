@@ -152,14 +152,41 @@ const Home: React.FC = () => {
       <div style={{ marginTop: 32, marginBottom: 32 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <Title level={4} style={{ margin: 0, color: '#f8f8f8' }}>{t('home.productNavigation')}</Title>
-          <Button type="link" style={{ color: '#ffd700', fontWeight: 600, paddingRight: 0 }}>
+          <Button 
+            type="link" 
+            style={{ color: '#ffd700', fontWeight: 600, paddingRight: 0 }}
+            onClick={() => navigate('/shop')}
+          >
             {t('home.viewAll')}
           </Button>
         </div>
         <Row gutter={[16, 16]}>
           {cigars.slice(0, 4).map((cigar) => (
             <Col xs={6} key={cigar.id} style={{ textAlign: 'center' }}>
-              <div style={{ width: 48, height: 48, borderRadius: 24, background: 'rgba(30,30,30,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px', border: '2px solid rgba(255,215,0,0.2)' }}>
+              <div 
+                style={{ 
+                  width: 48, 
+                  height: 48, 
+                  borderRadius: 24, 
+                  background: 'rgba(30,30,30,0.7)', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  margin: '0 auto 8px', 
+                  border: '2px solid rgba(255,215,0,0.2)',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease'
+                }}
+                onClick={() => navigate('/shop')}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.border = '2px solid rgba(255,215,0,0.6)'
+                  e.currentTarget.style.transform = 'scale(1.05)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.border = '2px solid rgba(255,215,0,0.2)'
+                  e.currentTarget.style.transform = 'scale(1)'
+                }}
+              >
                 <img src={cigar.images?.[0] || 'https://via.placeholder.com/36x36?text=Brand'} alt={cigar.brand} style={{ width: 36, height: 36, objectFit: 'contain' }} />
               </div>
               <div style={{ fontSize: 12, color: '#f0f0f0' }}>{cigar.brand}</div>
@@ -172,7 +199,11 @@ const Home: React.FC = () => {
       <div style={{ marginBottom: 32 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <Title level={4} style={{ margin: '0 0 16px', color: '#f8f8f8' }}>{t('home.popularCigars')}</Title>
-          <Button type="link" style={{ color: '#ffd700', fontWeight: 600, paddingRight: 0 }}>
+          <Button 
+            type="link" 
+            style={{ color: '#ffd700', fontWeight: 600, paddingRight: 0 }}
+            onClick={() => navigate('/shop')}
+          >
             {t('home.viewAll')}
           </Button>
         </div>
@@ -183,7 +214,30 @@ const Home: React.FC = () => {
         ) : (
           <div style={{ display: 'flex', overflowX: 'auto', gap: 16, paddingBottom: 8 }}>
             {cigars.slice(0, 6).map((cigar) => (
-              <div key={cigar.id} style={{ flex: '0 0 160px', background: 'rgba(30,30,30,0.6)', borderRadius: 12, padding: 16, textAlign: 'center', border: '1px solid rgba(255,215,0,0.2)' }}>
+              <div 
+                key={cigar.id} 
+                style={{ 
+                  flex: '0 0 160px', 
+                  background: 'rgba(30,30,30,0.6)', 
+                  borderRadius: 12, 
+                  padding: 16, 
+                  textAlign: 'center', 
+                  border: '1px solid rgba(255,215,0,0.2)',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease'
+                }}
+                onClick={() => navigate('/shop')}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.border = '1px solid rgba(255,215,0,0.6)'
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(255,215,0,0.2)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.border = '1px solid rgba(255,215,0,0.2)'
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = 'none'
+                }}
+              >
                 <img src={cigar.images?.[0] || 'https://via.placeholder.com/96x96?text=Cigar'} alt={cigar.name} style={{ width: 96, height: 96, objectFit: 'contain', marginBottom: 8 }} />
                 <div style={{ fontWeight: 600, color: '#f8f8f8', fontSize: 14 }}>{cigar.name}</div>
                 <div style={{ color: '#D4AF37', fontWeight: 700, fontSize: 14 }}>RM{cigar.price}</div>
@@ -197,7 +251,11 @@ const Home: React.FC = () => {
       <div style={{ marginBottom: 32 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <Title level={4} style={{ margin: '0 0 16px', color: '#f8f8f8' }}>{t('home.latestEvents')}</Title>
-          <Button type="link" style={{ color: '#ffd700', fontWeight: 600, paddingRight: 0 }}>
+          <Button 
+            type="link" 
+            style={{ color: '#ffd700', fontWeight: 600, paddingRight: 0 }}
+            onClick={() => navigate('/events')}
+          >
             {t('home.viewAll')}
           </Button>
         </div>
@@ -245,13 +303,38 @@ const Home: React.FC = () => {
         <Title level={4} style={{ margin: '0 0 16px', color: '#f8f8f8' }}>{t('home.quickNavigation')}</Title>
         <Row gutter={[16, 16]}>
           {[
-            { title: t('home.bookEvent'), icon: <CalendarOutlined /> },
-            { title: t('home.storeNavigation'), icon: <TeamOutlined /> },
-            { title: t('home.friendInvite'), icon: <StarOutlined /> },
-            { title: t('home.pointsExchange'), icon: <TrophyOutlined /> },
+            { title: t('home.bookEvent'), icon: <CalendarOutlined />, path: '/events' },
+            { title: t('home.storeNavigation'), icon: <ShoppingOutlined />, path: '/shop' },
+            { title: t('home.friendInvite'), icon: <StarOutlined />, path: '/profile' },
+            { title: t('home.pointsExchange'), icon: <TrophyOutlined />, path: '/profile' },
           ].map((f) => (
             <Col xs={6} key={f.title}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, background: 'rgba(30,30,30,0.6)', borderRadius: 12, padding: 12, textAlign: 'center', border: '1px solid rgba(255,215,0,0.2)' }}>
+              <div 
+                style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  gap: 8, 
+                  background: 'rgba(30,30,30,0.6)', 
+                  borderRadius: 12, 
+                  padding: 12, 
+                  textAlign: 'center', 
+                  border: '1px solid rgba(255,215,0,0.2)',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease'
+                }}
+                onClick={() => navigate(f.path)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.border = '1px solid rgba(255,215,0,0.6)'
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(255,215,0,0.2)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.border = '1px solid rgba(255,215,0,0.2)'
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = 'none'
+                }}
+              >
                 <div style={{ color: '#D4AF37', fontSize: 24 }}>{f.icon}</div>
                 <div style={{ fontSize: 12, color: '#f8f8f8', fontWeight: 600 }}>{f.title}</div>
             </div>
