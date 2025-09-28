@@ -43,13 +43,13 @@ const BrandDetail: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [cartItems, setCartItems] = useState<Record<string, number>>({})
   
-  // 模拟产品数据
-  const mockProducts: ProductItem[] = [
+  // 默认产品数据（当没有真实数据时使用）
+  const defaultProducts: ProductItem[] = [
     {
       id: '1',
       name: '世纪六号 (Siglo VI)',
       description: '经典系列的旗舰，口感丰富平衡。',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDF1G0vO_P-653sM8l9oJd2-i9x7-o6C1D6v1b6f0e4h9kM1c9G7q6o6e4h4b0h1g3j2k1l0p8n7m6n5o4',
+      image: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQwIiB5PSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+U2lnbG8gVkk8L3RleHQ+Cjwvc3ZnPgo=',
       price: 1200,
       quantity: 0
     },
@@ -57,7 +57,7 @@ const BrandDetail: React.FC = () => {
       id: '2',
       name: '导师 (Espléndidos)',
       description: '丘吉尔尺寸的标志性雪茄，浓郁强劲。',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB_9q8z7r6t5o4p3c2e1w0x9v8u7y6a5s4d3c2b1a0z9y8x7w6v5u4t3s2r1q0',
+      image: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQwIiB5PSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+RXNwbMOpbmRpZG9zPC90ZXh0Pgo8L3N2Zz4K',
       price: 1500,
       quantity: 0
     },
@@ -65,18 +65,18 @@ const BrandDetail: React.FC = () => {
       id: '3',
       name: '贝伊可 56 (Behike 56)',
       description: '品牌中最奢华的系列，使用稀有的Medio Tiempo烟叶。',
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA-z9y8x7w6v5u4t3s2r1q0p9o8n7m6l5k4j3h2g1f0e9d8c7b6a5s4',
+      image: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQwIiB5PSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+QmVoaWtlIDU2PC90ZXh0Pgo8L3N2Zz4K',
       price: 2500,
       quantity: 0
     }
   ]
 
-  // 模拟评价数据
-  const mockReviews: Review[] = [
+  // 默认评价数据
+  const defaultReviews: Review[] = [
     {
       id: '1',
       userName: '雪茄鉴赏家',
-      userAvatar: 'https://lh3.googleusercontent.com/a/ACg8ocL8d_1q5U_z6z6q_1q5U_z6z6q_1q5U_z6z6q_1q5U_z=s96-c',
+      userAvatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiM2NjY2NjYiLz4KPHN2ZyB4PSIxMCIgeT0iMTAiIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjOTk5OTk5Ij4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIi8+Cjwvc3ZnPgo8L3N2Zz4K',
       rating: 5,
       comment: '高希霸是传奇，名不虚传。每一口都是享受，风味层次感极强，从奶油、可可到皮革的香气，完美融合。绝对是特殊场合的首选。',
       date: '2023年10月28日'
@@ -84,7 +84,7 @@ const BrandDetail: React.FC = () => {
     {
       id: '2',
       userName: '老饕王先生',
-      userAvatar: 'https://lh3.googleusercontent.com/a/ACg8ocK8d_1q5U_z6z6q_1q5U_z6z6q_1q5U_z6z6q_1q5U_z=s96-c',
+      userAvatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiM2NjY2NjYiLz4KPHN2ZyB4PSIxMCIgeT0iMTAiIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjOTk5OTk5Ij4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIi8+Cjwvc3ZnPgo8L3N2Zz4K',
       rating: 5,
       comment: '贝伊可56的体验是超凡的。烟雾顺滑，香气浓郁但绝不霸道。这是一支值得花时间慢慢品味的雪茄，每一分钱都物有所值。',
       date: '2023年9月15日'
@@ -97,13 +97,14 @@ const BrandDetail: React.FC = () => {
       
       setLoading(true)
       try {
-        const [brandData, cigarsData] = await Promise.all([
-          getBrandById(brandId),
-          getCigarsByBrand('高希霸') // 使用品牌名称查询
-        ])
-        
+        const brandData = await getBrandById(brandId)
         setBrand(brandData)
-        setProducts(cigarsData)
+        
+        // 如果获取到品牌数据，使用品牌名称查询产品
+        if (brandData?.name) {
+          const cigarsData = await getCigarsByBrand(brandData.name)
+          setProducts(cigarsData)
+        }
       } catch (error) {
         console.error('加载品牌数据失败:', error)
         message.error('加载品牌信息失败')
@@ -147,6 +148,42 @@ const BrandDetail: React.FC = () => {
         background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)'
       }}>
         <Spin size="large" />
+      </div>
+    )
+  }
+
+  if (!brand) {
+    return (
+      <div style={{ 
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)',
+        color: '#ffffff',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <Title level={2} style={{ color: '#FFD700', marginBottom: '16px' }}>
+            品牌未找到
+          </Title>
+          <Paragraph style={{ color: '#d1d5db', marginBottom: '24px' }}>
+            抱歉，您访问的品牌不存在或已被删除。
+          </Paragraph>
+          <Button 
+            type="primary"
+            onClick={() => navigate('/shop')}
+            style={{
+              background: 'linear-gradient(to right, #FFD700, #B8860B)',
+              border: 'none',
+              color: '#000000',
+              fontWeight: 'bold'
+            }}
+          >
+            返回商城
+          </Button>
+        </div>
       </div>
     )
   }
@@ -203,7 +240,7 @@ const BrandDetail: React.FC = () => {
         }}>
           <img 
             alt={`${brand?.name || '高希霸'}雪茄`}
-            src={brand?.logo || 'https://lh3.googleusercontent.com/aida-public/AB6AXuD5U3YWRN9U_FnZlD21Pbr1z7Kx8TyoxlAnRhsv7owHVccijOYispFy3NctN-GkuurV7dyuCmqbYl2Iq3CpxxIzytn45ivoXx0bPAzyA5o0JCVJIhAvPWRLiGyQdqT8PnKXj2KH0BB96lRKS8n_ySqgrqfjc5imdMlup87f7kcIuxgnmeBcyd9D_BP705iuNuOazDdlG2qWdmFpcUMUdwP0zKLm0V5LH2UlVu_9sPxu7UkyuA-WVWZJcbm51q1gAfpwp8KqZdp1wsum'}
+            src={brand?.logo || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgdmlld0JveD0iMCAwIDI1NiAyNTYiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2IiBmaWxsPSIjMzMzMzMzIi8+CjxjaXJjbGUgY3g9IjEyOCIgY3k9IjEyOCIgcj0iODAiIGZpbGw9IiM2NjY2NjYiLz4KPHN2ZyB4PSI4OCIgeT0iODgiIHdpZHRoPSI4MCIgaGVpZ2h0PSI4MCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjOTk5OTk5Ij4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIi8+Cjwvc3ZnPgo8L3N2Zz4K'}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
           <div style={{
@@ -285,7 +322,14 @@ const BrandDetail: React.FC = () => {
               {t('inventory.representativeProducts')}
             </Title>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {mockProducts.map((product) => (
+              {(products.length > 0 ? products.map(cigar => ({
+                id: cigar.id,
+                name: cigar.name,
+                description: cigar.description || '优质雪茄产品',
+                image: cigar.images?.[0] || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQwIiB5PSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Q2lnYXI8L3RleHQ+Cjwvc3ZnPgo=',
+                price: cigar.price || 1000,
+                quantity: 0
+              })) : defaultProducts).map((product) => (
                 <div key={product.id} style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -385,7 +429,7 @@ const BrandDetail: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {mockReviews.map((review) => (
+              {defaultReviews.map((review) => (
                 <div key={review.id} style={{
                   borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
                   paddingBottom: '16px'

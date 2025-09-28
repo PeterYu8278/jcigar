@@ -22,6 +22,7 @@ import AdminInventory from './views/admin/Inventory'
 import AdminEvents from './views/admin/Events'
 import AdminOrders from './views/admin/Orders'
 import AdminFinance from './views/admin/Finance'
+import CloudinaryTestPage from './views/admin/CloudinaryTest'
 
 // 认证页面
 import Login from './views/auth/Login'
@@ -108,6 +109,7 @@ function App() {
                   <Route path="/admin/events" element={<ProtectedRoute roles={['admin']}><AdminEvents /></ProtectedRoute>} />
                   <Route path="/admin/orders" element={<ProtectedRoute roles={['admin']}><AdminOrders /></ProtectedRoute>} />
                   <Route path="/admin/finance" element={<ProtectedRoute roles={['admin']}><AdminFinance /></ProtectedRoute>} />
+                  <Route path="/admin/cloudinary-test" element={<ProtectedRoute roles={['admin']}><CloudinaryTestPage /></ProtectedRoute>} />
                   
                   {/* 默认重定向 */}
                   <Route path="*" element={<Navigate to="/" replace />} />

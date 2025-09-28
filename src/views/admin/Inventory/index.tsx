@@ -5,6 +5,7 @@ import { Table, Button, Tag, Space, Typography, Input, Select, Progress, Modal, 
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, WarningOutlined, UploadOutlined, DownloadOutlined, MinusCircleOutlined, EyeOutlined } from '@ant-design/icons'
 import type { Cigar, InventoryLog, Brand } from '../../../types'
 import { getCigars, createDocument, updateDocument, deleteDocument, COLLECTIONS, getAllInventoryLogs, getAllOrders, getUsers, getBrands, getBrandById } from '../../../services/firebase/firestore'
+import ImageUpload from '../../../components/common/ImageUpload'
 
 const { Title } = Typography
 const { Search } = Input
@@ -595,6 +596,13 @@ const AdminInventory: React.FC = () => {
                     onClick={() => setCreatingBrand(true)}
                   >
                     {t('inventory.addBrand')}
+                  </Button>
+                  <Button 
+                    type="default" 
+                    onClick={() => window.open('/admin/cloudinary-test', '_blank')}
+                    style={{ color: '#1890ff' }}
+                  >
+                    Cloudinary 测试
                   </Button>
                 </Space>
               </div>
@@ -1229,7 +1237,13 @@ const AdminInventory: React.FC = () => {
             label={t('inventory.brandLogo')}
             name="logo"
           >
-            <Input placeholder="https://example.com/logo.png" />
+            <ImageUpload
+              folder="brands"
+              maxSize={2 * 1024 * 1024} // 2MB
+              width={120}
+              height={120}
+              showPreview={true}
+            />
           </Form.Item>
           
           <Form.Item
