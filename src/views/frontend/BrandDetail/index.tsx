@@ -15,23 +15,6 @@ import type { Brand, Cigar } from '../../../types'
 
 const { Title, Paragraph, Text } = Typography
 
-interface ProductItem {
-  id: string
-  name: string
-  description: string
-  image: string
-  price: number
-  quantity: number
-}
-
-interface Review {
-  id: string
-  userName: string
-  userAvatar: string
-  rating: number
-  comment: string
-  date: string
-}
 
 const BrandDetail: React.FC = () => {
   const navigate = useNavigate()
@@ -43,53 +26,7 @@ const BrandDetail: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [cartItems, setCartItems] = useState<Record<string, number>>({})
   
-  // 默认产品数据（当没有真实数据时使用）
-  const defaultProducts: ProductItem[] = [
-    {
-      id: '1',
-      name: '世纪六号 (Siglo VI)',
-      description: '经典系列的旗舰，口感丰富平衡。',
-      image: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQwIiB5PSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+U2lnbG8gVkk8L3RleHQ+Cjwvc3ZnPgo=',
-      price: 1200,
-      quantity: 0
-    },
-    {
-      id: '2',
-      name: '导师 (Espléndidos)',
-      description: '丘吉尔尺寸的标志性雪茄，浓郁强劲。',
-      image: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQwIiB5PSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+RXNwbMOpbmRpZG9zPC90ZXh0Pgo8L3N2Zz4K',
-      price: 1500,
-      quantity: 0
-    },
-    {
-      id: '3',
-      name: '贝伊可 56 (Behike 56)',
-      description: '品牌中最奢华的系列，使用稀有的Medio Tiempo烟叶。',
-      image: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQwIiB5PSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+QmVoaWtlIDU2PC90ZXh0Pgo8L3N2Zz4K',
-      price: 2500,
-      quantity: 0
-    }
-  ]
 
-  // 默认评价数据
-  const defaultReviews: Review[] = [
-    {
-      id: '1',
-      userName: '雪茄鉴赏家',
-      userAvatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiM2NjY2NjYiLz4KPHN2ZyB4PSIxMCIgeT0iMTAiIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjOTk5OTk5Ij4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIi8+Cjwvc3ZnPgo8L3N2Zz4K',
-      rating: 5,
-      comment: '高希霸是传奇，名不虚传。每一口都是享受，风味层次感极强，从奶油、可可到皮革的香气，完美融合。绝对是特殊场合的首选。',
-      date: '2023年10月28日'
-    },
-    {
-      id: '2',
-      userName: '老饕王先生',
-      userAvatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiM2NjY2NjYiLz4KPHN2ZyB4PSIxMCIgeT0iMTAiIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjOTk5OTk5Ij4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIi8+Cjwvc3ZnPgo8L3N2Zz4K',
-      rating: 5,
-      comment: '贝伊可56的体验是超凡的。烟雾顺滑，香气浓郁但绝不霸道。这是一支值得花时间慢慢品味的雪茄，每一分钱都物有所值。',
-      date: '2023年9月15日'
-    }
-  ]
 
   useEffect(() => {
     const loadBrandData = async () => {
@@ -328,14 +265,15 @@ const BrandDetail: React.FC = () => {
               {t('inventory.representativeProducts')}
             </Title>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {(products.length > 0 ? products.map(cigar => ({
-                id: cigar.id,
-                name: cigar.name,
-                description: cigar.description || '优质雪茄产品',
-                image: cigar.images?.[0] || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQwIiB5PSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Q2lnYXI8L3RleHQ+Cjwvc3ZnPgo=',
-                price: cigar.price || 1000,
-                quantity: 0
-              })) : defaultProducts).map((product) => (
+              {products.length > 0 ? (
+                products.map(cigar => ({
+                  id: cigar.id,
+                  name: cigar.name,
+                  description: cigar.description || '优质雪茄产品',
+                  image: cigar.images?.[0] || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQwIiB5PSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Q2lnYXI8L3RleHQ+Cjwvc3ZnPgo=',
+                  price: cigar.price || 1000,
+                  quantity: 0
+                })).map((product) => (
                 <div key={product.id} style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -399,7 +337,18 @@ const BrandDetail: React.FC = () => {
                     />
                   </div>
                 </div>
-              ))}
+                ))
+              ) : (
+                <div style={{ 
+                  textAlign: 'center', 
+                  padding: '24px', 
+                  color: '#9ca3af' 
+                }}>
+                  <Text style={{ color: '#9ca3af' }}>
+                    暂无产品信息
+                  </Text>
+                </div>
+              )}
             </div>
           </Card>
 
@@ -435,27 +384,15 @@ const BrandDetail: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {defaultReviews.map((review) => (
-                <div key={review.id} style={{
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-                  paddingBottom: '16px'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                    <Avatar src={review.userAvatar} size={40} style={{ marginRight: '12px' }} />
-                    <div>
-                      <Text style={{ color: '#ffffff', fontWeight: 'bold' }}>
-                        {review.userName}
-                      </Text>
-                      <div style={{ fontSize: '12px', color: '#9ca3af' }}>
-                        {review.date}
-                      </div>
-                    </div>
-                  </div>
-                  <Paragraph style={{ color: '#d1d5db', lineHeight: 1.6, margin: 0 }}>
-                    "{review.comment}"
-                  </Paragraph>
-                </div>
-              ))}
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '24px', 
+                color: '#9ca3af' 
+              }}>
+                <Text style={{ color: '#9ca3af' }}>
+                  暂无客户评价
+                </Text>
+              </div>
             </div>
           </Card>
         </div>

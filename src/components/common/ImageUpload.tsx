@@ -4,11 +4,13 @@ import { DeleteOutlined, LoadingOutlined, PlusOutlined, UploadOutlined } from '@
 import { Button, message, Modal } from 'antd'
 import { useCloudinary } from '../../hooks/useCloudinary'
 import type { UploadResult } from '../../services/cloudinary'
+import { getUploadConfig, getFullFolderPath, isValidFolderName } from '../../config/cloudinaryFolders'
+import { validateFileForFolder, type CloudinaryFolderName } from '../../types/cloudinary'
 
 interface ImageUploadProps {
   value?: string // 当前图片URL
   onChange?: (url: string | null) => void // 图片变化回调
-  folder?: string // Cloudinary文件夹
+  folder?: CloudinaryFolderName | string // Cloudinary文件夹名称或自定义路径
   maxSize?: number // 最大文件大小（字节）
   accept?: string // 接受的文件类型
   width?: number // 预览图片宽度
@@ -20,11 +22,11 @@ interface ImageUploadProps {
 const ImageUpload: React.FC<ImageUploadProps> = ({
   value,
   onChange,
-  folder = 'cigar-app',
-  maxSize = 5 * 1024 * 1024, // 5MB
+  folder = 'temp',
+  maxSize,
   accept = 'image/*',
-  width = 120,
-  height = 120,
+  width,
+  height,
   showPreview = true,
   disabled = false
 }) => {
@@ -32,25 +34,40 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   const [previewVisible, setPreviewVisible] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // 获取文件夹配置
+  const folderConfig = isValidFolderName(folder) ? getUploadConfig(folder) : null
+  const finalFolder = isValidFolderName(folder) ? getFullFolderPath(folder) : folder
+  const finalMaxSize = maxSize || folderConfig?.maxSize || 5 * 1024 * 1024
+  const finalWidth = width || folderConfig?.width || 120
+  const finalHeight = height || folderConfig?.height || 120
+
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
-    // 检查文件大小
-    if (file.size > maxSize) {
-      message.error(`文件大小不能超过 ${maxSize / 1024 / 1024}MB`)
-      return
-    }
+    // 使用新的验证逻辑
+    if (isValidFolderName(folder)) {
+      const validation = validateFileForFolder(file, folder)
+      if (!validation.valid) {
+        message.error(validation.error)
+        return
+      }
+    } else {
+      // 自定义文件夹的验证
+      if (file.size > finalMaxSize) {
+        message.error(`文件大小不能超过 ${finalMaxSize / 1024 / 1024}MB`)
+        return
+      }
 
-    // 检查文件类型
-    if (!file.type.startsWith('image/')) {
-      message.error('请选择图片文件')
-      return
+      if (!file.type.startsWith('image/')) {
+        message.error('请选择图片文件')
+        return
+      }
     }
 
     try {
       const result: UploadResult = await upload(file, {
-        folder
+        folder: finalFolder
       })
       
       onChange?.(result.secure_url)
@@ -92,8 +109,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             src={value}
             alt="预览"
             style={{
-              width: `${width}px`,
-              height: `${height}px`,
+              width: `${finalWidth}px`,
+              height: `${finalHeight}px`,
               objectFit: 'cover',
               borderRadius: '8px',
               border: '1px solid #d9d9d9',
@@ -126,8 +143,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       ) : (
         <div
           style={{
-            width: `${width}px`,
-            height: `${height}px`,
+            width: `${finalWidth}px`,
+            height: `${finalHeight}px`,
             border: '2px dashed #d9d9d9',
             borderRadius: '8px',
             display: 'flex',

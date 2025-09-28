@@ -47,6 +47,7 @@ export const ROUTE_PERMISSIONS = {
   '/events': ['guest', 'member', 'admin'],
   '/shop': ['member', 'admin'],
   '/profile': ['member', 'admin'],
+  '/brand': ['member', 'admin'], // 品牌详情页面权限
   '/admin': ['admin'],
   '/admin/users': ['admin'],
   '/admin/inventory': ['admin'],
@@ -62,6 +63,21 @@ export const hasPermission = (userRole: UserRole, permission: keyof Permission):
 
 // 路由权限检查函数
 export const canAccessRoute = (userRole: UserRole, path: string): boolean => {
+  // 直接匹配
   const allowedRoles = ROUTE_PERMISSIONS[path as keyof typeof ROUTE_PERMISSIONS];
-  return allowedRoles ? allowedRoles.includes(userRole) : false;
+  if (allowedRoles) {
+    return allowedRoles.includes(userRole);
+  }
+  
+  // 动态路由匹配
+  if (path.startsWith('/brand/')) {
+    return ['member', 'admin'].includes(userRole);
+  }
+  
+  if (path.startsWith('/admin/')) {
+    return userRole === 'admin';
+  }
+  
+  // 默认拒绝访问
+  return false;
 };

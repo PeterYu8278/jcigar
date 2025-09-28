@@ -7,6 +7,7 @@ import type { Event, User, Cigar } from '../../../types'
 import { getEvents, createDocument, updateDocument, deleteDocument, COLLECTIONS, getUsers, registerForEvent, unregisterFromEvent, getCigars, createOrdersFromEventAllocations, getAllOrders, getUsersByIds } from '../../../services/firebase/firestore'
 import ParticipantsList from '../../../components/admin/ParticipantsList'
 import ParticipantsSummary from '../../../components/admin/ParticipantsSummary'
+import ImageUpload from '../../../components/common/ImageUpload'
 import { useTranslation } from 'react-i18next'
 
 const { Title } = Typography
@@ -1486,6 +1487,12 @@ const AdminEvents: React.FC = () => {
           </Form.Item>
           <Form.Item label={t('common.description')} name="description">
             <Input.TextArea rows={3} />
+          </Form.Item>
+          <Form.Item label={t('common.eventImage')} name="image">
+            <ImageUpload
+              folder="events"
+              showPreview={true}
+            />
           </Form.Item>
           <Form.Item label={t('common.locationName')} name="locationName" rules={[{ required: true, message: t('common.pleaseInputLocationName') }]}>
             <Input />

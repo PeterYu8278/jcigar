@@ -21,6 +21,7 @@ import { updateDocument } from '../../../services/firebase/firestore'
 import type { User } from '../../../types'
 import { useTranslation } from 'react-i18next'
 import { MemberProfileCard } from '../../../components/common/MemberProfileCard'
+import ImageUpload from '../../../components/common/ImageUpload'
 
 const Profile: React.FC = () => {
   const { user, setUser } = useAuthStore()
@@ -298,7 +299,7 @@ const Profile: React.FC = () => {
         <Form
           form={form}
           layout="vertical"
-          onFinish={async (values: { displayName: string; phone?: string; notifications: boolean }) => {
+          onFinish={async (values: { displayName: string; phone?: string; notifications: boolean; avatar?: string }) => {
             if (!user) return
             setSaving(true)
             try {
@@ -307,6 +308,7 @@ const Profile: React.FC = () => {
                 profile: {
                   ...user.profile,
                   phone: values.phone,
+                  avatar: values.avatar,
                   preferences: {
                     ...user.profile?.preferences,
                     notifications: values.notifications,
@@ -327,6 +329,16 @@ const Profile: React.FC = () => {
             }
           }}
         >
+          <Form.Item
+            label={t('profile.avatar')}
+            name="avatar"
+          >
+            <ImageUpload
+              folder="users"
+              showPreview={true}
+            />
+          </Form.Item>
+          
           <Form.Item
             label={t('profile.nameLabel')}
             name="displayName"

@@ -58,9 +58,6 @@ const BrandForm: React.FC<BrandFormProps> = ({
         >
           <ImageUpload
             folder="brands"
-            maxSize={2 * 1024 * 1024} // 2MB
-            width={120}
-            height={120}
             showPreview={true}
           />
         </Form.Item>

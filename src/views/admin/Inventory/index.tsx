@@ -938,6 +938,18 @@ const AdminInventory: React.FC = () => {
               <div style={{ fontSize: 12, color: 'rgba(244,175,37,0.8)' }}>{t('common.uploadProductImage')}</div>
             </div>
           )}
+          
+          {/* 桌面端图片上传 */}
+          {!isMobile && (
+            <div style={{ marginBottom: 16 }}>
+              <Form.Item label={t('common.productImage')} name="images">
+                <ImageUpload
+                  folder="products"
+                  showPreview={true}
+                />
+              </Form.Item>
+            </div>
+          )}
         </div>
         <Form form={form} layout="horizontal" labelCol={{ flex: '100px' }} wrapperCol={{ flex: 'auto' }} onFinish={async (values: any) => {
           setLoading(true)
