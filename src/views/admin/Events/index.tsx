@@ -185,7 +185,7 @@ const AdminEvents: React.FC = () => {
         try {
           const orderResult = await createOrdersFromEventAllocations(event.id)
           if (orderResult.success && orderResult.createdOrders > 0) {
-            message.success(`活动已自动结束，并创建了 ${orderResult.createdOrders} 个订单`)
+            message.success(t('common.eventAutoEndedWithOrders', { count: orderResult.createdOrders }))
           }
         } catch (error) {
           console.error('Auto-create orders failed:', error)
@@ -628,7 +628,7 @@ const AdminEvents: React.FC = () => {
           pageSize: 10,
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
+          showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
         }}
       />
       ) : (

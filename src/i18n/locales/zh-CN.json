@@ -101,7 +101,18 @@
     "uploadProductImage": "上传产品图片",
     "deleteProduct": "删除产品",
     "memberQRCode": "会员QR Code",
-    "saveFailed": "保存失败"
+    "saveFailed": "保存失败",
+    "action": "操作",
+    "eventAutoEndedWithOrders": "活动已自动结束，并创建了 {{count}} 个订单",
+    "overview": "概览",
+    "completeEdit": "完成编辑",
+    "editEvent": "编辑活动",
+    "cancelEdit": "取消编辑",
+    "setToDraft": "设为草稿",
+    "setToPublished": "设为已发布",
+    "setToCancelled": "设为已取消",
+    "quickStatus": "快速状态",
+    "noDescription": "无描述"
   },
   "auth": {
     "login": "登录",
@@ -194,7 +205,9 @@
     "phonePlaceholder": "请输入手机号码",
     "notificationsToggle": "开启通知",
     "phoneRequired": "请输入手机号码",
-    "phoneInvalid": "请输入有效的手机号(7-15位数字，可含+)"
+    "phoneInvalid": "请输入有效的手机号(7-15位数字，可含+)",
+    "membershipLevel": "会员等级",
+    "points": "积分"
   },
   "events": {
     "title": "活动列表",

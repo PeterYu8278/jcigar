@@ -101,7 +101,18 @@
     "uploadProductImage": "Upload Product Image",
     "deleteProduct": "Delete Product",
     "memberQRCode": "Member QR Code",
-    "saveFailed": "Save failed"
+    "saveFailed": "Save failed",
+    "action": "Action",
+    "eventAutoEndedWithOrders": "Event auto-ended and created {{count}} orders",
+    "overview": "Overview",
+    "completeEdit": "Complete Edit",
+    "editEvent": "Edit Event",
+    "cancelEdit": "Cancel Edit",
+    "setToDraft": "Set to Draft",
+    "setToPublished": "Set to Published",
+    "setToCancelled": "Set to Cancelled",
+    "quickStatus": "Quick Status",
+    "noDescription": "No description"
   },
   "auth": {
     "login": "Login",
@@ -195,6 +206,8 @@
     "notificationsToggle": "Enable Notifications",
     "phoneRequired": "Please enter phone number",
     "phoneInvalid": "Please enter a valid phone number (7-15 digits, + allowed)",
+    "membershipLevel": "Membership Level",
+    "points": "Points",
     "eventName": "Event Name",
     "eventTime": "Event Time",
     "location": "Location",

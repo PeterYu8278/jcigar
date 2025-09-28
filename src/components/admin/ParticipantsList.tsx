@@ -1,6 +1,6 @@
 import React from 'react'
 import { Spin, Select, InputNumber, Button, Modal, message } from 'antd'
-import { CheckCircleOutlined, UserOutlined } from '@ant-design/icons'
+import { CheckCircleOutlined, UserOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { User, Cigar, Event } from '../../types'
 import { updateDocument, COLLECTIONS, unregisterFromEvent } from '../../services/firebase/firestore'
 import { useTranslation } from 'react-i18next'
@@ -137,30 +137,35 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
               ) : (
                 <CheckCircleOutlined style={{ color: '#52c41a' }} />
               )}
-              <Button size="small" danger onClick={async () => {
-                Modal.confirm({
-                  title: t('participants.removeParticipant'),
-                  content: t('participants.confirmRemoveParticipant'),
-                  okButtonProps: { danger: true },
-                  onOk: async () => {
-                    const res = await unregisterFromEvent((event as any).id, uid)
-                    if ((res as any)?.success) {
-                      message.success(t('participants.removed'))
-                      // 刷新事件数据
-                      const updatedParticipants = registeredParticipants.filter((id: string) => id !== uid)
-                      const updatedAllocations = { ...(event as any).allocations }
-                      delete updatedAllocations[uid]
-                      onEventUpdate({ 
-                        ...event, 
-                        participants: { ...(event as any).participants, registered: updatedParticipants },
-                        allocations: updatedAllocations
-                      } as Event)
-                    } else {
-                      message.error(t('participants.removeFailed'))
+              <Button 
+                size="small" 
+                danger 
+                icon={<DeleteOutlined />}
+                onClick={async () => {
+                  Modal.confirm({
+                    title: t('participants.removeParticipant'),
+                    content: t('participants.confirmRemoveParticipant'),
+                    okButtonProps: { danger: true },
+                    onOk: async () => {
+                      const res = await unregisterFromEvent((event as any).id, uid)
+                      if ((res as any)?.success) {
+                        message.success(t('participants.removed'))
+                        // 刷新事件数据
+                        const updatedParticipants = registeredParticipants.filter((id: string) => id !== uid)
+                        const updatedAllocations = { ...(event as any).allocations }
+                        delete updatedAllocations[uid]
+                        onEventUpdate({ 
+                          ...event, 
+                          participants: { ...(event as any).participants, registered: updatedParticipants },
+                          allocations: updatedAllocations
+                        } as Event)
+                      } else {
+                        message.error(t('participants.removeFailed'))
+                      }
                     }
-                  }
-                })
-              }}>{t('participants.removeParticipant')}</Button>
+                  })
+                }}
+              />
             </div>
           </div>
         )
