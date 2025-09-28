@@ -1,26 +1,36 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { ConfigProvider } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import enUS from 'antd/locale/en_US'
 import dayjs from 'dayjs'
-import { useI18nStore } from '../../store/modules/i18n'
 
 interface LocalizedAppProps {
   children: React.ReactNode
 }
 
 const LocalizedApp: React.FC<LocalizedAppProps> = ({ children }) => {
-  const store = useI18nStore()
-  const language = store?.language || 'zh-CN'
+  const [language, setLanguage] = useState<'zh-CN' | 'en-US'>('zh-CN')
 
   // 根据语言设置Ant Design的locale
   const antdLocale = language === 'zh-CN' ? zhCN : enUS
   
-  // 根据语言设置dayjs的locale
-  React.useEffect(() => {
-    if (language) {
-      dayjs.locale(language === 'zh-CN' ? 'zh-cn' : 'en')
+  // 初始化语言设置
+  useEffect(() => {
+    // 从localStorage获取保存的语言设置
+    const savedLanguage = localStorage.getItem('i18n-storage')
+    if (savedLanguage) {
+      try {
+        const parsed = JSON.parse(savedLanguage)
+        if (parsed.state?.language) {
+          setLanguage(parsed.state.language)
+        }
+      } catch (error) {
+        console.warn('Failed to parse saved language:', error)
+      }
     }
+    
+    // 设置dayjs locale
+    dayjs.locale(language === 'zh-CN' ? 'zh-cn' : 'en')
   }, [language])
 
   return (
