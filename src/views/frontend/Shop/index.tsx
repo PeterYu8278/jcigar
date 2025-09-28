@@ -267,7 +267,7 @@ const Shop: React.FC = () => {
                   color: '#999',
                   textAlign: 'center'
                 }}>
-                  {brand.country || brand.origin || ''}
+                  {brand.country || ''}
                 </div>
               </div>
             ))}
@@ -376,7 +376,7 @@ const Shop: React.FC = () => {
                   color: '#999',
                   textAlign: 'center'
                 }}>
-                  {brand.country || brand.origin || ''}
+                  {brand.country || ''}
                 </div>
               </div>
             ))}
