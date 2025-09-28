@@ -117,7 +117,6 @@ export const deleteFile = async (publicId: string): Promise<boolean> => {
   try {
     // 注意：删除文件需要服务器端API密钥，这里只是示例
     // 在实际应用中，应该通过后端API来删除文件
-    console.warn('删除文件功能需要在服务器端实现')
     return false
   } catch (error) {
     console.error('Cloudinary 删除失败:', error)

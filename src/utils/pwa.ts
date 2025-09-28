@@ -50,27 +50,21 @@ export const initializePWA = async (): Promise<void> => {
       
       // Listen for updates
       wb.addEventListener('controlling', () => {
-        console.log('[PWA] Service worker is controlling the page');
       });
       
       // Listen for waiting
       wb.addEventListener('waiting', () => {
-        console.log('[PWA] New service worker is waiting');
         // Show update notification to user
         showUpdateNotification();
       });
       
       // Listen for activated
       wb.addEventListener('activated', () => {
-        console.log('[PWA] Service worker is activated');
       });
-      
-      console.log('[PWA] Service worker registered successfully');
     }
     
     // Listen for beforeinstallprompt event
     window.addEventListener('beforeinstallprompt', (e) => {
-      console.log('[PWA] Install prompt triggered');
       e.preventDefault();
       deferredPrompt = e as BeforeInstallPromptEvent;
       installState.isInstallable = true;
@@ -79,7 +73,6 @@ export const initializePWA = async (): Promise<void> => {
     
     // Listen for appinstalled event
     window.addEventListener('appinstalled', () => {
-      console.log('[PWA] App installed successfully');
       installState.isInstalled = true;
       installState.canInstall = false;
       deferredPrompt = null;
@@ -88,8 +81,6 @@ export const initializePWA = async (): Promise<void> => {
     // Update install state
     installState.isInstalled = isInstalled();
     installState.isStandalone = isStandalone();
-    
-    console.log('[PWA] PWA initialized successfully');
   } catch (error) {
     console.error('[PWA] Failed to initialize PWA:', error);
   }
@@ -98,16 +89,12 @@ export const initializePWA = async (): Promise<void> => {
 // Show install prompt
 export const showInstallPrompt = async (): Promise<boolean> => {
   if (!deferredPrompt) {
-    console.log('[PWA] No install prompt available');
     return false;
   }
   
   try {
     await deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    
-    console.log('[PWA] Install prompt result:', outcome);
-    
     if (outcome === 'accepted') {
       installState.isInstalled = true;
       installState.canInstall = false;
@@ -130,8 +117,6 @@ export const getInstallState = (): PWAInstallState => {
 // Show update notification
 export const showUpdateNotification = (): void => {
   // This would typically show a toast notification or modal
-  console.log('[PWA] New version available. Please refresh the page.');
-  
   // You can integrate this with your UI notification system
   if (confirm('新版本可用！是否立即更新？')) {
     window.location.reload();
@@ -145,7 +130,6 @@ export const checkForUpdates = async (): Promise<void> => {
       const registration = await navigator.serviceWorker.getRegistration();
       if (registration) {
         await registration.update();
-        console.log('[PWA] Checking for updates...');
       }
     } catch (error) {
       console.error('[PWA] Failed to check for updates:', error);
@@ -161,7 +145,6 @@ export const unregisterServiceWorker = async (): Promise<void> => {
       for (const registration of registrations) {
         await registration.unregister();
       }
-      console.log('[PWA] Service worker unregistered');
     } catch (error) {
       console.error('[PWA] Failed to unregister service worker:', error);
     }

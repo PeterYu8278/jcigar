@@ -21,7 +21,11 @@ i18n
   .init({
     resources,
     fallbackLng: 'zh-CN',
-    debug: import.meta.env.DEV,
+    debug: false, // 禁用调试日志
+    
+    // 禁用缺失键的警告
+    saveMissing: false,
+    missingKeyHandler: false,
     
     interpolation: {
       escapeValue: false, // React已经处理了XSS

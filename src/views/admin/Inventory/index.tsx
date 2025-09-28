@@ -587,110 +587,306 @@ const AdminInventory: React.FC = () => {
             </div>
           )}
           {activeTab === 'brand' && (
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <Space>
-                  <Button 
-                    type="primary" 
-                    icon={<PlusOutlined />}
-                    onClick={() => setCreatingBrand(true)}
-                  >
-                    {t('inventory.addBrand')}
-                  </Button>
-                  <Button 
-                    type="default" 
-                    onClick={() => window.open('/admin/cloudinary-test', '_blank')}
-                    style={{ color: '#1890ff' }}
-                  >
-                    Cloudinary 测试
-                  </Button>
-                </Space>
-              </div>
+            <div style={{ 
+              background: 'linear-gradient(180deg, #221c10, #121212)', 
+              minHeight: '100vh',
+              padding: '16px',
+              margin: '-16px',
+              color: 'white'
+            }}>
               
-              <Card>
+              {/* 搜索栏 */}
+              <div style={{ position: 'relative', marginBottom: '24px' }}>
+                <div style={{ 
+                  position: 'absolute', 
+                  top: '50%', 
+                  left: '16px', 
+                  transform: 'translateY(-50%)',
+                  color: 'rgba(255,255,255,0.5)'
+                }}>
+                  <SearchOutlined style={{ fontSize: '20px' }} />
+                </div>
+                <Input
+                  placeholder={t('inventory.searchBrand')}
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  style={{
+                    width: '100%',
+                    borderRadius: '9999px',
+                    border: 'none',
+                    background: 'rgba(255,255,255,0.05)',
+                    padding: '12px 16px 12px 48px',
+                    color: 'white',
+                    fontSize: '16px'
+                  }}
+                />
+              </div>
+
+              {/* 排序和筛选按钮 */}
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+                <Button
+                  style={{
+                    borderRadius: '9999px',
+                    background: 'rgba(255,255,255,0.05)',
+                    border: 'none',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 16px'
+                  }}
+                >
+                  <span>{t('inventory.sort')}</span>
+                  <svg fill="currentColor" height="16" viewBox="0 0 256 256" width="16">
+                    <path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"></path>
+                  </svg>
+                </Button>
+                <Button
+                  style={{
+                    borderRadius: '9999px',
+                    background: 'rgba(255,255,255,0.05)',
+                    border: 'none',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 16px'
+                  }}
+                >
+                  <span>{t('inventory.filter')}</span>
+                  <svg fill="currentColor" height="16" viewBox="0 0 256 256" width="16">
+                    <path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"></path>
+                  </svg>
+                </Button>
+              </div>
+
+              {/* 品牌列表 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {brandList.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+                  <div style={{ 
+                    textAlign: 'center', 
+                    padding: '60px 0', 
+                    color: 'rgba(255,255,255,0.6)' 
+                  }}>
                     <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏷️</div>
-                    <div style={{ fontSize: '16px', marginBottom: '8px' }}>{t('inventory.brandManagement')}</div>
-                    <div style={{ fontSize: '14px' }}>{t('inventory.noBrandsFound')}</div>
+                    <div style={{ fontSize: '16px', marginBottom: '8px' }}>{t('inventory.noBrandsFound')}</div>
+                    <div style={{ fontSize: '14px' }}>{t('inventory.addFirstBrand')}</div>
                   </div>
                 ) : (
-                  <Table
-                    dataSource={brandList}
-                    rowKey="id"
-                    pagination={{ pageSize: 10 }}
-                    columns={[
-                      {
-                        title: t('inventory.brandName'),
-                        dataIndex: 'name',
-                        key: 'name',
-                        render: (text: string, record: Brand) => (
-                          <Space>
-                            {record.logo && (
-                              <img 
-                                src={record.logo} 
-                                alt={text} 
-                                style={{ width: 32, height: 32, borderRadius: 4 }}
-                              />
-                            )}
-                            <span style={{ fontWeight: 600 }}>{text}</span>
-                          </Space>
-                        ),
-                      },
-                      {
-                        title: t('inventory.brandCountry'),
-                        dataIndex: 'country',
-                        key: 'country',
-                      },
-                      {
-                        title: t('inventory.foundedYear'),
-                        dataIndex: 'foundedYear',
-                        key: 'foundedYear',
-                        render: (year: number) => year || '-',
-                      },
-                      {
-                        title: t('inventory.brandStatus'),
-                        dataIndex: 'status',
-                        key: 'status',
-                        render: (status: string) => (
-                          <Tag color={status === 'active' ? 'green' : 'red'}>
-                            {status === 'active' ? t('inventory.active') : t('inventory.inactive')}
-                          </Tag>
-                        ),
-                      },
-                      {
-                        title: t('inventory.totalProducts'),
-                        dataIndex: ['metadata', 'totalProducts'],
-                        key: 'totalProducts',
-                        render: (count: number) => count || 0,
-                      },
-                      {
-                        title: t('common.action'),
-                        key: 'action',
-                        render: (_, record: Brand) => (
-                          <Space>
-                            <Button 
-                              size="small" 
-                              icon={<EditOutlined />}
-                              onClick={() => setEditingBrand(record)}
-                            >
-                              {t('common.edit')}
-                            </Button>
-                            <Button 
-                              size="small" 
-                              danger 
-                              icon={<DeleteOutlined />}
-                              onClick={() => setDeletingBrand(record)}
-                            >
-                              {t('common.delete')}
-                            </Button>
-                          </Space>
-                        ),
-                      },
-                    ]}
-                  />
+                  brandList
+                    .filter(brand => !keyword || brand.name.toLowerCase().includes(keyword.toLowerCase()))
+                    .map((brand) => {
+                      const productCount = items.filter(item => item.brand === brand.name).length
+                      return (
+                        <div
+                          key={brand.id}
+                          style={{
+                            borderRadius: '12px',
+                            background: 'rgba(255,255,255,0.05)',
+                            backdropFilter: 'blur(20px)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            padding: '16px',
+                            transition: 'all 0.3s ease',
+                            cursor: 'pointer'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+                          }}
+                        >
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'flex-start', 
+                            justifyContent: 'space-between',
+                            gap: '16px'
+                          }}>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '12px'
+                              }}>
+                                {brand.logo ? (
+                                  <img 
+                                    src={brand.logo} 
+                                    alt={brand.name} 
+                                    style={{ 
+                                      width: '50px', 
+                                      height: '50px', 
+                                      borderRadius: '8px',
+                                      objectFit: 'cover',
+                                      border: '2px solid rgba(244,175,37,0.3)'
+                                    }}
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none'
+                                    }}
+                                  />
+                                ) : (
+                                  <div style={{
+                                    width: '40px',
+                                    height: '40px',
+                                    borderRadius: '8px',
+                                    background: 'linear-gradient(135deg, rgba(244,175,37,0.2), rgba(224,153,15,0.2))',
+                                    border: '2px solid rgba(244,175,37,0.3)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    color: '#f4af25'
+                                  }}>
+                                    {brand.name.charAt(0).toUpperCase()}
+                                  </div>
+                                )}
+                                <div>
+                                  <h3 style={{ 
+                                    fontWeight: 'bold',
+                                    background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                                    WebkitBackgroundClip: 'text',
+                                    color: 'transparent',
+                                    fontSize: '18px',
+                                    margin: '0 0 4px 0'
+                                  }}>
+                                    {brand.name}
+                                  </h3>
+                                  <div style={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: '16px',
+                                    fontSize: '12px',
+                                    color: 'rgba(255,255,255,0.7)'
+                                  }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                      <svg 
+                                        style={{ color: '#f4af25' }} 
+                                        fill="none" 
+                                        height="14"                                         
+                                        stroke="currentColor" 
+                                        strokeLinecap="round" 
+                                        strokeLinejoin="round" 
+                                        strokeWidth="2" 
+                                        viewBox="0 0 24 24" 
+                                        width="14"
+                                      >
+                                        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+                                        <circle cx="12" cy="10" r="3"></circle>
+                                      </svg>
+                                      <span>{t('inventory.origin')}：{brand.country || '-'}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                      <svg 
+                                        style={{ color: '#f4af25' }} 
+                                        fill="none" 
+                                        height="14" 
+                                        stroke="currentColor" 
+                                        strokeLinecap="round" 
+                                        strokeLinejoin="round" 
+                                        strokeWidth="2" 
+                                        viewBox="0 0 24 24" 
+                                        width="14"
+                                      >
+                                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                                        <line x1="12" x2="12" y1="22.08" y2="12"></line>
+                                      </svg>
+                                      <span>{t('inventory.productTypes')}：{productCount}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <Button
+                                onClick={() => setEditingBrand(brand)}
+                                style={{
+                                  width: '40px',
+                                  height: '40px',
+                                  borderRadius: '50%',
+                                  background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                                  border: 'none',
+                                  color: 'black',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  boxShadow: '0 4px 15px 0 rgba(244,175,37,0.3)',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.3s ease'
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.transform = 'scale(1.05)'
+                                  e.currentTarget.style.boxShadow = '0 6px 20px 0 rgba(244,175,37,0.4)'
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.transform = 'scale(1)'
+                                  e.currentTarget.style.boxShadow = '0 4px 15px 0 rgba(244,175,37,0.3)'
+                                }}
+                              >
+                                <EditOutlined style={{ fontSize: '18px' }} />
+                              </Button>
+                              <Button
+                                onClick={() => setDeletingBrand(brand)}
+                                style={{
+                                  width: '40px',
+                                  height: '40px',
+                                  borderRadius: '50%',
+                                  background: 'linear-gradient(to right, #ff6b6b, #ee5a52)',
+                                  border: 'none',
+                                  color: 'white',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  boxShadow: '0 4px 15px 0 rgba(255,107,107,0.3)',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.3s ease'
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.transform = 'scale(1.05)'
+                                  e.currentTarget.style.boxShadow = '0 6px 20px 0 rgba(255,107,107,0.4)'
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.transform = 'scale(1)'
+                                  e.currentTarget.style.boxShadow = '0 4px 15px 0 rgba(255,107,107,0.3)'
+                                }}
+                              >
+                                <DeleteOutlined style={{ fontSize: '18px' }} />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })
                 )}
-              </Card>
+              </div>
+
+              {/* 添加品牌按钮 */}
+              <div style={{ 
+                position: 'fixed', 
+                bottom: '20px', 
+                right: '20px',
+                zIndex: 1000
+              }}>
+                <Button
+                  onClick={() => setCreatingBrand(true)}
+                  style={{
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(to right, #f4af25, #e0990f)',
+                    border: 'none',
+                    color: 'black',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 15px 0 rgba(244,175,37,0.3)',
+                    cursor: 'pointer',
+                    fontSize: '24px'
+                  }}
+                >
+                  <PlusOutlined />
+                </Button>
+              </div>
             </div>
           )}
           {activeTab === 'in' && (

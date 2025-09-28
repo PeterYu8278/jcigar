@@ -167,69 +167,77 @@ const Home: React.FC = () => {
             {t('home.viewAll')}
           </Button>
         </div>
-        {loadingBrands ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
-            <Spin />
-          </div>
-        ) : (
-          <Row gutter={[16, 16]}>
-            {brands
-              .filter(brand => brand.status === 'active')
-              .slice(0, 4)
-              .map((brand) => (
-              <Col xs={6} key={brand.id} style={{ textAlign: 'center' }}>
-                <div 
-                  style={{ 
-                    width: 48, 
-                    height: 48, 
-                    borderRadius: 24, 
-                    background: 'rgba(30,30,30,0.7)', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center', 
-                    margin: '0 auto 8px', 
-                    border: '2px solid rgba(255,215,0,0.2)',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease'
-                  }}
-                  onClick={() => navigate(`/brand/${brand.id}`)}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.border = '2px solid rgba(255,215,0,0.6)'
-                    e.currentTarget.style.transform = 'scale(1.05)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.border = '2px solid rgba(255,215,0,0.2)'
-                    e.currentTarget.style.transform = 'scale(1)'
-                  }}
-                >
-                  {brand.logo ? (
-                    <img 
-                      src={brand.logo} 
-                      alt={brand.name} 
-                      style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: '50%' }} 
-                    />
-                  ) : (
-                    <div style={{ 
-                      width: 36, 
-                      height: 36, 
-                      borderRadius: '50%', 
-                      background: 'linear-gradient(45deg, #FFD700, #B8860B)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#000',
-                      fontWeight: 'bold',
-                      fontSize: '14px'
-                    }}>
-                      {brand.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                </div>
-                <div style={{ fontSize: 12, color: '#f0f0f0' }}>{brand.name}</div>
-              </Col>
-            ))}
-          </Row>
-        )}
+         {loadingBrands ? (
+           <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
+             <Spin />
+           </div>
+         ) : (
+           <div style={{ 
+             display: 'grid', 
+             gridTemplateColumns: 'repeat(4, 1fr)', 
+             gap: '16px',
+             padding: '0 8px'
+           }}>
+             {brands
+               .filter(brand => brand.status === 'active')
+               .slice(0, 4)
+               .map((brand) => (
+               <div key={brand.id} style={{ textAlign: 'center' }}>
+                 <div 
+                   style={{ 
+                     width: 80, 
+                     height: 80, 
+                     borderRadius: 40, 
+                     background: 'rgba(30,30,30,0.7)', 
+                     display: 'flex', 
+                     alignItems: 'center', 
+                     justifyContent: 'center', 
+                     margin: '0 auto 12px', 
+                     border: '2px solid rgba(255,215,0,0.2)',
+                     cursor: 'pointer',
+                     transition: 'all 0.3s ease',
+                     boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                   }}
+                   onClick={() => navigate(`/brand/${brand.id}`)}
+                   onMouseEnter={(e) => {
+                     e.currentTarget.style.border = '2px solid rgba(255,215,0,0.6)'
+                     e.currentTarget.style.transform = 'scale(1.1)'
+                     e.currentTarget.style.boxShadow = '0 8px 20px rgba(255,215,0,0.3)'
+                   }}
+                   onMouseLeave={(e) => {
+                     e.currentTarget.style.border = '2px solid rgba(255,215,0,0.2)'
+                     e.currentTarget.style.transform = 'scale(1)'
+                     e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)'
+                   }}
+                 >
+                   {brand.logo ? (
+                     <img 
+                       src={brand.logo} 
+                       alt={brand.name} 
+                       style={{ width: 64, height: 64, objectFit: 'contain', borderRadius: '50%' }} 
+                     />
+                   ) : (
+                     <div style={{ 
+                       width: 64, 
+                       height: 64, 
+                       borderRadius: '50%', 
+                       background: 'linear-gradient(45deg, #FFD700, #B8860B)',
+                       display: 'flex',
+                       alignItems: 'center',
+                       justifyContent: 'center',
+                       color: '#000',
+                       fontWeight: 'bold',
+                       fontSize: '20px'
+                     }}>
+                       {brand.name.charAt(0).toUpperCase()}
+                     </div>
+                   )}
+                 </div>
+                 <div style={{ fontSize: 14, color: '#f0f0f0', fontWeight: 600 }}>{brand.name}</div>
+               </div>
+             ))}
+           </div>
+         )}
       </div>
 
       {/* 热门雪茄 - 横向滚动 */}

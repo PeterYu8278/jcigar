@@ -6,6 +6,7 @@ import { useCloudinary } from '../../hooks/useCloudinary'
 import type { UploadResult } from '../../services/cloudinary'
 import { getUploadConfig, getFullFolderPath, isValidFolderName } from '../../config/cloudinaryFolders'
 import { validateFileForFolder, type CloudinaryFolderName } from '../../types/cloudinary'
+import ImageCrop from './ImageCrop'
 
 interface ImageUploadProps {
   value?: string // 当前图片URL
@@ -17,6 +18,12 @@ interface ImageUploadProps {
   height?: number // 预览图片高度
   showPreview?: boolean // 是否显示预览
   disabled?: boolean // 是否禁用
+  enableCrop?: boolean // 是否启用裁剪功能
+  cropAspectRatio?: number // 裁剪宽高比
+  cropMinWidth?: number // 裁剪最小宽度
+  cropMinHeight?: number // 裁剪最小高度
+  cropMaxWidth?: number // 裁剪最大宽度
+  cropMaxHeight?: number // 裁剪最大高度
 }
 
 const ImageUpload: React.FC<ImageUploadProps> = ({
@@ -28,10 +35,18 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   width,
   height,
   showPreview = true,
-  disabled = false
+  disabled = false,
+  enableCrop = false,
+  cropAspectRatio = 1,
+  cropMinWidth = 100,
+  cropMinHeight = 100,
+  cropMaxWidth = 800,
+  cropMaxHeight = 800
 }) => {
   const { upload, uploading, error } = useCloudinary()
   const [previewVisible, setPreviewVisible] = useState(false)
+  const [cropVisible, setCropVisible] = useState(false)
+  const [tempImageUrl, setTempImageUrl] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // 获取文件夹配置
@@ -65,15 +80,23 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       }
     }
 
-    try {
-      const result: UploadResult = await upload(file, {
-        folder: finalFolder
-      })
-      
-      onChange?.(result.secure_url)
-      message.success('图片上传成功')
-    } catch (err) {
-      message.error('图片上传失败')
+    // 如果启用裁剪功能，先显示裁剪界面
+    if (enableCrop) {
+      const imageUrl = URL.createObjectURL(file)
+      setTempImageUrl(imageUrl)
+      setCropVisible(true)
+    } else {
+      // 直接上传
+      try {
+        const result: UploadResult = await upload(file, {
+          folder: finalFolder
+        })
+        
+        onChange?.(result.secure_url)
+        message.success('图片上传成功')
+      } catch (err) {
+        message.error('图片上传失败')
+      }
     }
 
     // 清空input

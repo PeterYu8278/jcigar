@@ -588,7 +588,12 @@
     "customerReviews": "客户评价",
     "addToCart": "加入购物车",
     "pleaseSelectQuantity": "请先选择商品数量",
-    "addedToCart": "已添加 {{count}} 件商品到购物车"
+    "addedToCart": "已添加 {{count}} 件商品到购物车",
+    "searchBrand": "搜索品牌",
+    "sort": "排序",
+    "filter": "筛选",
+    "productTypes": "产品种类",
+    "addFirstBrand": "添加第一个品牌"
   },
   "financeAdmin": {
     "title": "财务管理",

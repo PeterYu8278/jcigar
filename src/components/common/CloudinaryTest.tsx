@@ -39,8 +39,6 @@ const CloudinaryTest: React.FC = () => {
           setTestResult('✅ Cloudinary 连接成功！')
           setTestImageUrl(result.secure_url)
           message.success('Cloudinary 测试成功！')
-          
-          console.log('Cloudinary 测试结果:', result)
         }
       }, 'image/png')
     } catch (err) {

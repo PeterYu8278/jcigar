@@ -602,7 +602,12 @@
     "customerReviews": "Customer Reviews",
     "addToCart": "Add to Cart",
     "pleaseSelectQuantity": "Please select product quantity first",
-    "addedToCart": "Added {{count}} items to cart"
+    "addedToCart": "Added {{count}} items to cart",
+    "searchBrand": "Search Brands",
+    "sort": "Sort",
+    "filter": "Filter",
+    "productTypes": "Product Types",
+    "addFirstBrand": "Add First Brand"
   },
   "financeAdmin": {
     "title": "Financial Management",
