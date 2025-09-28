@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../../../store/modules/auth'
 import { useQRCode } from '../../../hooks/useQRCode'
 import { QRCodeDisplay } from '../../../components/common/QRCodeDisplay'
+import { MemberProfileCard } from '../../../components/common/MemberProfileCard'
 
 const Home: React.FC = () => {
   const navigate = useNavigate()
@@ -27,6 +28,17 @@ const Home: React.FC = () => {
   const { user } = useAuthStore()
   const [events, setEvents] = useState<Event[]>([])
   const [loadingEvents, setLoadingEvents] = useState<boolean>(false)
+  
+  // 会员等级文本获取函数
+  const getMembershipText = (level: string) => {
+    switch (level) {
+      case 'bronze': return t('profile.bronzeMember')
+      case 'silver': return t('profile.silverMember')
+      case 'gold': return t('profile.goldMember')
+      case 'platinum': return t('profile.platinumMember')
+      default: return t('home.vipMember')
+    }
+  }
   
   // QR Code Hook - 基于用户ID自动生成
   const { qrCodeDataURL, loading: qrLoading, error: qrError } = useQRCode({
@@ -81,7 +93,7 @@ const Home: React.FC = () => {
           {/* 欢迎标题 - 独立一行 */}
           <h1 style={{ 
             color: '#f8f8f8', 
-            background: 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)',
+            background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
@@ -111,69 +123,14 @@ const Home: React.FC = () => {
             </Col>
           </Row>
         </div>
-        {/* 会员卡 UI */}
-      <div style={{
-        position: 'relative',
-        borderRadius: 20,
-        background: 'linear-gradient(145deg, #1A1A1A 0%, #0A0A0A 100%)',
-        border: '1px solid rgba(212, 175, 55, 0.25)',
-        overflow: 'hidden'
-      }}>
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'radial-gradient(circle at 15% 25%, rgba(212,175,55,0.15), transparent 40%), radial-gradient(circle at 85% 75%, rgba(212,175,55,0.1), transparent 40%)'
-        }} />
-        <div style={{ position: 'relative', zIndex: 1, padding: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-            <div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: '#ffffff', letterSpacing: 1 }}>Gentleman Club</div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#D4AF37', letterSpacing: 2 }}>CIGAR CONNOISSEUR</div>
-            </div>
-            <QRCodeDisplay
-              qrCodeDataURL={qrCodeDataURL}
-              loading={qrLoading}
-              error={qrError}
-              size={54}
-              showPlaceholder={true}
-            />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{
-                width: 56,
-                height: 56,
-                borderRadius: '50%',
-                backgroundImage: user?.profile?.avatar ? `url(${user.profile.avatar})` : 'url(https://lh3.googleusercontent.com/aida-public/AB6AXuDs5P-wl44y-z3P55qwZDWCSmApe-9yEsTNGmr02UNzEVBeCMwE7hIq_ikKnzQespBptCZg7RY1P5pvidROpLwXpyUdWETLOFTJYuGtSIN_2d53icCJctg5HZDPl5zRc3QfbeMOn0fl6RWLZplcDWF9frxhgWKf4-RKyNaQsWhBGRCkTAVvLMDnCcZUDGLg-c8YjnHcY8-gFFEmIaa-bHoz3lEcP-SgonuSLCTv4Fa7-_dYYF8uQ3H5a7nAxZocj7UyH0Jl9CAQQWET)',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                border: '2px solid #D4AF37',
-                boxShadow: '0 6px 16px rgba(0,0,0,0.5)'
-              }} />
-              <div>
-                <div style={{ color: '#ffffff', fontSize: 20, fontWeight: 700 }}>{user?.displayName || '会员'}</div>
-                <div style={{ color: '#D4AF37', fontSize: 12, fontWeight: 700 }}>
-                  {user?.membership?.level === 'bronze' ? t('profile.bronzeMember') :
-                   user?.membership?.level === 'silver' ? t('profile.silverMember') :
-                   user?.membership?.level === 'gold' ? t('profile.goldMember') :
-                   user?.membership?.level === 'platinum' ? t('profile.platinumMember') :
-                   t('home.vipMember')}
-                </div>
-              </div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }}>{t('home.memberId')}</div>
-              <div style={{ color: '#ffffff', fontSize: 16, fontWeight: 700, letterSpacing: 2 }}>
-                {user?.id ? `C${user.id.slice(-4).toUpperCase()}` : 'C0000'}
-              </div>
-              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 4 }}>积分</div>
-              <div style={{ color: '#D4AF37', fontSize: 14, fontWeight: 700 }}>
-                {(user?.membership as any)?.points || 0}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+        {/* 会员卡 UI - 使用MemberProfileCard组件 */}
+        <MemberProfileCard
+          user={user}
+          showMemberCard={true}
+          onToggleMemberCard={() => {}} // 主页不需要切换功能
+          getMembershipText={getMembershipText}
+          style={{ margin: '0 auto' }}
+        />
       </Card>
 
       

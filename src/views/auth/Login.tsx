@@ -52,29 +52,9 @@ const Login: React.FC = () => {
 
   return (
     <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2d2d2d 100%)',
-      position: 'relative',
-      overflow: 'hidden'
     }}>
       {/* 背景装饰 */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: `
-          radial-gradient(circle at 20% 20%, rgba(255, 215, 0, 0.1) 0%, transparent 50%),
-          radial-gradient(circle at 80% 80%, rgba(255, 215, 0, 0.05) 0%, transparent 50%),
-          radial-gradient(circle at 50% 50%, rgba(255, 215, 0, 0.03) 0%, transparent 70%)
-        `,
-        pointerEvents: 'none'
-      }} />
-      
       <Card style={{ 
         width: 400, 
         background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.9) 0%, rgba(45, 45, 45, 0.8) 100%)',
@@ -89,7 +69,7 @@ const Login: React.FC = () => {
           <div style={{ textAlign: 'center', paddingTop: '20px' }}>
             <Title level={2} style={{ 
               marginBottom: 8,
-              background: 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)',
+              background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
@@ -201,8 +181,11 @@ const Login: React.FC = () => {
                 type="link" 
                 onClick={() => navigate('/register')}
                 style={{
-                  color: '#ffd700',
-                  fontWeight: 600,
+                  background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  fontWeight: 700,
                   padding: 0
                 }}
               >
