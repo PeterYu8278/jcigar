@@ -23,11 +23,32 @@ export interface User {
   updatedAt: Date;
 }
 
+// 品牌类型
+export interface Brand {
+  id: string;
+  name: string;
+  description: string;
+  logo?: string;
+  website?: string;
+  country: string;
+  foundedYear?: number;
+  status: 'active' | 'inactive';
+  metadata: {
+    totalProducts: number;
+    totalSales: number;
+    rating: number;
+    tags: string[];
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // 雪茄产品类型
 export interface Cigar {
   id: string;
   name: string;
   brand: string;
+  brandId?: string; // 关联品牌ID
   origin: string;
   size: string;
   strength: 'mild' | 'medium' | 'full';

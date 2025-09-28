@@ -14,8 +14,8 @@ import {
 const { Title, Paragraph, Text } = Typography
 
 import { useNavigate } from 'react-router-dom'
-import { getUpcomingEvents } from '../../../services/firebase/firestore'
-import type { Event } from '../../../types'
+import { getCigars, getUpcomingEvents } from '../../../services/firebase/firestore'
+import type { Event, Cigar } from '../../../types'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../../../store/modules/auth'
 import { useQRCode } from '../../../hooks/useQRCode'
@@ -27,7 +27,9 @@ const Home: React.FC = () => {
   const { t } = useTranslation()
   const { user } = useAuthStore()
   const [events, setEvents] = useState<Event[]>([])
+  const [cigars, setCigars] = useState<Cigar[]>([])
   const [loadingEvents, setLoadingEvents] = useState<boolean>(false)
+  const [loadingCigars, setLoadingCigars] = useState<boolean>(false)
   
   // 会员等级文本获取函数
   const getMembershipText = (level: string) => {
@@ -51,12 +53,21 @@ const Home: React.FC = () => {
     const load = async () => {
       try {
         setLoadingEvents(true)
-        const list = await getUpcomingEvents()
-        setEvents(Array.isArray(list) ? list : [])
+        setLoadingCigars(true)
+        
+        const [eventsData, cigarsData] = await Promise.all([
+          getUpcomingEvents(),
+          getCigars()
+        ])
+        
+        setEvents(Array.isArray(eventsData) ? eventsData : [])
+        setCigars(Array.isArray(cigarsData) ? cigarsData : [])
       } catch (e) {
         setEvents([])
+        setCigars([])
       } finally {
         setLoadingEvents(false)
+        setLoadingCigars(false)
       }
     }
     load()
@@ -146,20 +157,15 @@ const Home: React.FC = () => {
           </Button>
         </div>
         <Row gutter={[16, 16]}>
-          {[
-            { name: '高希霸', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBIu_k8y8X7w7V6U5T4S3R2Q1P0Z9Y8x8w8v8u8t8s8r8q8p7o7n7m7l7k7j_i_h_g' },
-            { name: '帕特加斯', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD7x7W6v6U5T4S3R2Q1P0Z9Y8x8w8v8u8t8s8r8q8p7o7n7m7l7k7j_i_h_g_f' },
-            { name: '蒙特', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCz8r7q6p5o4n3m2l1k0j_i_h_g_f_e_d_c_b_a_z_y_x_w_v_u_t_s_r_q_p_o' },
-            { name: '罗密欧', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD0l0k1j_i_h_g_f_e_d_c_b_a_z_y_x_w_v_u_t_s_r_q_p_o_n_m_l_k_j' },
-          ].map((b) => (
-            <Col xs={6} key={b.name} style={{ textAlign: 'center' }}>
+          {cigars.slice(0, 4).map((cigar) => (
+            <Col xs={6} key={cigar.id} style={{ textAlign: 'center' }}>
               <div style={{ width: 48, height: 48, borderRadius: 24, background: 'rgba(30,30,30,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px', border: '2px solid rgba(255,215,0,0.2)' }}>
-                <img src={b.img} alt={b.name} style={{ width: 36, height: 36, objectFit: 'contain' }} />
+                <img src={cigar.images?.[0] || 'https://via.placeholder.com/36x36?text=Brand'} alt={cigar.brand} style={{ width: 36, height: 36, objectFit: 'contain' }} />
               </div>
-              <div style={{ fontSize: 12, color: '#f0f0f0' }}>{b.name}</div>
-        </Col>
+              <div style={{ fontSize: 12, color: '#f0f0f0' }}>{cigar.brand}</div>
+            </Col>
           ))}
-      </Row>
+        </Row>
       </div>
 
       {/* 热门雪茄 - 横向滚动 */}
@@ -170,19 +176,21 @@ const Home: React.FC = () => {
             {t('home.viewAll')}
           </Button>
         </div>
-        <div style={{ display: 'flex', overflowX: 'auto', gap: 16, paddingBottom: 8 }}>
-          {[
-            { name: '高希霸 Behike', price: 'RM1,888', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDewnAUejRKwMqvfBd6D1XYCYb6e1bHT4EMa32ffMwOq2kYtoUtYiXbrhB-kvCwIHPPFLJ4xHP8DqJo2SjSxzCttrqZzb3n-Fj4J-OuBHbhbCXNKz1nadbvLMqAxZE6VFMVf0uEjrPuNz9nELRZRjhNZkZ_DigrNhgW5SwOQXiDpqxHqjCWHjyAecETKR7mAa5pg4-HuAuh6QKh-EEPpC69-ZrlqOxfIZqDvEWGyNJKBKgrRiUCB5K2Ze5epbRzTDtak-k_0AV6htej' },
-            { name: '帕特加斯 D系列', price: 'RM888', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBTLERvBearfV-iCSv2pYSL1EAVhlK4GHAHDfLzs8djn-3JCx0vE-dmdAvbntg22hzDsyYYMmPXHL8vBd-qksaR1EOC0RyitWSvwiWLGZLqAwljCF1xho4YPA8X7NKpkwWzlGwEFL3L9sWk4_BiMtb1FVYjgw8S9wewx3W69XLz5DOmcfJqGsvEwo3OjXZQyz8jyGhOt-hjq0CYwPymvNQsnaBvOXfuKNNJ2yYGHmZxfVN2vHnzPmUog8rOnpEr5A8qGjPQz1BDUlPc' },
-            { name: '蒙特 2号', price: 'RM998', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD9o8p7q6o5n4m3l2k1j0i-h_g_f_e_d_c_b_a_z_y_x_w_v_u_t_s_r_q_p_o_n_m_l' },
-          ].map((p) => (
-            <div key={p.name} style={{ flex: '0 0 160px', background: 'rgba(30,30,30,0.6)', borderRadius: 12, padding: 16, textAlign: 'center', border: '1px solid rgba(255,215,0,0.2)' }}>
-              <img src={p.img} alt={p.name} style={{ width: 96, height: 96, objectFit: 'contain', marginBottom: 8 }} />
-              <div style={{ fontWeight: 600, color: '#f8f8f8', fontSize: 14 }}>{p.name}</div>
-              <div style={{ color: '#D4AF37', fontWeight: 700, fontSize: 14 }}>{p.price}</div>
-            </div>
-          ))}
-        </div>
+        {loadingCigars ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
+            <Spin />
+          </div>
+        ) : (
+          <div style={{ display: 'flex', overflowX: 'auto', gap: 16, paddingBottom: 8 }}>
+            {cigars.slice(0, 6).map((cigar) => (
+              <div key={cigar.id} style={{ flex: '0 0 160px', background: 'rgba(30,30,30,0.6)', borderRadius: 12, padding: 16, textAlign: 'center', border: '1px solid rgba(255,215,0,0.2)' }}>
+                <img src={cigar.images?.[0] || 'https://via.placeholder.com/96x96?text=Cigar'} alt={cigar.name} style={{ width: 96, height: 96, objectFit: 'contain', marginBottom: 8 }} />
+                <div style={{ fontWeight: 600, color: '#f8f8f8', fontSize: 14 }}>{cigar.name}</div>
+                <div style={{ color: '#D4AF37', fontWeight: 700, fontSize: 14 }}>RM{cigar.price}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 最新活动 列表（真实数据） */}

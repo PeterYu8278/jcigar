@@ -1164,73 +1164,13 @@ const AdminUsers: React.FC = () => {
 
                   {activeTab === 'referral' && (
                     <>
-                      {/* Sample Referral Record 1 */}
                       <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '16px',
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        borderRadius: '8px',
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                        textAlign: 'center',
+                        padding: '40px 20px',
+                        color: 'rgba(255, 255, 255, 0.6)'
                       }}>
-                        <div style={{ flex: 1 }}>
-                          <p style={{
-                            fontWeight: '600',
-                            color: '#FFFFFF',
-                            margin: 0
-                          }}>
-                            推荐好友：张三
-                          </p>
-                          <p style={{
-                            fontSize: '12px',
-                            color: 'rgba(255, 255, 255, 0.6)',
-                            margin: '4px 0 0 0'
-                          }}>
-                            2024-01-10
-                          </p>
-                        </div>
-                        <p style={{
-                          fontSize: '18px',
-                          fontWeight: 'bold',
-                          color: '#52c41a',
-                          margin: 0
-                        }}>
-                          + 100
-                        </p>
-                      </div>
-
-                      {/* Sample Referral Record 2 */}
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '16px',
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        borderRadius: '8px',
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
-                      }}>
-                        <div style={{ flex: 1 }}>
-                          <p style={{
-                            fontWeight: '600',
-                            color: '#FFFFFF',
-                            margin: 0
-                          }}>
-                            推荐好友：李四
-                          </p>
-                          <p style={{
-                            fontSize: '12px',
-                            color: 'rgba(255, 255, 255, 0.6)',
-                            margin: '4px 0 0 0'
-                          }}>
-                            2023-11-25
-                          </p>
-                        </div>
-                        <p style={{
-                          fontSize: '18px',
-                          fontWeight: 'bold',
-                          color: '#52c41a',
-                          margin: 0
-                        }}>
-                          + 100
+                        <p style={{ margin: 0, fontSize: '14px' }}>
+                          {t('usersAdmin.noReferralRecords')}
                         </p>
                       </div>
                     </>

@@ -17,7 +17,7 @@ import {
   arrayRemove
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-import type { User, Cigar, Event, Order, Transaction, InventoryLog } from '../../types';
+import type { User, Brand, Cigar, Event, Order, Transaction, InventoryLog } from '../../types';
 
 // 清洗数据：移除undefined，转换日期/时间戳，深拷贝数组和对象
 const sanitizeForFirestore = (input: any): any => {
@@ -56,6 +56,7 @@ const sanitizeForFirestore = (input: any): any => {
 // 集合名称常量
 export const COLLECTIONS = {
   USERS: 'users',
+  BRANDS: 'brands',
   CIGARS: 'cigars',
   EVENTS: 'events',
   ORDERS: 'orders',
@@ -149,6 +150,52 @@ export const getUsersByIds = async (ids: string[]): Promise<User[]> => {
     return []
   }
 }
+
+// 品牌相关操作
+export const getBrands = async (): Promise<Brand[]> => {
+  try {
+    const q = query(collection(db, COLLECTIONS.BRANDS), orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Brand));
+  } catch (error) {
+    console.error('获取品牌列表失败:', error);
+    return [];
+  }
+};
+
+export const getBrandById = async (id: string): Promise<Brand | null> => {
+  return getDocument<Brand>(COLLECTIONS.BRANDS, id);
+};
+
+export const getActiveBrands = async (): Promise<Brand[]> => {
+  try {
+    const q = query(
+      collection(db, COLLECTIONS.BRANDS), 
+      where('status', '==', 'active'),
+      orderBy('name', 'asc')
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Brand));
+  } catch (error) {
+    console.error('获取活跃品牌列表失败:', error);
+    return [];
+  }
+};
+
+export const getBrandsByCountry = async (country: string): Promise<Brand[]> => {
+  try {
+    const q = query(
+      collection(db, COLLECTIONS.BRANDS), 
+      where('country', '==', country),
+      orderBy('name', 'asc')
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Brand));
+  } catch (error) {
+    console.error('根据国家获取品牌失败:', error);
+    return [];
+  }
+};
 
 // 雪茄相关操作
 export const getCigars = async (): Promise<Cigar[]> => {

@@ -31,11 +31,11 @@ const Profile: React.FC = () => {
   const [showMemberCard, setShowMemberCard] = useState(false) // 控制头像/会员卡切换
   const [activeTab, setActiveTab] = useState<'purchase' | 'points' | 'activity' | 'referral'>('purchase') // 标签状态
 
-  // 模拟用户统计数据
+  // 用户统计数据 - 从实际数据计算
   const userStats = [
-    { title: t('profile.eventsJoined'), value: 12, icon: <CalendarOutlined /> },
-    { title: t('profile.cigarsPurchased'), value: 28, icon: <ShoppingOutlined /> },
-    { title: t('profile.communityPoints'), value: 1580, icon: <TrophyOutlined /> },
+    { title: t('profile.eventsJoined'), value: 0, icon: <CalendarOutlined /> },
+    { title: t('profile.cigarsPurchased'), value: 0, icon: <ShoppingOutlined /> },
+    { title: t('profile.communityPoints'), value: (user?.membership as any)?.points || 0, icon: <TrophyOutlined /> },
   ]
 
   const getMembershipColor = (level: string) => {
@@ -240,170 +240,50 @@ const Profile: React.FC = () => {
         {/* Records List */}
         <div style={{ paddingBottom: '24px' }}>
           {activeTab === 'purchase' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.05)',
-                borderRadius: '8px',
-                padding: '16px',
-                border: '1px solid rgba(244, 175, 37, 0.2)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontWeight: '600', color: '#FFFFFF', marginBottom: '4px' }}>
-                      Cohiba Behike 52
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
-                      2024-10-20
-                    </div>
-                  </div>
-                  <div style={{ fontWeight: 'bold', color: '#F4AF25' }}>RM580</div>
-                </div>
-              </div>
-              
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.05)',
-                borderRadius: '8px',
-                padding: '16px',
-                border: '1px solid rgba(244, 175, 37, 0.2)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontWeight: '600', color: '#FFFFFF', marginBottom: '4px' }}>
-                      Montecristo No.2
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
-                      2024-10-18
-                    </div>
-                  </div>
-                  <div style={{ fontWeight: 'bold', color: '#F4AF25' }}>RM320</div>
-                </div>
-              </div>
+            <div style={{
+              textAlign: 'center',
+              padding: '40px 20px',
+              color: 'rgba(255, 255, 255, 0.6)'
+            }}>
+              <p style={{ margin: 0, fontSize: '14px' }}>
+                {t('usersAdmin.noPurchaseRecords')}
+              </p>
             </div>
           )}
 
           {activeTab === 'points' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.05)',
-                borderRadius: '8px',
-                padding: '16px',
-                border: '1px solid rgba(244, 175, 37, 0.2)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontWeight: '600', color: '#FFFFFF', marginBottom: '4px' }}>
-                      {t('usersAdmin.purchaseCigarPoints')}
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
-                      2024-10-20
-                    </div>
-                  </div>
-                  <div style={{ fontWeight: 'bold', color: '#F4AF25' }}>+58</div>
-                </div>
-              </div>
-              
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.05)',
-                borderRadius: '8px',
-                padding: '16px',
-                border: '1px solid rgba(244, 175, 37, 0.2)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontWeight: '600', color: '#FFFFFF', marginBottom: '4px' }}>
-                      {t('usersAdmin.attendEventPoints')}
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
-                      2024-10-18
-                    </div>
-                  </div>
-                  <div style={{ fontWeight: 'bold', color: '#F4AF25' }}>+25</div>
-                </div>
-              </div>
+            <div style={{
+              textAlign: 'center',
+              padding: '40px 20px',
+              color: 'rgba(255, 255, 255, 0.6)'
+            }}>
+              <p style={{ margin: 0, fontSize: '14px' }}>
+                {t('usersAdmin.noPointsRecords')}
+              </p>
             </div>
           )}
 
           {activeTab === 'activity' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.05)',
-                borderRadius: '8px',
-                padding: '16px',
-                border: '1px solid rgba(244, 175, 37, 0.2)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontWeight: '600', color: '#FFFFFF', marginBottom: '4px' }}>
-                      {t('usersAdmin.cubanCigarTasting')}
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
-                      2024-10-15
-                    </div>
-                  </div>
-                  <Tag color="green" style={{ fontSize: '10px' }}>{t('profile.joinedTag')}</Tag>
-                </div>
-              </div>
-              
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.05)',
-                borderRadius: '8px',
-                padding: '16px',
-                border: '1px solid rgba(244, 175, 37, 0.2)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontWeight: '600', color: '#FFFFFF', marginBottom: '4px' }}>
-                      {t('usersAdmin.whiskeyCigarPairing')}
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
-                      2024-10-22
-                    </div>
-                  </div>
-                  <Tag color="blue" style={{ fontSize: '10px' }}>{t('profile.registeredTag')}</Tag>
-                </div>
-              </div>
+            <div style={{
+              textAlign: 'center',
+              padding: '40px 20px',
+              color: 'rgba(255, 255, 255, 0.6)'
+            }}>
+              <p style={{ margin: 0, fontSize: '14px' }}>
+                {t('usersAdmin.noActivityRecords')}
+              </p>
             </div>
           )}
 
           {activeTab === 'referral' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.05)',
-                borderRadius: '8px',
-                padding: '16px',
-                border: '1px solid rgba(244, 175, 37, 0.2)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontWeight: '600', color: '#FFFFFF', marginBottom: '4px' }}>
-                      {t('usersAdmin.referralRegistration')}
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
-                      2024-10-15
-                    </div>
-                  </div>
-                  <div style={{ fontWeight: 'bold', color: '#F4AF25' }}>+100</div>
-                </div>
-              </div>
-              
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.05)',
-                borderRadius: '8px',
-                padding: '16px',
-                border: '1px solid rgba(244, 175, 37, 0.2)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontWeight: '600', color: '#FFFFFF', marginBottom: '4px' }}>
-                      {t('usersAdmin.friendFirstPurchase')}
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
-                      2024-10-10
-                    </div>
-                  </div>
-                  <div style={{ fontWeight: 'bold', color: '#F4AF25' }}>+50</div>
-                </div>
-              </div>
+            <div style={{
+              textAlign: 'center',
+              padding: '40px 20px',
+              color: 'rgba(255, 255, 255, 0.6)'
+            }}>
+              <p style={{ margin: 0, fontSize: '14px' }}>
+                {t('usersAdmin.noReferralRecords')}
+              </p>
             </div>
           )}
         </div>

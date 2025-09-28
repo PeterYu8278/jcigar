@@ -3,8 +3,8 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Table, Button, Tag, Space, Typography, Input, Select, Progress, Modal, Form, InputNumber, message, Dropdown, Checkbox, Card, Upload } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, WarningOutlined, UploadOutlined, DownloadOutlined, MinusCircleOutlined, EyeOutlined } from '@ant-design/icons'
-import type { Cigar, InventoryLog } from '../../../types'
-import { getCigars, createDocument, updateDocument, deleteDocument, COLLECTIONS, getAllInventoryLogs, getAllOrders, getUsers } from '../../../services/firebase/firestore'
+import type { Cigar, InventoryLog, Brand } from '../../../types'
+import { getCigars, createDocument, updateDocument, deleteDocument, COLLECTIONS, getAllInventoryLogs, getAllOrders, getUsers, getBrands, getBrandById } from '../../../services/firebase/firestore'
 
 const { Title } = Typography
 const { Search } = Input
@@ -30,6 +30,13 @@ const AdminInventory: React.FC = () => {
   const [users, setUsers] = useState<any[]>([])
   const [viewingReference, setViewingReference] = useState<string | null>(null)
   const [imageList, setImageList] = useState<any[]>([])
+  
+  // 品牌管理相关状态
+  const [brandList, setBrandList] = useState<Brand[]>([])
+  const [creatingBrand, setCreatingBrand] = useState(false)
+  const [editingBrand, setEditingBrand] = useState<Brand | null>(null)
+  const [deletingBrand, setDeletingBrand] = useState<Brand | null>(null)
+  const [brandForm] = Form.useForm()
 
   const [keyword, setKeyword] = useState('')
   const [originFilter, setOriginFilter] = useState<string | undefined>()
@@ -52,9 +59,10 @@ const AdminInventory: React.FC = () => {
         setItems(list)
         const logs = await getAllInventoryLogs()
         setInventoryLogs(logs)
-        const [os, us] = await Promise.all([getAllOrders(), getUsers()])
+        const [os, us, bs] = await Promise.all([getAllOrders(), getUsers(), getBrands()])
         setOrders(os)
         setUsers(us)
+        setBrandList(bs)
       } finally {
         setLoading(false)
       }
@@ -547,22 +555,96 @@ const AdminInventory: React.FC = () => {
                   <Button 
                     type="primary" 
                     icon={<PlusOutlined />}
-                    onClick={() => {
-                      // TODO: 实现添加品牌功能
-                      message.info(t('inventory.brandManagement') + ' - ' + t('common.add'))
-                    }}
+                    onClick={() => setCreatingBrand(true)}
                   >
-                    {t('common.add')} {t('inventory.brand')}
+                    {t('inventory.addBrand')}
                   </Button>
                 </Space>
               </div>
               
               <Card>
-                <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
-                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏷️</div>
-                  <div style={{ fontSize: '16px', marginBottom: '8px' }}>{t('inventory.brandManagement')}</div>
-                  <div style={{ fontSize: '14px' }}>{t('common.noData')}</div>
-                </div>
+                {brandList.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏷️</div>
+                    <div style={{ fontSize: '16px', marginBottom: '8px' }}>{t('inventory.brandManagement')}</div>
+                    <div style={{ fontSize: '14px' }}>{t('inventory.noBrandsFound')}</div>
+                  </div>
+                ) : (
+                  <Table
+                    dataSource={brandList}
+                    rowKey="id"
+                    pagination={{ pageSize: 10 }}
+                    columns={[
+                      {
+                        title: t('inventory.brandName'),
+                        dataIndex: 'name',
+                        key: 'name',
+                        render: (text: string, record: Brand) => (
+                          <Space>
+                            {record.logo && (
+                              <img 
+                                src={record.logo} 
+                                alt={text} 
+                                style={{ width: 32, height: 32, borderRadius: 4 }}
+                              />
+                            )}
+                            <span style={{ fontWeight: 600 }}>{text}</span>
+                          </Space>
+                        ),
+                      },
+                      {
+                        title: t('inventory.brandCountry'),
+                        dataIndex: 'country',
+                        key: 'country',
+                      },
+                      {
+                        title: t('inventory.foundedYear'),
+                        dataIndex: 'foundedYear',
+                        key: 'foundedYear',
+                        render: (year: number) => year || '-',
+                      },
+                      {
+                        title: t('inventory.brandStatus'),
+                        dataIndex: 'status',
+                        key: 'status',
+                        render: (status: string) => (
+                          <Tag color={status === 'active' ? 'green' : 'red'}>
+                            {status === 'active' ? t('inventory.active') : t('inventory.inactive')}
+                          </Tag>
+                        ),
+                      },
+                      {
+                        title: t('inventory.totalProducts'),
+                        dataIndex: ['metadata', 'totalProducts'],
+                        key: 'totalProducts',
+                        render: (count: number) => count || 0,
+                      },
+                      {
+                        title: t('common.action'),
+                        key: 'action',
+                        render: (_, record: Brand) => (
+                          <Space>
+                            <Button 
+                              size="small" 
+                              icon={<EditOutlined />}
+                              onClick={() => setEditingBrand(record)}
+                            >
+                              {t('common.edit')}
+                            </Button>
+                            <Button 
+                              size="small" 
+                              danger 
+                              icon={<DeleteOutlined />}
+                              onClick={() => setDeletingBrand(record)}
+                            >
+                              {t('common.delete')}
+                            </Button>
+                          </Space>
+                        ),
+                      },
+                    ]}
+                  />
+                )}
               </Card>
             </div>
           )}
@@ -977,6 +1059,174 @@ const AdminInventory: React.FC = () => {
           <div>{t('inventory.totalProductTypes')}：{currentReferenceLogs.length} {t('inventory.types')}</div>
           <div>{t('inventory.totalInStockQuantity')}：{currentReferenceLogs.reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
         </div>
+      </Modal>
+
+      {/* 品牌管理 - 添加/编辑品牌 */}
+      <Modal
+        title={editingBrand ? t('inventory.editBrand') : t('inventory.addBrand')}
+        open={creatingBrand || !!editingBrand}
+        onCancel={() => {
+          setCreatingBrand(false)
+          setEditingBrand(null)
+          brandForm.resetFields()
+        }}
+        onOk={() => brandForm.submit()}
+        confirmLoading={loading}
+        width={600}
+      >
+        <Form
+          form={brandForm}
+          layout="vertical"
+          onFinish={async (values) => {
+            setLoading(true)
+            try {
+              const brandData = {
+                name: values.name,
+                description: values.description || '',
+                logo: values.logo || '',
+                website: values.website || '',
+                country: values.country,
+                foundedYear: values.foundedYear ? parseInt(values.foundedYear) : undefined,
+                status: values.status || 'active',
+                metadata: {
+                  totalProducts: 0,
+                  totalSales: 0,
+                  rating: 0,
+                  tags: [],
+                },
+              }
+
+              if (editingBrand) {
+                const result = await updateDocument(COLLECTIONS.BRANDS, editingBrand.id, brandData)
+                if (result.success) {
+                  message.success(t('inventory.brandUpdated'))
+                  setBrandList(await getBrands())
+                  setEditingBrand(null)
+                  brandForm.resetFields()
+                } else {
+                  message.error(t('inventory.brandUpdateFailed'))
+                }
+              } else {
+                const result = await createDocument(COLLECTIONS.BRANDS, brandData)
+                if (result.success) {
+                  message.success(t('inventory.brandCreated'))
+                  setBrandList(await getBrands())
+                  setCreatingBrand(false)
+                  brandForm.resetFields()
+                } else {
+                  message.error(t('inventory.brandCreateFailed'))
+                }
+              }
+            } finally {
+              setLoading(false)
+            }
+          }}
+          initialValues={editingBrand ? {
+            name: editingBrand.name,
+            description: editingBrand.description,
+            logo: editingBrand.logo,
+            website: editingBrand.website,
+            country: editingBrand.country,
+            foundedYear: editingBrand.foundedYear,
+            status: editingBrand.status,
+          } : {}}
+        >
+          <Form.Item
+            label={t('inventory.brandName')}
+            name="name"
+            rules={[{ required: true, message: t('inventory.brandNameRequired') }]}
+          >
+            <Input placeholder={t('inventory.pleaseInputBrandName')} />
+          </Form.Item>
+          
+          <Form.Item
+            label={t('inventory.brandDescription')}
+            name="description"
+          >
+            <Input.TextArea 
+              rows={3} 
+              placeholder={t('inventory.pleaseInputBrandDescription')} 
+            />
+          </Form.Item>
+          
+          <Form.Item
+            label={t('inventory.brandLogo')}
+            name="logo"
+          >
+            <Input placeholder="https://example.com/logo.png" />
+          </Form.Item>
+          
+          <Form.Item
+            label={t('inventory.brandWebsite')}
+            name="website"
+            rules={[
+              {
+                pattern: /^https?:\/\/.+/,
+                message: t('inventory.brandWebsiteInvalid')
+              }
+            ]}
+          >
+            <Input placeholder="https://example.com" />
+          </Form.Item>
+          
+          <Form.Item
+            label={t('inventory.brandCountry')}
+            name="country"
+            rules={[{ required: true, message: t('inventory.brandCountryRequired') }]}
+          >
+            <Input placeholder={t('inventory.pleaseInputBrandCountry')} />
+          </Form.Item>
+          
+          <Form.Item
+            label={t('inventory.foundedYear')}
+            name="foundedYear"
+            rules={[
+              {
+                pattern: /^\d{4}$/,
+                message: t('inventory.foundedYearInvalid')
+              }
+            ]}
+          >
+            <Input placeholder="1990" />
+          </Form.Item>
+          
+          <Form.Item
+            label={t('inventory.brandStatus')}
+            name="status"
+            initialValue="active"
+          >
+            <Select>
+              <Option value="active">{t('inventory.active')}</Option>
+              <Option value="inactive">{t('inventory.inactive')}</Option>
+            </Select>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 品牌管理 - 删除确认 */}
+      <Modal
+        title={t('inventory.confirmDeleteBrand')}
+        open={!!deletingBrand}
+        onCancel={() => setDeletingBrand(null)}
+        onOk={async () => {
+          if (!deletingBrand) return
+          setLoading(true)
+          try {
+            const result = await deleteDocument(COLLECTIONS.BRANDS, deletingBrand.id)
+            if (result.success) {
+              message.success(t('inventory.brandDeleted'))
+              setBrandList(await getBrands())
+            } else {
+              message.error(t('inventory.brandDeleteFailed'))
+            }
+          } finally {
+            setLoading(false)
+            setDeletingBrand(null)
+          }
+        }}
+        okButtonProps={{ danger: true }}
+      >
+        {t('inventory.deleteBrandContent', { name: deletingBrand?.name })}
       </Modal>
     </div>
   )
