@@ -304,7 +304,7 @@ const AdminInventory: React.FC = () => {
       {/* 自定义标签页 */}
       <div style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', borderBottom: '1px solid rgba(244,175,37,0.2)' }}>
-          {(['list', 'in', 'out'] as const).map((tabKey) => {
+          {(['list', 'brand', 'in', 'out'] as const).map((tabKey) => {
             const isActive = activeTab === tabKey
             const baseStyle: React.CSSProperties = {
               flex: 1,
@@ -331,7 +331,7 @@ const AdminInventory: React.FC = () => {
                 onClick={() => setActiveTab(tabKey)}
                 style={{ ...baseStyle, ...(isActive ? activeStyle : inactiveStyle) }}
               >
-                {tabKey === 'list' ? t('inventory.product') : tabKey === 'in' ? t('inventory.stockIn') : t('inventory.stockOut')}
+                {tabKey === 'list' ? t('inventory.product') : tabKey === 'brand' ? t('inventory.brandManagement') : tabKey === 'in' ? t('inventory.stockIn') : t('inventory.stockOut')}
               </button>
             )
           })}
@@ -538,6 +538,32 @@ const AdminInventory: React.FC = () => {
                   )}
                 </div>
               )}
+            </div>
+          )}
+          {activeTab === 'brand' && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <Space>
+                  <Button 
+                    type="primary" 
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      // TODO: 实现添加品牌功能
+                      message.info(t('inventory.brandManagement') + ' - ' + t('common.add'))
+                    }}
+                  >
+                    {t('common.add')} {t('inventory.brand')}
+                  </Button>
+                </Space>
+              </div>
+              
+              <Card>
+                <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏷️</div>
+                  <div style={{ fontSize: '16px', marginBottom: '8px' }}>{t('inventory.brandManagement')}</div>
+                  <div style={{ fontSize: '14px' }}>{t('common.noData')}</div>
+                </div>
+              </Card>
             </div>
           )}
           {activeTab === 'in' && (

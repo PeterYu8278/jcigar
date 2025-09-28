@@ -553,7 +553,8 @@
     "pleaseInputOrigin": "Please input origin",
     "pleaseInputSize": "Please input size",
     "pleaseSelectStrength": "Please select strength",
-    "pleaseInputPrice": "Please input price"
+    "pleaseInputPrice": "Please input price",
+    "brandManagement": "Brand Management"
   },
   "financeAdmin": {
     "title": "Financial Management",

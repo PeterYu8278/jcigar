@@ -539,7 +539,8 @@
     "pleaseInputOrigin": "请输入产地",
     "pleaseInputSize": "请输入尺寸",
     "pleaseSelectStrength": "请选择强度",
-    "pleaseInputPrice": "请输入价格"
+    "pleaseInputPrice": "请输入价格",
+    "brandManagement": "品牌管理"
   },
   "financeAdmin": {
     "title": "财务管理",
