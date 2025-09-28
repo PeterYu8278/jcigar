@@ -13,6 +13,7 @@ import Home from './views/frontend/Home'
 import Events from './views/frontend/Events'
 import Shop from './views/frontend/Shop'
 import Profile from './views/frontend/Profile'
+import BrandDetail from './views/frontend/BrandDetail'
 
 // 管理后台页面
 import AdminDashboard from './views/admin/Dashboard'
@@ -98,6 +99,7 @@ function App() {
                   <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
                   <Route path="/shop" element={<ProtectedRoute roles={['member', 'admin']}><Shop /></ProtectedRoute>} />
                   <Route path="/profile" element={<ProtectedRoute roles={['member', 'admin']}><Profile /></ProtectedRoute>} />
+                  <Route path="/brand/:brandId" element={<ProtectedRoute roles={['member', 'admin']}><BrandDetail /></ProtectedRoute>} />
                   
                   {/* 管理后台路由 */}
                   <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminDashboard /></ProtectedRoute>} />

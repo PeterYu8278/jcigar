@@ -112,7 +112,12 @@
     "setToPublished": "Set to Published",
     "setToCancelled": "Set to Cancelled",
     "quickStatus": "Quick Status",
-    "noDescription": "No description"
+    "noDescription": "No description",
+    "confirmDeleteProduct": "Confirm delete product",
+    "totalProductTypes": "Total product types",
+    "types": "types",
+    "totalInStockQuantity": "Total in-stock quantity",
+    "sticks": "sticks"
   },
   "auth": {
     "login": "Login",
@@ -310,7 +315,7 @@
     "welcomeSubtitle": "Explore world-class cigars, join professional gatherings, and share tasting experiences with fellow enthusiasts",
     "vipMember": "VIP Member",
     "memberId": "Member ID",
-    "productNavigation": "Product Navigation",
+    "productNavigation": "Brand Navigation",
     "viewAll": "View All",
     "popularCigars": "Popular Cigars",
     "latestEvents": "Latest Events",
@@ -401,7 +406,8 @@
     "friendFirstPurchase": "Friend's first purchase",
     "memberId": "Member ID",
     "clickToReturnAvatar": "Click to return to avatar",
-    "clickToViewMemberCard": "Click to view member card"
+    "clickToViewMemberCard": "Click to view member card",
+    "noPurchaseRecords": "No purchase records"
   },
 
   "ordersAdmin": {
@@ -589,7 +595,14 @@
     "brandCountryRequired": "Brand country is required",
     "foundedYearInvalid": "Founded year must be a valid number",
     "brandWebsiteInvalid": "Please input a valid website URL",
-    "pleaseSelectBrand": "Please select brand"
+    "pleaseSelectBrand": "Please select brand",
+    "brandHistory": "Brand History",
+    "brandPhilosophy": "Brand Philosophy",
+    "representativeProducts": "Representative Products",
+    "customerReviews": "Customer Reviews",
+    "addToCart": "Add to Cart",
+    "pleaseSelectQuantity": "Please select product quantity first",
+    "addedToCart": "Added {{count}} items to cart"
   },
   "financeAdmin": {
     "title": "Financial Management",

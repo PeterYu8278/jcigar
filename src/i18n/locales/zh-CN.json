@@ -112,7 +112,12 @@
     "setToPublished": "设为已发布",
     "setToCancelled": "设为已取消",
     "quickStatus": "快速状态",
-    "noDescription": "无描述"
+    "noDescription": "无描述",
+    "confirmDeleteProduct": "确认删除产品",
+    "totalProductTypes": "产品种类总数",
+    "types": "种",
+    "totalInStockQuantity": "入库总数量",
+    "sticks": "支"
   },
   "auth": {
     "login": "登录",
@@ -296,7 +301,7 @@
     "welcomeSubtitle": "探索世界顶级雪茄，参与专业聚会，与同好分享品鉴心得",
     "vipMember": "尊贵会员",
     "memberId": "会员编号",
-    "productNavigation": "商品导航",
+    "productNavigation": "品牌导航",
     "viewAll": "查看全部",
     "popularCigars": "热门雪茄",
     "latestEvents": "最新活动",
@@ -387,7 +392,8 @@
     "friendFirstPurchase": "好友首次购买",
     "memberId": "会员ID",
     "clickToReturnAvatar": "点击返回头像",
-    "clickToViewMemberCard": "点击查看会员卡"
+    "clickToViewMemberCard": "点击查看会员卡",
+    "noPurchaseRecords": "暂无购买记录"
   },
   
   "ordersAdmin": {
@@ -575,7 +581,14 @@
     "brandCountryRequired": "品牌国家不能为空",
     "foundedYearInvalid": "成立年份必须是有效数字",
     "brandWebsiteInvalid": "请输入有效的网站地址",
-    "pleaseSelectBrand": "请选择品牌"
+    "pleaseSelectBrand": "请选择品牌",
+    "brandHistory": "品牌历史",
+    "brandPhilosophy": "品牌理念",
+    "representativeProducts": "代表性产品",
+    "customerReviews": "客户评价",
+    "addToCart": "加入购物车",
+    "pleaseSelectQuantity": "请先选择商品数量",
+    "addedToCart": "已添加 {{count}} 件商品到购物车"
   },
   "financeAdmin": {
     "title": "财务管理",

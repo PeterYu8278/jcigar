@@ -324,7 +324,7 @@ const AdminInventory: React.FC = () => {
   return (
     <div style={{ minHeight: '10vh'}}>
       
-           <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', paddingInline: 0, marginBottom: 12 }}>{t('navigation.inventory')}</h1>
+           <h1 style={{ fontSize: 22, fontWeight: 800, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', paddingInline: 0, marginBottom: 12 }}>{t('navigation.inventory')}</h1>
  
       {/* 自定义标签页 */}
       <div style={{ marginBottom: 12 }}>
@@ -338,13 +338,15 @@ const AdminInventory: React.FC = () => {
               fontSize: 12,
               outline: 'none',
               borderBottom: isActive ? '2px solid #f4af25' : '2px solid transparent',
+              borderTop: 'none',
+              borderLeft: 'none',
+              borderRight: 'none',
               cursor: 'pointer',
               background: 'none',
-              border: 'none',
             }
             const activeStyle: React.CSSProperties = {
               color: 'transparent',
-              backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+              background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
               WebkitBackgroundClip: 'text',
             }
             const inactiveStyle: React.CSSProperties = {
@@ -1201,7 +1203,9 @@ const AdminInventory: React.FC = () => {
             country: editingBrand.country,
             foundedYear: editingBrand.foundedYear,
             status: editingBrand.status,
-          } : {}}
+          } : {
+            status: 'active'
+          }}
         >
           <Form.Item
             label={t('inventory.brandName')}
@@ -1265,7 +1269,6 @@ const AdminInventory: React.FC = () => {
           <Form.Item
             label={t('inventory.brandStatus')}
             name="status"
-            initialValue="active"
           >
             <Select>
               <Option value="active">{t('inventory.active')}</Option>

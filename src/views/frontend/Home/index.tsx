@@ -14,8 +14,8 @@ import {
 const { Title, Paragraph, Text } = Typography
 
 import { useNavigate } from 'react-router-dom'
-import { getCigars, getUpcomingEvents } from '../../../services/firebase/firestore'
-import type { Event, Cigar } from '../../../types'
+import { getCigars, getUpcomingEvents, getBrands } from '../../../services/firebase/firestore'
+import type { Event, Cigar, Brand } from '../../../types'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../../../store/modules/auth'
 import { useQRCode } from '../../../hooks/useQRCode'
@@ -28,8 +28,10 @@ const Home: React.FC = () => {
   const { user } = useAuthStore()
   const [events, setEvents] = useState<Event[]>([])
   const [cigars, setCigars] = useState<Cigar[]>([])
+  const [brands, setBrands] = useState<Brand[]>([])
   const [loadingEvents, setLoadingEvents] = useState<boolean>(false)
   const [loadingCigars, setLoadingCigars] = useState<boolean>(false)
+  const [loadingBrands, setLoadingBrands] = useState<boolean>(false)
   
   // 会员等级文本获取函数
   const getMembershipText = (level: string) => {
@@ -54,20 +56,25 @@ const Home: React.FC = () => {
       try {
         setLoadingEvents(true)
         setLoadingCigars(true)
+        setLoadingBrands(true)
         
-        const [eventsData, cigarsData] = await Promise.all([
+        const [eventsData, cigarsData, brandsData] = await Promise.all([
           getUpcomingEvents(),
-          getCigars()
+          getCigars(),
+          getBrands()
         ])
         
         setEvents(Array.isArray(eventsData) ? eventsData : [])
         setCigars(Array.isArray(cigarsData) ? cigarsData : [])
+        setBrands(Array.isArray(brandsData) ? brandsData : [])
       } catch (e) {
         setEvents([])
         setCigars([])
+        setBrands([])
       } finally {
         setLoadingEvents(false)
         setLoadingCigars(false)
+        setLoadingBrands(false)
       }
     }
     load()
@@ -148,7 +155,7 @@ const Home: React.FC = () => {
 
       {/* 功能卡片 - 已移除旧“最新活动”卡片，改为下方新列表 */}
 
-      {/* 商品导航 */}
+      {/* 品牌导航 */}
       <div style={{ marginTop: 32, marginBottom: 32 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <Title level={4} style={{ margin: 0, color: '#f8f8f8' }}>{t('home.productNavigation')}</Title>
@@ -160,39 +167,69 @@ const Home: React.FC = () => {
             {t('home.viewAll')}
           </Button>
         </div>
-        <Row gutter={[16, 16]}>
-          {cigars.slice(0, 4).map((cigar) => (
-            <Col xs={6} key={cigar.id} style={{ textAlign: 'center' }}>
-              <div 
-                style={{ 
-                  width: 48, 
-                  height: 48, 
-                  borderRadius: 24, 
-                  background: 'rgba(30,30,30,0.7)', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  margin: '0 auto 8px', 
-                  border: '2px solid rgba(255,215,0,0.2)',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease'
-                }}
-                onClick={() => navigate('/shop')}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.border = '2px solid rgba(255,215,0,0.6)'
-                  e.currentTarget.style.transform = 'scale(1.05)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.border = '2px solid rgba(255,215,0,0.2)'
-                  e.currentTarget.style.transform = 'scale(1)'
-                }}
-              >
-                <img src={cigar.images?.[0] || 'https://via.placeholder.com/36x36?text=Brand'} alt={cigar.brand} style={{ width: 36, height: 36, objectFit: 'contain' }} />
-              </div>
-              <div style={{ fontSize: 12, color: '#f0f0f0' }}>{cigar.brand}</div>
-            </Col>
-          ))}
-        </Row>
+        {loadingBrands ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
+            <Spin />
+          </div>
+        ) : (
+          <Row gutter={[16, 16]}>
+            {brands
+              .filter(brand => brand.status === 'active')
+              .slice(0, 4)
+              .map((brand) => (
+              <Col xs={6} key={brand.id} style={{ textAlign: 'center' }}>
+                <div 
+                  style={{ 
+                    width: 48, 
+                    height: 48, 
+                    borderRadius: 24, 
+                    background: 'rgba(30,30,30,0.7)', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    margin: '0 auto 8px', 
+                    border: '2px solid rgba(255,215,0,0.2)',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onClick={() => navigate(`/brand/${brand.id}`)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.border = '2px solid rgba(255,215,0,0.6)'
+                    e.currentTarget.style.transform = 'scale(1.05)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.border = '2px solid rgba(255,215,0,0.2)'
+                    e.currentTarget.style.transform = 'scale(1)'
+                  }}
+                >
+                  {brand.logo ? (
+                    <img 
+                      src={brand.logo} 
+                      alt={brand.name} 
+                      style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: '50%' }} 
+                    />
+                  ) : (
+                    <div style={{ 
+                      width: 36, 
+                      height: 36, 
+                      borderRadius: '50%', 
+                      background: 'linear-gradient(45deg, #FFD700, #B8860B)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#000',
+                      fontWeight: 'bold',
+                      fontSize: '14px'
+                    }}>
+                      {brand.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div style={{ fontSize: 12, color: '#f0f0f0' }}>{brand.name}</div>
+              </Col>
+            ))}
+          </Row>
+        )}
       </div>
 
       {/* 热门雪茄 - 横向滚动 */}
@@ -238,7 +275,11 @@ const Home: React.FC = () => {
                   e.currentTarget.style.boxShadow = 'none'
                 }}
               >
-                <img src={cigar.images?.[0] || 'https://via.placeholder.com/96x96?text=Cigar'} alt={cigar.name} style={{ width: 96, height: 96, objectFit: 'contain', marginBottom: 8 }} />
+                <img 
+                  src={cigar.images?.[0] || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOTYiIGhlaWdodD0iOTYiIHZpZXdCb3g9IjAgMCA5NiA5NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9Ijk2IiBoZWlnaHQ9Ijk2IiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQ4IiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Q2lnYXI8L3RleHQ+Cjwvc3ZnPgo='} 
+                  alt={cigar.name} 
+                  style={{ width: 96, height: 96, objectFit: 'contain', marginBottom: 8 }} 
+                />
                 <div style={{ fontWeight: 600, color: '#f8f8f8', fontSize: 14 }}>{cigar.name}</div>
                 <div style={{ color: '#D4AF37', fontWeight: 700, fontSize: 14 }}>RM{cigar.price}</div>
               </div>
