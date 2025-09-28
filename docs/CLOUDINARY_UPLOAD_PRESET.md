@@ -21,7 +21,7 @@
 填写以下信息：
 
 **基本设置：**
-- **Preset name**: `ml_default`
+- **Preset name**: `jep-cigar`
 - **Signing Mode**: 选择 **"Unsigned"**（无签名）
 - **Folder**: `cigar-app`
 
@@ -54,7 +54,7 @@ const result = await uploadFile(file, {
 ## 🚨 常见问题
 
 ### 1. 上传失败 - "Upload preset not found"
-- 确保预设名称是 `ml_default`
+- 确保预设名称是 `jep-cigar`
 - 确保预设设置为 "Unsigned"（无签名）
 
 ### 2. 文件格式不支持

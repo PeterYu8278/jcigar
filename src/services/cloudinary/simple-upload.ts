@@ -14,7 +14,7 @@ export interface UploadOptions {
 }
 
 const CLOUD_NAME = 'dy2zb1n41'
-const UPLOAD_PRESET = 'ml_default' // 需要在 Cloudinary Dashboard 中创建
+const UPLOAD_PRESET = 'jep-cigar' // 您的上传预设名称
 
 /**
  * 上传文件到 Cloudinary（无签名上传）
