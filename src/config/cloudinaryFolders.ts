@@ -66,7 +66,7 @@ export const UPLOAD_CONFIG = {
 
 // 获取特定文件夹的上传配置
 export function getUploadConfig(folderName: CloudinaryFolderName) {
-  return UPLOAD_CONFIG.FOLDER_CONFIGS[folderName];
+  return (UPLOAD_CONFIG.FOLDER_CONFIGS as any)[folderName];
 }
 
 // 生成完整的文件夹路径
