@@ -99,7 +99,9 @@
     "remove": "Remove",
     "upload": "Upload",
     "uploadProductImage": "Upload Product Image",
-    "deleteProduct": "Delete Product"
+    "deleteProduct": "Delete Product",
+    "memberQRCode": "Member QR Code",
+    "saveFailed": "Save failed"
   },
   "auth": {
     "login": "Login",
@@ -271,7 +273,8 @@
     "wishlist": "Wishlist",
     "size": "Size",
     "sticks": "sticks",
-    "reviews": "reviews"
+    "reviews": "reviews",
+    "searchBrand": "Search brand"
   },
   "messages": {
     "operationSuccess": "Operation successful",

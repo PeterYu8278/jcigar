@@ -80,7 +80,7 @@ const Shop: React.FC = () => {
             <SearchOutlined />
                 </div>
           <Input
-            placeholder="搜索品牌"
+            placeholder={t('shop.searchBrand')}
             value={searchKeyword}
             onChange={(e) => setSearchKeyword(e.target.value)}
             style={{

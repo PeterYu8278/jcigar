@@ -40,10 +40,10 @@ const Login: React.FC = () => {
     try {
       const res = await loginWithGoogle()
       if (res.success) {
-        message.success('已使用 Google 登录')
+        message.success(t('auth.loginSuccess'))
         navigate(from, { replace: true })
       } else {
-        message.error((res as any).error?.message || 'Google 登录失败')
+        message.error((res as any).error?.message || t('auth.loginFailed'))
       }
     } finally {
       setLoading(false)

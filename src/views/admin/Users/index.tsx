@@ -692,7 +692,6 @@ const AdminUsers: React.FC = () => {
       >
         {editing && (
           <div style={{
-            background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
             minHeight: isMobile ? '100vh' : 'auto',
             color: '#FFFFFF'
           }}>
@@ -1333,7 +1332,7 @@ const AdminUsers: React.FC = () => {
                         fontSize: 16,
                         boxShadow: 'none'
                       }}
-                      placeholder="请输入姓名"
+                      placeholder={t('auth.name')}
                     />
                   </div>
                 </div>
@@ -1382,7 +1381,7 @@ const AdminUsers: React.FC = () => {
                         fontSize: 16,
                         boxShadow: 'none'
                       }}
-                      placeholder="请输入邮箱"
+                      placeholder={t('auth.email')}
                     />
                   </div>
                 </div>
@@ -1432,7 +1431,7 @@ const AdminUsers: React.FC = () => {
                         fontSize: 16,
                         boxShadow: 'none'
                       }}
-                      placeholder="请输入手机号"
+                      placeholder={t('auth.phone')}
                     />
                   </div>
                 </div>
@@ -1573,7 +1572,7 @@ const AdminUsers: React.FC = () => {
                   e.currentTarget.style.transform = 'scale(1)'
                 }}
               >
-                {loading ? '保存中...' : '保存更改'}
+                {loading ? t('common.loading') : t('common.save')}
               </button>
             </div>
         </Form>
@@ -1591,7 +1590,7 @@ const AdminUsers: React.FC = () => {
           try {
             const res = await deleteDocument(COLLECTIONS.USERS, deleting.id)
             if (res.success) {
-              message.success('已删除')
+              message.success(t('common.deleted'))
               const list = await getUsers()
               setUsers(list)
             }

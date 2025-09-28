@@ -97,7 +97,7 @@ const AdminEvents: React.FC = () => {
 
       const res = await updateDocument(COLLECTIONS.EVENTS, viewing.id, updateData)
       if (res.success) {
-        message.success('已保存')
+        message.success(t('common.saved'))
         const list = await getEvents()
         setEvents(list)
         const updatedEvent = list.find(e => e.id === viewing.id)
@@ -105,10 +105,10 @@ const AdminEvents: React.FC = () => {
           setViewing(updatedEvent)
         }
       } else {
-        message.error('保存失败')
+        message.error(t('common.saveFailed'))
       }
     } catch (error) {
-      message.error('保存失败')
+      message.error(t('common.saveFailed'))
     }
   }
   const [viewing, setViewing] = useState<Event | null>(null)
@@ -188,7 +188,7 @@ const AdminEvents: React.FC = () => {
             message.success(`活动已自动结束，并创建了 ${orderResult.createdOrders} 个订单`)
           }
         } catch (error) {
-          console.error('自动创建订单失败:', error)
+          console.error('Auto-create orders failed:', error)
         }
       }
     }
@@ -466,9 +466,9 @@ const AdminEvents: React.FC = () => {
       width: 100,
       render: (_: any, record: any) => (
         <Space size="small" style={{ justifyContent: 'center', width: '100%' }}>
-          <button style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', padding: '4px 8px', borderRadius: 6, background: 'transparent', color: '#666', cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => setViewing(record)}>
-            <EyeOutlined />
-          </button>
+          <Button type="link" icon={<EyeOutlined />} size="small" onClick={() => setViewing(record)}>
+            
+          </Button>
         </Space>
       ),
     },
@@ -1453,7 +1453,7 @@ const AdminEvents: React.FC = () => {
             if (editing) {
               const res = await updateDocument<Event>(COLLECTIONS.EVENTS, editing.id, payload)
               if (res.success) {
-                // 如果状态被设置为"已结束"，自动创建订单
+                // Auto-create orders when status is set to "completed"
                 if (values.status === 'completed' && editing.status !== 'completed') {
                   const orderResult = await createOrdersFromEventAllocations(editing.id);
                   if (orderResult.success) {

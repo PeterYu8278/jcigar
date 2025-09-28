@@ -2,6 +2,7 @@
 import React from 'react'
 import { Spin, Alert } from 'antd'
 import { QrcodeOutlined } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 
 interface QRCodeDisplayProps {
   qrCodeDataURL: string | null
@@ -27,6 +28,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
   style = {},
   showPlaceholder = true
 }) => {
+  const { t } = useTranslation()
   // 加载状态
   if (loading) {
     return (
@@ -84,7 +86,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
         }}
       >
         <img
-          alt="会员QR Code"
+          alt={t('common.memberQRCode')}
           src={qrCodeDataURL}
           style={{ 
             width: size, 

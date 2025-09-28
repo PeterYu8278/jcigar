@@ -267,7 +267,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
                       textAlign: 'left',
                       textShadow: '0 2px 4px rgba(0,0,0,0.7)',
                       fontFamily: "'Noto Sans SC', sans-serif"
-                    }}>{user?.displayName || '会员'}</div>
+                    }}>{user?.displayName || t('common.member')}</div>
                     <div style={{ 
                       color: '#D4AF37', 
                       fontSize: 12, 

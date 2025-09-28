@@ -60,7 +60,6 @@ const Profile: React.FC = () => {
 
   return (
     <div style={{
-      background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
       minHeight: '100vh',
       color: '#FFFFFF',
       padding: '0'
@@ -70,8 +69,8 @@ const Profile: React.FC = () => {
         position: 'sticky',
         top: 0,
         zIndex: 10,
-                        display: 'flex',
-                        alignItems: 'center',
+        display: 'flex',
+        alignItems: 'center',
         justifyContent: 'space-between',
         padding: '16px',
         background: 'transparent',

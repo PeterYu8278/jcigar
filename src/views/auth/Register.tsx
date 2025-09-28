@@ -21,7 +21,7 @@ const Register: React.FC = () => {
     phone: string;
   }) => {
     if (values.password !== values.confirmPassword) {
-      message.error('两次输入的密码不一致')
+      message.error(t('auth.passwordsDoNotMatch'))
       return
     }
 
@@ -29,13 +29,13 @@ const Register: React.FC = () => {
     try {
       const result = await registerUser(values.email || '', values.password, values.displayName, values.phone)
       if (result.success) {
-        message.success('注册成功！请登录')
+        message.success(t('auth.registerSuccess'))
         navigate('/login')
       } else {
-        message.error((result as any).error?.message || '注册失败')
+        message.error((result as any).error?.message || t('auth.registerFailed'))
       }
     } catch (error) {
-      message.error('注册失败，请重试')
+      message.error(t('auth.registerFailedRetry'))
     } finally {
       setLoading(false)
     }
@@ -82,11 +82,11 @@ const Register: React.FC = () => {
           >
             <Form.Item
               name="displayName"
-              rules={[{ required: true, message: '请输入您的姓名!' }]}
+              rules={[{ required: true, message: t('auth.nameRequired') }]}
             >
               <Input
                 prefix={<UserOutlined style={{ color: '#ffd700' }} />}
-                placeholder="姓名"
+                placeholder={t('auth.name')}
                 style={{
                   background: 'rgba(45, 45, 45, 0.8)',
                   border: '1px solid #444444',
@@ -99,14 +99,14 @@ const Register: React.FC = () => {
             <Form.Item
               name="phone"
               rules={[
-                { required: true, message: '请输入手机号码!' },
-                { pattern: /^\+?\d{7,15}$/, message: '请输入有效的手机号(7-15位数字，可含+)' }
+                { required: true, message: t('auth.phoneRequired') },
+                { pattern: /^\+?\d{7,15}$/, message: t('auth.phoneInvalid') }
               ]}
               getValueFromEvent={(e) => e.target.value.replace(/[^\d+]/g, '')}
             >
               <Input
                 prefix={<UserOutlined style={{ color: '#ffd700' }} />}
-                placeholder="手机号码"
+                placeholder={t('auth.phone')}
                 style={{
                   background: 'rgba(45, 45, 45, 0.8)',
                   border: '1px solid #444444',
@@ -119,12 +119,12 @@ const Register: React.FC = () => {
             <Form.Item
               name="email"
               rules={[
-                { type: 'email', message: '请输入有效的邮箱地址!' }
+                { type: 'email', message: t('auth.emailInvalid') }
               ]}
             >
               <Input
                 prefix={<MailOutlined style={{ color: '#ffd700' }} />}
-                placeholder="邮箱地址（选填）"
+                placeholder={t('auth.emailOptional')}
                 style={{
                   background: 'rgba(45, 45, 45, 0.8)',
                   border: '1px solid #444444',
@@ -137,8 +137,8 @@ const Register: React.FC = () => {
             <Form.Item
               name="password"
               rules={[
-                { required: true, message: '请输入密码!' },
-                { min: 6, message: '密码至少6位!' }
+                { required: true, message: t('auth.passwordRequired') },
+                { min: 6, message: t('auth.passwordMinLength') }
               ]}
             >
               <Input.Password
@@ -193,7 +193,7 @@ const Register: React.FC = () => {
 
           <div style={{ textAlign: 'center', paddingBottom: '20px' }}>
             <Text style={{ color: '#999999' }}>
-              已有账户？{' '}
+              {t('auth.noAccount')}{' '}
               <Button 
                 type="link" 
                 onClick={() => navigate('/login')}
@@ -206,7 +206,7 @@ const Register: React.FC = () => {
                   padding: 0
                 }}
               >
-                立即登录
+                {t('auth.login')}
               </Button>
             </Text>
           </div>

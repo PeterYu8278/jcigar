@@ -99,7 +99,9 @@
     "remove": "移除",
     "upload": "上传",
     "uploadProductImage": "上传产品图片",
-    "deleteProduct": "删除产品"
+    "deleteProduct": "删除产品",
+    "memberQRCode": "会员QR Code",
+    "saveFailed": "保存失败"
   },
   "auth": {
     "login": "登录",
@@ -257,7 +259,8 @@
     "wishlist": "收藏",
     "size": "尺寸",
     "sticks": "支",
-    "reviews": "评价"
+    "reviews": "评价",
+    "searchBrand": "搜索品牌"
   },
   "messages": {
     "operationSuccess": "操作成功",

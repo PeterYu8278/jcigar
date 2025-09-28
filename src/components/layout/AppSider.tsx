@@ -60,7 +60,7 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
     {
       key: '/profile',
       icon: <UserOutlined />,
-      label: '个人档案',
+      label: t('navigation.profile'),
     },
   ]
 
