@@ -10,14 +10,17 @@ interface LocalizedAppProps {
 }
 
 const LocalizedApp: React.FC<LocalizedAppProps> = ({ children }) => {
-  const { language } = useI18nStore()
+  const store = useI18nStore()
+  const language = store?.language || 'zh-CN'
 
   // 根据语言设置Ant Design的locale
   const antdLocale = language === 'zh-CN' ? zhCN : enUS
   
   // 根据语言设置dayjs的locale
   React.useEffect(() => {
-    dayjs.locale(language === 'zh-CN' ? 'zh-cn' : 'en')
+    if (language) {
+      dayjs.locale(language === 'zh-CN' ? 'zh-cn' : 'en')
+    }
   }, [language])
 
   return (
