@@ -792,7 +792,7 @@ const AdminUsers: React.FC = () => {
                   borderRadius: '8px',
                   color: '#111',
                   textTransform: 'uppercase',
-                  marginTop: '16px',
+                  marginBottom: '10px',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease'
                 }}
@@ -802,12 +802,12 @@ const AdminUsers: React.FC = () => {
             </div>
 
             {/* Stats Section */}
-            <div style={{ padding: '0 24px 24px 24px' }}>
+            <div style={{ padding: '0 16px 0 16px' }}>
               <div style={{ 
                 display: 'grid', 
                 gridTemplateColumns: 'repeat(3, 1fr)', 
-                gap: '16px', 
-                marginBottom: '24px' 
+                gap: '10px', 
+                marginBottom: '10px' 
               }}>
                 {[
                   { title: t('profile.eventsJoined'), value: 12, icon: <CalendarOutlined /> },

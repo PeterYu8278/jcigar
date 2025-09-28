@@ -136,7 +136,6 @@ const AdminEvents: React.FC = () => {
     location: true,
     registration: true,
     revenue: true,
-    status: true,
     action: true,
   })
 
@@ -277,7 +276,12 @@ const AdminEvents: React.FC = () => {
       key: 'title',
       render: (title: string, record: any) => (
         <div>
-          <div style={{ fontWeight: 'bold' }}>{title}</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <div style={{ fontWeight: 'bold' }}>{title}</div>
+            <Tag color={getStatusColor(record.status)} style={{ fontSize: '11px', marginLeft: 8 }}>
+              {getStatusText(record.status)}
+            </Tag>
+          </div>
           <div style={{ fontSize: '12px', color: '#666' }}>
             {(record.description || '').length > 50 
               ? `${record.description.substring(0, 50)}...` 
@@ -339,127 +343,6 @@ const AdminEvents: React.FC = () => {
           RM{revenueMap[(record as any).id] ?? 0}
         </div>
       ),
-    },
-    {
-      title: t('events.status'),
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: string) => (
-        <Tag color={getStatusColor(status)}>
-          {getStatusText(status)}
-        </Tag>
-      ),
-      filterIcon: (filtered: boolean) => (
-        <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />
-      ),
-      filterDropdown: (props: any) => {
-        const { setSelectedKeys, selectedKeys, confirm, clearFilters } = props as any
-        return (
-          <div style={{ padding: 8 }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 140 }}>
-              <button 
-                style={{ 
-                  padding: '4px 8px', 
-                  borderRadius: 4, 
-                  fontSize: 12, 
-                  cursor: 'pointer', 
-                  transition: 'all 0.2s ease',
-                  ...(selectedKeys[0] === undefined ? 
-                    { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600 } : 
-                    { background: 'transparent', color: '#666' }
-                  )
-                }} 
-                onClick={() => { setSelectedKeys([]); clearFilters?.(); confirm({ closeDropdown: true }) }}
-              >
-                {t('common.all')}
-              </button>
-              <button 
-                style={{ 
-                  padding: '4px 8px', 
-                  borderRadius: 4, 
-                  fontSize: 12, 
-                  cursor: 'pointer', 
-                  transition: 'all 0.2s ease',
-                  ...(selectedKeys[0] === 'draft' ? 
-                    { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600 } : 
-                    { background: 'transparent', color: '#666' }
-                  )
-                }} 
-                onClick={() => { setSelectedKeys(['draft']); confirm({ closeDropdown: true }) }}
-              >
-                {t('events.draft')}
-              </button>
-              <button 
-                style={{ 
-                  padding: '4px 8px', 
-                  borderRadius: 4, 
-                  fontSize: 12, 
-                  cursor: 'pointer', 
-                  transition: 'all 0.2s ease',
-                  ...(selectedKeys[0] === 'published' ? 
-                    { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600 } : 
-                    { background: 'transparent', color: '#666' }
-                  )
-                }} 
-                onClick={() => { setSelectedKeys(['published']); confirm({ closeDropdown: true }) }}
-              >
-                {t('events.published')}
-              </button>
-              <button 
-                style={{ 
-                  padding: '4px 8px', 
-                  borderRadius: 4, 
-                  fontSize: 12, 
-                  cursor: 'pointer', 
-                  transition: 'all 0.2s ease',
-                  ...(selectedKeys[0] === 'ongoing' ? 
-                    { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600 } : 
-                    { background: 'transparent', color: '#666' }
-                  )
-                }} 
-                onClick={() => { setSelectedKeys(['ongoing']); confirm({ closeDropdown: true }) }}
-              >
-                {t('events.ongoing')}
-              </button>
-              <button 
-                style={{ 
-                  padding: '4px 8px', 
-                  borderRadius: 4, 
-                  fontSize: 12, 
-                  cursor: 'pointer', 
-                  transition: 'all 0.2s ease',
-                  ...(selectedKeys[0] === 'completed' ? 
-                    { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600 } : 
-                    { background: 'transparent', color: '#666' }
-                  )
-                }} 
-                onClick={() => { setSelectedKeys(['completed']); confirm({ closeDropdown: true }) }}
-              >
-                {t('events.completed')}
-              </button>
-              <button 
-                style={{ 
-                  padding: '4px 8px', 
-                  borderRadius: 4, 
-                  fontSize: 12, 
-                  cursor: 'pointer', 
-                  transition: 'all 0.2s ease',
-                  ...(selectedKeys[0] === 'cancelled' ? 
-                    { background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600 } : 
-                    { background: 'transparent', color: '#666' }
-                  )
-                }} 
-                onClick={() => { setSelectedKeys(['cancelled']); confirm({ closeDropdown: true }) }}
-              >
-                {t('events.cancelled')}
-              </button>
-            </div>
-          </div>
-        )
-      },
-      onFilter: (value: any, record: any) => {
-        return !value || record.status === value
-      },
     },
     {
       title: t('common.action'),
