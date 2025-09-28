@@ -28,8 +28,10 @@ const LocalizedApp: React.FC<LocalizedAppProps> = ({ children }) => {
         console.warn('Failed to parse saved language:', error)
       }
     }
-    
-    // 设置dayjs locale
+  }, []) // 只在组件挂载时执行一次
+
+  // 设置dayjs locale
+  useEffect(() => {
     dayjs.locale(language === 'zh-CN' ? 'zh-cn' : 'en')
   }, [language])
 
