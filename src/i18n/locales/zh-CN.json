@@ -365,7 +365,16 @@
     "referralRecords": "引荐人记录",
     "purchaseCigar": "购买雪茄",
     "attendTasting": "参加品鉴会",
-    "purchaseAccessories": "购买雪茄配件"
+    "purchaseAccessories": "购买雪茄配件",
+    "purchaseCigarPoints": "购买雪茄获得积分",
+    "attendEventPoints": "参与活动获得积分",
+    "cubanCigarTasting": "古巴雪茄品鉴会",
+    "whiskeyCigarPairing": "威士忌与雪茄搭配品鉴",
+    "referralRegistration": "推荐好友注册",
+    "friendFirstPurchase": "好友首次购买",
+    "memberId": "会员ID",
+    "clickToReturnAvatar": "点击返回头像",
+    "clickToViewMemberCard": "点击查看会员卡"
   },
   
   "ordersAdmin": {

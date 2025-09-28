@@ -292,7 +292,7 @@ const Profile: React.FC = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontWeight: '600', color: '#FFFFFF', marginBottom: '4px' }}>
-                      购买雪茄获得积分
+                      {t('usersAdmin.purchaseCigarPoints')}
                     </div>
                     <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
                       2024-10-20
@@ -311,7 +311,7 @@ const Profile: React.FC = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontWeight: '600', color: '#FFFFFF', marginBottom: '4px' }}>
-                      参与活动获得积分
+                      {t('usersAdmin.attendEventPoints')}
                     </div>
                     <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
                       2024-10-18
@@ -334,7 +334,7 @@ const Profile: React.FC = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontWeight: '600', color: '#FFFFFF', marginBottom: '4px' }}>
-                      古巴雪茄品鉴会
+                      {t('usersAdmin.cubanCigarTasting')}
                     </div>
                     <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
                       2024-10-15
@@ -353,7 +353,7 @@ const Profile: React.FC = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontWeight: '600', color: '#FFFFFF', marginBottom: '4px' }}>
-                      威士忌与雪茄搭配品鉴
+                      {t('usersAdmin.whiskeyCigarPairing')}
                     </div>
                     <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
                       2024-10-22
@@ -376,7 +376,7 @@ const Profile: React.FC = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontWeight: '600', color: '#FFFFFF', marginBottom: '4px' }}>
-                      推荐好友注册
+                      {t('usersAdmin.referralRegistration')}
                     </div>
                     <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
                       2024-10-15
@@ -395,7 +395,7 @@ const Profile: React.FC = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontWeight: '600', color: '#FFFFFF', marginBottom: '4px' }}>
-                      好友首次购买
+                      {t('usersAdmin.friendFirstPurchase')}
                     </div>
                     <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
                       2024-10-10

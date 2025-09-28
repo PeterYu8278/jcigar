@@ -379,7 +379,16 @@
     "referralRecords": "Referral Records",
     "purchaseCigar": "Purchase Cigar",
     "attendTasting": "Attend Tasting",
-    "purchaseAccessories": "Purchase Accessories"
+    "purchaseAccessories": "Purchase Accessories",
+    "purchaseCigarPoints": "Purchase cigars for points",
+    "attendEventPoints": "Attend events for points",
+    "cubanCigarTasting": "Cuban Cigar Tasting",
+    "whiskeyCigarPairing": "Whiskey & Cigar Pairing",
+    "referralRegistration": "Referral registration",
+    "friendFirstPurchase": "Friend's first purchase",
+    "memberId": "Member ID",
+    "clickToReturnAvatar": "Click to return to avatar",
+    "clickToViewMemberCard": "Click to view member card"
   },
 
   "ordersAdmin": {

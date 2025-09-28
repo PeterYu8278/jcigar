@@ -286,7 +286,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
                     fontSize: 11,
                     fontFamily: "'Noto Sans SC', sans-serif",
                     textShadow: '0 1px 2px rgba(0,0,0,0.5)'
-                  }}>会员ID</div>
+                  }}>{t('usersAdmin.memberId')}</div>
                   <div style={{ 
                     color: '#ffffff', 
                     fontSize: 16, 
@@ -303,7 +303,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
                     marginTop: 4,
                     fontFamily: "'Noto Sans SC', sans-serif",
                     textShadow: '0 1px 2px rgba(0,0,0,0.5)'
-                  }}>积分</div>
+                  }}>{t('usersAdmin.points')}</div>
                   <div style={{ 
                     color: '#D4AF37', 
                     fontSize: 14, 
@@ -329,7 +329,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
               fontFamily: "'Noto Sans SC', sans-serif",
               textShadow: '0 1px 2px rgba(0,0,0,0.5)'
             }}>
-              点击返回头像
+              {t('usersAdmin.clickToReturnAvatar')}
             </div>
           </div>
         ) : (
@@ -404,7 +404,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
               fontFamily: "'Noto Sans SC', sans-serif",
               textShadow: '0 1px 2px rgba(0,0,0,0.5)'
             }}>
-              点击查看会员卡
+              {t('usersAdmin.clickToViewMemberCard')}
             </div>
           </div>
         )}
