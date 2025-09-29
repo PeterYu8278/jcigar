@@ -704,6 +704,9 @@ const AdminUsers: React.FC = () => {
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '16px',
+              
+              background: 'transparent',
+              backdropFilter: 'blur(10px)'
             }}>
               <Button
                 type="text"
@@ -795,7 +798,7 @@ const AdminUsers: React.FC = () => {
             </div>
 
             {/* Stats Section */}
-            <div style={{ padding: '0 16px 0 16px' }}>
+            <div style={{}}>
               <div style={{ 
                 display: 'grid', 
                 gridTemplateColumns: 'repeat(3, 1fr)', 

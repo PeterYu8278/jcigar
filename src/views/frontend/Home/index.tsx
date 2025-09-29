@@ -1,6 +1,6 @@
 // 首页组件 - Gentleman Club黑金主题
 import React, { useEffect, useState } from 'react'
-import { Row, Col, Card, Typography, Button, Space, Statistic, Badge, Spin } from 'antd'
+import { Row, Col, Card, Typography, Button, Space, Statistic, Badge, Spin, message } from 'antd'
 import { 
   CalendarOutlined, 
   ShoppingOutlined, 
@@ -14,7 +14,7 @@ import {
 const { Title, Paragraph, Text } = Typography
 
 import { useNavigate } from 'react-router-dom'
-import { getCigars, getUpcomingEvents, getBrands } from '../../../services/firebase/firestore'
+import { getCigars, getUpcomingEvents, getBrands, registerForEvent, unregisterFromEvent } from '../../../services/firebase/firestore'
 import type { Event, Cigar, Brand } from '../../../types'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../../../store/modules/auth'
@@ -32,6 +32,7 @@ const Home: React.FC = () => {
   const [loadingEvents, setLoadingEvents] = useState<boolean>(false)
   const [loadingCigars, setLoadingCigars] = useState<boolean>(false)
   const [loadingBrands, setLoadingBrands] = useState<boolean>(false)
+  const [registeringEvents, setRegisteringEvents] = useState<Set<string>>(new Set())
   
   // 会员等级文本获取函数
   const getMembershipText = (level: string) => {
@@ -50,6 +51,60 @@ const Home: React.FC = () => {
     memberName: user?.displayName,
     autoGenerate: true
   })
+
+  // 检查用户是否已报名某个活动
+  const isUserRegistered = (event: Event): boolean => {
+    return !!(user?.id && event.participants?.registered?.includes(user.id))
+  }
+
+  // 处理活动报名/取消报名
+  const handleEventRegistration = async (eventId: string, isRegistered: boolean) => {
+    if (!user?.id) {
+      message.warning('请先登录')
+      return
+    }
+
+    setRegisteringEvents(prev => new Set(prev).add(eventId))
+    
+    try {
+      const result = isRegistered 
+        ? await unregisterFromEvent(eventId, user.id)
+        : await registerForEvent(eventId, user.id)
+
+      if (result.success) {
+        message.success(isRegistered ? '已取消报名' : '报名成功')
+        // 更新本地事件状态
+        setEvents(prevEvents => 
+          prevEvents.map(event => {
+            if (event.id === eventId) {
+              const updatedRegistered = isRegistered 
+                ? event.participants.registered.filter(id => id !== user.id)
+                : [...(event.participants.registered || []), user.id]
+              
+              return {
+                ...event,
+                participants: {
+                  ...event.participants,
+                  registered: updatedRegistered
+                }
+              }
+            }
+            return event
+          })
+        )
+      } else {
+        message.error(result.error?.message || (isRegistered ? '取消报名失败' : '报名失败'))
+      }
+    } catch (error) {
+      message.error(isRegistered ? '取消报名失败' : '报名失败')
+    } finally {
+      setRegisteringEvents(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(eventId)
+        return newSet
+      })
+    }
+  }
 
   useEffect(() => {
     const load = async () => {
@@ -163,7 +218,14 @@ const Home: React.FC = () => {
           <Title level={4} style={{ margin: 0, color: '#f8f8f8' }}>{t('home.productNavigation')}</Title>
           <Button 
             type="link" 
-            style={{ color: '#ffd700', fontWeight: 600, paddingRight: 0 }}
+            style={{ 
+              background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              fontWeight: 600, 
+              paddingRight: 0 
+            }}
             onClick={() => navigate('/shop')}
           >
             {t('home.viewAll')}
@@ -245,10 +307,17 @@ const Home: React.FC = () => {
       {/* 热门雪茄 - 横向滚动 */}
       <div style={{ marginBottom: 32 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <Title level={4} style={{ margin: '0 0 16px', color: '#f8f8f8' }}>{t('home.popularCigars')}</Title>
+          <Title level={4} style={{ margin: 0, color: '#f8f8f8' }}>{t('home.popularCigars')}</Title>
           <Button 
             type="link" 
-            style={{ color: '#ffd700', fontWeight: 600, paddingRight: 0 }}
+            style={{ 
+              background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              fontWeight: 600, 
+              paddingRight: 0 
+            }}
             onClick={() => navigate('/shop')}
           >
             {t('home.viewAll')}
@@ -259,39 +328,99 @@ const Home: React.FC = () => {
             <Spin />
           </div>
         ) : (
-          <div style={{ display: 'flex', overflowX: 'auto', gap: 16, paddingBottom: 8 }}>
-            {cigars.slice(0, 6).map((cigar) => (
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(4, 1fr)', 
+            gap: '12px'
+          }}>
+            {cigars.slice(0, 4).map((cigar) => (
               <div 
                 key={cigar.id} 
                 style={{ 
-                  flex: '0 0 160px', 
-                  background: 'rgba(30,30,30,0.6)', 
-                  borderRadius: 12, 
-                  padding: 16, 
-                  textAlign: 'center', 
-                  border: '1px solid rgba(255,215,0,0.2)',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease'
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  padding: '4px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  transition: 'all 0.3s ease',
+                  cursor: 'pointer'
                 }}
                 onClick={() => navigate('/shop')}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.border = '1px solid rgba(255,215,0,0.6)'
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
                   e.currentTarget.style.transform = 'translateY(-2px)'
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(255,215,0,0.2)'
+                  e.currentTarget.style.boxShadow = '0 8px 25px rgba(244, 175, 37, 0.2)'
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.border = '1px solid rgba(255,215,0,0.2)'
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
                   e.currentTarget.style.transform = 'translateY(0)'
                   e.currentTarget.style.boxShadow = 'none'
                 }}
               >
-                <img 
-                  src={cigar.images?.[0] || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOTYiIGhlaWdodD0iOTYiIHZpZXdCb3g9IjAgMCA5NiA5NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9Ijk2IiBoZWlnaHQ9Ijk2IiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQ4IiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Q2lnYXI8L3RleHQ+Cjwvc3ZnPgo='} 
-                  alt={cigar.name} 
-                  style={{ width: 96, height: 96, objectFit: 'contain', marginBottom: 8 }} 
+                <div 
+                  style={{
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '8px',
+                    backgroundImage: `url(${cigar.images?.[0] || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQwIiB5PSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEwIiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Q2lnYXI8L3RleHQ+Cjwvc3ZnPgo='})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    border: '2px solid rgba(244, 175, 37, 0.2)'
+                  }}
                 />
-                <div style={{ fontWeight: 600, color: '#f8f8f8', fontSize: 14 }}>{cigar.name}</div>
-                <div style={{ color: '#D4AF37', fontWeight: 700, fontSize: 14 }}>RM{cigar.price}</div>
+                <div style={{ width: '100%', textAlign: 'center' }}>
+                  <h3 style={{ 
+                    fontSize: '12px', 
+                    fontWeight: '600', 
+                    color: '#fff',
+                    margin: '0 0 4px 0',
+                    textAlign: 'center',
+                    width: '100%',
+                    lineHeight: '1.2',
+                    minHeight: '28px',
+                    display: 'flex',
+                    alignItems: 'top',
+                    justifyContent: 'center',
+                    wordWrap: 'break-word',
+                    overflowWrap: 'break-word'
+                  }}>
+                    {cigar.name}
+                  </h3>
+                  <p style={{ 
+                    fontSize: '11px', 
+                    color: '#F4AF25',
+                    margin: '0 0 4px 0',
+                    fontWeight: '500',
+                    textAlign: 'center',
+                    width: '100%',
+                    lineHeight: '1.2',
+                    minHeight: '13px',
+                    display: 'flex',
+                    alignItems: 'top',
+                    justifyContent: 'center'
+                  }}>
+                    RM {cigar.price}
+                  </p>
+                  <p style={{ 
+                    fontSize: '10px', 
+                    color: '#999',
+                    margin: 0,
+                    textAlign: 'center',
+                    width: '100%',
+                    lineHeight: '1.2',
+                    minHeight: '12px',
+                    display: 'flex',
+                    alignItems: 'top',
+                    justifyContent: 'center',
+                    wordWrap: 'break-word',
+                    overflowWrap: 'break-word'
+                  }}>
+                    {cigar.origin}
+                  </p>
+                </div>
               </div>
             ))}
           </div>
@@ -304,7 +433,14 @@ const Home: React.FC = () => {
           <Title level={4} style={{ margin: '0 0 16px', color: '#f8f8f8' }}>{t('home.latestEvents')}</Title>
           <Button 
             type="link" 
-            style={{ color: '#ffd700', fontWeight: 600, paddingRight: 0 }}
+            style={{ 
+              background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              fontWeight: 600, 
+              paddingRight: 0 
+            }}
             onClick={() => navigate('/events')}
           >
             {t('home.viewAll')}
@@ -334,9 +470,37 @@ const Home: React.FC = () => {
                         <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{desc}</div>
                       )}
                     </div>
-                    <Button type="primary" size="small" style={{ background: '#D4AF37', border: 'none', color: '#0a0a0a', fontWeight: 700 }} onClick={() => navigate('/events')}>
-                      {t('events.join')}
-                    </Button>
+                    {(() => {
+                      const isRegistered = isUserRegistered(ev as Event)
+                      const isLoading = registeringEvents.has(ev.id)
+                      const isPastDeadline = ev.schedule?.registrationDeadline && 
+                        new Date(ev.schedule.registrationDeadline) < new Date()
+                      
+                      return (
+                        <Button 
+                          type="primary" 
+                          size="small" 
+                          loading={isLoading}
+                          disabled={isPastDeadline}
+                          style={{ 
+                            background: isRegistered 
+                              ? 'linear-gradient(to right,#ff6b6b,#ee5a52)' 
+                              : 'linear-gradient(to right,#FDE08D,#C48D3A)', 
+                            color: '#0a0a0a', 
+                            fontWeight: 700,
+                            opacity: isPastDeadline ? 0.5 : 1
+                          }} 
+                          onClick={() => handleEventRegistration(ev.id, !!isRegistered)}
+                        >
+                          {isPastDeadline 
+                            ? '报名已截止' 
+                            : isRegistered 
+                              ? '取消报名' 
+                              : t('events.join')
+                          }
+                        </Button>
+                      )
+                    })()}
             </div>
                 )
               })

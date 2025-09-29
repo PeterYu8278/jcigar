@@ -624,7 +624,7 @@ const AdminInventory: React.FC = () => {
 
               {/* 排序和筛选按钮 */}
               <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
-                <Button
+                  <Button 
                   style={{
                     borderRadius: '9999px',
                     background: 'rgba(255,255,255,0.05)',
@@ -640,7 +640,7 @@ const AdminInventory: React.FC = () => {
                   <svg fill="currentColor" height="16" viewBox="0 0 256 256" width="16">
                     <path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"></path>
                   </svg>
-                </Button>
+                  </Button>
                 <Button
                   style={{
                     borderRadius: '9999px',
@@ -659,7 +659,7 @@ const AdminInventory: React.FC = () => {
                   </svg>
                 </Button>
               </div>
-
+              
               {/* 品牌列表 */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {brandList.length === 0 ? (
@@ -798,7 +798,7 @@ const AdminInventory: React.FC = () => {
                               </div>
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
-                              <Button
+                            <Button 
                                 onClick={() => setEditingBrand(brand)}
                                 style={{
                                   width: '40px',
@@ -824,8 +824,8 @@ const AdminInventory: React.FC = () => {
                                 }}
                               >
                                 <EditOutlined style={{ fontSize: '18px' }} />
-                              </Button>
-                              <Button
+                            </Button>
+                            <Button 
                                 onClick={() => setDeletingBrand(brand)}
                                 style={{
                                   width: '40px',
@@ -851,7 +851,7 @@ const AdminInventory: React.FC = () => {
                                 }}
                               >
                                 <DeleteOutlined style={{ fontSize: '18px' }} />
-                              </Button>
+                            </Button>
                             </div>
                           </div>
                         </div>

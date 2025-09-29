@@ -172,7 +172,7 @@ const BrandDetail: React.FC = () => {
       </div>
 
       {/* 主要内容 */}
-      <div style={{ padding: '16px', paddingBottom: '100px' }}>
+      <div style={{ padding: '16px', paddingBottom: '24px' }}>
         {/* 品牌横幅 */}
         <div style={{
           position: 'relative',
@@ -199,9 +199,9 @@ const BrandDetail: React.FC = () => {
             <Title level={2} style={{ color: '#ffffff', margin: 0 }}>
               {brand?.name?.toUpperCase() || 'COHIBA'}
             </Title>
-            <Text style={{ color: '#f0e68c', fontSize: '14px' }}>
-              {brand?.description || '古巴雪茄的巅峰之作'}
-            </Text>
+            {/*<Text style={{ color: '#f0e68c', fontSize: '14px' }}>*}
+              {/*{brand?.description || '古巴雪茄的巅峰之作'}*/}
+            {/*</Text>*/}
           </div>
         </div>
 
@@ -212,9 +212,11 @@ const BrandDetail: React.FC = () => {
             border: '1px solid rgba(255, 255, 255, 0.2)',
             borderRadius: '12px',
             backdropFilter: 'blur(10px)'
-          }}>
+          }}
+          bodyStyle={{ padding: '12px 16px' }}>
             <Title level={4} style={{
-              marginBottom: '12px',
+              marginTop: 0,
+              marginBottom: '8px',
               background: 'linear-gradient(to right, #FFD700, #B8860B)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
@@ -223,28 +225,7 @@ const BrandDetail: React.FC = () => {
               {t('inventory.brandHistory')}
             </Title>
             <Paragraph style={{ color: '#d1d5db', lineHeight: 1.6, margin: 0 }}>
-              {brand?.description || '高希霸（Cohiba）是古巴最著名的雪茄品牌，成立于1966年。最初，它只为菲德尔·卡斯特罗和古巴政府高层官员秘密生产。直到1982年，高希霸才向公众市场推出，并迅速成为全球雪茄爱好者的终极追求。'}
-            </Paragraph>
-          </Card>
-
-          {/* 品牌理念 */}
-          <Card style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            borderRadius: '12px',
-            backdropFilter: 'blur(10px)'
-          }}>
-            <Title level={4} style={{
-              marginBottom: '12px',
-              background: 'linear-gradient(to right, #FFD700, #B8860B)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
-            }}>
-              {t('inventory.brandPhilosophy')}
-            </Title>
-            <Paragraph style={{ color: '#d1d5db', lineHeight: 1.6, margin: 0 }}>
-              高希霸代表着卓越与奢华。其烟叶均选自古巴比那尔德里奥省（Pinar del Río）的顶级烟草田，并经过独特的第三次发酵过程，这赋予了高希霸雪茄无与伦比的顺滑和复杂的风味。每一支高希霸雪茄都是由技艺最高超的卷烟师手工制作而成。
+              {brand?.description || `${brand?.name || '该品牌'}成立于${brand?.foundedYear || '未知年份'}，来自${brand?.country || '未知国家'}。${brand?.metadata?.tags?.length ? `标签：${brand.metadata.tags.join('、')}` : ''}`}
             </Paragraph>
           </Card>
 
@@ -254,9 +235,11 @@ const BrandDetail: React.FC = () => {
             border: '1px solid rgba(255, 255, 255, 0.2)',
             borderRadius: '12px',
             backdropFilter: 'blur(10px)'
-          }}>
+          }}
+          bodyStyle={{ padding: '12px 16px' }}>
             <Title level={4} style={{
-              marginBottom: '16px',
+              marginTop: 0,
+              marginBottom: '12px',
               background: 'linear-gradient(to right, #FFD700, #B8860B)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
@@ -352,15 +335,17 @@ const BrandDetail: React.FC = () => {
             </div>
           </Card>
 
-          {/* 客户评价 */}
-          <Card style={{
+          {/* 客户评价 - 已隐藏 */}
+          {/* <Card style={{
             background: 'rgba(255, 255, 255, 0.1)',
             border: '1px solid rgba(255, 255, 255, 0.2)',
             borderRadius: '12px',
             backdropFilter: 'blur(10px)'
-          }}>
+          }}
+          bodyStyle={{ padding: '12px 16px' }}>
             <Title level={4} style={{
-              marginBottom: '16px',
+              marginTop: 0,
+              marginBottom: '12px',
               background: 'linear-gradient(to right, #FFD700, #B8860B)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
@@ -372,29 +357,46 @@ const BrandDetail: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
               <Rate 
                 disabled 
-                value={4.9} 
+                value={brand?.metadata?.rating || 0} 
                 style={{ color: '#fbbf24' }}
               />
               <Text style={{ marginLeft: '8px', color: '#f0e68c', fontWeight: 'bold' }}>
-                4.9
+                {brand?.metadata?.rating?.toFixed(1) || '0.0'}
               </Text>
               <Text style={{ marginLeft: '4px', color: '#9ca3af', fontSize: '14px' }}>
-                (1,288 条评价)
+                ({brand?.metadata?.totalSales || 0} 条评价)
               </Text>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '24px', 
-                color: '#9ca3af' 
-              }}>
-                <Text style={{ color: '#9ca3af' }}>
-                  暂无客户评价
-                </Text>
-              </div>
+              {brand?.metadata?.rating && brand.metadata.rating > 0 ? (
+                <div style={{ 
+                  textAlign: 'center', 
+                  padding: '24px', 
+                  color: '#d1d5db' 
+                }}>
+                  <Text style={{ color: '#d1d5db', lineHeight: 1.6 }}>
+                    {brand.metadata.rating >= 4.5 ? 
+                      `${brand.name}品牌获得了客户的高度认可，平均评分${brand.metadata.rating.toFixed(1)}分，共收到${brand.metadata.totalSales || 0}条评价。` :
+                      brand.metadata.rating >= 3.5 ?
+                      `${brand.name}品牌在客户中获得了良好评价，平均评分${brand.metadata.rating.toFixed(1)}分。` :
+                      `${brand.name}品牌正在努力提升客户满意度，当前评分${brand.metadata.rating.toFixed(1)}分。`
+                    }
+                  </Text>
+                </div>
+              ) : (
+                <div style={{ 
+                  textAlign: 'center', 
+                  padding: '24px', 
+                  color: '#9ca3af' 
+                }}>
+                  <Text style={{ color: '#9ca3af' }}>
+                    暂无客户评价
+                  </Text>
+                </div>
+              )}
             </div>
-          </Card>
+          </Card> */}
         </div>
       </div>
 

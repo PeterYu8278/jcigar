@@ -39,7 +39,7 @@ const Shop: React.FC = () => {
   }, [])
 
   return (
-    <div style={{ padding: '24px' }}>
+    <div>
       {/* 顶部标题栏 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <h1 style={{ 
@@ -104,7 +104,6 @@ const Shop: React.FC = () => {
                 fontSize: '14px',
                 fontWeight: '500',
                 borderRadius: '20px',
-                whiteSpace: 'nowrap',
                 border: 'none',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
@@ -177,11 +176,9 @@ const Shop: React.FC = () => {
           推荐品牌
         </h2>
         <div style={{ 
-          display: 'flex', 
-          gap: '12px', 
-          overflowX: 'auto', 
-          paddingBottom: '8px',
-          marginBottom: '-8px'
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(4, 1fr)', 
+          gap: '12px'
         }}>
           {brands
             .filter(brand => brand.status === 'active')
@@ -190,12 +187,11 @@ const Shop: React.FC = () => {
               <div 
                 key={brand.id} 
                 style={{ 
-                  flex: '0 0 120px',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
                   gap: '8px',
-                  padding: '12px',
+                  padding: '4px',
                   background: 'rgba(255, 255, 255, 0.05)',
                   borderRadius: '12px',
                   border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -216,8 +212,8 @@ const Shop: React.FC = () => {
               >
                 <div 
                   style={{
-                    width: '60px',
-                    height: '60px',
+                    width: '50px',
+                    height: '50px',
                     borderRadius: '50%',
                     background: 'rgba(30,30,30,0.7)',
                     display: 'flex',
@@ -244,7 +240,7 @@ const Shop: React.FC = () => {
                       justifyContent: 'center',
                       color: '#000',
                       fontWeight: 'bold',
-                      fontSize: '16px'
+                      fontSize: '20px'
                     }}>
                       {brand.name.charAt(0).toUpperCase()}
                     </div>
@@ -256,117 +252,8 @@ const Shop: React.FC = () => {
                   fontWeight: '600',
                   textAlign: 'center',
                   overflow: 'hidden',
+                  minHeight: '38px',
                   textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  width: '100%'
-                }}>
-                  {brand.name}
-                </div>
-                <div style={{ 
-                  fontSize: '10px', 
-                  color: '#999',
-                  textAlign: 'center'
-                }}>
-                  {brand.country || ''}
-                </div>
-              </div>
-            ))}
-        </div>
-      </div>
-
-      {/* 热门品牌 */}
-      <div style={{ marginBottom: '32px' }}>
-        <h2 style={{ 
-          fontSize: '18px', 
-          fontWeight: 'bold', 
-          color: '#fff', 
-          marginBottom: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          <span style={{ color: '#F4AF25' }}>⭐</span>
-          热门品牌
-        </h2>
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(4, 1fr)', 
-          gap: '12px'
-        }}>
-          {brands
-            .filter(brand => brand.status === 'active')
-            .slice(6, 10)
-            .map((brand) => (
-              <div 
-                key={brand.id} 
-                style={{ 
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '16px',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease'
-                }}
-                onClick={() => navigate(`/brand/${brand.id}`)}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                  e.currentTarget.style.boxShadow = '0 8px 25px rgba(244, 175, 37, 0.2)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = 'none'
-                }}
-              >
-                <div 
-                  style={{
-                    width: '80px',
-                    height: '80px',
-                    borderRadius: '50%',
-                    background: 'rgba(30,30,30,0.7)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '2px solid rgba(255,215,0,0.2)',
-                    overflow: 'hidden'
-                  }}
-                >
-                  {brand.logo ? (
-                    <img 
-                      src={brand.logo} 
-                      alt={brand.name} 
-                      style={{ width: '70px', height: '70px', objectFit: 'contain' }} 
-                    />
-                  ) : (
-                    <div style={{ 
-                      width: '70px', 
-                      height: '70px', 
-                      borderRadius: '50%', 
-                      background: 'linear-gradient(45deg, #FFD700, #B8860B)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#000',
-                      fontWeight: 'bold',
-                      fontSize: '20px'
-                    }}>
-                      {brand.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                </div>
-                <div style={{ 
-                  fontSize: '14px', 
-                  color: '#f0f0f0', 
-                  fontWeight: '600',
-                  textAlign: 'center',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
                   width: '100%'
                 }}>
                   {brand.name}
@@ -400,7 +287,7 @@ const Shop: React.FC = () => {
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(4, 1fr)', 
-          gap: '16px'
+          gap: '12px'
         }}>
           {loading ? (
             <div style={{ 
@@ -428,7 +315,7 @@ const Shop: React.FC = () => {
               flexDirection: 'column', 
               alignItems: 'center', 
               gap: '8px',
-              padding: '12px',
+              padding: '4px',
               background: 'rgba(255, 255, 255, 0.05)',
               borderRadius: '12px',
               border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -448,10 +335,10 @@ const Shop: React.FC = () => {
             >
               <div 
                 style={{
-                  width: '100%',
-                  height: '120px',
+                  width: '70px',
+                  height: '70px',
                   borderRadius: '8px',
-                  backgroundImage: `url(${cigar.images?.[0] || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDEyMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMjAiIGhlaWdodD0iMTIwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjYwIiB5PSI2MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Q2lnYXI8L3RleHQ+Cjwvc3ZnPgo='})`,
+                  backgroundImage: `url(${cigar.images?.[0] || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQwIiB5PSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEwIiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Q2lnYXI8L3RleHQ+Cjwvc3ZnPgo='})`,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                   border: '2px solid rgba(244, 175, 37, 0.2)'
@@ -459,31 +346,50 @@ const Shop: React.FC = () => {
               />
               <div style={{ width: '100%', textAlign: 'center' }}>
                 <h3 style={{ 
-                  fontSize: '14px', 
+                  fontSize: '12px', 
                   fontWeight: '600', 
                   color: '#fff',
                   margin: '0 0 4px 0',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
+                  textAlign: 'center',
+                  width: '100%',
+                  lineHeight: '1.2',
+                  minHeight: '28px',
+                  display: 'flex',
+                  alignItems: 'top',
+                  justifyContent: 'center',
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word'
                 }}>
                   {cigar.name}
                 </h3>
                 <p style={{ 
-                  fontSize: '12px', 
+                  fontSize: '11px', 
                   color: '#F4AF25',
                   margin: '0 0 4px 0',
-                  fontWeight: '500'
+                  fontWeight: '500',
+                  textAlign: 'center',
+                  width: '100%',
+                  lineHeight: '1.2',
+                  minHeight: '13px',
+                  display: 'flex',
+                  alignItems: 'top',
+                  justifyContent: 'center'
                 }}>
                   RM {cigar.price}
                 </p>
                 <p style={{ 
-                  fontSize: '11px', 
+                  fontSize: '10px', 
                   color: '#999',
                   margin: 0,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
+                  textAlign: 'center',
+                  width: '100%',
+                  lineHeight: '1.2',
+                  minHeight: '12px',
+                  display: 'flex',
+                  alignItems: 'top',
+                  justifyContent: 'center',
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word'
                 }}>
                   {cigar.origin}
                 </p>
@@ -493,11 +399,11 @@ const Shop: React.FC = () => {
                 size="small"
                 style={{
                   width: '100%',
-                  height: '32px',
+                  height: '28px',
                   background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
                   border: 'none',
                   borderRadius: '6px',
-                  fontSize: '12px',
+                  fontSize: '11px',
                   fontWeight: '600',
                   color: '#000'
                 }}
