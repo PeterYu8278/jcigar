@@ -70,36 +70,21 @@ const Profile: React.FC = () => {
         position: 'sticky',
         top: 0,
         zIndex: 10,
-        display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '16px',
-        background: 'transparent',
-        backdropFilter: 'blur(10px)'
       }}>
         <div style={{ width: '40px' }} /> {/* 占位符保持居中 */}
         <h1 style={{
           fontSize: '18px',
           fontWeight: 'bold',
           color: '#FFFFFF',
-          margin: 0
+          margin: 0,
+          textAlign: 'center',
+          flex: 1
         }}>
           {t('navigation.profile')}
         </h1>
-        <Button
-          type="text"
-          icon={<EditOutlined />}
-                      onClick={() => {
-                        if (!user) return
-                        form.setFieldsValue({
-                          displayName: user.displayName,
-                          phone: user.profile?.phone,
-                          notifications: user.profile?.preferences?.notifications ?? true,
-                        })
-                        setEditing(true)
-                      }}
-          style={{ color: '#FFFFFF', fontSize: '20px' }}
-        />
       </div>
 
       {/* User Profile Section */}
@@ -130,7 +115,7 @@ const Profile: React.FC = () => {
             marginBottom: '8px',
             color: 'rgba(255, 255, 255, 0.7)'
           }}>
-            <span>{t('profile.membershipLevel')}: {getMembershipText(user?.membership?.level || 'bronze')}</span>
+            <span>{getMembershipText(user?.membership?.level || 'bronze')}</span>
             <div style={{ width: '1px', height: '16px', background: 'rgba(255, 255, 255, 0.2)' }} />
             <span>{t('profile.points')}: {(user?.membership as any)?.points || 0}</span>
           </div>
@@ -143,26 +128,58 @@ const Profile: React.FC = () => {
             </p>
           </div>
         </div>
+        
+        {/* Edit Button */}
+        <button
+          onClick={() => {
+            if (!user) return
+            form.setFieldsValue({
+              displayName: user.displayName,
+              phone: user.profile?.phone,
+              notifications: user.profile?.preferences?.notifications ?? true,
+              avatar: user.profile?.avatar,
+            })
+            setEditing(true)
+          }}
+          style={{
+            width: '100%',
+            maxWidth: '320px',
+            height: '48px',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+            border: 'none',
+            borderRadius: '8px',
+            color: '#111',
+            textTransform: 'uppercase',
+            marginBottom: '10px',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          {t('profile.editProfile')}
+        </button>
 
 
         {/* Stats Section */}
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(3, 1fr)', 
-          gap: '16px', 
-          marginBottom: '24px' 
+          gap: '10px', 
+          marginBottom: '10px',
+          width: '100%',
+          maxWidth: '320px',
+          margin: '0 auto 10px auto'
         }}>
           {userStats.map((stat, index) => (
             <div key={index} style={{
               background: 'rgba(255, 255, 255, 0.05)',
               borderRadius: '12px',
-              padding: '16px',
+              padding: '8px',
               border: '1px solid rgba(244, 175, 37, 0.2)',
               textAlign: 'center'
             }}>
-              <div style={{ fontSize: '24px', marginBottom: '8px', color: '#F4AF25' }}>
-                {stat.icon}
-              </div>
+              
               <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#FFFFFF', marginBottom: '4px' }}>
                 {stat.value}
               </div>
@@ -355,8 +372,8 @@ const Profile: React.FC = () => {
             <Switch />
           </Form.Item>
         </Form>
-        </Modal>
-      </div>
+      </Modal>
+    </div>
   )
 }
 

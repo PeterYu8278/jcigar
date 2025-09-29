@@ -470,6 +470,7 @@ const AdminOrders: React.FC = () => {
         styles={{
           body: { 
             padding: 0, 
+            marginBottom: 50,
             background: 'linear-gradient(180deg, #221c10 0%, #181611 0%)', 
             minHeight: isMobile ? '100vh' : 'auto' 
           },
@@ -512,21 +513,17 @@ const AdminOrders: React.FC = () => {
                 fontSize: '18px', 
                 fontWeight: 'bold', 
                 color: '#FFFFFF', 
-                margin: 0
+                margin: 0,
+                textAlign: 'center',
+                flex: 1
               }}>
                 {t('ordersAdmin.orderDetails')}
               </h1>
-              <Button 
-                type="text" 
-                onClick={() => { setViewing(null); setIsEditingInView(false) }}
-                style={{ color: '#FFFFFF', fontSize: '32px', minWidth: 'auto' }}
-              >
-                ×
-              </Button>
+              
             </div>
 
             {/* Content */}
-            <div style={{ padding: '0 16px 28px' }}>
+            <div style={{ padding: '0 0 0' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 
                 {/* 商品列表 */}
@@ -639,7 +636,7 @@ const AdminOrders: React.FC = () => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
                       <p style={{ color: '#bab09c', margin: 0 }}>{t('ordersAdmin.orderId')}</p>
-                      <p style={{ color: '#FFFFFF', margin: 0, fontFamily: 'monospace', justifyContent: "right", wordBreak: 'break-all', whiteSpace: 'normal' }}>{viewing.id}</p>
+                      <p style={{ color: '#FFFFFF', margin: 0, wordBreak: 'break-all', whiteSpace: 'normal' }}>{viewing.id}</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
                       <p style={{ color: '#bab09c', margin: 0 }}>{t('ordersAdmin.status.title')}</p>
@@ -648,31 +645,76 @@ const AdminOrders: React.FC = () => {
                 </Tag>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
-                      <p style={{ color: '#bab09c', margin: 0 }}>{t('ordersAdmin.createdAt')}</p>
+                      <p style={{ color: '#bab09c', margin: 0, whiteSpace: 'nowrap' }}>{t('ordersAdmin.createdAt')}</p>
                       <p style={{ color: '#FFFFFF', margin: 0 }}>{dayjs(viewing.createdAt).format('YYYY-MM-DD HH:mm:ss')}</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
-                      <p style={{ color: '#bab09c', margin: 0 }}>{t('ordersAdmin.payment.title')}</p>
+                      <p style={{ color: '#bab09c', margin: 0, whiteSpace: 'nowrap' }}>{t('ordersAdmin.payment.title')}</p>
                       <p style={{ color: '#FFFFFF', margin: 0 }}>{getPaymentText(viewing.payment.method)}</p>
                     </div>
-                    {viewing.payment.transactionId && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
-                        <p style={{ color: '#bab09c', margin: 0 }}>{t('ordersAdmin.transactionId')}</p>
-                        <p style={{ color: '#FFFFFF', margin: 0, fontFamily: 'monospace', wordBreak: 'break-all', whiteSpace: 'normal' }}>{viewing.payment.transactionId}</p>
-                      </div>
-                    )}
-                    {viewing.payment.paidAt && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
-                        <p style={{ color: '#bab09c', margin: 0 }}>{t('ordersAdmin.paidAt')}</p>
-                        <p style={{ color: '#FFFFFF', margin: 0 }}>{dayjs(viewing.payment.paidAt).format('YYYY-MM-DD HH:mm')}</p>
-                      </div>
-                    )}
-                    {viewing.shipping.trackingNumber && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
-                        <p style={{ color: '#bab09c', margin: 0 }}>{t('ordersAdmin.trackingNumber')}</p>
-                        <p style={{ color: '#FFFFFF', margin: 0, fontFamily: 'monospace', wordBreak: 'break-all', whiteSpace: 'normal' }}>{viewing.shipping.trackingNumber}</p>
-                      </div>
-                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
+                      <p style={{ color: '#bab09c', margin: 0, whiteSpace: 'nowrap' }}>{t('ordersAdmin.transactionId')}</p>
+                      <p style={{ color: '#FFFFFF', margin: 0, wordBreak: 'break-all', whiteSpace: 'normal', textAlign: 'right' }}>{viewing.payment.transactionId}</p>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
+                      <p style={{ color: '#bab09c', margin: 0, whiteSpace: 'nowrap' }}>{t('ordersAdmin.paidAt')}</p>
+                      <p></p>
+                      <p style={{ color: '#FFFFFF', margin: 0 }}>{dayjs(viewing.payment.paidAt).format('YYYY-MM-DD HH:mm')}</p>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
+                      <p style={{ color: '#bab09c', margin: 0, whiteSpace: 'nowrap' }}>{t('ordersAdmin.trackingNumber')}</p>
+                      {isEditingInView ? (
+                        <Input
+                          defaultValue={viewing.shipping.trackingNumber || ''}
+                          placeholder={t('ordersAdmin.enterTrackingNo')}
+                          style={{ 
+                            width: '200px',
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            border: '1px solid rgba(244, 175, 37, 0.3)',
+                            color: '#FFFFFF',
+                            borderRadius: '4px'
+                          }}
+                          onBlur={async (e) => {
+                            const newTrackingNumber = e.target.value
+                            if (newTrackingNumber !== viewing.shipping.trackingNumber) {
+                              try {
+                                await updateDocument(COLLECTIONS.ORDERS, viewing.id, {
+                                  shipping: {
+                                    ...viewing.shipping,
+                                    trackingNumber: newTrackingNumber
+                                  }
+                                } as any)
+                                message.success(t('ordersAdmin.trackingNumberUpdated'))
+                                loadData()
+                                setViewing({ ...viewing, shipping: { ...viewing.shipping, trackingNumber: newTrackingNumber } })
+                              } catch (error) {
+                                message.error(t('ordersAdmin.updateFailed'))
+                              }
+                            }
+                          }}
+                          onPressEnter={async (e) => {
+                            const newTrackingNumber = e.currentTarget.value
+                            if (newTrackingNumber !== viewing.shipping.trackingNumber) {
+                              try {
+                                await updateDocument(COLLECTIONS.ORDERS, viewing.id, {
+                                  shipping: {
+                                    ...viewing.shipping,
+                                    trackingNumber: newTrackingNumber
+                                  }
+                                } as any)
+                                message.success(t('ordersAdmin.trackingNumberUpdated'))
+                                loadData()
+                                setViewing({ ...viewing, shipping: { ...viewing.shipping, trackingNumber: newTrackingNumber } })
+                              } catch (error) {
+                                message.error(t('ordersAdmin.updateFailed'))
+                              }
+                            }
+                          }}
+                        />
+                      ) : (
+                        <p style={{ color: '#FFFFFF', margin: 0, wordBreak: 'break-all', whiteSpace: 'normal' }}>{viewing.shipping.trackingNumber || '-'}</p>
+                      )}
+                    </div>
                   </div>
                 </section>
 
@@ -790,16 +832,12 @@ const AdminOrders: React.FC = () => {
                 )}
                 <button 
                   onClick={() => { 
-                    setIsEditingInView(v => !v); 
-                    form.setFieldsValue({ 
-                      status: viewing.status, 
-                      trackingNumber: viewing.shipping.trackingNumber || ''
-                    }) 
+                    setIsEditingInView(v => !v)
                   }}
                   style={{ 
                     height: '40px',
-                    background: isEditingInView ? 'rgba(255, 255, 255, 0.1)' : 'linear-gradient(to right,#FDE08D,#C48D3A)',
-                    color: isEditingInView ? '#ccc' : '#111',
+                    background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                    color: '#111',
                     fontWeight: 'bold',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
                     borderRadius: 8,
@@ -807,70 +845,11 @@ const AdminOrders: React.FC = () => {
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  {isEditingInView ? t('common.done') : t('common.edit')}
+                  {isEditingInView ? t('common.save') : t('common.edit')}
                 </button>
-                <Button 
-                  danger 
-                  onClick={() => {
-                    Modal.confirm({
-                      title: t('ordersAdmin.deleteConfirm'),
-                      content: t('ordersAdmin.deleteContent', { id: viewing.id }),
-                      okButtonProps: { danger: true },
-                      onOk: async () => {
-                        const res = await deleteDocument(COLLECTIONS.ORDERS, viewing.id)
-                        if (res.success) { message.success(t('ordersAdmin.deleted')); setViewing(null); loadData() }
-                      }
-                    })
-                  }}
-                  style={{ height: '40px' }}
-                >
-                  {t('common.delete')}
-                </Button>
+                
               </div>
             </div>
-            {isEditingInView && (
-              <div style={{ marginTop: 16 }}>
-                <Title level={5}>{t('common.edit')}</Title>
-        <Form form={form} layout="vertical" onFinish={async (values: any) => {
-                  if (!viewing) return
-          setLoading(true)
-          try {
-            const updateData: Partial<Order> = {
-              status: values.status,
-              shipping: {
-                        ...viewing.shipping,
-                trackingNumber: values.trackingNumber,
-              }
-            }
-                    const res = await updateDocument<Order>(COLLECTIONS.ORDERS, viewing.id, updateData)
-            if (res.success) {
-                      message.success(t('ordersAdmin.updated'))
-              loadData()
-            }
-          } finally {
-            setLoading(false)
-          }
-        }}>
-                  <Form.Item label={t('ordersAdmin.status.title')} name="status" rules={[{ required: true, message: t('ordersAdmin.pleaseSelectStatus') }]}>
-            <Select>
-                      <Option value="pending">{t('ordersAdmin.status.pending')}</Option>
-                      <Option value="confirmed">{t('ordersAdmin.status.confirmed')}</Option>
-                      <Option value="shipped">{t('ordersAdmin.status.shipped')}</Option>
-                      <Option value="delivered">{t('ordersAdmin.status.delivered')}</Option>
-                      <Option value="cancelled">{t('ordersAdmin.status.cancelled')}</Option>
-            </Select>
-          </Form.Item>
-                  <Form.Item label={t('ordersAdmin.trackingNumber')} name="trackingNumber">
-                    <Input placeholder={t('ordersAdmin.enterTrackingNo')} />
-          </Form.Item>
-                  <Form.Item>
-                    <Space>
-                      <button onClick={() => form.submit()} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease', opacity: loading ? 0.6 : 1 }}>{t('common.save')}</button>
-                    </Space>
-          </Form.Item>
-        </Form>
-              </div>
-            )}
           </div>
         )}
       </Modal>

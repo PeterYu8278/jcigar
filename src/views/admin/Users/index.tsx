@@ -704,8 +704,6 @@ const AdminUsers: React.FC = () => {
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '16px',
-              background: 'transparent',
-              backdropFilter: 'blur(10px)'
             }}>
               <Button
                 type="text"
@@ -717,17 +715,12 @@ const AdminUsers: React.FC = () => {
                 fontSize: '18px',
                 fontWeight: 'bold',
                 color: '#FFFFFF',
-                margin: 0
+                margin: 0,
+                textAlign: 'center',
+                flex: 1
               }}>
                 {t('usersAdmin.memberDetails')}
               </h1>
-              <Button
-                type="text"
-                onClick={() => setEditing(null)}
-                style={{ color: '#FFFFFF', fontSize: '20px', minWidth: 'auto' }}
-              >
-                ×
-              </Button>
             </div>
 
             {/* User Profile Section */}
@@ -758,7 +751,7 @@ const AdminUsers: React.FC = () => {
                   marginBottom: '8px',
                   color: 'rgba(255, 255, 255, 0.7)'
                 }}>
-                  <span>{t('usersAdmin.membershipLevel')}: {getMembershipText(editing.membership?.level || 'bronze')}</span>
+                  <span>{getMembershipText(editing.membership?.level || 'bronze')}</span>
                   <div style={{ width: '1px', height: '16px', background: 'rgba(255, 255, 255, 0.2)' }} />
                   <span>{t('usersAdmin.points')}: 1250</span>
                 </div>
@@ -807,7 +800,10 @@ const AdminUsers: React.FC = () => {
                 display: 'grid', 
                 gridTemplateColumns: 'repeat(3, 1fr)', 
                 gap: '10px', 
-                marginBottom: '10px' 
+                marginBottom: '10px',
+                width: '100%',
+                maxWidth: '320px',
+                margin: '0 auto 10px auto'
               }}>
                 {[
                   { title: t('profile.eventsJoined'), value: 12, icon: <CalendarOutlined /> },
@@ -821,9 +817,6 @@ const AdminUsers: React.FC = () => {
                     border: '1px solid rgba(244, 175, 37, 0.2)',
                     textAlign: 'center'
                   }}>
-                    <div style={{ fontSize: '24px', marginBottom: '8px', color: '#F4AF25' }}>
-                      {stat.icon}
-                    </div>
                     <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#FFFFFF', marginBottom: '4px' }}>
                       {stat.value}
                     </div>
