@@ -10,6 +10,9 @@ import {
   StarOutlined,
   TrophyOutlined
 } from '@ant-design/icons'
+import { Swiper, SwiperSlide } from 'swiper/react'
+import { Autoplay, Navigation, Pagination, A11y } from 'swiper/modules'
+// Swiper CSS imports - handled dynamically to avoid TypeScript errors
 
 const { Title, Paragraph, Text } = Typography
 
@@ -33,6 +36,7 @@ const Home: React.FC = () => {
   const [loadingCigars, setLoadingCigars] = useState<boolean>(false)
   const [loadingBrands, setLoadingBrands] = useState<boolean>(false)
   const [registeringEvents, setRegisteringEvents] = useState<Set<string>>(new Set())
+  const [swiperInstance, setSwiperInstance] = useState<any>(null)
   
   // 会员等级文本获取函数
   const getMembershipText = (level: string) => {
@@ -107,6 +111,11 @@ const Home: React.FC = () => {
   }
 
   useEffect(() => {
+    // Dynamically import Swiper CSS
+    import('swiper/css')
+    import('swiper/css/navigation')
+    import('swiper/css/pagination')
+    
     const load = async () => {
       try {
         setLoadingEvents(true)
@@ -137,6 +146,71 @@ const Home: React.FC = () => {
   
   return (
     <div style={{ minHeight: '100vh' }}>
+      {/* 自定义导航和分页器样式 */}
+      <style>{`
+        .swiper-slide {
+          width: 90px !important;
+        }
+        .swiper-slide-brands {
+          width: 90px !important;
+        }
+        .swiper-wrapper {
+          margin-top: 12px;
+          transition-timing-function: linear !important;
+        }
+        .swiper-button-next-custom,
+        .swiper-button-prev-custom {
+          position: absolute;
+          top: 50%;
+          width: 40px;
+          height: 40px;
+          margin-top: -20px;
+          z-index: 10;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(244, 175, 37, 0.8);
+          border-radius: 50%;
+          color: #000;
+          font-weight: bold;
+          font-size: 16px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+          transition: all 0.3s ease;
+        }
+        .swiper-button-next-custom:hover,
+        .swiper-button-prev-custom:hover {
+          background: rgba(244, 175, 37, 1);
+          transform: scale(1.1);
+        }
+        .swiper-button-prev-custom {
+          left: -10px;
+        }
+        .swiper-button-next-custom {
+          right: -10px;
+        }
+        .swiper-pagination-custom {
+          position: absolute;
+          bottom: 10px;
+          left: 50%;
+          transform: translateX(-50%);
+          display: flex;
+          gap: 8px;
+          z-index: 10;
+        }
+        .swiper-pagination-bullet-custom {
+          width: 8px;
+          height: 8px;
+          background: rgba(255, 255, 255, 0.3);
+          border-radius: 50%;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+        .swiper-pagination-bullet-active-custom {
+          background: #F4AF25;
+          transform: scale(1.2);
+        }
+      `}</style>
       {/* 顶部标题栏 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
       </div>
@@ -212,9 +286,9 @@ const Home: React.FC = () => {
 
       {/* 功能卡片 - 已移除旧“最新活动”卡片，改为下方新列表 */}
 
-      {/* 品牌导航 */}
-      <div style={{ marginTop: 32, marginBottom: 32 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      {/* 品牌导航 - Swiper轮播 */}
+      <div style={{ marginTop: 32 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Title level={4} style={{ margin: 0, color: '#f8f8f8' }}>{t('home.productNavigation')}</Title>
           <Button 
             type="link" 
@@ -231,82 +305,125 @@ const Home: React.FC = () => {
             {t('home.viewAll')}
           </Button>
         </div>
-         {loadingBrands ? (
-           <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
-             <Spin />
-           </div>
-         ) : (
-           <div style={{ 
-             display: 'grid', 
-             gridTemplateColumns: 'repeat(4, 1fr)', 
-             gap: '16px',
-             padding: '0 8px'
-           }}>
-             {brands
-               .filter(brand => brand.status === 'active')
-               .slice(0, 4)
-               .map((brand) => (
-               <div key={brand.id} style={{ textAlign: 'center' }}>
-                 <div 
-                   style={{ 
-                     width: 80, 
-                     height: 80, 
-                     borderRadius: 40, 
-                     background: 'rgba(30,30,30,0.7)', 
-                     display: 'flex', 
-                     alignItems: 'center', 
-                     justifyContent: 'center', 
-                     margin: '0 auto 12px', 
-                     border: '2px solid rgba(255,215,0,0.2)',
-                     cursor: 'pointer',
-                     transition: 'all 0.3s ease',
-                     boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
-                   }}
-                   onClick={() => navigate(`/brand/${brand.id}`)}
-                   onMouseEnter={(e) => {
-                     e.currentTarget.style.border = '2px solid rgba(255,215,0,0.6)'
-                     e.currentTarget.style.transform = 'scale(1.1)'
-                     e.currentTarget.style.boxShadow = '0 8px 20px rgba(255,215,0,0.3)'
-                   }}
-                   onMouseLeave={(e) => {
-                     e.currentTarget.style.border = '2px solid rgba(255,215,0,0.2)'
-                     e.currentTarget.style.transform = 'scale(1)'
-                     e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)'
-                   }}
-                 >
-                   {brand.logo ? (
-                     <img 
-                       src={brand.logo} 
-                       alt={brand.name} 
-                       style={{ width: 64, height: 64, objectFit: 'contain', borderRadius: '50%' }} 
-                     />
-                   ) : (
-                     <div style={{ 
-                       width: 64, 
-                       height: 64, 
-                       borderRadius: '50%', 
-                       background: 'linear-gradient(45deg, #FFD700, #B8860B)',
-                       display: 'flex',
-                       alignItems: 'center',
-                       justifyContent: 'center',
-                       color: '#000',
-                       fontWeight: 'bold',
-                       fontSize: '20px'
-                     }}>
-                       {brand.name.charAt(0).toUpperCase()}
-                     </div>
-                   )}
-                 </div>
-                 <div style={{ fontSize: 14, color: '#f0f0f0', fontWeight: 600 }}>{brand.name}</div>
-               </div>
-             ))}
-           </div>
-         )}
+        {loadingBrands ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
+            <Spin />
+          </div>
+        ) : (
+          <div style={{ position: 'relative' }}>
+            <Swiper
+              modules={[Autoplay, Navigation, Pagination, A11y]}
+              slidesPerView="auto"
+              spaceBetween={12}
+              loop={brands.filter(brand => brand.status === 'active').length > 4}
+              autoplay={{ 
+                delay: 0,
+                disableOnInteraction: false,
+                pauseOnMouseEnter: true,
+                reverseDirection: false
+              }}
+              speed={8000}
+              navigation={{
+                nextEl: '.swiper-button-next-custom-brands',
+                prevEl: '.swiper-button-prev-custom-brands',
+              }}
+              keyboard={{ enabled: true }}
+              a11y={{ enabled: true }}
+              style={{ 
+                paddingBottom: '40px',
+                '--swiper-navigation-color': '#F4AF25',
+                '--swiper-pagination-color': '#F4AF25',
+                '--swiper-pagination-bullet-inactive-color': 'rgba(255, 255, 255, 0.3)',
+                '--swiper-pagination-bullet-inactive-opacity': '0.3'
+              } as any}
+            >
+              {brands
+                .filter(brand => brand.status === 'active')
+                .map((brand) => (
+                  <SwiperSlide key={brand.id} className="swiper-slide-brands">
+                    <div 
+                      style={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        alignItems: 'center', 
+                        gap: '8px',
+                        padding: '4px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '12px',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        transition: 'all 0.3s ease',
+                        cursor: 'pointer',
+                        height: '100%'
+                      }}
+                      onClick={() => navigate(`/brand/${brand.id}`)}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
+                        e.currentTarget.style.transform = 'translateY(-2px)'
+                        e.currentTarget.style.boxShadow = '0 8px 25px rgba(244, 175, 37, 0.2)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+                        e.currentTarget.style.transform = 'translateY(0)'
+                        e.currentTarget.style.boxShadow = 'none'
+                      }}
+                    >
+                      <div 
+                        style={{
+                          width: '80px',
+                          height: '80px',
+                          borderRadius: '8px',
+                          backgroundImage: brand.logo ? `url(${brand.logo})` : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQwIiB5PSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEwIiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+QnJhbmQ8L3RleHQ+Cjwvc3ZnPgo=',
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                          border: '2px solid rgba(244, 175, 37, 0.2)'
+                        }}
+                      />
+                      <div style={{ width: '100%', textAlign: 'center' }}>
+                        <h3 style={{ 
+                          fontSize: '12px', 
+                          fontWeight: '600', 
+                          color: '#fff',
+                          margin: '0 0 4px 0',
+                          textAlign: 'center',
+                          width: '100%',
+                          lineHeight: '1.2',
+                          minHeight: '28px',
+                          display: 'flex',
+                          alignItems: 'top',
+                          justifyContent: 'center',
+                          wordWrap: 'break-word',
+                          overflowWrap: 'break-word'
+                        }}>
+                          {brand.name}
+                        </h3>
+                        <p style={{ 
+                          fontSize: '10px', 
+                          color: '#999',
+                          margin: 0,
+                          textAlign: 'center',
+                          width: '100%',
+                          lineHeight: '1.2',
+                          minHeight: '12px',
+                          display: 'flex',
+                          alignItems: 'top',
+                          justifyContent: 'center',
+                          wordWrap: 'break-word',
+                          overflowWrap: 'break-word'
+                        }}>
+                          {brand.country || ''}
+                        </p>
+                      </div>
+                    </div>
+                  </SwiperSlide>
+                ))}
+            </Swiper>
+          </div>
+        )}
       </div>
 
-      {/* 热门雪茄 - 横向滚动 */}
-      <div style={{ marginBottom: 32 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      {/* 热门雪茄 - Swiper轮播 */}
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Title level={4} style={{ margin: 0, color: '#f8f8f8' }}>{t('home.popularCigars')}</Title>
           <Button 
             type="link" 
@@ -328,101 +445,142 @@ const Home: React.FC = () => {
             <Spin />
           </div>
         ) : (
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(4, 1fr)', 
-            gap: '12px'
-          }}>
-            {cigars.slice(0, 4).map((cigar) => (
-              <div 
-                key={cigar.id} 
-                style={{ 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  alignItems: 'center', 
-                  gap: '8px',
-                  padding: '4px',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  transition: 'all 0.3s ease',
-                  cursor: 'pointer'
-                }}
-                onClick={() => navigate('/shop')}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                  e.currentTarget.style.boxShadow = '0 8px 25px rgba(244, 175, 37, 0.2)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = 'none'
-                }}
-              >
-                <div 
-                  style={{
-                    width: '80px',
-                    height: '80px',
-                    borderRadius: '8px',
-                    backgroundImage: `url(${cigar.images?.[0] || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQwIiB5PSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEwIiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Q2lnYXI8L3RleHQ+Cjwvc3ZnPgo='})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    border: '2px solid rgba(244, 175, 37, 0.2)'
-                  }}
-                />
-                <div style={{ width: '100%', textAlign: 'center' }}>
-                  <h3 style={{ 
-                    fontSize: '12px', 
-                    fontWeight: '600', 
-                    color: '#fff',
-                    margin: '0 0 4px 0',
-                    textAlign: 'center',
-                    width: '100%',
-                    lineHeight: '1.2',
-                    minHeight: '28px',
-                    display: 'flex',
-                    alignItems: 'top',
-                    justifyContent: 'center',
-                    wordWrap: 'break-word',
-                    overflowWrap: 'break-word'
-                  }}>
-                    {cigar.name}
-                  </h3>
-                  <p style={{ 
-                    fontSize: '11px', 
-                    color: '#F4AF25',
-                    margin: '0 0 4px 0',
-                    fontWeight: '500',
-                    textAlign: 'center',
-                    width: '100%',
-                    lineHeight: '1.2',
-                    minHeight: '13px',
-                    display: 'flex',
-                    alignItems: 'top',
-                    justifyContent: 'center'
-                  }}>
-                    RM {cigar.price}
-                  </p>
-                  <p style={{ 
-                    fontSize: '10px', 
-                    color: '#999',
-                    margin: 0,
-                    textAlign: 'center',
-                    width: '100%',
-                    lineHeight: '1.2',
-                    minHeight: '12px',
-                    display: 'flex',
-                    alignItems: 'top',
-                    justifyContent: 'center',
-                    wordWrap: 'break-word',
-                    overflowWrap: 'break-word'
-                  }}>
-                    {cigar.origin}
-                  </p>
-                </div>
-              </div>
-            ))}
+          <div style={{ position: 'relative' }}>
+            <Swiper
+              modules={[Autoplay, Navigation, Pagination, A11y]}
+              slidesPerView="auto"
+              spaceBetween={12}
+              loop={cigars.length > 4}
+              autoplay={{ 
+                delay: 0,
+                disableOnInteraction: false,
+                pauseOnMouseEnter: true,
+                reverseDirection: false
+              }}
+              speed={8000}
+              navigation={{
+                nextEl: '.swiper-button-next-custom',
+                prevEl: '.swiper-button-prev-custom',
+              }}
+              
+              keyboard={{ enabled: true }}
+              a11y={{ enabled: true }}
+              onSwiper={setSwiperInstance}
+              style={{ 
+                paddingBottom: '40px',
+                '--swiper-navigation-color': '#F4AF25',
+                '--swiper-pagination-color': '#F4AF25',
+                '--swiper-pagination-bullet-inactive-color': 'rgba(255, 255, 255, 0.3)',
+                '--swiper-pagination-bullet-inactive-opacity': '0.3'
+              } as any}
+            >
+              {cigars.slice(0, 10).map((cigar) => (
+                <SwiperSlide key={cigar.id}>
+                  <div 
+                    style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      alignItems: 'center', 
+                      gap: '8px',
+                      padding: '4px',
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      transition: 'all 0.3s ease',
+                      cursor: 'pointer',
+                      height: '100%'
+                    }}
+                    onClick={() => navigate('/shop')}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 8px 25px rgba(244, 175, 37, 0.2)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
+                  >
+                    <div 
+                      style={{
+                        width: '80px',
+                        height: '80px',
+                        borderRadius: '8px',
+                        backgroundImage: `url(${cigar.images?.[0] || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQwIiB5PSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEwIiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Q2lnYXI8L3RleHQ+Cjwvc3ZnPgo='})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        border: '2px solid rgba(244, 175, 37, 0.2)'
+                      }}
+                    />
+                    <div style={{ width: '100%', textAlign: 'center' }}>
+                      <h3 style={{ 
+                        fontSize: '12px', 
+                        fontWeight: '600', 
+                        color: '#fff',
+                        margin: '0 0 4px 0',
+                        textAlign: 'center',
+                        width: '100%',
+                        lineHeight: '1.2',
+                        minHeight: '28px',
+                        display: 'flex',
+                        alignItems: 'top',
+                        justifyContent: 'center',
+                        wordWrap: 'break-word',
+                        overflowWrap: 'break-word'
+                      }}>
+                        {cigar.name}
+                      </h3>
+                      <p style={{ 
+                        fontSize: '11px', 
+                        color: '#F4AF25',
+                        margin: '0 0 4px 0',
+                        fontWeight: '500',
+                        textAlign: 'center',
+                        width: '100%',
+                        lineHeight: '1.2',
+                        minHeight: '13px',
+                        display: 'flex',
+                        alignItems: 'top',
+                        justifyContent: 'center'
+                      }}>
+                        RM {cigar.price}
+                      </p>
+                      <p style={{ 
+                        fontSize: '10px', 
+                        color: '#999',
+                        margin: 0,
+                        textAlign: 'center',
+                        width: '100%',
+                        lineHeight: '1.2',
+                        minHeight: '12px',
+                        display: 'flex',
+                        alignItems: 'top',
+                        justifyContent: 'center',
+                        wordWrap: 'break-word',
+                        overflowWrap: 'break-word'
+                      }}>
+                        {cigar.origin}
+                      </p>
+                    </div>
+                  </div>
+                </SwiperSlide>
+              ))}
+            </Swiper>           
+            
+            {/* 自定义分页器 */}
+            <div 
+              className="swiper-pagination-custom"
+              style={{
+                position: 'absolute',
+                bottom: '10px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                display: 'flex',
+                gap: '8px',
+                zIndex: 10
+              }}
+            />
           </div>
         )}
       </div>
