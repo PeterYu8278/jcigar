@@ -255,7 +255,7 @@ const AdminOrders: React.FC = () => {
           }}
           deleteConfirmTitle={t('ordersAdmin.deleteConfirm')}
           deleteConfirmContent={t('ordersAdmin.deleteContent', { id: record.id.substring(0, 8) + '...' })}
-          size="small"
+          buttonSize="small"
           type="link"
           showEdit={false}
           showIcon={true}

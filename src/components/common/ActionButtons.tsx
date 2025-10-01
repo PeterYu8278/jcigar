@@ -24,7 +24,7 @@ interface ActionButtonsProps {
   /** 删除确认内容 */
   deleteConfirmContent?: string
   /** 按钮大小 */
-  size?: 'small' | 'middle' | 'large'
+  buttonSize?: 'small' | 'middle' | 'large'
   /** 按钮类型 */
   type?: 'link' | 'default' | 'primary' | 'dashed' | 'text'
   /** 是否禁用 */
@@ -42,7 +42,7 @@ interface ActionButtonsProps {
   /** 加载状态 */
   loading?: boolean
   /** 按钮间距 */
-  size?: 'small' | 'middle' | 'large'
+  spaceSize?: 'small' | 'middle' | 'large'
 }
 
 const ActionButtons: React.FC<ActionButtonsProps> = ({
@@ -55,7 +55,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   onDeleteError,
   deleteConfirmTitle,
   deleteConfirmContent,
-  size = 'small',
+  buttonSize = 'small',
   type = 'link',
   disabled = false,
   style,
@@ -63,16 +63,17 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   showEdit = true,
   showDelete = true,
   showIcon = true,
-  loading = false
+  loading = false,
+  spaceSize = 'small'
 }) => {
   return (
-    <Space size="small" style={{ justifyContent: 'center', width: '100%', ...style }}>
+    <Space size={spaceSize} style={{ justifyContent: 'center', width: '100%', ...style }}>
       {showView && onView && (
         <ViewButton
           itemId={itemId}
           itemName={itemName}
           onView={onView}
-          size={size}
+          size={buttonSize}
           type={type}
           disabled={disabled}
           showIcon={showIcon}
@@ -84,7 +85,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
           itemId={itemId}
           itemName={itemName}
           onEdit={onEdit}
-          size={size}
+          size={buttonSize}
           type={type}
           disabled={disabled}
           showIcon={showIcon}
@@ -100,7 +101,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
           onDelete={onDelete}
           onSuccess={onDeleteSuccess}
           onError={onDeleteError}
-          size={size}
+          size={buttonSize}
           type={type}
           danger={true}
           disabled={disabled}
