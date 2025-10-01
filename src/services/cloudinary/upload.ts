@@ -103,7 +103,6 @@ export const uploadFile = async (
       bytes: (result as any).bytes
     }
   } catch (error) {
-    console.error('Cloudinary 上传失败:', error)
     throw new Error('文件上传失败，请重试')
   }
 }
@@ -119,7 +118,6 @@ export const deleteFile = async (publicId: string): Promise<boolean> => {
     // 在实际应用中，应该通过后端API来删除文件
     return false
   } catch (error) {
-    console.error('Cloudinary 删除失败:', error)
     return false
   }
 }

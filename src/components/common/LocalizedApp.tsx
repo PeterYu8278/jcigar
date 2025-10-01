@@ -25,7 +25,7 @@ const LocalizedApp: React.FC<LocalizedAppProps> = ({ children }) => {
           setLanguage(parsed.state.language)
         }
       } catch (error) {
-        console.warn('Failed to parse saved language:', error)
+        // 静默处理错误
       }
     }
   }, []) // 只在组件挂载时执行一次

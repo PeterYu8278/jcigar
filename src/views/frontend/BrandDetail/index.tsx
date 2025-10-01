@@ -47,7 +47,6 @@ const BrandDetail: React.FC = () => {
           setProducts([])
         }
       } catch (error) {
-        console.error('加载品牌数据失败:', error)
         message.error('加载品牌信息失败')
         setBrand(null)
         setProducts([])

@@ -41,11 +41,10 @@ const CloudinaryTest: React.FC = () => {
           message.success('Cloudinary 测试成功！')
         }
       }, 'image/png')
-    } catch (err) {
-      setTestResult('❌ Cloudinary 连接失败')
-      message.error('Cloudinary 测试失败')
-      console.error('Cloudinary 测试错误:', err)
-    }
+      } catch (err) {
+        setTestResult('❌ Cloudinary 连接失败')
+        message.error('Cloudinary 测试失败')
+      }
   }
 
   return (

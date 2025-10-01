@@ -47,7 +47,6 @@ export const generateMemberQRCode = async (
 
     return qrCodeDataURL
   } catch (error) {
-    console.error('生成QR Code失败:', error)
     throw new Error('QR Code生成失败')
   }
 }
@@ -71,7 +70,6 @@ export const generateSimpleMemberQRCode = async (memberId: string): Promise<stri
 
     return qrCodeDataURL
   } catch (error) {
-    console.error('生成简单QR Code失败:', error)
     throw new Error('QR Code生成失败')
   }
 }
@@ -107,7 +105,6 @@ export const generateMemberCardQRCode = async (
 
     return qrCodeDataURL
   } catch (error) {
-    console.error('生成会员卡QR Code失败:', error)
     throw new Error('会员卡QR Code生成失败')
   }
 }

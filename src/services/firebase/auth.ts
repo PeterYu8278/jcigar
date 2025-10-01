@@ -48,7 +48,6 @@ export const registerUser = async (email: string, password: string, displayName:
     return { success: true, user };
   } catch (error) {
     const err = error as any
-    console.error('注册失败:', err);
     const code = err?.code as string | undefined
     const message =
       code === 'auth/email-already-in-use' ? '该邮箱已被注册'
@@ -66,7 +65,6 @@ export const loginUser = async (email: string, password: string) => {
     return { success: true, user: userCredential.user };
   } catch (error) {
     const err = error as any
-    console.error('登录失败:', err);
     const code = err?.code as string | undefined
     const message =
       code === 'auth/user-not-found' ? '账户不存在'
@@ -105,7 +103,6 @@ export const loginWithEmailOrPhone = async (identifier: string, password: string
     return await loginUser(email, password);
   } catch (error) {
     const err = error as any;
-    console.error('邮箱/手机号登录失败:', err);
     return { success: false, error: err as Error } as { success: false; error: Error };
   }
 };
@@ -148,15 +145,6 @@ export const loginWithGoogle = async () => {
     return { success: true, user };
   } catch (error) {
     const err = error as any
-    console.error('Google 登录失败:', err);
-    
-    // 提供更详细的错误信息
-    if (err.code === 'auth/unauthorized-domain') {
-      console.error('域名未授权。请在Firebase控制台中添加当前域名到授权域名列表。');
-      console.error('当前域名:', window.location.origin);
-      console.error('请访问: https://console.firebase.google.com/project/cigar-56871/authentication/settings');
-    }
-    
     return { success: false, error: err as Error } as { success: false; error: Error };
   }
 };
@@ -167,7 +155,6 @@ export const logoutUser = async () => {
     await signOut(auth);
     return { success: true };
   } catch (error) {
-    console.error('登出失败:', error);
     return { success: false, error: error as Error };
   }
 };
@@ -191,7 +178,6 @@ export const getUserData = async (uid: string): Promise<User | null> => {
     }
     return null;
   } catch (error) {
-    console.error('获取用户数据失败:', error);
     return null;
   }
 };
@@ -203,7 +189,6 @@ export const sendPasswordResetEmailFor = async (email: string) => {
     await sendPasswordResetEmail(auth, email)
     return { success: true }
   } catch (error) {
-    console.error('发送密码重置邮件失败:', error)
     return { success: false, error: error as Error }
   }
 }

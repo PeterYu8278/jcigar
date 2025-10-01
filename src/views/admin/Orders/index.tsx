@@ -4,7 +4,7 @@ import dayjs from 'dayjs'
 import { Table, Button, Tag, Space, Typography, Input, Select, DatePicker, message, Modal, Form, InputNumber, Switch, Descriptions } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, EyeOutlined, ShoppingOutlined, ArrowLeftOutlined } from '@ant-design/icons'
 import type { Order, User, Cigar } from '../../../types'
-import { getAllOrders, getUsers, getCigars, updateDocument, deleteDocument, COLLECTIONS, createDirectSaleOrder, createDocument } from '../../../services/firebase/firestore'
+import { getAllOrders, getUsers, getCigars, updateDocument, deleteDocument, COLLECTIONS, createDirectSaleOrder, createDocument, getAllInventoryLogs } from '../../../services/firebase/firestore'
 import { useTranslation } from 'react-i18next'
 
 const { Title } = Typography
@@ -121,6 +121,24 @@ const AdminOrders: React.FC = () => {
     return user ? (user?.profile?.phone || '') : ''
   }
 
+  // 删除订单相关的出库记录
+  const deleteOrderInventoryLogs = async (orderId: string) => {
+    try {
+      const inventoryLogs = await getAllInventoryLogs()
+      const relatedLogs = inventoryLogs.filter((log: any) => 
+        log?.referenceNo?.startsWith(`ORDER:${orderId}`) && log?.type === 'out'
+      )
+      
+      if (relatedLogs.length > 0) {
+        await Promise.all(relatedLogs.map((log: any) => 
+          deleteDocument(COLLECTIONS.INVENTORY_LOGS, log.id)
+        ))
+      }
+    } catch (error) {
+      // 静默处理错误
+    }
+  }
+
   const getCigarInfo = (cigarId: string) => {
     const cigar = cigars.find(c => c.id === cigarId)
     return cigar ? `${cigar.name} (${cigar.brand})` : cigarId
@@ -224,6 +242,24 @@ const AdminOrders: React.FC = () => {
 
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
   const [sortDesc, setSortDesc] = useState<boolean>(true)
+ 
+  // 产品下拉：按品牌分组，并按品牌与产品名称字母排序
+  const groupedCigars = useMemo(() => {
+    const brandToList = new Map<string, Cigar[]>()
+    cigars.forEach((c) => {
+      const brand = (c as any)?.brand || 'Unknown'
+      const list = brandToList.get(brand) || []
+      list.push(c)
+      brandToList.set(brand, list)
+    })
+    const sorted = Array.from(brandToList.entries())
+      .sort((a, b) => a[0].toLowerCase().localeCompare(b[0].toLowerCase()))
+      .map(([brand, list]) => ({
+        brand,
+        list: list.sort((a, b) => (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase())),
+      }))
+    return sorted
+  }, [cigars])
 
   const filteredSorted = useMemo(() => {
     const list = [...filtered]
@@ -241,7 +277,7 @@ const AdminOrders: React.FC = () => {
       
       <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 16 }}>
         <Space>
-          <button onClick={() => { setCreating(true); createForm.resetFields(); createForm.setFieldsValue({ items: [{ cigarId: undefined, quantity: 1 }], paymentMethod: 'bank_transfer' }) }} style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 8, padding: '8px 16px', background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, cursor: 'pointer' }}>
+          <button onClick={() => { setCreating(true); createForm.resetFields(); createForm.setFieldsValue({ items: [{ cigarId: undefined, quantity: 1, price: 0 }], paymentMethod: 'bank_transfer', createdAt: dayjs().startOf('day') }) }} style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 8, padding: '8px 16px', background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, cursor: 'pointer' }}>
             <PlusOutlined />
             {t('ordersAdmin.createManual')}
           </button>
@@ -401,8 +437,11 @@ const AdminOrders: React.FC = () => {
                 onOk: async () => {
                   setLoading(true)
                   try {
+                    // 先删除相关的出库记录
+                    await Promise.all(selectedRowKeys.map(id => deleteOrderInventoryLogs(String(id))))
+                    // 再删除订单
                     await Promise.all(selectedRowKeys.map(id => deleteDocument(COLLECTIONS.ORDERS, String(id))))
-                      message.success(t('ordersAdmin.batchDeleted'))
+                    message.success(t('ordersAdmin.batchDeleted'))
                     loadData()
                     setSelectedRowKeys([])
                   } finally {
@@ -865,12 +904,15 @@ const AdminOrders: React.FC = () => {
       >
         <Form form={createForm} layout="vertical" onFinish={async (values: any) => {
           const userId: string = values.userId
-          const items: { cigarId: string; quantity: number }[] = (values.items || []).filter((it: any) => it?.cigarId && it?.quantity > 0)
+          const items: { cigarId: string; quantity: number; price: number }[] = (values.items || []).filter((it: any) => it?.cigarId && it?.quantity > 0 && it?.price > 0)
           if (!userId) { message.warning(t('ordersAdmin.pleaseSelectUser')); return }
           if (items.length === 0) { message.warning(t('ordersAdmin.pleaseAddAtLeastOneItem')); return }
+          const createdAt: Date = values.createdAt && typeof (values.createdAt as any)?.toDate === 'function' 
+            ? (values.createdAt as any).startOf('day').toDate() 
+            : dayjs().startOf('day').toDate()
           setLoading(true)
           try {
-            const res = await createDirectSaleOrder({ userId, items, note: values.note })
+            const res = await createDirectSaleOrder({ userId, items, note: values.note, createdAt } as any)
             if (res.success) {
               message.success(t('ordersAdmin.created'))
               setCreating(false)
@@ -883,15 +925,36 @@ const AdminOrders: React.FC = () => {
             setLoading(false)
           }
         }}>
+          <Form.Item label={t('ordersAdmin.orderDate')} name="createdAt" initialValue={dayjs().startOf('day')}>
+            <DatePicker style={{ width: '100%' }} />
+          </Form.Item>
           <Form.Item label={t('ordersAdmin.selectUser')} name="userId" rules={[{ required: true, message: t('ordersAdmin.pleaseSelectUser') }]}> 
-            <Select showSearch placeholder={t('ordersAdmin.selectUser')}>
-              {users.map(u => (
-                <Select.Option key={u.id} value={u.id}>{u.displayName} ({u.profile?.phone})</Select.Option>
-              ))}
+            <Select 
+              showSearch 
+              placeholder={t('ordersAdmin.selectUser')}
+              filterOption={(input, option) => {
+                const kw = (input || '').toLowerCase()
+                const uid = (option as any)?.value as string
+                const u = users.find(x => x.id === uid) as any
+                const name = (u?.displayName || '').toLowerCase()
+                const email = (u?.email || '').toLowerCase()
+                const phone = (u?.profile?.phone || '').toLowerCase()
+                return !!kw && (name.includes(kw) || email.includes(kw) || phone.includes(kw))
+              }}
+            >
+              {users
+                .sort((a, b) => {
+                  const nameA = (a.displayName || a.email || a.id).toLowerCase()
+                  const nameB = (b.displayName || b.email || b.id).toLowerCase()
+                  return nameA.localeCompare(nameB)
+                })
+                .map(u => (
+                  <Select.Option key={u.id} value={u.id}>{u.displayName} ({(u as any)?.profile?.phone || '-'})</Select.Option>
+                ))}
             </Select>
           </Form.Item>
 
-          <Form.List name="items" initialValue={[{ cigarId: undefined, quantity: 1 }]}>
+          <Form.List name="items" initialValue={[{ cigarId: undefined, quantity: 1, price: 0 }]}>
             {(fields, { add, remove }) => (
               <div>
                 {fields.map((field) => (
@@ -901,11 +964,30 @@ const AdminOrders: React.FC = () => {
                       name={[field.name, 'cigarId']}
                       fieldKey={[field.fieldKey!, 'cigarId'] as any}
                       rules={[{ required: true, message: t('ordersAdmin.pleaseSelectItem') }]}
-                      style={{ minWidth: 320 }}
+                      style={{ minWidth: 280 }}
                     >
-                      <Select placeholder={t('ordersAdmin.selectItem')}>
-                        {cigars.map(c => (
-                          <Select.Option key={c.id} value={c.id}>{c.name} - RM{c.price}</Select.Option>
+                      <Select 
+                        placeholder={t('ordersAdmin.selectItem')}
+                        showSearch
+                        optionFilterProp="children"
+                        onChange={(cigarId) => {
+                          const cigar = cigars.find(c => c.id === cigarId)
+                          if (cigar) {
+                            createForm.setFieldValue(['items', field.name, 'price'], cigar.price)
+                          }
+                        }}
+                        filterOption={(input, option) => {
+                          const kw = (input || '').toLowerCase()
+                          const text = String((option?.children as any) || '').toLowerCase()
+                          return text.includes(kw)
+                        }}
+                      >
+                        {groupedCigars.map(group => (
+                          <Select.OptGroup key={group.brand} label={group.brand}>
+                            {group.list.map(c => (
+                              <Select.Option key={c.id} value={c.id}>{c.name} - RM{c.price}</Select.Option>
+                            ))}
+                          </Select.OptGroup>
                         ))}
                       </Select>
                     </Form.Item>
@@ -914,8 +996,24 @@ const AdminOrders: React.FC = () => {
                       name={[field.name, 'quantity']}
                       fieldKey={[field.fieldKey!, 'quantity'] as any}
                       rules={[{ required: true, message: t('ordersAdmin.pleaseEnterQuantity') }]}
+                      style={{ minWidth: 100 }}
                     >
                       <InputNumber min={1} placeholder={t('ordersAdmin.quantity')} />
+                    </Form.Item>
+                    <Form.Item
+                      {...field}
+                      name={[field.name, 'price']}
+                      fieldKey={[field.fieldKey!, 'price'] as any}
+                      rules={[{ required: true, message: t('ordersAdmin.pleaseEnterPrice') }]}
+                      style={{ minWidth: 120 }}
+                    >
+                      <InputNumber 
+                        min={0} 
+                        step={0.01}
+                        precision={2}
+                        placeholder={t('ordersAdmin.price')}
+                        prefix="RM"
+                      />
                     </Form.Item>
                     {fields.length > 1 && (
                       <Button danger onClick={() => remove(field.name)}>{t('common.remove')}</Button>
@@ -923,7 +1021,7 @@ const AdminOrders: React.FC = () => {
                   </Space>
                 ))}
                 <Form.Item>
-                  <Button type="dashed" onClick={() => add({ quantity: 1 })} icon={<PlusOutlined />}>{t('ordersAdmin.addItem')}</Button>
+                  <Button type="dashed" onClick={() => add({ quantity: 1, price: 0 })} icon={<PlusOutlined />}>{t('ordersAdmin.addItem')}</Button>
                 </Form.Item>
               </div>
             )}

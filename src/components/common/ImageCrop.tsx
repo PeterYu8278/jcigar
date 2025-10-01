@@ -127,7 +127,6 @@ const ImageCrop: React.FC<ImageCropProps> = ({
       message.success('图片裁剪完成')
     } catch (error) {
       message.error('图片裁剪失败')
-      console.error('Crop error:', error)
     } finally {
       setLoading(false)
     }

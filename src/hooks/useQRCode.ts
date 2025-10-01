@@ -43,7 +43,6 @@ export const useQRCode = (options: UseQRCodeOptions = {}): UseQRCodeReturn => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '生成QR Code失败'
       setError(errorMessage)
-      console.error('QR Code生成错误:', err)
     } finally {
       setLoading(false)
     }

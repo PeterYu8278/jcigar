@@ -189,7 +189,7 @@ const AdminEvents: React.FC = () => {
             message.success(t('common.eventAutoEndedWithOrders', { count: orderResult.createdOrders }))
           }
         } catch (error) {
-          console.error('Auto-create orders failed:', error)
+          // 静默处理错误
         }
       }
     }
@@ -200,7 +200,7 @@ const AdminEvents: React.FC = () => {
         await updateDocument(COLLECTIONS.EVENTS, event.id, { status: newStatus } as any)
         return newStatus
       } catch (error) {
-        console.error(t('events.statusUpdateFailed'), error)
+        // 静默处理错误
       }
     }
     
@@ -1206,6 +1206,7 @@ const AdminEvents: React.FC = () => {
                           <ParticipantsSummary
                             event={participantsLike}
                             getCigarPriceById={getCigarPriceById}
+                            cigars={cigars}
                           />
                         </div>
                       )

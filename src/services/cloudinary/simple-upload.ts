@@ -73,7 +73,6 @@ export const uploadFile = async (
       bytes: result.bytes
     }
   } catch (error) {
-    console.error('Cloudinary 上传失败:', error)
     throw new Error(error instanceof Error ? error.message : '文件上传失败，请重试')
   }
 }

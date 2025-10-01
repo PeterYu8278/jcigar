@@ -51,7 +51,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             set({ isAdmin: userData.role === 'admin' })
           }
         } catch (error) {
-          console.error('获取用户数据失败:', error)
           set({ error: '获取用户数据失败' })
         }
       } else {

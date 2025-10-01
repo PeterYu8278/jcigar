@@ -12,7 +12,9 @@ export default defineConfig({
     }),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: 'auto',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      selfDestroying: true, // 允许Service Worker自毁
       manifest: {
         name: 'Gentleman Club - Cigar Connoisseur',
         short_name: 'Gentleman Club',
@@ -68,7 +70,13 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
-        maximumFileSizeToCacheInBytes: 3000000 // 3MB
+        maximumFileSizeToCacheInBytes: 3000000, // 3MB
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
+        // 禁用所有Service Worker日志
+        navigateFallback: null,
+        runtimeCaching: []
       },
       devOptions: {
         enabled: false, // 开发环境禁用PWA

@@ -75,7 +75,6 @@ export const createDocument = async <T>(collectionName: string, data: Omit<T, 'i
     });
     return { success: true, id: docRef.id };
   } catch (error) {
-    console.error(`创建${collectionName}文档失败:`, error);
     return { success: false, error: error as Error };
   }
 };
@@ -90,7 +89,6 @@ export const getDocument = async <T>(collectionName: string, id: string): Promis
     }
     return null;
   } catch (error) {
-    console.error(`获取${collectionName}文档失败:`, error);
     return null;
   }
 };
@@ -105,7 +103,6 @@ export const updateDocument = async <T>(collectionName: string, id: string, data
     });
     return { success: true };
   } catch (error) {
-    console.error(`更新${collectionName}文档失败:`, error);
     return { success: false, error: error as Error };
   }
 };
@@ -115,7 +112,6 @@ export const deleteDocument = async (collectionName: string, id: string) => {
     await deleteDoc(doc(db, collectionName, id));
     return { success: true };
   } catch (error) {
-    console.error(`删除${collectionName}文档失败:`, error);
     return { success: false, error: error as Error };
   }
 };
@@ -126,7 +122,6 @@ export const getUsers = async (): Promise<User[]> => {
     const querySnapshot = await getDocs(collection(db, COLLECTIONS.USERS));
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
   } catch (error) {
-    console.error('获取用户列表失败:', error);
     return [];
   }
 };
@@ -146,7 +141,6 @@ export const getUsersByIds = async (ids: string[]): Promise<User[]> => {
     const results = await Promise.all(tasks)
     return results.filter(Boolean) as User[]
   } catch (error) {
-    console.error('批量获取用户失败:', error)
     return []
   }
 }
@@ -158,7 +152,6 @@ export const getBrands = async (): Promise<Brand[]> => {
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Brand));
   } catch (error) {
-    console.error('获取品牌列表失败:', error);
     return [];
   }
 };
@@ -177,7 +170,6 @@ export const getActiveBrands = async (): Promise<Brand[]> => {
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Brand));
   } catch (error) {
-    console.error('获取活跃品牌列表失败:', error);
     return [];
   }
 };
@@ -192,7 +184,6 @@ export const getBrandsByCountry = async (country: string): Promise<Brand[]> => {
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Brand));
   } catch (error) {
-    console.error('根据国家获取品牌失败:', error);
     return [];
   }
 };
@@ -204,7 +195,6 @@ export const getCigars = async (): Promise<Cigar[]> => {
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Cigar));
   } catch (error) {
-    console.error('获取雪茄列表失败:', error);
     return [];
   }
 };
@@ -219,7 +209,6 @@ export const getCigarsByBrand = async (brand: string): Promise<Cigar[]> => {
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Cigar));
   } catch (error) {
-    console.error('根据品牌获取雪茄失败:', error);
     return [];
   }
 };
@@ -231,7 +220,6 @@ export const getEvents = async (): Promise<Event[]> => {
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Event));
   } catch (error) {
-    console.error('获取活动列表失败:', error);
     return [];
   }
 };
@@ -251,7 +239,6 @@ export const getUpcomingEvents = async (): Promise<Event[]> => {
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Event));
   } catch (error) {
-    console.error('获取即将到来的活动失败:', error);
     return [];
   }
 };
@@ -266,7 +253,6 @@ export const registerForEvent = async (eventId: string, userId: string) => {
     });
     return { success: true };
   } catch (error) {
-    console.error('活动报名失败:', error);
     return { success: false, error: error as Error };
   }
 };
@@ -280,7 +266,6 @@ export const unregisterFromEvent = async (eventId: string, userId: string) => {
     });
     return { success: true };
   } catch (error) {
-    console.error('取消活动报名失败:', error);
     return { success: false, error: error as Error };
   }
 };
@@ -296,7 +281,6 @@ export const getOrdersByUser = async (userId: string): Promise<Order[]> => {
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
   } catch (error) {
-    console.error('获取用户订单失败:', error);
     return [];
   }
 };
@@ -307,7 +291,6 @@ export const getAllOrders = async (): Promise<Order[]> => {
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
   } catch (error) {
-    console.error('获取所有订单失败:', error);
     return [];
   }
 };
@@ -370,7 +353,6 @@ export const createOrdersFromEventAllocations = async (eventId: string): Promise
 
     return { success: true, createdOrders: createdOrdersCount };
   } catch (error) {
-    console.error('从活动分配创建订单失败:', error);
     return { success: false, createdOrders: 0, error: error as Error };
   }
 };
@@ -404,7 +386,6 @@ export const createDirectSaleOrder = async (params: { userId: string; items: { c
     const result = await createDocument<Order>(COLLECTIONS.ORDERS, orderData)
     return result
   } catch (error) {
-    console.error('创建直接销售订单失败:', error)
     return { success: false, error: error as Error }
   }
 }
@@ -416,7 +397,6 @@ export const getAllTransactions = async (): Promise<Transaction[]> => {
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
   } catch (error) {
-    console.error('获取交易记录失败:', error);
     return [];
   }
 };
@@ -431,7 +411,6 @@ export const getTransactionsByType = async (type: Transaction['type']): Promise<
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
   } catch (error) {
-    console.error('根据类型获取交易记录失败:', error);
     return [];
   }
 };
@@ -447,7 +426,6 @@ export const getTransactionsByDateRange = async (startDate: Date, endDate: Date)
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
   } catch (error) {
-    console.error('根据日期范围获取交易记录失败:', error);
     return [];
   }
 };
@@ -457,7 +435,6 @@ export const createTransaction = async (transactionData: Omit<Transaction, 'id'>
     const result = await createDocument<Transaction>(COLLECTIONS.TRANSACTIONS, transactionData);
     return result;
   } catch (error) {
-    console.error('创建交易记录失败:', error);
     return { success: false, error: error as Error };
   }
 };
@@ -469,7 +446,6 @@ export const getAllInventoryLogs = async (): Promise<InventoryLog[]> => {
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryLog));
   } catch (error) {
-    console.error('获取库存变动记录失败:', error);
     return [];
   }
 };
@@ -479,7 +455,6 @@ export const createInventoryLog = async (logData: Omit<InventoryLog, 'id'>) => {
     const result = await createDocument<InventoryLog>(COLLECTIONS.INVENTORY_LOGS, logData);
     return result;
   } catch (error) {
-    console.error('创建库存变动记录失败:', error);
     return { success: false, error: error as Error };
   }
 };
@@ -500,3 +475,4 @@ export const subscribeToCollection = <T>(
     callback(data);
   });
 };
+

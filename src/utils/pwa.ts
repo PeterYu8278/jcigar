@@ -82,7 +82,7 @@ export const initializePWA = async (): Promise<void> => {
     installState.isInstalled = isInstalled();
     installState.isStandalone = isStandalone();
   } catch (error) {
-    console.error('[PWA] Failed to initialize PWA:', error);
+    // 静默处理错误
   }
 };
 
@@ -104,7 +104,6 @@ export const showInstallPrompt = async (): Promise<boolean> => {
     
     return false;
   } catch (error) {
-    console.error('[PWA] Failed to show install prompt:', error);
     return false;
   }
 };
@@ -132,7 +131,7 @@ export const checkForUpdates = async (): Promise<void> => {
         await registration.update();
       }
     } catch (error) {
-      console.error('[PWA] Failed to check for updates:', error);
+      // 静默处理错误
     }
   }
 };
@@ -145,9 +144,9 @@ export const unregisterServiceWorker = async (): Promise<void> => {
       for (const registration of registrations) {
         await registration.unregister();
       }
-    } catch (error) {
-      console.error('[PWA] Failed to unregister service worker:', error);
-    }
+  } catch (error) {
+    // 静默处理错误
+  }
   }
 };
 

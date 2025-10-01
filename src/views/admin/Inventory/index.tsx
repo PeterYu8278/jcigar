@@ -31,6 +31,14 @@ const AdminInventory: React.FC = () => {
   const [users, setUsers] = useState<any[]>([])
   const [viewingReference, setViewingReference] = useState<string | null>(null)
   const [imageList, setImageList] = useState<any[]>([])
+  const [pagination, setPagination] = useState<{ current: number; pageSize: number }>({ current: 1, pageSize: 10 })
+  // 记录表分页大小（持久化）
+  const [inPageSize, setInPageSize] = useState<number>(() => {
+    try { return Number(localStorage.getItem('inventory_in_page_size') || 10) || 10 } catch { return 10 }
+  })
+  const [outPageSize, setOutPageSize] = useState<number>(() => {
+    try { return Number(localStorage.getItem('inventory_out_page_size') || 10) || 10 } catch { return 10 }
+  })
   
   // 品牌管理相关状态
   const [brandList, setBrandList] = useState<Brand[]>([])
@@ -65,6 +73,16 @@ const AdminInventory: React.FC = () => {
         setOrders(os)
         setUsers(us)
         setBrandList(bs)
+        // 初始化分页（本地持久化）
+        try {
+          const raw = localStorage.getItem('inventory_pagination')
+          if (raw) {
+            const saved = JSON.parse(raw)
+            if (saved?.current && saved?.pageSize) {
+              setPagination({ current: Number(saved.current) || 1, pageSize: Number(saved.pageSize) || 10 })
+            }
+          }
+        } catch {}
       } finally {
         setLoading(false)
       }
@@ -118,24 +136,87 @@ const AdminInventory: React.FC = () => {
     return 'success'
   }
 
+  // 商品是否存在入/出库记录（存在则禁止删除）
+  const hasInventoryHistory = (cigarId: string | undefined) => {
+    if (!cigarId) return false
+    return inventoryLogs.some((log: any) => log?.cigarId === cigarId)
+  }
+
+  // 基于入库/出库日志的实时库存计算
+  const stockByCigarId = useMemo(() => {
+    // 精确计算：sum(IN) - sum(OUT)，不在逐步相减时夹0，避免顺序依赖
+    const map = new Map<string, number>()
+    for (const log of inventoryLogs) {
+      const id = (log as any)?.cigarId
+      if (!id) continue
+      const type = (log as any)?.type
+      const qtyRaw = (log as any)?.quantity ?? 0
+      const qty = Number.isFinite(qtyRaw) ? Math.max(0, Math.floor(qtyRaw)) : 0
+      const prev = map.get(id) ?? 0
+      if (type === 'in') {
+        map.set(id, prev + qty)
+      } else if (type === 'out') {
+        map.set(id, prev - qty)
+      }
+    }
+    return map
+  }, [inventoryLogs])
+
+  const getComputedStock = (cigarId?: string) => {
+    if (!cigarId) return 0
+    const net = stockByCigarId.get(cigarId) ?? 0
+    // 展示时夹到 >= 0，避免出现负数库存展示
+    return Math.max(0, net)
+  }
+
+  // 每个商品的总入库/总出库数量
+  const totalsByCigarId = useMemo(() => {
+    const map = new Map<string, { totalIn: number; totalOut: number }>()
+    for (const log of inventoryLogs) {
+      const id = (log as any)?.cigarId
+      if (!id) continue
+      const type = (log as any)?.type
+      const qtyRaw = (log as any)?.quantity ?? 0
+      const qty = Number.isFinite(qtyRaw) ? Math.max(0, Math.floor(qtyRaw)) : 0
+      const prev = map.get(id) || { totalIn: 0, totalOut: 0 }
+      if (type === 'in') prev.totalIn += qty
+      else if (type === 'out') prev.totalOut += qty
+      map.set(id, prev)
+    }
+    return map
+  }, [inventoryLogs])
+
+  const getTotals = (cigarId?: string) => {
+    if (!cigarId) return { totalIn: 0, totalOut: 0 }
+    return totalsByCigarId.get(cigarId) || { totalIn: 0, totalOut: 0 }
+  }
+
   const filtered = useMemo(() => {
     return items.filter(i => {
       const kw = keyword.trim().toLowerCase()
       const passKw = !kw || i.name?.toLowerCase().includes(kw) || i.brand?.toLowerCase().includes(kw)
       const passBrand = !brandFilter || i.brand === brandFilter
       const passOrigin = !originFilter || i.origin === originFilter
-      const status = ((i as any)?.inventory?.stock ?? 0) <= ((i as any)?.inventory?.minStock ?? 0) ? 'critical' : ((i as any)?.inventory?.stock ?? 0) <= (((i as any)?.inventory?.minStock ?? 0) * 1.5) ? 'low' : 'normal'
+      const computedStock = getComputedStock(i.id)
+      const minStock = ((i as any)?.inventory?.minStock ?? 0)
+      const status = (computedStock <= minStock) ? 'critical' : (computedStock <= (minStock * 1.5)) ? 'low' : 'normal'
       const passStatus = !statusFilter || status === statusFilter
       const passStrength = !strengthFilter || i.strength === strengthFilter
       return passKw && passBrand && passOrigin && passStatus && passStrength
     })
-  }, [items, keyword, brandFilter, originFilter, strengthFilter, statusFilter])
+  }, [items, keyword, brandFilter, originFilter, strengthFilter, statusFilter, stockByCigarId])
+
+  // 过滤条件变化时重置到第1页
+  useEffect(() => {
+    setPagination(p => ({ ...p, current: 1 }))
+  }, [keyword, brandFilter, originFilter, strengthFilter, statusFilter])
 
   const columnsAll = [
     {
       title: t('inventory.cigarName'),
       dataIndex: 'name',
       key: 'name',
+      width: 260,
       render: (name: string, record: any) => {
         // 根据品牌名称找到对应的品牌信息
         const brandInfo = brandList.find(brand => brand.name === record.brand)
@@ -163,6 +244,7 @@ const AdminInventory: React.FC = () => {
     {
       title: t('inventory.spec'),
       key: 'spec',
+      width: 50,
       render: (_: any, record: any) => (
         <div>
           <div>{record.size}</div>
@@ -176,26 +258,36 @@ const AdminInventory: React.FC = () => {
       title: t('inventory.price'),
       dataIndex: 'price',
       key: 'price',
+      width: 50,
       render: (price: number) => `RM${price}`,
       sorter: (a: any, b: any) => a.price - b.price,
     },
     {
       title: t('inventory.stockStatus'),
       key: 'stockStatus',
+      width: 150,
       render: (_: any, record: any) => (
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-            <span>{t('inventory.currentStock')}: {(record as any)?.inventory?.stock ?? 0}</span>
+            <span>{t('inventory.currentStock')}: {getComputedStock((record as any)?.id)}</span>
             <span>{t('inventory.reserved')}: {(record as any)?.inventory?.reserved ?? 0}</span>
           </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 12, color: '#666' }}>
+            {(() => { const { totalIn, totalOut } = getTotals((record as any)?.id); return (
+              <>
+                <span>{t('inventory.totalIn')}: {totalIn}</span>
+                <span>{t('inventory.totalOut')}: {totalOut}</span>
+              </>
+            ) })()}
+          </div>
           <Progress
-            percent={getStockProgress((record as any)?.inventory?.stock ?? 0, (record as any)?.inventory?.minStock ?? 0)}
-            status={getProgressStatus((record as any)?.inventory?.stock ?? 0, (record as any)?.inventory?.minStock ?? 0)}
+            percent={getStockProgress(getComputedStock((record as any)?.id), (record as any)?.inventory?.minStock ?? 0)}
+            status={getProgressStatus(getComputedStock((record as any)?.id), (record as any)?.inventory?.minStock ?? 0)}
             size="small"
-            format={() => `${(record as any)?.inventory?.stock ?? 0}/${(((record as any)?.inventory?.minStock ?? 0) * 2)}`}
+            format={() => `${getComputedStock((record as any)?.id)}/${(((record as any)?.inventory?.minStock ?? 0) * 2)}`}
           />
-          <Tag color={getStatusColor(((record as any)?.inventory?.stock ?? 0) <= ((record as any)?.inventory?.minStock ?? 0) ? 'critical' : ((record as any)?.inventory?.stock ?? 0) <= (((record as any)?.inventory?.minStock ?? 0) * 1.5) ? 'low' : 'normal')} style={{ marginTop: 4 }}>
-            {getStatusText(((record as any)?.inventory?.stock ?? 0) <= ((record as any)?.inventory?.minStock ?? 0) ? 'critical' : ((record as any)?.inventory?.stock ?? 0) <= (((record as any)?.inventory?.minStock ?? 0) * 1.5) ? 'low' : 'normal')}
+          <Tag color={getStatusColor((getComputedStock((record as any)?.id) <= ((record as any)?.inventory?.minStock ?? 0)) ? 'critical' : (getComputedStock((record as any)?.id) <= (((record as any)?.inventory?.minStock ?? 0) * 1.5)) ? 'low' : 'normal')} style={{ marginTop: 4 }}>
+            {getStatusText((getComputedStock((record as any)?.id) <= ((record as any)?.inventory?.minStock ?? 0)) ? 'critical' : (getComputedStock((record as any)?.id) <= (((record as any)?.inventory?.minStock ?? 0) * 1.5)) ? 'low' : 'normal')}
           </Tag>
         </div>
       ),
@@ -203,6 +295,7 @@ const AdminInventory: React.FC = () => {
     {
       title: t('inventory.actions'),
       key: 'action',
+      width: 100,
       render: (_: any, record: any) => (
         <Space size="small" style={{ justifyContent: 'center', width: '100%' }}>
           <Button type="link" icon={<EyeOutlined />} size="small" onClick={() => {
@@ -214,7 +307,7 @@ const AdminInventory: React.FC = () => {
               size: record.size,
               strength: record.strength,
               price: record.price,
-              stock: (record as any)?.inventory?.stock ?? 0,
+              stock: getComputedStock((record as any)?.id) ?? 0,
               minStock: (record as any)?.inventory?.minStock ?? 0,
               reserved: (record as any)?.inventory?.reserved ?? 0,
             })
@@ -306,6 +399,76 @@ const AdminInventory: React.FC = () => {
 
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
 
+  // 统一的出库列表：订单出库 + 手动出库
+  const unifiedOutRows = useMemo(() => {
+    const userMap = new Map(users.map((u: any) => [u.id, u]))
+    const cigarMap = new Map(items.map((c: any) => [c.id, c]))
+    const rows: any[] = []
+    // 来自订单的出库
+    for (const o of orders) {
+      const createdAt = (o as any).createdAt
+      const user = userMap.get(o.userId)
+      const source = (o as any).source?.type || 'direct'
+      for (const it of (o.items || [])) {
+        const cigar = cigarMap.get(it.cigarId)
+        rows.push({
+          id: `order_${o.id}_${it.cigarId}`,
+          createdAt,
+          orderId: o.id,
+          referenceNo: undefined,
+          user: user ? `${user.displayName} <${user.email}>` : o.userId,
+          cigarName: cigar ? cigar.name : it.cigarId,
+          quantity: it.quantity,
+          source,
+        })
+      }
+    }
+    // 来自手动出库日志的出库
+    for (const log of outLogs) {
+      const cigar = cigarMap.get((log as any).cigarId)
+      rows.push({
+        id: `manual_${(log as any).id || ((log as any).referenceNo || '')}_${(log as any).cigarId}`,
+        createdAt: (log as any).createdAt,
+        orderId: '-',
+        referenceNo: (log as any).referenceNo,
+        user: (log as any).operatorId || '-',
+        cigarName: cigar ? cigar.name : (log as any).cigarId,
+        quantity: (log as any).quantity,
+        source: 'manual',
+      })
+    }
+    // 按时间倒序
+    return rows.sort((a, b) => new Date(b.createdAt as any).getTime() - new Date(a.createdAt as any).getTime())
+  }, [orders, users, items, outLogs])
+
+  const unifiedOutColumns = [
+    { title: t('inventory.time'), dataIndex: 'createdAt', key: 'createdAt', width: 160, render: (v: any) => v ? new Date(v).toLocaleString() : '-' },
+    { title: t('inventory.orderId'), dataIndex: 'orderId', key: 'orderId', width: 140 },
+    { title: t('inventory.referenceNo'), dataIndex: 'referenceNo', key: 'referenceNo', width: 180, render: (v: any) => v || '-' },
+    { title: t('inventory.user'), dataIndex: 'user', key: 'user', width: 220 },
+    { title: t('inventory.product'), dataIndex: 'cigarName', key: 'cigarName', width: 220 },
+    { title: t('inventory.quantity'), dataIndex: 'quantity', key: 'quantity', width: 100 },
+    { title: t('inventory.source'), dataIndex: 'source', key: 'source', width: 120, render: (s: string) => s === 'event' ? t('inventory.event') : s === 'direct' ? t('inventory.directSale') : t('inventory.manual') },
+  ]
+
+  // 产品下拉：按品牌分组，并按品牌与产品名称字母排序（用于入库/出库下拉）
+  const groupedCigars = useMemo(() => {
+    const brandToList = new Map<string, Cigar[]>()
+    items.forEach((c) => {
+      const brand = (c as any)?.brand || 'Unknown'
+      const list = brandToList.get(brand) || []
+      list.push(c)
+      brandToList.set(brand, list)
+    })
+    const sorted = Array.from(brandToList.entries())
+      .sort((a, b) => a[0].toLowerCase().localeCompare(b[0].toLowerCase()))
+      .map(([brand, list]) => ({
+        brand,
+        list: list.sort((a, b) => (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase())),
+      }))
+    return sorted
+  }, [items])
+
   const brands = useMemo(() => {
     return Array.from(new Set(items.map(i => i.brand).filter(Boolean))) as string[]
   }, [items])
@@ -391,7 +554,16 @@ const AdminInventory: React.FC = () => {
                           onOk: async () => {
                             setLoading(true)
                             try {
-                              await Promise.all(selectedRowKeys.map(id => deleteDocument(COLLECTIONS.CIGARS, String(id))))
+                              const ids = selectedRowKeys.map(id => String(id))
+                              const blocked = ids.filter(id => hasInventoryHistory(id))
+                              const allowed = ids.filter(id => !hasInventoryHistory(id))
+                              if (blocked.length > 0) {
+                                message.warning(t('inventory.deleteBlockedDueToLogs'))
+                              }
+                              if (allowed.length === 0) {
+                                return
+                              }
+                              await Promise.all(allowed.map(id => deleteDocument(COLLECTIONS.CIGARS, id)))
                               message.success(t('inventory.batchDeleted'))
                               const list = await getCigars()
                               setItems(list)
@@ -508,20 +680,30 @@ const AdminInventory: React.FC = () => {
               )}
 
               {!isMobile ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {groupedByBrand.map(group => (
+                    <div key={group.key} style={{ border: '1px solid rgba(244,175,37,0.2)', borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
+                      <div style={{ padding: '8px 12px', background: 'rgba(244,175,37,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ fontWeight: 700 }}>{group.key}</div>
+                        <div style={{ fontSize: 12, color: '#666' }}>{t('inventory.productTypes')}：{group.items.length}</div>
+                      </div>
+                      <div style={{ padding: 12 }}>
               <Table
                 columns={columns}
-                dataSource={filtered}
+                          dataSource={group.items}
                 rowKey="id"
+                          size="small"
                 loading={loading}
-                rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
-                pagination={{
-                  total: items.length,
-                  pageSize: 10,
-                  showSizeChanger: true,
-                  showQuickJumper: true,
-                  showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
-                }}
-              />
+                          rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys, preserveSelectedRowKeys: true }}
+                          pagination={false}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  {groupedByBrand.length === 0 && (
+                    <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
+                  )}
+                </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                   {groupedByBrand.map(group => (
@@ -542,9 +724,9 @@ const AdminInventory: React.FC = () => {
                               <div style={{ fontWeight: 700, color: '#f4af25', marginTop: 2 }}>RM{record.price?.toLocaleString?.() || record.price}</div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, marginTop: 4 }}>
                                 {(() => {
-                                  const st = ((record as any)?.inventory?.stock ?? 0) <= ((record as any)?.inventory?.minStock ?? 0)
-                                    ? 'critical' : ((record as any)?.inventory?.stock ?? 0) <= (((record as any)?.inventory?.minStock ?? 0) * 1.5)
-                                    ? 'low' : 'normal'
+                                  const computed = getComputedStock((record as any)?.id)
+                                  const min = ((record as any)?.inventory?.minStock ?? 0)
+                                  const st = (computed <= min) ? 'critical' : (computed <= (min * 1.5)) ? 'low' : 'normal'
                                   const color = st === 'normal' ? '#16a34a' : st === 'low' ? '#f59e0b' : '#ef4444'
                                   const text = st === 'normal' ? t('inventory.stockNormal') : st === 'low' ? t('inventory.stockLow') : t('inventory.stockCritical')
                                   return (
@@ -552,10 +734,18 @@ const AdminInventory: React.FC = () => {
                                       <span style={{ width: 8, height: 8, borderRadius: 9999, background: color, display: 'inline-block' }} />
                                       <span style={{ color }}>{text}</span>
                                       <span style={{ color: 'rgba(224,214,196,0.6)' }}>|</span>
-                                      <span style={{ color: '#fff' }}>{((record as any)?.inventory?.stock ?? 0)} 件</span>
+                                      <span style={{ color: '#fff' }}>{computed} 件</span>
                                     </>
                                   )
                                 })()}
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, marginTop: 4 }}>
+                                {(() => { const { totalIn, totalOut } = getTotals((record as any)?.id); return (
+                                  <>
+                                    <span style={{ color: 'rgba(224,214,196,0.8)' }}>{t('inventory.totalIn')}: <span style={{ color: '#fff' }}>{totalIn}</span></span>
+                                    <span style={{ color: 'rgba(224,214,196,0.8)' }}>{t('inventory.totalOut')}: <span style={{ color: '#fff' }}>{totalOut}</span></span>
+                                  </>
+                                ) })()}
                               </div>
                             </div>
                             <button style={{ padding: '4px 8px', borderRadius: 6, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => {
@@ -567,7 +757,7 @@ const AdminInventory: React.FC = () => {
                                 size: (record as any).size,
                                 strength: (record as any).strength,
                                 price: (record as any).price,
-                                stock: (record as any)?.inventory?.stock ?? 0,
+                                stock: getComputedStock((record as any)?.id) ?? 0,
                                 minStock: (record as any)?.inventory?.minStock ?? 0,
                                 reserved: (record as any)?.inventory?.reserved ?? 0,
                               })
@@ -675,6 +865,7 @@ const AdminInventory: React.FC = () => {
                 ) : (
                   brandList
                     .filter(brand => !keyword || brand.name.toLowerCase().includes(keyword.toLowerCase()))
+                    .sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()))
                     .map((brand) => {
                       const productCount = items.filter(item => item.brand === brand.name).length
                       return (
@@ -725,8 +916,8 @@ const AdminInventory: React.FC = () => {
                                   />
                                 ) : (
                                   <div style={{
-                                    width: '40px',
-                                    height: '40px',
+                                    width: '50px',
+                                    height: '50px',
                                     borderRadius: '8px',
                                     background: 'linear-gradient(135deg, rgba(244,175,37,0.2), rgba(224,153,15,0.2))',
                                     border: '2px solid rgba(244,175,37,0.3)',
@@ -900,9 +1091,6 @@ const AdminInventory: React.FC = () => {
                     const target = items.find(i => i.id === line.cigarId) as any
                     if (!target) continue
                     const qty = Math.max(1, Math.floor(line.quantity || 1))
-                    const current = target?.inventory?.stock ?? 0
-                    const next = current + qty
-                    await updateDocument(COLLECTIONS.CIGARS, target.id, { inventory: { ...target.inventory, stock: next } } as any)
                     await createDocument(COLLECTIONS.INVENTORY_LOGS, {
                       cigarId: target.id,
                       type: 'in',
@@ -932,9 +1120,22 @@ const AdminInventory: React.FC = () => {
                             rules={[{ required: true, message: t('inventory.pleaseSelectProduct') }]}
                             style={{ minWidth: 320 }}
                           >
-                            <Select placeholder={t('inventory.pleaseSelectProduct')}>
-                              {items.map(i => (
-                                <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（{t('inventory.stock')}：{(i as any)?.inventory?.stock ?? 0}）</Option>
+                            <Select
+                              placeholder={t('inventory.pleaseSelectProduct')}
+                              showSearch
+                              optionFilterProp="children"
+                              filterOption={(input, option) => {
+                                const kw = (input || '').toLowerCase()
+                                const text = String((option?.children as any) || '').toLowerCase()
+                                return text.includes(kw)
+                              }}
+                            >
+                              {groupedCigars.map(group => (
+                                <Select.OptGroup key={group.brand} label={group.brand}>
+                                  {group.list.map(i => (
+                                    <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（{t('inventory.stock')}：{getComputedStock(i.id)}）</Option>
+                                  ))}
+                                </Select.OptGroup>
                               ))}
                             </Select>
                           </Form.Item>
@@ -972,7 +1173,17 @@ const AdminInventory: React.FC = () => {
                 columns={logColumns}
                 dataSource={inLogs}
                 rowKey="id"
-                pagination={{ pageSize: 10 }}
+        pagination={{ 
+          pageSize: inPageSize,
+          showSizeChanger: true,
+          showQuickJumper: false,
+          pageSizeOptions: ['5','10','20','50'],
+          onChange: (_page, size) => {
+            const next = size || inPageSize
+            setInPageSize(next)
+            try { localStorage.setItem('inventory_in_page_size', String(next)) } catch {}
+          }
+        }}
               />
             </Card>
           )}
@@ -988,9 +1199,6 @@ const AdminInventory: React.FC = () => {
                       const target = items.find(i => i.id === line.cigarId) as any
                       if (!target) continue
                       const qty = Math.max(1, Math.floor(line.quantity || 1))
-                      const current = target?.inventory?.stock ?? 0
-                      const next = Math.max(0, current - qty)
-                      await updateDocument(COLLECTIONS.CIGARS, target.id, { inventory: { ...target.inventory, stock: next } } as any)
                       await createDocument(COLLECTIONS.INVENTORY_LOGS, {
                         cigarId: target.id,
                         type: 'out',
@@ -1020,9 +1228,22 @@ const AdminInventory: React.FC = () => {
                               rules={[{ required: true, message: t('inventory.pleaseSelectProduct') }]}
                               style={{ minWidth: 320 }}
                             >
-                              <Select placeholder={t('inventory.pleaseSelectProduct')}>
-                                {items.map(i => (
-                                  <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（{t('inventory.stock')}：{(i as any)?.inventory?.stock ?? 0}）</Option>
+                              <Select 
+                                placeholder={t('inventory.pleaseSelectProduct')}
+                                showSearch
+                                optionFilterProp="children"
+                                filterOption={(input, option) => {
+                                  const kw = (input || '').toLowerCase()
+                                  const text = String((option?.children as any) || '').toLowerCase()
+                                  return text.includes(kw)
+                                }}
+                              >
+                                {groupedCigars.map(group => (
+                                  <Select.OptGroup key={group.brand} label={group.brand}>
+                                    {group.list.map(i => (
+                                      <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（{t('inventory.stock')}：{getComputedStock(i.id)}）</Option>
+                                    ))}
+                                  </Select.OptGroup>
                                 ))}
                               </Select>
                             </Form.Item>
@@ -1057,11 +1278,21 @@ const AdminInventory: React.FC = () => {
               </Card>
             <Card>
               <Table
-                title={() => t('inventory.outStockRecordFromOrders')}
-                columns={outOrderColumns}
-                dataSource={outFromOrders}
+        title={() => t('inventory.outStockRecord')}
+                columns={unifiedOutColumns}
+                dataSource={unifiedOutRows}
                 rowKey="id"
-                pagination={{ pageSize: 10 }}
+        pagination={{ 
+          pageSize: outPageSize,
+          showSizeChanger: true,
+          showQuickJumper: false,
+          pageSizeOptions: ['5','10','20','50'],
+          onChange: (_page, size) => {
+            const next = size || outPageSize
+            setOutPageSize(next)
+            try { localStorage.setItem('inventory_out_page_size', String(next)) } catch {}
+          }
+        }}
               />
             </Card>
             </div>
@@ -1085,18 +1316,50 @@ const AdminInventory: React.FC = () => {
               {editing && (
                 <>
                   <Button danger onClick={() => {
+                    const productId = (editing as any)?.id
+                    const productName = (editing as any)?.name || ''
+                    
+                    if (hasInventoryHistory(productId)) {
+                      // 显示有库存记录的提示窗
+                      const relatedLogs = inventoryLogs.filter((log: any) => log?.cigarId === productId)
+                      const inCount = relatedLogs.filter((log: any) => log?.type === 'in').length
+                      const outCount = relatedLogs.filter((log: any) => log?.type === 'out').length
+                      
+                      Modal.info({
+                        title: t('inventory.deleteBlocked'),
+                        content: (
+                          <div>
+                            <p>{t('inventory.deleteBlockedDueToLogs')}</p>
+                            <p><strong>{productName}</strong> {t('inventory.hasInventoryRecords')}:</p>
+                            <ul style={{ marginLeft: 20 }}>
+                              <li>{t('inventory.inStockRecords')}: {inCount} {t('inventory.records')}</li>
+                              <li>{t('inventory.outStockRecords')}: {outCount} {t('inventory.records')}</li>
+                            </ul>
+                            <p style={{ color: '#ff4d4f', marginTop: 12 }}>
+                              {t('inventory.deleteBlockedExplanation')}
+                            </p>
+                          </div>
+                        ),
+                        okText: t('common.understood'),
+                      })
+                      return
+                    }
+                    
                     Modal.confirm({
                       title: t('common.deleteProduct'),
-                      content: `确定删除产品 ${(editing as any)?.name || ''} 吗？`,
+                      content: `确定删除产品 ${productName} 吗？`,
                       okButtonProps: { danger: true },
                       onOk: async () => {
                         setLoading(true)
                         try {
-                          const res = await deleteDocument(COLLECTIONS.CIGARS, (editing as any).id)
+                          const res = await deleteDocument(COLLECTIONS.CIGARS, productId)
                           if (res.success) {
                             message.success(t('common.deleted'))
                             setItems(await getCigars())
+                            setSelectedRowKeys([])
                             setEditing(null)
+                          } else {
+                            message.error(t('common.deleteFailed'))
                           }
                         } finally {
                           setLoading(false)
@@ -1142,6 +1405,8 @@ const AdminInventory: React.FC = () => {
                 <ImageUpload
                   folder="products"
                   showPreview={true}
+                  width={100}
+                  height={100}
                 />
               </Form.Item>
             </div>
@@ -1163,8 +1428,7 @@ const AdminInventory: React.FC = () => {
               price: values.price,
               sku: values.sku,
               inventory: {
-                // 库存为系统自动计算：编辑时保留原值；新增初始化为0
-                stock: editing ? ((editing as any)?.inventory?.stock ?? 0) : 0,
+                // 库存实时由日志计算，不写入 stock 字段
                 minStock: values.minStock ?? 0,
               } as any,
               updatedAt: new Date(),
@@ -1263,11 +1527,8 @@ const AdminInventory: React.FC = () => {
           const target = adjustingIn || adjustingOut
           if (!target) return
           const delta = (adjustingIn ? 1 : -1) * Math.max(1, Math.floor(values.quantity || 1))
-          const current = (target as any)?.inventory?.stock ?? 0
-          const next = Math.max(0, current + delta)
           setLoading(true)
           try {
-            await updateDocument<Cigar>(COLLECTIONS.CIGARS, (target as any).id, { inventory: { ...(target as any).inventory, stock: next } } as any)
             await createDocument<InventoryLog>(COLLECTIONS.INVENTORY_LOGS, {
               cigarId: (target as any).id,
               type: adjustingIn ? 'in' : 'out',
