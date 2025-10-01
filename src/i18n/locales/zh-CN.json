@@ -101,6 +101,7 @@
     "uploadProductImage": "上传产品图片",
     "deleteProduct": "删除产品",
     "memberQRCode": "会员QR Code",
+    "eventImage": "活动图片",
     "saveFailed": "保存失败",
     "action": "操作",
     "eventAutoEndedWithOrders": "活动已自动结束，并创建了 {{count}} 个订单",
@@ -649,6 +650,8 @@
     "confirmRemoveParticipant": "确定移除该报名者吗？",
     "removed": "已移除",
     "removeFailed": "移除失败",
+    "productCategories": "产品类别",
+    "participants": "人",
     "totalAmount": "总金额",
     "participantsCount": "共 {{count}} 位参与者"
   },

@@ -94,6 +94,7 @@ export interface Event {
     featured: string[]; // cigar IDs
     tasting: string[]; // cigar IDs
   };
+  image?: string; // 活动图片URL
   status: 'draft' | 'published' | 'ongoing' | 'completed' | 'cancelled';
   createdAt: Date;
   updatedAt: Date;

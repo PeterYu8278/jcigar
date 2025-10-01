@@ -294,7 +294,7 @@ const AdminUsers: React.FC = () => {
 
   const filteredUsers = useMemo(() => {
                       const kw = keyword.trim().toLowerCase()
-    return users.filter(u => {
+    const filtered = users.filter(u => {
       const passKw = !kw || u.displayName?.toLowerCase().includes(kw) || (u.email || '').toLowerCase().includes(kw) || ((u as any)?.profile?.phone || '').includes(keyword.trim())
                       const passRole = !roleFilter || u.role === roleFilter
                       const passLevel = !levelFilter || u.membership?.level === levelFilter
@@ -302,7 +302,14 @@ const AdminUsers: React.FC = () => {
       const passStatus = !statusFilter || status === statusFilter
       return passKw && passRole && passLevel && passStatus
     })
-  }, [users, keyword, roleFilter, levelFilter, statusFilter])
+    
+    // 按字母顺序排序（按displayName）
+    return filtered.sort((a, b) => {
+      const nameA = (a.displayName || '').toLowerCase()
+      const nameB = (b.displayName || '').toLowerCase()
+      return nameA.localeCompare(nameB)
+    })
+  }, [users, keyword, roleFilter, levelFilter, statusFilter, statusMap])
 
   const groupedByInitial = useMemo(() => {
     const groups: Record<string, User[]> = {}
@@ -354,10 +361,10 @@ const AdminUsers: React.FC = () => {
   }, [visibleCols])
 
   return (
-    <div style={{ paddingRight: '24px' }}>
+    <div  style={{ minHeight: '100vh' }}>
       {!isMobile && (
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Title level={2} style={{ marginTop: 0, marginBottom: 0, marginLeft: 0, marginRight: 0, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent'}}>{t('navigation.users')}</Title>
+         <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{t('navigation.users')}</h1>
         <Space>
           {selectedRowKeys.length > 1 && (
             <>
@@ -394,13 +401,6 @@ const AdminUsers: React.FC = () => {
               }}>{t('usersAdmin.batchDelete')}</Button>
             </>
           )}
-
-          <Button onClick={() => {
-            setKeyword('')
-            setRoleFilter(undefined)
-            setLevelFilter(undefined)
-            setSelectedRowKeys([])
-          }}>{t('common.resetFilters')}</Button>
 
           <button onClick={() => {
           setCreating(true)
@@ -458,10 +458,12 @@ const AdminUsers: React.FC = () => {
             <Option value="active">{t('usersAdmin.active')}</Option>
               <Option value="inactive">{t('usersAdmin.inactive')}</Option>
           </Select>
-          <button style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease' }}>
-            <SearchOutlined />
-            {t('common.search')}
-          </button>
+          <Button onClick={() => {
+            setKeyword('')
+            setRoleFilter(undefined)
+            setLevelFilter(undefined)
+            setSelectedRowKeys([])
+          }}>{t('common.resetFilters')}</Button>
         </Space>
       </div>
       )}

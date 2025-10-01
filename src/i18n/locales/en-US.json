@@ -101,6 +101,7 @@
     "uploadProductImage": "Upload Product Image",
     "deleteProduct": "Delete Product",
     "memberQRCode": "Member QR Code",
+    "eventImage": "Event Image",
     "saveFailed": "Save failed",
     "action": "Action",
     "eventAutoEndedWithOrders": "Event auto-ended and created {{count}} orders",
@@ -663,6 +664,8 @@
     "confirmRemoveParticipant": "Are you sure to remove this participant?",
     "removed": "Removed",
     "removeFailed": "Remove failed",
+    "productCategories": "Product Categories",
+    "participants": "participants",
     "totalAmount": "Total Amount",
     "participantsCount": "{{count}} participants"
   },

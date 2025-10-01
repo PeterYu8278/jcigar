@@ -201,19 +201,6 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         disabled={disabled}
       />
 
-      {/* 上传按钮 */}
-      {!value && !disabled && (
-        <Button
-          type="primary"
-          icon={<UploadOutlined />}
-          loading={uploading}
-          onClick={() => fileInputRef.current?.click()}
-          size="small"
-        >
-          选择图片
-        </Button>
-      )}
-
       {/* 错误信息 */}
       {error && (
         <div style={{ color: '#ff4d4f', fontSize: '12px', textAlign: 'center' }}>

@@ -273,24 +273,14 @@ const AdminOrders: React.FC = () => {
 
   return (
     <div style={{ minHeight: '100vh' }}>
-      <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', marginBottom: 12 }}>{t('navigation.orders')}</h1>
-      
-      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{t('navigation.orders')}</h1>
+        
         <Space>
           <button onClick={() => { setCreating(true); createForm.resetFields(); createForm.setFieldsValue({ items: [{ cigarId: undefined, quantity: 1, price: 0 }], paymentMethod: 'bank_transfer', createdAt: dayjs().startOf('day') }) }} style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 8, padding: '8px 16px', background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, cursor: 'pointer' }}>
             <PlusOutlined />
             {t('ordersAdmin.createManual')}
           </button>
-          
-          <Button onClick={() => { 
-            setKeyword('')
-            setStatusFilter(undefined)
-            setPaymentFilter(undefined)
-            setDateRange(null)
-            setSelectedRowKeys([])
-          }}>
-            {t('common.resetFilters')}
-          </Button>
         </Space>
       </div>
 
@@ -323,10 +313,15 @@ const AdminOrders: React.FC = () => {
             value={dateRange}
             onChange={setDateRange}
           />
-          <button style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease' }}>
-            <SearchOutlined />
-            {t('common.search')}
-          </button>
+          <Button onClick={() => { 
+            setKeyword('')
+            setStatusFilter(undefined)
+            setPaymentFilter(undefined)
+            setDateRange(null)
+            setSelectedRowKeys([])
+          }}>
+            {t('common.resetFilters')}
+          </Button>
         </Space>
       </div>
       ) : (
@@ -763,6 +758,7 @@ const AdminOrders: React.FC = () => {
                   borderRadius: '12px',
                   background: 'rgba(39, 35, 27, 0.5)',
                   backdropFilter: 'blur(10px)',
+                  marginBottom: '50px',
                   border: '1px solid rgba(57, 51, 40, 0.7)'
                 }}>
                   <h2 style={{ 
@@ -794,17 +790,22 @@ const AdminOrders: React.FC = () => {
 
             {/* Action Buttons */}
             <div style={{
-              position: 'fixed',
+              position: 'sticky',
               bottom: 0,
-              left: 0,
-              right: 0,
               zIndex: 10,
               background: 'rgba(24, 22, 17, 0.8)',
               backdropFilter: 'blur(10px)',
               padding: '12px 16px',
-              borderTop: '1px solid #393328'
+              borderTop: '1px solid #393328',
+              marginTop: 'auto'
             }}>
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+              <div style={{ 
+                display: 'flex', 
+                gap: '8px', 
+                marginBottom: '8px',
+                maxWidth: '100%',
+                overflow: 'hidden'
+              }}>
                 {!isEditingInView && (
                   <>
                     <button 

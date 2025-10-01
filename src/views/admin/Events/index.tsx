@@ -59,6 +59,9 @@ const AdminEvents: React.FC = () => {
         case 'description':
           updateData.description = editForm.description
           break
+        case 'image':
+          updateData.image = editForm.image
+          break
         case 'status':
           updateData.status = editForm.status
           break
@@ -96,17 +99,59 @@ const AdminEvents: React.FC = () => {
 
       updateData.updatedAt = new Date()
 
-      const res = await updateDocument(COLLECTIONS.EVENTS, viewing.id, updateData)
-      if (res.success) {
-        message.success(t('common.saved'))
-        const list = await getEvents()
-        setEvents(list)
-        const updatedEvent = list.find(e => e.id === viewing.id)
-        if (updatedEvent) {
-          setViewing(updatedEvent)
+      // 如果是新活动，先创建
+      if (viewing.id === 'new') {
+        const newEventData = {
+          ...updateData,
+          organizerId: '', // 需要设置当前用户ID
+          createdAt: new Date(),
+          schedule: updateData.schedule || {
+            startDate: new Date(),
+            endDate: new Date(),
+            registrationDeadline: new Date()
+          },
+          location: updateData.location || {
+            name: '',
+            address: ''
+          },
+          participants: updateData.participants || {
+            fee: 0,
+            maxParticipants: 50,
+            registered: []
+          },
+          cigars: {
+            featured: [],
+            tasting: []
+          },
+          image: ''
+        }
+        
+        const res = await createDocument<Event>(COLLECTIONS.EVENTS, newEventData as any)
+        if (res.success) {
+          message.success(t('common.created'))
+          const list = await getEvents()
+          setEvents(list)
+          const newEvent = list.find(e => e.id === res.id)
+          if (newEvent) {
+            setViewing(newEvent)
+          }
+        } else {
+          message.error(t('common.createFailed'))
         }
       } else {
-        message.error(t('common.saveFailed'))
+        // 更新现有活动
+        const res = await updateDocument(COLLECTIONS.EVENTS, viewing.id, updateData)
+        if (res.success) {
+          message.success(t('common.saved'))
+          const list = await getEvents()
+          setEvents(list)
+          const updatedEvent = list.find(e => e.id === viewing.id)
+          if (updatedEvent) {
+            setViewing(updatedEvent)
+          }
+        } else {
+          message.error(t('common.saveFailed'))
+        }
       }
     } catch (error) {
       message.error(t('common.saveFailed'))
@@ -478,9 +523,9 @@ const AdminEvents: React.FC = () => {
 
   return (
     <div style={{ minHeight: '100vh' }}>
-      <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', marginBottom: 12 }}>{t('navigation.events')}</h1>
-      
-      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{t('navigation.events')}</h1>
+        
         <Space>
           {selectedRowKeys.length > 1 && (
             <>
@@ -521,11 +566,51 @@ const AdminEvents: React.FC = () => {
               </button>
             </>
           )}
-          <button onClick={() => { setKeyword(''); setStatusFilter(undefined); setSelectedRowKeys([]) }} style={{ padding: '8px 16px', borderRadius: 8, background: '#fff', color: '#000', cursor: 'pointer', transition: 'all 0.2s ease' }}>
-            {t('common.resetFilters')}
-          </button>
           
-          <button onClick={() => { setCreating(true); form.resetFields() }} style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 8, padding: '8px 16px', background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, cursor: 'pointer' }}>
+          <button onClick={() => { 
+            // 创建一个新的空活动对象用于详情界面
+            const newEvent: Event = {
+              id: 'new',
+              title: '',
+              description: '',
+              organizerId: '', // 需要设置当前用户ID
+              status: 'draft',
+              schedule: {
+                startDate: new Date(),
+                endDate: new Date(),
+                registrationDeadline: new Date()
+              },
+              location: {
+                name: '',
+                address: ''
+              },
+              participants: {
+                fee: 0,
+                maxParticipants: 50,
+                registered: []
+              },
+              cigars: {
+                featured: [],
+                tasting: []
+              },
+              image: '',
+              createdAt: new Date(),
+              updatedAt: new Date()
+            }
+            setViewing(newEvent)
+            setIsEditingDetails(true)
+            setEditForm({
+              title: '',
+              description: '',
+              image: '',
+              status: 'draft',
+              startDate: dayjs(),
+              endDate: dayjs(),
+              locationName: '',
+              fee: 0,
+              maxParticipants: 50
+            })
+          }} style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 8, padding: '8px 16px', background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, cursor: 'pointer' }}>
             <PlusOutlined />
             {t('dashboard.createEvent')}
           </button>
@@ -546,9 +631,8 @@ const AdminEvents: React.FC = () => {
           />
           <DatePicker placeholder={t('events.startDate')} />
           <DatePicker placeholder={t('events.endDate')} />
-          <button style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease' }}>
-            <SearchOutlined />
-            {t('common.search')}
+          <button onClick={() => { setKeyword(''); setStatusFilter(undefined); setSelectedRowKeys([]) }} style={{ padding: '8px 16px', borderRadius: 8, background: '#fff', color: '#000', cursor: 'pointer', transition: 'all 0.2s ease' }}>
+            {t('common.resetFilters')}
           </button>
         </Space>
       </div>
@@ -685,11 +769,11 @@ const AdminEvents: React.FC = () => {
 
       {/* 查看活动详情 */}
       <Modal
-        title={t('events.eventDetails')}
+        title={viewing?.id === 'new' ? t('dashboard.createEvent') : t('events.eventDetails')}
         open={!!viewing}
-        onCancel={() => setViewing(null)}
+        onCancel={() => { setViewing(null); setIsEditingDetails(false) }}
         footer={null}
-        width={900}
+        width={1000}
       >
         {viewing && (
           <Tabs
@@ -701,47 +785,109 @@ const AdminEvents: React.FC = () => {
                 label: t('common.overview'),
                 children: (
             <div>
-            <Descriptions bordered column={2} size="small">
-              <Descriptions.Item label={t('events.eventName')} span={2}>
-                {isEditingDetails ? (
-                  <Input
-                    value={editForm.title}
-                    onChange={(e) => setEditForm({...editForm, title: e.target.value})}
-                    onPressEnter={async () => {
-                      await handleSaveField('title')
+            {/* 活动基本信息 - 左右布局 */}
+            <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
+              {/* 左侧：活动名称和描述 */}
+              <div style={{ flex: 1 }}>
+                <Descriptions bordered column={1} size="small">
+                  <Descriptions.Item label={t('events.eventName')}>
+                    {isEditingDetails ? (
+                      <Input
+                        value={editForm.title}
+                        onChange={(e) => setEditForm({...editForm, title: e.target.value})}
+                        onPressEnter={async () => {
+                          await handleSaveField('title')
+                        }}
+                        onBlur={async () => {
+                          await handleSaveField('title')
+                        }}
+                        autoFocus
+                      />
+                    ) : (
+                      <span style={{ fontWeight: 'bold', fontSize: '16px' }}>
+                        {viewing.title}
+                      </span>
+                    )}
+                  </Descriptions.Item>
+                  <Descriptions.Item label={t('events.description')}>
+                    {isEditingDetails ? (
+                      <Input.TextArea
+                        value={editForm.description}
+                        onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+                        onPressEnter={async () => {
+                          await handleSaveField('description')
+                        }}
+                        onBlur={async () => {
+                          await handleSaveField('description')
+                        }}
+                        autoFocus
+                        rows={3}
+                      />
+                    ) : (
+                      <div style={{ maxHeight: '100px', overflow: 'auto' }}>
+                        {(viewing as any).description || t('common.noDescription')}
+                      </div>
+                    )}
+                  </Descriptions.Item>
+                </Descriptions>
+              </div>
+              
+              {/* 右侧：活动图片上传 */}
+              <div style={{ width: '150px', flexShrink: 0 }}>
+                <div style={{ 
+                  padding: '16px', 
+                  border: '1px solid #d9d9d9', 
+                  borderRadius: '6px',
+                  background: '#fafafa'
+                }}>
+                  <div style={{ 
+                    fontSize: '14px', 
+                    fontWeight: '600', 
+                    marginBottom: '8px',
+                    color: '#262626'
+                  }}>
+                    {t('common.eventImage')}
+                  </div>
+                  <ImageUpload
+                    value={(viewing as any).image || undefined}
+                    onChange={async (url) => {
+                      if (viewing?.id === 'new') {
+                        // 新活动：直接更新editForm
+                        setEditForm({...editForm, image: url})
+                      } else {
+                        // 现有活动：保存到数据库
+                        try {
+                          const updateData = { image: url, updatedAt: new Date() }
+                          const res = await updateDocument(COLLECTIONS.EVENTS, viewing.id, updateData)
+                          if (res.success) {
+                            message.success(t('common.saved'))
+                            const list = await getEvents()
+                            setEvents(list)
+                            const updatedEvent = list.find(e => e.id === viewing.id)
+                            if (updatedEvent) {
+                              setViewing(updatedEvent)
+                            }
+                          } else {
+                            message.error(t('common.saveFailed'))
+                          }
+                        } catch (error) {
+                          message.error(t('common.saveFailed'))
+                        }
+                      }
                     }}
-                    onBlur={async () => {
-                      await handleSaveField('title')
-                    }}
-                    autoFocus
+                    folder="events"
+                    maxSize={2 * 1024 * 1024} // 2MB
+                    width={100}
+                    height={100}
+                    showPreview={true}
                   />
-                ) : (
-                  <span style={{ fontWeight: 'bold', fontSize: '16px' }}>
-                    {viewing.title}
-                  </span>
-                )}
-              </Descriptions.Item>
-              <Descriptions.Item label={t('events.description')} span={2}>
-                {isEditingDetails ? (
-                  <Input.TextArea
-                    value={editForm.description}
-                    onChange={(e) => setEditForm({...editForm, description: e.target.value})}
-                    onPressEnter={async () => {
-                      await handleSaveField('description')
-                    }}
-                    onBlur={async () => {
-                      await handleSaveField('description')
-                    }}
-                    autoFocus
-                    rows={3}
-                  />
-                ) : (
-                  <div style={{ maxHeight: '100px', overflow: 'auto' }}>
-                    {(viewing as any).description || t('common.noDescription')}
+                </div>
+              </div>
             </div>
-                )}
-              </Descriptions.Item>
-              <Descriptions.Item label={t('events.status')} span={1}>
+            
+            {/* 其他活动信息 */}
+            <Descriptions bordered column={2} size="small">
+              <Descriptions.Item label={t('events.status')}>
                 {isEditingDetails ? (
                   <Select
                     value={editForm.status}
@@ -775,7 +921,7 @@ const AdminEvents: React.FC = () => {
                   </Tag>
                 )}
               </Descriptions.Item>
-              <Descriptions.Item label={t('events.startTime')} span={1}>
+              <Descriptions.Item label={t('events.startTime')}>
                 {isEditingDetails ? (
                   <DatePicker
                     value={editForm.startDate}
@@ -797,7 +943,7 @@ const AdminEvents: React.FC = () => {
                   </span>
                 )}
               </Descriptions.Item>
-              <Descriptions.Item label={t('events.endTime')} span={1}>
+              <Descriptions.Item label={t('events.endTime')}>
                 {isEditingDetails ? (
                   <DatePicker
                     value={editForm.endDate}
@@ -819,7 +965,7 @@ const AdminEvents: React.FC = () => {
                   </span>
                 )}
               </Descriptions.Item>
-              <Descriptions.Item label={t('events.location')} span={2}>
+              <Descriptions.Item label={t('events.location')}>
                 {isEditingDetails ? (
                   <Input
                     value={editForm.locationName}
@@ -843,7 +989,7 @@ const AdminEvents: React.FC = () => {
             </div>
                 )}
               </Descriptions.Item>
-              <Descriptions.Item label={t('events.fee')} span={1}>
+              <Descriptions.Item label={t('events.fee')}>
                 {isEditingDetails ? (
                   <InputNumber
                     value={editForm.fee}
@@ -862,7 +1008,7 @@ const AdminEvents: React.FC = () => {
                   </span>
                 )}
               </Descriptions.Item>
-              <Descriptions.Item label={t('events.maxParticipants')} span={1}>
+              <Descriptions.Item label={t('events.maxParticipants')}>
                 {isEditingDetails ? (
                   <InputNumber
                     value={editForm.maxParticipants}
@@ -884,12 +1030,12 @@ const AdminEvents: React.FC = () => {
                   </span>
                 )}
               </Descriptions.Item>
-              <Descriptions.Item label={t('events.currentParticipants')} span={1}>
+              <Descriptions.Item label={t('events.currentParticipants')}>
                 <span style={{ color: '#52c41a', fontWeight: 'bold' }}>
                   {((viewing as any)?.participants?.registered || []).length} {t('events.people')}
                 </span>
               </Descriptions.Item>
-              <Descriptions.Item label={t('events.registrationProgress')} span={1}>
+              <Descriptions.Item label={t('events.registrationProgress')}>
                 {(() => {
                   const registered = ((viewing as any)?.participants?.registered || []).length
                   const max = (viewing as any)?.participants?.maxParticipants ?? 0
@@ -903,10 +1049,10 @@ const AdminEvents: React.FC = () => {
                   )
                 })()}
               </Descriptions.Item>
-              <Descriptions.Item label={t('events.createdAt')} span={1}>
+              <Descriptions.Item label={t('events.createdAt')}>
                 {(viewing as any)?.createdAt ? new Date((viewing as any).createdAt).toLocaleString() : '-'}
               </Descriptions.Item>
-              <Descriptions.Item label={t('events.updatedAt')} span={1}>
+              <Descriptions.Item label={t('events.updatedAt')}>
                 {(viewing as any)?.updatedAt ? new Date((viewing as any).updatedAt).toLocaleString() : '-'}
               </Descriptions.Item>
             </Descriptions>
@@ -1181,33 +1327,43 @@ const AdminEvents: React.FC = () => {
           </Space>
                           </div>
 
-                          <div style={{ 
-                            maxHeight: 400, 
-                            overflow: 'auto', 
-                            border: '1px solid #f0f0f0', 
-                            borderRadius: 6,
-                            background: '#fafafa'
-                          }}>
-                            <ParticipantsList
-                              event={participantsLike}
-                              participantsUsers={participantsUsers}
-                              cigars={cigars}
-                              participantsLoading={participantsLoading}
-                              allocSaving={allocSaving}
-                              onEventUpdate={(updatedEvent) => {
-                                setViewing(updatedEvent)
-                                setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e))
-                              }}
-                              onAllocSavingChange={setAllocSaving}
-                              getCigarPriceById={getCigarPriceById}
-                            />
+                          {/* 左右并排布局 */}
+                          <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                            {/* 左侧：参与者列表 */}
+                            <div style={{ flex: 1 }}>
+                              <div style={{ 
+                                maxHeight: 400, 
+                                width: '600px',
+                                overflow: 'none', 
+                                border: '1px solid #f0f0f0', 
+                                borderRadius: 6,
+                                background: '#fafafa'
+                              }}>
+                                <ParticipantsList
+                                  event={participantsLike}
+                                  participantsUsers={participantsUsers}
+                                  cigars={cigars}
+                                  participantsLoading={participantsLoading}
+                                  allocSaving={allocSaving}
+                                  onEventUpdate={(updatedEvent) => {
+                                    setViewing(updatedEvent)
+                                    setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e))
+                                  }}
+                                  onAllocSavingChange={setAllocSaving}
+                                  getCigarPriceById={getCigarPriceById}
+                                />
+                              </div>
+                            </div>
+                            
+                            {/* 右侧：产品类别统计 */}
+                            <div style={{ flex: 1 }}>
+                              <ParticipantsSummary
+                                event={participantsLike}
+                                getCigarPriceById={getCigarPriceById}
+                                cigars={cigars}
+                              />
+                            </div>
                           </div>
-
-                          <ParticipantsSummary
-                            event={participantsLike}
-                            getCigarPriceById={getCigarPriceById}
-                            cigars={cigars}
-                          />
                         </div>
                       )
                     })()}

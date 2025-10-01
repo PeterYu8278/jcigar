@@ -14,21 +14,13 @@ const ParticipantsSummary: React.FC<ParticipantsSummaryProps> = ({
   cigars = []
 }) => {
   const { t } = useTranslation()
-  if (!event) return null
-
-  const registeredParticipants = (event as any)?.participants?.registered || []
-
-  if (registeredParticipants.length === 0) return null
-
-  const totalAmount = registeredParticipants.reduce((sum: number, uid: string) => {
-    const allocation = (event as any)?.allocations?.[uid]
-    if (allocation?.amount != null) return sum + allocation.amount
-    const qty = allocation?.quantity || 1
-    return sum + (getCigarPriceById(allocation?.cigarId) * qty)
-  }, 0)
-
-  // 计算产品类别统计
+  
+  // 计算产品类别统计 - 必须在所有条件检查之前调用useMemo
   const categoryStats = useMemo(() => {
+    if (!event) return []
+    
+    const registeredParticipants = (event as any)?.participants?.registered || []
+    if (registeredParticipants.length === 0) return []
     const stats: Record<string, { 
       count: number; 
       totalQuantity: number; 
@@ -69,7 +61,26 @@ const ParticipantsSummary: React.FC<ParticipantsSummaryProps> = ({
     })
     
     return Object.entries(stats).sort((a, b) => b[1].totalAmount - a[1].totalAmount)
-  }, [registeredParticipants, event, cigars, getCigarPriceById])
+  }, [event, cigars, getCigarPriceById])
+
+  // 计算总金额
+  const totalAmount = useMemo(() => {
+    if (!event) return 0
+    
+    const registeredParticipants = (event as any)?.participants?.registered || []
+    return registeredParticipants.reduce((sum: number, uid: string) => {
+      const allocation = (event as any)?.allocations?.[uid]
+      if (allocation?.amount != null) return sum + allocation.amount
+      const qty = allocation?.quantity || 1
+      return sum + (getCigarPriceById(allocation?.cigarId) * qty)
+    }, 0)
+  }, [event, getCigarPriceById])
+
+  // 条件渲染 - 在所有Hooks调用之后
+  if (!event) return null
+  
+  const registeredParticipants = (event as any)?.participants?.registered || []
+  if (registeredParticipants.length === 0) return null
 
   return (
     <div style={{ 
@@ -104,8 +115,6 @@ const ParticipantsSummary: React.FC<ParticipantsSummaryProps> = ({
                   {category}
                 </div>
                 <div style={{ display: 'flex', gap: 16, color: '#666' }}>
-                  <span>{stats.count} {t('participants.participants')}</span>
-                  <span>{stats.totalQuantity} {t('participants.pieces')}</span>
                   <span style={{ fontWeight: 600, color: '#fa541c' }}>RM{stats.totalAmount}</span>
                 </div>
               </div>
@@ -144,7 +153,7 @@ const ParticipantsSummary: React.FC<ParticipantsSummaryProps> = ({
         textAlign: 'right'
       }}>
         <div style={{ fontSize: 18, fontWeight: 600, color: '#389e0d' }}>
-          {t('participants.totalAmount')}：RM{totalAmount}
+          {t('participants.totalAmount')}：RM{totalAmount.toFixed(2)}
         </div>
         <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
           {t('participants.participantsCount', { count: registeredParticipants.length })}
