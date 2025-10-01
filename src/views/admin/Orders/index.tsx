@@ -5,6 +5,10 @@ import { Table, Button, Tag, Space, Typography, Input, Select, DatePicker, messa
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, EyeOutlined, ShoppingOutlined, ArrowLeftOutlined } from '@ant-design/icons'
 import DeleteButton from '../../../components/common/DeleteButton'
 import BatchDeleteButton from '../../../components/common/BatchDeleteButton'
+import ViewButton from '../../../components/common/ViewButton'
+import EditButton from '../../../components/common/EditButton'
+import CreateButton from '../../../components/common/CreateButton'
+import ActionButtons from '../../../components/common/ActionButtons'
 import type { Order, User, Cigar } from '../../../types'
 import { getAllOrders, getUsers, getCigars, updateDocument, deleteDocument, COLLECTIONS, createDirectSaleOrder, createDocument, getAllInventoryLogs } from '../../../services/firebase/firestore'
 import { useTranslation } from 'react-i18next'
@@ -233,29 +237,29 @@ const AdminOrders: React.FC = () => {
       title: t('ordersAdmin.actions'),
       key: 'action',
       render: (_: any, record: Order) => (
-        <Space size="small" style={{ justifyContent: 'center', width: '100%' }}>
-          <Button type="link" icon={<EyeOutlined />} size="small" onClick={() => { setViewing(record); setIsEditingInView(false) }}>
-          </Button>
-          <DeleteButton
-            itemId={record.id}
-            itemName={`订单 ${record.id.substring(0, 8)}...`}
-            confirmTitle={t('ordersAdmin.deleteConfirm')}
-            confirmContent={t('ordersAdmin.deleteContent', { id: record.id.substring(0, 8) + '...' })}
-            onDelete={async (id) => {
-              // 先删除相关的出库记录
-              await deleteOrderInventoryLogs(id)
-              // 再删除订单
-              return await deleteDocument(COLLECTIONS.ORDERS, id)
-            }}
-            onSuccess={() => {
-              loadData()
-            }}
-            size="small"
-            type="link"
-            danger={true}
-            showIcon={true}
-          />
-        </Space>
+        <ActionButtons
+          itemId={record.id}
+          itemName={`订单 ${record.id.substring(0, 8)}...`}
+          onView={(item) => {
+            setViewing(record)
+            setIsEditingInView(false)
+          }}
+          onDelete={async (id) => {
+            // 先删除相关的出库记录
+            await deleteOrderInventoryLogs(id)
+            // 再删除订单
+            return await deleteDocument(COLLECTIONS.ORDERS, id)
+          }}
+          onDeleteSuccess={() => {
+            loadData()
+          }}
+          deleteConfirmTitle={t('ordersAdmin.deleteConfirm')}
+          deleteConfirmContent={t('ordersAdmin.deleteContent', { id: record.id.substring(0, 8) + '...' })}
+          size="small"
+          type="link"
+          showEdit={false}
+          showIcon={true}
+        />
       ),
     },
   ]
@@ -298,10 +302,32 @@ const AdminOrders: React.FC = () => {
         <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{t('navigation.orders')}</h1>
         
         <Space>
-          <button onClick={() => { setCreating(true); createForm.resetFields(); createForm.setFieldsValue({ items: [{ cigarId: undefined, quantity: 1, price: 0 }], paymentMethod: 'bank_transfer', createdAt: dayjs().startOf('day') }) }} style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 8, padding: '8px 16px', background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, cursor: 'pointer' }}>
-            <PlusOutlined />
-            {t('ordersAdmin.createManual')}
-          </button>
+          <CreateButton
+            onCreate={() => { 
+              setCreating(true)
+              createForm.resetFields()
+              createForm.setFieldsValue({ 
+                items: [{ cigarId: undefined, quantity: 1, price: 0 }], 
+                paymentMethod: 'bank_transfer', 
+                createdAt: dayjs().startOf('day') 
+              })
+            }}
+            buttonText={t('ordersAdmin.createManual')}
+            size="middle"
+            type="default"
+            showIcon={true}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 8, 
+              borderRadius: 8, 
+              padding: '8px 16px', 
+              background: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
+              color: '#111', 
+              fontWeight: 700, 
+              cursor: 'pointer' 
+            }}
+          />
         </Space>
       </div>
 
