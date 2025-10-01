@@ -533,6 +533,7 @@
     "batchDeleteConfirm": "Batch Delete Confirmation",
     "batchDeleteContent": "Are you sure to delete {{count}} selected products?",
     "batchDeleted": "Batch deleted",
+    "batchDeleteFailed": "Batch deletion failed",
     "addProduct": "Add Product",
     "stockAlert": "Stock Alert",
     "brand": "Brand",
