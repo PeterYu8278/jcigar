@@ -3,6 +3,8 @@ import React, { useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import { Table, Button, Tag, Space, Typography, Input, Select, DatePicker, message, Modal, Form, InputNumber, Switch, Descriptions } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, EyeOutlined, ShoppingOutlined, ArrowLeftOutlined } from '@ant-design/icons'
+import DeleteButton from '../../../components/common/DeleteButton'
+import BatchDeleteButton from '../../../components/common/BatchDeleteButton'
 import type { Order, User, Cigar } from '../../../types'
 import { getAllOrders, getUsers, getCigars, updateDocument, deleteDocument, COLLECTIONS, createDirectSaleOrder, createDocument, getAllInventoryLogs } from '../../../services/firebase/firestore'
 import { useTranslation } from 'react-i18next'
@@ -234,49 +236,25 @@ const AdminOrders: React.FC = () => {
         <Space size="small" style={{ justifyContent: 'center', width: '100%' }}>
           <Button type="link" icon={<EyeOutlined />} size="small" onClick={() => { setViewing(record); setIsEditingInView(false) }}>
           </Button>
-          <Button 
-            type="link" 
-            danger 
-            icon={<DeleteOutlined />} 
-            size="small" 
-            onClick={async () => {
-              console.log('Delete button clicked for order:', record.id)
-              console.log('Current order:', record)
-              
-              const confirmed = window.confirm(`确定要删除订单 ${record.id.substring(0, 8)}... 吗？`)
-              console.log('Window confirm result:', confirmed)
-              
-              if (confirmed) {
-                console.log('User confirmed deletion, starting delete process for order:', record.id)
-                try {
-                  setLoading(true)
-                  
-                  // 先删除相关的出库记录
-                  console.log('Deleting inventory logs for order:', record.id)
-                  await deleteOrderInventoryLogs(record.id)
-                  
-                  // 再删除订单
-                  console.log('Deleting order:', record.id)
-                  await deleteDocument(COLLECTIONS.ORDERS, record.id)
-                  
-                  console.log('Order deleted successfully:', record.id)
-                  message.success(t('ordersAdmin.deleted'))
-                  
-                  // 重新加载数据
-                  loadData()
-                  
-                } catch (error) {
-                  console.error('Error in delete process:', error)
-                  message.error(t('ordersAdmin.deleteFailed') + ': ' + (error as Error).message)
-                } finally {
-                  setLoading(false)
-                }
-              } else {
-                console.log('User cancelled deletion for order:', record.id)
-              }
+          <DeleteButton
+            itemId={record.id}
+            itemName={`订单 ${record.id.substring(0, 8)}...`}
+            confirmTitle={t('ordersAdmin.deleteConfirm')}
+            confirmContent={t('ordersAdmin.deleteContent', { id: record.id.substring(0, 8) + '...' })}
+            onDelete={async (id) => {
+              // 先删除相关的出库记录
+              await deleteOrderInventoryLogs(id)
+              // 再删除订单
+              return await deleteDocument(COLLECTIONS.ORDERS, id)
             }}
-          >
-          </Button>
+            onSuccess={() => {
+              loadData()
+            }}
+            size="small"
+            type="link"
+            danger={true}
+            showIcon={true}
+          />
         </Space>
       ),
     },
@@ -467,44 +445,27 @@ const AdminOrders: React.FC = () => {
             }}>
                 {t('ordersAdmin.batchCancel')}
             </Button>
-            <Button danger disabled={selectedRowKeys.length === 0} onClick={async () => {
-              console.log('Batch delete button clicked')
-              console.log('Selected order IDs:', selectedRowKeys)
-              console.log('Number of orders to delete:', selectedRowKeys.length)
-              
-              const confirmed = window.confirm(`确定要删除选中的 ${selectedRowKeys.length} 个订单吗？`)
-              console.log('Window confirm result:', confirmed)
-              
-              if (confirmed) {
-                console.log('User confirmed batch deletion, starting delete process')
-                setLoading(true)
-                try {
-                  console.log('Starting batch deletion process...')
-                  
-                  // 先删除相关的出库记录
-                  console.log('Deleting inventory logs for orders:', selectedRowKeys)
-                  await Promise.all(selectedRowKeys.map(id => deleteOrderInventoryLogs(String(id))))
-                  
-                  // 再删除订单
-                  console.log('Deleting orders:', selectedRowKeys)
-                  await Promise.all(selectedRowKeys.map(id => deleteDocument(COLLECTIONS.ORDERS, String(id))))
-                  
-                  console.log('Batch deletion completed successfully')
-                  message.success(t('ordersAdmin.batchDeleted'))
-                  loadData()
-                  setSelectedRowKeys([])
-                } catch (error) {
-                  console.error('Error in batch delete process:', error)
-                  message.error(t('ordersAdmin.batchDeleteFailed') + ': ' + (error as Error).message)
-                } finally {
-                  setLoading(false)
-                }
-              } else {
-                console.log('User cancelled batch deletion')
-              }
-            }}>
-                {t('ordersAdmin.batchDelete')}
-            </Button>
+            <BatchDeleteButton
+              selectedIds={selectedRowKeys}
+              confirmTitle={t('ordersAdmin.batchDeleteConfirm')}
+              confirmContent={t('ordersAdmin.batchDeleteContent', { count: selectedRowKeys.length })}
+              onBatchDelete={async (ids) => {
+                // 先删除相关的出库记录
+                await Promise.all(ids.map(id => deleteOrderInventoryLogs(id)))
+                // 再删除订单
+                await Promise.all(ids.map(id => deleteDocument(COLLECTIONS.ORDERS, id)))
+                return { success: true }
+              }}
+              onSuccess={() => {
+                loadData()
+                setSelectedRowKeys([])
+              }}
+              itemTypeName="订单"
+              size="middle"
+              type="default"
+              danger={true}
+              showIcon={true}
+            />
           </Space>
         )}
         pagination={{
