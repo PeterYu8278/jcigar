@@ -1017,7 +1017,39 @@ const AdminInventory: React.FC = () => {
                                 <EditOutlined style={{ fontSize: '18px' }} />
                             </Button>
                             <Button 
-                                onClick={() => setDeletingBrand(brand)}
+                                onClick={async () => {
+                                  console.log('Delete button clicked for brand:', brand.id)
+                                  console.log('Current brand:', brand)
+                                  
+                                  const confirmed = window.confirm(`确定要删除品牌 "${brand.name}" 吗？`)
+                                  console.log('Window confirm result:', confirmed)
+                                  
+                                  if (confirmed) {
+                                    console.log('User confirmed deletion, starting delete process for brand:', brand.id)
+                                    try {
+                                      setLoading(true)
+                                      
+                                      console.log('Deleting brand:', brand.id)
+                                      const result = await deleteDocument(COLLECTIONS.BRANDS, brand.id)
+                                      
+                                      if (result.success) {
+                                        console.log('Brand deleted successfully:', brand.id)
+                                        message.success(t('inventory.brandDeleted'))
+                                        setBrandList(await getBrands())
+                                      } else {
+                                        console.error('Brand deletion failed:', result.error)
+                                        message.error(t('inventory.brandDeleteFailed'))
+                                      }
+                                    } catch (error) {
+                                      console.error('Error in brand delete process:', error)
+                                      message.error(t('inventory.brandDeleteFailed') + ': ' + (error as Error).message)
+                                    } finally {
+                                      setLoading(false)
+                                    }
+                                  } else {
+                                    console.log('User cancelled deletion for brand:', brand.id)
+                                  }
+                                }}
                                 style={{
                                   width: '40px',
                                   height: '40px',

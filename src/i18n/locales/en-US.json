@@ -420,6 +420,7 @@
     "orderDelivered": "Order delivered",
     "orderCancelled": "Order cancelled",
     "deleted": "Order deleted",
+    "deleteFailed": "Order deletion failed",
     "updated": "Order updated",
     "created": "Order created",
     "createFailed": "Creation failed",

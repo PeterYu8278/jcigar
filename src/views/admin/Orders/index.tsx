@@ -234,6 +234,49 @@ const AdminOrders: React.FC = () => {
         <Space size="small" style={{ justifyContent: 'center', width: '100%' }}>
           <Button type="link" icon={<EyeOutlined />} size="small" onClick={() => { setViewing(record); setIsEditingInView(false) }}>
           </Button>
+          <Button 
+            type="link" 
+            danger 
+            icon={<DeleteOutlined />} 
+            size="small" 
+            onClick={async () => {
+              console.log('Delete button clicked for order:', record.id)
+              console.log('Current order:', record)
+              
+              const confirmed = window.confirm(`确定要删除订单 ${record.id.substring(0, 8)}... 吗？`)
+              console.log('Window confirm result:', confirmed)
+              
+              if (confirmed) {
+                console.log('User confirmed deletion, starting delete process for order:', record.id)
+                try {
+                  setLoading(true)
+                  
+                  // 先删除相关的出库记录
+                  console.log('Deleting inventory logs for order:', record.id)
+                  await deleteOrderInventoryLogs(record.id)
+                  
+                  // 再删除订单
+                  console.log('Deleting order:', record.id)
+                  await deleteDocument(COLLECTIONS.ORDERS, record.id)
+                  
+                  console.log('Order deleted successfully:', record.id)
+                  message.success(t('ordersAdmin.deleted'))
+                  
+                  // 重新加载数据
+                  loadData()
+                  
+                } catch (error) {
+                  console.error('Error in delete process:', error)
+                  message.error(t('ordersAdmin.deleteFailed') + ': ' + (error as Error).message)
+                } finally {
+                  setLoading(false)
+                }
+              } else {
+                console.log('User cancelled deletion for order:', record.id)
+              }
+            }}
+          >
+          </Button>
         </Space>
       ),
     },

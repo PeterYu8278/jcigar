@@ -406,6 +406,7 @@
     "orderDelivered": "订单已送达",
     "orderCancelled": "订单已取消",
     "deleted": "订单已删除",
+    "deleteFailed": "订单删除失败",
     "updated": "订单已更新",
     "created": "订单已创建",
     "createFailed": "创建失败",
