@@ -473,6 +473,7 @@
     "batchCancelled": "Batch cancelled",
     "batchDelete": "Batch Delete",
     "batchDeleted": "Batch deleted",
+    "batchDeleteFailed": "Batch deletion failed",
     "batchDeleteConfirm": "Batch Delete Confirmation",
     "batchDeleteContent": "Are you sure to delete {{count}} selected orders?",
     "cancelOrder": "Cancel Order",

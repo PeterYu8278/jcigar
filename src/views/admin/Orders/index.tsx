@@ -467,26 +467,41 @@ const AdminOrders: React.FC = () => {
             }}>
                 {t('ordersAdmin.batchCancel')}
             </Button>
-            <Button danger disabled={selectedRowKeys.length === 0} onClick={() => {
-              Modal.confirm({
-                  title: t('ordersAdmin.batchDeleteConfirm'),
-                  content: t('ordersAdmin.batchDeleteContent', { count: selectedRowKeys.length }),
-                okButtonProps: { danger: true },
-                onOk: async () => {
-                  setLoading(true)
-                  try {
-                    // 先删除相关的出库记录
-                    await Promise.all(selectedRowKeys.map(id => deleteOrderInventoryLogs(String(id))))
-                    // 再删除订单
-                    await Promise.all(selectedRowKeys.map(id => deleteDocument(COLLECTIONS.ORDERS, String(id))))
-                    message.success(t('ordersAdmin.batchDeleted'))
-                    loadData()
-                    setSelectedRowKeys([])
-                  } finally {
-                    setLoading(false)
-                  }
+            <Button danger disabled={selectedRowKeys.length === 0} onClick={async () => {
+              console.log('Batch delete button clicked')
+              console.log('Selected order IDs:', selectedRowKeys)
+              console.log('Number of orders to delete:', selectedRowKeys.length)
+              
+              const confirmed = window.confirm(`确定要删除选中的 ${selectedRowKeys.length} 个订单吗？`)
+              console.log('Window confirm result:', confirmed)
+              
+              if (confirmed) {
+                console.log('User confirmed batch deletion, starting delete process')
+                setLoading(true)
+                try {
+                  console.log('Starting batch deletion process...')
+                  
+                  // 先删除相关的出库记录
+                  console.log('Deleting inventory logs for orders:', selectedRowKeys)
+                  await Promise.all(selectedRowKeys.map(id => deleteOrderInventoryLogs(String(id))))
+                  
+                  // 再删除订单
+                  console.log('Deleting orders:', selectedRowKeys)
+                  await Promise.all(selectedRowKeys.map(id => deleteDocument(COLLECTIONS.ORDERS, String(id))))
+                  
+                  console.log('Batch deletion completed successfully')
+                  message.success(t('ordersAdmin.batchDeleted'))
+                  loadData()
+                  setSelectedRowKeys([])
+                } catch (error) {
+                  console.error('Error in batch delete process:', error)
+                  message.error(t('ordersAdmin.batchDeleteFailed') + ': ' + (error as Error).message)
+                } finally {
+                  setLoading(false)
                 }
-              })
+              } else {
+                console.log('User cancelled batch deletion')
+              }
             }}>
                 {t('ordersAdmin.batchDelete')}
             </Button>
