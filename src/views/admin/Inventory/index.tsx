@@ -377,7 +377,7 @@ const AdminInventory: React.FC = () => {
           id: `${o.id}_${it.cigarId}`,
           orderId: o.id,
           createdAt,
-          user: user ? `${user.displayName} <${user.email}>` : o.userId,
+          user: user ? `${user.displayName} ${(user as any)?.profile?.phone || user.email}` : o.userId,
           cigarName: cigar ? cigar.name : it.cigarId,
           quantity: it.quantity,
           source,
@@ -416,7 +416,7 @@ const AdminInventory: React.FC = () => {
           createdAt,
           orderId: o.id,
           referenceNo: undefined,
-          user: user ? `${user.displayName} <${user.email}>` : o.userId,
+          user: user ? `${user.displayName} ${(user as any)?.profile?.phone || user.email}` : o.userId,
           cigarName: cigar ? cigar.name : it.cigarId,
           quantity: it.quantity,
           source,
@@ -444,7 +444,7 @@ const AdminInventory: React.FC = () => {
   const unifiedOutColumns = [
     { title: t('inventory.time'), dataIndex: 'createdAt', key: 'createdAt', width: 160, render: (v: any) => v ? new Date(v).toLocaleString() : '-' },
     { title: t('inventory.orderId'), dataIndex: 'orderId', key: 'orderId', width: 140 },
-    { title: t('inventory.referenceNo'), dataIndex: 'referenceNo', key: 'referenceNo', width: 180, render: (v: any) => v || '-' },
+    { title: t('inventory.referenceNo'), dataIndex: 'referenceNo', key: 'referenceNo', width: 120, render: (v: any) => v || '-' },
     { title: t('inventory.user'), dataIndex: 'user', key: 'user', width: 220 },
     { title: t('inventory.product'), dataIndex: 'cigarName', key: 'cigarName', width: 220 },
     { title: t('inventory.quantity'), dataIndex: 'quantity', key: 'quantity', width: 100 },
@@ -556,8 +556,8 @@ const AdminInventory: React.FC = () => {
                         
                         if (confirmed) {
                           console.log('User confirmed batch deletion, starting delete process')
-                          setLoading(true)
-                          try {
+                            setLoading(true)
+                            try {
                             console.log('Starting inventory batch deletion process...')
                             
                             const ids = selectedRowKeys.map(id => String(id))
@@ -583,21 +583,21 @@ const AdminInventory: React.FC = () => {
                             await Promise.all(allowed.map(id => deleteDocument(COLLECTIONS.CIGARS, id)))
                             
                             console.log('Inventory batch deletion completed successfully')
-                            message.success(t('inventory.batchDeleted'))
+                              message.success(t('inventory.batchDeleted'))
                             
                             console.log('Refreshing product list...')
-                            const list = await getCigars()
-                            setItems(list)
-                            setSelectedRowKeys([])
+                              const list = await getCigars()
+                              setItems(list)
+                              setSelectedRowKeys([])
                           } catch (error) {
                             console.error('Error in inventory batch delete process:', error)
                             message.error(t('inventory.batchDeleteFailed') + ': ' + (error as Error).message)
-                          } finally {
-                            setLoading(false)
-                          }
+                            } finally {
+                              setLoading(false)
+                            }
                         } else {
                           console.log('User cancelled inventory batch deletion')
-                        }
+                          }
                       }}>{t('inventory.batchDelete')}</Button>
                     </>
                   )}
@@ -1490,7 +1490,7 @@ const AdminInventory: React.FC = () => {
               name: values.name,
               brand: values.brand,
               brandId: selectedBrand?.id, // 添加品牌ID关联
-              origin: values.origin,
+              origin: values.origin ?? selectedBrand?.country,
               size: values.size,
               strength: values.strength,
               price: values.price,
@@ -1537,6 +1537,12 @@ const AdminInventory: React.FC = () => {
                   )
                 }
                 return false
+              }}
+              onChange={(val) => {
+                const b = brandList.find(brand => brand.name === val)
+                if (b?.country) {
+                  try { form.setFieldsValue({ origin: b.country }) } catch {}
+                }
               }}
             >
               {brandList

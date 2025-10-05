@@ -96,6 +96,7 @@ export interface Event {
   };
   image?: string; // 活动图片URL
   status: 'draft' | 'published' | 'ongoing' | 'completed' | 'cancelled';
+  isPrivate?: boolean; // 是否为私人活动
   createdAt: Date;
   updatedAt: Date;
 }

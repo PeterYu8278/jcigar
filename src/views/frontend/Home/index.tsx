@@ -272,13 +272,13 @@ const Home: React.FC = () => {
         </div>
         {/* 会员卡 UI - 使用MemberProfileCard组件 */}
         <div style={{ padding: '0 0px 0px 0px' }}>
-          <MemberProfileCard
-            user={user}
+        <MemberProfileCard
+          user={user}
             showMemberCard={true}
             onToggleMemberCard={() => {}} // 主页不需要切换功能
-            getMembershipText={getMembershipText}
-            style={{ margin: '0 auto' }}
-          />
+          getMembershipText={getMembershipText}
+          style={{ margin: '0 auto' }}
+        />
         </div>
       </Card>
 
@@ -413,9 +413,9 @@ const Home: React.FC = () => {
                           {brand.country || ''}
                         </p>
                       </div>
-                    </div>
+              </div>
                   </SwiperSlide>
-                ))}
+          ))}
             </Swiper>
           </div>
         )}
@@ -563,7 +563,7 @@ const Home: React.FC = () => {
                         {cigar.origin}
                       </p>
                     </div>
-                  </div>
+            </div>
                 </SwiperSlide>
               ))}
             </Swiper>           
@@ -581,7 +581,7 @@ const Home: React.FC = () => {
                 zIndex: 10
               }}
             />
-          </div>
+        </div>
         )}
       </div>
 
@@ -656,7 +656,7 @@ const Home: React.FC = () => {
                               ? '取消报名' 
                               : t('events.join')
                           }
-                        </Button>
+                    </Button>
                       )
                     })()}
             </div>

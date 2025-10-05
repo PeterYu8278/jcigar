@@ -60,7 +60,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
   return (
     <div style={{ 
       background: 'transparent', 
-      minHeight: isMobile ? '100vh' : 'auto',
+      minHeight: isMobile ? '100%' : 'auto',
       color: '#FFFFFF'
     }}>
       {/* Header */}
@@ -95,7 +95,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
 
       {/* Content */}
       <div style={{ padding: '0 0 0' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginBottom: '30px' }}>
           
           {/* 商品列表 */}
           <section style={{
@@ -260,7 +260,6 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
             borderRadius: '12px',
             background: 'rgba(39, 35, 27, 0.5)',
             backdropFilter: 'blur(10px)',
-            marginBottom: '50px',
             border: '1px solid rgba(57, 51, 40, 0.7)'
           }}>
             <h2 style={{ 
@@ -297,7 +296,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
         zIndex: 10,
         background: 'rgba(24, 22, 17, 0.8)',
         backdropFilter: 'blur(10px)',
-        padding: '12px 16px',
+        padding: '12px 0px',
         borderTop: '1px solid #393328',
         marginTop: 'auto'
       }}>
@@ -313,7 +312,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
               <button 
                 onClick={() => handleStatusUpdate('confirmed')}
                 style={{ 
-                  flex: 1, 
+                  flex: 2, 
                   height: '40px',
                   background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
                   color: '#111',
@@ -329,7 +328,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
               <button 
                 onClick={() => handleStatusUpdate('shipped')}
                 style={{ 
-                  flex: 1, 
+                  flex: 2, 
                   height: '40px',
                   background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
                   color: '#111',
@@ -345,7 +344,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
               <button 
                 onClick={() => handleStatusUpdate('delivered')}
                 style={{ 
-                  flex: 1, 
+                  flex: 2, 
                   height: '40px',
                   background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
                   color: '#111',
@@ -363,6 +362,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
           <button 
             onClick={onEditToggle}
             style={{ 
+              flex: 1,
               height: '40px',
               background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
               color: '#111',

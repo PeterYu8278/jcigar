@@ -44,8 +44,8 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
     }
     
     const createdAt: Date = values.createdAt && typeof (values.createdAt as any)?.toDate === 'function' 
-      ? (values.createdAt as any).startOf('day').toDate() 
-      : dayjs().startOf('day').toDate()
+      ? (values.createdAt as any).toDate() 
+      : dayjs().toDate()
 
     try {
       const res = await createDirectSaleOrder({ 
@@ -74,11 +74,15 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
       initialValues={{
         items: [{ cigarId: undefined, quantity: 1, price: 0 }], 
         paymentMethod: 'bank_transfer', 
-        createdAt: dayjs().startOf('day') 
+        createdAt: dayjs() 
       }}
     >
       <Form.Item label={t('ordersAdmin.orderDate')} name="createdAt">
-        <DatePicker style={{ width: '100%' }} />
+        <DatePicker 
+          style={{ width: '100%' }} 
+          showTime={{ format: 'HH:mm' }}
+          format="YYYY-MM-DD HH:mm"
+        />
       </Form.Item>
       
       <Form.Item 

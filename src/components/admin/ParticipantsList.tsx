@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { Spin, Select, InputNumber, Button, Modal, message } from 'antd'
+import { Spin, Select, InputNumber, Button, Modal, message, Tag } from 'antd'
 import { CheckCircleOutlined, UserOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { User, Cigar, Event } from '../../types'
 import { updateDocument, COLLECTIONS, unregisterFromEvent } from '../../services/firebase/firestore'
@@ -69,7 +69,19 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
   }
 
   return (
-    <div style={{ padding: 8 }}>
+    <div style={{ 
+      maxHeight: '400px', 
+      overflowY: 'auto',
+      padding: '8px',
+      border: '1px solid #f0f0f0',
+      borderRadius: '8px',
+      background: '#fafafa'
+    }}>
+      <div style={{ 
+        display: 'grid', 
+        gap: '12px',
+        padding: '8px'
+      }}>
       {registeredParticipants.map((uid: string, index: number) => {
         const user = participantsUsers.find(x => x.id === uid)
         const allocation = (event as any)?.allocations?.[uid]
@@ -79,54 +91,160 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
           <div 
             key={uid} 
             style={{ 
-              padding: '8px 8px',
-              marginBottom: 6,
+                padding: '16px',
               background: '#fff',
-              borderRadius: 6,
+                borderRadius: '8px',
               border: '1px solid #e8e8e8',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                transition: 'all 0.2s ease'
             }}
           >
             {/* 第一行：序号 + 名字和电话号码 */}
             <div style={{ 
               display: 'flex', 
               alignItems: 'center', 
-              gap: 8, 
-              marginBottom: 8
+              gap: 12, 
+              marginBottom: 12
             }}>
-              <div style={{ width: 40, textAlign: 'center', color: '#999', fontSize: 11 }}>
-                #{index + 1}
+              <div style={{ 
+                width: 32, 
+                height: 32,
+                textAlign: 'center', 
+                lineHeight: '32px',
+                color: '#111', 
+                fontSize: 12  
+              }}>
+                # {index + 1}
               </div>
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontWeight: 500, color: '#666', fontSize: 13 }}>
+                <span style={{ fontWeight: 600, color: '#111', fontSize: 13 }}>
                   {user ? user.displayName : t('participants.unknownUser')}
                 </span>
                 <span style={{ fontSize: 11, color: '#999' }}>
                   {user ? ((user as any)?.profile?.phone || user.email || uid) : uid}
                 </span>
+                {/* 订单状态标签 + 订单ID */}
+                {allocation?.orderId ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Tag color="green">{t('participants.orderCreated')}</Tag>
+                    <span style={{ fontSize: 11, color: '#666' }}>ID: {allocation.orderId}</span>
+                  </div>
+                ) : (
+                  <Tag color="orange">{t('participants.orderPending')}</Tag>
+                )}
               </div>
             </div>
-            
-            {/* 第二行：产品选择 + 数量 + 价钱 + 删除按键 */}
-            <div style={{ 
+            {/* 第二行：活动费用（使用活动名称，可调整数量与费用，保存到 allocations） */}
+            {(event as any)?.participants?.fee > 0 && (
+              <div
+                style={{
+                  marginBottom: 8,
+                  padding: '8px',
+                  background: '#fafafa',
+                  border: '1px dashed #e8e8e8',
+                  borderRadius: 6,
               display: 'flex', 
               alignItems: 'center', 
               gap: 8 
-            }}>
-              <div style={{ width: 300, flexShrink: 0 }}>
+                }}
+              >
+                {/* 名称：活动名称（与雪茄分配列宽一致） */}
+                <div style={{ width: 210, flexShrink: 0, color: '#666', fontSize: 12, fontWeight: 600 }}>
+                  {(event as any)?.title || t('events.fee')}
+                </div>
+                {/* 数量可调，默认 1 */}
+                <div style={{ width: 120, flexShrink: 0 }}>
+                  <InputNumber
+                    min={1}
+                    max={99}
+                    size="small"
+                    value={(allocation as any)?.feeQuantity || 1}
+                    onChange={async (val) => {
+                      const qty = Number(val) || 1
+                      const unitPrice = (allocation as any)?.feeUnitPrice != null
+                        ? Number((allocation as any)?.feeUnitPrice)
+                        : Number((event as any)?.participants?.fee || 0)
+                      const feeAmount = unitPrice * qty
+                      const current = (event as any)?.allocations?.[uid] || {}
+                      const updated = { ...(event as any).allocations, [uid]: { ...current, feeQuantity: qty, feeUnitPrice: unitPrice, feeAmount } }
+                      onAllocSavingChange(uid)
+                      await updateDocument(COLLECTIONS.EVENTS, (event as any).id, { allocations: updated } as any)
+                      onEventUpdate({ ...event, allocations: updated } as Event)
+                      onAllocSavingChange(null)
+                    }}
+                    style={{ width: '100%' }}
+                    addonAfter={<span style={{ color: '#666', fontSize: 11 }}>{t('participants.pieces')}</span>}
+                  />
+                </div>
+                {/* 费用可调，默认活动 fee */}
+                <div style={{ width: 130, flexShrink: 0 }}>
+                  <InputNumber
+                    min={0}
+                    step={0.01}
+                    precision={2}
+                    size="small"
+                    value={(() => {
+                      if ((allocation as any)?.feeUnitPrice != null) return Number((allocation as any)?.feeUnitPrice)
+                      return Number((event as any)?.participants?.fee || 0)
+                    })()}
+                    onChange={async (val) => {
+                      const unitPrice = Number(val) || 0
+                      const qty = (allocation as any)?.feeQuantity || 1
+                      const feeAmount = unitPrice * qty
+                      const current = (event as any)?.allocations?.[uid] || {}
+                      const updated = { ...(event as any).allocations, [uid]: { ...current, feeUnitPrice: unitPrice, feeQuantity: qty, feeAmount } }
+                      onAllocSavingChange(uid)
+                      await updateDocument(COLLECTIONS.EVENTS, (event as any).id, { allocations: updated } as any)
+                      onEventUpdate({ ...event, allocations: updated } as Event)
+                      onAllocSavingChange(null)
+                    }}
+                    style={{ width: '100%' }}
+                    addonBefore="RM"
+                    placeholder="0.00"
+                  />
+                </div>
+                {/* 末尾占位，保持与删除按钮列对齐 */}
+                <div style={{ width: 36, flexShrink: 0 }} />
+              </div>
+            )}
+
+            {/* 第二行：产品选择 + 数量 + 价钱 + 删除按键（支持多行） */}
+            {(() => {
+              const items = (allocation as any)?.items as any[] | undefined
+              const ensureItemsInit = async () => {
+                // 将旧的单一字段迁移为 items 数组
+                const current = (event as any)?.allocations?.[uid] || {}
+                const baseItem = (current?.cigarId) ? [{
+                  cigarId: current.cigarId,
+                  quantity: current.quantity || 1,
+                  unitPrice: current.unitPrice != null ? current.unitPrice : getCigarPriceById(current.cigarId),
+                  amount: (current.unitPrice != null ? current.unitPrice : getCigarPriceById(current.cigarId)) * (current.quantity || 1)
+                }] : []
+                const updated = { ...(event as any).allocations, [uid]: { ...current, items: baseItem } }
+                onAllocSavingChange(uid)
+                await updateDocument(COLLECTIONS.EVENTS, (event as any).id, { allocations: updated } as any)
+                onEventUpdate({ ...event, allocations: updated } as Event)
+                onAllocSavingChange(null)
+              }
+
+              const renderRow = (row: any, idx: number) => (
+                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <div style={{ width: 220, flexShrink: 0 }}>
                 <Select
                   placeholder={t('participants.selectCigarModel')}
                   style={{ width: '100%' }}
-                  value={allocation?.cigarId}
+                      value={row?.cigarId}
                   showSearch
                   optionFilterProp="children"
                   size="small"
                   onChange={async (val) => {
+                        const unitPrice = getCigarPriceById(val)
+                        const qty = row?.quantity || 1
+                        const amount = unitPrice * qty
                     const current = (event as any)?.allocations?.[uid] || {}
-                    const quantity = current?.quantity || 1
-                    const unitPrice = getCigarPriceById(val)
-                    const totalAmount = unitPrice * quantity
-                    const updated = { ...(event as any).allocations, [uid]: { ...current, cigarId: val, unitPrice, amount: totalAmount } }
+                        const nextItems = [...((current?.items as any[]) || [])]
+                        nextItems[idx] = { ...(nextItems[idx] || {}), cigarId: val, quantity: qty, unitPrice, amount }
+                        const updated = { ...(event as any).allocations, [uid]: { ...current, items: nextItems } }
                     onAllocSavingChange(uid)
                     await updateDocument(COLLECTIONS.EVENTS, (event as any).id, { allocations: updated } as any)
                     onEventUpdate({ ...event, allocations: updated } as Event)
@@ -147,18 +265,20 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                   ))}
                 </Select>
               </div>
-              <div style={{ width: 80, flexShrink: 0 }}>
+                  <div style={{ width: 120 , flexShrink: 0 }}>
                 <InputNumber
                   min={1}
                   max={99}
-                  value={allocation?.quantity || 1}
+                      value={row?.quantity || 1}
                   size="small"
                   onChange={async (val) => {
+                        const qty = Number(val) || 1
+                        const unitPrice = row?.unitPrice != null ? row.unitPrice : getCigarPriceById(row?.cigarId)
+                        const amount = unitPrice * qty
                     const current = (event as any)?.allocations?.[uid] || {}
-                    const qty = Number(val) || 1
-                    const unitPrice = current?.unitPrice != null ? current.unitPrice : getCigarPriceById(current?.cigarId)
-                    const totalAmount = unitPrice * qty
-                    const updated = { ...(event as any).allocations, [uid]: { ...current, quantity: qty, amount: totalAmount } }
+                        const nextItems = [...((current?.items as any[]) || [])]
+                        nextItems[idx] = { ...(nextItems[idx] || {}), quantity: qty, unitPrice, amount }
+                        const updated = { ...(event as any).allocations, [uid]: { ...current, items: nextItems } }
                     onAllocSavingChange(uid)
                     await updateDocument(COLLECTIONS.EVENTS, (event as any).id, { allocations: updated } as any)
                     onEventUpdate({ ...event, allocations: updated } as Event)
@@ -175,15 +295,17 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                   precision={2}
                   size="small"
                   value={(() => {
-                    if (allocation?.unitPrice != null) return allocation.unitPrice
-                    return getCigarPriceById(allocation?.cigarId)
+                        if (row?.unitPrice != null) return row.unitPrice
+                        return getCigarPriceById(row?.cigarId)
                   })()}
                   onChange={async (val) => {
+                        const unitPrice = Number(val) || 0
+                        const qty = row?.quantity || 1
+                        const amount = unitPrice * qty
                     const current = (event as any)?.allocations?.[uid] || {}
-                    const unitPrice = Number(val) || 0
-                    const quantity = current?.quantity || 1
-                    const totalAmount = unitPrice * quantity
-                    const updated = { ...(event as any).allocations, [uid]: { ...current, amount: totalAmount, unitPrice } }
+                        const nextItems = [...((current?.items as any[]) || [])]
+                        nextItems[idx] = { ...(nextItems[idx] || {}), unitPrice, quantity: qty, amount }
+                        const updated = { ...(event as any).allocations, [uid]: { ...current, items: nextItems } }
                     onAllocSavingChange(uid)
                     await updateDocument(COLLECTIONS.EVENTS, (event as any).id, { allocations: updated } as any)
                     onEventUpdate({ ...event, allocations: updated } as Event)
@@ -201,66 +323,53 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                   icon={<DeleteOutlined />}
                   style={{ minWidth: 24, height: 24, padding: '0 4px' }}
                   onClick={async () => {
-                    console.log('Delete button clicked for user:', uid)
-                    console.log('Current event:', event)
-                    console.log('Current participants:', registeredParticipants)
-                    
-                    // 先测试简单的确认对话框
-                    const confirmed = window.confirm(`确定要删除参与者 ${uid} 吗？`)
-                    console.log('Window confirm result:', confirmed)
-                    
-                    if (confirmed) {
-                      console.log('User confirmed deletion, starting delete process for user:', uid)
-                      try {
-                        // 立即从本地状态中移除参与者
-                        const updatedParticipants = registeredParticipants.filter((id: string) => id !== uid)
-                        const updatedAllocations = { ...(event as any).allocations }
-                        delete updatedAllocations[uid]
-                        
-                        console.log('Updated participants:', updatedParticipants)
-                        console.log('Updated allocations:', updatedAllocations)
-                        
-                        // 创建更新后的事件对象
-                        const updatedEvent = { 
-                          ...event, 
-                          participants: { ...(event as any).participants, registered: updatedParticipants },
-                          allocations: updatedAllocations
-                        } as Event
-                        
-                        console.log('Calling onEventUpdate with:', updatedEvent)
-                        
-                        // 立即更新UI状态
-                        onEventUpdate(updatedEvent)
-                        
-                        // 显示成功消息
-                        message.success(t('participants.removed'))
-                        
-                        // 异步更新数据库（不阻塞UI）
-                        try {
-                          const res = await unregisterFromEvent((event as any).id, uid)
-                          if (!(res as any)?.success) {
-                            console.warn('Database sync failed, but UI already updated:', (res as any)?.error)
-                            // 可以选择显示一个警告，但不回滚UI状态
-                            message.warning('参与者已从界面移除，但数据库同步失败')
-                          }
-                        } catch (dbError) {
-                          console.warn('Database sync error:', dbError)
-                          message.warning('参与者已从界面移除，但数据库同步失败')
-                        }
-                      } catch (error) {
-                        console.error('Error in delete process:', error)
-                        message.error(t('participants.removeFailed') + ': ' + (error as Error).message)
-                      }
-                    } else {
-                      console.log('User cancelled deletion for user:', uid)
-                    }
+                        const current = (event as any)?.allocations?.[uid] || {}
+                        const nextItems = [...((current?.items as any[]) || [])]
+                        nextItems.splice(idx, 1)
+                        const updated = { ...(event as any).allocations, [uid]: { ...current, items: nextItems } }
+                        onAllocSavingChange(uid)
+                        await updateDocument(COLLECTIONS.EVENTS, (event as any).id, { allocations: updated } as any)
+                        onEventUpdate({ ...event, allocations: updated } as Event)
+                        onAllocSavingChange(null)
                   }}
                 />
               </div>
             </div>
+              )
+
+              if (items && items.length > 0) {
+                return (
+                  <div>
+                    {items.map((row, idx) => renderRow(row, idx))}
+                    <div>
+                      <Button size="small" onClick={async () => {
+                        const current = (event as any)?.allocations?.[uid] || {}
+                        const nextItems = [...((current?.items as any[]) || []), { cigarId: undefined, quantity: 1, unitPrice: 0, amount: 0 }]
+                        const updated = { ...(event as any).allocations, [uid]: { ...current, items: nextItems } }
+                        onAllocSavingChange(uid)
+                        await updateDocument(COLLECTIONS.EVENTS, (event as any).id, { allocations: updated } as any)
+                        onEventUpdate({ ...event, allocations: updated } as Event)
+                        onAllocSavingChange(null)
+                      }}>{t('common.add')}</Button>
+                    </div>
+                  </div>
+                )
+              }
+
+              // 未初始化 items，显示旧的单行且提供迁移按钮
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ color: '#999', fontSize: 12 }}>{t('participants.orderPending')}</div>
+                  <Button size="small" onClick={ensureItemsInit}>{t('common.add')}</Button>
+                </div>
+              )
+            })()}
+
+            
           </div>
         )
       })}
+      </div>
     </div>
   )
 }

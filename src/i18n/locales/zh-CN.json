@@ -63,7 +63,8 @@
     "pleaseSelectUniqueUser": "请选择唯一用户",
     "participantAdded": "参与者已添加",
     "addFailed": "添加失败",
-    "ordersCreated": "订单已创建",
+    "orderCreated": "订单已创建",
+    "orderPending": "订单待创建",
     "forEvent": "为活动",
     "noParticipantsAssignedCigars": "无参与者分配雪茄",
     "createOrdersFailed": "创建订单失败",
@@ -85,12 +86,15 @@
     "pleaseSelectEndDate": "请选择结束日期",
     "fee": "费用",
     "maxParticipants": "最大参与人数",
+    "privateEvent": "私人活动",
     "status": "状态",
     "draft": "草稿",
     "published": "已发布",
     "ongoing": "进行中",
     "completed": "已完成",
     "cancelled": "已取消",
+    "current": "当前",
+    "invalidStatusTransition": "无效的状态转换",
     "deleteEvent": "删除活动",
     "deleted": "已删除",
     "deleteFailed": "删除失败",
@@ -670,6 +674,8 @@
     "termsOfService": "服务条款",
     "contactUs": "联系我们",
     "copyright": "© 2024 Gentleman Club管理平台 · Created with",
-    "byJepVentures": "by JEP Ventures"
+    "byJepVentures": "by JEP Ventures",
+    "private": "私人",
+    "public": "公开"
   }
 }

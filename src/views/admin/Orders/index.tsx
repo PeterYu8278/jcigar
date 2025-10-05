@@ -31,11 +31,27 @@ const AdminOrders: React.FC = () => {
   const [paymentFilter, setPaymentFilter] = useState<string | undefined>()
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null)
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
+  const [pagination, setPagination] = useState(() => {
+    const saved = localStorage.getItem('orders-pagination')
+    if (saved) {
+      try {
+        return JSON.parse(saved)
+      } catch {
+        return { current: 1, pageSize: 10, total: 0 }
+      }
+    }
+    return { current: 1, pageSize: 10, total: 0 }
+  })
   
 
   useEffect(() => {
     loadData()
   }, [])
+
+  // 筛选条件变化时重置分页到第一页
+  useEffect(() => {
+    setPagination((prev: any) => ({ ...prev, current: 1 }))
+  }, [keyword, statusFilter, paymentFilter, dateRange])
 
   const loadData = async () => {
     setLoading(true)
@@ -53,6 +69,17 @@ const AdminOrders: React.FC = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  // 分页处理函数
+  const handlePaginationChange = (page: number, pageSize?: number) => {
+    const newPagination = {
+      current: page,
+      pageSize: pageSize || pagination.pageSize,
+      total: pagination.total
+    }
+    setPagination(newPagination)
+    localStorage.setItem('orders-pagination', JSON.stringify(newPagination))
   }
 
   // 删除订单相关的出库记录
@@ -73,6 +100,82 @@ const AdminOrders: React.FC = () => {
     }
   }
 
+  // 删除参与者分配记录中的订单资料
+  const deleteOrderFromEventAllocations = async (orderId: string) => {
+    try {
+      // 获取所有活动
+      const { getEvents } = await import('../../../services/firebase/firestore')
+      const events = await getEvents()
+      
+      // 查找包含该订单ID的活动
+      for (const event of events) {
+        const allocations = (event as any)?.allocations
+        if (allocations) {
+          let hasChanges = false
+          const updatedAllocations = { ...allocations }
+          
+          // 遍历所有分配记录，移除包含该订单ID的记录
+          for (const [userId, allocation] of Object.entries(allocations)) {
+            if ((allocation as any)?.orderId === orderId) {
+              // 移除订单ID，但保留其他分配信息
+              updatedAllocations[userId] = {
+                ...(allocation as any),
+                orderId: undefined
+              }
+              hasChanges = true
+            }
+          }
+          
+          // 如果有变化，更新活动文档
+          if (hasChanges) {
+            await updateDocument(COLLECTIONS.EVENTS, event.id, {
+              allocations: updatedAllocations
+            } as any)
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting order from event allocations:', error)
+    }
+  }
+
+  // 批量删除：在同一次更新中清理多个订单ID对应的分配记录，避免并发覆盖
+  const deleteOrdersFromEventAllocations = async (orderIds: string[]) => {
+    try {
+      if (!orderIds || orderIds.length === 0) return
+      const orderIdSet = new Set(orderIds.map(String))
+      const { getEvents } = await import('../../../services/firebase/firestore')
+      const events = await getEvents()
+
+      for (const event of events) {
+        const allocations = (event as any)?.allocations
+        if (!allocations) continue
+
+        let hasChanges = false
+        const updatedAllocations: Record<string, any> = { ...allocations }
+
+        for (const [userId, allocation] of Object.entries(allocations)) {
+          const allocOrderId = (allocation as any)?.orderId
+          if (allocOrderId && orderIdSet.has(String(allocOrderId))) {
+            updatedAllocations[userId] = {
+              ...(allocation as any),
+              orderId: undefined,
+            }
+            hasChanges = true
+          }
+        }
+
+        if (hasChanges) {
+          await updateDocument(COLLECTIONS.EVENTS, (event as any).id, {
+            allocations: updatedAllocations,
+          } as any)
+        }
+      }
+    } catch (error) {
+      console.error('Error batch-deleting orders from event allocations:', error)
+    }
+  }
+
   const filtered = useMemo(() => {
     return filterOrders(orders, users, keyword, statusFilter, paymentFilter, dateRange)
   }, [orders, users, keyword, statusFilter, paymentFilter, dateRange])
@@ -85,7 +188,11 @@ const AdminOrders: React.FC = () => {
       setIsEditingInView(false)
     },
     onDeleteOrder: async (id) => {
+      // 删除参与者分配记录中的订单资料
+      await deleteOrderFromEventAllocations(id)
+      // 删除订单相关的出库记录
       await deleteOrderInventoryLogs(id)
+      // 删除订单
       return await deleteDocument(COLLECTIONS.ORDERS, id)
     },
     onOrderUpdate: loadData
@@ -270,9 +377,11 @@ const AdminOrders: React.FC = () => {
               confirmTitle={t('ordersAdmin.batchDeleteConfirm')}
               confirmContent={t('ordersAdmin.batchDeleteContent', { count: selectedRowKeys.length })}
               onBatchDelete={async (ids) => {
-                    // 先删除相关的出库记录
+                // 先批量清理活动分配记录中的订单资料（单次更新/每个活动，避免覆盖）
+                await deleteOrdersFromEventAllocations(ids.map(String))
+                // 再删除相关的出库记录
                 await Promise.all(ids.map(id => deleteOrderInventoryLogs(id)))
-                    // 再删除订单
+                // 最后删除订单
                 await Promise.all(ids.map(id => deleteDocument(COLLECTIONS.ORDERS, id)))
                 return { success: true }
               }}
@@ -289,11 +398,16 @@ const AdminOrders: React.FC = () => {
           </Space>
         )}
         pagination={{
+          current: pagination.current,
+          pageSize: pagination.pageSize,
             total: filteredSorted.length,
-          pageSize: 10,
           showSizeChanger: true,
-          showQuickJumper: true,
+          showQuickJumper: false,
           showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
+          onChange: handlePaginationChange,
+          onShowSizeChange: handlePaginationChange,
+          pageSizeOptions: ['10', '20', '50', '100'],
+          style: { color: '#fff' }
         }}
       />
       ) : (
@@ -337,20 +451,14 @@ const AdminOrders: React.FC = () => {
         width={isMobile ? '100%' : 820}
         style={{ 
           top: isMobile ? 0 : 20,
-          border: 'none',
-          boxShadow: 'none'
         }}
         styles={{
           body: { 
-            padding: 0, 
-            marginBottom: 50,
             background: 'linear-gradient(180deg, #221c10 0%, #181611 0%)', 
             minHeight: isMobile ? '100vh' : 'auto' 
           },
           mask: { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
           content: {
-            border: 'none',
-            boxShadow: 'none',
             background: 'linear-gradient(180deg, #221c10 0%, #181611 0%)'
           }
         }}

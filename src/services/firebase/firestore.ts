@@ -296,7 +296,7 @@ export const getAllOrders = async (): Promise<Order[]> => {
 };
 
 // 根据活动参与者雪茄分配自动创建订单
-export const createOrdersFromEventAllocations = async (eventId: string): Promise<{ success: boolean; createdOrders: number; error?: Error }> => {
+export const createOrdersFromEventAllocations = async (eventId: string): Promise<{ success: boolean; createdOrders: number; updatedOrders: number; error?: Error }> => {
   try {
     // 获取活动详情
     const event = await getEventById(eventId);
@@ -307,28 +307,61 @@ export const createOrdersFromEventAllocations = async (eventId: string): Promise
     // 检查活动是否有雪茄分配
     const allocations = (event as any)?.allocations;
     if (!allocations || Object.keys(allocations).length === 0) {
-      return { success: true, createdOrders: 0 };
+      return { success: true, createdOrders: 0, updatedOrders: 0 };
     }
 
     const registeredUsers = (event as any)?.participants?.registered || [];
     let createdOrdersCount = 0;
+    let updatedOrdersCount = 0;
+    
+    // 创建所有分配记录的副本，用于批量更新
+    const updatedAllocations = { ...allocations };
 
-    // 为每个参与者创建订单
+    // 为每个参与者创建或更新订单
     for (const userId of registeredUsers) {
       const allocation = allocations[userId];
-      if (allocation && allocation.cigarId && allocation.quantity > 0) {
-        // 获取雪茄信息
-        const cigar = await getCigarById(allocation.cigarId);
-        if (cigar) {
-          // 创建订单
+      if (allocation) {
+        // 组装订单行：支持多支雪茄 + 活动费用
+        const orderItems: { cigarId: string; quantity: number; price: number }[] = []
+        let runningTotal = 0
+
+        // 1) 活动费用行：名称由前端展示，这里用标识符保存，不生成出库
+        const feeQty = (allocation as any)?.feeQuantity != null ? Number((allocation as any).feeQuantity) : 1
+        const feeUnit = (allocation as any)?.feeUnitPrice != null
+          ? Number((allocation as any).feeUnitPrice)
+          : Number((event as any)?.participants?.fee || 0)
+        if (feeUnit > 0 && feeQty > 0) {
+          const feeId = String((event as any)?.title || 'EVENT_FEE')
+          orderItems.push({ cigarId: feeId, quantity: feeQty, price: feeUnit })
+          runningTotal += feeUnit * feeQty
+        }
+
+        // 2) 多行雪茄（新结构）
+        const itemRows = (allocation as any)?.items as Array<{ cigarId: string; quantity: number; unitPrice?: number }> | undefined
+        if (Array.isArray(itemRows) && itemRows.length > 0) {
+          for (const row of itemRows) {
+            if (!row?.cigarId || !row?.quantity || row.quantity <= 0) continue
+            const rowCigar = await getCigarById(row.cigarId)
+            const unitPrice = (row as any)?.unitPrice != null ? Number((row as any).unitPrice) : (rowCigar?.price || 0)
+            orderItems.push({ cigarId: String(row.cigarId), quantity: row.quantity, price: unitPrice })
+            runningTotal += unitPrice * row.quantity
+          }
+        } else if ((allocation as any).cigarId && (allocation as any).quantity > 0) {
+          // 3) 兼容旧结构：单行雪茄
+          const cigar = await getCigarById((allocation as any).cigarId)
+          const qty = (allocation as any).quantity || 1
+          const unitPrice = (allocation as any).unitPrice != null ? Number((allocation as any).unitPrice) : (cigar?.price || 0)
+          if ((allocation as any).cigarId) {
+            orderItems.push({ cigarId: String((allocation as any).cigarId), quantity: qty, price: unitPrice })
+            runningTotal += unitPrice * qty
+          }
+        }
+
+        if (orderItems.length > 0) {
           const orderData = {
             userId: userId,
-            items: [{
-              cigarId: allocation.cigarId,
-              quantity: allocation.quantity,
-              price: cigar.price
-            }],
-            total: cigar.price * allocation.quantity,
+            items: orderItems,
+            total: runningTotal,
             status: 'pending' as const,
             source: { type: 'event' as const, eventId },
             payment: {
@@ -343,17 +376,80 @@ export const createOrdersFromEventAllocations = async (eventId: string): Promise
             updatedAt: new Date()
           };
 
-          const result = await createDocument<Order>(COLLECTIONS.ORDERS, orderData);
-          if (result.success) {
-            createdOrdersCount++;
+          let orderId: string;
+          let isNewOrder = false;
+
+          // 检查是否已存在订单
+          if (allocation.orderId) {
+            // 更新现有订单 - 只更新允许的字段
+            const updateData = {
+              items: orderData.items,
+              total: orderData.total,
+              status: orderData.status,
+              source: orderData.source,
+              payment: orderData.payment,
+              shipping: orderData.shipping,
+              updatedAt: new Date()
+            };
+            const updateResult = await updateDocument(COLLECTIONS.ORDERS, allocation.orderId, updateData);
+            if (updateResult.success) {
+              orderId = allocation.orderId;
+              updatedOrdersCount++;
+              console.log(`Updated existing order ${orderId} for user ${userId}`);
+            } else {
+              console.error(`Failed to update order ${allocation.orderId} for user ${userId}:`, updateResult.error);
+              continue;
+            }
+          } else {
+            // 创建新订单
+            const result = await createDocument<Order>(COLLECTIONS.ORDERS, orderData);
+            if (result.success && result.id) {
+              orderId = result.id;
+              isNewOrder = true;
+              createdOrdersCount++;
+              console.log(`Created new order ${orderId} for user ${userId}`);
+            } else {
+              console.error(`Failed to create order for user ${userId}`);
+              continue;
+            }
           }
+
+          // 如果是新订单，创建出库记录（仅对真实雪茄行生成，不含费用行）
+          if (isNewOrder) {
+            for (const it of orderItems) {
+              // 仅对真实存在的雪茄生成库存日志（费用行不会匹配到实体雪茄）
+              const exists = await getCigarById(it.cigarId)
+              if (exists) {
+                await createDocument(COLLECTIONS.INVENTORY_LOGS, {
+                  cigarId: it.cigarId,
+                  type: 'out',
+                  quantity: it.quantity,
+                  reason: '活动订单出库',
+                  referenceNo: `ORDER:${orderId}`,
+                  operatorId: 'system',
+                  createdAt: new Date(),
+                } as any)
+              }
+            }
+          }
+
+          // 将订单ID存储到分配记录中（更新副本）
+          updatedAllocations[userId] = {
+            ...allocation,
+            orderId: orderId
+          };
         }
       }
     }
 
-    return { success: true, createdOrders: createdOrdersCount };
+    // 批量更新所有分配记录
+    await updateDocument(COLLECTIONS.EVENTS, eventId, {
+      allocations: updatedAllocations
+    } as any);
+
+    return { success: true, createdOrders: createdOrdersCount, updatedOrders: updatedOrdersCount };
   } catch (error) {
-    return { success: false, createdOrders: 0, error: error as Error };
+    return { success: false, createdOrders: 0, updatedOrders: 0, error: error as Error };
   }
 };
 
@@ -384,6 +480,22 @@ export const createDirectSaleOrder = async (params: { userId: string; items: { c
       updatedAt: new Date(),
     }
     const result = await createDocument<Order>(COLLECTIONS.ORDERS, orderData)
+    
+    // 如果订单创建成功，创建对应的出库记录
+    if (result.success) {
+      for (const item of itemsDetailed) {
+        await createDocument(COLLECTIONS.INVENTORY_LOGS, {
+          cigarId: item.cigarId,
+          type: 'out',
+          quantity: item.quantity,
+          reason: '直接销售出库',
+          referenceNo: `ORDER:${result.id}`,
+          operatorId: 'system',
+          createdAt: new Date(),
+        } as any);
+      }
+    }
+    
     return result
   } catch (error) {
     return { success: false, error: error as Error }

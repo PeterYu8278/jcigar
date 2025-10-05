@@ -777,7 +777,7 @@ const AdminUsers: React.FC = () => {
                     level: editing.membership?.level,
                     phone: (editing as any)?.profile?.phone,
                   })
-                  // 不要立即关闭编辑状态，让模态框处理
+                  setEditing(null)
                 }}
                 style={{
                   width: '100%',
@@ -1184,10 +1184,7 @@ const AdminUsers: React.FC = () => {
       <Modal
         title={creating ? t('usersAdmin.addUser') : t('usersAdmin.editUser')}
         open={creating}
-        onCancel={() => { 
-          setCreating(false)
-          setEditing(null)
-        }}
+        onCancel={() => { setCreating(false) }}
         footer={null}
         width={400}
         style={{ top: 20 }}
