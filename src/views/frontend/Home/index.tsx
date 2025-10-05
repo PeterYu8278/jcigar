@@ -64,7 +64,7 @@ const Home: React.FC = () => {
   // 处理活动报名/取消报名
   const handleEventRegistration = async (eventId: string, isRegistered: boolean) => {
     if (!user?.id) {
-      message.warning('请先登录')
+      message.warning(t('auth.pleaseLogin'))
       return
     }
 
@@ -76,7 +76,7 @@ const Home: React.FC = () => {
         : await registerForEvent(eventId, user.id)
 
       if (result.success) {
-        message.success(isRegistered ? '已取消报名' : '报名成功')
+        message.success(isRegistered ? t('events.unregistered') : t('events.registered'))
         // 更新本地事件状态
         setEvents(prevEvents => 
           prevEvents.map(event => {
@@ -97,10 +97,10 @@ const Home: React.FC = () => {
           })
         )
       } else {
-        message.error(result.error?.message || (isRegistered ? '取消报名失败' : '报名失败'))
+        message.error(result.error?.message || (isRegistered ? t('events.unregisterFailed') : t('events.registerFailed')))
       }
     } catch (error) {
-      message.error(isRegistered ? '取消报名失败' : '报名失败')
+      message.error(isRegistered ? t('events.unregisterFailed') : t('events.registerFailed'))
     } finally {
       setRegisteringEvents(prev => {
         const newSet = new Set(prev)
@@ -274,8 +274,8 @@ const Home: React.FC = () => {
         <div style={{ padding: '0 0px 0px 0px' }}>
         <MemberProfileCard
           user={user}
-            showMemberCard={true}
-            onToggleMemberCard={() => {}} // 主页不需要切换功能
+          showMemberCard={true}
+          onToggleMemberCard={() => {}} // 主页不需要切换功能
           getMembershipText={getMembershipText}
           style={{ margin: '0 auto' }}
         />
@@ -341,27 +341,27 @@ const Home: React.FC = () => {
                 .filter(brand => brand.status === 'active')
                 .map((brand) => (
                   <SwiperSlide key={brand.id} className="swiper-slide-brands">
-                    <div 
-                      style={{ 
-                        display: 'flex', 
+              <div 
+                style={{ 
+                  display: 'flex', 
                         flexDirection: 'column', 
-                        alignItems: 'center', 
+                  alignItems: 'center', 
                         gap: '8px',
                         padding: '4px',
                         background: 'rgba(255, 255, 255, 0.05)',
                         borderRadius: '12px',
                         border: '1px solid rgba(255, 255, 255, 0.1)',
                         transition: 'all 0.3s ease',
-                        cursor: 'pointer',
+                  cursor: 'pointer',
                         height: '100%'
-                      }}
+                }}
                       onClick={() => navigate(`/brand/${brand.id}`)}
-                      onMouseEnter={(e) => {
+                onMouseEnter={(e) => {
                         e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
                         e.currentTarget.style.transform = 'translateY(-2px)'
                         e.currentTarget.style.boxShadow = '0 8px 25px rgba(244, 175, 37, 0.2)'
-                      }}
-                      onMouseLeave={(e) => {
+                }}
+                onMouseLeave={(e) => {
                         e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
                         e.currentTarget.style.transform = 'translateY(0)'
                         e.currentTarget.style.boxShadow = 'none'
@@ -477,7 +477,7 @@ const Home: React.FC = () => {
               {cigars.slice(0, 10).map((cigar) => (
                 <SwiperSlide key={cigar.id}>
                   <div 
-                    style={{ 
+                style={{ 
                       display: 'flex', 
                       flexDirection: 'column', 
                       alignItems: 'center', 
@@ -487,21 +487,21 @@ const Home: React.FC = () => {
                       borderRadius: '12px',
                       border: '1px solid rgba(255, 255, 255, 0.1)',
                       transition: 'all 0.3s ease',
-                      cursor: 'pointer',
+                  cursor: 'pointer',
                       height: '100%'
-                    }}
-                    onClick={() => navigate('/shop')}
-                    onMouseEnter={(e) => {
+                }}
+                onClick={() => navigate('/shop')}
+                onMouseEnter={(e) => {
                       e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
-                      e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.transform = 'translateY(-2px)'
                       e.currentTarget.style.boxShadow = '0 8px 25px rgba(244, 175, 37, 0.2)'
-                    }}
-                    onMouseLeave={(e) => {
+                }}
+                onMouseLeave={(e) => {
                       e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
-                      e.currentTarget.style.transform = 'translateY(0)'
-                      e.currentTarget.style.boxShadow = 'none'
-                    }}
-                  >
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = 'none'
+                }}
+              >
                     <div 
                       style={{
                         width: '80px',
@@ -563,7 +563,7 @@ const Home: React.FC = () => {
                         {cigar.origin}
                       </p>
                     </div>
-            </div>
+              </div>
                 </SwiperSlide>
               ))}
             </Swiper>           
@@ -581,7 +581,7 @@ const Home: React.FC = () => {
                 zIndex: 10
               }}
             />
-        </div>
+          </div>
         )}
       </div>
 

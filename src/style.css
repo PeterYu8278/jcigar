@@ -355,3 +355,97 @@ a:hover {
   font-weight: 600 !important;
   box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3) !important;
 }
+
+/* 分页组件样式修复 */
+.ant-pagination {
+  color: #c0c0c0 !important;
+}
+
+.ant-pagination .ant-pagination-total-text {
+  color: #c0c0c0 !important;
+}
+
+.ant-pagination .ant-pagination-item {
+  background: #1a1a1a !important;
+  border-color: #333333 !important;
+}
+
+.ant-pagination .ant-pagination-item a {
+  color: #c0c0c0 !important;
+}
+
+.ant-pagination .ant-pagination-item:hover {
+  border-color: #ffd700 !important;
+}
+
+.ant-pagination .ant-pagination-item:hover a {
+  color: #ffd700 !important;
+}
+
+.ant-pagination .ant-pagination-item-active {
+  background: #ffd700 !important;
+  border-color: #ffd700 !important;
+}
+
+.ant-pagination .ant-pagination-item-active a {
+  color: #0a0a0a !important;
+}
+
+.ant-pagination .ant-pagination-prev,
+.ant-pagination .ant-pagination-next {
+  background: #1a1a1a !important;
+  border-color: #333333 !important;
+}
+
+.ant-pagination .ant-pagination-prev:hover,
+.ant-pagination .ant-pagination-next:hover {
+  border-color: #ffd700 !important;
+}
+
+.ant-pagination .ant-pagination-prev:hover .anticon,
+.ant-pagination .ant-pagination-next:hover .anticon {
+  color: #ffd700 !important;
+}
+
+.ant-pagination .ant-pagination-jump-prev,
+.ant-pagination .ant-pagination-jump-next {
+  color: #c0c0c0 !important;
+}
+
+.ant-pagination .ant-pagination-jump-prev:hover,
+.ant-pagination .ant-pagination-jump-next:hover {
+  color: #ffd700 !important;
+}
+
+.ant-pagination .ant-pagination-options {
+  color: #c0c0c0 !important;
+}
+
+.ant-pagination .ant-pagination-options .ant-select {
+  color: #c0c0c0 !important;
+}
+
+.ant-pagination .ant-pagination-options .ant-select .ant-select-selector {
+  background: #1a1a1a !important;
+  border-color: #333333 !important;
+  color: #c0c0c0 !important;
+}
+
+.ant-pagination .ant-pagination-options .ant-select:hover .ant-select-selector {
+  border-color: #ffd700 !important;
+}
+
+.ant-pagination .ant-pagination-options .ant-pagination-options-quick-jumper {
+  color: #c0c0c0 !important;
+}
+
+.ant-pagination .ant-pagination-options .ant-pagination-options-quick-jumper input {
+  background: #1a1a1a !important;
+  border-color: #333333 !important;
+  color: #c0c0c0 !important;
+}
+
+.ant-pagination .ant-pagination-options .ant-pagination-options-quick-jumper input:focus {
+  border-color: #ffd700 !important;
+  box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.2) !important;
+}

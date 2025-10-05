@@ -47,7 +47,7 @@ const BrandDetail: React.FC = () => {
           setProducts([])
         }
       } catch (error) {
-        message.error('加载品牌信息失败')
+        message.error(t('brand.loadFailed'))
         setBrand(null)
         setProducts([])
       } finally {

@@ -74,6 +74,7 @@ const AdminEvents: React.FC = () => {
   const [manualAddLoading, setManualAddLoading] = useState(false)
   const [manualAddValue, setManualAddValue] = useState<string>('')
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
+  const [orderSyncing, setOrderSyncing] = useState(false)
   
   // Form instance
   const [form] = Form.useForm()
@@ -581,6 +582,12 @@ const AdminEvents: React.FC = () => {
 
   return (
     <div style={{ minHeight: '100vh' }}>
+      <Modal open={orderSyncing} footer={null} closable={false} maskClosable={false} centered>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Spin />
+          <span>{t('common.processingOrders')}</span>
+        </div>
+      </Modal>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{t('navigation.events')}</h1>
       
@@ -940,6 +947,7 @@ const AdminEvents: React.FC = () => {
               type="primary"
               onClick={async () => {
               if (!participantsEvent) return
+                setOrderSyncing(true)
                 const orderResult = await createOrdersFromEventAllocations((participantsEvent as any).id);
                 if (orderResult.success) {
                   const totalOrders = orderResult.createdOrders + orderResult.updatedOrders;
@@ -966,6 +974,7 @@ const AdminEvents: React.FC = () => {
                 } else {
                   message.error(t('common.createOrdersFailed') + ' ' + (orderResult.error?.message || t('common.unknownError')));
                 }
+                setOrderSyncing(false)
               }}
             >
               {t('common.createOrders')}
@@ -1104,6 +1113,7 @@ const AdminEvents: React.FC = () => {
               if (res.success) {
                 // Auto-create orders when status is set to "completed"
                 if (finalStatus === EVENT_STATUSES.COMPLETED && editing.status !== EVENT_STATUSES.COMPLETED) {
+                  setOrderSyncing(true)
                   const orderResult = await createOrdersFromEventAllocations(editing.id);
                   if (orderResult.success) {
                     const totalOrders = orderResult.createdOrders + orderResult.updatedOrders;
@@ -1122,6 +1132,7 @@ const AdminEvents: React.FC = () => {
                   } else {
                     message.warning(t('common.eventSavedAndEnded') + ' ' + (orderResult.error?.message || t('common.unknownError')));
                   }
+                  setOrderSyncing(false)
                 } else {
                   message.success(t('common.saved'))
                 }

@@ -133,9 +133,10 @@ export interface Order {
 // 财务记录类型
 export interface Transaction {
   id: string;
-  type: 'sale' | 'purchase' | 'event_fee' | 'refund';
+  // 类别可选（已移除前端依赖）
+  type?: 'sale' | 'purchase' | 'event_fee' | 'refund';
   amount: number;
-  currency: 'RM' | 'USD' | 'CNY';
+  currency?: 'RM' | 'USD' | 'CNY';
   description: string;
   relatedId?: string; // order ID or event ID
   userId?: string;

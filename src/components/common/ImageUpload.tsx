@@ -2,6 +2,7 @@
 import React, { useState, useRef } from 'react'
 import { DeleteOutlined, LoadingOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons'
 import { Button, message, Modal } from 'antd'
+import { useTranslation } from 'react-i18next'
 import { useCloudinary } from '../../hooks/useCloudinary'
 import type { UploadResult } from '../../services/cloudinary'
 import { getUploadConfig, getFullFolderPath, isValidFolderName } from '../../config/cloudinaryFolders'
@@ -43,6 +44,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   cropMaxWidth = 800,
   cropMaxHeight = 800
 }) => {
+  const { t } = useTranslation()
   const { upload, uploading, error } = useCloudinary()
   const [previewVisible, setPreviewVisible] = useState(false)
   const [cropVisible, setCropVisible] = useState(false)
@@ -70,12 +72,12 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     } else {
       // 自定义文件夹的验证
       if (file.size > finalMaxSize) {
-        message.error(`文件大小不能超过 ${finalMaxSize / 1024 / 1024}MB`)
+        message.error(t('upload.fileTooLarge', { size: Math.floor(finalMaxSize / 1024 / 1024) }))
         return
       }
 
       if (!file.type.startsWith('image/')) {
-        message.error('请选择图片文件')
+        message.error(t('upload.selectImageFile'))
         return
       }
     }
@@ -93,9 +95,9 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         })
         
         onChange?.(result.secure_url)
-        message.success('图片上传成功')
+        message.success(t('upload.success'))
       } catch (err) {
-        message.error('图片上传失败')
+        message.error(t('upload.fail'))
       }
     }
 
@@ -107,14 +109,14 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
   const handleDelete = () => {
     Modal.confirm({
-      title: '确认删除',
-      content: '确定要删除这张图片吗？',
-      okText: '删除',
+      title: t('common.confirmDelete'),
+      content: t('upload.confirmDeleteImage'),
+      okText: t('common.delete'),
       okType: 'danger',
-      cancelText: '取消',
+      cancelText: t('common.cancel'),
       onOk: () => {
         onChange?.(null)
-        message.success('图片已删除')
+        message.success(t('upload.imageDeleted'))
       }
     })
   }
@@ -186,7 +188,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             <PlusOutlined style={{ fontSize: '24px', color: '#999' }} />
           )}
           <div style={{ marginTop: '8px', fontSize: '12px', color: '#999' }}>
-            {uploading ? '上传中...' : '点击上传'}
+            {uploading ? t('upload.uploading') : t('upload.clickToUpload')}
           </div>
         </div>
       )}
@@ -211,7 +213,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       {/* 图片预览模态框 */}
       <Modal
         open={previewVisible}
-        title="图片预览"
+        title={t('upload.imagePreview')}
         footer={null}
         onCancel={() => setPreviewVisible(false)}
         width="auto"

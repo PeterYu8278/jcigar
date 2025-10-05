@@ -28,10 +28,10 @@ export const useOrderColumns = ({
       title: t('ordersAdmin.orderId'),
       dataIndex: 'id',
       key: 'id',
-      width: 100,
+      width: 150,
       render: (id: string) => (
         <span style={{ fontFamily: 'monospace', fontSize: '12px', wordBreak: 'break-all', whiteSpace: 'normal' }}>
-          {id.substring(0, 8)}...
+          {id}
         </span>
       ),
     },
@@ -68,43 +68,45 @@ export const useOrderColumns = ({
       title: t('ordersAdmin.totalAmount'),
       dataIndex: 'total',
       key: 'total',
-      render: (total: number) => (
-        <span style={{ fontWeight: 'bold', color: '#1890ff' }}>
-          RM{total.toFixed(2)}
-        </span>
+      render: (_: number, record: Order) => (
+        <div>
+          <div style={{ fontWeight: 'bold', color: '#1890ff' }}>RM{Number(record.total || 0).toFixed(2)}</div>
+          <div style={{ marginTop: 4, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Tag color="geekblue" style={{ marginInlineEnd: 0 }}>{getPaymentText((record as any)?.payment?.method, t)}</Tag>
+          </div>
+        </div>
       ),
     },
-    {
-      title: t('ordersAdmin.status.title'),
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: string) => (
-        <Tag color={getStatusColor(status)}>
-          {getStatusText(status, t)}
-        </Tag>
-      ),
-    },
-    {
-      title: t('ordersAdmin.payment.title'),
-      dataIndex: ['payment', 'method'],
-      key: 'payment',
-      render: (method: string) => getPaymentText(method, t),
-    },
+    // 移除独立的状态与支付方式列（已合并至金额列下方）
     {
       title: t('ordersAdmin.address'),
       dataIndex: ['shipping', 'address'],
       key: 'shipping',
-      render: (address: string) => (
-        <span style={{ fontSize: '12px' }}>
-          {address ? (address.length > 20 ? `${address.substring(0, 20)}...` : address) : '-'}
-        </span>
-      ),
+      render: (_: any, record: Order) => {
+        const addr = (record as any)?.shipping?.address as string
+        const display = addr ? (addr.length > 20 ? `${addr.substring(0, 20)}...` : addr) : '-'
+        return (
+          <div>
+            <div style={{ fontSize: '12px' }}>{display}</div>
+            <div style={{ marginTop: 4 }}>
+              <Tag color={getStatusColor(record.status)}>{getStatusText(record.status, t)}</Tag>
+            </div>
+          </div>
+        )
+      },
     },
     {
       title: t('ordersAdmin.createdAt'),
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (date: Date) => dayjs(date).format('YYYY-MM-DD HH:mm'),
+      render: (date: any) => {
+        let d: any = date
+        if (d && typeof d.toDate === 'function') {
+          d = d.toDate()
+        }
+        const m = dayjs(d)
+        return m.isValid() ? m.format('YYYY-MM-DD') : '-'
+      },
     },
     {
       title: t('ordersAdmin.actions'),

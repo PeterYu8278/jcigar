@@ -32,6 +32,23 @@ const AdminInventory: React.FC = () => {
   const [viewingReference, setViewingReference] = useState<string | null>(null)
   const [imageList, setImageList] = useState<any[]>([])
   const [pagination, setPagination] = useState<{ current: number; pageSize: number }>({ current: 1, pageSize: 10 })
+  const toDateSafe = (val: any): Date | null => {
+    if (!val) return null
+    let v: any = val
+    if (v && typeof v.toDate === 'function') {
+      v = v.toDate()
+    }
+    const d = v instanceof Date ? v : new Date(v)
+    return isNaN(d.getTime()) ? null : d
+  }
+
+  const formatYMD = (d: Date | null): string => {
+    if (!d) return '-'
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
   // 记录表分页大小（持久化）
   const [inPageSize, setInPageSize] = useState<number>(() => {
     try { return Number(localStorage.getItem('inventory_in_page_size') || 10) || 10 } catch { return 10 }
@@ -320,7 +337,7 @@ const AdminInventory: React.FC = () => {
   const columns = columnsAll.filter(c => visibleCols[c.key as string] !== false)
 
   const logColumns = [
-    { title: t('inventory.time'), dataIndex: 'createdAt', key: 'createdAt', render: (v: any) => v ? new Date(v).toLocaleString() : '-' },
+    { title: t('inventory.time'), dataIndex: 'createdAt', key: 'createdAt', render: (v: any) => formatYMD(toDateSafe(v)) },
     { title: t('inventory.product'), dataIndex: 'cigarId', key: 'cigarId', render: (id: string) => items.find(i => i.id === id)?.name || id },
     { title: t('inventory.type'), dataIndex: 'type', key: 'type', render: (type: string) => type === 'in' ? t('inventory.stockIn') : t('inventory.stockOut') },
     { title: t('inventory.quantity'), dataIndex: 'quantity', key: 'quantity' },
@@ -385,11 +402,15 @@ const AdminInventory: React.FC = () => {
       }
     }
     // 按时间倒序
-    return rows.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    return rows.sort((a, b) => {
+      const da = toDateSafe(a.createdAt)?.getTime() || 0
+      const db = toDateSafe(b.createdAt)?.getTime() || 0
+      return db - da
+    })
   }, [orders, users, items])
 
   const outOrderColumns = [
-    { title: t('inventory.time'), dataIndex: 'createdAt', key: 'createdAt', render: (v: any) => v ? new Date(v).toLocaleString() : '-' },
+    { title: t('inventory.time'), dataIndex: 'createdAt', key: 'createdAt', render: (v: any) => formatYMD(toDateSafe(v)) },
     { title: t('inventory.orderId'), dataIndex: 'orderId', key: 'orderId' },
     { title: t('inventory.user'), dataIndex: 'user', key: 'user' },
     { title: t('inventory.product'), dataIndex: 'cigarName', key: 'cigarName' },
@@ -425,6 +446,9 @@ const AdminInventory: React.FC = () => {
     }
     // 来自手动出库日志的出库
     for (const log of outLogs) {
+      const ref = String((log as any).referenceNo || '')
+      // 避免重复：订单出库已由 orders 渲染一遍，过滤掉 referenceNo 以 ORDER: 开头的日志
+      if (ref.startsWith('ORDER:')) continue
       const cigar = cigarMap.get((log as any).cigarId)
       rows.push({
         id: `manual_${(log as any).id || ((log as any).referenceNo || '')}_${(log as any).cigarId}`,
@@ -438,11 +462,15 @@ const AdminInventory: React.FC = () => {
       })
     }
     // 按时间倒序
-    return rows.sort((a, b) => new Date(b.createdAt as any).getTime() - new Date(a.createdAt as any).getTime())
+    return rows.sort((a, b) => {
+      const da = toDateSafe(a.createdAt)?.getTime() || 0
+      const db = toDateSafe(b.createdAt)?.getTime() || 0
+      return db - da
+    })
   }, [orders, users, items, outLogs])
 
   const unifiedOutColumns = [
-    { title: t('inventory.time'), dataIndex: 'createdAt', key: 'createdAt', width: 160, render: (v: any) => v ? new Date(v).toLocaleString() : '-' },
+    { title: t('inventory.time'), dataIndex: 'createdAt', key: 'createdAt', width: 160, render: (v: any) => formatYMD(toDateSafe(v)) },
     { title: t('inventory.orderId'), dataIndex: 'orderId', key: 'orderId', width: 140 },
     { title: t('inventory.referenceNo'), dataIndex: 'referenceNo', key: 'referenceNo', width: 120, render: (v: any) => v || '-' },
     { title: t('inventory.user'), dataIndex: 'user', key: 'user', width: 220 },
@@ -1682,7 +1710,7 @@ const AdminInventory: React.FC = () => {
       >
         <Table
           columns={[
-            { title: t('inventory.time'), dataIndex: 'createdAt', key: 'createdAt', render: (v: any) => v ? new Date(v).toLocaleString() : '-' },
+            { title: t('inventory.time'), dataIndex: 'createdAt', key: 'createdAt', render: (v: any) => { const d = toDateSafe(v); return d ? d.toLocaleString() : '-' } },
             { title: t('inventory.product'), dataIndex: 'cigarId', key: 'cigarId', render: (id: string) => items.find(i => i.id === id)?.name || id },
             { title: t('inventory.quantity'), dataIndex: 'quantity', key: 'quantity' },
             { title: t('inventory.reason'), dataIndex: 'reason', key: 'reason', render: (v: any) => v || '-' },

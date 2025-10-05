@@ -214,7 +214,7 @@ const ParticipantsSummary: React.FC<ParticipantsSummaryProps> = ({
         <div style={{ fontSize: 14, fontWeight: 600, color: '#722ed1', marginBottom: 8 }}>{t('participants.eventFee')}</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', background: '#f9f0ff', border: '1px solid #d3adf7', borderRadius: 6, padding: '8px 12px', fontSize: 12 }}>
           <div style={{ color: '#722ed1' }}>{(event as any)?.title || t('events.fee')}</div>
-          <div style={{ color: '#595959' }}>{feeStats.payerCount} 人 × {feeStats.feeQuantity} 次</div>
+          <div style={{ color: '#595959' }}>{feeStats.feeQuantity} 次</div>
           <div style={{ fontWeight: 700, color: '#722ed1' }}>RM{feeStats.feeTotal.toFixed(2)}</div>
         </div>
       </div>

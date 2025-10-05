@@ -73,7 +73,14 @@ export const filterOrders = (
     const passKw = !kw || 
       order.id.toLowerCase().includes(kw) ||
       (user?.displayName?.toLowerCase().includes(kw)) ||
-      (user?.email?.toLowerCase().includes(kw))
+      (user?.email?.toLowerCase().includes(kw)) ||
+      // 允许在 shipping address 栏搜索
+      (String((order as any)?.shipping?.address || '').toLowerCase().includes(kw)) ||
+      // 允许在 item 栏搜索：按 cigarId 或者拼成字符串匹配（id/qty/price）
+      (Array.isArray(order.items) && order.items.some(it => {
+        const fields = [String(it.cigarId || '').toLowerCase(), String(it.quantity || ''), String(it.price || '')]
+        return fields.some(f => f.includes(kw))
+      }))
     
     const passStatus = !statusFilter || order.status === statusFilter
     const passPayment = !paymentFilter || order.payment.method === paymentFilter

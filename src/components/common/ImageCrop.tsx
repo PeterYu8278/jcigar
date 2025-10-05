@@ -1,6 +1,7 @@
 // 图片裁剪组件
 import React, { useState, useRef, useCallback } from 'react'
 import { Button, Modal, message } from 'antd'
+import { useTranslation } from 'react-i18next'
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons'
 import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop'
 import type { Crop, PixelCrop } from 'react-image-crop'
@@ -31,6 +32,7 @@ const ImageCrop: React.FC<ImageCropProps> = ({
   maxHeight = 800,
   title = '图片裁剪'
 }) => {
+  const { t } = useTranslation()
   const [crop, setCrop] = useState<Crop>()
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>()
   const [loading, setLoading] = useState(false)
@@ -104,18 +106,18 @@ const ImageCrop: React.FC<ImageCropProps> = ({
   // 确认裁剪
   const handleConfirm = async () => {
     if (!completedCrop || !imgRef.current) {
-      message.error('请选择裁剪区域')
+      message.error(t('crop.selectArea'))
       return
     }
 
     // 验证裁剪尺寸
     if (completedCrop.width < minWidth || completedCrop.height < minHeight) {
-      message.error(`裁剪区域不能小于 ${minWidth}x${minHeight} 像素`)
+      message.error(t('crop.tooSmall', { width: minWidth, height: minHeight }))
       return
     }
 
     if (completedCrop.width > maxWidth || completedCrop.height > maxHeight) {
-      message.error(`裁剪区域不能大于 ${maxWidth}x${maxHeight} 像素`)
+      message.error(t('crop.tooLarge', { width: maxWidth, height: maxHeight }))
       return
     }
 
@@ -124,9 +126,9 @@ const ImageCrop: React.FC<ImageCropProps> = ({
       const croppedImageBlob = await getCroppedImg(imgRef.current, completedCrop)
       const croppedImageUrl = URL.createObjectURL(croppedImageBlob)
       onConfirm(croppedImageUrl)
-      message.success('图片裁剪完成')
+      message.success(t('crop.success'))
     } catch (error) {
-      message.error('图片裁剪失败')
+      message.error(t('crop.fail'))
     } finally {
       setLoading(false)
     }
@@ -162,10 +164,10 @@ const ImageCrop: React.FC<ImageCropProps> = ({
       style={{ maxWidth: '800px' }}
       footer={[
         <Button key="cancel" onClick={onCancel} icon={<CloseOutlined />}>
-          取消
+          {t('common.cancel')}
         </Button>,
         <Button key="reset" onClick={handleReset}>
-          重置
+          {t('common.reset')}
         </Button>,
         <Button
           key="confirm"
@@ -174,7 +176,7 @@ const ImageCrop: React.FC<ImageCropProps> = ({
           onClick={handleConfirm}
           icon={<CheckOutlined />}
         >
-          确认裁剪
+          {t('crop.confirm')}
         </Button>
       ]}
     >

@@ -70,6 +70,9 @@
     "createOrdersFailed": "创建订单失败",
     "unknownError": "未知错误",
     "createOrders": "创建订单",
+    "ordersCreated": "个订单已创建",
+    "ordersUpdated": "个订单已更新",
+    "processingOrders": "正在处理订单，请稍候...",
     "exportAllocations": "导出分配",
     "imported": "已导入",
     "条": "条",
@@ -226,6 +229,8 @@
     "points": "积分"
   },
   "events": {
+    "registerFailed": "报名失败",
+    "unregisterFailed": "取消报名失败",
     "title": "活动列表",
     "subtitle": "参与我们的雪茄聚会活动，与同好分享品鉴心得",
     "unknown": "未知",
@@ -623,6 +628,7 @@
     "amount": "金额",
     "description": "描述",
     "relatedId": "关联ID",
+    "relatedOrder": "关联订单",
     "userId": "用户ID",
     "createdAt": "创建时间",
     "actions": "操作",
@@ -641,6 +647,16 @@
     "endDate": "结束日期",
     "resetFilters": "重置筛选",
     "exportReport": "导出报表",
+    "pasteImport": "粘贴导入",
+    "pasteImportTitle": "粘贴导入交易记录",
+    "pasteImportHint": "每行一条记录。",
+    "pasteImportFormat": "格式：YYYY-MM-DD，描述，收入，支出，关联ID（可选）",
+    "pasteImportPlaceholder": "2025-10-05，会员费，100，0，EVT123\n2025-10-06，采购耗材，0，30，",
+    "noLinesToImport": "没有可导入的行",
+    "importResult": "导入完成：成功 {{success}} 条，失败 {{failed}} 条",
+    "parseText": "解析文本",
+    "clear": "清空",
+    "pasteHere": "点击此处并按 Ctrl+V（或 ⌘+V）粘贴记录",
     "sale": "销售",
     "eventFee": "活动费用",
     "purchase": "采购",
@@ -667,6 +683,38 @@
     "participants": "人",
     "totalAmount": "总金额",
     "participantsCount": "共 {{count}} 位参与者"
+  },
+  "upload": {
+    "fileTooLarge": "文件大小不能超过 {{size}}MB",
+    "selectImageFile": "请选择图片文件",
+    "success": "图片上传成功",
+    "fail": "图片上传失败",
+    "confirmDeleteImage": "确定要删除这张图片吗？",
+    "imageDeleted": "图片已删除",
+    "uploading": "上传中...",
+    "clickToUpload": "点击上传",
+    "imagePreview": "图片预览"
+  },
+  "cloudinary": {
+    "testSuccess": "Cloudinary 测试成功！",
+    "testFail": "Cloudinary 测试失败",
+    "testTitle": "Cloudinary 测试",
+    "connectionTest": "连接测试",
+    "testButton": "测试 Cloudinary 连接",
+    "testImageUrl": "测试图片URL:",
+    "testImageAlt": "测试图片",
+    "imageUploadTest": "图片上传测试"
+  },
+  "crop": {
+    "selectArea": "请选择裁剪区域",
+    "tooSmall": "裁剪区域不能小于 {{width}}x{{height}} 像素",
+    "tooLarge": "裁剪区域不能大于 {{width}}x{{height}} 像素",
+    "success": "图片裁剪完成",
+    "fail": "图片裁剪失败",
+    "confirm": "确认裁剪"
+  },
+  "brand": {
+    "loadFailed": "加载品牌信息失败"
   },
   "footer": {
     "tagline": "尊贵雪茄体验 · 品质生活方式",

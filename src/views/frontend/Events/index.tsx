@@ -177,7 +177,7 @@ const Events: React.FC = () => {
                 }}
                 onClick={async () => {
                   if (!user) {
-                    message.info('请先登录后再报名')
+                    message.info(t('auth.pleaseLogin'))
                     return
                   }
                   const max = (event as any)?.participants?.maxParticipants || 0

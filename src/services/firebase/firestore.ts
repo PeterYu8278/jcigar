@@ -5,6 +5,7 @@ import {
   getDocs, 
   getDoc, 
   addDoc, 
+  setDoc,
   updateDoc, 
   deleteDoc,
   query,
@@ -370,7 +371,7 @@ export const createOrdersFromEventAllocations = async (eventId: string): Promise
               paidAt: new Date()
             },
             shipping: {
-              address: '活动现场领取'
+              address: String((event as any)?.title || '活动现场领取')
             },
             createdAt: new Date(),
             updatedAt: new Date()
@@ -401,35 +402,69 @@ export const createOrdersFromEventAllocations = async (eventId: string): Promise
               continue;
             }
           } else {
-            // 创建新订单
-            const result = await createDocument<Order>(COLLECTIONS.ORDERS, orderData);
-            if (result.success && result.id) {
-              orderId = result.id;
-              isNewOrder = true;
-              createdOrdersCount++;
-              console.log(`Created new order ${orderId} for user ${userId}`);
-            } else {
-              console.error(`Failed to create order for user ${userId}`);
-              continue;
+            // 创建新订单（自定义ID：ORD-YYYY-MM-0000-E，按活动开始日期）
+            const rawStart = (event as any)?.schedule?.startDate
+            const startDate: Date = rawStart && typeof (rawStart as any)?.toDate === 'function' 
+              ? (rawStart as any).toDate()
+              : (rawStart instanceof Date ? rawStart : new Date())
+            const year = startDate.getFullYear();
+            const month = String(startDate.getMonth() + 1).padStart(2, '0');
+            const prefix = `ORD-${year}-${month}-`;
+            const startOfMonth = new Date(year, startDate.getMonth(), 1, 0, 0, 0, 0);
+            const endOfMonth = new Date(year, startDate.getMonth() + 1, 0, 23, 59, 59, 999);
+            const qCount = query(
+              collection(db, COLLECTIONS.ORDERS),
+              where('createdAt', '>=', startOfMonth),
+              where('createdAt', '<=', endOfMonth)
+            );
+            const snap = await getDocs(qCount);
+            let seq = snap.size + 1;
+            let newId = `${prefix}${String(seq).padStart(4, '0')}-E`;
+            // 防止并发或同批次生成重复ID：若存在则自增直至唯一
+            while (true) {
+              const exists = await getDoc(doc(db, COLLECTIONS.ORDERS, newId));
+              if (!exists.exists()) break;
+              seq += 1;
+              newId = `${prefix}${String(seq).padStart(4, '0')}-E`;
             }
+
+            const sanitized = sanitizeForFirestore(orderData);
+            await setDoc(doc(db, COLLECTIONS.ORDERS, newId), {
+              ...sanitized,
+              createdAt: (sanitized as any)?.createdAt || new Date(),
+              updatedAt: new Date(),
+            } as any);
+            orderId = newId;
+            isNewOrder = true;
+            createdOrdersCount++;
+            console.log(`Created new order ${orderId} for user ${userId}`);
           }
 
           // 如果是新订单，创建出库记录（仅对真实雪茄行生成，不含费用行）
           if (isNewOrder) {
             for (const it of orderItems) {
               // 仅对真实存在的雪茄生成库存日志（费用行不会匹配到实体雪茄）
-              const exists = await getCigarById(it.cigarId)
-              if (exists) {
-                await createDocument(COLLECTIONS.INVENTORY_LOGS, {
-                  cigarId: it.cigarId,
-                  type: 'out',
-                  quantity: it.quantity,
-                  reason: '活动订单出库',
-                  referenceNo: `ORDER:${orderId}`,
-                  operatorId: 'system',
-                  createdAt: new Date(),
-                } as any)
-              }
+              const cigarExists = await getCigarById(it.cigarId)
+              if (!cigarExists) continue
+              const ref = `ORDER:${orderId}`
+              // 去重：如果同一订单、同一雪茄的出库记录已存在，则跳过
+              const dupQ = query(
+                collection(db, COLLECTIONS.INVENTORY_LOGS),
+                where('referenceNo', '==', ref),
+                where('cigarId', '==', it.cigarId),
+                where('type', '==', 'out')
+              )
+              const dupSnap = await getDocs(dupQ)
+              if (!dupSnap.empty) continue
+              await createDocument(COLLECTIONS.INVENTORY_LOGS, {
+                cigarId: it.cigarId,
+                type: 'out',
+                quantity: it.quantity,
+                reason: '活动订单出库',
+                referenceNo: ref,
+                operatorId: 'system',
+                createdAt: new Date(),
+              } as any)
             }
           }
 
@@ -454,16 +489,26 @@ export const createOrdersFromEventAllocations = async (eventId: string): Promise
 };
 
 // 直接销售创建订单（手动选择用户与商品）
-export const createDirectSaleOrder = async (params: { userId: string; items: { cigarId: string; quantity: number }[]; note?: string }) => {
+export const createDirectSaleOrder = async (params: { userId: string; items: { cigarId?: string; quantity: number; price?: number }[]; note?: string; createdAt?: Date }) => {
   try {
-    const itemsDetailed = [] as { cigarId: string; quantity: number; price: number }[]
+    const itemsDetailed: { cigarId: string; quantity: number; price: number }[] = []
     let total = 0
     for (const it of params.items) {
-      if (!it.cigarId || !it.quantity) continue
-      const cigar = await getCigarById(it.cigarId)
-      if (!cigar) continue
-      itemsDetailed.push({ cigarId: it.cigarId, quantity: it.quantity, price: cigar.price })
-      total += cigar.price * it.quantity
+      if (!it?.quantity || it.quantity <= 0) continue
+      const id = it.cigarId
+      if (id) {
+        const cigar = await getCigarById(id)
+        const unitPrice = it.price != null ? Number(it.price) : (cigar?.price || 0)
+        itemsDetailed.push({ cigarId: id, quantity: it.quantity, price: unitPrice })
+        total += unitPrice * it.quantity
+      } else {
+        // 自定义费用行（无 cigarId）
+        const unitPrice = Number(it.price || 0)
+        if (unitPrice > 0) {
+          itemsDetailed.push({ cigarId: `FEE:${Date.now()}`, quantity: it.quantity, price: unitPrice })
+          total += unitPrice * it.quantity
+        }
+      }
     }
     if (itemsDetailed.length === 0) {
       throw new Error('无有效商品项')
@@ -476,23 +521,64 @@ export const createDirectSaleOrder = async (params: { userId: string; items: { c
       source: { type: 'direct', note: params.note },
       payment: { method: 'bank_transfer', transactionId: undefined, paidAt: new Date() },
       shipping: { address: '自提/门店' },
-      createdAt: new Date(),
+      createdAt: params.createdAt || new Date(),
       updatedAt: new Date(),
     }
-    const result = await createDocument<Order>(COLLECTIONS.ORDERS, orderData)
+    // 自定义ID：ORD-YYYY-MM-0000-M
+    const now = orderData.createdAt || new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const prefix = `ORD-${year}-${month}-`
+    const startOfMonth = new Date(year, now.getMonth(), 1, 0, 0, 0, 0)
+    const endOfMonth = new Date(year, now.getMonth() + 1, 0, 23, 59, 59, 999)
+    const qCount = query(
+      collection(db, COLLECTIONS.ORDERS),
+      where('createdAt', '>=', startOfMonth),
+      where('createdAt', '<=', endOfMonth)
+    )
+    const snap = await getDocs(qCount)
+    let seq = snap.size + 1
+    let newId = `${prefix}${String(seq).padStart(4, '0')}-M`
+    // 防止并发或同批次生成重复ID：若存在则自增直至唯一
+    while (true) {
+      const exists = await getDoc(doc(db, COLLECTIONS.ORDERS, newId))
+      if (!exists.exists()) break
+      seq += 1
+      newId = `${prefix}${String(seq).padStart(4, '0')}-M`
+    }
+
+    const sanitized = sanitizeForFirestore(orderData)
+    await setDoc(doc(db, COLLECTIONS.ORDERS, newId), {
+      ...sanitized,
+      createdAt: (sanitized as any)?.createdAt || new Date(),
+      updatedAt: new Date(),
+    } as any)
+    const result = { success: true, id: newId }
     
     // 如果订单创建成功，创建对应的出库记录
     if (result.success) {
       for (const item of itemsDetailed) {
+        const exists = await getCigarById(item.cigarId)
+        if (!exists) continue
+        const ref = `ORDER:${result.id}`
+        // 去重：如果同一订单、同一雪茄的出库记录已存在，则跳过
+        const dupQ = query(
+          collection(db, COLLECTIONS.INVENTORY_LOGS),
+          where('referenceNo', '==', ref),
+          where('cigarId', '==', item.cigarId),
+          where('type', '==', 'out')
+        )
+        const dupSnap = await getDocs(dupQ)
+        if (!dupSnap.empty) continue
         await createDocument(COLLECTIONS.INVENTORY_LOGS, {
           cigarId: item.cigarId,
           type: 'out',
           quantity: item.quantity,
           reason: '直接销售出库',
-          referenceNo: `ORDER:${result.id}`,
+          referenceNo: ref,
           operatorId: 'system',
           createdAt: new Date(),
-        } as any);
+        } as any)
       }
     }
     
@@ -544,8 +630,33 @@ export const getTransactionsByDateRange = async (startDate: Date, endDate: Date)
 
 export const createTransaction = async (transactionData: Omit<Transaction, 'id'>) => {
   try {
-    const result = await createDocument<Transaction>(COLLECTIONS.TRANSACTIONS, transactionData);
-    return result;
+    // 基于月份生成流水号：TXN-YYYY-MM-0000
+    const now = (transactionData as any)?.createdAt instanceof Date ? (transactionData as any).createdAt as Date : new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const prefix = `TXN-${year}-${month}-`;
+
+    // 统计当月已有记录数量（简单顺序号方案，非强一致性）
+    const startOfMonth = new Date(year, now.getMonth(), 1, 0, 0, 0, 0);
+    const endOfMonth = new Date(year, now.getMonth() + 1, 0, 23, 59, 59, 999);
+    const qCount = query(
+      collection(db, COLLECTIONS.TRANSACTIONS),
+      where('createdAt', '>=', startOfMonth),
+      where('createdAt', '<=', endOfMonth)
+    );
+    const snap = await getDocs(qCount);
+    const seq = snap.size + 1;
+    const id = `${prefix}${String(seq).padStart(4, '0')}`;
+
+    // 清洗数据并写入固定ID文档
+    const sanitized = sanitizeForFirestore(transactionData);
+    const payload = {
+      ...sanitized,
+      createdAt: (sanitized as any)?.createdAt || new Date(),
+      updatedAt: new Date(),
+    } as any;
+    await setDoc(doc(db, COLLECTIONS.TRANSACTIONS, id), payload);
+    return { success: true, id };
   } catch (error) {
     return { success: false, error: error as Error };
   }

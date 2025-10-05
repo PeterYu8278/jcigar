@@ -217,7 +217,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
                 <p style={{ color: '#bab09c', margin: 0, whiteSpace: 'nowrap' }}>{t('ordersAdmin.createdAt')}</p>
-                <p style={{ color: '#FFFFFF', margin: 0 }}>{dayjs(order.createdAt).format('YYYY-MM-DD HH:mm:ss')}</p>
+                <p style={{ color: '#FFFFFF', margin: 0 }}>{dayjs(order.createdAt).format('YYYY-MM-DD')}</p>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
                 <p style={{ color: '#bab09c', margin: 0, whiteSpace: 'nowrap' }}>{t('ordersAdmin.payment.title')}</p>

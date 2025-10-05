@@ -132,6 +132,45 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                 ) : (
                   <Tag color="orange">{t('participants.orderPending')}</Tag>
                 )}
+                {/* 删除参与者按钮 */}
+                <div style={{ marginLeft: 'auto' }}>
+                  <Button
+                    size="small"
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={async () => {
+                      try {
+                        // 本地移除
+                        const updatedParticipants = registeredParticipants.filter((id: string) => id !== uid)
+                        const updatedAllocations = { ...(event as any).allocations }
+                        delete updatedAllocations[uid]
+
+                        onEventUpdate({
+                          ...event,
+                          participants: { ...(event as any).participants, registered: updatedParticipants },
+                          allocations: updatedAllocations
+                        } as Event)
+
+                        // 远端同步
+                        try {
+                          const [regRes] = await Promise.all([
+                            unregisterFromEvent((event as any).id, uid),
+                            updateDocument(COLLECTIONS.EVENTS, (event as any).id, { allocations: updatedAllocations } as any)
+                          ])
+                          if (!(regRes as any)?.success) {
+                            message.warning(t('participants.removeFailed'))
+                          } else {
+                            message.success(t('participants.removed'))
+                          }
+                        } catch (e) {
+                          message.warning(t('participants.removeFailed'))
+                        }
+                      } catch (err) {
+                        message.error(t('participants.removeFailed'))
+                      }
+                    }}
+                  />
+                </div>
               </div>
             </div>
             {/* 第二行：活动费用（使用活动名称，可调整数量与费用，保存到 allocations） */}
@@ -212,14 +251,16 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
             {(() => {
               const items = (allocation as any)?.items as any[] | undefined
               const ensureItemsInit = async () => {
-                // 将旧的单一字段迁移为 items 数组
+                // 将旧的单一字段迁移为 items 数组；若不存在任何配置，则新增一条空行
                 const current = (event as any)?.allocations?.[uid] || {}
-                const baseItem = (current?.cigarId) ? [{
-                  cigarId: current.cigarId,
-                  quantity: current.quantity || 1,
-                  unitPrice: current.unitPrice != null ? current.unitPrice : getCigarPriceById(current.cigarId),
-                  amount: (current.unitPrice != null ? current.unitPrice : getCigarPriceById(current.cigarId)) * (current.quantity || 1)
-                }] : []
+                const baseItem = (current?.cigarId)
+                  ? [{
+                      cigarId: current.cigarId,
+                      quantity: current.quantity || 1,
+                      unitPrice: current.unitPrice != null ? current.unitPrice : getCigarPriceById(current.cigarId),
+                      amount: (current.unitPrice != null ? current.unitPrice : getCigarPriceById(current.cigarId)) * (current.quantity || 1)
+                    }]
+                  : [{ cigarId: undefined, quantity: 1, unitPrice: 0, amount: 0 }]
                 const updated = { ...(event as any).allocations, [uid]: { ...current, items: baseItem } }
                 onAllocSavingChange(uid)
                 await updateDocument(COLLECTIONS.EVENTS, (event as any).id, { allocations: updated } as any)
@@ -228,7 +269,7 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
               }
 
               const renderRow = (row: any, idx: number) => (
-                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <div key={`${uid}-${row?.cigarId || 'row'}-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                   <div style={{ width: 220, flexShrink: 0 }}>
                 <Select
                   placeholder={t('participants.selectCigarModel')}
@@ -356,11 +397,13 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                 )
               }
 
-              // 未初始化 items，显示旧的单行且提供迁移按钮
+              // 未初始化 items：立即展示一行空的输入行，首次操作时迁移/初始化
               return (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ color: '#999', fontSize: 12 }}>{t('participants.orderPending')}</div>
-                  <Button size="small" onClick={ensureItemsInit}>{t('common.add')}</Button>
+                <div>
+                  {renderRow({ cigarId: undefined, quantity: 1, unitPrice: 0, amount: 0 }, 0)}
+                  <div>
+                    <Button size="small" onClick={ensureItemsInit}>{t('common.add')}</Button>
+                  </div>
                 </div>
               )
             })()}

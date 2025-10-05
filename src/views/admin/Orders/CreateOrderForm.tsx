@@ -27,11 +27,31 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
   const { t } = useTranslation()
   const [form] = Form.useForm()
   const groupedCigars = groupCigarsByBrand(cigars)
+  const itemsWatch = Form.useWatch('items', form)
+
+  const computeSummary = () => {
+    const items = Array.isArray(itemsWatch) ? itemsWatch : []
+    let totalQty = 0
+    let totalAmount = 0
+    const lines: Array<{ key: string; name: string; qty: number; unit: number; sum: number }> = []
+    for (const it of items) {
+      const qty = Number(it?.quantity || 0)
+      const unit = Number(it?.price || 0)
+      if (qty <= 0) continue
+      const id = String(it?.cigarId || '')
+      const name = id ? (cigars.find(c => c.id === id)?.name || id) : t('ordersAdmin.customFee')
+      const sum = qty * unit
+      totalQty += qty
+      totalAmount += sum
+      lines.push({ key: id || `fee-${lines.length}`, name, qty, unit, sum })
+    }
+    return { totalQty, totalAmount, lines }
+  }
 
   const handleSubmit = async (values: any) => {
     const userId: string = values.userId
-    const items: { cigarId: string; quantity: number; price: number }[] = (values.items || [])
-      .filter((it: any) => it?.cigarId && it?.quantity > 0 && it?.price > 0)
+    const items: { cigarId?: string; quantity: number; price?: number }[] = (values.items || [])
+      .filter((it: any) => (it?.quantity > 0) && (it?.price > 0 || it?.cigarId))
     
     if (!userId) {
       onCreateError(t('ordersAdmin.pleaseSelectUser'))
@@ -48,12 +68,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
       : dayjs().toDate()
 
     try {
-      const res = await createDirectSaleOrder({ 
-        userId, 
-        items, 
-        note: values.note, 
-        createdAt 
-      } as any)
+      const res = await createDirectSaleOrder({ userId, items, note: values.note, createdAt })
       
       if (res.success) {
         onCreateSuccess()
@@ -74,14 +89,13 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
       initialValues={{
         items: [{ cigarId: undefined, quantity: 1, price: 0 }], 
         paymentMethod: 'bank_transfer', 
-        createdAt: dayjs() 
+        createdAt: dayjs().startOf('day') 
       }}
     >
       <Form.Item label={t('ordersAdmin.orderDate')} name="createdAt">
         <DatePicker 
           style={{ width: '100%' }} 
-          showTime={{ format: 'HH:mm' }}
-          format="YYYY-MM-DD HH:mm"
+          format="YYYY-MM-DD"
         />
       </Form.Item>
       
@@ -120,17 +134,19 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
       <Form.List name="items">
         {(fields, { add, remove }) => (
           <div>
-            {fields.map((field) => (
-              <div key={`create-${field.key}`} style={{ display: 'flex', alignItems: 'baseline', marginBottom: 8, gap: 8 }}>
+            {fields.map((field) => {
+              const { key, ...restField } = field as any
+              return (
+              <div key={`create-${key}`} style={{ display: 'flex', alignItems: 'baseline', marginBottom: 8, gap: 8 }}>
                 <Form.Item
-                  {...field}
+                  {...restField}
                   name={[field.name, 'cigarId']}
                   fieldKey={[field.fieldKey!, 'cigarId'] as any}
-                  rules={[{ required: true, message: t('ordersAdmin.pleaseSelectItem') }]}
+                  rules={[{ required: false }]}
                   style={{ minWidth: 280, marginBottom: 0 }}
                 >
                   <Select 
-                    placeholder={t('ordersAdmin.selectItem')}
+                    placeholder={t('ordersAdmin.selectItem') + ' / ' + t('ordersAdmin.customFee')}
                     showSearch
                     optionFilterProp="children"
                     onChange={(cigarId) => {
@@ -158,7 +174,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                 </Form.Item>
                 
                 <Form.Item
-                  {...field}
+                  {...restField}
                   name={[field.name, 'quantity']}
                   fieldKey={[field.fieldKey!, 'quantity'] as any}
                   rules={[{ required: true, message: t('ordersAdmin.pleaseEnterQuantity') }]}
@@ -168,7 +184,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                 </Form.Item>
                 
                 <Form.Item
-                  {...field}
+                  {...restField}
                   name={[field.name, 'price']}
                   fieldKey={[field.fieldKey!, 'price'] as any}
                   rules={[{ required: true, message: t('ordersAdmin.pleaseEnterPrice') }]}
@@ -189,7 +205,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                   </Button>
                 )}
               </div>
-            ))}
+            )})}
             <Form.Item>
               <Button 
                 type="dashed" 
@@ -199,6 +215,33 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                 {t('ordersAdmin.addItem')}
               </Button>
             </Form.Item>
+
+            {/* 统计汇总 */}
+            {(() => {
+              const s = computeSummary()
+              return (
+                <div style={{ marginTop: 12, padding: 12, border: '1px dashed #d9d9d9', borderRadius: 6, background: '#fafafa' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <strong>{t('participants.productCategories')}</strong>
+                    <span>{t('participants.totalAmount')}: RM{s.totalAmount.toFixed(2)}</span>
+                  </div>
+                  <div style={{ maxHeight: 160, overflow: 'auto' }}>
+                    {s.lines.length === 0 ? (
+                      <div style={{ color: '#999' }}>{t('common.noData')}</div>
+                    ) : (
+                      s.lines.map(line => (
+                        <div key={line.key} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '4px 0', borderBottom: '1px dashed #eee' }}>
+                          <span style={{ flex: 2 }}>{line.name}</span>
+                          <span style={{ flex: 1, textAlign: 'right' }}>× {line.qty}</span>
+                          <span style={{ flex: 1, textAlign: 'right' }}>RM{line.unit.toFixed(2)}</span>
+                          <span style={{ flex: 1, textAlign: 'right', fontWeight: 600 }}>RM{line.sum.toFixed(2)}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )
+            })()}
           </div>
         )}
       </Form.List>
@@ -217,6 +260,16 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
           <Select.Option value="credit">{t('ordersAdmin.payment.credit')}</Select.Option>
           <Select.Option value="paypal">PayPal</Select.Option>
         </Select>
+      </Form.Item>
+
+      {/* Actions */}
+      <Form.Item>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <Button onClick={onCancel}>{t('common.cancel')}</Button>
+          <Button type="primary" htmlType="submit" loading={loading}>
+            {t('common.create')}
+          </Button>
+        </div>
       </Form.Item>
     </Form>
   )

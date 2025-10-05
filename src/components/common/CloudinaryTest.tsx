@@ -1,6 +1,7 @@
 // Cloudinary 测试组件
 import React, { useState } from 'react'
 import { Button, Card, message, Space, Typography } from 'antd'
+import { useTranslation } from 'react-i18next'
 import { UploadOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import { useCloudinary } from '../../hooks/useCloudinary'
 import ImageUpload from './ImageUpload'
@@ -9,6 +10,7 @@ const { Title, Text } = Typography
 
 const CloudinaryTest: React.FC = () => {
   const { upload, uploading, error } = useCloudinary()
+  const { t } = useTranslation()
   const [testImageUrl, setTestImageUrl] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<string | null>(null)
 
@@ -36,22 +38,22 @@ const CloudinaryTest: React.FC = () => {
             folder: 'test'
           })
           
-          setTestResult('✅ Cloudinary 连接成功！')
+          setTestResult(`✅ ${t('cloudinary.testSuccess')}`)
           setTestImageUrl(result.secure_url)
-          message.success('Cloudinary 测试成功！')
+          message.success(t('cloudinary.testSuccess'))
         }
       }, 'image/png')
       } catch (err) {
-        setTestResult('❌ Cloudinary 连接失败')
-        message.error('Cloudinary 测试失败')
+        setTestResult(`❌ ${t('cloudinary.testFail')}`)
+        message.error(t('cloudinary.testFail'))
       }
   }
 
   return (
-    <Card title="Cloudinary 测试" style={{ maxWidth: 600, margin: '20px auto' }}>
+    <Card title={t('cloudinary.testTitle')} style={{ maxWidth: 600, margin: '20px auto' }}>
       <Space direction="vertical" style={{ width: '100%' }}>
         <div>
-          <Title level={4}>连接测试</Title>
+          <Title level={4}>{t('cloudinary.connectionTest')}</Title>
           <Button 
             type="primary" 
             icon={<CheckCircleOutlined />}
@@ -59,7 +61,7 @@ const CloudinaryTest: React.FC = () => {
             loading={uploading}
             style={{ marginBottom: 16 }}
           >
-            测试 Cloudinary 连接
+            {t('cloudinary.testButton')}
           </Button>
           
           {testResult && (
@@ -78,7 +80,7 @@ const CloudinaryTest: React.FC = () => {
           
           {testImageUrl && (
             <div style={{ marginTop: 16 }}>
-              <Text strong>测试图片URL:</Text>
+              <Text strong>{t('cloudinary.testImageUrl')}</Text>
               <div style={{ 
                 wordBreak: 'break-all', 
                 fontSize: '12px', 
@@ -89,7 +91,7 @@ const CloudinaryTest: React.FC = () => {
               </div>
               <img 
                 src={testImageUrl} 
-                alt="测试图片" 
+                alt={t('cloudinary.testImageAlt') as string} 
                 style={{ 
                   width: 100, 
                   height: 100, 
@@ -103,7 +105,7 @@ const CloudinaryTest: React.FC = () => {
         </div>
 
         <div>
-          <Title level={4}>图片上传测试</Title>
+          <Title level={4}>{t('cloudinary.imageUploadTest')}</Title>
             <ImageUpload
               value={testImageUrl || undefined}
               onChange={(url) => setTestImageUrl(url)}
