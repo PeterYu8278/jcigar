@@ -55,7 +55,8 @@ const AppFooter: React.FC = () => {
           <Divider style={{ 
             background: 'linear-gradient(90deg, transparent 0%, #333333 50%, transparent 100%)',
             border: 'none',
-            height: '1px'
+            height: '1px',
+            margin: '0px'
           }} />
           
           {/* 链接区域 */}

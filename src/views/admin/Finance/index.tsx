@@ -1,9 +1,9 @@
 // 财务管理页面
 import React, { useEffect, useState, useMemo } from 'react'
 import { Table, Card, Row, Col, Statistic, Typography, DatePicker, Select, Button, Space, message, Modal, Form, InputNumber, Input, Spin } from 'antd'
-import { DollarOutlined, ShoppingOutlined, CalendarOutlined, ArrowUpOutlined, ArrowDownOutlined, PlusOutlined, EyeOutlined, BarChartOutlined, PieChartOutlined } from '@ant-design/icons'
+import { DollarOutlined, ShoppingOutlined, CalendarOutlined, ArrowUpOutlined, ArrowDownOutlined, PlusOutlined, EyeOutlined, BarChartOutlined, PieChartOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { Transaction, User } from '../../../types'
-import { getAllTransactions, getAllOrders, getAllInventoryLogs, createTransaction, COLLECTIONS, getAllUsers } from '../../../services/firebase/firestore'
+import { getAllTransactions, getAllOrders, getAllInventoryLogs, createTransaction, COLLECTIONS, getAllUsers, updateDocument, deleteDocument } from '../../../services/firebase/firestore'
 import dayjs from 'dayjs'
 import { useTranslation } from 'react-i18next'
 
@@ -18,6 +18,9 @@ const AdminFinance: React.FC = () => {
   const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [viewing, setViewing] = useState<Transaction | null>(null)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editForm] = Form.useForm()
   const [importing, setImporting] = useState(false)
   const [importRows, setImportRows] = useState<Array<{
     date: Date
@@ -92,7 +95,6 @@ const AdminFinance: React.FC = () => {
     }
     setImportRows(prev => [...prev, ...appended])
   }
-  const [viewing, setViewing] = useState<Transaction | null>(null)
   const [form] = Form.useForm()
   
   // 筛选状态
@@ -101,17 +103,84 @@ const AdminFinance: React.FC = () => {
 
   const toDateSafe = (val: any): Date | null => {
     if (!val) return null
-    let v: any = val
-    if (v && typeof v.toDate === 'function') {
-      v = v.toDate()
+    try {
+      let v: any = val
+      if (v && typeof v.toDate === 'function') {
+        v = v.toDate()
+      }
+      const d = v instanceof Date ? v : new Date(v)
+      return isNaN(d.getTime()) ? null : d
+    } catch (error) {
+      console.warn('Invalid date value:', val, error)
+      return null
     }
-    const d = v instanceof Date ? v : new Date(v)
-    return isNaN(d.getTime()) ? null : d
   }
 
   const formatYMD = (d: Date | null): string => {
     if (!d) return '-'
-    return dayjs(d).format('YYYY-MM-DD')
+    try {
+      return dayjs(d).format('YYYY-MM-DD')
+    } catch (error) {
+      console.warn('Invalid date format:', d, error)
+      return '-'
+    }
+  }
+
+  // 当viewing改变时，更新表单值
+  useEffect(() => {
+    if (viewing && editForm) {
+      editForm.setFieldsValue({
+        transactionDate: toDateSafe(viewing.createdAt) ? dayjs(toDateSafe(viewing.createdAt)) : dayjs(),
+        incomeAmount: viewing.amount > 0 ? viewing.amount : 0,
+        expenseAmount: viewing.amount < 0 ? Math.abs(viewing.amount) : 0,
+        description: viewing.description,
+        relatedId: viewing.relatedId || undefined,
+        relatedOrders: (viewing as any)?.relatedOrders || [],
+      })
+      setIsEditing(false) // 重置编辑状态
+    }
+  }, [viewing, editForm])
+
+  // 监听表单值变化用于统计显示
+  const watchedIncomeAmount = Form.useWatch('incomeAmount', editForm) || 0
+  const watchedExpenseAmount = Form.useWatch('expenseAmount', editForm) || 0
+  const watchedRelatedOrders = Form.useWatch('relatedOrders', editForm) || []
+  
+  // 计算统计值
+  const transactionAmount = Math.abs(watchedIncomeAmount - watchedExpenseAmount)
+  const totalMatchedAmount = watchedRelatedOrders.reduce((sum: number, item: any) => sum + Number(item?.amount || 0), 0)
+  const remainingAmount = transactionAmount - totalMatchedAmount
+
+  // 计算订单匹配状态
+  const getOrderMatchStatus = (orderId: string) => {
+    const order = orders.find(o => o.id === orderId)
+    if (!order) return { matched: 0, total: 0, status: 'none' }
+    
+    const orderTotal = Number(order.total || 0)
+    const matchedAmount = transactions
+      .filter(t => {
+        const relatedOrders = (t as any)?.relatedOrders || []
+        return relatedOrders.some((ro: any) => ro.orderId === orderId)
+      })
+      .reduce((sum, t) => {
+        const relatedOrders = (t as any)?.relatedOrders || []
+        const orderMatch = relatedOrders.find((ro: any) => ro.orderId === orderId)
+        return sum + (orderMatch ? Number(orderMatch.amount || 0) : 0)
+      }, 0)
+    
+    if (matchedAmount >= orderTotal) {
+      return { matched: matchedAmount, total: orderTotal, status: 'fully' }
+    } else if (matchedAmount > 0) {
+      return { matched: matchedAmount, total: orderTotal, status: 'partial' }
+    } else {
+      return { matched: matchedAmount, total: orderTotal, status: 'none' }
+    }
+  }
+
+  // 检查订单是否已全额匹配
+  const isOrderFullyMatched = (orderId: string) => {
+    const status = getOrderMatchStatus(orderId)
+    return status.status === 'fully'
   }
 
   // 加载数据
@@ -137,6 +206,31 @@ const AdminFinance: React.FC = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  // 删除交易记录
+  const handleDeleteTransaction = async (transaction: Transaction) => {
+    Modal.confirm({
+      title: t('financeAdmin.deleteTransaction'),
+      content: t('financeAdmin.deleteTransactionConfirm'),
+      okText: t('common.confirm'),
+      cancelText: t('common.cancel'),
+      okType: 'danger',
+      onOk: async () => {
+        setLoading(true)
+        try {
+          const result = await deleteDocument(COLLECTIONS.TRANSACTIONS, transaction.id)
+          if (result.success) {
+            message.success(t('financeAdmin.transactionDeleted'))
+            loadTransactions()
+          } else {
+            message.error(t('financeAdmin.deleteFailed'))
+          }
+        } finally {
+          setLoading(false)
+        }
+      }
+    })
   }
 
   // 筛选后的数据
@@ -397,22 +491,190 @@ const AdminFinance: React.FC = () => {
         }}
       />
 
-      {/* 查看交易详情 */}
+      {/* 交易详情（可编辑） */}
       <Modal
         title={t('financeAdmin.transactionDetails')}
         open={!!viewing}
-        onCancel={() => setViewing(null)}
-        footer={<Button onClick={() => setViewing(null)}>{t('financeAdmin.close')}</Button>}
+        onCancel={() => {
+          setViewing(null)
+          setIsEditing(false)
+        }}
+        footer={[
+          <button key="cancel" type="button" onClick={() => {
+            setViewing(null)
+            setIsEditing(false)
+          }} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #d9d9d9', background: '#fff', cursor: 'pointer' }}>
+            {t('common.cancel')}
+          </button>,
+          <button key="delete" type="button" onClick={() => viewing && handleDeleteTransaction(viewing)} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #ff4d4f', background: '#fff', color: '#ff4d4f', cursor: 'pointer' }}>
+            {t('common.delete')}
+          </button>,
+          !isEditing ? (
+            <button key="edit" type="button" className="cigar-btn-gradient" onClick={() => setIsEditing(true)} style={{ padding: '6px 14px', borderRadius: 8, cursor: 'pointer' }}>
+              {t('common.edit')}
+            </button>
+          ) : (
+            <button key="save" type="button" className="cigar-btn-gradient" onClick={() => editForm.submit()} style={{ padding: '6px 14px', borderRadius: 8, cursor: 'pointer' }}>
+              {t('common.save')}
+            </button>
+          )
+        ]}
+        width={960}
+        destroyOnHidden
+        centered
+        styles={{
+          body: {
+            background: 'rgba(255,255, 255)',
+            maxHeight: '80vh',
+            overflow: 'auto',
+            padding: 16,
+          },
+          mask: { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
+          content: {
+            background: 'rgba(255,255, 255)',
+            border: '1px solid rgba(255, 215, 0, 0.2)'
+          }
+        }}
       >
         {viewing && (
+          <Form
+            form={editForm}
+            layout="vertical"
+            onFinish={async (values: any) => {
+              setLoading(true)
+              try {
+                const income = Number(values.incomeAmount || 0)
+                const expense = Number(values.expenseAmount || 0)
+                if (income <= 0 && expense <= 0) {
+                  message.error(t('financeAdmin.enterIncomeOrExpense'))
+                  return
+                }
+                const amount = income - expense
+                // 校验relatedOrders分配总额
+                const ro: Array<{ orderId: string; amount: number }> = Array.isArray(values.relatedOrders) ? values.relatedOrders.filter((r: any) => r?.orderId && Number(r?.amount) > 0).map((r: any) => ({ orderId: String(r.orderId), amount: Number(r.amount) })) : []
+                const roSum = ro.reduce((s, r) => s + r.amount, 0)
+                const absTx = Math.abs(amount)
+                if (roSum > absTx) {
+                  message.error(t('financeAdmin.relatedOrdersExceed'))
+                  return
+                }
+                const updated = {
+                  amount,
+                  description: values.description,
+                  relatedId: values.relatedId || undefined,
+                  relatedOrders: ro.length ? ro : undefined,
+                  createdAt: values.transactionDate ? (dayjs(values.transactionDate).toDate()) : new Date()
+                }
+                await updateDocument(COLLECTIONS.TRANSACTIONS, viewing.id, updated as any)
+                message.success(t('financeAdmin.updated'))
+                setIsEditing(false)
+                loadTransactions()
+              } finally {
+                setLoading(false)
+              }
+            }}
+          >
+            <div style={{ display: 'flex', gap: 16 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <Form.Item label={t('financeAdmin.transactionDate')} name="transactionDate" rules={[{ required: true, message: t('financeAdmin.selectTransactionDate') }]}> 
+                  <DatePicker style={{ width: '100%' }} disabled={!isEditing} />
+                </Form.Item>
+                <Form.Item label={t('financeAdmin.income')} name="incomeAmount">
+                  <InputNumber style={{ width: '100%' }} min={0} disabled={!isEditing} />
+                </Form.Item>
+                <Form.Item label={t('financeAdmin.expense')} name="expenseAmount">
+                  <InputNumber style={{ width: '100%' }} min={0} disabled={!isEditing} />
+                </Form.Item>
+                <Form.Item label={t('financeAdmin.description')} name="description" rules={[{ required: true, message: t('financeAdmin.enterDescription') }]}> 
+                  <Input.TextArea rows={4} disabled={!isEditing} />
+                </Form.Item>
+                {/* 添加余额显示 */}
+                <div style={{ marginTop: 16, padding: 12, background: '#f8f9fa', borderRadius: 6, border: '1px solid #e9ecef' }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: '#495057' }}>
+                    {t('financeAdmin.balanceCalculation')}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#6c757d' }}>
+                    <div>{t('financeAdmin.currentBalance')}: RM{balanceMap.get(viewing.id)?.toFixed(2) || '0.00'}</div>
+                    <div>{t('financeAdmin.transactionImpact')}: RM{(watchedIncomeAmount - watchedExpenseAmount).toFixed(2)}</div>
+                  </div>
+                </div>
+              </div>
+              <div style={{ width: 600 }}>
+                <Form.List name="relatedOrders">
+                  {(fields, { add, remove }) => (
+                    <div style={{ border: '1px solid #eee', borderRadius: 8, padding: 12, background: '#fafafa' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <strong>{t('financeAdmin.relatedOrders')}</strong>
+                        {isEditing && (
+                          <button type="button" onClick={() => add({ orderId: undefined, amount: 0 })} className="cigar-btn-gradient" style={{ padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}>{t('common.add')}</button>
+                        )}
+                      </div>
+                      {fields.length === 0 && (
+                        <div style={{ color: '#999' }}>{t('common.noData')}</div>
+                      )}
+                      {fields.map((field) => (
+                        <div key={field.key} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                          <Form.Item {...field} name={[field.name, 'orderId']} style={{ marginBottom: 0, flex: 1 }}>
+                            <Select
+                              allowClear
+                              showSearch
+                              placeholder={t('financeAdmin.relatedOrderId')}
+                              optionFilterProp="label"
+                              disabled={!isEditing}
+                              options={(orders || [])
+                                .filter(o => !isOrderFullyMatched(o.id))
+                                .map(o => {
+                                const u = (users || []).find((x: any) => x.id === o.userId)
+                                const name = u?.displayName || u?.email || o.userId
+                                const addr = (o as any)?.shipping?.address || '-'
+                                const total = Number((o as any)?.total || 0)
+                                return { 
+                                  label: (
           <div>
-            <p><strong>{t('financeAdmin.transactionId')}：</strong>{viewing.id}</p>
-            <p><strong>{t('financeAdmin.income')}：</strong>{viewing.amount > 0 ? `${viewing.amount}` : '0'}</p>
-            <p><strong>{t('financeAdmin.expense')}：</strong>{viewing.amount < 0 ? `${Math.abs(viewing.amount)}` : '0'}</p>
-            <p><strong>{t('financeAdmin.description')}：</strong>{viewing.description}</p>
-            <p><strong>{t('financeAdmin.relatedId')}：</strong>{viewing.relatedId || '-'}</p>
-            <p><strong>{t('financeAdmin.transactionDate')}：</strong>{dayjs(viewing.createdAt).format('YYYY-MM-DD')}</p>
+                                      <div>{o.id} · {name} · RM{total.toFixed(2)}</div>
+                                      <div style={{ fontSize: '12px', color: '#666' }}>{addr}</div>
+                                    </div>
+                                  ), 
+                                  value: o.id 
+                                }
+                              })}
+                              onChange={(val) => {
+                                const arr = Array.isArray(editForm.getFieldValue('relatedOrders')) ? [...editForm.getFieldValue('relatedOrders')] : []
+                                const order = (orders || []).find((o: any) => o.id === val)
+                                const defaultAmt = Number((order as any)?.total || 0)
+                                arr[field.name] = { ...(arr[field.name] || {}), orderId: val, amount: defaultAmt }
+                                editForm.setFieldsValue({ relatedOrders: arr })
+                              }}
+                            />
+                          </Form.Item>
+                          <Form.Item {...field} name={[field.name, 'amount']} style={{ marginBottom: 0, width: 120 }}>
+                            <InputNumber min={0} step={0.01} style={{ width: '100%' }} disabled={!isEditing} />
+                          </Form.Item>
+                          {isEditing && (
+                            <button type="button" onClick={() => remove(field.name)} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #d9d9d9', background: '#fff', cursor: 'pointer' }}>{t('common.remove')}</button>
+                          )}
+                        </div>
+                      ))}
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 12, color: '#666' }}>
+                        {t('financeAdmin.relatedOrdersHint')}
+                      </div>
+                      {/* 添加统计信息 */}
+                      <div style={{ marginTop: 12, padding: 8, background: '#f0f0f0', borderRadius: 4 }}>
+                        <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>
+                          {t('financeAdmin.relatedOrdersStats')}:
+                        </div>
+                        <div style={{ fontSize: 11, color: '#333' }}>
+                          <div>{t('financeAdmin.totalMatchedAmount')}: RM{totalMatchedAmount.toFixed(2)}</div>
+                          <div>{t('financeAdmin.transactionAmount')}: RM{transactionAmount.toFixed(2)}</div>
+                          <div>{t('financeAdmin.remainingAmount')}: RM{remainingAmount.toFixed(2)}</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </Form.List>
+              </div>
           </div>
+          </Form>
         )}
       </Modal>
 
@@ -478,7 +740,16 @@ const AdminFinance: React.FC = () => {
                 const u = (users || []).find((x: any) => x.id === o.userId)
                 const name = u?.displayName || u?.email || o.userId
                 const addr = (o as any)?.shipping?.address || '-'
-                return { label: `${o.id} · ${name} · ${addr}`, value: o.id }
+                const total = Number((o as any)?.total || 0)
+                return { 
+                  label: (
+                    <div>
+                      <div>{o.id} · {name} · RM{total.toFixed(2)}</div>
+                      <div style={{ fontSize: '12px', color: '#666' }}>{addr}</div>
+                    </div>
+                  ), 
+                  value: o.id 
+                }
               })}
             />
           </Form.Item>

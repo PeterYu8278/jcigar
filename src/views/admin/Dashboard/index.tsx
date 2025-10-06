@@ -142,7 +142,7 @@ const AdminDashboard: React.FC = () => {
             const baseStyle: React.CSSProperties = {
               flex: 1,
               padding: '10px 0',
-                fontWeight: 800,
+              fontWeight: 800,
               fontSize: 12,
               outline: 'none',
               borderBottom: '2px solid transparent',

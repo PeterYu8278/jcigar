@@ -460,7 +460,7 @@ export const createOrdersFromEventAllocations = async (eventId: string): Promise
                 cigarId: it.cigarId,
                 type: 'out',
                 quantity: it.quantity,
-                reason: '活动订单出库',
+                reason: String((event as any)?.title || '活动订单出库'),
                 referenceNo: ref,
                 operatorId: 'system',
                 createdAt: new Date(),
@@ -520,7 +520,7 @@ export const createDirectSaleOrder = async (params: { userId: string; items: { c
       status: 'pending',
       source: { type: 'direct', note: params.note },
       payment: { method: 'bank_transfer', transactionId: undefined, paidAt: new Date() },
-      shipping: { address: '自提/门店' },
+      shipping: { address: 'Direct Sales' },
       createdAt: params.createdAt || new Date(),
       updatedAt: new Date(),
     }

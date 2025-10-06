@@ -30,8 +30,10 @@ const AdminInventory: React.FC = () => {
   const [orders, setOrders] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
   const [viewingReference, setViewingReference] = useState<string | null>(null)
+  const [viewingProductLogs, setViewingProductLogs] = useState<string | null>(null)
   const [imageList, setImageList] = useState<any[]>([])
   const [pagination, setPagination] = useState<{ current: number; pageSize: number }>({ current: 1, pageSize: 10 })
+  const [inModalOpen, setInModalOpen] = useState(false)
   const toDateSafe = (val: any): Date | null => {
     if (!val) return null
     let v: any = val
@@ -330,6 +332,10 @@ const AdminInventory: React.FC = () => {
             })
           }}>
           </Button>
+          <Button type="link" icon={<SearchOutlined />} size="small" onClick={() => {
+            setViewingProductLogs((record as any)?.id)
+          }}>
+          </Button>
         </Space>
       ),
     },
@@ -378,6 +384,12 @@ const AdminInventory: React.FC = () => {
     if (!viewingReference) return []
     return referenceGroups[viewingReference] || []
   }, [viewingReference, referenceGroups])
+
+  // 当前查看的产品相关记录
+  const currentProductLogs = useMemo(() => {
+    if (!viewingProductLogs) return []
+    return inventoryLogs.filter(log => log.cigarId === viewingProductLogs)
+  }, [viewingProductLogs, inventoryLogs])
 
   const outFromOrders = useMemo(() => {
     // 将订单按商品拆分为出库行
@@ -1167,7 +1179,18 @@ const AdminInventory: React.FC = () => {
           )}
           {activeTab === 'in' && (
             <Card>
-              <Form form={inForm} layout="vertical" onFinish={async (values: { referenceNo?: string; reason?: string; items: { cigarId: string; quantity: number }[] }) => {
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+                <Button type="primary" onClick={() => setInModalOpen(true)}>{t('inventory.inStock')}</Button>
+              </div>
+              <Modal
+                title={t('inventory.inStockRecord')}
+                open={inModalOpen}
+                onCancel={() => setInModalOpen(false)}
+                footer={null}
+                destroyOnClose
+                width={720}
+              >
+              <Form form={inForm} layout="vertical" onFinish={async (values: { referenceNo?: string; reason?: string; items: { cigarId: string; quantity: number; unitPrice?: number }[] }) => {
                 const lines = (values.items || []).filter(it => it?.cigarId && it?.quantity > 0)
                 if (lines.length === 0) { message.warning(t('inventory.pleaseAddAtLeastOneInStockDetail')); return }
                 setLoading(true)
@@ -1182,6 +1205,7 @@ const AdminInventory: React.FC = () => {
                       quantity: qty,
                       reason: values.reason || t('inventory.inStock'),
                       referenceNo: values.referenceNo,
+                      unitPrice: (line.unitPrice != null ? Number(line.unitPrice) : undefined),
                       operatorId: 'system',
                       createdAt: new Date(),
                     } as any)
@@ -1190,6 +1214,7 @@ const AdminInventory: React.FC = () => {
                   inForm.resetFields()
                   setItems(await getCigars())
                   setInventoryLogs(await getAllInventoryLogs())
+                  setInModalOpen(false)
                 } finally {
                   setLoading(false)
                 }
@@ -1231,6 +1256,13 @@ const AdminInventory: React.FC = () => {
                           >
                             <InputNumber min={1} placeholder={t('inventory.quantity')} />
                           </Form.Item>
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'unitPrice']}
+                            rules={[]}
+                          >
+                            <InputNumber min={0} step={0.01} placeholder={t('inventory.price')} />
+                          </Form.Item>
                           {fields.length > 1 && (
                             <MinusCircleOutlined onClick={() => remove(name)} />
                           )}
@@ -1249,9 +1281,13 @@ const AdminInventory: React.FC = () => {
                   <Input placeholder={t('inventory.forExample') + t('inventory.purchaseInStock')} />
                 </Form.Item>
                 <Form.Item>
-                  <button type="submit" disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease', opacity: loading ? 0.6 : 1 }}>{t('inventory.confirmInStock')}</button>
+                  <Space>
+                    <Button onClick={() => setInModalOpen(false)}>{t('common.cancel')}</Button>
+                    <Button type="primary" htmlType="submit" loading={loading}>{t('inventory.confirmInStock')}</Button>
+                  </Space>
                 </Form.Item>
               </Form>
+              </Modal>
               <Table
                 style={{ marginTop: 16 }}
                 title={() => t('inventory.inStockRecord')}
@@ -1725,6 +1761,97 @@ const AdminInventory: React.FC = () => {
           <div style={{ fontWeight: 'bold', marginBottom: 8 }}>{t('inventory.referenceNo')}</div>
           <div>{t('inventory.totalProductTypes')}：{currentReferenceLogs.length} {t('inventory.types')}</div>
           <div>{t('inventory.totalInStockQuantity')}：{currentReferenceLogs.reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
+        </div>
+      </Modal>
+
+      {/* 产品出入库记录弹窗 */}
+      <Modal
+        title={`${t('inventory.productLogs')} - ${items.find(i => i.id === viewingProductLogs)?.name || viewingProductLogs}`}
+        open={!!viewingProductLogs}
+        onCancel={() => setViewingProductLogs(null)}
+        footer={null}
+        width={900}
+      >
+        <Table
+          columns={[
+            { 
+              title: t('inventory.time'), 
+              dataIndex: 'createdAt', 
+              key: 'createdAt', 
+              render: (v: any) => { 
+                const d = toDateSafe(v); 
+                return d ? d.toLocaleString() : '-' 
+              },
+              sorter: (a: any, b: any) => {
+                const da = toDateSafe(a.createdAt)?.getTime() || 0
+                const db = toDateSafe(b.createdAt)?.getTime() || 0
+                return da - db
+              }
+            },
+            { 
+              title: t('inventory.type'), 
+              dataIndex: 'type', 
+              key: 'type', 
+              render: (type: string) => {
+                const color = type === 'in' ? 'green' : type === 'out' ? 'red' : 'blue'
+                const text = type === 'in' ? t('inventory.stockIn') : type === 'out' ? t('inventory.stockOut') : t('inventory.adjustment')
+                return <Tag color={color}>{text}</Tag>
+              },
+              filters: [
+                { text: t('inventory.stockIn'), value: 'in' },
+                { text: t('inventory.stockOut'), value: 'out' },
+                { text: t('inventory.adjustment'), value: 'adjustment' }
+              ],
+              onFilter: (value: any, record: any) => record.type === value
+            },
+            { 
+              title: t('inventory.quantity'), 
+              dataIndex: 'quantity', 
+              key: 'quantity',
+              render: (quantity: number, record: any) => {
+                const color = record.type === 'in' ? 'green' : record.type === 'out' ? 'red' : 'blue'
+                const prefix = record.type === 'in' ? '+' : record.type === 'out' ? '-' : ''
+                return <span style={{ color: color === 'green' ? '#52c41a' : color === 'red' ? '#ff4d4f' : '#1890ff' }}>
+                  {prefix}{quantity}
+                </span>
+              },
+              sorter: (a: any, b: any) => a.quantity - b.quantity
+            },
+            { 
+              title: t('inventory.referenceNo'), 
+              dataIndex: 'referenceNo', 
+              key: 'referenceNo', 
+              render: (v: any) => v || '-'
+            },
+            { 
+              title: t('inventory.reason'), 
+              dataIndex: 'reason', 
+              key: 'reason', 
+              render: (v: any) => v || '-'
+            },
+            { 
+              title: t('inventory.operator'), 
+              dataIndex: 'operatorId', 
+              key: 'operatorId', 
+              render: (v: any) => v || '-'
+            },
+          ]}
+          dataSource={currentProductLogs}
+          rowKey="id"
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total })
+          }}
+          size="small"
+        />
+        <div style={{ marginTop: 16, padding: 12, background: '#f5f5f5', borderRadius: 6 }}>
+          <div style={{ fontWeight: 'bold', marginBottom: 8 }}>{t('inventory.summary')}</div>
+          <div>{t('inventory.totalRecords')}：{currentProductLogs.length} {t('inventory.records')}</div>
+          <div>{t('inventory.totalInStock')}：{currentProductLogs.filter(log => log.type === 'in').reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
+          <div>{t('inventory.totalOutStock')}：{currentProductLogs.filter(log => log.type === 'out').reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
+          <div>{t('inventory.currentStock')}：{getComputedStock(viewingProductLogs || '')} {t('inventory.sticks')}</div>
         </div>
       </Modal>
 

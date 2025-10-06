@@ -1,14 +1,17 @@
 import React from 'react'
 import { Tag } from 'antd'
+import { CheckOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { useTranslation } from 'react-i18next'
 import ActionButtons from '../../../components/common/ActionButtons'
-import type { Order, User, Cigar } from '../../../types'
+import type { Order, User, Cigar, Transaction } from '../../../types'
 import { getStatusColor, getStatusText, getPaymentText, getUserName, getUserPhone, getCigarInfo } from './helpers'
 
 interface UseOrderColumnsProps {
   users: User[]
   cigars: Cigar[]
+  transactions: Transaction[]
+  orders: Order[]
   onViewOrder: (order: Order) => void
   onDeleteOrder: (id: string) => Promise<{ success: boolean; error?: string | Error }>
   onOrderUpdate: () => void
@@ -17,11 +20,39 @@ interface UseOrderColumnsProps {
 export const useOrderColumns = ({
   users,
   cigars,
+  transactions,
+  orders,
   onViewOrder,
   onDeleteOrder,
   onOrderUpdate
 }: UseOrderColumnsProps) => {
   const { t } = useTranslation()
+
+  // 计算订单匹配状态
+  const getOrderMatchStatus = (orderId: string) => {
+    const order = orders.find(o => o.id === orderId)
+    if (!order) return { matched: 0, total: 0, status: 'none' }
+    
+    const orderTotal = Number(order.total || 0)
+    const matchedAmount = transactions
+      .filter(t => {
+        const relatedOrders = (t as any)?.relatedOrders || []
+        return relatedOrders.some((ro: any) => ro.orderId === orderId)
+      })
+      .reduce((sum, t) => {
+        const relatedOrders = (t as any)?.relatedOrders || []
+        const orderMatch = relatedOrders.find((ro: any) => ro.orderId === orderId)
+        return sum + (orderMatch ? Number(orderMatch.amount || 0) : 0)
+      }, 0)
+    
+    if (matchedAmount >= orderTotal) {
+      return { matched: matchedAmount, total: orderTotal, status: 'fully' }
+    } else if (matchedAmount > 0) {
+      return { matched: matchedAmount, total: orderTotal, status: 'partial' }
+    } else {
+      return { matched: matchedAmount, total: orderTotal, status: 'none' }
+    }
+  }
 
   return [
     {
@@ -68,14 +99,30 @@ export const useOrderColumns = ({
       title: t('ordersAdmin.totalAmount'),
       dataIndex: 'total',
       key: 'total',
-      render: (_: number, record: Order) => (
-        <div>
-          <div style={{ fontWeight: 'bold', color: '#1890ff' }}>RM{Number(record.total || 0).toFixed(2)}</div>
-          <div style={{ marginTop: 4, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-            <Tag color="geekblue" style={{ marginInlineEnd: 0 }}>{getPaymentText((record as any)?.payment?.method, t)}</Tag>
+      render: (_: number, record: Order) => {
+        const matchStatus = getOrderMatchStatus(record.id)
+        return (
+          <div>
+            <div style={{ fontWeight: 'bold', color: '#1890ff', display: 'flex', alignItems: 'center', gap: 8 }}>
+              RM{Number(record.total || 0).toFixed(2)}
+              {matchStatus.status === 'fully' && (
+                <CheckOutlined style={{ color: '#52c41a', fontSize: '16px' }} />
+              )}
+              {matchStatus.status === 'partial' && (
+                <ClockCircleOutlined style={{ color: '#52c41a', fontSize: '16px' }} />
+              )}
+            </div>
+            <div style={{ marginTop: 4, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+              <Tag color="geekblue" style={{ marginInlineEnd: 0 }}>{getPaymentText((record as any)?.payment?.method, t)}</Tag>
+              {matchStatus.status !== 'none' && (
+                <Tag color={matchStatus.status === 'fully' ? 'green' : 'orange'} style={{ marginInlineEnd: 0 }}>
+                  {matchStatus.status === 'fully' ? t('financeAdmin.fullyMatched') : `${t('financeAdmin.partialMatched')}: RM${matchStatus.matched.toFixed(2)}`}
+                </Tag>
+              )}
+            </div>
           </div>
-        </div>
-      ),
+        )
+      },
     },
     // 移除独立的状态与支付方式列（已合并至金额列下方）
     {

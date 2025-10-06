@@ -77,9 +77,9 @@ const MobileBottomNav: React.FC = () => {
       badge: 5
     },
     {
-      key: '/admin/inventory',
-      icon: <DatabaseOutlined />,
-      label: t('navigation.inventory'),
+      key: '/admin/finance',
+      icon: <DollarOutlined />,
+      label: t('navigation.finance'),
       badge: null
     }
   ]

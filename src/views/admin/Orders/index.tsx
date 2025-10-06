@@ -1,15 +1,15 @@
 // 订单管理页面
 import React, { useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
-import { Table, Button, Space, Input, Select, DatePicker, message, Modal } from 'antd'
+import { Table, Space, Input, Select, DatePicker, message, Modal } from 'antd'
 import { SearchOutlined } from '@ant-design/icons'
 import BatchDeleteButton from '../../../components/common/BatchDeleteButton'
 import CreateButton from '../../../components/common/CreateButton'
 import OrderDetails from './OrderDetails'
 import CreateOrderForm from './CreateOrderForm'
 import { useOrderColumns } from './useOrderColumns'
-import type { Order, User, Cigar } from '../../../types'
-import { getAllOrders, getUsers, getCigars, updateDocument, deleteDocument, COLLECTIONS, getAllInventoryLogs } from '../../../services/firebase/firestore'
+import type { Order, User, Cigar, Transaction } from '../../../types'
+import { getAllOrders, getUsers, getCigars, updateDocument, deleteDocument, COLLECTIONS, getAllInventoryLogs, getAllTransactions } from '../../../services/firebase/firestore'
 import { useTranslation } from 'react-i18next'
 import { filterOrders, sortOrders, getStatusColor, getStatusText, getUserName, getUserPhone } from './helpers'
 
@@ -24,6 +24,7 @@ const AdminOrders: React.FC = () => {
   const [isEditingInView, setIsEditingInView] = useState(false)
   const [users, setUsers] = useState<User[]>([])
   const [cigars, setCigars] = useState<Cigar[]>([])
+  const [transactions, setTransactions] = useState<Transaction[]>([])
   const [creating, setCreating] = useState(false)
 
   const [keyword, setKeyword] = useState('')
@@ -56,14 +57,16 @@ const AdminOrders: React.FC = () => {
   const loadData = async () => {
     setLoading(true)
     try {
-      const [ordersData, usersData, cigarsData] = await Promise.all([
+      const [ordersData, usersData, cigarsData, transactionsData] = await Promise.all([
         getAllOrders(),
         getUsers(),
-        getCigars()
+        getCigars(),
+        getAllTransactions()
       ])
       setOrders(ordersData)
       setUsers(usersData)
       setCigars(cigarsData)
+      setTransactions(transactionsData)
     } catch (error) {
       message.error(t('messages.dataLoadFailed'))
     } finally {
@@ -183,6 +186,8 @@ const AdminOrders: React.FC = () => {
   const columns = useOrderColumns({
     users,
     cigars,
+    transactions,
+    orders,
     onViewOrder: (order) => {
       setViewing(order)
       setIsEditingInView(false)
@@ -261,15 +266,19 @@ const AdminOrders: React.FC = () => {
             value={dateRange}
             onChange={setDateRange}
           />
-          <Button onClick={() => { 
-            setKeyword('')
-            setStatusFilter(undefined)
-            setPaymentFilter(undefined)
-            setDateRange(null)
-            setSelectedRowKeys([])
-          }}>
+          <button 
+            type="button"
+            onClick={() => { 
+              setKeyword('')
+              setStatusFilter(undefined)
+              setPaymentFilter(undefined)
+              setDateRange(null)
+              setSelectedRowKeys([])
+            }}
+            style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #d9d9d9', background: '#fff', cursor: 'pointer' }}
+          >
             {t('common.resetFilters')}
-          </Button>
+          </button>
         </Space>
       </div>
       ) : (
@@ -333,7 +342,7 @@ const AdminOrders: React.FC = () => {
         rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
         title={() => (
           <Space>
-            <Button disabled={selectedRowKeys.length === 0} onClick={async () => {
+            <button type="button" disabled={selectedRowKeys.length === 0} onClick={async () => {
               setLoading(true)
               try {
                 await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'confirmed' } as any)))
@@ -343,10 +352,10 @@ const AdminOrders: React.FC = () => {
               } finally {
                 setLoading(false)
               }
-            }}>
+            }} style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #d9d9d9', background: '#fff', cursor: selectedRowKeys.length === 0 ? 'not-allowed' : 'pointer', opacity: selectedRowKeys.length === 0 ? 0.6 : 1 }}>
                 {t('ordersAdmin.batchConfirm')}
-            </Button>
-              <Button disabled={selectedRowKeys.length === 0} onClick={async () => {
+            </button>
+              <button type="button" disabled={selectedRowKeys.length === 0} onClick={async () => {
                 setLoading(true)
                 try {
                   await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'delivered' } as any)))
@@ -356,10 +365,10 @@ const AdminOrders: React.FC = () => {
               } finally {
                 setLoading(false)
               }
-            }}>
+            }} style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #d9d9d9', background: '#fff', cursor: selectedRowKeys.length === 0 ? 'not-allowed' : 'pointer', opacity: selectedRowKeys.length === 0 ? 0.6 : 1 }}>
                 {t('ordersAdmin.batchDeliver')}
-            </Button>
-            <Button disabled={selectedRowKeys.length === 0} onClick={async () => {
+            </button>
+            <button type="button" disabled={selectedRowKeys.length === 0} onClick={async () => {
               setLoading(true)
               try {
                 await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'cancelled' } as any)))
@@ -369,9 +378,9 @@ const AdminOrders: React.FC = () => {
               } finally {
                 setLoading(false)
               }
-            }}>
+            }} style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #d9d9d9', background: '#fff', cursor: selectedRowKeys.length === 0 ? 'not-allowed' : 'pointer', opacity: selectedRowKeys.length === 0 ? 0.6 : 1 }}>
                 {t('ordersAdmin.batchCancel')}
-            </Button>
+            </button>
             <BatchDeleteButton
               selectedIds={selectedRowKeys}
               confirmTitle={t('ordersAdmin.batchDeleteConfirm')}
@@ -486,7 +495,34 @@ const AdminOrders: React.FC = () => {
         onCancel={() => setCreating(false)}
         onOk={() => {/* Form submission handled by CreateOrderForm */}}
         confirmLoading={loading}
-        width={720}
+        destroyOnClose
+        centered
+        width={960}
+        styles={{
+          body: {
+            background: 'rgba(255,255, 255)',
+            maxHeight: '80vh',
+            overflow: 'auto',
+            padding: 16,
+          },
+          mask: { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
+          content: {
+            background: 'rgba(255,255, 255)',
+            border: '1px solid rgba(255, 215, 0, 0.2)'
+          }
+        }}
+        className="create-order-modal"
+        footer={[
+          <button key="cancel" type="button" onClick={() => setCreating(false)} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #d9d9d9', background: '#fff', cursor: 'pointer' }}>
+            {t('common.cancel')}
+          </button>,
+          <button key="submit" type="button" className="cigar-btn-gradient" onClick={() => {
+            const formEl = document.getElementById('createOrderForm') as HTMLFormElement | null
+            if (formEl) formEl.requestSubmit()
+          }} style={{ padding: '6px 14px', borderRadius: 8, cursor: 'pointer' }}>
+            {t('common.create')}
+          </button>
+        ]}
       >
         <CreateOrderForm
           users={users}

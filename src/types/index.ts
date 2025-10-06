@@ -139,6 +139,7 @@ export interface Transaction {
   currency?: 'RM' | 'USD' | 'CNY';
   description: string;
   relatedId?: string; // order ID or event ID
+  relatedOrders?: Array<{ orderId: string; amount: number }>; // multiple related orders and allocated amount
   userId?: string;
   createdAt: Date;
 }

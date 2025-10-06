@@ -36,6 +36,8 @@
   --cigar-shadow-primary: 0 8px 32px rgba(0, 0, 0, 0.3);
   --cigar-shadow-gold: 0 4px 20px rgba(255, 215, 0, 0.15);
   --cigar-shadow-card: 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
+  /* 侧边栏宽度变量（由脚本更新） */
+  --sider-width: 240px;
   
   /* 动画时长 */
   --cigar-transition-fast: 0.2s ease-in-out;
@@ -70,6 +72,11 @@ a:hover {
 .ant-layout {
   background: var(--cigar-black-primary);
   color: var(--cigar-text-primary);
+}
+
+/* 让 Modal 视觉居中随侧边栏变化进行修正 */
+.ant-modal-wrap {
+  padding-left: var(--sider-width);
 }
 
 /* 自定义滚动条样式 */
@@ -116,6 +123,24 @@ a:hover {
   box-shadow: var(--cigar-shadow-gold);
   transition: all var(--cigar-transition-normal);
 }
+
+/* 统一的无边框金色渐变按钮样式（用于创建/保存/确认等提交类按钮） */
+.cigar-btn-gradient {
+  background: linear-gradient(to right,#FDE08D,#C48D3A) !important;
+  color: #111 !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 14px rgba(196,141,58,0.35) !important;
+}
+.cigar-btn-gradient:hover,
+.cigar-btn-gradient:focus {
+  filter: brightness(1.05);
+  box-shadow: 0 6px 18px rgba(196,141,58,0.45) !important;
+}
+
+/* 全局相邻按钮间距统一为 8px */
+.ant-btn + .ant-btn { margin-left: 8px; }
+.ant-modal-footer > * + * { margin-left: 8px; }
+button + button { margin-left: 8px; }
 
 .cigar-button-primary:hover {
   transform: translateY(-1px);

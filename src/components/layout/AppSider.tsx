@@ -38,6 +38,10 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
   const handleCollapseChange = (collapsed: boolean) => {
     setCollapsed(collapsed)
     onCollapseChange?.(collapsed)
+    try {
+      const width = collapsed ? '64px' : '240px'
+      document.documentElement.style.setProperty('--sider-width', width)
+    } catch {}
   }
 
   // 前端菜单项
@@ -118,7 +122,7 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
       collapsedWidth={64}
       style={{
         background: 'linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%)',
-        borderRight: '2px solid #ffd700',
+        borderRight: '1px solid #ffd700',
         boxShadow: '2px 0 8px rgba(0, 0, 0, 0.3)',
         position: 'fixed',
         top: 0,
@@ -151,7 +155,7 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
             <FireOutlined style={{ color: '#ffd700', fontSize: '18px' }} />
             <Text style={{ 
               fontWeight: 'bold', 
-              background: 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)',
+              background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
@@ -204,10 +208,20 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
           borderRadius: '8px',
           textAlign: 'center'
         }}>
-          <CrownOutlined style={{ color: '#ffd700', fontSize: '16px', marginBottom: '4px' }} />
+          <CrownOutlined style={{ 
+            fontSize: '16px', 
+            marginBottom: '4px',
+            background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text'
+          }} />
           <div>
             <Text style={{ 
-              color: '#ffd700', 
+              background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text', 
               fontSize: '12px',
               fontWeight: 600
             }}>
