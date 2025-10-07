@@ -36,6 +36,8 @@ const AdminInventory: React.FC = () => {
   const [inModalOpen, setInModalOpen] = useState(false)
   const [inStatsOpen, setInStatsOpen] = useState(false)
   const [outStatsOpen, setOutStatsOpen] = useState(false)
+  const [outModalOpen, setOutModalOpen] = useState(false)
+  const [outStatsExpandedKeys, setOutStatsExpandedKeys] = useState<React.Key[]>([])
   const [inStatsExpandedKeys, setInStatsExpandedKeys] = useState<React.Key[]>([])
   const [inSearchKeyword, setInSearchKeyword] = useState('')
   const [inBrandFilter, setInBrandFilter] = useState<string | undefined>()
@@ -484,22 +486,42 @@ const AdminInventory: React.FC = () => {
 
   // 出库统计
   const outStats = useMemo(() => {
-    const brandMap = new Map<string, { quantity: number; records: number }>()
-    
+    const brandMap = new Map<string, {
+      quantity: number;
+      records: number;
+      products: Map<string, { cigar: any; quantity: number; records: number }>
+    }>()
+
     outLogs.forEach(log => {
       const cigar = items.find(c => c.id === log.cigarId)
       const brand = cigar?.brand || 'Unknown'
       const quantity = Number(log.quantity || 0)
-      
-      const existing = brandMap.get(brand) || { quantity: 0, records: 0 }
-      brandMap.set(brand, {
-        quantity: existing.quantity + quantity,
-        records: existing.records + 1
-      })
+
+      if (!brandMap.has(brand)) {
+        brandMap.set(brand, { quantity: 0, records: 0, products: new Map() })
+      }
+      const brandData = brandMap.get(brand)!
+      brandData.quantity += quantity
+      brandData.records += 1
+
+      if (cigar) {
+        const productKey = log.cigarId
+        if (!brandData.products.has(productKey)) {
+          brandData.products.set(productKey, { cigar, quantity: 0, records: 0 })
+        }
+        const productData = brandData.products.get(productKey)!
+        productData.quantity += quantity
+        productData.records += 1
+      }
     })
-    
+
     return Array.from(brandMap.entries())
-      .map(([brand, data]) => ({ brand, ...data }))
+      .map(([brand, data]) => ({
+        brand,
+        quantity: data.quantity,
+        records: data.records,
+        products: Array.from(data.products.values()).sort((a, b) => b.quantity - a.quantity)
+      }))
       .sort((a, b) => b.quantity - a.quantity)
   }, [outLogs, items])
   
@@ -1333,7 +1355,7 @@ const AdminInventory: React.FC = () => {
             </div>
           )}
           {activeTab === 'in' && (
-            <Card>
+            <div>
               {/* 搜索和筛选 */}
               <div style={{ marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                 <Search
@@ -1370,8 +1392,15 @@ const AdminInventory: React.FC = () => {
                 >
                   {t('inventory.inStats')}
                 </button>
-                <Button type="primary" onClick={() => setInModalOpen(true)}>{t('inventory.inStock')}</Button>
+                <button
+                  onClick={() => setInModalOpen(true)}
+                  className="cigar-btn-gradient"
+                  style={{ padding: '6px 14px', borderRadius: 8 }}
+                >
+                  {t('inventory.inStock')}
+                </button>
               </div>
+              <Card>
               <Modal
                 title={t('inventory.inStockRecord')}
                 open={inModalOpen}
@@ -1479,7 +1508,7 @@ const AdminInventory: React.FC = () => {
               </Form>
               </Modal>
               <Table
-                style={{ marginTop: 16 }}
+                style={{ marginTop: 1 }}
                 title={() => t('inventory.inStockRecord')}
                 columns={logColumns}
                 dataSource={filteredInLogs}
@@ -1497,6 +1526,7 @@ const AdminInventory: React.FC = () => {
         }}
               />
             </Card>
+            </div>
           )}
           {activeTab === 'out' && (
             <div>
@@ -1536,8 +1566,25 @@ const AdminInventory: React.FC = () => {
                 >
                   {t('inventory.outStats')}
                 </button>
+                <button
+                  onClick={() => setOutModalOpen(true)}
+                  className="cigar-btn-gradient"
+                  style={{ padding: '6px 14px', borderRadius: 8 }}
+                >
+                  {t('inventory.createOutStock')}
+                </button>
               </div>
-              <Card style={{ marginBottom: 16 }}>
+
+              {/* 出库创建弹窗 */}
+              <Modal
+                title={t('inventory.createOutStock')}
+                open={outModalOpen}
+                onCancel={() => setOutModalOpen(false)}
+                footer={null}
+                width={680}
+                destroyOnHidden
+                centered
+              >
                 <Form form={outForm} layout="vertical" onFinish={async (values: { referenceNo?: string; reason?: string; items: { cigarId: string; quantity: number }[] }) => {
                   const lines = (values.items || []).filter(it => it?.cigarId && it?.quantity > 0)
                   if (lines.length === 0) { message.warning(t('inventory.pleaseAddAtLeastOneOutStockDetail')); return }
@@ -1559,6 +1606,7 @@ const AdminInventory: React.FC = () => {
                     }
                     message.success(t('inventory.outStockSuccess'))
                     outForm.resetFields()
+                    setOutModalOpen(false)
                     setItems(await getCigars())
                     setInventoryLogs(await getAllInventoryLogs())
                   } finally {
@@ -1620,13 +1668,16 @@ const AdminInventory: React.FC = () => {
                     <Input placeholder={t('inventory.forExample') + t('inventory.salesOutStock')} />
                   </Form.Item>
                   <Form.Item>
-                    <button type="submit" disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease', opacity: loading ? 0.6 : 1 }}>{t('inventory.confirmOutStock')}</button>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                      <button onClick={() => setOutModalOpen(false)} style={{ padding: '8px 16px', borderRadius: 8 }}>{t('common.cancel')}</button>
+                      <button type="submit" disabled={loading} className="cigar-btn-gradient" style={{ padding: '8px 16px', borderRadius: 8, opacity: loading ? 0.6 : 1 }}>{t('inventory.confirmOutStock')}</button>
+                    </div>
                   </Form.Item>
                 </Form>
-              </Card>
+              </Modal>
             <Card>
-              <Table
-        title={() => t('inventory.outStockRecord')}
+              <Table 
+              title={() => t('inventory.outStockRecord')}
                 columns={unifiedOutColumns}
                 dataSource={unifiedOutRows}
                 rowKey="id"
@@ -2319,6 +2370,36 @@ const AdminInventory: React.FC = () => {
           pagination={false}
           size="small"
           expandable={{
+            columnWidth: 60,
+            columnTitle: (
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <button
+                onClick={() => {
+                  if (inStatsExpandedKeys.length > 0) {
+                    setInStatsExpandedKeys([])
+                  } else {
+                    setInStatsExpandedKeys(inStats.map(s => s.brand))
+                  }
+                }}
+                style={{
+                  padding: '2px 8px',
+                  borderRadius: 4,
+                  border: '1px solid #d9d9d9',
+                  background: '#fff',
+                  cursor: 'pointer',
+                  fontSize: 16,
+                  fontWeight: 600,
+                  color: '#666',
+                  lineHeight: 1,
+                  minWidth: 28,
+                  height: 28
+                }}
+                title={inStatsExpandedKeys.length > 0 ? t('inventory.collapseAll') : t('inventory.expandAll')}
+              >
+                {inStatsExpandedKeys.length > 0 ? '-' : '+'}
+              </button>
+              </div>
+            ),
             expandedRowKeys: inStatsExpandedKeys,
             onExpandedRowsChange: (keys) => setInStatsExpandedKeys([...keys]),
             expandedRowRender: (record: any) => (
@@ -2328,7 +2409,7 @@ const AdminInventory: React.FC = () => {
                 pagination={false}
                 size="small"
                 showHeader={true}
-                style={{ marginLeft: 40 }}
+                style={{ marginLeft: 20 }}
                 columns={[
                   {
                     title: t('inventory.productName'),
@@ -2338,7 +2419,7 @@ const AdminInventory: React.FC = () => {
                       <div style={{ paddingLeft: 8 }}>
                         <div style={{ fontWeight: 500 }}>{cigar.name}</div>
                         <div style={{ fontSize: 12, color: '#666' }}>{cigar.specification || '-'}</div>
-                      </div>
+    </div>
                     )
                   },
                   {
@@ -2373,41 +2454,8 @@ const AdminInventory: React.FC = () => {
               />
             ),
             rowExpandable: (record: any) => record.products && record.products.length > 0,
-          }}
-          columns={[
-            {
-              title: (
-                <button
-                  onClick={() => {
-                    if (inStatsExpandedKeys.length > 0) {
-                      setInStatsExpandedKeys([])
-                    } else {
-                      setInStatsExpandedKeys(inStats.map(s => s.brand))
-                    }
-                  }}
-                  style={{
-                    padding: '2px 8px',
-                    borderRadius: 4,
-                    border: '1px solid #d9d9d9',
-                    background: '#fff',
-                    cursor: 'pointer',
-                    fontSize: 16,
-                    fontWeight: 600,
-                    color: '#666',
-                    lineHeight: 1,
-                    minWidth: 28,
-                    height: 28
-                  }}
-                  title={inStatsExpandedKeys.length > 0 ? t('inventory.collapseAll') : t('inventory.expandAll')}
-                >
-                  {inStatsExpandedKeys.length > 0 ? '−' : '+'}
-                </button>
-              ),
-              key: 'expand',
-              width: 60,
-              align: 'center' as const,
-              render: () => null
-            },
+        }}
+        columns={[
             {
               title: t('inventory.brand'),
               dataIndex: 'brand',
@@ -2502,19 +2550,97 @@ const AdminInventory: React.FC = () => {
           </div>
         </div>
 
-        {/* 品牌出库统计表格 */}
+        {/* 品牌出库统计表格（可展开产品明细） */}
         <Table
           dataSource={outStats}
           rowKey="brand"
           pagination={false}
           size="small"
+          expandable={{
+            columnWidth: 60,
+            columnTitle: (
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <button
+                  onClick={() => {
+                    if (outStatsExpandedKeys.length > 0) {
+                      setOutStatsExpandedKeys([])
+                    } else {
+                      setOutStatsExpandedKeys(outStats.map(s => s.brand))
+                    }
+                  }}
+                  style={{
+                    padding: '2px 8px',
+                    borderRadius: 4,
+                    border: '1px solid #d9d9d9',
+                    background: '#fff',
+                    cursor: 'pointer',
+                    fontSize: 16,
+                    fontWeight: 600,
+                    color: '#666',
+                    lineHeight: 1,
+                    minWidth: 28,
+                    height: 28
+                  }}
+                  title={outStatsExpandedKeys.length > 0 ? t('inventory.collapseAll') : t('inventory.expandAll')}
+                >
+                  {outStatsExpandedKeys.length > 0 ? '-' : '+'}
+                </button>
+              </div>
+            ),
+            expandedRowKeys: outStatsExpandedKeys,
+            onExpandedRowsChange: (keys) => setOutStatsExpandedKeys([...keys]),
+            expandedRowRender: (record: any) => (
+              <Table
+                dataSource={record.products}
+                rowKey={(p: any) => p.cigar.id}
+                pagination={false}
+                size="small"
+                showHeader={true}
+                style={{ marginLeft: 20 }}
+                columns={[
+                  {
+                    title: t('inventory.productName'),
+                    dataIndex: 'cigar',
+                    key: 'name',
+                    render: (cigar: any) => (
+                      <div style={{ paddingLeft: 8 }}>
+                        <div style={{ fontWeight: 500 }}>{cigar.name}</div>
+                        <div style={{ fontSize: 12, color: '#666' }}>{cigar.specification || '-'}</div>
+                      </div>
+                    )
+                  },
+                  {
+                    title: t('inventory.outQuantity'),
+                    dataIndex: 'quantity',
+                    key: 'quantity',
+                    width: 150,
+                    align: 'right' as const,
+                    render: (quantity: number) => (
+                      <span style={{ color: '#f5222d' }}>{quantity} {t('inventory.sticks')}</span>
+                    )
+                  },
+                  {
+                    title: t('inventory.recordCount'),
+                    dataIndex: 'records',
+                    key: 'records',
+                    width: 120,
+                    align: 'center' as const,
+                    render: (records: number) => <span>{records}</span>
+                  }
+                ]}
+              />
+            ),
+            rowExpandable: (record: any) => record.products && record.products.length > 0,
+          }}
           columns={[
             {
               title: t('inventory.brand'),
               dataIndex: 'brand',
               key: 'brand',
-              render: (brand: string) => (
-                <span style={{ fontWeight: 600 }}>{brand}</span>
+              render: (brand: string, record: any) => (
+                <span style={{ fontWeight: 600 }}>
+                  {brand} ({record.products?.length || 0} {t('inventory.products')})
+                </span>
               )
             },
             {

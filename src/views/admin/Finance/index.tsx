@@ -1,7 +1,7 @@
 // 财务管理页面
 import React, { useEffect, useState, useMemo } from 'react'
 import { Table, Card, Row, Col, Statistic, Typography, DatePicker, Select, Button, Space, message, Modal, Form, InputNumber, Input, Spin } from 'antd'
-import { DollarOutlined, ShoppingOutlined, CalendarOutlined, ArrowUpOutlined, ArrowDownOutlined, PlusOutlined, EyeOutlined, BarChartOutlined, PieChartOutlined, DeleteOutlined } from '@ant-design/icons'
+import { DollarOutlined, ShoppingOutlined, CalendarOutlined, ArrowUpOutlined, ArrowDownOutlined, PlusOutlined, EyeOutlined, BarChartOutlined, PieChartOutlined, DeleteOutlined, CheckOutlined } from '@ant-design/icons'
 import type { Transaction, User } from '../../../types'
 import { getAllTransactions, getAllOrders, getAllInventoryLogs, createTransaction, COLLECTIONS, getAllUsers, updateDocument, deleteDocument, getCigars } from '../../../services/firebase/firestore'
 import dayjs from 'dayjs'
@@ -30,7 +30,6 @@ const AdminFinance: React.FC = () => {
     description: string
     income: number
     expense: number
-    relatedId?: string
   }>>([])
 
   const parseLooseDate = (raw: string): Date | null => {
@@ -72,15 +71,14 @@ const AdminFinance: React.FC = () => {
       .map(l => l.trim())
       .filter(l => l.length > 0)
     if (lines.length === 0) return
-    const appended: Array<{ date: Date; description: string; income: number; expense: number; relatedId?: string }> = []
+    const appended: Array<{ date: Date; description: string; income: number; expense: number }> = []
     for (const line of lines) {
       const parts = line.split(/[\t,]/).map(s => s.trim())
-      const [dateStr, desc, incomeStr, expenseStr, relatedIdStr] = [
+      const [dateStr, desc, incomeStr, expenseStr] = [
         parts[0],
         parts[1] || '',
         parts[2] || '0',
-        parts[3] || '0',
-        parts[4] || ''
+        parts[3] || '0'
       ]
       const d = parseLooseDate(dateStr)
       if (!d) continue
@@ -89,7 +87,6 @@ const AdminFinance: React.FC = () => {
         description: desc,
         income: Number(incomeStr) || 0,
         expense: Number(expenseStr) || 0,
-        relatedId: relatedIdStr || undefined,
       })
     }
     if (appended.length === 0) {
@@ -178,6 +175,19 @@ const AdminFinance: React.FC = () => {
     } else {
       return { matched: matchedAmount, total: orderTotal, status: 'none' }
     }
+  }
+
+  // 检查交易是否已全额配对
+  const isTransactionFullyMatched = (transaction: Transaction) => {
+    const relatedOrders = (transaction as any)?.relatedOrders || []
+    if (relatedOrders.length === 0) return false
+    
+    const transactionAmount = Math.abs(Number(transaction.amount || 0))
+    const totalMatchedAmount = relatedOrders.reduce((sum: number, ro: any) => {
+      return sum + Number(ro.amount || 0)
+    }, 0)
+    
+    return totalMatchedAmount >= transactionAmount
   }
 
   // 检查订单是否已全额匹配
@@ -280,10 +290,13 @@ const AdminFinance: React.FC = () => {
       title: t('financeAdmin.transactionId'),
       dataIndex: 'id',
       key: 'id',
-      width: 150,
-      render: (id: string) => (
+      width: 180,
+      render: (id: string, record: Transaction) => (
         <span style={{ fontFamily: 'monospace', fontSize: '12px', wordBreak: 'break-all', whiteSpace: 'normal' }}>
           {id}
+          {isTransactionFullyMatched(record) && (
+            <CheckOutlined style={{ marginLeft: 6, color: '#52c41a', fontSize: '14px' }} />
+          )}
         </span>
       ),
     },
@@ -329,13 +342,7 @@ const AdminFinance: React.FC = () => {
       },
       sorter: (a: any, b: any) => (balanceMap.get(a.id) || 0) - (balanceMap.get(b.id) || 0),
     },
-    {
-      title: t('financeAdmin.relatedOrder'),
-      dataIndex: 'relatedId',
-      key: 'relatedId',
-      render: (relatedId: string) => relatedId || '-',
-    },
-    // 移除用户ID列
+    // 移除用户ID列和相关订单列
     
     
     {
@@ -728,13 +735,12 @@ const AdminFinance: React.FC = () => {
           </Button>
           <Button 
             onClick={() => {
-              const header = ['id','income','expense','description','relatedId','transactionDate']
+              const header = ['id','income','expense','description','transactionDate']
               const rows = filteredTransactions.map(t => [
                 t.id,
                 t.amount > 0 ? t.amount : 0,
                 t.amount < 0 ? Math.abs(t.amount) : 0,
                 t.description,
-                t.relatedId || '',
                 dayjs(t.createdAt).format('YYYY-MM-DD HH:mm')
               ])
               const csv = [header.join(','), ...rows.map(r => r.map(x => `"${String(x ?? '').replace(/"/g,'""')}"`).join(','))].join('\n')
@@ -806,8 +812,7 @@ const AdminFinance: React.FC = () => {
           body: {
             background: 'rgba(255,255, 255)',
             maxHeight: '80vh',
-            overflow: 'auto',
-            padding: 16,
+            overflow: 'auto'
           },
           mask: { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
           content: {
@@ -819,7 +824,9 @@ const AdminFinance: React.FC = () => {
         {viewing && (
           <Form
             form={editForm}
-            layout="vertical"
+            layout="horizontal"
+            labelCol={{ span: 8 }}
+            wrapperCol={{ span: 16 }}
             onFinish={async (values: any) => {
               setLoading(true)
               try {
@@ -855,7 +862,7 @@ const AdminFinance: React.FC = () => {
             }}
           >
             <div style={{ display: 'flex', gap: 16 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ width: 360, minWidth: 320 }}>
                 <Form.Item label={t('financeAdmin.transactionDate')} name="transactionDate" rules={[{ required: true, message: t('financeAdmin.selectTransactionDate') }]}> 
                   <DatePicker style={{ width: '100%' }} disabled={!isEditing} />
                 </Form.Item>
@@ -866,20 +873,10 @@ const AdminFinance: React.FC = () => {
                   <InputNumber style={{ width: '100%' }} min={0} disabled={!isEditing} />
                 </Form.Item>
                 <Form.Item label={t('financeAdmin.description')} name="description" rules={[{ required: true, message: t('financeAdmin.enterDescription') }]}> 
-                  <Input.TextArea rows={4} disabled={!isEditing} />
+                  <Input.TextArea rows={3} disabled={!isEditing} />
                 </Form.Item>
-                {/* 添加余额显示 */}
-                <div style={{ marginTop: 16, padding: 12, background: '#f8f9fa', borderRadius: 6, border: '1px solid #e9ecef' }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: '#495057' }}>
-                    {t('financeAdmin.balanceCalculation')}
-                  </div>
-                  <div style={{ fontSize: 12, color: '#6c757d' }}>
-                    <div>{t('financeAdmin.currentBalance')}: RM{balanceMap.get(viewing.id)?.toFixed(2) || '0.00'}</div>
-                    <div>{t('financeAdmin.transactionImpact')}: RM{(watchedIncomeAmount - watchedExpenseAmount).toFixed(2)}</div>
-                  </div>
-                </div>
               </div>
-              <div style={{ width: 600 }}>
+              <div style={{ flex: 1, minWidth: 380 }}>
                 <Form.List name="relatedOrders">
                   {(fields, { add, remove }) => (
                     <div style={{ border: '1px solid #eee', borderRadius: 8, padding: 12, background: '#fafafa' }}>
@@ -892,15 +889,19 @@ const AdminFinance: React.FC = () => {
                       {fields.length === 0 && (
                         <div style={{ color: '#999' }}>{t('common.noData')}</div>
                       )}
-                      {fields.map((field) => (
+                      {fields.map((field, index) => (
                         <div key={field.key} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-                          <Form.Item {...field} name={[field.name, 'orderId']} style={{ marginBottom: 0, flex: 1 }}>
+                          <Form.Item name={[field.name, 'orderId']} style={{ marginBottom: 0, flex: 1 }}>
                             <Select
                               allowClear
                               showSearch
                               placeholder={t('financeAdmin.relatedOrderId')}
-                              optionFilterProp="label"
                               disabled={!isEditing}
+                              filterOption={(input, option) => {
+                                const searchText = (input || '').toLowerCase()
+                                const searchableText = (option as any)?.searchText || ''
+                                return searchableText.toLowerCase().includes(searchText)
+                              }}
                               options={(orders || [])
                                 .filter(o => !isOrderFullyMatched(o.id))
                                 .map(o => {
@@ -908,6 +909,7 @@ const AdminFinance: React.FC = () => {
                                 const name = u?.displayName || u?.email || o.userId
                                 const addr = (o as any)?.shipping?.address || '-'
                                 const total = Number((o as any)?.total || 0)
+                                const searchText = `${o.id} ${name} ${addr} ${total.toFixed(2)}`
                                 return { 
                                   label: (
           <div>
@@ -915,7 +917,8 @@ const AdminFinance: React.FC = () => {
                                       <div style={{ fontSize: '12px', color: '#666' }}>{addr}</div>
           </div>
                                   ), 
-                                  value: o.id 
+                                  value: o.id,
+                                  searchText
                                 }
                               })}
                               onChange={(val) => {
@@ -927,7 +930,7 @@ const AdminFinance: React.FC = () => {
                               }}
                             />
                           </Form.Item>
-                          <Form.Item {...field} name={[field.name, 'amount']} style={{ marginBottom: 0, width: 120 }}>
+                          <Form.Item name={[field.name, 'amount']} style={{ marginBottom: 0, width: 120 }}>
                             <InputNumber min={0} step={0.01} style={{ width: '100%' }} disabled={!isEditing} />
                           </Form.Item>
                           {isEditing && (
@@ -939,16 +942,42 @@ const AdminFinance: React.FC = () => {
                         {t('financeAdmin.relatedOrdersHint')}
                       </div>
                       {/* 添加统计信息 */}
-                      <div style={{ marginTop: 12, padding: 8, background: '#f0f0f0', borderRadius: 4 }}>
-                        <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>
-                          {t('financeAdmin.relatedOrdersStats')}:
-                        </div>
-                        <div style={{ fontSize: 11, color: '#333' }}>
-                          <div>{t('financeAdmin.totalMatchedAmount')}: RM{totalMatchedAmount.toFixed(2)}</div>
-                          <div>{t('financeAdmin.transactionAmount')}: RM{transactionAmount.toFixed(2)}</div>
-                          <div>{t('financeAdmin.remainingAmount')}: RM{remainingAmount.toFixed(2)}</div>
-                        </div>
-                      </div>
+                      {(() => {
+                        const exceeded = totalMatchedAmount > transactionAmount
+                        const boxStyle: React.CSSProperties = exceeded
+                          ? {
+                              marginTop: 12,
+                              padding: 8,
+                              background: '#fff1f0',
+                              borderRadius: 4,
+                              border: '1px solid #ffa39e'
+                            }
+                          : {
+                              marginTop: 12,
+                              padding: 8,
+                              background: '#f0f0f0',
+                              borderRadius: 4
+                            }
+                        const titleStyle: React.CSSProperties = exceeded
+                          ? { fontSize: 12, color: '#cf1322', marginBottom: 4, fontWeight: 600 }
+                          : { fontSize: 12, color: '#666', marginBottom: 4 }
+                        const textStyle: React.CSSProperties = exceeded
+                          ? { fontSize: 11, color: '#cf1322', fontWeight: 600 }
+                          : { fontSize: 11, color: '#333' }
+                        return (
+                          <div style={boxStyle}>
+                            <div style={titleStyle}>
+                              {t('financeAdmin.relatedOrdersStats')}
+                              {exceeded ? ` · ${t('financeAdmin.relatedOrdersExceed')}` : ':'}
+                            </div>
+                            <div style={textStyle}>
+                              <div>{t('financeAdmin.totalMatchedAmount')}: RM{totalMatchedAmount.toFixed(2)}</div>
+                              <div>{t('financeAdmin.transactionAmount')}: RM{transactionAmount.toFixed(2)}</div>
+                              <div>{t('financeAdmin.remainingAmount')}: RM{remainingAmount.toFixed(2)}</div>
+                            </div>
+                          </div>
+                        )
+                      })()}
                     </div>
                   )}
                 </Form.List>
@@ -1015,12 +1044,17 @@ const AdminFinance: React.FC = () => {
               allowClear
               showSearch
               placeholder={t('financeAdmin.relatedOrderId')}
-              optionFilterProp="label"
+              filterOption={(input, option) => {
+                const searchText = (input || '').toLowerCase()
+                const searchableText = (option as any)?.searchText || ''
+                return searchableText.toLowerCase().includes(searchText)
+              }}
               options={(orders || []).map(o => {
                 const u = (users || []).find((x: any) => x.id === o.userId)
                 const name = u?.displayName || u?.email || o.userId
                 const addr = (o as any)?.shipping?.address || '-'
                 const total = Number((o as any)?.total || 0)
+                const searchText = `${o.id} ${name} ${addr} ${total.toFixed(2)}`
                 return { 
                   label: (
                     <div>
@@ -1028,7 +1062,8 @@ const AdminFinance: React.FC = () => {
                       <div style={{ fontSize: '12px', color: '#666' }}>{addr}</div>
                     </div>
                   ), 
-                  value: o.id 
+                  value: o.id,
+                  searchText
                 }
               })}
             />
@@ -1052,22 +1087,23 @@ const AdminFinance: React.FC = () => {
           let success = 0
           let failed = 0
           for (const r of importRows) {
-            const income = Number(r.income || 0)
-            const expense = Number(r.expense || 0)
-            if (!isFinite(income) || !isFinite(expense) || (income <= 0 && expense <= 0)) {
+            const income = Number(r.income ?? 0)
+            const expense = Number(r.expense ?? 0)
+            if (!isFinite(income) || !isFinite(expense) || (income <= 0 && expense <= 0) || (income > 0 && expense > 0)) {
               failed++
               continue
             }
-            const amount = income - expense
+            const isIncome = income > 0
+            const amount = isIncome ? income : expense
+            const parsedDate = dayjs(r.date).isValid() ? dayjs(r.date).toDate() : new Date()
             const payload = {
-              type: undefined as any,
-              amount,
-              currency: undefined,
-              description: r.description,
-              relatedId: r.relatedId || undefined,
-              createdAt: r.date,
-            }
-            const res = await createTransaction(payload as any)
+              type: isIncome ? 'income' : 'expense',
+              amount: Number(amount),
+              currency: 'MYR',
+              description: (r.description || '').trim(),
+              createdAt: parsedDate,
+            } as any
+            const res = await createTransaction(payload)
             if (res.success) success++; else failed++
           }
           setLoading(false)
@@ -1096,7 +1132,7 @@ const AdminFinance: React.FC = () => {
           {t('financeAdmin.pasteHere')}
     </div>
         <Table
-          dataSource={importRows.map((r, idx) => ({ key: idx, date: r.date, description: r.description, income: r.income, expense: r.expense, relatedId: r.relatedId }))}
+          dataSource={importRows.map((r, idx) => ({ key: idx, date: r.date, description: r.description, income: r.income, expense: r.expense }))}
           size="small"
           pagination={{ pageSize: 5 }}
           columns={[
@@ -1164,27 +1200,7 @@ const AdminFinance: React.FC = () => {
                 />
               )
             },
-            {
-              title: t('financeAdmin.relatedOrder'),
-              dataIndex: 'relatedId',
-              key: 'relatedId',
-              render: (v: string, record: any, index: number) => (
-                <Select
-                  allowClear
-                  showSearch
-                  value={v}
-                  optionFilterProp="label"
-                  options={(orders || []).map(o => ({ label: `${o.id}`, value: o.id }))}
-                  onChange={(val) => {
-                    const next = [...importRows]
-                    next[index] = { ...next[index], relatedId: val || undefined }
-                    setImportRows(next)
-                  }}
-                  style={{ width: '100%' }}
-                />
-              )
-            },
-            // 移除用户ID列
+            // 移除用户ID列和相关订单列
             {
               title: t('financeAdmin.actions'),
               key: 'actions',
