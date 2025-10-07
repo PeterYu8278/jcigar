@@ -34,6 +34,8 @@ const AdminInventory: React.FC = () => {
   const [imageList, setImageList] = useState<any[]>([])
   const [pagination, setPagination] = useState<{ current: number; pageSize: number }>({ current: 1, pageSize: 10 })
   const [inModalOpen, setInModalOpen] = useState(false)
+  const [inStatsOpen, setInStatsOpen] = useState(false)
+  const [outStatsOpen, setOutStatsOpen] = useState(false)
   const toDateSafe = (val: any): Date | null => {
     if (!val) return null
     let v: any = val
@@ -363,6 +365,51 @@ const AdminInventory: React.FC = () => {
 
   const inLogs = useMemo(() => inventoryLogs.filter(l => (l as any).type === 'in'), [inventoryLogs])
   const outLogs = useMemo(() => inventoryLogs.filter(l => (l as any).type === 'out'), [inventoryLogs])
+  
+  // 入库统计
+  const inStats = useMemo(() => {
+    const brandMap = new Map<string, { quantity: number; records: number; totalValue: number }>()
+    
+    inLogs.forEach(log => {
+      const cigar = items.find(c => c.id === log.cigarId)
+      const brand = cigar?.brand || 'Unknown'
+      const quantity = Number(log.quantity || 0)
+      const unitPrice = Number((log as any).unitPrice || 0)
+      const value = quantity * unitPrice
+      
+      const existing = brandMap.get(brand) || { quantity: 0, records: 0, totalValue: 0 }
+      brandMap.set(brand, {
+        quantity: existing.quantity + quantity,
+        records: existing.records + 1,
+        totalValue: existing.totalValue + value
+      })
+    })
+    
+    return Array.from(brandMap.entries())
+      .map(([brand, data]) => ({ brand, ...data }))
+      .sort((a, b) => b.quantity - a.quantity)
+  }, [inLogs, items])
+
+  // 出库统计
+  const outStats = useMemo(() => {
+    const brandMap = new Map<string, { quantity: number; records: number }>()
+    
+    outLogs.forEach(log => {
+      const cigar = items.find(c => c.id === log.cigarId)
+      const brand = cigar?.brand || 'Unknown'
+      const quantity = Number(log.quantity || 0)
+      
+      const existing = brandMap.get(brand) || { quantity: 0, records: 0 }
+      brandMap.set(brand, {
+        quantity: existing.quantity + quantity,
+        records: existing.records + 1
+      })
+    })
+    
+    return Array.from(brandMap.entries())
+      .map(([brand, data]) => ({ brand, ...data }))
+      .sort((a, b) => b.quantity - a.quantity)
+  }, [outLogs, items])
   
   // 按单号分组的入库记录
   const referenceGroups = useMemo(() => {
@@ -1179,7 +1226,22 @@ const AdminInventory: React.FC = () => {
           )}
           {activeTab === 'in' && (
             <Card>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                <button 
+                  onClick={() => setInStatsOpen(true)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: 8,
+                    border: '1px solid rgba(244, 175, 37, 0.5)',
+                    background: 'rgba(244, 175, 37, 0.1)',
+                    color: '#f4af25',
+                    cursor: 'pointer',
+                    fontSize: 14,
+                    fontWeight: 600
+                  }}
+                >
+                  {t('inventory.inStats')}
+                </button>
                 <Button type="primary" onClick={() => setInModalOpen(true)}>{t('inventory.inStock')}</Button>
               </div>
               <Modal
@@ -1310,6 +1372,23 @@ const AdminInventory: React.FC = () => {
           )}
           {activeTab === 'out' && (
             <div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+                <button 
+                  onClick={() => setOutStatsOpen(true)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: 8,
+                    border: '1px solid rgba(244, 175, 37, 0.5)',
+                    background: 'rgba(244, 175, 37, 0.1)',
+                    color: '#f4af25',
+                    cursor: 'pointer',
+                    fontSize: 14,
+                    fontWeight: 600
+                  }}
+                >
+                  {t('inventory.outStats')}
+                </button>
+              </div>
               <Card style={{ marginBottom: 16 }}>
                 <Form form={outForm} layout="vertical" onFinish={async (values: { referenceNo?: string; reason?: string; items: { cigarId: string; quantity: number }[] }) => {
                   const lines = (values.items || []).filter(it => it?.cigarId && it?.quantity > 0)
@@ -2028,6 +2107,199 @@ const AdminInventory: React.FC = () => {
         okButtonProps={{ danger: true }}
       >
         {t('inventory.deleteBrandContent', { name: deletingBrand?.name })}
+      </Modal>
+      {/* 入库统计弹窗 */}
+      <Modal
+        title={t('inventory.inStatsTitle')}
+        open={inStatsOpen}
+        onCancel={() => setInStatsOpen(false)}
+        footer={null}
+        width={800}
+        destroyOnHidden
+        centered
+        styles={{
+          body: {
+            background: 'rgba(255,255, 255)',
+            maxHeight: '70vh',
+            overflow: 'auto',
+            padding: 16,
+          },
+          mask: { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
+          content: {
+            background: 'rgba(255,255, 255)',
+            border: '1px solid rgba(255, 215, 0, 0.2)'
+          }
+        }}
+      >
+        {/* 入库总体统计 */}
+        <div style={{ 
+          marginBottom: 16, 
+          padding: 16, 
+          background: '#f8f9fa', 
+          borderRadius: 8,
+          border: '1px solid #e9ecef'
+        }}>
+          <div style={{ fontSize: 16, fontWeight: 600, color: '#495057', marginBottom: 8 }}>
+            {t('inventory.inSummary')}
+          </div>
+          <div style={{ display: 'flex', gap: 24 }}>
+            <div>
+              <div style={{ fontSize: 12, color: '#6c757d' }}>{t('inventory.totalRecords')}</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: '#52c41a' }}>
+                {inLogs.length}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: '#6c757d' }}>{t('inventory.totalInStock')}</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: '#52c41a' }}>
+                {inLogs.reduce((sum, log) => sum + Number(log.quantity || 0), 0)} {t('inventory.sticks')}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: '#6c757d' }}>{t('inventory.totalValue')}</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: '#52c41a' }}>
+                RM{inLogs.reduce((sum, log) => sum + (Number(log.quantity || 0) * Number((log as any).unitPrice || 0)), 0).toFixed(2)}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 品牌入库统计表格 */}
+        <Table
+          dataSource={inStats}
+          rowKey="brand"
+          pagination={false}
+          size="small"
+          columns={[
+            {
+              title: t('inventory.brand'),
+              dataIndex: 'brand',
+              key: 'brand',
+              render: (brand: string) => (
+                <span style={{ fontWeight: 600 }}>{brand}</span>
+              )
+            },
+            {
+              title: t('inventory.inQuantity'),
+              dataIndex: 'quantity',
+              key: 'quantity',
+              width: 150,
+              align: 'right' as const,
+              render: (quantity: number) => (
+                <span style={{ fontWeight: 600, color: '#52c41a' }}>{quantity} {t('inventory.sticks')}</span>
+              )
+            },
+            {
+              title: t('inventory.recordCount'),
+              dataIndex: 'records',
+              key: 'records',
+              width: 120,
+              align: 'center' as const,
+              render: (records: number) => (
+                <span>{records}</span>
+              )
+            },
+            {
+              title: t('inventory.totalValue'),
+              dataIndex: 'totalValue',
+              key: 'totalValue',
+              width: 150,
+              align: 'right' as const,
+              render: (value: number) => (
+                <span style={{ fontWeight: 600, color: '#1890ff' }}>RM{value.toFixed(2)}</span>
+              )
+            }
+          ]}
+        />
+      </Modal>
+
+      {/* 出库统计弹窗 */}
+      <Modal
+        title={t('inventory.outStatsTitle')}
+        open={outStatsOpen}
+        onCancel={() => setOutStatsOpen(false)}
+        footer={null}
+        width={800}
+        destroyOnHidden
+        centered
+        styles={{
+          body: {
+            background: 'rgba(255,255, 255)',
+            maxHeight: '70vh',
+            overflow: 'auto',
+            padding: 16,
+          },
+          mask: { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
+          content: {
+            background: 'rgba(255,255, 255)',
+            border: '1px solid rgba(255, 215, 0, 0.2)'
+          }
+        }}
+      >
+        {/* 出库总体统计 */}
+        <div style={{ 
+          marginBottom: 16, 
+          padding: 16, 
+          background: '#f8f9fa', 
+          borderRadius: 8,
+          border: '1px solid #e9ecef'
+        }}>
+          <div style={{ fontSize: 16, fontWeight: 600, color: '#495057', marginBottom: 8 }}>
+            {t('inventory.outSummary')}
+          </div>
+          <div style={{ display: 'flex', gap: 24 }}>
+            <div>
+              <div style={{ fontSize: 12, color: '#6c757d' }}>{t('inventory.totalRecords')}</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: '#f5222d' }}>
+                {outLogs.length}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: '#6c757d' }}>{t('inventory.totalOutStock')}</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: '#f5222d' }}>
+                {outLogs.reduce((sum, log) => sum + Number(log.quantity || 0), 0)} {t('inventory.sticks')}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 品牌出库统计表格 */}
+        <Table
+          dataSource={outStats}
+          rowKey="brand"
+          pagination={false}
+          size="small"
+          columns={[
+            {
+              title: t('inventory.brand'),
+              dataIndex: 'brand',
+              key: 'brand',
+              render: (brand: string) => (
+                <span style={{ fontWeight: 600 }}>{brand}</span>
+              )
+            },
+            {
+              title: t('inventory.outQuantity'),
+              dataIndex: 'quantity',
+              key: 'quantity',
+              width: 150,
+              align: 'right' as const,
+              render: (quantity: number) => (
+                <span style={{ fontWeight: 600, color: '#f5222d' }}>{quantity} {t('inventory.sticks')}</span>
+              )
+            },
+            {
+              title: t('inventory.recordCount'),
+              dataIndex: 'records',
+              key: 'records',
+              width: 120,
+              align: 'center' as const,
+              render: (records: number) => (
+                <span>{records}</span>
+              )
+            }
+          ]}
+        />
       </Modal>
     </div>
   )

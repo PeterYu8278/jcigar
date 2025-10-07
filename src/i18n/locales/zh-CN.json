@@ -624,7 +624,17 @@
     "sort": "排序",
     "filter": "筛选",
     "productTypes": "产品种类",
-    "addFirstBrand": "添加第一个品牌"
+    "addFirstBrand": "添加第一个品牌",
+    "inStats": "入库统计",
+    "outStats": "出库统计",
+    "inStatsTitle": "入库统计",
+    "outStatsTitle": "出库统计",
+    "inSummary": "入库汇总",
+    "outSummary": "出库汇总",
+    "totalValue": "总价值",
+    "inQuantity": "入库数量",
+    "outQuantity": "出库数量",
+    "recordCount": "记录数"
   },
   "financeAdmin": {
     "title": "财务管理",

@@ -640,7 +640,17 @@
     "sort": "Sort",
     "filter": "Filter",
     "productTypes": "Product Types",
-    "addFirstBrand": "Add First Brand"
+    "addFirstBrand": "Add First Brand",
+    "inStats": "Inbound Statistics",
+    "outStats": "Outbound Statistics",
+    "inStatsTitle": "Inbound Statistics",
+    "outStatsTitle": "Outbound Statistics",
+    "inSummary": "Inbound Summary",
+    "outSummary": "Outbound Summary",
+    "totalValue": "Total Value",
+    "inQuantity": "Inbound Quantity",
+    "outQuantity": "Outbound Quantity",
+    "recordCount": "Record Count"
   },
   "financeAdmin": {
     "title": "Financial Management",
