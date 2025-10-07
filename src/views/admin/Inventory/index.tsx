@@ -2377,35 +2377,39 @@ const AdminInventory: React.FC = () => {
           columns={[
             {
               title: (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <button
-                    onClick={() => {
-                      if (inStatsExpandedKeys.length > 0) {
-                        setInStatsExpandedKeys([])
-                      } else {
-                        setInStatsExpandedKeys(inStats.map(s => s.brand))
-                      }
-                    }}
-                    style={{
-                      padding: '2px 8px',
-                      borderRadius: 4,
-                      border: '1px solid #d9d9d9',
-                      background: '#fff',
-                      cursor: 'pointer',
-                      fontSize: 16,
-                      fontWeight: 600,
-                      color: '#666',
-                      lineHeight: 1,
-                      minWidth: 28,
-                      height: 28
-                    }}
-                    title={inStatsExpandedKeys.length > 0 ? t('inventory.collapseAll') : t('inventory.expandAll')}
-                  >
-                    {inStatsExpandedKeys.length > 0 ? '−' : '+'}
-                  </button>
-                  <span>{t('inventory.brand')}</span>
-                </div>
+                <button
+                  onClick={() => {
+                    if (inStatsExpandedKeys.length > 0) {
+                      setInStatsExpandedKeys([])
+                    } else {
+                      setInStatsExpandedKeys(inStats.map(s => s.brand))
+                    }
+                  }}
+                  style={{
+                    padding: '2px 8px',
+                    borderRadius: 4,
+                    border: '1px solid #d9d9d9',
+                    background: '#fff',
+                    cursor: 'pointer',
+                    fontSize: 16,
+                    fontWeight: 600,
+                    color: '#666',
+                    lineHeight: 1,
+                    minWidth: 28,
+                    height: 28
+                  }}
+                  title={inStatsExpandedKeys.length > 0 ? t('inventory.collapseAll') : t('inventory.expandAll')}
+                >
+                  {inStatsExpandedKeys.length > 0 ? '−' : '+'}
+                </button>
               ),
+              key: 'expand',
+              width: 60,
+              align: 'center' as const,
+              render: () => null
+            },
+            {
+              title: t('inventory.brand'),
               dataIndex: 'brand',
               key: 'brand',
               render: (brand: string, record: any) => (
