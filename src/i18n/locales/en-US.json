@@ -719,7 +719,9 @@
     "currentBalance": "Current Balance",
     "transactionImpact": "Transaction Impact",
     "fullyMatched": "Fully Matched",
-    "partialMatched": "Partial Matched"
+    "partialMatched": "Partial Matched",
+    "overview": "Overview",
+    "transactions": "Transactions"
   },
   "participants": {
     "loadingParticipants": "Loading participant information...",

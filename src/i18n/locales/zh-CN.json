@@ -696,7 +696,9 @@
     "currentBalance": "当前余额",
     "transactionImpact": "交易影响",
     "fullyMatched": "全额匹配",
-    "partialMatched": "部分匹配"
+    "partialMatched": "部分匹配",
+    "overview": "概况",
+    "transactions": "交易记录"
   },
   "participants": {
     "loadingParticipants": "加载参与者信息中...",

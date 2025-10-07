@@ -1,6 +1,6 @@
 // 财务管理页面
 import React, { useEffect, useState, useMemo } from 'react'
-import { Table, Card, Row, Col, Statistic, Typography, DatePicker, Select, Button, Space, message, Modal, Form, InputNumber, Input, Spin } from 'antd'
+import { Table, Card, Row, Col, Statistic, Typography, DatePicker, Select, Button, Space, message, Modal, Form, InputNumber, Input, Spin, Tabs } from 'antd'
 import { DollarOutlined, ShoppingOutlined, CalendarOutlined, ArrowUpOutlined, ArrowDownOutlined, PlusOutlined, EyeOutlined, BarChartOutlined, PieChartOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { Transaction, User } from '../../../types'
 import { getAllTransactions, getAllOrders, getAllInventoryLogs, createTransaction, COLLECTIONS, getAllUsers, updateDocument, deleteDocument } from '../../../services/firebase/firestore'
@@ -20,6 +20,7 @@ const AdminFinance: React.FC = () => {
   const [creating, setCreating] = useState(false)
   const [viewing, setViewing] = useState<Transaction | null>(null)
   const [isEditing, setIsEditing] = useState(false)
+  const [activeTab, setActiveTab] = useState('overview')
   const [editForm] = Form.useForm()
   const [importing, setImporting] = useState(false)
   const [importRows, setImportRows] = useState<Array<{
@@ -392,8 +393,10 @@ const AdminFinance: React.FC = () => {
         </Space>
       </div>
 
-      {/* 统计卡片 */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+      <Tabs activeKey={activeTab} onChange={setActiveTab}>
+        <Tabs.TabPane tab={t('financeAdmin.overview')} key="overview">
+          {/* 统计卡片 */}
+          <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col span={6}>
           <Card>
             <Statistic
@@ -429,7 +432,9 @@ const AdminFinance: React.FC = () => {
         </Col>
         {/* 移除基于类别的统计卡片 */}
       </Row>
+        </Tabs.TabPane>
 
+        <Tabs.TabPane tab={t('financeAdmin.transactions')} key="transactions">
       {/* 筛选器 */}
       <div style={{ marginBottom: 16, padding: '16px', background: '#fafafa', borderRadius: '6px' }}>
         <Space size="middle" wrap>
@@ -490,6 +495,8 @@ const AdminFinance: React.FC = () => {
           showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
         }}
       />
+        </Tabs.TabPane>
+      </Tabs>
 
       {/* 交易详情（可编辑） */}
       <Modal
