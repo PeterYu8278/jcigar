@@ -495,7 +495,7 @@ const AdminOrders: React.FC = () => {
         onCancel={() => setCreating(false)}
         onOk={() => {/* Form submission handled by CreateOrderForm */}}
         confirmLoading={loading}
-        destroyOnClose
+        destroyOnHidden
         centered
         width={960}
         styles={{

@@ -1406,7 +1406,7 @@ const AdminInventory: React.FC = () => {
                 open={inModalOpen}
                 onCancel={() => setInModalOpen(false)}
                 footer={null}
-                destroyOnClose
+                destroyOnHidden
                 width={720}
               >
               <Form form={inForm} layout="vertical" onFinish={async (values: { referenceNo?: string; reason?: string; items: { cigarId: string; quantity: number; unitPrice?: number }[] }) => {
