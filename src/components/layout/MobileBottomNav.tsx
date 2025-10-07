@@ -50,7 +50,7 @@ const MobileBottomNav: React.FC = () => {
     }
   ]
 
-  // 管理员导航项（选择5个最重要的功能）
+  // 管理员导航项（包含6个重要功能）
   const adminNavItems = [
     {
       key: '/admin',
@@ -75,6 +75,12 @@ const MobileBottomNav: React.FC = () => {
       icon: <ShoppingCartOutlined />,
       label: t('navigation.orders'),
       badge: 5
+    },
+    {
+      key: '/admin/inventory',
+      icon: <DatabaseOutlined />,
+      label: t('navigation.inventory'),
+      badge: null
     },
     {
       key: '/admin/finance',
