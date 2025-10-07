@@ -707,7 +707,16 @@
     "brandSalesChart": "品牌销量图表",
     "top5Brands": "销量前5品牌",
     "pieces": "支",
-    "noSalesData": "暂无销售数据"
+    "noSalesData": "暂无销售数据",
+    "productSalesDetails": "产品销售详情",
+    "brandSummary": "品牌摘要",
+    "totalProducts": "产品总数",
+    "totalQuantity": "总销量",
+    "totalSales": "总销售额",
+    "productName": "产品名称",
+    "salesQuantity": "销售数量",
+    "salesAmount": "销售金额",
+    "orderCount": "订单次数"
   },
   "participants": {
     "loadingParticipants": "加载参与者信息中...",

@@ -22,6 +22,7 @@ const AdminFinance: React.FC = () => {
   const [viewing, setViewing] = useState<Transaction | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
+  const [selectedBrand, setSelectedBrand] = useState<string | null>(null)
   const [editForm] = Form.useForm()
   const [importing, setImporting] = useState(false)
   const [importRows, setImportRows] = useState<Array<{
@@ -393,6 +394,35 @@ const AdminFinance: React.FC = () => {
     }))
   }, [orders, cigars])
 
+  // 计算选中品牌的产品详情
+  const brandProductDetails = useMemo(() => {
+    if (!selectedBrand) return []
+    
+    const productMap = new Map<string, { cigar: any; quantity: number; amount: number; orders: number }>()
+    
+    orders.forEach(order => {
+      const items = (order as any)?.items || []
+      items.forEach((item: any) => {
+        const cigar = cigars.find(c => c.id === item.cigarId)
+        if (cigar && cigar.brand === selectedBrand) {
+          const quantity = Number(item.quantity || 0)
+          const amount = Number(item.quantity || 0) * Number(item.price || 0)
+          
+          const existing = productMap.get(item.cigarId) || { cigar, quantity: 0, amount: 0, orders: 0 }
+          productMap.set(item.cigarId, {
+            cigar,
+            quantity: existing.quantity + quantity,
+            amount: existing.amount + amount,
+            orders: existing.orders + 1
+          })
+        }
+      })
+    })
+    
+    return Array.from(productMap.values())
+      .sort((a, b) => b.quantity - a.quantity)
+  }, [selectedBrand, orders, cigars])
+
   // 已移除类别统计
 
   return (
@@ -614,7 +644,13 @@ const AdminFinance: React.FC = () => {
             {brandSalesStats.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {brandSalesStats.map((stat, index) => (
-                  <div key={stat.brand}>
+                  <div 
+                    key={stat.brand}
+                    onClick={() => setSelectedBrand(stat.brand)}
+                    style={{ cursor: 'pointer', transition: 'transform 0.2s' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.02)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
+                  >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                       <span style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>
                         {index + 1}. {stat.brand}
@@ -1159,6 +1195,118 @@ const AdminFinance: React.FC = () => {
             },
           ]}
         />
+      </Modal>
+
+      {/* 品牌产品详情弹窗 */}
+      <Modal
+        title={`${selectedBrand} - ${t('financeAdmin.productSalesDetails')}`}
+        open={!!selectedBrand}
+        onCancel={() => setSelectedBrand(null)}
+        footer={null}
+        width={800}
+        destroyOnHidden
+        centered
+        styles={{
+          body: {
+            background: 'rgba(255,255, 255)',
+            maxHeight: '70vh',
+            overflow: 'auto',
+            padding: 16,
+          },
+          mask: { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
+          content: {
+            background: 'rgba(255,255, 255)',
+            border: '1px solid rgba(255, 215, 0, 0.2)'
+          }
+        }}
+      >
+        {selectedBrand && (
+          <>
+            {/* 品牌统计摘要 */}
+            <div style={{ 
+              marginBottom: 16, 
+              padding: 16, 
+              background: '#f8f9fa', 
+              borderRadius: 8,
+              border: '1px solid #e9ecef'
+            }}>
+              <div style={{ fontSize: 16, fontWeight: 600, color: '#495057', marginBottom: 8 }}>
+                {t('financeAdmin.brandSummary')}
+              </div>
+              <div style={{ display: 'flex', gap: 24 }}>
+                <div>
+                  <div style={{ fontSize: 12, color: '#6c757d' }}>{t('financeAdmin.totalProducts')}</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: '#1890ff' }}>
+                    {brandProductDetails.length}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: '#6c757d' }}>{t('financeAdmin.totalQuantity')}</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: '#1890ff' }}>
+                    {brandProductDetails.reduce((sum, p) => sum + p.quantity, 0)} {t('financeAdmin.pieces')}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: '#6c757d' }}>{t('financeAdmin.totalSales')}</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: '#1890ff' }}>
+                    RM{brandProductDetails.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 产品详情表格 */}
+            <Table
+              dataSource={brandProductDetails}
+              rowKey={(record) => record.cigar.id}
+              pagination={false}
+              size="small"
+              columns={[
+                {
+                  title: t('financeAdmin.productName'),
+                  dataIndex: 'cigar',
+                  key: 'name',
+                  render: (cigar: any) => (
+                    <div>
+                      <div style={{ fontWeight: 600 }}>{cigar.name}</div>
+                      <div style={{ fontSize: 12, color: '#666' }}>{cigar.specification || '-'}</div>
+                    </div>
+                  )
+                },
+                {
+                  title: t('financeAdmin.salesQuantity'),
+                  dataIndex: 'quantity',
+                  key: 'quantity',
+                  width: 120,
+                  align: 'right' as const,
+                  render: (quantity: number) => (
+                    <span style={{ fontWeight: 600 }}>{quantity} {t('financeAdmin.pieces')}</span>
+                  )
+                },
+                {
+                  title: t('financeAdmin.salesAmount'),
+                  dataIndex: 'amount',
+                  key: 'amount',
+                  width: 150,
+                  align: 'right' as const,
+                  render: (amount: number) => (
+                    <span style={{ fontWeight: 600, color: '#1890ff' }}>RM{amount.toFixed(2)}</span>
+                  )
+                },
+                {
+                  title: t('financeAdmin.orderCount'),
+                  dataIndex: 'orders',
+                  key: 'orders',
+                  width: 100,
+                  align: 'center' as const,
+                  render: (orders: number) => (
+                    <span>{orders}</span>
+                  )
+                }
+              ]}
+            />
+          </>
+        )}
       </Modal>
     </div>
   )

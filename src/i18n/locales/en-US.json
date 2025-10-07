@@ -730,7 +730,16 @@
     "brandSalesChart": "Brand Sales Chart",
     "top5Brands": "Top 5 Brands by Sales Volume",
     "pieces": "pcs",
-    "noSalesData": "No sales data available"
+    "noSalesData": "No sales data available",
+    "productSalesDetails": "Product Sales Details",
+    "brandSummary": "Brand Summary",
+    "totalProducts": "Total Products",
+    "totalQuantity": "Total Quantity",
+    "totalSales": "Total Sales",
+    "productName": "Product Name",
+    "salesQuantity": "Sales Quantity",
+    "salesAmount": "Sales Amount",
+    "orderCount": "Order Count"
   },
   "participants": {
     "loadingParticipants": "Loading participant information...",
