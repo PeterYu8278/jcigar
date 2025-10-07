@@ -547,6 +547,22 @@ const AdminInventory: React.FC = () => {
       const source = (o as any).source?.type || 'direct'
       for (const it of (o.items || [])) {
         const cigar = cigarMap.get(it.cigarId)
+        
+        // 应用品牌筛选
+        if (outBrandFilter && cigar?.brand !== outBrandFilter) continue
+        
+        // 应用搜索筛选
+        if (outSearchKeyword) {
+          const kw = outSearchKeyword.toLowerCase()
+          const cigarName = cigar?.name?.toLowerCase() || ''
+          const userName = user ? `${user.displayName} ${(user as any)?.profile?.phone || user.email}`.toLowerCase() : o.userId.toLowerCase()
+          const orderId = o.id.toLowerCase()
+          
+          if (!cigarName.includes(kw) && !userName.includes(kw) && !orderId.includes(kw)) {
+            continue
+          }
+        }
+        
         rows.push({
           id: `order_${o.id}_${it.cigarId}`,
           createdAt,
@@ -582,7 +598,7 @@ const AdminInventory: React.FC = () => {
       const db = toDateSafe(b.createdAt)?.getTime() || 0
       return db - da
     })
-  }, [orders, users, items, filteredOutLogs])
+  }, [orders, users, items, filteredOutLogs, outSearchKeyword, outBrandFilter])
 
   const unifiedOutColumns = [
     { title: t('inventory.time'), dataIndex: 'createdAt', key: 'createdAt', width: 160, render: (v: any) => formatYMD(toDateSafe(v)) },
