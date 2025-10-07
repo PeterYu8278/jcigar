@@ -726,7 +726,11 @@
     "thisMonth": "This Month",
     "thisYear": "This Year",
     "trendChart": "Trend Chart",
-    "chartPlaceholder": "Chart visualization coming soon"
+    "chartPlaceholder": "Chart visualization coming soon",
+    "brandSalesChart": "Brand Sales Chart",
+    "top5Brands": "Top 5 Brands by Sales Volume",
+    "pieces": "pcs",
+    "noSalesData": "No sales data available"
   },
   "participants": {
     "loadingParticipants": "Loading participant information...",

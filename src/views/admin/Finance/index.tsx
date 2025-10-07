@@ -3,7 +3,7 @@ import React, { useEffect, useState, useMemo } from 'react'
 import { Table, Card, Row, Col, Statistic, Typography, DatePicker, Select, Button, Space, message, Modal, Form, InputNumber, Input, Spin } from 'antd'
 import { DollarOutlined, ShoppingOutlined, CalendarOutlined, ArrowUpOutlined, ArrowDownOutlined, PlusOutlined, EyeOutlined, BarChartOutlined, PieChartOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { Transaction, User } from '../../../types'
-import { getAllTransactions, getAllOrders, getAllInventoryLogs, createTransaction, COLLECTIONS, getAllUsers, updateDocument, deleteDocument } from '../../../services/firebase/firestore'
+import { getAllTransactions, getAllOrders, getAllInventoryLogs, createTransaction, COLLECTIONS, getAllUsers, updateDocument, deleteDocument, getCigars } from '../../../services/firebase/firestore'
 import dayjs from 'dayjs'
 import { useTranslation } from 'react-i18next'
 
@@ -16,6 +16,7 @@ const AdminFinance: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [orders, setOrders] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
+  const [cigars, setCigars] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [creating, setCreating] = useState(false)
   const [viewing, setViewing] = useState<Transaction | null>(null)
@@ -188,12 +189,14 @@ const AdminFinance: React.FC = () => {
   useEffect(() => {
     loadTransactions()
     ;(async () => {
-      const [orderList, userList] = await Promise.all([
+      const [orderList, userList, cigarList] = await Promise.all([
         getAllOrders(),
-        getAllUsers()
+        getAllUsers(),
+        getCigars()
       ])
       setOrders(orderList || [])
       setUsers(userList || [])
+      setCigars(cigarList || [])
     })()
   }, [])
 
@@ -356,6 +359,39 @@ const AdminFinance: React.FC = () => {
     .reduce((sum, t) => sum + t.amount, 0))
 
   const netProfit = totalRevenue - totalExpenses
+
+  // 计算品牌销量统计
+  const brandSalesStats = useMemo(() => {
+    const brandMap = new Map<string, { quantity: number; amount: number }>()
+    
+    orders.forEach(order => {
+      const items = (order as any)?.items || []
+      items.forEach((item: any) => {
+        const cigar = cigars.find(c => c.id === item.cigarId)
+        const brand = cigar?.brand || 'Unknown'
+        const quantity = Number(item.quantity || 0)
+        const amount = Number(item.quantity || 0) * Number(item.price || 0)
+        
+        const existing = brandMap.get(brand) || { quantity: 0, amount: 0 }
+        brandMap.set(brand, {
+          quantity: existing.quantity + quantity,
+          amount: existing.amount + amount
+        })
+      })
+    })
+    
+    const stats = Array.from(brandMap.entries())
+      .map(([brand, data]) => ({ brand, ...data }))
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 5) // Top 5 brands
+    
+    const maxQuantity = Math.max(...stats.map(s => s.quantity), 1)
+    
+    return stats.map(stat => ({
+      ...stat,
+      percentage: (stat.quantity / maxQuantity) * 100
+    }))
+  }, [orders, cigars])
 
   // 已移除类别统计
 
@@ -558,7 +594,7 @@ const AdminFinance: React.FC = () => {
             </button>
           </div>
 
-          {/* 趋势图表占位符 */}
+          {/* 品牌销量图表 */}
           <div style={{ 
             padding: 24, 
             borderRadius: 12, 
@@ -569,26 +605,66 @@ const AdminFinance: React.FC = () => {
             marginBottom: 24
           }}>
             <div style={{ color: '#fff', fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
-              {t('financeAdmin.trendChart')}
+              {t('financeAdmin.brandSalesChart')}
             </div>
-            <div style={{ display: 'flex', gap: 4, alignItems: 'baseline', marginBottom: 16 }}>
-              <span style={{ color: '#fff', fontSize: 32, fontWeight: 700 }}>RM{netProfit.toFixed(0)}</span>
-              <span style={{ color: '#0bda19', fontSize: 16, fontWeight: 500 }}>
-                +{totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : 0}%
-              </span>
+            <div style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 14, marginBottom: 24 }}>
+              {t('financeAdmin.top5Brands')}
             </div>
-            <div style={{ 
-              height: 180, 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              background: 'rgba(244, 175, 37, 0.05)',
-              borderRadius: 8,
-              color: 'rgba(255, 255, 255, 0.4)',
-              fontSize: 14
-            }}>
-              {t('financeAdmin.chartPlaceholder')}
-            </div>
+            
+            {brandSalesStats.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {brandSalesStats.map((stat, index) => (
+                  <div key={stat.brand}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <span style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>
+                        {index + 1}. {stat.brand}
+                      </span>
+                      <span style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 14 }}>
+                        {stat.quantity} {t('financeAdmin.pieces')} · RM{stat.amount.toFixed(2)}
+                      </span>
+                    </div>
+                    <div style={{ 
+                      width: '100%', 
+                      height: 8, 
+                      background: 'rgba(244, 175, 37, 0.1)', 
+                      borderRadius: 4,
+                      overflow: 'hidden'
+                    }}>
+                      <div style={{ 
+                        width: `${stat.percentage}%`, 
+                        height: '100%', 
+                        background: `linear-gradient(to right, ${
+                          index === 0 ? '#f4af25' : 
+                          index === 1 ? '#d28e19' : 
+                          index === 2 ? '#b87315' : 
+                          index === 3 ? '#a0680a' : '#8a5a08'
+                        }, ${
+                          index === 0 ? '#d28e19' : 
+                          index === 1 ? '#b87315' : 
+                          index === 2 ? '#a0680a' : 
+                          index === 3 ? '#8a5a08' : '#6f4706'
+                        })`,
+                        borderRadius: 4,
+                        transition: 'width 0.5s ease'
+                      }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ 
+                height: 180, 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                background: 'rgba(244, 175, 37, 0.05)',
+                borderRadius: 8,
+                color: 'rgba(255, 255, 255, 0.4)',
+                fontSize: 14
+              }}>
+                {t('financeAdmin.noSalesData')}
+              </div>
+            )}
           </div>
         </>
       )}
