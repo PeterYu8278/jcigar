@@ -653,7 +653,10 @@
     "recordCount": "Record Count",
     "searchInLogs": "Search inbound records (product, reason, reference no.)",
     "searchOutLogs": "Search outbound records (product, reason, reference no.)",
-    "filterByBrand": "Filter by Brand"
+    "filterByBrand": "Filter by Brand",
+    "products": "products",
+    "expandAll": "Expand All",
+    "collapseAll": "Collapse All"
   },
   "financeAdmin": {
     "title": "Financial Management",

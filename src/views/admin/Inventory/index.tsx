@@ -36,6 +36,7 @@ const AdminInventory: React.FC = () => {
   const [inModalOpen, setInModalOpen] = useState(false)
   const [inStatsOpen, setInStatsOpen] = useState(false)
   const [outStatsOpen, setOutStatsOpen] = useState(false)
+  const [expandedInStatsBrands, setExpandedInStatsBrands] = useState<string[]>([])
   const [inSearchKeyword, setInSearchKeyword] = useState('')
   const [inBrandFilter, setInBrandFilter] = useState<string | undefined>()
   const [outSearchKeyword, setOutSearchKeyword] = useState('')
@@ -422,9 +423,14 @@ const AdminInventory: React.FC = () => {
     })
   }, [outLogs, outSearchKeyword, outBrandFilter, items])
   
-  // 入库统计
+  // 入库统计（包含品牌和产品详情）
   const inStats = useMemo(() => {
-    const brandMap = new Map<string, { quantity: number; records: number; totalValue: number }>()
+    const brandMap = new Map<string, { 
+      quantity: number; 
+      records: number; 
+      totalValue: number;
+      products: Map<string, { cigar: any; quantity: number; records: number; totalValue: number }>
+    }>()
     
     inLogs.forEach(log => {
       const cigar = items.find(c => c.id === log.cigarId)
@@ -433,16 +439,46 @@ const AdminInventory: React.FC = () => {
       const unitPrice = Number((log as any).unitPrice || 0)
       const value = quantity * unitPrice
       
-      const existing = brandMap.get(brand) || { quantity: 0, records: 0, totalValue: 0 }
-      brandMap.set(brand, {
-        quantity: existing.quantity + quantity,
-        records: existing.records + 1,
-        totalValue: existing.totalValue + value
-      })
+      if (!brandMap.has(brand)) {
+        brandMap.set(brand, { 
+          quantity: 0, 
+          records: 0, 
+          totalValue: 0,
+          products: new Map()
+        })
+      }
+      
+      const brandData = brandMap.get(brand)!
+      brandData.quantity += quantity
+      brandData.records += 1
+      brandData.totalValue += value
+      
+      // 产品级别统计
+      if (cigar) {
+        const productKey = log.cigarId
+        if (!brandData.products.has(productKey)) {
+          brandData.products.set(productKey, {
+            cigar,
+            quantity: 0,
+            records: 0,
+            totalValue: 0
+          })
+        }
+        const productData = brandData.products.get(productKey)!
+        productData.quantity += quantity
+        productData.records += 1
+        productData.totalValue += value
+      }
     })
     
     return Array.from(brandMap.entries())
-      .map(([brand, data]) => ({ brand, ...data }))
+      .map(([brand, data]) => ({ 
+        brand, 
+        quantity: data.quantity,
+        records: data.records,
+        totalValue: data.totalValue,
+        products: Array.from(data.products.values()).sort((a, b) => b.quantity - a.quantity)
+      }))
       .sort((a, b) => b.quantity - a.quantity)
   }, [inLogs, items])
 
@@ -2276,19 +2312,107 @@ const AdminInventory: React.FC = () => {
           </div>
         </div>
 
+        {/* 展开/收起控制按钮 */}
+        <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button
+            onClick={() => setExpandedInStatsBrands(inStats.map(s => s.brand))}
+            style={{
+              padding: '4px 12px',
+              borderRadius: 6,
+              border: '1px solid #d9d9d9',
+              background: '#fff',
+              cursor: 'pointer',
+              fontSize: 12
+            }}
+          >
+            {t('inventory.expandAll')}
+          </button>
+          <button
+            onClick={() => setExpandedInStatsBrands([])}
+            style={{
+              padding: '4px 12px',
+              borderRadius: 6,
+              border: '1px solid #d9d9d9',
+              background: '#fff',
+              cursor: 'pointer',
+              fontSize: 12
+            }}
+          >
+            {t('inventory.collapseAll')}
+          </button>
+        </div>
+
         {/* 品牌入库统计表格 */}
         <Table
           dataSource={inStats}
           rowKey="brand"
           pagination={false}
           size="small"
+          expandable={{
+            expandedRowKeys: expandedInStatsBrands,
+            onExpandedRowsChange: (expandedRows) => setExpandedInStatsBrands(expandedRows as string[]),
+            expandedRowRender: (record: any) => (
+              <Table
+                dataSource={record.products}
+                rowKey={(p: any) => p.cigar.id}
+                pagination={false}
+                size="small"
+                showHeader={true}
+                style={{ marginLeft: 40 }}
+                columns={[
+                  {
+                    title: t('inventory.productName'),
+                    dataIndex: 'cigar',
+                    key: 'name',
+                    render: (cigar: any) => (
+                      <div style={{ paddingLeft: 8 }}>
+                        <div style={{ fontWeight: 500 }}>{cigar.name}</div>
+                        <div style={{ fontSize: 12, color: '#666' }}>{cigar.specification || '-'}</div>
+                      </div>
+                    )
+                  },
+                  {
+                    title: t('inventory.inQuantity'),
+                    dataIndex: 'quantity',
+                    key: 'quantity',
+                    width: 150,
+                    align: 'right' as const,
+                    render: (quantity: number) => (
+                      <span style={{ color: '#52c41a' }}>{quantity} {t('inventory.sticks')}</span>
+                    )
+                  },
+                  {
+                    title: t('inventory.recordCount'),
+                    dataIndex: 'records',
+                    key: 'records',
+                    width: 120,
+                    align: 'center' as const,
+                    render: (records: number) => <span>{records}</span>
+                  },
+                  {
+                    title: t('inventory.totalValue'),
+                    dataIndex: 'totalValue',
+                    key: 'totalValue',
+                    width: 150,
+                    align: 'right' as const,
+                    render: (value: number) => (
+                      <span style={{ color: '#1890ff' }}>RM{value.toFixed(2)}</span>
+                    )
+                  }
+                ]}
+              />
+            ),
+            rowExpandable: (record: any) => record.products && record.products.length > 0,
+          }}
           columns={[
             {
               title: t('inventory.brand'),
               dataIndex: 'brand',
               key: 'brand',
-              render: (brand: string) => (
-                <span style={{ fontWeight: 600 }}>{brand}</span>
+              render: (brand: string, record: any) => (
+                <span style={{ fontWeight: 600 }}>
+                  {brand} ({record.products?.length || 0} {t('inventory.products')})
+                </span>
               )
             },
             {

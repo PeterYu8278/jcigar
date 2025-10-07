@@ -637,7 +637,10 @@
     "recordCount": "记录数",
     "searchInLogs": "搜索入库记录（产品、原因、单号）",
     "searchOutLogs": "搜索出库记录（产品、原因、单号）",
-    "filterByBrand": "按品牌筛选"
+    "filterByBrand": "按品牌筛选",
+    "products": "个产品",
+    "expandAll": "全部展开",
+    "collapseAll": "全部收起"
   },
   "financeAdmin": {
     "title": "财务管理",
