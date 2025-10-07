@@ -913,7 +913,7 @@ const AdminFinance: React.FC = () => {
           <div>
                                       <div>{o.id} · {name} · RM{total.toFixed(2)}</div>
                                       <div style={{ fontSize: '12px', color: '#666' }}>{addr}</div>
-                                    </div>
+          </div>
                                   ), 
                                   value: o.id 
                                 }
@@ -1094,7 +1094,7 @@ const AdminFinance: React.FC = () => {
           }}
         >
           {t('financeAdmin.pasteHere')}
-        </div>
+    </div>
         <Table
           dataSource={importRows.map((r, idx) => ({ key: idx, date: r.date, description: r.description, income: r.income, expense: r.expense, relatedId: r.relatedId }))}
           size="small"

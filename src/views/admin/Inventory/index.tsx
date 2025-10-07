@@ -36,7 +36,7 @@ const AdminInventory: React.FC = () => {
   const [inModalOpen, setInModalOpen] = useState(false)
   const [inStatsOpen, setInStatsOpen] = useState(false)
   const [outStatsOpen, setOutStatsOpen] = useState(false)
-  const [expandedInStatsBrands, setExpandedInStatsBrands] = useState<string[]>([])
+  const [inStatsExpandedKeys, setInStatsExpandedKeys] = useState<React.Key[]>([])
   const [inSearchKeyword, setInSearchKeyword] = useState('')
   const [inBrandFilter, setInBrandFilter] = useState<string | undefined>()
   const [outSearchKeyword, setOutSearchKeyword] = useState('')
@@ -2312,36 +2312,6 @@ const AdminInventory: React.FC = () => {
           </div>
         </div>
 
-        {/* 展开/收起控制按钮 */}
-        <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <button
-            onClick={() => setExpandedInStatsBrands(inStats.map(s => s.brand))}
-            style={{
-              padding: '4px 12px',
-              borderRadius: 6,
-              border: '1px solid #d9d9d9',
-              background: '#fff',
-              cursor: 'pointer',
-              fontSize: 12
-            }}
-          >
-            {t('inventory.expandAll')}
-          </button>
-          <button
-            onClick={() => setExpandedInStatsBrands([])}
-            style={{
-              padding: '4px 12px',
-              borderRadius: 6,
-              border: '1px solid #d9d9d9',
-              background: '#fff',
-              cursor: 'pointer',
-              fontSize: 12
-            }}
-          >
-            {t('inventory.collapseAll')}
-          </button>
-        </div>
-
         {/* 品牌入库统计表格 */}
         <Table
           dataSource={inStats}
@@ -2349,8 +2319,8 @@ const AdminInventory: React.FC = () => {
           pagination={false}
           size="small"
           expandable={{
-            expandedRowKeys: expandedInStatsBrands,
-            onExpandedRowsChange: (expandedRows) => setExpandedInStatsBrands(expandedRows as string[]),
+            expandedRowKeys: inStatsExpandedKeys,
+            onExpandedRowsChange: (keys) => setInStatsExpandedKeys([...keys]),
             expandedRowRender: (record: any) => (
               <Table
                 dataSource={record.products}
@@ -2406,7 +2376,36 @@ const AdminInventory: React.FC = () => {
           }}
           columns={[
             {
-              title: t('inventory.brand'),
+              title: (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <button
+                    onClick={() => {
+                      if (inStatsExpandedKeys.length > 0) {
+                        setInStatsExpandedKeys([])
+                      } else {
+                        setInStatsExpandedKeys(inStats.map(s => s.brand))
+                      }
+                    }}
+                    style={{
+                      padding: '2px 8px',
+                      borderRadius: 4,
+                      border: '1px solid #d9d9d9',
+                      background: '#fff',
+                      cursor: 'pointer',
+                      fontSize: 16,
+                      fontWeight: 600,
+                      color: '#666',
+                      lineHeight: 1,
+                      minWidth: 28,
+                      height: 28
+                    }}
+                    title={inStatsExpandedKeys.length > 0 ? t('inventory.collapseAll') : t('inventory.expandAll')}
+                  >
+                    {inStatsExpandedKeys.length > 0 ? '−' : '+'}
+                  </button>
+                  <span>{t('inventory.brand')}</span>
+                </div>
+              ),
               dataIndex: 'brand',
               key: 'brand',
               render: (brand: string, record: any) => (
