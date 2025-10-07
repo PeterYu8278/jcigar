@@ -634,7 +634,10 @@
     "totalValue": "总价值",
     "inQuantity": "入库数量",
     "outQuantity": "出库数量",
-    "recordCount": "记录数"
+    "recordCount": "记录数",
+    "searchInLogs": "搜索入库记录（产品、原因、单号）",
+    "searchOutLogs": "搜索出库记录（产品、原因、单号）",
+    "filterByBrand": "按品牌筛选"
   },
   "financeAdmin": {
     "title": "财务管理",

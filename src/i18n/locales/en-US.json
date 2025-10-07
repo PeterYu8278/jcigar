@@ -650,7 +650,10 @@
     "totalValue": "Total Value",
     "inQuantity": "Inbound Quantity",
     "outQuantity": "Outbound Quantity",
-    "recordCount": "Record Count"
+    "recordCount": "Record Count",
+    "searchInLogs": "Search inbound records (product, reason, reference no.)",
+    "searchOutLogs": "Search outbound records (product, reason, reference no.)",
+    "filterByBrand": "Filter by Brand"
   },
   "financeAdmin": {
     "title": "Financial Management",

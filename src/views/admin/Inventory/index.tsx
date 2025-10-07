@@ -36,6 +36,10 @@ const AdminInventory: React.FC = () => {
   const [inModalOpen, setInModalOpen] = useState(false)
   const [inStatsOpen, setInStatsOpen] = useState(false)
   const [outStatsOpen, setOutStatsOpen] = useState(false)
+  const [inSearchKeyword, setInSearchKeyword] = useState('')
+  const [inBrandFilter, setInBrandFilter] = useState<string | undefined>()
+  const [outSearchKeyword, setOutSearchKeyword] = useState('')
+  const [outBrandFilter, setOutBrandFilter] = useState<string | undefined>()
   const toDateSafe = (val: any): Date | null => {
     if (!val) return null
     let v: any = val
@@ -366,6 +370,58 @@ const AdminInventory: React.FC = () => {
   const inLogs = useMemo(() => inventoryLogs.filter(l => (l as any).type === 'in'), [inventoryLogs])
   const outLogs = useMemo(() => inventoryLogs.filter(l => (l as any).type === 'out'), [inventoryLogs])
   
+  // 入库记录筛选
+  const filteredInLogs = useMemo(() => {
+    return inLogs.filter(log => {
+      // 品牌筛选
+      if (inBrandFilter) {
+        const cigar = items.find(c => c.id === log.cigarId)
+        if (cigar?.brand !== inBrandFilter) return false
+      }
+      
+      // 关键字搜索
+      if (inSearchKeyword) {
+        const kw = inSearchKeyword.toLowerCase()
+        const cigar = items.find(c => c.id === log.cigarId)
+        const cigarName = cigar?.name?.toLowerCase() || ''
+        const reason = ((log as any).reason || '').toLowerCase()
+        const refNo = ((log as any).referenceNo || '').toLowerCase()
+        
+        if (!cigarName.includes(kw) && !reason.includes(kw) && !refNo.includes(kw)) {
+          return false
+        }
+      }
+      
+      return true
+    })
+  }, [inLogs, inSearchKeyword, inBrandFilter, items])
+  
+  // 出库记录筛选
+  const filteredOutLogs = useMemo(() => {
+    return outLogs.filter(log => {
+      // 品牌筛选
+      if (outBrandFilter) {
+        const cigar = items.find(c => c.id === log.cigarId)
+        if (cigar?.brand !== outBrandFilter) return false
+      }
+      
+      // 关键字搜索
+      if (outSearchKeyword) {
+        const kw = outSearchKeyword.toLowerCase()
+        const cigar = items.find(c => c.id === log.cigarId)
+        const cigarName = cigar?.name?.toLowerCase() || ''
+        const reason = ((log as any).reason || '').toLowerCase()
+        const refNo = ((log as any).referenceNo || '').toLowerCase()
+        
+        if (!cigarName.includes(kw) && !reason.includes(kw) && !refNo.includes(kw)) {
+          return false
+        }
+      }
+      
+      return true
+    })
+  }, [outLogs, outSearchKeyword, outBrandFilter, items])
+  
   // 入库统计
   const inStats = useMemo(() => {
     const brandMap = new Map<string, { quantity: number; records: number; totalValue: number }>()
@@ -504,7 +560,7 @@ const AdminInventory: React.FC = () => {
       }
     }
     // 来自手动出库日志的出库
-    for (const log of outLogs) {
+    for (const log of filteredOutLogs) {
       const ref = String((log as any).referenceNo || '')
       // 避免重复：订单出库已由 orders 渲染一遍，过滤掉 referenceNo 以 ORDER: 开头的日志
       if (ref.startsWith('ORDER:')) continue
@@ -526,7 +582,7 @@ const AdminInventory: React.FC = () => {
       const db = toDateSafe(b.createdAt)?.getTime() || 0
       return db - da
     })
-  }, [orders, users, items, outLogs])
+  }, [orders, users, items, filteredOutLogs])
 
   const unifiedOutColumns = [
     { title: t('inventory.time'), dataIndex: 'createdAt', key: 'createdAt', width: 160, render: (v: any) => formatYMD(toDateSafe(v)) },
@@ -1226,7 +1282,27 @@ const AdminInventory: React.FC = () => {
           )}
           {activeTab === 'in' && (
             <Card>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+              {/* 搜索和筛选 */}
+              <div style={{ marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                <Search
+                  placeholder={t('inventory.searchInLogs')}
+                  value={inSearchKeyword}
+                  onChange={(e) => setInSearchKeyword(e.target.value)}
+                  style={{ width: 300 }}
+                  allowClear
+                />
+                <Select
+                  placeholder={t('inventory.filterByBrand')}
+                  value={inBrandFilter}
+                  onChange={setInBrandFilter}
+                  style={{ width: 200 }}
+                  allowClear
+                >
+                  {Array.from(new Set(items.map(i => i.brand))).sort().map(brand => (
+                    <Option key={brand} value={brand}>{brand}</Option>
+                  ))}
+                </Select>
+                <div style={{ flex: 1 }} />
                 <button 
                   onClick={() => setInStatsOpen(true)}
                   style={{
@@ -1354,7 +1430,7 @@ const AdminInventory: React.FC = () => {
                 style={{ marginTop: 16 }}
                 title={() => t('inventory.inStockRecord')}
                 columns={logColumns}
-                dataSource={inLogs}
+                dataSource={filteredInLogs}
                 rowKey="id"
         pagination={{ 
           pageSize: inPageSize,
@@ -1372,7 +1448,27 @@ const AdminInventory: React.FC = () => {
           )}
           {activeTab === 'out' && (
             <div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+              {/* 搜索和筛选 */}
+              <div style={{ marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                <Search
+                  placeholder={t('inventory.searchOutLogs')}
+                  value={outSearchKeyword}
+                  onChange={(e) => setOutSearchKeyword(e.target.value)}
+                  style={{ width: 300 }}
+                  allowClear
+                />
+                <Select
+                  placeholder={t('inventory.filterByBrand')}
+                  value={outBrandFilter}
+                  onChange={setOutBrandFilter}
+                  style={{ width: 200 }}
+                  allowClear
+                >
+                  {Array.from(new Set(items.map(i => i.brand))).sort().map(brand => (
+                    <Option key={brand} value={brand}>{brand}</Option>
+                  ))}
+                </Select>
+                <div style={{ flex: 1 }} />
                 <button 
                   onClick={() => setOutStatsOpen(true)}
                   style={{
