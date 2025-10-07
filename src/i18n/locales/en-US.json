@@ -721,7 +721,12 @@
     "fullyMatched": "Fully Matched",
     "partialMatched": "Partial Matched",
     "overview": "Overview",
-    "transactions": "Transactions"
+    "transactions": "Transactions",
+    "thisWeek": "This Week",
+    "thisMonth": "This Month",
+    "thisYear": "This Year",
+    "trendChart": "Trend Chart",
+    "chartPlaceholder": "Chart visualization coming soon"
   },
   "participants": {
     "loadingParticipants": "Loading participant information...",

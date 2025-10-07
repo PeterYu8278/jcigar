@@ -698,7 +698,12 @@
     "fullyMatched": "全额匹配",
     "partialMatched": "部分匹配",
     "overview": "概况",
-    "transactions": "交易记录"
+    "transactions": "交易记录",
+    "thisWeek": "本周",
+    "thisMonth": "本月",
+    "thisYear": "本年",
+    "trendChart": "收支趋势图",
+    "chartPlaceholder": "图表可视化即将推出"
   },
   "participants": {
     "loadingParticipants": "加载参与者信息中...",

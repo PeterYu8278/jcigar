@@ -433,43 +433,163 @@ const AdminFinance: React.FC = () => {
       {/* 概况标签内容 */}
       {activeTab === 'overview' && (
         <>
-          {/* 统计卡片 */}
-          <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title={t('financeAdmin.totalRevenue')}
-              value={totalRevenue}
-              precision={2}
-              prefix={<DollarOutlined />}
-              valueStyle={{ color: '#3f8600' }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title={t('financeAdmin.totalExpenses')}
-              value={totalExpenses}
-              precision={2}
-              prefix={<ShoppingOutlined />}
-              valueStyle={{ color: '#cf1322' }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title={t('financeAdmin.netProfit')}
-              value={netProfit}
-              precision={2}
-              prefix={netProfit >= 0 ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
-              valueStyle={{ color: netProfit >= 0 ? '#3f8600' : '#cf1322' }}
-            />
-          </Card>
-        </Col>
-        {/* 移除基于类别的统计卡片 */}
-      </Row>
+          {/* 统计卡片 - Glassmorphism风格 */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
+            {/* 总收入卡片 */}
+            <div style={{ 
+              flex: '1 1 250px', 
+              minWidth: 250,
+              padding: 24, 
+              borderRadius: 12, 
+              background: 'rgba(57, 51, 40, 0.5)', 
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              border: '1px solid rgba(244, 175, 37, 0.2)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <DollarOutlined style={{ color: '#f4af25', fontSize: 20 }} />
+                <span style={{ color: '#fff', fontSize: 16, fontWeight: 500 }}>{t('financeAdmin.totalRevenue')}</span>
+              </div>
+              <div style={{ color: '#fff', fontSize: 32, fontWeight: 700, letterSpacing: '-0.5px' }}>
+                RM{totalRevenue.toFixed(2)}
+              </div>
+            </div>
+
+            {/* 总支出卡片 */}
+            <div style={{ 
+              flex: '1 1 250px', 
+              minWidth: 250,
+              padding: 24, 
+              borderRadius: 12, 
+              background: 'rgba(57, 51, 40, 0.5)', 
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              border: '1px solid rgba(244, 175, 37, 0.2)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <ShoppingOutlined style={{ color: '#f4af25', fontSize: 20 }} />
+                <span style={{ color: '#fff', fontSize: 16, fontWeight: 500 }}>{t('financeAdmin.totalExpenses')}</span>
+              </div>
+              <div style={{ color: '#fff', fontSize: 32, fontWeight: 700, letterSpacing: '-0.5px' }}>
+                RM{totalExpenses.toFixed(2)}
+              </div>
+            </div>
+
+            {/* 净利润卡片 */}
+            <div style={{ 
+              flex: '1 1 250px', 
+              minWidth: 250,
+              padding: 24, 
+              borderRadius: 12, 
+              background: 'rgba(57, 51, 40, 0.5)', 
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              border: '1px solid rgba(244, 175, 37, 0.2)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {netProfit >= 0 ? <ArrowUpOutlined style={{ color: '#f4af25', fontSize: 20 }} /> : <ArrowDownOutlined style={{ color: '#f4af25', fontSize: 20 }} />}
+                <span style={{ color: '#fff', fontSize: 16, fontWeight: 500 }}>{t('financeAdmin.netProfit')}</span>
+              </div>
+              <div style={{ color: '#fff', fontSize: 32, fontWeight: 700, letterSpacing: '-0.5px' }}>
+                RM{netProfit.toFixed(2)}
+              </div>
+              <div style={{ color: netProfit >= 0 ? '#0bda19' : '#fa3f38', fontSize: 16, fontWeight: 500 }}>
+                {netProfit >= 0 ? '+' : ''}{totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : 0}%
+              </div>
+            </div>
+          </div>
+
+          {/* 日期范围选择器 */}
+          <div style={{ display: 'flex', gap: 12, marginBottom: 24, overflowX: 'auto', paddingBottom: 4 }}>
+            <button style={{
+              height: 32,
+              padding: '0 16px',
+              borderRadius: 16,
+              background: 'rgba(244, 175, 37, 0.2)',
+              border: 'none',
+              color: '#f4af25',
+              fontSize: 14,
+              fontWeight: 500,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}>
+              {t('financeAdmin.thisWeek')}
+            </button>
+            <button style={{
+              height: 32,
+              padding: '0 16px',
+              borderRadius: 16,
+              background: 'rgba(57, 51, 40, 0.5)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              border: '1px solid rgba(244, 175, 37, 0.2)',
+              color: '#fff',
+              fontSize: 14,
+              fontWeight: 500,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}>
+              {t('financeAdmin.thisMonth')}
+            </button>
+            <button style={{
+              height: 32,
+              padding: '0 16px',
+              borderRadius: 16,
+              background: 'rgba(57, 51, 40, 0.5)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              border: '1px solid rgba(244, 175, 37, 0.2)',
+              color: '#fff',
+              fontSize: 14,
+              fontWeight: 500,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}>
+              {t('financeAdmin.thisYear')}
+            </button>
+          </div>
+
+          {/* 趋势图表占位符 */}
+          <div style={{ 
+            padding: 24, 
+            borderRadius: 12, 
+            background: 'rgba(57, 51, 40, 0.5)', 
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            border: '1px solid rgba(244, 175, 37, 0.2)',
+            marginBottom: 24
+          }}>
+            <div style={{ color: '#fff', fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
+              {t('financeAdmin.trendChart')}
+            </div>
+            <div style={{ display: 'flex', gap: 4, alignItems: 'baseline', marginBottom: 16 }}>
+              <span style={{ color: '#fff', fontSize: 32, fontWeight: 700 }}>RM{netProfit.toFixed(0)}</span>
+              <span style={{ color: '#0bda19', fontSize: 16, fontWeight: 500 }}>
+                +{totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : 0}%
+              </span>
+            </div>
+            <div style={{ 
+              height: 180, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              background: 'rgba(244, 175, 37, 0.05)',
+              borderRadius: 8,
+              color: 'rgba(255, 255, 255, 0.4)',
+              fontSize: 14
+            }}>
+              {t('financeAdmin.chartPlaceholder')}
+            </div>
+          </div>
         </>
       )}
 
