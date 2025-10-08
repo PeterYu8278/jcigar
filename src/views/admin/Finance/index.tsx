@@ -26,7 +26,7 @@ const AdminFinance: React.FC = () => {
   const [editForm] = Form.useForm()
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
   const [selectedDateRange, setSelectedDateRange] = useState<'week' | 'month' | 'year' | null>(null)
-  const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set())
+  const [productExpandedKeys, setProductExpandedKeys] = useState<React.Key[]>([])
   const [importing, setImporting] = useState(false)
   const [importRows, setImportRows] = useState<Array<{
     date: Date
@@ -440,7 +440,7 @@ const AdminFinance: React.FC = () => {
       quantity: number; 
       amount: number; 
       orders: number;
-      orderDetails: Array<{ orderId: string; orderDate: string; quantity: number; amount: number; userName: string }>
+      orderRecords: Array<{ orderId: string; orderDate: string; quantity: number; amount: number; userName: string }>
     }>()
     
     orders.forEach(order => {
@@ -450,29 +450,27 @@ const AdminFinance: React.FC = () => {
         if (cigar && cigar.brand === selectedBrand) {
           const quantity = Number(item.quantity || 0)
           const amount = Number(item.quantity || 0) * Number(item.price || 0)
+          const user = users.find(u => u.id === order.userId)
+          const userName = user?.displayName || user?.email || order.userId
           
           const existing = productMap.get(item.cigarId) || { 
             cigar, 
             quantity: 0, 
             amount: 0, 
             orders: 0,
-            orderDetails: []
+            orderRecords: []
           }
-          
-          // 获取用户名称
-          const user = users.find(u => u.id === order.userId)
-          const userName = user?.displayName || user?.email || order.userId
           
           productMap.set(item.cigarId, {
             cigar,
             quantity: existing.quantity + quantity,
             amount: existing.amount + amount,
             orders: existing.orders + 1,
-            orderDetails: [
-              ...existing.orderDetails,
+            orderRecords: [
+              ...existing.orderRecords,
               {
                 orderId: order.id,
-                orderDate: order.createdAt,
+                orderDate: order.createdAt as string,
                 quantity,
                 amount,
                 userName
@@ -1457,6 +1455,90 @@ const AdminFinance: React.FC = () => {
                 rowKey={(record) => record.cigar.id}
                 pagination={false}
                 size="small"
+                expandable={{
+                  columnWidth: 60,
+                  columnTitle: (
+                    <div style={{ display: 'flex', justifyContent: 'center' }}>
+                      <button
+                        onClick={() => {
+                          if (productExpandedKeys.length > 0) {
+                            setProductExpandedKeys([])
+                          } else {
+                            setProductExpandedKeys(brandProductDetails.map(p => p.cigar.id))
+                          }
+                        }}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '16px',
+                          fontWeight: 600,
+                          color: '#1890ff',
+                          padding: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        {productExpandedKeys.length > 0 ? '−' : '+'}
+                      </button>
+                    </div>
+                  ),
+                  expandedRowKeys: productExpandedKeys,
+                  onExpandedRowsChange: (keys) => setProductExpandedKeys([...keys]),
+                  expandedRowRender: (record) => (
+                    <div style={{ padding: '8px 16px' }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: '#495057' }}>
+                        {t('financeAdmin.orderRecords')}
+                      </div>
+                      <Table
+                        dataSource={record.orderRecords}
+                        rowKey={(r) => `${r.orderId}-${r.orderDate}`}
+                        pagination={false}
+                        size="small"
+                        columns={[
+                          {
+                            title: t('financeAdmin.orderId'),
+                            dataIndex: 'orderId',
+                            key: 'orderId',
+                            width: 200,
+                            render: (id: string) => <span style={{ fontSize: 12 }}>{id}</span>
+                          },
+                          {
+                            title: t('financeAdmin.orderDate'),
+                            dataIndex: 'orderDate',
+                            key: 'orderDate',
+                            width: 150,
+                            render: (date: string) => <span style={{ fontSize: 12 }}>{formatYMD(toDateSafe(date))}</span>
+                          },
+                          {
+                            title: t('financeAdmin.customerName'),
+                            dataIndex: 'userName',
+                            key: 'userName',
+                            width: 150,
+                            render: (name: string) => <span style={{ fontSize: 12 }}>{name}</span>
+                          },
+                          {
+                            title: t('financeAdmin.quantity'),
+                            dataIndex: 'quantity',
+                            key: 'quantity',
+                            width: 100,
+                            align: 'right' as const,
+                            render: (qty: number) => <span style={{ fontSize: 12 }}>{qty} {t('financeAdmin.pieces')}</span>
+                          },
+                          {
+                            title: t('financeAdmin.amount'),
+                            dataIndex: 'amount',
+                            key: 'amount',
+                            width: 120,
+                            align: 'right' as const,
+                            render: (amt: number) => <span style={{ fontSize: 12, color: '#1890ff' }}>RM{amt.toFixed(2)}</span>
+                          }
+                        ]}
+                      />
+                    </div>
+                  )
+                }}
                 columns={[
                   {
                     title: t('financeAdmin.productName'),
@@ -1504,8 +1586,7 @@ const AdminFinance: React.FC = () => {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {brandProductDetails.map((product) => {
-                  const isExpanded = expandedProducts.has(product.cigar.id)
-                  
+                  const isExpanded = productExpandedKeys.includes(product.cigar.id)
                   return (
                     <div 
                       key={product.cigar.id}
@@ -1517,16 +1598,41 @@ const AdminFinance: React.FC = () => {
                       }}
                     >
                       <div style={{ marginBottom: 8 }}>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: '#212529' }}>
-                          {product.cigar.name}
-                        </div>
-                        {product.cigar.specification && (
-                          <div style={{ fontSize: 12, color: '#6c757d', marginTop: 2 }}>
-                            {product.cigar.specification}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 14, fontWeight: 600, color: '#212529' }}>
+                              {product.cigar.name}
+                            </div>
+                            {product.cigar.specification && (
+                              <div style={{ fontSize: 12, color: '#6c757d', marginTop: 2 }}>
+                                {product.cigar.specification}
+                              </div>
+                            )}
                           </div>
-                        )}
+                          <button
+                            onClick={() => {
+                              if (isExpanded) {
+                                setProductExpandedKeys(productExpandedKeys.filter(k => k !== product.cigar.id))
+                              } else {
+                                setProductExpandedKeys([...productExpandedKeys, product.cigar.id])
+                              }
+                            }}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              cursor: 'pointer',
+                              fontSize: '18px',
+                              fontWeight: 600,
+                              color: '#1890ff',
+                              padding: '4px 8px',
+                              marginLeft: 8
+                            }}
+                          >
+                            {isExpanded ? '−' : '+'}
+                          </button>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 11, color: '#6c757d' }}>{t('financeAdmin.salesQuantity')}</div>
                           <div style={{ fontSize: 16, fontWeight: 600, color: '#495057' }}>
@@ -1547,78 +1653,43 @@ const AdminFinance: React.FC = () => {
                         </div>
                       </div>
                       
-                      {/* 展开/收起订单记录按钮 */}
-                      <button
-                        onClick={() => {
-                          const newExpanded = new Set(expandedProducts)
-                          if (isExpanded) {
-                            newExpanded.delete(product.cigar.id)
-                          } else {
-                            newExpanded.add(product.cigar.id)
-                          }
-                          setExpandedProducts(newExpanded)
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '6px 12px',
-                          background: 'transparent',
-                          border: '1px solid #dee2e6',
-                          borderRadius: 6,
-                          color: '#495057',
-                          fontSize: 12,
-                          fontWeight: 500,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 4
-                        }}
-                      >
-                        <span>{isExpanded ? '▼' : '▶'}</span>
-                        <span>{t('financeAdmin.orderRecords')} ({product.orders})</span>
-                      </button>
-                      
-                      {/* 订单记录列表 */}
+                      {/* 展开的订单记录 */}
                       {isExpanded && (
-                        <div style={{ 
-                          marginTop: 12, 
-                          paddingTop: 12, 
-                          borderTop: '1px solid #dee2e6',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 8
-                        }}>
-                          {product.orderDetails.map((detail, idx) => (
-                            <div 
-                              key={`${detail.orderId}-${idx}`}
-                              style={{
-                                padding: 8,
-                                background: '#fff',
-                                borderRadius: 6,
-                                border: '1px solid #e9ecef'
-                              }}
-                            >
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                                <div style={{ fontSize: 11, color: '#6c757d' }}>
-                                  {dayjs(detail.orderDate).format('YYYY-MM-DD HH:mm')}
+                        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #dee2e6' }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color: '#495057' }}>
+                            {t('financeAdmin.orderRecords')}
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {product.orderRecords.map((order, idx) => (
+                              <div 
+                                key={`${order.orderId}-${idx}`}
+                                style={{
+                                  padding: 8,
+                                  background: '#fff',
+                                  borderRadius: 6,
+                                  border: '1px solid #e9ecef'
+                                }}
+                              >
+                                <div style={{ fontSize: 11, color: '#6c757d', marginBottom: 4 }}>
+                                  {order.orderId}
                                 </div>
-                                <div style={{ fontSize: 11, fontWeight: 600, color: '#1890ff' }}>
-                                  {detail.orderId}
-                                </div>
-                              </div>
-                              <div style={{ fontSize: 12, color: '#495057', marginBottom: 4 }}>
-                                {detail.userName}
-                              </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <div style={{ fontSize: 12, color: '#6c757d' }}>
-                                  {detail.quantity} {t('financeAdmin.pieces')}
-                                </div>
-                                <div style={{ fontSize: 12, fontWeight: 600, color: '#1890ff' }}>
-                                  RM{detail.amount.toFixed(2)}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
+                                  <div>
+                                    <div style={{ color: '#6c757d' }}>{formatYMD(toDateSafe(order.orderDate))}</div>
+                                    <div style={{ color: '#495057', marginTop: 2 }}>{order.userName}</div>
+                                  </div>
+                                  <div style={{ textAlign: 'right' }}>
+                                    <div style={{ color: '#495057', fontWeight: 600 }}>
+                                      {order.quantity} {t('financeAdmin.pieces')}
+                                    </div>
+                                    <div style={{ color: '#1890ff', fontWeight: 600, marginTop: 2 }}>
+                                      RM{order.amount.toFixed(2)}
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
