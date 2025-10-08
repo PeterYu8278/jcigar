@@ -1401,18 +1401,25 @@ const AdminFinance: React.FC = () => {
         footer={null}
         width={isMobile ? '100%' : 800}
         destroyOnHidden
-        centered
+        centered={!isMobile}
         styles={{
           body: {
             background: 'rgba(255,255, 255)',
-            maxHeight: isMobile ? '80vh' : '70vh',
-            overflow: 'auto'
+            maxHeight: isMobile ? '85vh' : '70vh',
+            overflow: 'auto',
+            padding: isMobile ? 12 : 16
           },
           mask: { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
           content: {
             background: 'rgba(255,255, 255)',
             border: '1px solid rgba(255, 215, 0, 0.2)',
-            margin: isMobile ? '0 12px' : 'auto'
+            margin: isMobile ? '0' : 'auto',
+            position: isMobile ? 'fixed' : 'relative',
+            bottom: isMobile ? 0 : 'auto',
+            left: isMobile ? 0 : 'auto',
+            right: isMobile ? 0 : 'auto',
+            borderRadius: isMobile ? '16px 16px 0 0' : '8px',
+            maxWidth: isMobile ? '100%' : '800px'
           }
         }}
       >
