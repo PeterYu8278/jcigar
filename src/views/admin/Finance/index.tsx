@@ -1366,20 +1366,21 @@ const AdminFinance: React.FC = () => {
         open={!!selectedBrand}
         onCancel={() => setSelectedBrand(null)}
         footer={null}
-        width={800}
+        width={isMobile ? '100%' : 800}
         destroyOnHidden
         centered
         styles={{
           body: {
             background: 'rgba(255,255, 255)',
-            maxHeight: '70vh',
+            maxHeight: isMobile ? '80vh' : '70vh',
             overflow: 'auto',
-            padding: 16,
+            padding: isMobile ? 12 : 16,
           },
           mask: { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
           content: {
             background: 'rgba(255,255, 255)',
-            border: '1px solid rgba(255, 215, 0, 0.2)'
+            border: '1px solid rgba(255, 215, 0, 0.2)',
+            margin: isMobile ? '0 12px' : 'auto'
           }
         }}
       >
@@ -1388,86 +1389,137 @@ const AdminFinance: React.FC = () => {
             {/* 品牌统计摘要 */}
             <div style={{ 
               marginBottom: 16, 
-              padding: 16, 
+              padding: isMobile ? 12 : 16, 
               background: '#f8f9fa', 
               borderRadius: 8,
               border: '1px solid #e9ecef'
             }}>
-              <div style={{ fontSize: 16, fontWeight: 600, color: '#495057', marginBottom: 8 }}>
+              <div style={{ fontSize: isMobile ? 14 : 16, fontWeight: 600, color: '#495057', marginBottom: 8 }}>
                 {t('financeAdmin.brandSummary')}
               </div>
-              <div style={{ display: 'flex', gap: 24 }}>
+              <div style={{ 
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+                gap: isMobile ? 12 : 24 
+              }}>
                 <div>
                   <div style={{ fontSize: 12, color: '#6c757d' }}>{t('financeAdmin.totalProducts')}</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: '#1890ff' }}>
+                  <div style={{ fontSize: isMobile ? 18 : 20, fontWeight: 700, color: '#1890ff' }}>
                     {brandProductDetails.length}
                   </div>
                 </div>
                 <div>
                   <div style={{ fontSize: 12, color: '#6c757d' }}>{t('financeAdmin.totalQuantity')}</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: '#1890ff' }}>
+                  <div style={{ fontSize: isMobile ? 18 : 20, fontWeight: 700, color: '#1890ff' }}>
                     {brandProductDetails.reduce((sum, p) => sum + p.quantity, 0)} {t('financeAdmin.pieces')}
                   </div>
                 </div>
                 <div>
                   <div style={{ fontSize: 12, color: '#6c757d' }}>{t('financeAdmin.totalSales')}</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: '#1890ff' }}>
+                  <div style={{ fontSize: isMobile ? 18 : 20, fontWeight: 700, color: '#1890ff' }}>
                     RM{brandProductDetails.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* 产品详情表格 */}
-            <Table
-              dataSource={brandProductDetails}
-              rowKey={(record) => record.cigar.id}
-              pagination={false}
-              size="small"
-              columns={[
-                {
-                  title: t('financeAdmin.productName'),
-                  dataIndex: 'cigar',
-                  key: 'name',
-                  render: (cigar: any) => (
-                    <div>
-                      <div style={{ fontWeight: 600 }}>{cigar.name}</div>
-                      <div style={{ fontSize: 12, color: '#666' }}>{cigar.specification || '-'}</div>
+            {/* 产品详情 - 桌面端表格/移动端卡片 */}
+            {!isMobile ? (
+              <Table
+                dataSource={brandProductDetails}
+                rowKey={(record) => record.cigar.id}
+                pagination={false}
+                size="small"
+                columns={[
+                  {
+                    title: t('financeAdmin.productName'),
+                    dataIndex: 'cigar',
+                    key: 'name',
+                    render: (cigar: any) => (
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{cigar.name}</div>
+                        <div style={{ fontSize: 12, color: '#666' }}>{cigar.specification || '-'}</div>
+                      </div>
+                    )
+                  },
+                  {
+                    title: t('financeAdmin.salesQuantity'),
+                    dataIndex: 'quantity',
+                    key: 'quantity',
+                    width: 120,
+                    align: 'right' as const,
+                    render: (quantity: number) => (
+                      <span style={{ fontWeight: 600 }}>{quantity} {t('financeAdmin.pieces')}</span>
+                    )
+                  },
+                  {
+                    title: t('financeAdmin.salesAmount'),
+                    dataIndex: 'amount',
+                    key: 'amount',
+                    width: 150,
+                    align: 'right' as const,
+                    render: (amount: number) => (
+                      <span style={{ fontWeight: 600, color: '#1890ff' }}>RM{amount.toFixed(2)}</span>
+                    )
+                  },
+                  {
+                    title: t('financeAdmin.orderCount'),
+                    dataIndex: 'orders',
+                    key: 'orders',
+                    width: 100,
+                    align: 'center' as const,
+                    render: (orders: number) => (
+                      <span>{orders}</span>
+                    )
+                  }
+                ]}
+              />
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {brandProductDetails.map((product) => (
+                  <div 
+                    key={product.cigar.id}
+                    style={{
+                      padding: 12,
+                      background: '#f8f9fa',
+                      borderRadius: 8,
+                      border: '1px solid #e9ecef'
+                    }}
+                  >
+                    <div style={{ marginBottom: 8 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#212529' }}>
+                        {product.cigar.name}
+                      </div>
+                      {product.cigar.specification && (
+                        <div style={{ fontSize: 12, color: '#6c757d', marginTop: 2 }}>
+                          {product.cigar.specification}
+                        </div>
+                      )}
                     </div>
-                  )
-                },
-                {
-                  title: t('financeAdmin.salesQuantity'),
-                  dataIndex: 'quantity',
-                  key: 'quantity',
-                  width: 120,
-                  align: 'right' as const,
-                  render: (quantity: number) => (
-                    <span style={{ fontWeight: 600 }}>{quantity} {t('financeAdmin.pieces')}</span>
-                  )
-                },
-                {
-                  title: t('financeAdmin.salesAmount'),
-                  dataIndex: 'amount',
-                  key: 'amount',
-                  width: 150,
-                  align: 'right' as const,
-                  render: (amount: number) => (
-                    <span style={{ fontWeight: 600, color: '#1890ff' }}>RM{amount.toFixed(2)}</span>
-                  )
-                },
-                {
-                  title: t('financeAdmin.orderCount'),
-                  dataIndex: 'orders',
-                  key: 'orders',
-                  width: 100,
-                  align: 'center' as const,
-                  render: (orders: number) => (
-                    <span>{orders}</span>
-                  )
-                }
-              ]}
-            />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 11, color: '#6c757d' }}>{t('financeAdmin.salesQuantity')}</div>
+                        <div style={{ fontSize: 16, fontWeight: 600, color: '#495057' }}>
+                          {product.quantity} {t('financeAdmin.pieces')}
+                        </div>
+                      </div>
+                      <div style={{ flex: 1, textAlign: 'center' }}>
+                        <div style={{ fontSize: 11, color: '#6c757d' }}>{t('financeAdmin.orderCount')}</div>
+                        <div style={{ fontSize: 16, fontWeight: 600, color: '#495057' }}>
+                          {product.orders}
+                        </div>
+                      </div>
+                      <div style={{ flex: 1, textAlign: 'right' }}>
+                        <div style={{ fontSize: 11, color: '#6c757d' }}>{t('financeAdmin.salesAmount')}</div>
+                        <div style={{ fontSize: 16, fontWeight: 700, color: '#1890ff' }}>
+                          RM{product.amount.toFixed(2)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </>
         )}
       </Modal>
