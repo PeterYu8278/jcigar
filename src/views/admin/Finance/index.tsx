@@ -24,6 +24,7 @@ const AdminFinance: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview')
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null)
   const [editForm] = Form.useForm()
+  const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
   const [importing, setImporting] = useState(false)
   const [importRows, setImportRows] = useState<Array<{
     date: Date
@@ -507,12 +508,19 @@ const AdminFinance: React.FC = () => {
       {activeTab === 'overview' && (
         <>
           {/* 统计卡片 - Glassmorphism风格 */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: isMobile ? 'column' : 'row',
+            flexWrap: isMobile ? 'nowrap' : 'wrap', 
+            gap: 16, 
+            marginBottom: 24 
+          }}>
             {/* 总收入卡片 */}
             <div style={{ 
-              flex: '1 1 250px', 
-              minWidth: 250,
-              padding: 24, 
+              flex: isMobile ? 'none' : '1 1 250px', 
+              minWidth: isMobile ? 'unset' : 250,
+              width: isMobile ? '100%' : 'auto',
+              padding: isMobile ? 20 : 24, 
               borderRadius: 12, 
               background: 'rgba(57, 51, 40, 0.5)', 
               backdropFilter: 'blur(10px)',
@@ -533,9 +541,10 @@ const AdminFinance: React.FC = () => {
 
             {/* 总支出卡片 */}
             <div style={{ 
-              flex: '1 1 250px', 
-              minWidth: 250,
-              padding: 24, 
+              flex: isMobile ? 'none' : '1 1 250px', 
+              minWidth: isMobile ? 'unset' : 250,
+              width: isMobile ? '100%' : 'auto',
+              padding: isMobile ? 20 : 24, 
               borderRadius: 12, 
               background: 'rgba(57, 51, 40, 0.5)', 
               backdropFilter: 'blur(10px)',
@@ -556,9 +565,10 @@ const AdminFinance: React.FC = () => {
 
             {/* 净利润卡片 */}
             <div style={{ 
-              flex: '1 1 250px', 
-              minWidth: 250,
-              padding: 24, 
+              flex: isMobile ? 'none' : '1 1 250px', 
+              minWidth: isMobile ? 'unset' : 250,
+              width: isMobile ? '100%' : 'auto',
+              padding: isMobile ? 20 : 24, 
               borderRadius: 12, 
               background: 'rgba(57, 51, 40, 0.5)', 
               backdropFilter: 'blur(10px)',
@@ -761,19 +771,67 @@ const AdminFinance: React.FC = () => {
         </Space>
       </div>
 
-      <Table
-        columns={columns}
-        dataSource={enriched}
-        rowKey="id"
-        loading={loading}
-        pagination={{
-          total: enriched.length,
-          pageSize: 10,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
-        }}
-      />
+      {!isMobile ? (
+        <Table
+          columns={columns}
+          dataSource={enriched}
+          rowKey="id"
+          loading={loading}
+          pagination={{
+            total: enriched.length,
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
+          }}
+        />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {enriched.map((transaction: any) => (
+            <div key={transaction.id} style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: 12,
+              borderRadius: 10,
+              background: 'rgba(255,255,255,0.7)',
+              border: '1px solid rgba(0,0,0,0.06)'
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                  <div style={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {transaction.id}
+                    {isTransactionFullyMatched(transaction) && (
+                      <CheckOutlined style={{ marginLeft: 6, color: '#52c41a', fontSize: '14px' }} />
+                    )}
+                  </div>
+                  <div style={{ color: '#999', fontSize: 12 }}>{formatYMD(toDateSafe(transaction.createdAt))}</div>
+                </div>
+                <div style={{ marginTop: 6, color: '#666', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {transaction.description}
+                </div>
+                <div style={{ marginTop: 6, display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12 }}>
+                  <div style={{ 
+                    color: transaction.amount >= 0 ? '#52c41a' : '#ff4d4f',
+                    fontWeight: 600 
+                  }}>
+                    {transaction.amount >= 0 ? '+' : ''}{transaction.amount.toFixed(2)}
+                  </div>
+                  <div style={{ color: '#666' }}>
+                    {t('financeAdmin.balance')}: RM{(balanceMap.get(transaction.id) || 0).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+              <Button 
+                type="link" 
+                icon={<EyeOutlined />} 
+                size="small" 
+                onClick={() => setViewing(transaction)}
+                style={{ marginLeft: 8 }}
+              />
+            </div>
+          ))}
+        </div>
+      )}
         </>
       )}
 

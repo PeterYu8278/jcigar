@@ -1400,7 +1400,7 @@ const AdminInventory: React.FC = () => {
                   {t('inventory.inStock')}
                 </button>
               </div>
-              <Card>
+            <Card>
               <Modal
                 title={t('inventory.inStockRecord')}
                 open={inModalOpen}
@@ -1507,24 +1507,55 @@ const AdminInventory: React.FC = () => {
                 </Form.Item>
               </Form>
               </Modal>
-              <Table
-                style={{ marginTop: 1 }}
-                title={() => t('inventory.inStockRecord')}
-                columns={logColumns}
-                dataSource={filteredInLogs}
-                rowKey="id"
-        pagination={{ 
-          pageSize: inPageSize,
-          showSizeChanger: true,
-          showQuickJumper: false,
-          pageSizeOptions: ['5','10','20','50'],
-          onChange: (_page, size) => {
-            const next = size || inPageSize
-            setInPageSize(next)
-            try { localStorage.setItem('inventory_in_page_size', String(next)) } catch {}
-          }
-        }}
-              />
+              {!isMobile ? (
+                <Table
+                  style={{ marginTop: 1 }}
+                  title={() => t('inventory.inStockRecord')}
+                  columns={logColumns}
+                  dataSource={filteredInLogs}
+                  rowKey="id"
+                  pagination={{ 
+                    pageSize: inPageSize,
+                    showSizeChanger: true,
+                    showQuickJumper: false,
+                    pageSizeOptions: ['5','10','20','50'],
+                    onChange: (_page, size) => {
+                      const next = size || inPageSize
+                      setInPageSize(next)
+                      try { localStorage.setItem('inventory_in_page_size', String(next)) } catch {}
+                    }
+                  }}
+                />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ fontWeight: 600, marginBottom: 4 }}>{t('inventory.inStockRecord')}</div>
+                  {filteredInLogs.map((log: any) => {
+                    const cigar = items.find(i => i.id === log.cigarId)
+                    return (
+                      <div key={log.id} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: 12,
+                        borderRadius: 10,
+                        background: 'rgba(255,255,255,0.7)',
+                        border: '1px solid rgba(0,0,0,0.06)'
+                      }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                            <div style={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cigar?.name || log.cigarId}</div>
+                            <div style={{ color: '#999', fontSize: 12 }}>{formatYMD(toDateSafe(log.createdAt))}</div>
+                          </div>
+                          <div style={{ marginTop: 6, display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12 }}>
+                            <div style={{ color: '#666' }}>{t('inventory.referenceNo')}: {log.referenceNo || '-'}</div>
+                            <div style={{ color: '#666' }}>{t('inventory.quantity')}: {log.quantity}</div>
+                          </div>
+                          <div style={{ marginTop: 6, color: '#888', fontSize: 12 }}>{t('inventory.reason')}: {log.reason || '-'}</div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </Card>
             </div>
           )}
@@ -1676,23 +1707,62 @@ const AdminInventory: React.FC = () => {
                 </Form>
               </Modal>
             <Card>
-              <Table 
-              title={() => t('inventory.outStockRecord')}
-                columns={unifiedOutColumns}
-                dataSource={unifiedOutRows}
-                rowKey="id"
-        pagination={{ 
-          pageSize: outPageSize,
-          showSizeChanger: true,
-          showQuickJumper: false,
-          pageSizeOptions: ['5','10','20','50'],
-          onChange: (_page, size) => {
-            const next = size || outPageSize
-            setOutPageSize(next)
-            try { localStorage.setItem('inventory_out_page_size', String(next)) } catch {}
-          }
-        }}
-              />
+              {!isMobile ? (
+                <Table
+                  title={() => t('inventory.outStockRecord')}
+                  columns={unifiedOutColumns}
+                  dataSource={unifiedOutRows}
+                  rowKey="id"
+                  pagination={{ 
+                    pageSize: outPageSize,
+                    showSizeChanger: true,
+                    showQuickJumper: false,
+                    pageSizeOptions: ['5','10','20','50'],
+                    onChange: (_page, size) => {
+                      const next = size || outPageSize
+                      setOutPageSize(next)
+                      try { localStorage.setItem('inventory_out_page_size', String(next)) } catch {}
+                    }
+                  }}
+                />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ fontWeight: 600, marginBottom: 4 }}>{t('inventory.outStockRecord')}</div>
+                  {unifiedOutRows.map((log: any) => {
+                    const cigar = items.find(i => i.id === log.cigarId)
+                    const user = users.find((u: any) => u.id === log.userId)
+                    const userName = user?.displayName || user?.email || log.userId || '-'
+                    return (
+                      <div key={log.id} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: 12,
+                        borderRadius: 10,
+                        background: 'rgba(255,255,255,0.7)',
+                        border: '1px solid rgba(0,0,0,0.06)'
+                      }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                            <div style={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cigar?.name || log.cigarId}</div>
+                            <div style={{ color: '#999', fontSize: 12 }}>{formatYMD(toDateSafe(log.createdAt))}</div>
+                          </div>
+                          <div style={{ marginTop: 6, display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12 }}>
+                            <div style={{ color: '#666' }}>{t('inventory.referenceNo')}: {log.referenceNo || '-'}</div>
+                            <div style={{ color: '#666' }}>{t('inventory.quantity')}: {log.quantity}</div>
+                          </div>
+                          <div style={{ marginTop: 6, color: '#888', fontSize: 12 }}>
+                            {log.source === 'order' ? (
+                              <span>{t('inventory.activityOrderOutbound')}: {userName}</span>
+                            ) : (
+                              <span>{t('inventory.reason')}: {log.reason || '-'}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </Card>
             </div>
           )}

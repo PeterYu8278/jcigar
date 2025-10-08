@@ -18,8 +18,8 @@ const ParticipantsSummary: React.FC<ParticipantsSummaryProps> = ({
   // 计算产品类别统计（支持多行 items；不包含活动费用） - 必须在所有条件检查之前调用useMemo
   const categoryStats = useMemo(() => {
     if (!event) return []
-    
-    const registeredParticipants = (event as any)?.participants?.registered || []
+
+  const registeredParticipants = (event as any)?.participants?.registered || []
     if (registeredParticipants.length === 0) return []
     const stats: Record<string, { 
       count: number; 
@@ -116,16 +116,16 @@ const ParticipantsSummary: React.FC<ParticipantsSummaryProps> = ({
     
     const registeredParticipants = (event as any)?.participants?.registered || []
     const productSum = registeredParticipants.reduce((sum: number, uid: string) => {
-      const allocation = (event as any)?.allocations?.[uid]
+    const allocation = (event as any)?.allocations?.[uid]
       if (!allocation) return sum
       const items = (allocation as any)?.items as Array<{ cigarId: string; quantity: number; unitPrice?: number }> | undefined
       if (Array.isArray(items) && items.length > 0) {
         return sum + items.reduce((s, it) => s + ((it?.unitPrice != null ? Number(it.unitPrice) : getCigarPriceById(it.cigarId)) * (it?.quantity || 1)), 0)
       }
-      if (allocation?.amount != null) return sum + allocation.amount
-      const qty = allocation?.quantity || 1
-      return sum + (getCigarPriceById(allocation?.cigarId) * qty)
-    }, 0)
+    if (allocation?.amount != null) return sum + allocation.amount
+    const qty = allocation?.quantity || 1
+    return sum + (getCigarPriceById(allocation?.cigarId) * qty)
+  }, 0)
     return productSum + feeStats.feeTotal
   }, [event, getCigarPriceById, feeStats.feeTotal])
 
@@ -152,7 +152,7 @@ const ParticipantsSummary: React.FC<ParticipantsSummaryProps> = ({
           {categoryStats.map(([category, stats]) => (
             <div key={category} style={{ 
               border: '1px solid rgba(82, 196, 26, 0.2)',
-              borderRadius: 6,
+      borderRadius: 6,
               overflow: 'hidden'
             }}>
               {/* 类别汇总 */}
@@ -223,14 +223,14 @@ const ParticipantsSummary: React.FC<ParticipantsSummaryProps> = ({
       <div style={{ 
         paddingTop: 12, 
         borderTop: '1px solid #b7eb8f',
-        textAlign: 'right'
-      }}>
-        <div style={{ fontSize: 18, fontWeight: 600, color: '#389e0d' }}>
+      textAlign: 'right'
+    }}>
+      <div style={{ fontSize: 18, fontWeight: 600, color: '#389e0d' }}>
           {t('participants.totalAmount')}：RM{totalAmount.toFixed(2)}
-        </div>
-        <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-          {t('participants.participantsCount', { count: registeredParticipants.length })}
-        </div>
+      </div>
+      <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+        {t('participants.participantsCount', { count: registeredParticipants.length })}
+      </div>
       </div>
 
       
