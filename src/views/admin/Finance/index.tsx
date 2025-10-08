@@ -398,11 +398,14 @@ const AdminFinance: React.FC = () => {
 
   const netProfit = totalRevenue - totalExpenses
 
-  // 计算品牌销量统计
+  // 计算品牌销量统计（只统计非取消状态的订单）
   const brandSalesStats = useMemo(() => {
     const brandMap = new Map<string, { quantity: number; amount: number }>()
     
-    orders.forEach(order => {
+    // 只统计非取消状态的订单
+    const validOrders = orders.filter(order => order.status !== 'cancelled')
+    
+    validOrders.forEach(order => {
       const items = (order as any)?.items || []
       items.forEach((item: any) => {
         const cigar = cigars.find(c => c.id === item.cigarId)
@@ -431,7 +434,7 @@ const AdminFinance: React.FC = () => {
     }))
   }, [orders, cigars])
 
-  // 计算选中品牌的产品详情
+  // 计算选中品牌的产品详情（只统计非取消状态的订单）
   const brandProductDetails = useMemo(() => {
     if (!selectedBrand) return []
     
@@ -440,10 +443,13 @@ const AdminFinance: React.FC = () => {
       quantity: number; 
       amount: number; 
       orders: number;
-      orderRecords: Array<{ orderId: string; orderDate: string; quantity: number; amount: number; userName: string }>
+      orderRecords: Array<{ orderId: string; orderDate: string; quantity: number; amount: number; userName: string; status: string }>
     }>()
     
-    orders.forEach(order => {
+    // 只统计非取消状态的订单
+    const validOrders = orders.filter(order => order.status !== 'cancelled')
+    
+    validOrders.forEach(order => {
       const items = (order as any)?.items || []
       items.forEach((item: any) => {
         const cigar = cigars.find(c => c.id === item.cigarId)
@@ -473,7 +479,8 @@ const AdminFinance: React.FC = () => {
                 orderDate: order.createdAt as string,
                 quantity,
                 amount,
-                userName
+                userName,
+                status: order.status
               }
             ]
           })
