@@ -512,72 +512,100 @@ const AdminFinance: React.FC = () => {
           {/* 统计卡片 - Glassmorphism风格 */}
           <div style={{ 
             display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+            gridTemplateColumns: isMobile ? 'repeat(3, 1fr)': '1fr',
             gap: 16, 
             marginBottom: 24 
           }}>
             {/* 总收入卡片 */}
             <div style={{ 
-              padding: isMobile ? 20 : 24, 
+              padding: isMobile ? 12 : 24, 
               borderRadius: 12, 
-              background: 'rgba(57, 51, 40, 0.5)', 
+              background: isMobile ? 'rgba(255,255,255,0.05)' : 'rgba(57, 51, 40, 0.5)', 
               backdropFilter: 'blur(10px)',
               WebkitBackdropFilter: 'blur(10px)',
-              border: '1px solid rgba(244, 175, 37, 0.2)',
+              border: isMobile ? 'none' : '1px solid rgba(244, 175, 37, 0.2)',
               display: 'flex',
               flexDirection: 'column',
-              gap: 8
+              gap: 8,
+              textAlign: isMobile ? 'center' : 'left'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: isMobile ? 'center' : 'flex-start' }}>
                 <DollarOutlined style={{ color: '#f4af25', fontSize: 20 }} />
-                <span style={{ color: '#fff', fontSize: 16, fontWeight: 500 }}>{t('financeAdmin.totalRevenue')}</span>
+                <span style={{ color: isMobile ? '#A0A0A0' : '#fff', fontSize: isMobile ? 12 : 16, fontWeight: 500 }}>{t('financeAdmin.totalRevenue')}</span>
               </div>
-              <div style={{ color: '#fff', fontSize: 32, fontWeight: 700, letterSpacing: '-0.5px' }}>
+              <div style={{ 
+                color: isMobile ? 'transparent' : '#fff', 
+                fontSize: isMobile ? 24 : 32, 
+                fontWeight: 700, 
+                letterSpacing: '-0.5px',
+                backgroundImage: isMobile ? 'linear-gradient(to right,#FDE08D,#C48D3A)' : 'none',
+                WebkitBackgroundClip: isMobile ? 'text' : 'initial'
+              }}>
                 RM{totalRevenue.toFixed(2)}
               </div>
             </div>
 
             {/* 总支出卡片 */}
             <div style={{ 
-              padding: isMobile ? 20 : 24, 
+              padding: isMobile ? 12 : 24, 
               borderRadius: 12, 
-              background: 'rgba(57, 51, 40, 0.5)', 
+              background: isMobile ? 'rgba(255,255,255,0.05)' : 'rgba(57, 51, 40, 0.5)', 
               backdropFilter: 'blur(10px)',
               WebkitBackdropFilter: 'blur(10px)',
-              border: '1px solid rgba(244, 175, 37, 0.2)',
+              border: isMobile ? 'none' : '1px solid rgba(244, 175, 37, 0.2)',
               display: 'flex',
               flexDirection: 'column',
-              gap: 8
+              gap: 8,
+              textAlign: isMobile ? 'center' : 'left'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: isMobile ? 'center' : 'flex-start' }}>
                 <ShoppingOutlined style={{ color: '#f4af25', fontSize: 20 }} />
-                <span style={{ color: '#fff', fontSize: 16, fontWeight: 500 }}>{t('financeAdmin.totalExpenses')}</span>
+                <span style={{ color: isMobile ? '#A0A0A0' : '#fff', fontSize: isMobile ? 12 : 16, fontWeight: 500 }}>{t('financeAdmin.totalExpenses')}</span>
               </div>
-              <div style={{ color: '#fff', fontSize: 32, fontWeight: 700, letterSpacing: '-0.5px' }}>
+              <div style={{ 
+                color: isMobile ? 'transparent' : '#fff', 
+                fontSize: isMobile ? 24 : 32, 
+                fontWeight: 700, 
+                letterSpacing: '-0.5px',
+                backgroundImage: isMobile ? 'linear-gradient(to right,#FDE08D,#C48D3A)' : 'none',
+                WebkitBackgroundClip: isMobile ? 'text' : 'initial'
+              }}>
                 RM{totalExpenses.toFixed(2)}
               </div>
             </div>
 
             {/* 净利润卡片 */}
             <div style={{ 
-              padding: isMobile ? 20 : 24, 
+              padding: isMobile ? 12 : 24, 
               borderRadius: 12, 
-              background: 'rgba(57, 51, 40, 0.5)', 
+              background: isMobile ? 'rgba(255,255,255,0.05)' : 'rgba(57, 51, 40, 0.5)', 
               backdropFilter: 'blur(10px)',
               WebkitBackdropFilter: 'blur(10px)',
-              border: '1px solid rgba(244, 175, 37, 0.2)',
+              border: isMobile ? 'none' : '1px solid rgba(244, 175, 37, 0.2)',
               display: 'flex',
               flexDirection: 'column',
-              gap: 8
+              gap: 8,
+              textAlign: isMobile ? 'center' : 'left'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: isMobile ? 'center' : 'flex-start' }}>
                 {netProfit >= 0 ? <ArrowUpOutlined style={{ color: '#f4af25', fontSize: 20 }} /> : <ArrowDownOutlined style={{ color: '#f4af25', fontSize: 20 }} />}
-                <span style={{ color: '#fff', fontSize: 16, fontWeight: 500 }}>{t('financeAdmin.netProfit')}</span>
+                <span style={{ color: isMobile ? '#A0A0A0' : '#fff', fontSize: isMobile ? 12 : 16, fontWeight: 500 }}>{t('financeAdmin.netProfit')}</span>
               </div>
-              <div style={{ color: '#fff', fontSize: 32, fontWeight: 700, letterSpacing: '-0.5px' }}>
+              <div style={{ 
+                color: isMobile ? 'transparent' : '#fff', 
+                fontSize: isMobile ? 24 : 32, 
+                fontWeight: 700, 
+                letterSpacing: '-0.5px',
+                backgroundImage: isMobile ? 'linear-gradient(to right,#FDE08D,#C48D3A)' : 'none',
+                WebkitBackgroundClip: isMobile ? 'text' : 'initial'
+              }}>
                 RM{netProfit.toFixed(2)}
               </div>
-              <div style={{ color: netProfit >= 0 ? '#0bda19' : '#fa3f38', fontSize: 16, fontWeight: 500 }}>
+              <div style={{ 
+                color: isMobile ? '#A0A0A0' : (netProfit >= 0 ? '#0bda19' : '#fa3f38'), 
+                fontSize: isMobile ? 12 : 16, 
+                fontWeight: 500 
+              }}>
                 {netProfit >= 0 ? '+' : ''}{totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : 0}%
               </div>
             </div>
