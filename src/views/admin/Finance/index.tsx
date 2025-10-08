@@ -25,6 +25,7 @@ const AdminFinance: React.FC = () => {
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null)
   const [editForm] = Form.useForm()
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
+  const [selectedDateRange, setSelectedDateRange] = useState<'week' | 'month' | 'year' | null>(null)
   const [importing, setImporting] = useState(false)
   const [importRows, setImportRows] = useState<Array<{
     date: Date
@@ -358,12 +359,39 @@ const AdminFinance: React.FC = () => {
     },
   ]
 
+  // 计算统计数据（基于选中的日期范围）
+  const filteredTransactionsForStats = useMemo(() => {
+    if (!selectedDateRange) return filteredTransactions
+    
+    const now = dayjs()
+    let startDate: dayjs.Dayjs
+    
+    switch (selectedDateRange) {
+      case 'week':
+        startDate = now.startOf('week')
+        break
+      case 'month':
+        startDate = now.startOf('month')
+        break
+      case 'year':
+        startDate = now.startOf('year')
+        break
+      default:
+        return filteredTransactions
+    }
+    
+    return filteredTransactions.filter(t => {
+      const transactionDate = dayjs(t.createdAt)
+      return transactionDate.isAfter(startDate) && transactionDate.isBefore(now.endOf('day'))
+    })
+  }, [filteredTransactions, selectedDateRange])
+
   // 统计数据
-  const totalRevenue = filteredTransactions
+  const totalRevenue = filteredTransactionsForStats
     .filter(t => t.amount > 0)
     .reduce((sum, t) => sum + t.amount, 0)
 
-  const totalExpenses = Math.abs(filteredTransactions
+  const totalExpenses = Math.abs(filteredTransactionsForStats
     .filter(t => t.amount < 0)
     .reduce((sum, t) => sum + t.amount, 0))
 
@@ -434,7 +462,7 @@ const AdminFinance: React.FC = () => {
   // 已移除类别统计
 
   return (
-    <div style={{ padding: '24px' }}>
+    <div>
       <h1 style={{ fontSize: 22, fontWeight: 800, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', paddingInline: 0, marginBottom: 12 }}>{t('financeAdmin.title')}</h1>
       
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -512,7 +540,7 @@ const AdminFinance: React.FC = () => {
           {/* 统计卡片 - Glassmorphism风格 */}
           <div style={{ 
             display: 'grid',
-            gridTemplateColumns: isMobile ? 'repeat(3, 1fr)': '1fr',
+            gridTemplateColumns: isMobile ? 'repeat(3, 1fr)': 'repeat(3, 1fr)',
             gap: 16, 
             marginBottom: 24 
           }}>
@@ -612,51 +640,92 @@ const AdminFinance: React.FC = () => {
           </div>
 
           {/* 日期范围选择器 */}
-          <div style={{ display: 'flex', gap: 12, marginBottom: 24, overflowX: 'auto', paddingBottom: 4 }}>
-            <button style={{
-              height: 32,
-              padding: '0 16px',
-              borderRadius: 16,
-              background: 'rgba(244, 175, 37, 0.2)',
-              border: 'none',
-              color: '#f4af25',
-              fontSize: 14,
-              fontWeight: 500,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap'
-            }}>
+          <div style={{ 
+            display: 'flex', 
+            gap: isMobile ? 8 : 12, 
+            marginBottom: 24, 
+            overflowX: 'auto', 
+            paddingBottom: 4,
+            justifyContent: isMobile ? 'center' : 'flex-start'
+          }}>
+            <button 
+              onClick={() => setSelectedDateRange(null)}
+              style={{
+                height: isMobile ? 28 : 32,
+                padding: isMobile ? '0 12px' : '0 16px',
+                borderRadius: isMobile ? 14 : 16,
+                background: !selectedDateRange ? 'rgba(244, 175, 37, 0.2)' : 'rgba(57, 51, 40, 0.5)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                border: !selectedDateRange ? 'none' : '1px solid rgba(244, 175, 37, 0.2)',
+                color: !selectedDateRange ? '#f4af25' : '#fff',
+                fontSize: isMobile ? 12 : 14,
+                fontWeight: 500,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {t('financeAdmin.allTime')}
+            </button>
+            <button 
+              onClick={() => setSelectedDateRange('week')}
+              style={{
+                height: isMobile ? 28 : 32,
+                padding: isMobile ? '0 12px' : '0 16px',
+                borderRadius: isMobile ? 14 : 16,
+                background: selectedDateRange === 'week' ? 'rgba(244, 175, 37, 0.2)' : 'rgba(57, 51, 40, 0.5)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                border: selectedDateRange === 'week' ? 'none' : '1px solid rgba(244, 175, 37, 0.2)',
+                color: selectedDateRange === 'week' ? '#f4af25' : '#fff',
+                fontSize: isMobile ? 12 : 14,
+                fontWeight: 500,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.2s ease'
+              }}
+            >
               {t('financeAdmin.thisWeek')}
             </button>
-            <button style={{
-              height: 32,
-              padding: '0 16px',
-              borderRadius: 16,
-              background: 'rgba(57, 51, 40, 0.5)',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-              border: '1px solid rgba(244, 175, 37, 0.2)',
-              color: '#fff',
-              fontSize: 14,
-              fontWeight: 500,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap'
-            }}>
+            <button 
+              onClick={() => setSelectedDateRange('month')}
+              style={{
+                height: isMobile ? 28 : 32,
+                padding: isMobile ? '0 12px' : '0 16px',
+                borderRadius: isMobile ? 14 : 16,
+                background: selectedDateRange === 'month' ? 'rgba(244, 175, 37, 0.2)' : 'rgba(57, 51, 40, 0.5)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                border: selectedDateRange === 'month' ? 'none' : '1px solid rgba(244, 175, 37, 0.2)',
+                color: selectedDateRange === 'month' ? '#f4af25' : '#fff',
+                fontSize: isMobile ? 12 : 14,
+                fontWeight: 500,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.2s ease'
+              }}
+            >
               {t('financeAdmin.thisMonth')}
             </button>
-            <button style={{
-              height: 32,
-              padding: '0 16px',
-              borderRadius: 16,
-              background: 'rgba(57, 51, 40, 0.5)',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-              border: '1px solid rgba(244, 175, 37, 0.2)',
-              color: '#fff',
-              fontSize: 14,
-              fontWeight: 500,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap'
-            }}>
+            <button 
+              onClick={() => setSelectedDateRange('year')}
+              style={{
+                height: isMobile ? 28 : 32,
+                padding: isMobile ? '0 12px' : '0 16px',
+                borderRadius: isMobile ? 14 : 16,
+                background: selectedDateRange === 'year' ? 'rgba(244, 175, 37, 0.2)' : 'rgba(57, 51, 40, 0.5)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                border: selectedDateRange === 'year' ? 'none' : '1px solid rgba(244, 175, 37, 0.2)',
+                color: selectedDateRange === 'year' ? '#f4af25' : '#fff',
+                fontSize: isMobile ? 12 : 14,
+                fontWeight: 500,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.2s ease'
+              }}
+            >
               {t('financeAdmin.thisYear')}
             </button>
           </div>
