@@ -761,7 +761,8 @@
     "productName": "Product Name",
     "salesQuantity": "Sales Quantity",
     "salesAmount": "Sales Amount",
-    "orderCount": "Order Count"
+    "orderCount": "Order Count",
+    "orderRecords": "Order Records"
   },
   "participants": {
     "loadingParticipants": "Loading participant information...",
