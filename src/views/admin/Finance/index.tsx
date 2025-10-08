@@ -435,8 +435,10 @@ const AdminFinance: React.FC = () => {
 
   return (
     <div style={{ padding: '24px' }}>
+      <h1 style={{ fontSize: 22, fontWeight: 800, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', paddingInline: 0, marginBottom: 12 }}>{t('financeAdmin.title')}</h1>
+      
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Title level={2} style={{ marginTop: 0, marginBottom: 0, marginLeft: 0, marginRight: 0, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent'}}>{t('financeAdmin.title')}</Title>
+        <div style={{ flex: 1 }} />
         <Space>
           <Button 
             icon={<BarChartOutlined />}
