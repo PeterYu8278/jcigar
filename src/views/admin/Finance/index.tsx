@@ -511,17 +511,13 @@ const AdminFinance: React.FC = () => {
         <>
           {/* 统计卡片 - Glassmorphism风格 */}
           <div style={{ 
-            display: 'flex', 
-            flexDirection: isMobile ? 'column' : 'row',
-            flexWrap: isMobile ? 'nowrap' : 'wrap', 
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
             gap: 16, 
             marginBottom: 24 
           }}>
             {/* 总收入卡片 */}
             <div style={{ 
-              flex: isMobile ? 'none' : '1 1 250px', 
-              minWidth: isMobile ? 'unset' : 250,
-              width: isMobile ? '100%' : 'auto',
               padding: isMobile ? 20 : 24, 
               borderRadius: 12, 
               background: 'rgba(57, 51, 40, 0.5)', 
@@ -543,9 +539,6 @@ const AdminFinance: React.FC = () => {
 
             {/* 总支出卡片 */}
             <div style={{ 
-              flex: isMobile ? 'none' : '1 1 250px', 
-              minWidth: isMobile ? 'unset' : 250,
-              width: isMobile ? '100%' : 'auto',
               padding: isMobile ? 20 : 24, 
               borderRadius: 12, 
               background: 'rgba(57, 51, 40, 0.5)', 
@@ -567,9 +560,6 @@ const AdminFinance: React.FC = () => {
 
             {/* 净利润卡片 */}
             <div style={{ 
-              flex: isMobile ? 'none' : '1 1 250px', 
-              minWidth: isMobile ? 'unset' : 250,
-              width: isMobile ? '100%' : 'auto',
               padding: isMobile ? 20 : 24, 
               borderRadius: 12, 
               background: 'rgba(57, 51, 40, 0.5)', 
@@ -774,19 +764,19 @@ const AdminFinance: React.FC = () => {
       </div>
 
       {!isMobile ? (
-        <Table
-          columns={columns}
+      <Table
+        columns={columns}
           dataSource={enriched}
-          rowKey="id"
-          loading={loading}
-          pagination={{
+        rowKey="id"
+        loading={loading}
+        pagination={{
             total: enriched.length,
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
-          }}
-        />
+          pageSize: 10,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
+        }}
+      />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {enriched.map((transaction: any) => (
