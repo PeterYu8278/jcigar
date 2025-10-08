@@ -180,8 +180,8 @@ const AdminOrders: React.FC = () => {
   }
 
   const filtered = useMemo(() => {
-    return filterOrders(orders, users, keyword, statusFilter, paymentFilter, dateRange)
-  }, [orders, users, keyword, statusFilter, paymentFilter, dateRange])
+    return filterOrders(orders, users, keyword, statusFilter, paymentFilter, dateRange, cigars)
+  }, [orders, users, keyword, statusFilter, paymentFilter, dateRange, cigars])
 
   const columns = useOrderColumns({
     users,

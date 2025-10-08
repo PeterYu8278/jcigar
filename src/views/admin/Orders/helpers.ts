@@ -65,7 +65,8 @@ export const filterOrders = (
   keyword: string,
   statusFilter?: string,
   paymentFilter?: string,
-  dateRange?: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null
+  dateRange?: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null,
+  cigars?: Cigar[]
 ) => {
   return orders.filter(order => {
     const kw = keyword.trim().toLowerCase()
@@ -76,9 +77,22 @@ export const filterOrders = (
       (user?.email?.toLowerCase().includes(kw)) ||
       // 允许在 shipping address 栏搜索
       (String((order as any)?.shipping?.address || '').toLowerCase().includes(kw)) ||
-      // 允许在 item 栏搜索：按 cigarId 或者拼成字符串匹配（id/qty/price）
+      // 允许在 item 栏搜索：按 cigarId、数量、价格，以及产品名称和品牌
       (Array.isArray(order.items) && order.items.some(it => {
         const fields = [String(it.cigarId || '').toLowerCase(), String(it.quantity || ''), String(it.price || '')]
+        
+        // 如果提供了 cigars 数组，也搜索产品名称和品牌
+        if (cigars && it.cigarId) {
+          const cigar = cigars.find(c => c.id === it.cigarId)
+          if (cigar) {
+            fields.push(
+              (cigar.name || '').toLowerCase(),
+              (cigar.brand || '').toLowerCase(),
+              ((cigar as any).specification || '').toLowerCase()
+            )
+          }
+        }
+        
         return fields.some(f => f.includes(kw))
       }))
     
