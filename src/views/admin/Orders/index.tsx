@@ -12,7 +12,7 @@ import type { Order, User, Cigar, Transaction } from '../../../types'
 import { getAllOrders, getUsers, getCigars, updateDocument, deleteDocument, COLLECTIONS, getAllInventoryLogs, getAllTransactions } from '../../../services/firebase/firestore'
 import { useTranslation } from 'react-i18next'
 import { filterOrders, sortOrders, getStatusColor, getStatusText, getUserName, getUserPhone } from './helpers'
-import { getModalThemeStyles, getModalTop, getModalWidth } from '../../../config/modalTheme'
+import { getModalThemeStyles, getModalWidth, getModalTop } from '../../../config/modalTheme'
 
 const { Search } = Input
 const { Option } = Select
@@ -459,8 +459,10 @@ const AdminOrders: React.FC = () => {
         onCancel={() => { setViewing(null); setIsEditingInView(false) }}
         footer={null}
         width={getModalWidth(isMobile, 820)}
-        style={{ top: getModalTop(isMobile) }}
-        styles={getModalThemeStyles(isMobile)}
+        style={{ 
+          top: getModalTop(isMobile, 20),
+        }}
+        styles={getModalThemeStyles(isMobile, false)}
         className="order-details-modal"
         closable={false}
       >
@@ -487,20 +489,8 @@ const AdminOrders: React.FC = () => {
         confirmLoading={loading}
         destroyOnHidden
         centered
-        width={960}
-        styles={{
-          body: {
-            background: 'rgba(255,255, 255)',
-            maxHeight: '80vh',
-            overflow: 'auto',
-            padding: 16,
-          },
-          mask: { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
-          content: {
-            background: 'rgba(255,255, 255)',
-            border: '1px solid rgba(255, 215, 0, 0.2)'
-          }
-        }}
+        width={getModalWidth(isMobile, 960)}
+        styles={getModalThemeStyles(isMobile, true)}
         className="create-order-modal"
         footer={[
           <button key="cancel" type="button" onClick={() => setCreating(false)} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #d9d9d9', background: '#fff', cursor: 'pointer' }}>

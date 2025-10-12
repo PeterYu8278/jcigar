@@ -1,136 +1,72 @@
 // 统一的弹窗主题配置
-// Unified Modal Theme Configuration
+// 供所有弹窗调用，确保UI一致性
 
 import type { ModalProps } from 'antd'
 
 /**
- * 统一的弹窗样式配置 - 深色主题
- * Unified modal styles configuration - Dark theme
+ * 深色主题弹窗样式（订单详情等）
+ * 渐变背景：#221c10 -> #181611
  */
-export const MODAL_THEME_STYLES: ModalProps['styles'] = {
+export const getDarkModalStyles = (isMobile: boolean): ModalProps['styles'] => ({
   body: {
-    background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
-    padding: 0,
-    color: '#FFFFFF',
+    background: 'linear-gradient(180deg, #221c10 0%, #181611 0%)',
+    minHeight: isMobile ? '100vh' : 'auto',
   },
-  mask: {
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-  },
+  mask: { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
   content: {
-    background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
+    background: 'linear-gradient(180deg, #221c10 0%, #181611 0%)',
+  },
+})
+
+/**
+ * 浅色主题弹窗样式（表单、编辑等）
+ * 白色背景，金色边框
+ */
+export const getLightModalStyles = (isMobile: boolean, centered = true): ModalProps['styles'] => ({
+  body: {
+    background: 'rgba(255,255,255,1)',
+    maxHeight: centered ? '80vh' : undefined,
+    overflow: centered ? 'auto' : undefined,
+  },
+  mask: { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
+  content: {
+    background: 'rgba(255,255,255,1)',
     border: '1px solid rgba(255, 215, 0, 0.2)',
   },
-  header: {
-    background: 'transparent',
-    color: '#FFFFFF',
-    borderBottom: '1px solid rgba(255, 215, 0, 0.2)',
-  },
-  footer: {
-    background: 'transparent',
-    borderTop: '1px solid rgba(255, 215, 0, 0.2)',
-  },
-}
-
-/**
- * 移动端弹窗样式配置 - 全屏
- * Mobile modal styles configuration - Fullscreen
- */
-export const MODAL_THEME_STYLES_MOBILE: ModalProps['styles'] = {
-  body: {
-    background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
-    minHeight: '100vh',
-    padding: 0,
-    color: '#FFFFFF',
-  },
-  mask: {
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-  },
-  content: {
-    background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
-    border: 'none',
-    boxShadow: 'none',
-  },
-  header: {
-    background: 'transparent',
-    color: '#FFFFFF',
-    borderBottom: 'none',
-  },
-  footer: {
-    background: 'transparent',
-    borderTop: 'none',
-  },
-}
-
-/**
- * 标准弹窗样式配置（带内边距）
- * Standard modal styles with padding
- */
-export const MODAL_THEME_STYLES_WITH_PADDING: ModalProps['styles'] = {
-  body: {
-    background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
-    maxHeight: '80vh',
-    overflow: 'auto',
-    color: '#FFFFFF',
-  },
-  mask: {
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-  },
-  content: {
-    background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
-    border: '1px solid rgba(255, 215, 0, 0.2)',
-  },
-  header: {
-    background: 'transparent',
-    color: '#FFFFFF',
-    borderBottom: '1px solid rgba(255, 215, 0, 0.2)',
-  },
-  footer: {
-    background: 'transparent',
-    borderTop: '1px solid rgba(255, 215, 0, 0.2)',
-  },
-}
-
-/**
- * 根据设备类型获取弹窗样式
- * Get modal styles based on device type
- * @param isMobile - 是否为移动设备
- * @param withPadding - 是否需要内边距
- * @returns Modal styles configuration
- */
-export const getModalThemeStyles = (
-  isMobile: boolean = false,
-  withPadding: boolean = false
-): ModalProps['styles'] => {
-  if (isMobile) {
-    return MODAL_THEME_STYLES_MOBILE
-  }
-  if (withPadding) {
-    return MODAL_THEME_STYLES_WITH_PADDING
-  }
-  return MODAL_THEME_STYLES
-}
-
-/**
- * 获取弹窗顶部位置
- * Get modal top position
- * @param isMobile - 是否为移动设备
- * @returns Top position value
- */
-export const getModalTop = (isMobile: boolean = false): number => {
-  return isMobile ? 0 : 20
-}
+})
 
 /**
  * 获取弹窗宽度
- * Get modal width
- * @param isMobile - 是否为移动设备
- * @param desktopWidth - 桌面端宽度（默认 820）
- * @returns Width value
+ * @param isMobile 是否移动端
+ * @param desktopWidth 桌面端宽度（默认960）
+ * @returns 弹窗宽度
  */
-export const getModalWidth = (
-  isMobile: boolean = false,
-  desktopWidth: number = 820
-): string | number => {
+export const getModalWidth = (isMobile: boolean, desktopWidth: number = 960): number | string => {
   return isMobile ? '100%' : desktopWidth
+}
+
+/**
+ * 获取弹窗顶部距离
+ * @param isMobile 是否移动端
+ * @param desktopTop 桌面端顶部距离（默认20）
+ * @returns 顶部距离
+ */
+export const getModalTop = (isMobile: boolean, desktopTop: number = 20): number => {
+  return isMobile ? 0 : desktopTop
+}
+
+/**
+ * 通用弹窗主题样式获取器
+ * @param isMobile 是否移动端
+ * @param isLight 是否使用浅色主题（默认true）
+ * @param centered 是否居中显示（默认true，仅浅色主题生效）
+ * @returns 弹窗样式配置
+ */
+export const getModalThemeStyles = (
+  isMobile: boolean,
+  isLight: boolean = true,
+  centered: boolean = true
+): ModalProps['styles'] => {
+  return isLight ? getLightModalStyles(isMobile, centered) : getDarkModalStyles(isMobile)
 }
 

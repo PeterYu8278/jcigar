@@ -6,7 +6,7 @@ import type { Transaction, User } from '../../../types'
 import { getAllTransactions, getAllOrders, getAllInventoryLogs, createTransaction, COLLECTIONS, getAllUsers, updateDocument, deleteDocument, getCigars } from '../../../services/firebase/firestore'
 import dayjs from 'dayjs'
 import { useTranslation } from 'react-i18next'
-import { getModalThemeStyles, getModalTop, getModalWidth } from '../../../config/modalTheme'
+import { getModalThemeStyles, getModalWidth } from '../../../config/modalTheme'
 
 const { Title } = Typography
 const { RangePicker } = DatePicker
