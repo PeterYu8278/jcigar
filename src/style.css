@@ -144,6 +144,53 @@ a:hover {
 .ant-modal-footer > * + * { margin-left: 8px; }
 button + button { margin-left: 8px; }
 
+/* 暗色主题弹窗表单样式 */
+.dark-theme-form .ant-form-item-label > label {
+  color: #FFFFFF !important;
+}
+
+.dark-theme-form .ant-form-item-label > label.ant-form-item-required::before {
+  color: #ff6b6b !important;
+}
+
+.dark-theme-form .ant-select-item-option-content {
+  color: #333 !important;
+}
+
+.dark-theme-form .ant-input,
+.dark-theme-form .ant-input-number,
+.dark-theme-form .ant-picker {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(244, 175, 37, 0.3) !important;
+  color: #FFFFFF !important;
+}
+
+.dark-theme-form .ant-input::placeholder,
+.dark-theme-form .ant-input-number input::placeholder {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.dark-theme-form .ant-input:focus,
+.dark-theme-form .ant-input-number:focus,
+.dark-theme-form .ant-input-number-focused,
+.dark-theme-form .ant-picker-focused {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(244, 175, 37, 0.6) !important;
+  box-shadow: 0 0 0 2px rgba(244, 175, 37, 0.1) !important;
+}
+
+.dark-theme-form .ant-input-number-input {
+  color: #FFFFFF !important;
+}
+
+.dark-theme-form .ant-picker-input > input {
+  color: #FFFFFF !important;
+}
+
+.dark-theme-form .ant-picker-suffix {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
 .cigar-button-primary:hover {
   transform: translateY(-1px);
   box-shadow: 0 6px 20px rgba(255, 215, 0, 0.25);

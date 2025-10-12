@@ -487,7 +487,7 @@ const AdminOrders: React.FC = () => {
         onCancel={() => setCreating(false)}
         onOk={() => {/* Form submission handled by CreateOrderForm */}}
         confirmLoading={loading}
-        {...getResponsiveModalConfig(isMobile, false, 960)}
+        {...getResponsiveModalConfig(isMobile, true, 960)}
         className="create-order-modal"
         footer={[
           <button key="cancel" type="button" onClick={() => setCreating(false)} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #d9d9d9', background: '#fff', cursor: 'pointer' }}>

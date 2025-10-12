@@ -6,7 +6,7 @@ import type { Transaction, User } from '../../../types'
 import { getAllTransactions, getAllOrders, getAllInventoryLogs, createTransaction, COLLECTIONS, getAllUsers, updateDocument, deleteDocument, getCigars } from '../../../services/firebase/firestore'
 import dayjs from 'dayjs'
 import { useTranslation } from 'react-i18next'
-import { getModalThemeStyles, getModalWidth, getModalTheme } from '../../../config/modalTheme'
+import { getModalThemeStyles, getModalWidth, getModalTheme, getResponsiveModalConfig } from '../../../config/modalTheme'
 
 const { Title } = Typography
 const { RangePicker } = DatePicker
@@ -27,7 +27,7 @@ const AdminFinance: React.FC = () => {
   const [editForm] = Form.useForm()
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
   const [mobileTxTab, setMobileTxTab] = useState<'details' | 'matching'>('details')
-  const theme = getModalTheme(false) // 使用亮色主题
+  const theme = getModalTheme(true) // 使用暗色主题
   const [selectedDateRange, setSelectedDateRange] = useState<'week' | 'month' | 'year' | null>(null)
   const [productExpandedKeys, setProductExpandedKeys] = useState<React.Key[]>([])
   const [importing, setImporting] = useState(false)
@@ -957,7 +957,6 @@ const AdminFinance: React.FC = () => {
 
       {/* 交易详情（可编辑） */}
       <Modal
-        title={t('financeAdmin.transactionDetails')}
         open={!!viewing}
         onCancel={() => {
           setViewing(null)
@@ -986,7 +985,7 @@ const AdminFinance: React.FC = () => {
         width={getModalWidth(isMobile, 960)}
         destroyOnHidden
         centered
-        styles={getModalThemeStyles(isMobile, false)}
+        styles={getModalThemeStyles(isMobile, true)}
       >
         {viewing && (
           <>
@@ -1044,6 +1043,11 @@ const AdminFinance: React.FC = () => {
             layout="horizontal"
             labelCol={{ span: 8 }}
             wrapperCol={{ span: 16 }}
+            className="dark-theme-form"
+            style={{ 
+              '--label-color': theme.form.labelColor,
+              '--required-mark-color': theme.form.requiredMarkColor
+            } as React.CSSProperties}
             onFinish={async (values: any) => {
               setLoading(true)
               try {
@@ -1136,7 +1140,7 @@ const AdminFinance: React.FC = () => {
                                   label: (
           <div>
                                       <div>{o.id} · {name} · RM{total.toFixed(2)}</div>
-                                      <div style={{ fontSize: '12px', color: '#666' }}>{addr}</div>
+                                      <div style={{ fontSize: '12px', color: '#bab09c' }}>{addr}</div>
           </div>
                                   ), 
                                   value: o.id,
@@ -1203,8 +1207,13 @@ const AdminFinance: React.FC = () => {
         onCancel={() => setCreating(false)}
         onOk={() => form.submit()}
         confirmLoading={loading}
+        {...getResponsiveModalConfig(isMobile, true, 600)}
       >
-        <Form form={form} layout="vertical" onFinish={async (values: any) => {
+        <Form 
+          form={form} 
+          layout="vertical" 
+          className="dark-theme-form"
+          onFinish={async (values: any) => {
           setLoading(true)
           try {
             const income = Number(values.incomeAmount || 0)
@@ -1268,7 +1277,7 @@ const AdminFinance: React.FC = () => {
                   label: (
                     <div>
                       <div>{o.id} · {name} · RM{total.toFixed(2)}</div>
-                      <div style={{ fontSize: '12px', color: '#666' }}>{addr}</div>
+                      <div style={{ fontSize: '12px', color: '#bab09c' }}>{addr}</div>
                     </div>
                   ), 
                   value: o.id,
@@ -1286,7 +1295,10 @@ const AdminFinance: React.FC = () => {
         title={t('financeAdmin.pasteImportTitle')}
         open={importing}
         onCancel={() => setImporting(false)}
-        width={1000}
+        width={getModalWidth(isMobile, 1000)}
+        destroyOnHidden
+        centered
+        styles={getModalThemeStyles(isMobile, true)}
         onOk={async () => {
           if (!importRows || importRows.length === 0) {
             message.warning(t('financeAdmin.noLinesToImport'))
@@ -1431,37 +1443,11 @@ const AdminFinance: React.FC = () => {
           setProductExpandedKeys([])
         }}
         footer={null}
-        width={isMobile ? '100%' : 800}
+        width={getModalWidth(isMobile, 800)}
         destroyOnHidden
         centered
         getContainer={false}
-        styles={{
-          body: {
-            background: 'rgba(255,255, 255)',
-            maxHeight: isMobile ? '80vh' : '70vh',
-            overflow: 'auto'
-          },
-          mask: { 
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            position: isMobile ? 'fixed' : undefined,
-            left: isMobile ? 0 : undefined,
-            right: isMobile ? 0 : undefined,
-            top: isMobile ? 0 : undefined,
-            bottom: isMobile ? 0 : undefined
-          },
-          content: {
-            background: 'rgba(255,255, 255)',
-            border: '1px solid rgba(255, 215, 0, 0.2)',
-            margin: isMobile ? '0 12px' : 'auto'
-          },
-          wrapper: isMobile ? {
-            position: 'fixed',
-            left: 0,
-            right: 0,
-            top: 0,
-            bottom: 0
-          } : undefined
-        }}
+        styles={getModalThemeStyles(isMobile, true)}
       >
         {selectedBrand && (
           <>
@@ -1575,8 +1561,8 @@ const AdminFinance: React.FC = () => {
                     key: 'name',
                     render: (cigar: any) => (
                       <div>
-                        <div style={{ fontWeight: 600 }}>{cigar.name}</div>
-                        <div style={{ fontSize: 12, color: '#666' }}>{cigar.specification || '-'}</div>
+                        <div style={{ fontWeight: 600, color: '#FFFFFF' }}>{cigar.name}</div>
+                        <div style={{ fontSize: 12, color: '#bab09c' }}>{cigar.specification || '-'}</div>
                       </div>
                     )
                   },
