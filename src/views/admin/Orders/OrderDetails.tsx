@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import type { Order, User, Cigar } from '../../../types'
 import { updateDocument, COLLECTIONS } from '../../../services/firebase/firestore'
 import { getStatusColor, getStatusText, getPaymentText, getUserName, getUserPhone } from './helpers'
+import { getModalTheme } from '../../../config/modalTheme'
 
 interface OrderDetailsProps {
   order: Order
@@ -29,6 +30,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
   onOrderUpdate
 }) => {
   const { t } = useTranslation()
+  const theme = getModalTheme(true) // 使用暗色主题
 
   const handleStatusUpdate = async (status: string) => {
     try {
@@ -98,20 +100,8 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginBottom: '30px' }}>
           
           {/* 商品列表 */}
-          <section style={{
-            padding: '16px',
-            borderRadius: '12px',
-            background: 'rgba(39, 35, 27, 0.5)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(57, 51, 40, 0.7)'
-          }}>
-            <h2 style={{ 
-              fontSize: '18px', 
-              fontWeight: 'bold', 
-              color: '#FFFFFF', 
-              marginBottom: '16px',
-              margin: '0 0 16px 0'
-            }}>
+          <section style={theme.content.section}>
+            <h2 style={theme.content.sectionTitle}>
               {t('ordersAdmin.itemDetails')}
             </h2>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -137,28 +127,14 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
                       🚬
                     </div>
                     <div style={{ flex: 1 }}>
-                      <p style={{ 
-                        fontWeight: 'bold', 
-                        color: '#FFFFFF', 
-                        margin: '0 0 4px 0',
-                        fontSize: '14px'
-                      }}>
+                      <p style={{ ...theme.text.body, fontWeight: 'bold', margin: '0 0 4px 0' }}>
                         {cigar?.name || item.cigarId}
                       </p>
-                      <p style={{ 
-                        fontSize: '12px', 
-                        color: '#bab09c',
-                        margin: 0
-                      }}>
+                      <p style={{ ...theme.text.hint, fontSize: '12px' }}>
                         {t('ordersAdmin.item.quantity')}: {item.quantity}
                       </p>
                     </div>
-                    <p style={{ 
-                      fontWeight: '600', 
-                      color: '#FFFFFF',
-                      margin: 0,
-                      fontSize: '14px'
-                    }}>
+                    <p style={{ ...theme.text.body, fontWeight: '600' }}>
                       RM{item.price.toFixed(2)}
                     </p>
                   </li>
@@ -173,116 +149,81 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
               justifyContent: 'space-between', 
               alignItems: 'center' 
             }}>
-              <p style={{ color: '#bab09c', margin: 0, fontSize: '14px' }}>
+              <p style={theme.text.secondary}>
                 {t('ordersAdmin.totalAmount')}:
               </p>
-              <p style={{ 
-                fontSize: '20px', 
-                fontWeight: 'bold', 
-                color: '#f4af25',
-                margin: 0
-              }}>
+              <p style={{ ...theme.text.primary, fontSize: '20px', fontWeight: 'bold' }}>
                 RM{order.total.toFixed(2)}
               </p>
             </div>
           </section>
 
           {/* 订单信息 */}
-          <section style={{
-            padding: '16px',
-            borderRadius: '12px',
-            background: 'rgba(39, 35, 27, 0.5)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(57, 51, 40, 0.7)'
-          }}>
-            <h2 style={{ 
-              fontSize: '18px', 
-              fontWeight: 'bold', 
-              color: '#FFFFFF', 
-              marginBottom: '16px',
-              margin: '0 0 16px 0'
-            }}>
+          <section style={theme.content.section}>
+            <h2 style={theme.content.sectionTitle}>
               {t('ordersAdmin.orderInfo')}
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
-                <p style={{ color: '#bab09c', margin: 0 }}>{t('ordersAdmin.orderId')}</p>
-                <p style={{ color: '#FFFFFF', margin: 0, wordBreak: 'break-all', whiteSpace: 'normal' }}>{order.id}</p>
+              <div style={theme.content.row}>
+                <p style={theme.text.secondary}>{t('ordersAdmin.orderId')}</p>
+                <p style={{ ...theme.text.body, wordBreak: 'break-all', whiteSpace: 'normal' }}>{order.id}</p>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
-                <p style={{ color: '#bab09c', margin: 0 }}>{t('ordersAdmin.status.title')}</p>
+              <div style={theme.content.row}>
+                <p style={theme.text.secondary}>{t('ordersAdmin.status.title')}</p>
                 <Tag color={getStatusColor(order.status)} style={{ margin: 0 }}>
                   {getStatusText(order.status, t)}
                 </Tag>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
-                <p style={{ color: '#bab09c', margin: 0, whiteSpace: 'nowrap' }}>{t('ordersAdmin.createdAt')}</p>
-                <p style={{ color: '#FFFFFF', margin: 0 }}>{dayjs(order.createdAt).format('YYYY-MM-DD')}</p>
+              <div style={theme.content.row}>
+                <p style={{ ...theme.text.secondary, whiteSpace: 'nowrap' }}>{t('ordersAdmin.createdAt')}</p>
+                <p style={theme.text.body}>{dayjs(order.createdAt).format('YYYY-MM-DD')}</p>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
-                <p style={{ color: '#bab09c', margin: 0, whiteSpace: 'nowrap' }}>{t('ordersAdmin.payment.title')}</p>
-                <p style={{ color: '#FFFFFF', margin: 0 }}>{getPaymentText(order.payment.method, t)}</p>
+              <div style={theme.content.row}>
+                <p style={{ ...theme.text.secondary, whiteSpace: 'nowrap' }}>{t('ordersAdmin.payment.title')}</p>
+                <p style={theme.text.body}>{getPaymentText(order.payment.method, t)}</p>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
-                <p style={{ color: '#bab09c', margin: 0, whiteSpace: 'nowrap' }}>{t('ordersAdmin.transactionId')}</p>
-                <p style={{ color: '#FFFFFF', margin: 0, wordBreak: 'break-all', whiteSpace: 'normal', textAlign: 'right' }}>{order.payment.transactionId}</p>
+              <div style={theme.content.row}>
+                <p style={{ ...theme.text.secondary, whiteSpace: 'nowrap' }}>{t('ordersAdmin.transactionId')}</p>
+                <p style={{ ...theme.text.body, wordBreak: 'break-all', whiteSpace: 'normal', textAlign: 'right' }}>{order.payment.transactionId}</p>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
-                <p style={{ color: '#bab09c', margin: 0, whiteSpace: 'nowrap' }}>{t('ordersAdmin.paidAt')}</p>
-                <p style={{ color: '#FFFFFF', margin: 0 }}>{dayjs(order.payment.paidAt).format('YYYY-MM-DD HH:mm')}</p>
+              <div style={theme.content.row}>
+                <p style={{ ...theme.text.secondary, whiteSpace: 'nowrap' }}>{t('ordersAdmin.paidAt')}</p>
+                <p style={theme.text.body}>{dayjs(order.payment.paidAt).format('YYYY-MM-DD HH:mm')}</p>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
-                <p style={{ color: '#bab09c', margin: 0, whiteSpace: 'nowrap' }}>{t('ordersAdmin.trackingNumber')}</p>
+              <div style={theme.content.row}>
+                <p style={{ ...theme.text.secondary, whiteSpace: 'nowrap' }}>{t('ordersAdmin.trackingNumber')}</p>
                 {isEditingInView ? (
                   <Input
                     defaultValue={order.shipping.trackingNumber || ''}
                     placeholder={t('ordersAdmin.enterTrackingNo')}
-                    style={{ 
-                      width: '200px',
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      border: '1px solid rgba(244, 175, 37, 0.3)',
-                      color: '#FFFFFF',
-                      borderRadius: '4px'
-                    }}
+                    style={{ ...(theme.input as any).base, width: '200px' }}
                     onBlur={(e) => handleTrackingNumberUpdate(e.target.value)}
                     onPressEnter={(e) => handleTrackingNumberUpdate(e.currentTarget.value)}
                   />
                 ) : (
-                  <p style={{ color: '#FFFFFF', margin: 0, wordBreak: 'break-all', whiteSpace: 'normal' }}>{order.shipping.trackingNumber || '-'}</p>
+                  <p style={{ ...theme.text.body, wordBreak: 'break-all', whiteSpace: 'normal' }}>{order.shipping.trackingNumber || '-'}</p>
                 )}
               </div>
             </div>
           </section>
 
           {/* 收货信息 */}
-          <section style={{
-            padding: '16px',
-            borderRadius: '12px',
-            background: 'rgba(39, 35, 27, 0.5)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(57, 51, 40, 0.7)'
-          }}>
-            <h2 style={{ 
-              fontSize: '18px', 
-              fontWeight: 'bold', 
-              color: '#FFFFFF', 
-              marginBottom: '16px',
-              margin: '0 0 16px 0'
-            }}>
+          <section style={theme.content.section}>
+            <h2 style={theme.content.sectionTitle}>
               {t('ordersAdmin.shippingInfo')}
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
-                <p style={{ color: '#bab09c', margin: 0 }}>{t('ordersAdmin.user')}</p>
-                <p style={{ color: '#FFFFFF', margin: 0 }}>{getUserName(order.userId, users)}</p>
+              <div style={theme.content.row}>
+                <p style={theme.text.secondary}>{t('ordersAdmin.user')}</p>
+                <p style={theme.text.body}>{getUserName(order.userId, users)}</p>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
-                <p style={{ color: '#bab09c', margin: 0 }}>{t('ordersAdmin.phone')}</p>
-                <p style={{ color: '#FFFFFF', margin: 0 }}>{getUserPhone(order.userId, users) || '-'}</p>
+              <div style={theme.content.row}>
+                <p style={theme.text.secondary}>{t('ordersAdmin.phone')}</p>
+                <p style={theme.text.body}>{getUserPhone(order.userId, users) || '-'}</p>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '14px' }}>
-                <p style={{ color: '#bab09c', margin: 0, whiteSpace: 'nowrap', marginRight: '16px' }}>{t('ordersAdmin.address')}</p>
-                <p style={{ color: '#FFFFFF', margin: 0, textAlign: 'right' }}>{order.shipping.address || '-'}</p>
+                <p style={{ ...theme.text.secondary, whiteSpace: 'nowrap', marginRight: '16px' }}>{t('ordersAdmin.address')}</p>
+                <p style={{ ...theme.text.body, textAlign: 'right' }}>{order.shipping.address || '-'}</p>
               </div>
             </div>
           </section>
@@ -311,49 +252,19 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
             <>
               <button 
                 onClick={() => handleStatusUpdate('confirmed')}
-                style={{ 
-                  flex: 2, 
-                  height: '40px',
-                  background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-                  color: '#111',
-                  fontWeight: 'bold',
-                  border: 'none',
-                  borderRadius: 8,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
+                style={{ ...theme.button.primary, flex: 2, height: '40px', transition: 'all 0.2s ease' }}
               >
                 {t('ordersAdmin.confirmOrder')}
               </button>
               <button 
                 onClick={() => handleStatusUpdate('shipped')}
-                style={{ 
-                  flex: 2, 
-                  height: '40px',
-                  background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-                  color: '#111',
-                  fontWeight: 'bold',
-                  border: 'none',
-                  borderRadius: 8,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
+                style={{ ...theme.button.primary, flex: 2, height: '40px', transition: 'all 0.2s ease' }}
               >
                 {t('ordersAdmin.markShipped')}
               </button>
               <button 
                 onClick={() => handleStatusUpdate('delivered')}
-                style={{ 
-                  flex: 2, 
-                  height: '40px',
-                  background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-                  color: '#111',
-                  fontWeight: 'bold',
-                  border: 'none',
-                  borderRadius: 8,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
+                style={{ ...theme.button.primary, flex: 2, height: '40px', transition: 'all 0.2s ease' }}
               >
                 {t('ordersAdmin.markDelivered')}
               </button>
@@ -361,17 +272,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
           )}
           <button 
             onClick={onEditToggle}
-            style={{ 
-              flex: 1,
-              height: '40px',
-              background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-              color: '#111',
-              fontWeight: 'bold',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              borderRadius: 8,
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
+            style={{ ...theme.button.primary, flex: 1, height: '40px', transition: 'all 0.2s ease' }}
           >
             {isEditingInView ? t('common.save') : t('common.edit')}
           </button>

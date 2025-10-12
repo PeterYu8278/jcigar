@@ -6,7 +6,7 @@ import type { Transaction, User } from '../../../types'
 import { getAllTransactions, getAllOrders, getAllInventoryLogs, createTransaction, COLLECTIONS, getAllUsers, updateDocument, deleteDocument, getCigars } from '../../../services/firebase/firestore'
 import dayjs from 'dayjs'
 import { useTranslation } from 'react-i18next'
-import { getModalThemeStyles, getModalWidth } from '../../../config/modalTheme'
+import { getModalThemeStyles, getModalWidth, getModalTheme } from '../../../config/modalTheme'
 
 const { Title } = Typography
 const { RangePicker } = DatePicker
@@ -27,6 +27,7 @@ const AdminFinance: React.FC = () => {
   const [editForm] = Form.useForm()
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
   const [mobileTxTab, setMobileTxTab] = useState<'details' | 'matching'>('details')
+  const theme = getModalTheme(false) // 使用亮色主题
   const [selectedDateRange, setSelectedDateRange] = useState<'week' | 'month' | 'year' | null>(null)
   const [productExpandedKeys, setProductExpandedKeys] = useState<React.Key[]>([])
   const [importing, setImporting] = useState(false)
@@ -966,18 +967,18 @@ const AdminFinance: React.FC = () => {
           <button key="cancel" type="button" onClick={() => {
             setViewing(null)
             setIsEditing(false)
-          }} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(244, 175, 37, 0.3)', background: 'rgba(255,255,255,0.1)', color: '#ffffff', cursor: 'pointer' }}>
+          }} style={theme.button.secondary}>
             {t('common.cancel')}
           </button>,
-          <button key="delete" type="button" onClick={() => viewing && handleDeleteTransaction(viewing)} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(239, 68, 68, 0.5)', background: 'rgba(239, 68, 68, 0.2)', color: '#ff6b6b', cursor: 'pointer' }}>
+          <button key="delete" type="button" onClick={() => viewing && handleDeleteTransaction(viewing)} style={theme.button.danger}>
             {t('common.delete')}
           </button>,
           !isEditing ? (
-            <button key="edit" type="button" className="cigar-btn-gradient" onClick={() => setIsEditing(true)} style={{ padding: '6px 14px', borderRadius: 8, cursor: 'pointer' }}>
+            <button key="edit" type="button" className="cigar-btn-gradient" onClick={() => setIsEditing(true)} style={theme.button.primary}>
               {t('common.edit')}
             </button>
           ) : (
-            <button key="save" type="button" className="cigar-btn-gradient" onClick={() => editForm.submit()} style={{ padding: '6px 14px', borderRadius: 8, cursor: 'pointer' }}>
+            <button key="save" type="button" className="cigar-btn-gradient" onClick={() => editForm.submit()} style={theme.button.primary}>
               {t('common.save')}
             </button>
           )
@@ -985,7 +986,7 @@ const AdminFinance: React.FC = () => {
         width={getModalWidth(isMobile, 960)}
         destroyOnHidden
         centered
-        styles={getModalThemeStyles(isMobile, true)}
+        styles={getModalThemeStyles(isMobile, false)}
       >
         {viewing && (
           <>
@@ -1100,15 +1101,15 @@ const AdminFinance: React.FC = () => {
               <div style={{ flex: 1, minWidth: isMobile ? 'auto' : 380 }}>
                 <Form.List name="relatedOrders">
                   {(fields, { add, remove }) => (
-                    <div style={{ border: '1px solid rgba(244, 175, 37, 0.3)', borderRadius: 8, padding: 12, background: 'rgba(255,255,255,0.05)' }}>
+                    <div style={theme.card.base}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                        <strong style={{ color: '#ffffff' }}>{t('financeAdmin.relatedOrders')}</strong>
+                        <strong>{t('financeAdmin.relatedOrders')}</strong>
                         {isEditing && (
-                          <button type="button" onClick={() => add({ orderId: undefined, amount: 0 })} className="cigar-btn-gradient" style={{ padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}>{t('common.add')}</button>
+                          <button type="button" onClick={() => add({ orderId: undefined, amount: 0 })} className="cigar-btn-gradient" style={theme.button.text}>{t('common.add')}</button>
                         )}
                       </div>
                       {fields.length === 0 && (
-                        <div style={{ color: 'rgba(255,255,255,0.6)' }}>{t('common.noData')}</div>
+                        <div style={theme.text.hint}>{t('common.noData')}</div>
                       )}
                       {fields.map((field, index) => (
                         <div key={field.key} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
@@ -1155,11 +1156,11 @@ const AdminFinance: React.FC = () => {
                             <InputNumber min={0} step={0.01} style={{ width: '100%' }} disabled={!isEditing} />
                           </Form.Item>
                           {isEditing && (
-                            <button type="button" onClick={() => remove(field.name)} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid rgba(239, 68, 68, 0.3)', background: 'rgba(239, 68, 68, 0.1)', color: '#ff6b6b', cursor: 'pointer' }}>{t('common.remove')}</button>
+                            <button type="button" onClick={() => remove(field.name)} style={theme.button.text}>{t('common.remove')}</button>
                           )}
                         </div>
                       ))}
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
+                      <div style={{ ...theme.text.hint, display: 'flex', justifyContent: 'flex-end' }}>
                         {t('financeAdmin.relatedOrdersHint')}
                       </div>
                       {/* 添加统计信息 */}
@@ -1167,27 +1168,9 @@ const AdminFinance: React.FC = () => {
                         const totalMatchedCents = Math.round(totalMatchedAmount * 100)
                         const transactionCents = Math.round(transactionAmount * 100)
                         const exceeded = totalMatchedCents > transactionCents
-                        const boxStyle: React.CSSProperties = exceeded
-                          ? {
-                              marginTop: 12,
-                              padding: 8,
-                              background: 'rgba(239, 68, 68, 0.2)',
-                              borderRadius: 4,
-                              border: '1px solid rgba(239, 68, 68, 0.4)'
-                            }
-                          : {
-                              marginTop: 12,
-                              padding: 8,
-                              background: 'rgba(255,255,255,0.1)',
-                              borderRadius: 4,
-                              border: '1px solid rgba(244, 175, 37, 0.2)'
-                            }
-                        const titleStyle: React.CSSProperties = exceeded
-                          ? { fontSize: 12, color: '#ff6b6b', marginBottom: 4, fontWeight: 600 }
-                          : { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginBottom: 4 }
-                        const textStyle: React.CSSProperties = exceeded
-                          ? { fontSize: 11, color: '#ff6b6b', fontWeight: 600 }
-                          : { fontSize: 11, color: 'rgba(255,255,255,0.9)' }
+                        const boxStyle = exceeded ? theme.card.error : theme.card.info
+                        const titleStyle = exceeded ? theme.text.error : theme.text.secondary
+                        const textStyle = exceeded ? theme.text.error : theme.text.success
                         return (
                           <div style={boxStyle}>
                             <div style={titleStyle}>

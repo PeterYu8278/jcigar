@@ -12,7 +12,7 @@ import type { Order, User, Cigar, Transaction } from '../../../types'
 import { getAllOrders, getUsers, getCigars, updateDocument, deleteDocument, COLLECTIONS, getAllInventoryLogs, getAllTransactions } from '../../../services/firebase/firestore'
 import { useTranslation } from 'react-i18next'
 import { filterOrders, sortOrders, getStatusColor, getStatusText, getUserName, getUserPhone } from './helpers'
-import { getModalThemeStyles, getModalWidth, getModalTop } from '../../../config/modalTheme'
+import { getModalThemeStyles, getModalWidth, getResponsiveModalConfig } from '../../../config/modalTheme'
 
 const { Search } = Input
 const { Option } = Select
@@ -458,11 +458,11 @@ const AdminOrders: React.FC = () => {
         open={!!viewing}
         onCancel={() => { setViewing(null); setIsEditingInView(false) }}
         footer={null}
-        width={getModalWidth(isMobile, 820)}
+        width={isMobile ? '100%' : 820}
         style={{ 
-          top: getModalTop(isMobile, 20),
+          top: isMobile ? 0 : 20,
         }}
-        styles={getModalThemeStyles(isMobile, false)}
+        styles={getModalThemeStyles(isMobile, true)}
         className="order-details-modal"
         closable={false}
       >
@@ -487,10 +487,7 @@ const AdminOrders: React.FC = () => {
         onCancel={() => setCreating(false)}
         onOk={() => {/* Form submission handled by CreateOrderForm */}}
         confirmLoading={loading}
-        destroyOnHidden
-        centered
-        width={getModalWidth(isMobile, 960)}
-        styles={getModalThemeStyles(isMobile, true)}
+        {...getResponsiveModalConfig(isMobile, false, 960)}
         className="create-order-modal"
         footer={[
           <button key="cancel" type="button" onClick={() => setCreating(false)} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #d9d9d9', background: '#fff', cursor: 'pointer' }}>

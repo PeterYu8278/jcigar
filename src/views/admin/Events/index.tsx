@@ -17,7 +17,6 @@ import EventDetailsView from '../../../components/admin/EventDetailsView'
 import EventParticipantsManager from '../../../components/admin/EventParticipantsManager'
 import StatusFilterDropdown from '../../../components/admin/StatusFilterDropdown'
 import { useTranslation } from 'react-i18next'
-import { getModalThemeStyles, getModalTop, getModalWidth } from '../../../config/modalTheme'
 
 const { Title } = Typography
 const { Search } = Input
