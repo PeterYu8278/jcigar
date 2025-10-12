@@ -1107,7 +1107,7 @@ const AdminFinance: React.FC = () => {
                   {(fields, { add, remove }) => (
                     <div style={theme.card.base}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                        <strong>{t('financeAdmin.relatedOrders')}</strong>
+                        <strong style={{ color: '#FFFFFF' }}>{t('financeAdmin.relatedOrders')}</strong>
                         {isEditing && (
                           <button type="button" onClick={() => add({ orderId: undefined, amount: 0 })} className="cigar-btn-gradient" style={theme.button.text}>{t('common.add')}</button>
                         )}

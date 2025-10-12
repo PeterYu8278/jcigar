@@ -20,8 +20,7 @@ export const getModalThemeStyles = (isMobile: boolean, isDarkTheme: boolean = tr
   return {
   body: {
       background: 'rgba(24, 22, 17, 0.95)',
-      overflow: 'auto',
-      padding: isMobile ? '8px' : '16px'
+      overflow: 'auto'
   },
   mask: {
       backgroundColor: 'rgba(0, 0, 0, 0.85)',

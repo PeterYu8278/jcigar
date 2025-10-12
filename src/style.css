@@ -145,8 +145,20 @@ a:hover {
 button + button { margin-left: 8px; }
 
 /* 暗色主题弹窗表单样式 */
+.dark-theme-form {
+  color: #FFFFFF !important;
+}
+
 .dark-theme-form .ant-form-item-label > label {
   color: #FFFFFF !important;
+}
+
+.dark-theme-form strong {
+  color: #FFFFFF !important;
+}
+
+.dark-theme-form div {
+  color: inherit;
 }
 
 .dark-theme-form .ant-form-item-label > label.ant-form-item-required::before {
@@ -188,6 +200,35 @@ button + button { margin-left: 8px; }
 }
 
 .dark-theme-form .ant-picker-suffix {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.dark-theme-form .ant-select-selector {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(244, 175, 37, 0.3) !important;
+  color: #FFFFFF !important;
+}
+
+.dark-theme-form .ant-select-selection-placeholder {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.dark-theme-form .ant-select-arrow {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.dark-theme-form .ant-select-focused .ant-select-selector {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(244, 175, 37, 0.6) !important;
+  box-shadow: 0 0 0 2px rgba(244, 175, 37, 0.1) !important;
+}
+
+.dark-theme-form .ant-select-selection-item {
+  color: #FFFFFF !important;
+}
+
+.dark-theme-form .ant-select-clear {
+  background: rgba(255, 255, 255, 0.1) !important;
   color: rgba(255, 255, 255, 0.6) !important;
 }
 
