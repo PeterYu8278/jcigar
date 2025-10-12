@@ -763,7 +763,9 @@
     "salesAmount": "Sales Amount",
     "orderCount": "Order Count",
     "orderRecords": "Order Records",
-    "customerName": "Customer Name",
+    "orderId": "Order ID",
+    "orderDate": "Order Date",
+    "userName": "User Name",
     "quantity": "Quantity"
   },
   "participants": {

@@ -1,0 +1,64 @@
+# Cigar App 2 - Project Rules for Cursor AI
+
+## Project Overview
+This is a React + TypeScript + Vite PWA application for a premium cigar club management platform.
+
+## Tech Stack
+- **Frontend Framework**: React 19 with TypeScript
+- **Build Tool**: Vite 7
+- **UI Library**: Ant Design 5
+- **State Management**: Zustand
+- **Routing**: React Router DOM 7
+- **Backend**: Firebase (Auth + Firestore)
+- **Image Management**: Cloudinary
+- **Internationalization**: i18next + react-i18next
+- **PWA**: vite-plugin-pwa with Workbox
+
+## Code Style Guidelines
+- Use TypeScript with strict mode enabled
+- Use functional components with React hooks
+- Prefer arrow functions for components
+- Use named exports for components
+- Keep components small and focused (single responsibility)
+- Use Ant Design components consistently
+- Follow existing file structure patterns
+
+## File Structure
+- `/src/components` - Reusable UI components
+  - `/admin` - Admin-specific components
+  - `/common` - Shared components
+  - `/layout` - Layout components
+- `/src/views` - Page-level components
+  - `/admin` - Admin pages
+  - `/auth` - Authentication pages
+  - `/frontend` - User-facing pages
+- `/src/services` - API and external service integrations
+- `/src/store` - Zustand state management
+- `/src/hooks` - Custom React hooks
+- `/src/utils` - Utility functions
+- `/src/config` - Configuration files
+- `/src/i18n` - Internationalization files
+
+## Important Notes
+- This project uses Firebase for authentication and data storage
+- Cloudinary is used for image uploads and management
+- The app supports both English (en-US) and Chinese (zh-CN)
+- All user-facing text should be internationalized using i18next
+- Follow the existing permission system defined in `/src/config/permissions.ts`
+
+## Development Commands
+- `npm run dev` - Start development server (port 3000)
+- `npm run build` - Build for production (with TypeScript check)
+- `npm run build:fast` - Build without TypeScript check
+- `npm run preview` - Preview production build
+
+## Best Practices
+- Always check for existing similar components before creating new ones
+- Use the existing hooks (useCloudinary, useQRCode) when applicable
+- Follow the established naming conventions
+- Keep console.log statements minimal in production code
+- Handle errors gracefully with proper error messages
+- Use TypeScript types from `/src/types`
+- Respect the existing theme configuration
+
+

@@ -740,7 +740,9 @@
     "salesAmount": "销售金额",
     "orderCount": "订单次数",
     "orderRecords": "订单记录",
-    "customerName": "客户名称",
+    "orderId": "订单ID",
+    "orderDate": "订单日期",
+    "userName": "用户名称",
     "quantity": "数量"
   },
   "participants": {

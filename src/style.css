@@ -74,9 +74,11 @@ a:hover {
   color: var(--cigar-text-primary);
 }
 
-/* 让 Modal 视觉居中随侧边栏变化进行修正 */
-.ant-modal-wrap {
-  padding-left: var(--sider-width);
+/* 让 Modal 视觉居中随侧边栏变化进行修正（仅桌面端） */
+@media (min-width: 769px) {
+  .ant-modal-wrap {
+    padding-left: var(--sider-width);
+  }
 }
 
 /* 自定义滚动条样式 */

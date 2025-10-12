@@ -1508,12 +1508,12 @@ const AdminInventory: React.FC = () => {
               </Form>
               </Modal>
               {!isMobile ? (
-                <Table
+              <Table
                   style={{ marginTop: 1 }}
-                  title={() => t('inventory.inStockRecord')}
-                  columns={logColumns}
+                title={() => t('inventory.inStockRecord')}
+                columns={logColumns}
                   dataSource={filteredInLogs}
-                  rowKey="id"
+                rowKey="id"
                   pagination={{ 
                     pageSize: inPageSize,
                     showSizeChanger: true,
@@ -1708,11 +1708,11 @@ const AdminInventory: React.FC = () => {
               </Modal>
             <Card>
               {!isMobile ? (
-                <Table
+              <Table
                   title={() => t('inventory.outStockRecord')}
                   columns={unifiedOutColumns}
                   dataSource={unifiedOutRows}
-                  rowKey="id"
+                rowKey="id"
                   pagination={{ 
                     pageSize: outPageSize,
                     showSizeChanger: true,
