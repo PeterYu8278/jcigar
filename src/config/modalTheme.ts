@@ -20,18 +20,22 @@ export const getDarkModalStyles = (isMobile: boolean): ModalProps['styles'] => (
 
 /**
  * 浅色主题弹窗样式（表单、编辑等）
- * 白色背景，金色边框
+ * 协调的背景色，与页面卡片保持一致
  */
 export const getLightModalStyles = (isMobile: boolean, centered = true): ModalProps['styles'] => ({
   body: {
-    background: 'rgba(255,255,255,1)',
+    background: 'rgba(57, 51, 40, 0.95)',
     maxHeight: centered ? '80vh' : undefined,
     overflow: centered ? 'auto' : undefined,
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
   },
   mask: { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
   content: {
-    background: 'rgba(255,255,255,1)',
-    border: '1px solid rgba(255, 215, 0, 0.2)',
+    background: 'rgba(57, 51, 40, 0.95)',
+    border: '1px solid rgba(244, 175, 37, 0.3)',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
   },
 })
 

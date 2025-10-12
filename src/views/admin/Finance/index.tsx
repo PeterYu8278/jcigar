@@ -966,10 +966,10 @@ const AdminFinance: React.FC = () => {
           <button key="cancel" type="button" onClick={() => {
             setViewing(null)
             setIsEditing(false)
-          }} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #d9d9d9', background: '#fff', cursor: 'pointer' }}>
+          }} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(244, 175, 37, 0.3)', background: 'rgba(255,255,255,0.1)', color: '#ffffff', cursor: 'pointer' }}>
             {t('common.cancel')}
           </button>,
-          <button key="delete" type="button" onClick={() => viewing && handleDeleteTransaction(viewing)} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #ff4d4f', background: '#fff', color: '#ff4d4f', cursor: 'pointer' }}>
+          <button key="delete" type="button" onClick={() => viewing && handleDeleteTransaction(viewing)} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(239, 68, 68, 0.5)', background: 'rgba(239, 68, 68, 0.2)', color: '#ff6b6b', cursor: 'pointer' }}>
             {t('common.delete')}
           </button>,
           !isEditing ? (
@@ -1100,15 +1100,15 @@ const AdminFinance: React.FC = () => {
               <div style={{ flex: 1, minWidth: isMobile ? 'auto' : 380 }}>
                 <Form.List name="relatedOrders">
                   {(fields, { add, remove }) => (
-                    <div style={{ border: '1px solid #eee', borderRadius: 8, padding: 12, background: '#fafafa' }}>
+                    <div style={{ border: '1px solid rgba(244, 175, 37, 0.3)', borderRadius: 8, padding: 12, background: 'rgba(255,255,255,0.05)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                        <strong>{t('financeAdmin.relatedOrders')}</strong>
+                        <strong style={{ color: '#ffffff' }}>{t('financeAdmin.relatedOrders')}</strong>
                         {isEditing && (
                           <button type="button" onClick={() => add({ orderId: undefined, amount: 0 })} className="cigar-btn-gradient" style={{ padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}>{t('common.add')}</button>
                         )}
                       </div>
                       {fields.length === 0 && (
-                        <div style={{ color: '#999' }}>{t('common.noData')}</div>
+                        <div style={{ color: 'rgba(255,255,255,0.6)' }}>{t('common.noData')}</div>
                       )}
                       {fields.map((field, index) => (
                         <div key={field.key} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
@@ -1155,11 +1155,11 @@ const AdminFinance: React.FC = () => {
                             <InputNumber min={0} step={0.01} style={{ width: '100%' }} disabled={!isEditing} />
                           </Form.Item>
                           {isEditing && (
-                            <button type="button" onClick={() => remove(field.name)} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #d9d9d9', background: '#fff', cursor: 'pointer' }}>{t('common.remove')}</button>
+                            <button type="button" onClick={() => remove(field.name)} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid rgba(239, 68, 68, 0.3)', background: 'rgba(239, 68, 68, 0.1)', color: '#ff6b6b', cursor: 'pointer' }}>{t('common.remove')}</button>
                           )}
                         </div>
                       ))}
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 12, color: '#666' }}>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
                         {t('financeAdmin.relatedOrdersHint')}
                       </div>
                       {/* 添加统计信息 */}
@@ -1171,22 +1171,23 @@ const AdminFinance: React.FC = () => {
                           ? {
                               marginTop: 12,
                               padding: 8,
-                              background: '#fff1f0',
+                              background: 'rgba(239, 68, 68, 0.2)',
                               borderRadius: 4,
-                              border: '1px solid #ffa39e'
+                              border: '1px solid rgba(239, 68, 68, 0.4)'
                             }
                           : {
                               marginTop: 12,
                               padding: 8,
-                              background: '#f0f0f0',
-                              borderRadius: 4
+                              background: 'rgba(255,255,255,0.1)',
+                              borderRadius: 4,
+                              border: '1px solid rgba(244, 175, 37, 0.2)'
                             }
                         const titleStyle: React.CSSProperties = exceeded
-                          ? { fontSize: 12, color: '#cf1322', marginBottom: 4, fontWeight: 600 }
-                          : { fontSize: 12, color: '#666', marginBottom: 4 }
+                          ? { fontSize: 12, color: '#ff6b6b', marginBottom: 4, fontWeight: 600 }
+                          : { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginBottom: 4 }
                         const textStyle: React.CSSProperties = exceeded
-                          ? { fontSize: 11, color: '#cf1322', fontWeight: 600 }
-                          : { fontSize: 11, color: '#333' }
+                          ? { fontSize: 11, color: '#ff6b6b', fontWeight: 600 }
+                          : { fontSize: 11, color: 'rgba(255,255,255,0.9)' }
                         return (
                           <div style={boxStyle}>
                             <div style={titleStyle}>
