@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import dayjs from 'dayjs'
 import { Form, Select, DatePicker, InputNumber, Input, Button } from 'antd'
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import type { User, Cigar } from '../../../types'
 import { createDirectSaleOrder } from '../../../services/firebase/firestore'
 import { groupCigarsByBrand } from './helpers'
+import { getModalTheme } from '../../../config/modalTheme'
 
 interface CreateOrderFormProps {
   users: User[]
@@ -28,6 +29,16 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
   const [form] = Form.useForm()
   const groupedCigars = groupCigarsByBrand(cigars)
   const itemsWatch = Form.useWatch('items', form)
+  const theme = getModalTheme()
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   const computeSummary = () => {
     const items = Array.isArray(itemsWatch) ? itemsWatch : []
@@ -108,176 +119,232 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
         createdAt: dayjs().startOf('day') 
       }}
       id="createOrderForm"
+      className="dark-theme-form"
     >
-      <div style={{ display: 'flex', gap: 16 }}>
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: 16 
+      }}>
+        {/* Left - Main Form Card */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <Form.Item label={t('ordersAdmin.orderDate')} name="createdAt">
-            <DatePicker 
-              style={{ width: '100%' }} 
-              format="YYYY-MM-DD"
-            />
-          </Form.Item>
-          
-          <Form.Item 
-            label={t('ordersAdmin.selectUser')} 
-            name="userId" 
-            rules={[{ required: true, message: t('ordersAdmin.pleaseSelectUser') }]}
-          > 
-            <Select 
-              showSearch 
-              placeholder={t('ordersAdmin.selectUser')}
-              filterOption={(input, option) => {
-                const kw = (input || '').toLowerCase()
-                const uid = (option as any)?.value as string
-                const u = users.find(x => x.id === uid) as any
-                const name = (u?.displayName || '').toLowerCase()
-                const email = (u?.email || '').toLowerCase()
-                const phone = (u?.profile?.phone || '').toLowerCase()
-                return !!kw && (name.includes(kw) || email.includes(kw) || phone.includes(kw))
-              }}
-            >
-              {users
-                .sort((a, b) => {
-                  const nameA = (a.displayName || a.email || a.id).toLowerCase()
-                  const nameB = (b.displayName || b.email || b.id).toLowerCase()
-                  return nameA.localeCompare(nameB)
-                })
-                .map(u => (
-                  <Select.Option key={u.id} value={u.id}>
-                    {u.displayName} ({(u as any)?.profile?.phone || '-'})
-                  </Select.Option>
-                ))}
-            </Select>
-          </Form.Item>
-
-          <Form.List name="items">
-        {(fields, { add, remove }) => (
-          <div>
-            {fields.map((field) => {
-              const { key, ...restField } = field as any
-              return (
-              <div key={`create-${key}`} style={{ display: 'flex', alignItems: 'center', marginBottom: 8, gap: 12 }}>
-                <Form.Item
-                  {...restField}
-                  name={[field.name, 'cigarId']}
-                  fieldKey={[field.fieldKey!, 'cigarId'] as any}
-                  rules={[{ required: false }]}
-                  style={{ width: 300, marginBottom: 0 }}
-                >
-                  <Select 
-                    placeholder={t('ordersAdmin.selectItem') + ' / ' + t('ordersAdmin.customFee')}
-                    showSearch
-                    optionFilterProp="children"
-                    onChange={(cigarId) => {
-                      const cigar = cigars.find(c => c.id === cigarId)
-                      if (cigar) {
-                        form.setFieldValue(['items', field.name, 'price'], cigar.price)
-                      }
-                    }}
-                    filterOption={(input, option) => {
-                      const kw = (input || '').toLowerCase()
-                      const text = String((option?.children as any) || '').toLowerCase()
-                      return text.includes(kw)
-                    }}
-                  >
-                    {groupedCigars.map(group => (
-                      <Select.OptGroup key={group.brand} label={group.brand}>
-                        {group.list.map(c => (
-                          <Select.Option key={c.id} value={c.id}>
-                            {c.name} - RM{c.price}
-                          </Select.Option>
-                        ))}
-                      </Select.OptGroup>
-                    ))}
-                  </Select>
-                </Form.Item>
-                
-                <Form.Item
-                  {...restField}
-                  name={[field.name, 'quantity']}
-                  fieldKey={[field.fieldKey!, 'quantity'] as any}
-                  rules={[{ required: true, message: t('ordersAdmin.pleaseEnterQuantity') }]}
-                  style={{ width: 120, marginBottom: 0 }}
-                >
-                  <InputNumber min={1} placeholder={t('ordersAdmin.quantity')} />
-                </Form.Item>
-                
-                <Form.Item
-                  {...restField}
-                  name={[field.name, 'price']}
-                  fieldKey={[field.fieldKey!, 'price'] as any}
-                  rules={[{ required: true, message: t('ordersAdmin.pleaseEnterPrice') }]}
-                  style={{ width: 140, marginBottom: 0 }}
-                >
-                  <InputNumber 
-                    min={0} 
-                    step={0.01}
-                    precision={2}
-                    placeholder={t('ordersAdmin.price')}
-                    prefix="RM"
-                  />
-                </Form.Item>
-                
-                {fields.length > 1 && (
-                  <Button danger type="text" icon={<DeleteOutlined />} onClick={() => remove(field.name)} style={{ marginLeft: 12 }} />
-                )}
-              </div>
-            )})}
-            <Form.Item>
-              <Button 
-                type="dashed" 
-                onClick={() => add({ quantity: 1, price: 0 })} 
-                icon={<PlusOutlined />}
+          <div style={theme.card.elevated}>
+            <Form.Item label={t('ordersAdmin.orderDate')} name="createdAt">
+              <DatePicker 
+                style={{ width: '100%' }} 
+                format="YYYY-MM-DD"
+              />
+            </Form.Item>
+            
+            <Form.Item 
+              label={t('ordersAdmin.selectUser')} 
+              name="userId" 
+              rules={[{ required: true, message: t('ordersAdmin.pleaseSelectUser') }]}
+            > 
+              <Select 
+                showSearch 
+                placeholder={t('ordersAdmin.selectUser')}
+                filterOption={(input, option) => {
+                  const kw = (input || '').toLowerCase()
+                  const uid = (option as any)?.value as string
+                  const u = users.find(x => x.id === uid) as any
+                  const name = (u?.displayName || '').toLowerCase()
+                  const email = (u?.email || '').toLowerCase()
+                  const phone = (u?.profile?.phone || '').toLowerCase()
+                  return !!kw && (name.includes(kw) || email.includes(kw) || phone.includes(kw))
+                }}
               >
-                {t('ordersAdmin.addItem')}
-              </Button>
+                {users
+                  .sort((a, b) => {
+                    const nameA = (a.displayName || a.email || a.id).toLowerCase()
+                    const nameB = (b.displayName || b.email || b.id).toLowerCase()
+                    return nameA.localeCompare(nameB)
+                  })
+                  .map(u => (
+                    <Select.Option key={u.id} value={u.id}>
+                      {u.displayName} ({(u as any)?.profile?.phone || '-'})
+                    </Select.Option>
+                  ))}
+              </Select>
+            </Form.Item>
+
+            {/* Product Section */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ ...theme.text.subtitle, marginBottom: 12 }}>
+                {t('ordersAdmin.products')}
+              </div>
+              <Form.List name="items">
+                {(fields, { add, remove }) => (
+                  <div>
+                    {fields.map((field) => {
+                      const { key, ...restField } = field as any
+                      return (
+                        <div key={`create-${key}`} style={{ 
+                          display: 'flex', 
+                          flexDirection: isMobile ? 'column' : 'row',
+                          alignItems: isMobile ? 'stretch' : 'center', 
+                          marginBottom: isMobile ? 8 : 8, 
+                          gap: isMobile ? 8 : 12,
+                          padding: isMobile ? '12px' : '0',
+                          border: isMobile ? '1px solid rgba(244, 175, 37, 0.2)' : 'none',
+                          borderRadius: isMobile ? '8px' : '0',
+                          background: isMobile ? 'rgba(255, 255, 255, 0.02)' : 'transparent'
+                        }}>
+                          <Form.Item
+                            {...restField}
+                            name={[field.name, 'cigarId']}
+                            fieldKey={[field.fieldKey!, 'cigarId'] as any}
+                            rules={[{ required: false }]}
+                            style={{ width: isMobile ? '100%' : 300, marginBottom: 0 }}
+                          >
+                            <Select 
+                              placeholder={t('ordersAdmin.selectItem') + ' / ' + t('ordersAdmin.customFee')}
+                              showSearch
+                              optionFilterProp="children"
+                              onChange={(cigarId) => {
+                                const cigar = cigars.find(c => c.id === cigarId)
+                                if (cigar) {
+                                  form.setFieldValue(['items', field.name, 'price'], cigar.price)
+                                }
+                              }}
+                              filterOption={(input, option) => {
+                                const kw = (input || '').toLowerCase()
+                                const text = String((option?.children as any) || '').toLowerCase()
+                                return text.includes(kw)
+                              }}
+                            >
+                              {groupedCigars.map(group => (
+                                <Select.OptGroup key={group.brand} label={group.brand}>
+                                  {group.list.map(c => (
+                                    <Select.Option key={c.id} value={c.id}>
+                                      {c.name} - RM{c.price}
+                                    </Select.Option>
+                                  ))}
+                                </Select.OptGroup>
+                              ))}
+                            </Select>
+                          </Form.Item>
+                          
+                          <div style={{ 
+                            display: 'flex', 
+                            gap: 8, 
+                            width: isMobile ? '100%' : 'auto' 
+                          }}>
+                            <Form.Item
+                              {...restField}
+                              name={[field.name, 'quantity']}
+                              fieldKey={[field.fieldKey!, 'quantity'] as any}
+                              rules={[{ required: true, message: t('ordersAdmin.pleaseEnterQuantity') }]}
+                              style={{ flex: isMobile ? 1 : 'none', width: isMobile ? 'auto' : 120, marginBottom: 0 }}
+                            >
+                              <InputNumber 
+                                min={1} 
+                                placeholder={t('ordersAdmin.quantity')}
+                                style={{ width: '100%' }}
+                              />
+                            </Form.Item>
+                            
+                            <Form.Item
+                              {...restField}
+                              name={[field.name, 'price']}
+                              fieldKey={[field.fieldKey!, 'price'] as any}
+                              rules={[{ required: true, message: t('ordersAdmin.pleaseEnterPrice') }]}
+                              style={{ flex: isMobile ? 1 : 'none', width: isMobile ? 'auto' : 140, marginBottom: 0 }}
+                            >
+                              <InputNumber 
+                                min={0} 
+                                step={0.01}
+                                precision={2}
+                                placeholder={t('ordersAdmin.price')}
+                                prefix="RM"
+                                style={{ width: '100%' }}
+                              />
+                            </Form.Item>
+                            
+                            {fields.length > 1 && (
+                              <Button 
+                                danger 
+                                type="text" 
+                                icon={<DeleteOutlined />} 
+                                onClick={() => remove(field.name)} 
+                                style={{ marginLeft: isMobile ? 0 : 12, flexShrink: 0 }}
+                              />
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                    <Form.Item style={{ marginBottom: 16 }}>
+                      <Button 
+                        type="dashed" 
+                        onClick={() => add({ quantity: 1, price: 0 })} 
+                        icon={<PlusOutlined />}
+                      >
+                        {t('ordersAdmin.addItem')}
+                      </Button>
+                    </Form.Item>
+                  </div>
+                )}
+              </Form.List>
+            </div>
+
+            <Form.Item label={t('ordersAdmin.note')} name="note">
+              <Input placeholder={t('ordersAdmin.noteOptional')} />
+            </Form.Item>
+            
+            <Form.Item label={t('ordersAdmin.address')} name="address">
+              <Input placeholder={t('ordersAdmin.addressOptional')} />
+            </Form.Item>
+            
+            <Form.Item label={t('ordersAdmin.payment.title')} name="paymentMethod" style={{ marginBottom: 0 }}>
+              <Select>
+                <Select.Option value="bank_transfer">{t('ordersAdmin.payment.bankTransfer')}</Select.Option>
+                <Select.Option value="credit">{t('ordersAdmin.payment.credit')}</Select.Option>
+                <Select.Option value="paypal">PayPal</Select.Option>
+              </Select>
             </Form.Item>
           </div>
-        )}
-      </Form.List>
-          <Form.Item label={t('ordersAdmin.note')} name="note">
-            <Input placeholder={t('ordersAdmin.noteOptional')} />
-          </Form.Item>
-          
-          <Form.Item label={t('ordersAdmin.address')} name="address">
-            <Input placeholder={t('ordersAdmin.addressOptional')} />
-          </Form.Item>
-          
-          <Form.Item label={t('ordersAdmin.payment.title')} name="paymentMethod">
-            <Select>
-              <Select.Option value="bank_transfer">{t('ordersAdmin.payment.bankTransfer')}</Select.Option>
-              <Select.Option value="credit">{t('ordersAdmin.payment.credit')}</Select.Option>
-              <Select.Option value="paypal">PayPal</Select.Option>
-            </Select>
-          </Form.Item>
-
-          {/* Actions moved to Modal footer */}
         </div>
 
-        {/* Right summary column */}
-        <div style={{ width: 320 }}>
+        {/* Right - Product Categories Summary */}
+        <div style={{ width: isMobile ? '100%' : 320 }}>
           {(() => {
             const s = computeSummary()
             return (
-              <div style={{ position: 'sticky', top: 0 }}>
-                <div style={{ marginBottom: 12, padding: 12, border: '1px dashed #d9d9d9', borderRadius: 6, background: '#fafafa' }}>
+              <div style={{ position: isMobile ? 'relative' : 'sticky', top: 0 }}>
+                <div style={{ ...theme.card.elevated, marginBottom: 12 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <strong>{t('participants.productCategories')}</strong>
+                    <strong style={theme.text.subtitle}>{t('participants.productCategories')}</strong>
                   </div>
                   <div style={{ maxHeight: 320, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {s.brandGroups.size === 0 ? (
-                      <div style={{ color: '#999' }}>{t('common.noData')}</div>
+                      <div style={theme.text.secondary}>{t('common.noData')}</div>
                     ) : (
                       Array.from(s.brandGroups.entries()).map(([brand, rows]) => (
-                        <div key={brand} style={{ border: '1px solid #eee', borderRadius: 6, overflow: 'hidden' }}>
-                          <div style={{ padding: '6px 8px', fontWeight: 600, background: '#f7f7f7' }}>{brand}</div>
+                        <div key={brand} style={{ ...theme.card.base, overflow: 'hidden', marginBottom: 0 }}>
+                          <div style={{ 
+                            padding: '6px 8px', 
+                            fontWeight: 600, 
+                            background: 'rgba(244, 175, 37, 0.1)',
+                            borderBottom: '1px solid rgba(244, 175, 37, 0.2)',
+                            color: '#f4af25'
+                          }}>
+                            {brand}
+                          </div>
                           <div>
                             {rows.map(r => (
-                              <div key={`${brand}-${r.key}`} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '4px 8px', borderBottom: '1px dashed #f0f0f0' }}>
+                              <div key={`${brand}-${r.key}`} style={{ 
+                                display: 'flex', 
+                                justifyContent: 'space-between', 
+                                fontSize: 12, 
+                                padding: '4px 8px', 
+                                borderBottom: '1px solid rgba(244, 175, 37, 0.1)',
+                                color: '#FFFFFF'
+                              }}>
                                 <span style={{ flex: 2 }}>{r.name}</span>
                                 <span style={{ flex: 1, textAlign: 'right' }}>× {r.qty}</span>
                                 <span style={{ flex: 1, textAlign: 'right' }}>RM{r.unit.toFixed(2)}</span>
-                                <span style={{ flex: 1, textAlign: 'right', fontWeight: 600 }}>RM{r.sum.toFixed(2)}</span>
+                                <span style={{ flex: 1, textAlign: 'right', fontWeight: 600, color: '#f4af25' }}>RM{r.sum.toFixed(2)}</span>
                               </div>
                             ))}
                           </div>
@@ -285,10 +352,14 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                       ))
                     )}
                   </div>
-                  <div style={{ borderTop: '1px dashed #e8e8e8', marginTop: 8, paddingTop: 8 }} />
+                  <div style={{ 
+                    borderTop: '1px solid rgba(244, 175, 37, 0.2)', 
+                    marginTop: 8, 
+                    paddingTop: 8 
+                  }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontWeight: 600 }}>{t('participants.productsSubtotal')}</span>
-                    <span style={{ fontWeight: 700 }}>RM{s.productSubtotal.amount.toFixed(2)}</span>
+                    <span style={{ ...theme.text.body, fontWeight: 600 }}>{t('participants.productsSubtotal')}</span>
+                    <span style={{ ...theme.text.primary, fontWeight: 700, fontSize: '16px' }}>RM{s.productSubtotal.amount.toFixed(2)}</span>
                   </div>
                 </div>
               </div>

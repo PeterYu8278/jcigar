@@ -1020,13 +1020,7 @@ const AdminInventory: React.FC = () => {
             </div>
           )}
           {activeTab === 'brand' && (
-            <div style={{ 
-              background: 'linear-gradient(180deg, #221c10, #121212)', 
-              minHeight: '100vh',
-              padding: '16px',
-              margin: '-16px',
-              color: 'white'
-            }}>
+            <div>
               
               {/* 搜索栏和添加品牌按钮 */}
               <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', alignItems: 'center' }}>
@@ -1057,38 +1051,26 @@ const AdminInventory: React.FC = () => {
                 </div>
                 
                 {/* 添加品牌按钮 */}
-                <Button
+                <button
                   onClick={() => setCreatingBrand(true)}
+                  className="cigar-btn-gradient"
                   style={{
                     height: '48px',
-                    borderRadius: '9999px',
-                    background: 'linear-gradient(to right, #f4af25, #e0990f)',
-                    border: 'none',
-                    color: 'black',
+                    borderRadius: '8px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '8px',
                     padding: '0 24px',
-                    boxShadow: '0 4px 15px 0 rgba(244,175,37,0.3)',
                     cursor: 'pointer',
                     fontSize: '16px',
-                    fontWeight: 600,
-                    transition: 'all 0.3s ease',
-                    whiteSpace: 'nowrap'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.05)'
-                    e.currentTarget.style.boxShadow = '0 6px 20px 0 rgba(244,175,37,0.4)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)'
-                    e.currentTarget.style.boxShadow = '0 4px 15px 0 rgba(244,175,37,0.3)'
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.3s ease'
                   }}
                 >
                   <PlusOutlined style={{ fontSize: '20px' }} />
                   <span>{t('inventory.addBrand')}</span>
-                </Button>
+                </button>
               </div>
 
               {/* 排序和筛选按钮 */}

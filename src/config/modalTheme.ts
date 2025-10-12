@@ -35,10 +35,11 @@ export const getModalThemeStyles = (isMobile: boolean, isDarkTheme: boolean = tr
   },
   header: {
     background: 'transparent',
-      borderBottom: '1px solid rgba(244, 175, 37, 0.2)',
-      marginBottom: '16px',
-      paddingBottom: '12px'
-    }
+    borderBottom: '1px solid rgba(244, 175, 37, 0.2)',
+    marginBottom: '16px',
+    paddingBottom: '12px',
+    color: '#FFFFFF'
+  }
   }
 }
 
