@@ -232,6 +232,15 @@ button + button { margin-left: 8px; }
   color: rgba(255, 255, 255, 0.6) !important;
 }
 
+/* 隐藏弹窗滚动条 */
+.ant-modal-body {
+  overflow: hidden !important;
+}
+
+.ant-modal-content {
+  overflow: hidden !important;
+}
+
 .cigar-button-primary:hover {
   transform: translateY(-1px);
   box-shadow: 0 6px 20px rgba(255, 215, 0, 0.25);
