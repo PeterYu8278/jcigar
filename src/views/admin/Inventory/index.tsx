@@ -6,6 +6,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, WarningOutl
 import type { Cigar, InventoryLog, Brand } from '../../../types'
 import { getCigars, createDocument, updateDocument, deleteDocument, COLLECTIONS, getAllInventoryLogs, getAllOrders, getUsers, getBrands, getBrandById } from '../../../services/firebase/firestore'
 import ImageUpload from '../../../components/common/ImageUpload'
+import { getModalThemeStyles, getModalTop, getModalWidth } from '../../../config/modalTheme'
 
 const { Title } = Typography
 const { Search } = Input

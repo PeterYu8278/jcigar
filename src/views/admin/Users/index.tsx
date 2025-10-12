@@ -12,6 +12,7 @@ import { getUsers, createDocument, updateDocument, deleteDocument, COLLECTIONS }
 import type { User } from '../../../types'
 import { sendPasswordResetEmailFor } from '../../../services/firebase/auth'
 import { useTranslation } from 'react-i18next'
+import { getModalThemeStyles, getModalTop, getModalWidth } from '../../../config/modalTheme'
 
 // CSS样式对象
 const glassmorphismInputStyle = {
@@ -674,21 +675,9 @@ const AdminUsers: React.FC = () => {
         open={!!editing}
         onCancel={() => setEditing(null)}
         footer={null}
-        width={isMobile ? '100%' : 480}
-        style={{ top: isMobile ? 0 : 20 }}
-        styles={{
-          body: {
-            padding: 0,
-            background: 'linear-gradient(180deg, #221c10 0%, #181611 0%)',
-            minHeight: isMobile ? '100vh' : 'auto'
-          },
-          mask: { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
-          content: {
-            border: 'none',
-            boxShadow: 'none',
-            background: 'linear-gradient(180deg, #221c10 0%, #181611 0%)'
-          }
-        }}
+        width={getModalWidth(isMobile, 480)}
+        style={{ top: getModalTop(isMobile) }}
+        styles={getModalThemeStyles(isMobile)}
         className="user-detail-modal"
         closable={false}
       >

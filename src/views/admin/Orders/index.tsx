@@ -12,6 +12,7 @@ import type { Order, User, Cigar, Transaction } from '../../../types'
 import { getAllOrders, getUsers, getCigars, updateDocument, deleteDocument, COLLECTIONS, getAllInventoryLogs, getAllTransactions } from '../../../services/firebase/firestore'
 import { useTranslation } from 'react-i18next'
 import { filterOrders, sortOrders, getStatusColor, getStatusText, getUserName, getUserPhone } from './helpers'
+import { getModalThemeStyles, getModalTop, getModalWidth } from '../../../config/modalTheme'
 
 const { Search } = Input
 const { Option } = Select
@@ -457,20 +458,9 @@ const AdminOrders: React.FC = () => {
         open={!!viewing}
         onCancel={() => { setViewing(null); setIsEditingInView(false) }}
         footer={null}
-        width={isMobile ? '100%' : 820}
-        style={{ 
-          top: isMobile ? 0 : 20,
-        }}
-        styles={{
-          body: { 
-            background: 'linear-gradient(180deg, #221c10 0%, #181611 0%)', 
-            minHeight: isMobile ? '100vh' : 'auto' 
-          },
-          mask: { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
-          content: {
-            background: 'linear-gradient(180deg, #221c10 0%, #181611 0%)'
-          }
-        }}
+        width={getModalWidth(isMobile, 820)}
+        style={{ top: getModalTop(isMobile) }}
+        styles={getModalThemeStyles(isMobile)}
         className="order-details-modal"
         closable={false}
       >

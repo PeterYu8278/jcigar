@@ -8,6 +8,7 @@ import type { UploadResult } from '../../services/cloudinary'
 import { getUploadConfig, getFullFolderPath, isValidFolderName } from '../../config/cloudinaryFolders'
 import { validateFileForFolder, type CloudinaryFolderName } from '../../types/cloudinary'
 import ImageCrop from './ImageCrop'
+import { getModalThemeStyles } from '../../config/modalTheme'
 
 interface ImageUploadProps {
   value?: string // 当前图片URL

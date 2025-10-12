@@ -6,6 +6,7 @@ import type { Transaction, User } from '../../../types'
 import { getAllTransactions, getAllOrders, getAllInventoryLogs, createTransaction, COLLECTIONS, getAllUsers, updateDocument, deleteDocument, getCigars } from '../../../services/firebase/firestore'
 import dayjs from 'dayjs'
 import { useTranslation } from 'react-i18next'
+import { getModalThemeStyles, getModalTop, getModalWidth } from '../../../config/modalTheme'
 
 const { Title } = Typography
 const { RangePicker } = DatePicker
@@ -146,12 +147,14 @@ const AdminFinance: React.FC = () => {
   }, [viewing, editForm])
 
   // 监听表单值变化用于统计显示
-  const watchedIncomeAmount = Form.useWatch('incomeAmount', editForm) || 0
-  const watchedExpenseAmount = Form.useWatch('expenseAmount', editForm) || 0
+  const watchedIncomeAmount = Form.useWatch('incomeAmount', editForm) ?? undefined
+  const watchedExpenseAmount = Form.useWatch('expenseAmount', editForm) ?? undefined
   const watchedRelatedOrders = Form.useWatch('relatedOrders', editForm) || []
   
   // 计算统计值
-  const transactionAmount = Math.abs(watchedIncomeAmount - watchedExpenseAmount)
+  const computedIncome = typeof watchedIncomeAmount === 'number' ? watchedIncomeAmount : (viewing ? Math.max(Number(viewing.amount || 0), 0) : 0)
+  const computedExpense = typeof watchedExpenseAmount === 'number' ? watchedExpenseAmount : (viewing ? Math.max(-Math.min(Number(viewing.amount || 0), 0), 0) : 0)
+  const transactionAmount = Math.abs(computedIncome - computedExpense)
   const totalMatchedAmount = watchedRelatedOrders.reduce((sum: number, item: any) => sum + Number(item?.amount || 0), 0)
   const remainingAmount = transactionAmount - totalMatchedAmount
 
@@ -979,21 +982,10 @@ const AdminFinance: React.FC = () => {
             </button>
           )
         ]}
-        width={960}
+        width={getModalWidth(isMobile, 960)}
         destroyOnHidden
         centered
-        styles={{
-          body: {
-            background: 'rgba(255,255, 255)',
-            maxHeight: '80vh',
-            overflow: 'auto'
-          },
-          mask: { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
-          content: {
-            background: 'rgba(255,255, 255)',
-            border: '1px solid rgba(255, 215, 0, 0.2)'
-          }
-        }}
+        styles={getModalThemeStyles(isMobile, true)}
       >
         {viewing && (
           <>
@@ -1061,7 +1053,7 @@ const AdminFinance: React.FC = () => {
                   return
                 }
                 const amount = income - expense
-                // 校验relatedOrders分配总额（按分比较避免浮点误差）
+                // 校验relatedOrders分配总额
                 const ro: Array<{ orderId: string; amount: number }> = Array.isArray(values.relatedOrders) ? values.relatedOrders.filter((r: any) => r?.orderId && Number(r?.amount) > 0).map((r: any) => ({ orderId: String(r.orderId), amount: Number(r.amount) })) : []
                 const roSum = ro.reduce((s, r) => s + r.amount, 0)
                 const absTx = Math.abs(amount)
@@ -1170,11 +1162,11 @@ const AdminFinance: React.FC = () => {
                       <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 12, color: '#666' }}>
                         {t('financeAdmin.relatedOrdersHint')}
                       </div>
-                       {/* 添加统计信息（仅编辑时显示超额提示；使用分避免浮点误差）*/}
-                       {(() => {
-                         const totalMatchedCents = Math.round(totalMatchedAmount * 100)
-                         const transactionCents = Math.round(transactionAmount * 100)
-                         const exceeded = totalMatchedCents > transactionCents
+                      {/* 添加统计信息 */}
+                      {(() => {
+                        const totalMatchedCents = Math.round(totalMatchedAmount * 100)
+                        const transactionCents = Math.round(transactionAmount * 100)
+                        const exceeded = totalMatchedCents > transactionCents
                         const boxStyle: React.CSSProperties = exceeded
                           ? {
                               marginTop: 12,
@@ -1197,9 +1189,9 @@ const AdminFinance: React.FC = () => {
                           : { fontSize: 11, color: '#333' }
                         return (
                           <div style={boxStyle}>
-                             <div style={titleStyle}>
-                               {t('financeAdmin.relatedOrdersStats')}
-                               {exceeded && isEditing ? ` · ${t('financeAdmin.relatedOrdersExceed')}` : ':'}
+                            <div style={titleStyle}>
+                              {t('financeAdmin.relatedOrdersStats')}
+                              {exceeded ? ` · ${t('financeAdmin.relatedOrdersExceed')}` : ':'}
                             </div>
                             <div style={textStyle}>
                               <div>{t('financeAdmin.totalMatchedAmount')}: RM{totalMatchedAmount.toFixed(2)}</div>

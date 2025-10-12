@@ -6,6 +6,7 @@ import { CheckOutlined, CloseOutlined } from '@ant-design/icons'
 import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop'
 import type { Crop, PixelCrop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
+import { getModalThemeStyles } from '../../config/modalTheme'
 
 interface ImageCropProps {
   src: string // 原始图片URL
