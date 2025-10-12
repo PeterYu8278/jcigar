@@ -1061,11 +1061,13 @@ const AdminFinance: React.FC = () => {
                   return
                 }
                 const amount = income - expense
-                // 校验relatedOrders分配总额
+                // 校验relatedOrders分配总额（按分比较避免浮点误差）
                 const ro: Array<{ orderId: string; amount: number }> = Array.isArray(values.relatedOrders) ? values.relatedOrders.filter((r: any) => r?.orderId && Number(r?.amount) > 0).map((r: any) => ({ orderId: String(r.orderId), amount: Number(r.amount) })) : []
                 const roSum = ro.reduce((s, r) => s + r.amount, 0)
                 const absTx = Math.abs(amount)
-                if (roSum > absTx) {
+                const roSumCents = Math.round(roSum * 100)
+                const absTxCents = Math.round(absTx * 100)
+                if (roSumCents > absTxCents) {
                   message.error(t('financeAdmin.relatedOrdersExceed'))
                   return
                 }
@@ -1168,9 +1170,11 @@ const AdminFinance: React.FC = () => {
                       <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 12, color: '#666' }}>
                         {t('financeAdmin.relatedOrdersHint')}
                       </div>
-                      {/* 添加统计信息 */}
-                      {(() => {
-                        const exceeded = totalMatchedAmount > transactionAmount
+                       {/* 添加统计信息（仅编辑时显示超额提示；使用分避免浮点误差）*/}
+                       {(() => {
+                         const totalMatchedCents = Math.round(totalMatchedAmount * 100)
+                         const transactionCents = Math.round(transactionAmount * 100)
+                         const exceeded = totalMatchedCents > transactionCents
                         const boxStyle: React.CSSProperties = exceeded
                           ? {
                               marginTop: 12,
@@ -1193,9 +1197,9 @@ const AdminFinance: React.FC = () => {
                           : { fontSize: 11, color: '#333' }
                         return (
                           <div style={boxStyle}>
-                            <div style={titleStyle}>
-                              {t('financeAdmin.relatedOrdersStats')}
-                              {exceeded ? ` · ${t('financeAdmin.relatedOrdersExceed')}` : ':'}
+                             <div style={titleStyle}>
+                               {t('financeAdmin.relatedOrdersStats')}
+                               {exceeded && isEditing ? ` · ${t('financeAdmin.relatedOrdersExceed')}` : ':'}
                             </div>
                             <div style={textStyle}>
                               <div>{t('financeAdmin.totalMatchedAmount')}: RM{totalMatchedAmount.toFixed(2)}</div>
