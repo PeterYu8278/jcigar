@@ -11,6 +11,7 @@ export const MODAL_THEME_STYLES: ModalProps['styles'] = {
   body: {
     background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
     padding: 0,
+    color: '#FFFFFF',
   },
   mask: {
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
@@ -18,6 +19,15 @@ export const MODAL_THEME_STYLES: ModalProps['styles'] = {
   content: {
     background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
     border: '1px solid rgba(255, 215, 0, 0.2)',
+  },
+  header: {
+    background: 'transparent',
+    color: '#FFFFFF',
+    borderBottom: '1px solid rgba(255, 215, 0, 0.2)',
+  },
+  footer: {
+    background: 'transparent',
+    borderTop: '1px solid rgba(255, 215, 0, 0.2)',
   },
 }
 
@@ -30,6 +40,7 @@ export const MODAL_THEME_STYLES_MOBILE: ModalProps['styles'] = {
     background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
     minHeight: '100vh',
     padding: 0,
+    color: '#FFFFFF',
   },
   mask: {
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
@@ -38,6 +49,15 @@ export const MODAL_THEME_STYLES_MOBILE: ModalProps['styles'] = {
     background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
     border: 'none',
     boxShadow: 'none',
+  },
+  header: {
+    background: 'transparent',
+    color: '#FFFFFF',
+    borderBottom: 'none',
+  },
+  footer: {
+    background: 'transparent',
+    borderTop: 'none',
   },
 }
 
@@ -50,6 +70,7 @@ export const MODAL_THEME_STYLES_WITH_PADDING: ModalProps['styles'] = {
     background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
     maxHeight: '80vh',
     overflow: 'auto',
+    color: '#FFFFFF',
   },
   mask: {
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
@@ -57,6 +78,15 @@ export const MODAL_THEME_STYLES_WITH_PADDING: ModalProps['styles'] = {
   content: {
     background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
     border: '1px solid rgba(255, 215, 0, 0.2)',
+  },
+  header: {
+    background: 'transparent',
+    color: '#FFFFFF',
+    borderBottom: '1px solid rgba(255, 215, 0, 0.2)',
+  },
+  footer: {
+    background: 'transparent',
+    borderTop: '1px solid rgba(255, 215, 0, 0.2)',
   },
 }
 
