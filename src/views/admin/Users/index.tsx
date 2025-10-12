@@ -361,7 +361,7 @@ const AdminUsers: React.FC = () => {
   }, [visibleCols])
 
   return (
-    <div  style={{ minHeight: '100vh' }}>
+    <div className="users-page" style={{ minHeight: '100vh' }}>
       {!isMobile && (
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
          <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{t('navigation.users')}</h1>

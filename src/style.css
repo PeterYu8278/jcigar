@@ -102,6 +102,21 @@ a:hover {
   background: var(--cigar-gold-secondary);
 }
 
+/* 隐藏用户管理页面的垂直滚动条 */
+.users-page {
+  overflow-y: hidden !important;
+}
+
+.users-page .ant-layout-content {
+  overflow-y: hidden !important;
+}
+
+/* 确保用户管理页面内容可以滚动 */
+.users-page .ant-layout-content > div {
+  height: 100vh;
+  overflow-y: auto;
+}
+
 /* 自定义组件样式 */
 .cigar-card {
   background: var(--cigar-black-secondary);
@@ -230,15 +245,6 @@ button + button { margin-left: 8px; }
 .dark-theme-form .ant-select-clear {
   background: rgba(255, 255, 255, 0.1) !important;
   color: rgba(255, 255, 255, 0.6) !important;
-}
-
-/* 隐藏弹窗滚动条 */
-.ant-modal-body {
-  overflow: hidden !important;
-}
-
-.ant-modal-content {
-  overflow: hidden !important;
 }
 
 .cigar-button-primary:hover {
