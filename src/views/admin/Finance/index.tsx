@@ -25,6 +25,7 @@ const AdminFinance: React.FC = () => {
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null)
   const [editForm] = Form.useForm()
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
+  const [mobileTxTab, setMobileTxTab] = useState<'details' | 'matching'>('details')
   const [selectedDateRange, setSelectedDateRange] = useState<'week' | 'month' | 'year' | null>(null)
   const [productExpandedKeys, setProductExpandedKeys] = useState<React.Key[]>([])
   const [importing, setImporting] = useState(false)
@@ -995,6 +996,56 @@ const AdminFinance: React.FC = () => {
         }}
       >
         {viewing && (
+          <>
+          {isMobile && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', borderBottom: '1px solid rgba(244,175,37,0.2)' }}>
+                {(['details','matching'] as const).map((tabKey) => {
+                  const isActive = mobileTxTab === tabKey
+                  const baseStyle: React.CSSProperties = {
+                    flex: 1,
+                    padding: '10px 0',
+                    fontWeight: 800,
+                    fontSize: 12,
+                    outline: 'none',
+                    borderBottom: '2px solid transparent',
+                    cursor: 'pointer',
+                    background: 'none',
+                    border: 'none',
+                    position: 'relative' as const,
+                  }
+                  const activeStyle: React.CSSProperties = {
+                    color: 'transparent',
+                    backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                    WebkitBackgroundClip: 'text',
+                  }
+                  const inactiveStyle: React.CSSProperties = {
+                    color: '#A0A0A0',
+                  }
+                  return (
+                    <button
+                      key={tabKey}
+                      onClick={() => setMobileTxTab(tabKey)}
+                      style={{ ...baseStyle, ...(isActive ? activeStyle : inactiveStyle) }}
+                    >
+                      {tabKey === 'details' ? t('financeAdmin.transactionDetails') : t('financeAdmin.relatedOrders')}
+                      {isActive && (
+                        <div style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          height: '2px',
+                          background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                          borderRadius: '1px'
+                        }} />
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
           <Form
             form={editForm}
             layout="horizontal"
@@ -1034,8 +1085,9 @@ const AdminFinance: React.FC = () => {
               }
             }}
           >
-            <div style={{ display: 'flex', gap: 16 }}>
-              <div style={{ width: 360, minWidth: 320 }}>
+            <div style={{ display: isMobile ? 'block' : 'flex', gap: 16 }}>
+              {(isMobile ? mobileTxTab === 'details' : true) && (
+              <div style={{ width: isMobile ? '100%' : 360, minWidth: isMobile ? 'auto' : 320 }}>
                 <Form.Item label={t('financeAdmin.transactionDate')} name="transactionDate" rules={[{ required: true, message: t('financeAdmin.selectTransactionDate') }]}> 
                   <DatePicker style={{ width: '100%' }} disabled={!isEditing} />
                 </Form.Item>
@@ -1049,7 +1101,9 @@ const AdminFinance: React.FC = () => {
                   <Input.TextArea rows={3} disabled={!isEditing} />
                 </Form.Item>
               </div>
-              <div style={{ flex: 1, minWidth: 380 }}>
+              )}
+              {(isMobile ? mobileTxTab === 'matching' : true) && (
+              <div style={{ flex: 1, minWidth: isMobile ? 'auto' : 380 }}>
                 <Form.List name="relatedOrders">
                   {(fields, { add, remove }) => (
                     <div style={{ border: '1px solid #eee', borderRadius: 8, padding: 12, background: '#fafafa' }}>
@@ -1155,8 +1209,10 @@ const AdminFinance: React.FC = () => {
                   )}
                 </Form.List>
               </div>
+              )}
           </div>
           </Form>
+          </>
         )}
       </Modal>
 
