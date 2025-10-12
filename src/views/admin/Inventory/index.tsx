@@ -6,6 +6,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, WarningOutl
 import type { Cigar, InventoryLog, Brand } from '../../../types'
 import { getCigars, createDocument, updateDocument, deleteDocument, COLLECTIONS, getAllInventoryLogs, getAllOrders, getUsers, getBrands, getBrandById } from '../../../services/firebase/firestore'
 import ImageUpload from '../../../components/common/ImageUpload'
+import { getModalTheme, getResponsiveModalConfig } from '../../../config/modalTheme'
 
 const { Title } = Typography
 const { Search } = Input
@@ -1027,31 +1028,67 @@ const AdminInventory: React.FC = () => {
               color: 'white'
             }}>
               
-              {/* 搜索栏 */}
-              <div style={{ position: 'relative', marginBottom: '24px' }}>
-                <div style={{ 
-                  position: 'absolute', 
-                  top: '50%', 
-                  left: '16px', 
-                  transform: 'translateY(-50%)',
-                  color: 'rgba(255,255,255,0.5)'
-                }}>
-                  <SearchOutlined style={{ fontSize: '20px' }} />
+              {/* 搜索栏和添加品牌按钮 */}
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', alignItems: 'center' }}>
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <div style={{ 
+                    position: 'absolute', 
+                    top: '50%', 
+                    left: '16px', 
+                    transform: 'translateY(-50%)',
+                    color: 'rgba(255,255,255,0.5)'
+                  }}>
+                    <SearchOutlined style={{ fontSize: '20px' }} />
+                  </div>
+                  <Input
+                    placeholder={t('inventory.searchBrand')}
+                    value={keyword}
+                    onChange={(e) => setKeyword(e.target.value)}
+                    style={{
+                      width: '100%',
+                      borderRadius: '9999px',
+                      border: 'none',
+                      background: 'rgba(255,255,255,0.05)',
+                      padding: '12px 16px 12px 48px',
+                      color: 'white',
+                      fontSize: '16px'
+                    }}
+                  />
                 </div>
-                <Input
-                  placeholder={t('inventory.searchBrand')}
-                  value={keyword}
-                  onChange={(e) => setKeyword(e.target.value)}
+                
+                {/* 添加品牌按钮 */}
+                <Button
+                  onClick={() => setCreatingBrand(true)}
                   style={{
-                    width: '100%',
+                    height: '48px',
                     borderRadius: '9999px',
+                    background: 'linear-gradient(to right, #f4af25, #e0990f)',
                     border: 'none',
-                    background: 'rgba(255,255,255,0.05)',
-                    padding: '12px 16px 12px 48px',
-                    color: 'white',
-                    fontSize: '16px'
+                    color: 'black',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    padding: '0 24px',
+                    boxShadow: '0 4px 15px 0 rgba(244,175,37,0.3)',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    fontWeight: 600,
+                    transition: 'all 0.3s ease',
+                    whiteSpace: 'nowrap'
                   }}
-                />
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.05)'
+                    e.currentTarget.style.boxShadow = '0 6px 20px 0 rgba(244,175,37,0.4)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)'
+                    e.currentTarget.style.boxShadow = '0 4px 15px 0 rgba(244,175,37,0.3)'
+                  }}
+                >
+                  <PlusOutlined style={{ fontSize: '20px' }} />
+                  <span>{t('inventory.addBrand')}</span>
+                </Button>
               </div>
 
               {/* 排序和筛选按钮 */}
@@ -1324,34 +1361,6 @@ const AdminInventory: React.FC = () => {
                     })
                 )}
               </div>
-
-              {/* 添加品牌按钮 */}
-              <div style={{ 
-                position: 'fixed', 
-                bottom: '20px', 
-                right: '20px',
-                zIndex: 1000
-              }}>
-                <Button
-                  onClick={() => setCreatingBrand(true)}
-                  style={{
-                    width: '56px',
-                    height: '56px',
-                    borderRadius: '50%',
-                    background: 'linear-gradient(to right, #f4af25, #e0990f)',
-                    border: 'none',
-                    color: 'black',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 4px 15px 0 rgba(244,175,37,0.3)',
-                    cursor: 'pointer',
-                    fontSize: '24px'
-                  }}
-                >
-                  <PlusOutlined />
-                </Button>
-              </div>
             </div>
           )}
           {activeTab === 'in' && (
@@ -1407,9 +1416,9 @@ const AdminInventory: React.FC = () => {
                 onCancel={() => setInModalOpen(false)}
                 footer={null}
                 destroyOnHidden
-                width={720}
+                {...getResponsiveModalConfig(isMobile, true, 720)}
               >
-              <Form form={inForm} layout="vertical" onFinish={async (values: { referenceNo?: string; reason?: string; items: { cigarId: string; quantity: number; unitPrice?: number }[] }) => {
+              <Form form={inForm} layout="vertical" className="dark-theme-form" onFinish={async (values: { referenceNo?: string; reason?: string; items: { cigarId: string; quantity: number; unitPrice?: number }[] }) => {
                 const lines = (values.items || []).filter(it => it?.cigarId && it?.quantity > 0)
                 if (lines.length === 0) { message.warning(t('inventory.pleaseAddAtLeastOneInStockDetail')); return }
                 setLoading(true)
@@ -1612,11 +1621,10 @@ const AdminInventory: React.FC = () => {
                 open={outModalOpen}
                 onCancel={() => setOutModalOpen(false)}
                 footer={null}
-                width={680}
                 destroyOnHidden
-                centered
+                {...getResponsiveModalConfig(isMobile, true, 680)}
               >
-                <Form form={outForm} layout="vertical" onFinish={async (values: { referenceNo?: string; reason?: string; items: { cigarId: string; quantity: number }[] }) => {
+                <Form form={outForm} layout="vertical" className="dark-theme-form" onFinish={async (values: { referenceNo?: string; reason?: string; items: { cigarId: string; quantity: number }[] }) => {
                   const lines = (values.items || []).filter(it => it?.cigarId && it?.quantity > 0)
                   if (lines.length === 0) { message.warning(t('inventory.pleaseAddAtLeastOneOutStockDetail')); return }
                   setLoading(true)
@@ -1774,7 +1782,7 @@ const AdminInventory: React.FC = () => {
         title={editing ? t('common.edit') : t('common.add')}
         open={creating || !!editing}
         onCancel={() => { setCreating(false); setEditing(null) }}
-        width={isMobile ? '100%' : 600}
+        {...getResponsiveModalConfig(isMobile, true, 600)}
         footer={isMobile ? (
           <div style={{ padding: '8px 0' }}>
             <button disabled={loading} onClick={() => form.submit()} style={{ width: '100%', padding: '12px', borderRadius: 8, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease', opacity: loading ? 0.6 : 1, boxShadow: '0 4px 15px -5px rgba(244,175,37,0.5)' }}>{t('common.save')}</button>
@@ -1892,7 +1900,7 @@ const AdminInventory: React.FC = () => {
             </div>
           )}
         </div>
-        <Form form={form} layout="horizontal" labelCol={{ flex: '100px' }} wrapperCol={{ flex: 'auto' }} onFinish={async (values: any) => {
+        <Form form={form} layout="horizontal" labelCol={{ flex: '100px' }} wrapperCol={{ flex: 'auto' }} className="dark-theme-form" onFinish={async (values: any) => {
           setLoading(true)
           try {
             // 根据品牌名称找到对应的品牌ID
@@ -2214,11 +2222,12 @@ const AdminInventory: React.FC = () => {
         }}
         onOk={() => brandForm.submit()}
         confirmLoading={loading}
-        width={600}
+        {...getResponsiveModalConfig(isMobile, true, 600)}
       >
         <Form
           form={brandForm}
           layout="vertical"
+          className="dark-theme-form"
           onFinish={async (values) => {
             setLoading(true)
             try {
@@ -2383,23 +2392,9 @@ const AdminInventory: React.FC = () => {
         open={inStatsOpen}
         onCancel={() => setInStatsOpen(false)}
         footer={null}
-        width={800}
-        destroyOnHidden
-        centered
-        styles={{
-          body: {
-            background: 'rgba(255,255, 255)',
-            maxHeight: '70vh',
-            overflow: 'auto',
-            padding: 16,
-          },
-          mask: { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
-          content: {
-            background: 'rgba(255,255, 255)',
-            border: '1px solid rgba(255, 215, 0, 0.2)'
-          }
-        }}
+        {...getResponsiveModalConfig(isMobile, true, 800)}
       >
+        <div style={getModalTheme().content as React.CSSProperties}>
         {/* 入库总体统计 */}
         <div style={{ 
           marginBottom: 16, 
@@ -2568,6 +2563,7 @@ const AdminInventory: React.FC = () => {
             }
           ]}
         />
+        </div>
       </Modal>
 
       {/* 出库统计弹窗 */}
@@ -2576,23 +2572,9 @@ const AdminInventory: React.FC = () => {
         open={outStatsOpen}
         onCancel={() => setOutStatsOpen(false)}
         footer={null}
-        width={800}
-        destroyOnHidden
-        centered
-        styles={{
-          body: {
-            background: 'rgba(255,255, 255)',
-            maxHeight: '70vh',
-            overflow: 'auto',
-            padding: 16,
-          },
-          mask: { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
-          content: {
-            background: 'rgba(255,255, 255)',
-            border: '1px solid rgba(255, 215, 0, 0.2)'
-          }
-        }}
+        {...getResponsiveModalConfig(isMobile, true, 800)}
       >
+        <div style={getModalTheme().content as React.CSSProperties}>
         {/* 出库总体统计 */}
         <div style={{ 
           marginBottom: 16, 
@@ -2735,6 +2717,7 @@ const AdminInventory: React.FC = () => {
             }
           ]}
         />
+        </div>
       </Modal>
     </div>
   )

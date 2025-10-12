@@ -243,8 +243,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
       }}>
         <div style={{ 
           display: 'flex', 
-          gap: '8px', 
-          marginBottom: '8px',
+          gap: '4px', 
           maxWidth: '100%',
           overflow: 'hidden'
         }}>
