@@ -317,7 +317,7 @@ const AdminOrders: React.FC = () => {
             }
             
             const baseStyle: React.CSSProperties = {
-              padding: '12px 20px',
+              padding: '12px 12px',
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
