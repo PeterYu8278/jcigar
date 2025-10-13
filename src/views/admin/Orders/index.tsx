@@ -1,7 +1,7 @@
 // 订单管理页面
 import React, { useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
-import { Table, Space, Input, Select, DatePicker, message, Modal } from 'antd'
+import { Table, Space, Input, Select, DatePicker, message, Modal, Badge } from 'antd'
 import { SearchOutlined, CheckOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import BatchDeleteButton from '../../../components/common/BatchDeleteButton'
 import CreateButton from '../../../components/common/CreateButton'
@@ -297,11 +297,22 @@ const AdminOrders: React.FC = () => {
             const getTabLabel = () => {
               switch (tabKey) {
                 case 'all':
-                  return `${t('common.all')} (${orders.length})`
+                  return t('common.all')
                 case 'matched':
-                  return `${t('financeAdmin.fullyMatched')} (${matchedCount})`
+                  return t('financeAdmin.fullyMatched')
                 case 'unmatched':
-                  return `${t('financeAdmin.partialMatched')} (${unmatchedCount})`
+                  return t('financeAdmin.partialMatched')
+              }
+            }
+            
+            const getTabCount = () => {
+              switch (tabKey) {
+                case 'all':
+                  return orders.length
+                case 'matched':
+                  return matchedCount
+                case 'unmatched':
+                  return unmatchedCount
               }
             }
             
@@ -346,6 +357,17 @@ const AdminOrders: React.FC = () => {
               >
                 {getTabIcon()}
                 {getTabLabel()}
+                <Badge 
+                  count={getTabCount()} 
+                  showZero
+                  style={{ 
+                    backgroundColor: isActive ? '#f4af25' : '#666',
+                    color: isActive ? '#000' : '#fff',
+                    fontWeight: 700,
+                    fontSize: 11,
+                    marginLeft: 4
+                  }}
+                />
                 {isActive && (
                   <div style={{
                     position: 'absolute',
