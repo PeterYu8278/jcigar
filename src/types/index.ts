@@ -13,9 +13,16 @@ export interface User {
   address?: string;
   status?: 'active' | 'inactive' | 'suspended';
   lastActive?: Date;
-  membership?: 'bronze' | 'silver' | 'gold' | 'platinum';
   
-  // 嵌套结构的完整配置
+  // 会员信息（对象形式）
+  membership?: {
+    level: 'bronze' | 'silver' | 'gold' | 'platinum';
+    joinDate?: Date;
+    lastActive?: Date;
+    points?: number;
+  };
+  
+  // 用户配置
   profile?: {
     avatar?: string;
     phone?: string;
@@ -23,11 +30,6 @@ export interface User {
       language: 'zh' | 'en';
       notifications: boolean;
     };
-  };
-  membershipDetails?: {
-    level: 'bronze' | 'silver' | 'gold' | 'platinum';
-    joinDate: Date;
-    lastActive: Date;
   };
   createdAt: Date;
   updatedAt: Date;

@@ -5,7 +5,7 @@
 
 import React, { useMemo, useState } from 'react'
 import { Table, Space, Button, Input, Select, Tag, Tooltip } from 'antd'
-import type { TableProps, ColumnsType } from 'antd/es/table'
+import type { TableProps, ColumnsType, ColumnType } from 'antd/es/table'
 import { SearchOutlined, ReloadOutlined, DownloadOutlined, SettingOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import { formatDate } from '../../utils/format'
@@ -13,7 +13,7 @@ import { formatDate } from '../../utils/format'
 const { Search } = Input
 const { Option } = Select
 
-export interface DataTableColumn<T = any> extends ColumnsType<T>[0] {
+export interface DataTableColumn<T = any> extends ColumnType<T> {
   searchable?: boolean
   filterable?: boolean
   exportable?: boolean

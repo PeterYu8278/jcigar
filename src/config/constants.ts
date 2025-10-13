@@ -226,38 +226,46 @@ export const COLORS = {
 
 // 状态颜色映射
 export const STATUS_COLORS = {
-  [ORDER_STATUS.PENDING]: 'orange',
-  [ORDER_STATUS.CONFIRMED]: 'blue',
-  [ORDER_STATUS.SHIPPED]: 'cyan',
-  [ORDER_STATUS.DELIVERED]: 'green',
-  [ORDER_STATUS.CANCELLED]: 'red',
-  [EVENT_STATUS.DRAFT]: 'default',
-  [EVENT_STATUS.PUBLISHED]: 'green',
-  [EVENT_STATUS.CANCELLED]: 'red',
-  [EVENT_STATUS.COMPLETED]: 'blue',
-  [BRAND_STATUS.ACTIVE]: 'green',
-  [BRAND_STATUS.INACTIVE]: 'red',
-  [CIGAR_STRENGTH.MILD]: 'green',
-  [CIGAR_STRENGTH.MEDIUM]: 'orange',
-  [CIGAR_STRENGTH.FULL]: 'red',
-  [INVENTORY_OPERATIONS.IN]: 'green',
-  [INVENTORY_OPERATIONS.OUT]: 'red',
-  [INVENTORY_OPERATIONS.ADJUSTMENT]: 'blue'
+  // 订单状态
+  'order:pending': 'orange',
+  'order:confirmed': 'blue',
+  'order:shipped': 'cyan',
+  'order:delivered': 'green',
+  'order:cancelled': 'red',
+  // 活动状态
+  'event:draft': 'default',
+  'event:published': 'green',
+  'event:cancelled': 'red',
+  'event:completed': 'blue',
+  // 品牌状态
+  'brand:active': 'green',
+  'brand:inactive': 'red',
+  // 雪茄强度
+  'cigar:mild': 'green',
+  'cigar:medium': 'orange',
+  'cigar:full': 'red',
+  // 库存操作
+  'inventory:in': 'green',
+  'inventory:out': 'red',
+  'inventory:adjustment': 'blue'
 } as const
 
 // 图标映射
 export const STATUS_ICONS = {
-  [ORDER_STATUS.PENDING]: 'clock-circle',
-  [ORDER_STATUS.CONFIRMED]: 'check-circle',
-  [ORDER_STATUS.SHIPPED]: 'car',
-  [ORDER_STATUS.DELIVERED]: 'check',
-  [ORDER_STATUS.CANCELLED]: 'close-circle',
-  [EVENT_STATUS.DRAFT]: 'edit',
-  [EVENT_STATUS.PUBLISHED]: 'eye',
-  [EVENT_STATUS.CANCELLED]: 'close',
-  [EVENT_STATUS.COMPLETED]: 'check',
-  [BRAND_STATUS.ACTIVE]: 'check-circle',
-  [BRAND_STATUS.INACTIVE]: 'close-circle'
+  // 订单状态
+  'order:pending': 'clock-circle',
+  'order:confirmed': 'check-circle',
+  'order:shipped': 'car',
+  'order:delivered': 'check',
+  'order:cancelled': 'close-circle',
+  // 活动状态
+  'event:draft': 'edit',
+  'event:published': 'eye',
+  'event:cancelled': 'close',
+  'event:completed': 'check',
+  // 品牌状态
+  'brand:active': 'check-circle',
+  'brand:inactive': 'close-circle'
 } as const
 
 // 权限配置

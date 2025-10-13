@@ -287,7 +287,7 @@ export const getResponsiveModalConfig = (isMobile: boolean, isDarkTheme: boolean
     width: getModalWidth(isMobile, width),
     styles: getModalThemeStyles(isMobile, true),
     centered: true,
-    destroyOnClose: true,
+    destroyOnHidden: true,
     maskClosable: !isMobile
   }
 }
