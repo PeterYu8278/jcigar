@@ -15,7 +15,8 @@ import {
   MenuUnfoldOutlined,
   ShoppingCartOutlined,
   CrownOutlined,
-  FireOutlined
+  FireOutlined,
+  ThunderboltOutlined
 } from '@ant-design/icons'
 import { useAuthStore } from '../../store/modules/auth'
 import { useTranslation } from 'react-i18next'
@@ -99,6 +100,11 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
       key: '/admin/finance',
       icon: <DollarOutlined />,
       label: t('navigation.finance'),
+    },
+    {
+      key: '/admin/performance',
+      icon: <ThunderboltOutlined />,
+      label: '性能监控',
     },
   ]
 
