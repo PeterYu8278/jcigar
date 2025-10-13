@@ -7,6 +7,8 @@ import React, { useState } from 'react'
 import { Badge, Dropdown, List, Button, Empty, Tabs } from 'antd'
 import { BellOutlined, CheckOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { MenuProps } from 'antd'
+import { useTranslation } from 'react-i18next'
+import { CONTAINER_KEYS } from '../../i18n/constants'
 
 export interface Notification {
   id: string

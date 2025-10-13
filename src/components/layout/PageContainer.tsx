@@ -6,6 +6,8 @@
 import React, { useState, useEffect } from 'react'
 import { Spin, Result, Button } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
+import { COMMON_ACTIONS, CONTAINER_KEYS } from '../../i18n/constants'
 import PageHeader, { type PageHeaderProps } from './PageHeader'
 import { useResponsive } from '../../hooks/useResponsive'
 import ErrorBoundary from '../common/ErrorBoundary'
