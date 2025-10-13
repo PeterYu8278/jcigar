@@ -162,18 +162,19 @@ const PageContainer: React.FC<PageContainerProps> = ({
    * 渲染错误状态
    */
   const renderError = () => {
-    const errorMessage = typeof error === 'string' ? error : error?.message || '加载失败'
+    const { t } = useTranslation()
+    const errorMessage = typeof error === 'string' ? error : error?.message || t(CONTAINER_KEYS.LOAD_FAILED)
 
     return (
       <div style={{ padding: '40px 0' }}>
         <Result
           status="error"
-          title="加载失败"
+          title={t(CONTAINER_KEYS.LOAD_FAILED)}
           subTitle={errorMessage}
           extra={
             onErrorRetry && (
               <Button type="primary" icon={<ReloadOutlined />} onClick={onErrorRetry}>
-                重试
+                {t(COMMON_ACTIONS.RETRY)}
               </Button>
             )
           }
@@ -186,6 +187,8 @@ const PageContainer: React.FC<PageContainerProps> = ({
    * 渲染空数据状态
    */
   const renderEmpty = () => {
+    const { t } = useTranslation()
+    
     if (emptyComponent) {
       return emptyComponent
     }
@@ -194,8 +197,8 @@ const PageContainer: React.FC<PageContainerProps> = ({
       <div style={{ padding: '40px 0' }}>
         <Result
           status="404"
-          title="暂无数据"
-          subTitle="当前没有任何数据"
+          title={t(CONTAINER_KEYS.NO_DATA)}
+          subTitle={t(CONTAINER_KEYS.CURRENT_NO_DATA)}
         />
       </div>
     )

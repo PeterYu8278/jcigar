@@ -1,11 +1,17 @@
 import React from 'react'
 import { Select, Space } from 'antd'
 import { GlobalOutlined } from '@ant-design/icons'
-import { useI18nStore, type SupportedLanguage } from '../../store/modules/i18n'
+import { useLanguage } from '../../hooks/useCommonTranslation'
 import { useTranslation } from 'react-i18next'
 
+export type SupportedLanguage = 'zh-CN' | 'en-US'
+
+/**
+ * 语言切换器组件
+ * 使用i18next直接管理语言状态
+ */
 const LanguageSwitcher: React.FC = () => {
-  const { language, setLanguage } = useI18nStore()
+  const { language, changeLanguage } = useLanguage()
   const { t } = useTranslation()
 
   const languageOptions = [
@@ -28,7 +34,7 @@ const LanguageSwitcher: React.FC = () => {
   ]
 
   const handleLanguageChange = (value: SupportedLanguage) => {
-    setLanguage(value)
+    changeLanguage(value)
   }
 
   return (

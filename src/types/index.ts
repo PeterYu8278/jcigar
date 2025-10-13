@@ -6,15 +6,25 @@ export interface User {
   email: string;
   displayName: string;
   role: 'admin' | 'member' | 'guest';
-  profile: {
+  
+  // 扁平化的常用属性（向后兼容）
+  photoURL?: string;
+  phone?: string;
+  address?: string;
+  status?: 'active' | 'inactive' | 'suspended';
+  lastActive?: Date;
+  membership?: 'bronze' | 'silver' | 'gold' | 'platinum';
+  
+  // 嵌套结构的完整配置
+  profile?: {
     avatar?: string;
     phone?: string;
-    preferences: {
+    preferences?: {
       language: 'zh' | 'en';
       notifications: boolean;
     };
   };
-  membership: {
+  membershipDetails?: {
     level: 'bronze' | 'silver' | 'gold' | 'platinum';
     joinDate: Date;
     lastActive: Date;

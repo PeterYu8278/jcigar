@@ -23,10 +23,11 @@ import {
   type PerformanceMetric
 } from '../../utils/performance'
 import { formatNumber } from '../../utils/format'
-
-const { TabPane } = Tabs
+import { useTranslation } from 'react-i18next'
+import { COMMON_ACTIONS, PERFORMANCE_KEYS } from '../../i18n/constants'
 
 const PerformanceMonitor: React.FC = () => {
+  const { t } = useTranslation()
   const [report, setReport] = useState<PerformanceReport | null>(null)
   const [metrics, setMetrics] = useState<PerformanceMetric[]>([])
   const [memory, setMemory] = useState<ReturnType<typeof getMemoryUsage>>(null)
@@ -117,36 +118,41 @@ const PerformanceMonitor: React.FC = () => {
       {/* 头部操作栏 */}
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ margin: 0, color: 'var(--cigar-text-primary)' }}>
-          <DashboardOutlined /> 性能监控
+          <DashboardOutlined /> {t(PERFORMANCE_KEYS.TITLE)}
         </h2>
         <Space>
           <Button
             icon={<ReloadOutlined />}
             onClick={loadPerformanceData}
           >
-            刷新
+            {t(COMMON_ACTIONS.REFRESH)}
           </Button>
           <Button
             type={autoRefresh ? 'primary' : 'default'}
             onClick={() => setAutoRefresh(!autoRefresh)}
           >
-            {autoRefresh ? '停止自动刷新' : '开启自动刷新'}
+            {autoRefresh ? t(PERFORMANCE_KEYS.AUTO_REFRESH_OFF) : t(PERFORMANCE_KEYS.AUTO_REFRESH_ON)}
           </Button>
           <Button
             icon={<DownloadOutlined />}
             onClick={handleExport}
           >
-            导出报告
+            {t(COMMON_ACTIONS.EXPORT_REPORT)}
           </Button>
           <Button danger onClick={handleClear}>
-            清空数据
+            {t(COMMON_ACTIONS.CLEAR_DATA)}
           </Button>
         </Space>
       </div>
 
-      <Tabs defaultActiveKey="overview">
-        {/* 概览 */}
-        <TabPane tab="性能概览" key="overview">
+      <Tabs 
+        defaultActiveKey="overview"
+        items={[
+          {
+            key: 'overview',
+            label: t(PERFORMANCE_KEYS.OVERVIEW),
+            children: (
+              <>
           {/* Web Vitals 核心指标 */}
           <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
             <Col xs={24} sm={12} lg={6}>
@@ -353,10 +359,14 @@ const PerformanceMonitor: React.FC = () => {
               </Col>
             </Row>
           </Card>
-        </TabPane>
-
-        {/* 详细指标 */}
-        <TabPane tab="详细指标" key="metrics">
+              </>
+            )
+          },
+          {
+            key: 'metrics',
+            label: t(PERFORMANCE_KEYS.DETAILED_METRICS),
+            children: (
+              <>
           <Card
             style={{
               background: 'var(--cigar-black-secondary)',
@@ -367,13 +377,13 @@ const PerformanceMonitor: React.FC = () => {
               dataSource={metrics.map((m, i) => ({ ...m, key: i }))}
               columns={[
                 {
-                  title: '指标名称',
+                  title: t(PERFORMANCE_KEYS.METRIC_NAME),
                   dataIndex: 'name',
                   key: 'name',
                   render: (text) => <span style={{ color: 'var(--cigar-text-primary)' }}>{text}</span>
                 },
                 {
-                  title: '值',
+                  title: t(PERFORMANCE_KEYS.VALUE),
                   dataIndex: 'value',
                   key: 'value',
                   render: (value, record) => (
@@ -383,7 +393,7 @@ const PerformanceMonitor: React.FC = () => {
                   )
                 },
                 {
-                  title: '类别',
+                  title: t(PERFORMANCE_KEYS.CATEGORY),
                   dataIndex: 'category',
                   key: 'category',
                   render: (category) => {
@@ -398,7 +408,7 @@ const PerformanceMonitor: React.FC = () => {
                   }
                 },
                 {
-                  title: '时间戳',
+                  title: t(PERFORMANCE_KEYS.TIMESTAMP),
                   dataIndex: 'timestamp',
                   key: 'timestamp',
                   render: (timestamp) => (
@@ -412,8 +422,11 @@ const PerformanceMonitor: React.FC = () => {
               scroll={{ y: 600 }}
             />
           </Card>
-        </TabPane>
-      </Tabs>
+              </>
+            )
+          }
+        ]}
+      />
     </div>
   )
 }

@@ -20,6 +20,7 @@ import {
 } from '@ant-design/icons'
 import { useAuthStore } from '../../store/modules/auth'
 import { useTranslation } from 'react-i18next'
+import { NAV_KEYS } from '../../i18n/constants'
 
 const { Sider } = Layout
 const { Text } = Typography
@@ -104,7 +105,7 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
     {
       key: '/admin/performance',
       icon: <ThunderboltOutlined />,
-      label: '性能监控',
+      label: t(NAV_KEYS.PERFORMANCE),
     },
   ]
 

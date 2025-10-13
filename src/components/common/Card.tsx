@@ -5,6 +5,8 @@
 
 import React from 'react'
 import { Card as AntCard, CardProps as AntCardProps, Skeleton, Empty } from 'antd'
+import { useTranslation } from 'react-i18next'
+import { COMMON_LABELS } from '../../i18n/constants'
 
 export interface CardProps extends AntCardProps {
   // 加载状态
@@ -46,7 +48,7 @@ const Card: React.FC<CardProps> = ({
   loading = false,
   loadingRows = 3,
   empty = false,
-  emptyText = '暂无数据',
+  emptyText,
   emptyDescription,
   gradient = false,
   gradientDirection = 'diagonal',
@@ -64,6 +66,11 @@ const Card: React.FC<CardProps> = ({
   className,
   ...props
 }) => {
+  const { t } = useTranslation()
+  
+  // 使用翻译的默认值
+  const finalEmptyText = emptyText || t(COMMON_LABELS.NO_DATA)
+  
   // 获取渐变背景
   const getGradientBackground = (): string => {
     if (!gradient) return ''
@@ -148,7 +155,7 @@ const Card: React.FC<CardProps> = ({
     if (empty) {
       return (
         <Empty
-          description={emptyText}
+          description={finalEmptyText}
           style={{ padding: '40px 0' }}
         >
           {emptyDescription && (

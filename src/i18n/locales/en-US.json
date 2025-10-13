@@ -133,7 +133,49 @@
     "totalProductTypes": "Total product types",
     "types": "types",
     "totalInStockQuantity": "Total in-stock quantity",
-    "sticks": "sticks"
+    "sticks": "sticks",
+    "create": "Create",
+    "download": "Download",
+    "refresh": "Refresh",
+    "retry": "Retry",
+    "confirmDelete": "Are you sure you want to delete?",
+    "loadFailed": "Load failed",
+    "noNotifications": "No notifications",
+    "currentNoData": "No data available",
+    "exportReport": "Export Report",
+    "clearData": "Clear Data"
+  },
+  "performance": {
+    "title": "Performance Monitor",
+    "overview": "Performance Overview",
+    "detailedMetrics": "Detailed Metrics",
+    "autoRefreshOn": "Enable Auto Refresh",
+    "autoRefreshOff": "Stop Auto Refresh",
+    "metricName": "Metric Name",
+    "value": "Value",
+    "category": "Category",
+    "timestamp": "Timestamp",
+    "fcp": "First Contentful Paint (FCP)",
+    "lcp": "Largest Contentful Paint (LCP)",
+    "fid": "First Input Delay (FID)",
+    "cls": "Cumulative Layout Shift (CLS)",
+    "ttfb": "Time to First Byte (TTFB)",
+    "renderTime": "Render Time",
+    "domReady": "DOM Ready Time",
+    "totalLoad": "Total Load Time",
+    "resourceCount": "Resource Count",
+    "totalSize": "Total Size",
+    "cacheHitRate": "Cache Hit Rate",
+    "jsHeapSize": "JS Heap Size",
+    "jsExecutionTime": "JS Execution Time",
+    "excellent": "Excellent",
+    "good": "Good",
+    "needsImprovement": "Needs Improvement",
+    "poor": "Poor"
+  },
+  "container": {
+    "loadFailed": "Load failed",
+    "noData": "No data"
   },
   "auth": {
     "login": "Login",
@@ -182,7 +224,8 @@
     "users": "Users",
     "inventory": "Inventory",
     "orders": "Orders",
-    "finance": "Finance"
+    "finance": "Finance",
+    "performance": "Performance"
   },
   "profile": {
     "title": "Profile",

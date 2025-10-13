@@ -60,6 +60,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
   onClearAll,
   style
 }) => {
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState('all')
 
   // 计算未读数量
@@ -80,7 +81,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
         <div style={{ padding: 20 }}>
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description="暂无通知"
+            description={t(CONTAINER_KEYS.NO_NOTIFICATIONS)}
           />
         </div>
       )

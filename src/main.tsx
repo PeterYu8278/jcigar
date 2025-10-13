@@ -4,10 +4,9 @@ import { App as AntdApp } from 'antd'
 import App from './App.tsx'
 import './style.css'
 import { cigarTheme } from './config/theme'
-import './i18n' // 初始化国际化
+import './i18n' // 初始化国际化（i18next会自动加载保存的语言设置）
 import LocalizedApp from './components/common/LocalizedApp'
 import { initializePWA, unregisterServiceWorker } from './utils/pwa'
-import { initializeLanguage } from './store/modules/i18n'
 
 // 开发环境：清理旧的Service Worker
 if (import.meta.env.DEV) {
@@ -21,9 +20,6 @@ if (import.meta.env.DEV) {
   // 生产环境：初始化PWA
   initializePWA().catch(() => {});
 }
-
-// 初始化语言设置
-initializeLanguage();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

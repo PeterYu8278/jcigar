@@ -6,6 +6,8 @@
 import React from 'react'
 import { Button as AntButton, ButtonProps as AntButtonProps, Tooltip } from 'antd'
 import { LoadingOutlined } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
+import { COMMON_ACTIONS, CONTAINER_KEYS } from '../../i18n/constants'
 
 export interface ButtonProps extends Omit<AntButtonProps, 'type'> {
   // 按钮变体
@@ -167,131 +169,162 @@ const Button: React.FC<ButtonProps> = ({
   return button
 }
 
-// 预设按钮组合
+/**
+ * 预设按钮Hook
+ * 使用国际化的按钮预设
+ */
+export const useButtonPresets = () => {
+  const { t } = useTranslation()
+  
+  return {
+    /**
+     * 保存按钮
+     */
+    Save: (props: Partial<ButtonProps>) => (
+      <Button variant="primary" {...props}>
+        {props.children || t(COMMON_ACTIONS.SAVE)}
+      </Button>
+    ),
+
+    /**
+     * 取消按钮
+     */
+    Cancel: (props: Partial<ButtonProps>) => (
+      <Button variant="secondary" {...props}>
+        {props.children || t(COMMON_ACTIONS.CANCEL)}
+      </Button>
+    ),
+
+    /**
+     * 创建按钮
+     */
+    Create: (props: Partial<ButtonProps>) => (
+      <Button variant="primary" {...props}>
+        {props.children || t(COMMON_ACTIONS.CREATE)}
+      </Button>
+    ),
+
+    /**
+     * 编辑按钮
+     */
+    Edit: (props: Partial<ButtonProps>) => (
+      <Button variant="primary" {...props}>
+        {props.children || t(COMMON_ACTIONS.EDIT)}
+      </Button>
+    ),
+
+    /**
+     * 删除按钮
+     */
+    Delete: (props: Partial<ButtonProps>) => (
+      <Button
+        variant="danger"
+        confirm={{
+          title: t(CONTAINER_KEYS.CONFIRM_DELETE),
+          onConfirm: props.onClick as any
+        }}
+        {...props}
+      >
+        {props.children || t(COMMON_ACTIONS.DELETE)}
+      </Button>
+    ),
+
+    /**
+     * 确认按钮
+     */
+    Confirm: (props: Partial<ButtonProps>) => (
+      <Button variant="success" {...props}>
+        {props.children || t(COMMON_ACTIONS.CONFIRM)}
+      </Button>
+    ),
+
+    /**
+     * 重置按钮
+     */
+    Reset: (props: Partial<ButtonProps>) => (
+      <Button variant="secondary" {...props}>
+        {props.children || t(COMMON_ACTIONS.RESET)}
+      </Button>
+    ),
+
+    /**
+     * 提交按钮
+     */
+    Submit: (props: Partial<ButtonProps>) => (
+      <Button variant="primary" htmlType="submit" {...props}>
+        {props.children || t(COMMON_ACTIONS.SUBMIT)}
+      </Button>
+    ),
+
+    /**
+     * 关闭按钮
+     */
+    Close: (props: Partial<ButtonProps>) => (
+      <Button variant="text" {...props}>
+        {props.children || t(COMMON_ACTIONS.CLOSE)}
+      </Button>
+    ),
+
+    /**
+     * 下载按钮
+     */
+    Download: (props: Partial<ButtonProps>) => (
+      <Button variant="primary" {...props}>
+        {props.children || t(COMMON_ACTIONS.DOWNLOAD)}
+      </Button>
+    ),
+
+    /**
+     * 上传按钮
+     */
+    Upload: (props: Partial<ButtonProps>) => (
+      <Button variant="primary" {...props}>
+        {props.children || t(COMMON_ACTIONS.UPLOAD)}
+      </Button>
+    ),
+
+    /**
+     * 刷新按钮
+     */
+    Refresh: (props: Partial<ButtonProps>) => (
+      <Button variant="secondary" {...props}>
+        {props.children || t(COMMON_ACTIONS.REFRESH)}
+      </Button>
+    ),
+
+    /**
+     * 返回按钮
+     */
+    Back: (props: Partial<ButtonProps>) => (
+      <Button variant="secondary" {...props}>
+        {props.children || t(COMMON_ACTIONS.BACK)}
+      </Button>
+    )
+  }
+}
+
+/**
+ * @deprecated 使用 useButtonPresets Hook 代替
+ * 为保持向后兼容性暂时保留，但会在下个版本移除
+ */
 export const ButtonPresets = {
-  /**
-   * 保存按钮
-   */
-  Save: (props: Partial<ButtonProps>) => (
-    <Button variant="primary" {...props}>
-      {props.children || '保存'}
-    </Button>
-  ),
-
-  /**
-   * 取消按钮
-   */
-  Cancel: (props: Partial<ButtonProps>) => (
-    <Button variant="secondary" {...props}>
-      {props.children || '取消'}
-    </Button>
-  ),
-
-  /**
-   * 创建按钮
-   */
-  Create: (props: Partial<ButtonProps>) => (
-    <Button variant="primary" {...props}>
-      {props.children || '创建'}
-    </Button>
-  ),
-
-  /**
-   * 编辑按钮
-   */
-  Edit: (props: Partial<ButtonProps>) => (
-    <Button variant="primary" {...props}>
-      {props.children || '编辑'}
-    </Button>
-  ),
-
-  /**
-   * 删除按钮
-   */
+  Save: (props: Partial<ButtonProps>) => <Button variant="primary" {...props}>{props.children || '保存'}</Button>,
+  Cancel: (props: Partial<ButtonProps>) => <Button variant="secondary" {...props}>{props.children || '取消'}</Button>,
+  Create: (props: Partial<ButtonProps>) => <Button variant="primary" {...props}>{props.children || '创建'}</Button>,
+  Edit: (props: Partial<ButtonProps>) => <Button variant="primary" {...props}>{props.children || '编辑'}</Button>,
   Delete: (props: Partial<ButtonProps>) => (
-    <Button
-      variant="danger"
-      confirm={{
-        title: '确定要删除吗？',
-        onConfirm: props.onClick as any
-      }}
-      {...props}
-    >
+    <Button variant="danger" confirm={{ title: '确定要删除吗？', onConfirm: props.onClick as any }} {...props}>
       {props.children || '删除'}
     </Button>
   ),
-
-  /**
-   * 确认按钮
-   */
-  Confirm: (props: Partial<ButtonProps>) => (
-    <Button variant="success" {...props}>
-      {props.children || '确认'}
-    </Button>
-  ),
-
-  /**
-   * 重置按钮
-   */
-  Reset: (props: Partial<ButtonProps>) => (
-    <Button variant="secondary" {...props}>
-      {props.children || '重置'}
-    </Button>
-  ),
-
-  /**
-   * 提交按钮
-   */
-  Submit: (props: Partial<ButtonProps>) => (
-    <Button variant="primary" htmlType="submit" {...props}>
-      {props.children || '提交'}
-    </Button>
-  ),
-
-  /**
-   * 关闭按钮
-   */
-  Close: (props: Partial<ButtonProps>) => (
-    <Button variant="text" {...props}>
-      {props.children || '关闭'}
-    </Button>
-  ),
-
-  /**
-   * 下载按钮
-   */
-  Download: (props: Partial<ButtonProps>) => (
-    <Button variant="primary" {...props}>
-      {props.children || '下载'}
-    </Button>
-  ),
-
-  /**
-   * 上传按钮
-   */
-  Upload: (props: Partial<ButtonProps>) => (
-    <Button variant="primary" {...props}>
-      {props.children || '上传'}
-    </Button>
-  ),
-
-  /**
-   * 刷新按钮
-   */
-  Refresh: (props: Partial<ButtonProps>) => (
-    <Button variant="secondary" {...props}>
-      {props.children || '刷新'}
-    </Button>
-  ),
-
-  /**
-   * 返回按钮
-   */
-  Back: (props: Partial<ButtonProps>) => (
-    <Button variant="secondary" {...props}>
-      {props.children || '返回'}
-    </Button>
-  )
+  Confirm: (props: Partial<ButtonProps>) => <Button variant="success" {...props}>{props.children || '确认'}</Button>,
+  Reset: (props: Partial<ButtonProps>) => <Button variant="secondary" {...props}>{props.children || '重置'}</Button>,
+  Submit: (props: Partial<ButtonProps>) => <Button variant="primary" htmlType="submit" {...props}>{props.children || '提交'}</Button>,
+  Close: (props: Partial<ButtonProps>) => <Button variant="text" {...props}>{props.children || '关闭'}</Button>,
+  Download: (props: Partial<ButtonProps>) => <Button variant="primary" {...props}>{props.children || '下载'}</Button>,
+  Upload: (props: Partial<ButtonProps>) => <Button variant="primary" {...props}>{props.children || '上传'}</Button>,
+  Refresh: (props: Partial<ButtonProps>) => <Button variant="secondary" {...props}>{props.children || '刷新'}</Button>,
+  Back: (props: Partial<ButtonProps>) => <Button variant="secondary" {...props}>{props.children || '返回'}</Button>
 }
 
 export default Button
