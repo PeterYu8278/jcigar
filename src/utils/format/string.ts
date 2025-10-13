@@ -3,256 +3,425 @@
  */
 
 /**
- * 截断字符串
- * @param str - 字符串
- * @param maxLength - 最大长度
- * @param suffix - 后缀，默认 '...'
- * 
- * @example
- * truncate('Hello World', 5) // "Hello..."
- * truncate('Hello', 10) // "Hello"
- */
-export const truncate = (
-  str: string | null | undefined,
-  maxLength: number,
-  suffix: string = '...'
-): string => {
-  if (!str) return ''
-  
-  if (str.length <= maxLength) {
-    return str
-  }
-  
-  return str.slice(0, maxLength) + suffix
-}
-
-/**
- * 手机号脱敏
- * @param phone - 手机号
- * @param keepStart - 保留开头位数，默认 3
- * @param keepEnd - 保留结尾位数，默认 4
- * 
- * @example
- * maskPhone('13812345678') // "138****5678"
- * maskPhone('13812345678', 4, 4) // "1381****5678"
- */
-export const maskPhone = (
-  phone: string | null | undefined,
-  keepStart: number = 3,
-  keepEnd: number = 4
-): string => {
-  if (!phone) return ''
-  
-  const cleanPhone = phone.replace(/\D/g, '')
-  
-  if (cleanPhone.length <= keepStart + keepEnd) {
-    return cleanPhone
-  }
-  
-  const start = cleanPhone.slice(0, keepStart)
-  const end = cleanPhone.slice(-keepEnd)
-  const maskLength = cleanPhone.length - keepStart - keepEnd
-  
-  return `${start}${'*'.repeat(maskLength)}${end}`
-}
-
-/**
- * 邮箱脱敏
- * @param email - 邮箱
- * 
- * @example
- * maskEmail('example@gmail.com') // "ex****@gmail.com"
- */
-export const maskEmail = (email: string | null | undefined): string => {
-  if (!email) return ''
-  
-  const [localPart, domain] = email.split('@')
-  
-  if (!localPart || !domain) {
-    return email
-  }
-  
-  const visibleStart = Math.min(2, Math.floor(localPart.length / 3))
-  const maskedLocal = localPart.slice(0, visibleStart) + '****'
-  
-  return `${maskedLocal}@${domain}`
-}
-
-/**
- * 身份证号脱敏
- * @param idCard - 身份证号
- * 
- * @example
- * maskIdCard('110101199001011234') // "110101****1234"
- */
-export const maskIdCard = (idCard: string | null | undefined): string => {
-  if (!idCard) return ''
-  
-  if (idCard.length < 8) {
-    return idCard
-  }
-  
-  const start = idCard.slice(0, 6)
-  const end = idCard.slice(-4)
-  
-  return `${start}****${end}`
-}
-
-/**
  * 首字母大写
- * @param str - 字符串
+ * @param str 字符串
+ * @returns 首字母大写的字符串
  * 
  * @example
  * capitalize('hello world') // "Hello world"
  */
 export const capitalize = (str: string | null | undefined): string => {
   if (!str) return ''
-  
-  return str.charAt(0).toUpperCase() + str.slice(1)
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
 }
 
 /**
  * 每个单词首字母大写
- * @param str - 字符串
+ * @param str 字符串
+ * @returns 每个单词首字母大写的字符串
  * 
  * @example
- * capitalizeWords('hello world') // "Hello World"
+ * titleCase('hello world') // "Hello World"
  */
-export const capitalizeWords = (str: string | null | undefined): string => {
+export const titleCase = (str: string | null | undefined): string => {
   if (!str) return ''
-  
-  return str.replace(/\b\w/g, char => char.toUpperCase())
+  return str.replace(/\w\S*/g, (txt) => 
+    txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
+  )
 }
 
 /**
- * 转为驼峰命名
- * @param str - 字符串
+ * 驼峰命名转换
+ * @param str 字符串
+ * @returns 驼峰命名字符串
  * 
  * @example
- * toCamelCase('hello-world') // "helloWorld"
- * toCamelCase('hello_world') // "helloWorld"
+ * camelCase('hello-world') // "helloWorld"
  */
-export const toCamelCase = (str: string | null | undefined): string => {
+export const camelCase = (str: string | null | undefined): string => {
   if (!str) return ''
-  
-  return str
-    .replace(/[-_\s]+(.)?/g, (_, char) => (char ? char.toUpperCase() : ''))
-    .replace(/^[A-Z]/, char => char.toLowerCase())
+  return str.replace(/[-_\s]+(.)?/g, (_, char) => char ? char.toUpperCase() : '')
 }
 
 /**
- * 转为短横线命名
- * @param str - 字符串
+ * 帕斯卡命名转换
+ * @param str 字符串
+ * @returns 帕斯卡命名字符串
  * 
  * @example
- * toKebabCase('helloWorld') // "hello-world"
- * toKebabCase('HelloWorld') // "hello-world"
+ * pascalCase('hello-world') // "HelloWorld"
  */
-export const toKebabCase = (str: string | null | undefined): string => {
+export const pascalCase = (str: string | null | undefined): string => {
   if (!str) return ''
-  
-  return str
-    .replace(/([a-z])([A-Z])/g, '$1-$2')
-    .replace(/[\s_]+/g, '-')
-    .toLowerCase()
+  const camel = camelCase(str)
+  return camel.charAt(0).toUpperCase() + camel.slice(1)
 }
 
 /**
- * 转为下划线命名
- * @param str - 字符串
+ * 短横线命名转换
+ * @param str 字符串
+ * @returns 短横线命名字符串
  * 
  * @example
- * toSnakeCase('helloWorld') // "hello_world"
- * toSnakeCase('HelloWorld') // "hello_world"
+ * kebabCase('helloWorld') // "hello-world"
  */
-export const toSnakeCase = (str: string | null | undefined): string => {
+export const kebabCase = (str: string | null | undefined): string => {
   if (!str) return ''
-  
-  return str
-    .replace(/([a-z])([A-Z])/g, '$1_$2')
-    .replace(/[\s-]+/g, '_')
-    .toLowerCase()
+  return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()
 }
 
 /**
- * 移除 HTML 标签
- * @param str - 字符串
+ * 下划线命名转换
+ * @param str 字符串
+ * @returns 下划线命名字符串
  * 
  * @example
- * stripHtml('<p>Hello <strong>World</strong></p>') // "Hello World"
+ * snakeCase('helloWorld') // "hello_world"
+ */
+export const snakeCase = (str: string | null | undefined): string => {
+  if (!str) return ''
+  return str.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase()
+}
+
+/**
+ * 截断字符串
+ * @param str 字符串
+ * @param length 最大长度
+ * @param suffix 后缀
+ * @returns 截断后的字符串
+ * 
+ * @example
+ * truncate('Hello World', 5) // "Hello..."
+ * truncate('Hello World', 5, '...') // "Hello..."
+ */
+export const truncate = (
+  str: string | null | undefined, 
+  length: number, 
+  suffix: string = '...'
+): string => {
+  if (!str) return ''
+  if (str.length <= length) return str
+  return str.slice(0, length) + suffix
+}
+
+/**
+ * 截断单词
+ * @param str 字符串
+ * @param length 最大长度
+ * @param suffix 后缀
+ * @returns 截断后的字符串
+ * 
+ * @example
+ * truncateWords('Hello World', 8) // "Hello..."
+ * truncateWords('Hello World', 8, '...') // "Hello..."
+ */
+export const truncateWords = (
+  str: string | null | undefined, 
+  length: number, 
+  suffix: string = '...'
+): string => {
+  if (!str) return ''
+  if (str.length <= length) return str
+  
+  const truncated = str.slice(0, length)
+  const lastSpace = truncated.lastIndexOf(' ')
+  
+  if (lastSpace > 0) {
+    return truncated.slice(0, lastSpace) + suffix
+  }
+  
+  return truncated + suffix
+}
+
+/**
+ * 移除HTML标签
+ * @param str 字符串
+ * @returns 移除HTML标签后的字符串
+ * 
+ * @example
+ * stripHtml('<p>Hello World</p>') // "Hello World"
  */
 export const stripHtml = (str: string | null | undefined): string => {
   if (!str) return ''
-  
   return str.replace(/<[^>]*>/g, '')
 }
 
 /**
- * 转义 HTML 特殊字符
- * @param str - 字符串
+ * 转义HTML
+ * @param str 字符串
+ * @returns 转义HTML后的字符串
  * 
  * @example
- * escapeHtml('<script>alert("XSS")</script>')
- * // "&lt;script&gt;alert(&quot;XSS&quot;)&lt;/script&gt;"
+ * escapeHtml('<script>alert("hello")</script>') // "&lt;script&gt;alert(&quot;hello&quot;)&lt;/script&gt;"
  */
 export const escapeHtml = (str: string | null | undefined): string => {
   if (!str) return ''
+  const div = document.createElement('div')
+  div.textContent = str
+  return div.innerHTML
+}
+
+/**
+ * 反转义HTML
+ * @param str 字符串
+ * @returns 反转义HTML后的字符串
+ * 
+ * @example
+ * unescapeHtml('&lt;script&gt;alert(&quot;hello&quot;)&lt;/script&gt;') // '<script>alert("hello")</script>'
+ */
+export const unescapeHtml = (str: string | null | undefined): string => {
+  if (!str) return ''
+  const div = document.createElement('div')
+  div.innerHTML = str
+  return div.textContent || div.innerText || ''
+}
+
+/**
+ * 格式化手机号
+ * @param phone 手机号
+ * @param format 格式类型
+ * @returns 格式化后的手机号
+ * 
+ * @example
+ * formatPhone('13812345678') // "138-1234-5678"
+ * formatPhone('13812345678', 'spaces') // "138 1234 5678"
+ */
+export const formatPhone = (
+  phone: string | null | undefined, 
+  format: 'dashes' | 'spaces' | 'dots' | 'parentheses' = 'dashes'
+): string => {
+  if (!phone) return ''
   
-  const escapeMap: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
+  // 移除所有非数字字符
+  const cleaned = phone.replace(/\D/g, '')
+  
+  if (cleaned.length !== 11) return phone
+  
+  const area = cleaned.slice(0, 3)
+  const first = cleaned.slice(3, 7)
+  const last = cleaned.slice(7)
+  
+  switch (format) {
+    case 'dashes':
+      return `${area}-${first}-${last}`
+    case 'spaces':
+      return `${area} ${first} ${last}`
+    case 'dots':
+      return `${area}.${first}.${last}`
+    case 'parentheses':
+      return `(${area}) ${first}-${last}`
+    default:
+      return `${area}-${first}-${last}`
+  }
+}
+
+/**
+ * 格式化银行卡号
+ * @param cardNumber 银行卡号
+ * @param mask 是否遮罩中间部分
+ * @returns 格式化后的银行卡号
+ * 
+ * @example
+ * formatCardNumber('1234567890123456') // "1234-5678-9012-3456"
+ * formatCardNumber('1234567890123456', true) // "1234-****-****-3456"
+ */
+export const formatCardNumber = (
+  cardNumber: string | null | undefined, 
+  mask: boolean = false
+): string => {
+  if (!cardNumber) return ''
+  
+  // 移除所有非数字字符
+  const cleaned = cardNumber.replace(/\D/g, '')
+  
+  if (cleaned.length < 16) return cardNumber
+  
+  if (mask) {
+    return `${cleaned.slice(0, 4)}-****-****-${cleaned.slice(-4)}`
   }
   
-  return str.replace(/[&<>"']/g, char => escapeMap[char])
+  // 每4位添加一个短横线
+  return cleaned.replace(/(.{4})/g, '$1-').slice(0, -1)
+}
+
+/**
+ * 格式化身份证号
+ * @param idCard 身份证号
+ * @param mask 是否遮罩中间部分
+ * @returns 格式化后的身份证号
+ * 
+ * @example
+ * formatIdCard('123456789012345678') // "123456789012345678"
+ * formatIdCard('123456789012345678', true) // "123456****5678"
+ */
+export const formatIdCard = (
+  idCard: string | null | undefined, 
+  mask: boolean = false
+): string => {
+  if (!idCard) return ''
+  
+  if (mask && idCard.length >= 8) {
+    return `${idCard.slice(0, 6)}****${idCard.slice(-4)}`
+  }
+  
+  return idCard
+}
+
+/**
+ * 格式化姓名（遮罩中间字符）
+ * @param name 姓名
+ * @param maskChar 遮罩字符
+ * @returns 格式化后的姓名
+ * 
+ * @example
+ * formatName('张三') // "张*"
+ * formatName('李小明') // "李*明"
+ * formatName('欧阳修') // "欧*修"
+ */
+export const formatName = (
+  name: string | null | undefined, 
+  maskChar: string = '*'
+): string => {
+  if (!name) return ''
+  
+  if (name.length === 1) return name
+  if (name.length === 2) return name[0] + maskChar
+  if (name.length === 3) return name[0] + maskChar + name[2]
+  
+  // 超过3个字符，保留首尾
+  return name[0] + maskChar.repeat(name.length - 2) + name[name.length - 1]
+}
+
+/**
+ * 格式化邮箱（遮罩中间部分）
+ * @param email 邮箱
+ * @param maskChar 遮罩字符
+ * @returns 格式化后的邮箱
+ * 
+ * @example
+ * formatEmail('user@example.com') // "u***@example.com"
+ * formatEmail('test@domain.com') // "t***@domain.com"
+ */
+export const formatEmail = (
+  email: string | null | undefined, 
+  maskChar: string = '*'
+): string => {
+  if (!email || !email.includes('@')) return email || ''
+  
+  const [username, domain] = email.split('@')
+  
+  if (username.length <= 1) return email
+  
+  const maskedUsername = username[0] + maskChar.repeat(username.length - 1)
+  return `${maskedUsername}@${domain}`
 }
 
 /**
  * 生成随机字符串
- * @param length - 长度
- * @param charset - 字符集，默认 'alphanumeric'
+ * @param length 长度
+ * @param charset 字符集
+ * @returns 随机字符串
  * 
  * @example
- * randomString(8) // "aB3xY9zK"
- * randomString(6, 'numeric') // "123456"
- * randomString(6, 'alpha') // "aBcDeF"
+ * randomString(8) // "aB3dEfGh"
+ * randomString(8, '0123456789') // "12345678"
  */
 export const randomString = (
-  length: number,
-  charset: 'alphanumeric' | 'alpha' | 'numeric' | 'lowercase' | 'uppercase' = 'alphanumeric'
+  length: number, 
+  charset: string = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
 ): string => {
-  const charsets = {
-    alphanumeric: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789',
-    alpha: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
-    numeric: '0123456789',
-    lowercase: 'abcdefghijklmnopqrstuvwxyz',
-    uppercase: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-  }
-  
-  const chars = charsets[charset]
   let result = ''
-  
   for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length))
+    result += charset.charAt(Math.floor(Math.random() * charset.length))
   }
-  
   return result
 }
 
 /**
- * 高亮关键词
- * @param text - 文本
- * @param keyword - 关键词
- * @param highlightClass - 高亮样式类名，默认 'highlight'
+ * 生成UUID
+ * @returns UUID字符串
  * 
  * @example
- * highlightKeyword('Hello World', 'World')
- * // "Hello <span class=\"highlight\">World</span>"
+ * generateUUID() // "550e8400-e29b-41d4-a716-446655440000"
+ */
+export const generateUUID = (): string => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0
+    const v = c === 'x' ? r : (r & 0x3 | 0x8)
+    return v.toString(16)
+  })
+}
+
+/**
+ * 格式化文件扩展名
+ * @param filename 文件名
+ * @returns 文件扩展名
+ * 
+ * @example
+ * getFileExtension('document.pdf') // "pdf"
+ * getFileExtension('image.jpg') // "jpg"
+ */
+export const getFileExtension = (filename: string | null | undefined): string => {
+  if (!filename) return ''
+  const lastDot = filename.lastIndexOf('.')
+  return lastDot > 0 ? filename.slice(lastDot + 1).toLowerCase() : ''
+}
+
+/**
+ * 格式化文件名（移除扩展名）
+ * @param filename 文件名
+ * @returns 不含扩展名的文件名
+ * 
+ * @example
+ * getFileName('document.pdf') // "document"
+ * getFileName('image.jpg') // "image"
+ */
+export const getFileName = (filename: string | null | undefined): string => {
+  if (!filename) return ''
+  const lastDot = filename.lastIndexOf('.')
+  return lastDot > 0 ? filename.slice(0, lastDot) : filename
+}
+
+/**
+ * 格式化路径
+ * @param path 路径
+ * @param separator 分隔符
+ * @returns 格式化后的路径
+ * 
+ * @example
+ * formatPath('/path/to/file', '/') // "/path/to/file"
+ * formatPath('path\\to\\file', '/') // "path/to/file"
+ */
+export const formatPath = (
+  path: string | null | undefined, 
+  separator: string = '/'
+): string => {
+  if (!path) return ''
+  
+  // 统一使用指定的分隔符
+  const normalized = path.replace(/[/\\]/g, separator)
+  
+  // 移除重复的分隔符
+  const deduplicated = normalized.replace(new RegExp(`\\${separator}+`, 'g'), separator)
+  
+  // 移除末尾的分隔符（除非是根路径）
+  return deduplicated.endsWith(separator) && deduplicated !== separator 
+    ? deduplicated.slice(0, -1) 
+    : deduplicated
+}
+
+/**
+ * 格式化搜索关键词（高亮显示）
+ * @param text 文本
+ * @param keyword 关键词
+ * @param highlightClass 高亮样式类名
+ * @returns 高亮后的HTML字符串
+ * 
+ * @example
+ * highlightKeyword('Hello World', 'world') // "Hello <span class="highlight">World</span>"
  */
 export const highlightKeyword = (
-  text: string | null | undefined,
+  text: string | null | undefined, 
   keyword: string | null | undefined,
   highlightClass: string = 'highlight'
 ): string => {
@@ -261,40 +430,3 @@ export const highlightKeyword = (
   const regex = new RegExp(`(${keyword})`, 'gi')
   return text.replace(regex, `<span class="${highlightClass}">$1</span>`)
 }
-
-/**
- * 判断字符串是否为空（包括空格）
- * @param str - 字符串
- * 
- * @example
- * isEmpty('') // true
- * isEmpty('   ') // true
- * isEmpty('hello') // false
- */
-export const isEmpty = (str: string | null | undefined): boolean => {
-  return !str || str.trim().length === 0
-}
-
-/**
- * 安全的 JSON 解析
- * @param str - JSON 字符串
- * @param defaultValue - 默认值
- * 
- * @example
- * safeJsonParse('{"name":"John"}') // { name: 'John' }
- * safeJsonParse('invalid json', {}) // {}
- */
-export const safeJsonParse = <T = any>(
-  str: string | null | undefined,
-  defaultValue: T = {} as T
-): T => {
-  if (!str) return defaultValue
-  
-  try {
-    return JSON.parse(str)
-  } catch (error) {
-    console.error('JSON 解析失败:', error)
-    return defaultValue
-  }
-}
-
