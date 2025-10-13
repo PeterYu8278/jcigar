@@ -1,7 +1,7 @@
 // 订单管理页面
 import React, { useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
-import { Table, Space, Input, Select, DatePicker, message, Modal, Tag } from 'antd'
+import { Table, Space, Input, Select, DatePicker, message, Modal, Tabs } from 'antd'
 import { SearchOutlined, CheckOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import BatchDeleteButton from '../../../components/common/BatchDeleteButton'
 import CreateButton from '../../../components/common/CreateButton'
@@ -33,6 +33,7 @@ const AdminOrders: React.FC = () => {
   const [paymentFilter, setPaymentFilter] = useState<string | undefined>()
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null)
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
+  const [matchStatusTab, setMatchStatusTab] = useState<'all' | 'matched' | 'unmatched'>('all')
   const [pagination, setPagination] = useState(() => {
     const saved = localStorage.getItem('orders-pagination')
     if (saved) {
@@ -53,7 +54,7 @@ const AdminOrders: React.FC = () => {
   // 筛选条件变化时重置分页到第一页
   useEffect(() => {
     setPagination((prev: any) => ({ ...prev, current: 1 }))
-  }, [keyword, statusFilter, paymentFilter, dateRange])
+  }, [keyword, statusFilter, paymentFilter, dateRange, matchStatusTab])
 
   const loadData = async () => {
     setLoading(true)
@@ -181,8 +182,23 @@ const AdminOrders: React.FC = () => {
   }
 
   const filtered = useMemo(() => {
-    return filterOrders(orders, users, keyword, statusFilter, paymentFilter, dateRange, cigars)
-  }, [orders, users, keyword, statusFilter, paymentFilter, dateRange, cigars])
+    let result = filterOrders(orders, users, keyword, statusFilter, paymentFilter, dateRange, cigars)
+    
+    // 按匹配状态筛选
+    if (matchStatusTab === 'matched') {
+      result = result.filter(order => {
+        const matchStatus = getOrderMatchStatus(order.id)
+        return matchStatus.status === 'fully'
+      })
+    } else if (matchStatusTab === 'unmatched') {
+      result = result.filter(order => {
+        const matchStatus = getOrderMatchStatus(order.id)
+        return matchStatus.status !== 'fully'
+      })
+    }
+    
+    return result
+  }, [orders, users, keyword, statusFilter, paymentFilter, dateRange, cigars, matchStatusTab, transactions])
 
   const columns = useOrderColumns({
     users,
@@ -269,6 +285,41 @@ const AdminOrders: React.FC = () => {
           />
         </Space>
       </div>
+
+      {/* 财务匹配状态标签页 */}
+      <Tabs
+        activeKey={matchStatusTab}
+        onChange={(key) => setMatchStatusTab(key as any)}
+        style={{ marginBottom: 16 }}
+        items={[
+          {
+            key: 'all',
+            label: (
+              <span>
+                {t('common.all')} ({orders.length})
+              </span>
+            )
+          },
+          {
+            key: 'matched',
+            label: (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <CheckOutlined style={{ color: '#52c41a' }} />
+                {t('financeAdmin.fullyMatched')} ({orders.filter(o => getOrderMatchStatus(o.id).status === 'fully').length})
+              </span>
+            )
+          },
+          {
+            key: 'unmatched',
+            label: (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <ClockCircleOutlined style={{ color: '#faad14' }} />
+                {t('financeAdmin.partialMatched')} ({orders.filter(o => getOrderMatchStatus(o.id).status !== 'fully').length})
+              </span>
+            )
+          }
+        ]}
+      />
 
       {/* 搜索和筛选 */}
       {!isMobile ? (
@@ -510,39 +561,19 @@ const AdminOrders: React.FC = () => {
                   </div>
                   
                   {/* 金额和财务匹配状态 */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', gap: 6 }}>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: '#f4af25' }}>
-                      RM {order.total.toFixed(2)}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: '#f4af25' }}>RM {order.total.toFixed(2)}</div>
+                      {/* 财务匹配状态 */}
+                      {matchStatus.status === 'fully' && (
+                        <CheckOutlined style={{ color: '#34d399', fontSize: '16px' }} />
+                      )}
                     </div>
-                    
-                    {/* 财务匹配状态标签 */}
-                    {matchStatus.status === 'fully' && (
-                      <Tag 
-                        color="success" 
-                        icon={<CheckOutlined />}
-                        style={{ margin: 0, fontSize: 11, fontWeight: 600 }}
-                      >
-                        {t('financeAdmin.fullyMatched')}
-                      </Tag>
-                    )}
-                    
                     {matchStatus.status === 'partial' && (
-                      <Tag 
-                        color="warning" 
-                        icon={<ClockCircleOutlined />}
-                        style={{ margin: 0, fontSize: 10, fontWeight: 600 }}
-                      >
-                        RM{matchStatus.matched.toFixed(2)}
-                      </Tag>
-                    )}
-                    
-                    {matchStatus.status === 'none' && matchStatus.total > 0 && (
-                      <Tag 
-                        color="default" 
-                        style={{ margin: 0, fontSize: 10, color: 'rgba(255,255,255,0.45)', borderColor: 'rgba(255,255,255,0.2)' }}
-                      >
-                        {t('financeAdmin.partialMatched')}
-                      </Tag>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                        <ClockCircleOutlined style={{ color: '#fb923c', fontSize: '14px' }} />
+                        <span style={{ fontSize: 10, color: '#fb923c' }}>RM{matchStatus.matched.toFixed(2)}</span>
+                      </div>
                     )}
                   </div>
                 </div>
