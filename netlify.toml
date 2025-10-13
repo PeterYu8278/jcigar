@@ -1,9 +1,9 @@
 [build]
   publish = "dist"
-  command = "npm run build"
+  command = "npm run build:fast"
 
 [build.environment]
-  NODE_VERSION = "18"
+  NODE_VERSION = "22"
 
 # 重定向规则 - 支持SPA路由
 [[redirects]]
