@@ -483,42 +483,48 @@ const AdminOrders: React.FC = () => {
                   </span>
                 </div>
                 
-                {/* 手机号 */}
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
-                  {getUserPhone(order.userId, users) || '-'}
+                {/* 手机号和查看按钮同行 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
+                    {getUserPhone(order.userId, users) || '-'}
+                  </div>
+                  <button style={{ padding: '4px 8px', borderRadius: 6, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10', fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => { setViewing(order); setIsEditingInView(false) }}>
+                    {t('common.viewDetails')}
+                  </button>
                 </div>
                 
-                {/* 商品列表 */}
-                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(244,175,37,0.1)' }}>
-                  {order.items.slice(0, 2).map((item, index) => (
-                    <div key={`${order.id}_${item.cigarId}_${index}`} style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginBottom: 4 }}>
-                      • {getCigarName(item.cigarId)} × {item.quantity}
-                    </div>
-                  ))}
-                  {order.items.length > 2 && (
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>
-                      +{order.items.length - 2} {t('common.more')}
-                    </div>
-                  )}
-                </div>
-                
-                <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: '#f4af25' }}>RM {order.total.toFixed(2)}</div>
-                    {/* 财务匹配状态 */}
-                    {matchStatus.status === 'fully' && (
-                      <CheckOutlined style={{ color: '#34d399', fontSize: '16px' }} />
+                {/* 商品列表和金额 */}
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(244,175,37,0.1)', display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                  {/* 商品列表 */}
+                  <div style={{ flex: 1 }}>
+                    {order.items.slice(0, 2).map((item, index) => (
+                      <div key={`${order.id}_${item.cigarId}_${index}`} style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginBottom: 4 }}>
+                        • {getCigarName(item.cigarId)} × {item.quantity}
+                      </div>
+                    ))}
+                    {order.items.length > 2 && (
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>
+                        +{order.items.length - 2} {t('common.more')}
+                      </div>
                     )}
+                  </div>
+                  
+                  {/* 金额和财务匹配状态 */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: '#f4af25' }}>RM {order.total.toFixed(2)}</div>
+                      {/* 财务匹配状态 */}
+                      {matchStatus.status === 'fully' && (
+                        <CheckOutlined style={{ color: '#34d399', fontSize: '16px' }} />
+                      )}
+                    </div>
                     {matchStatus.status === 'partial' && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
                         <ClockCircleOutlined style={{ color: '#fb923c', fontSize: '14px' }} />
                         <span style={{ fontSize: 10, color: '#fb923c' }}>RM{matchStatus.matched.toFixed(2)}</span>
                       </div>
                     )}
                   </div>
-                  <button style={{ padding: '4px 8px', borderRadius: 6, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10', fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => { setViewing(order); setIsEditingInView(false) }}>
-                    {t('common.viewDetails')}
-                  </button>
                 </div>
               </div>
             )
