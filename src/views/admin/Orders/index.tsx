@@ -463,16 +463,29 @@ const AdminOrders: React.FC = () => {
             
             return (
               <div key={order.id} style={{ border: '1px solid rgba(244,175,37,0.2)', borderRadius: 12, padding: 12, background: 'rgba(34,28,16,0.5)', backdropFilter: 'blur(10px)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>{t('ordersAdmin.orderNo')}: {order.id.substring(0, 12)}...</div>
-                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>{formattedDate}</div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', marginTop: 4 }}>{getUserName(order.userId, users)}</div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{getUserPhone(order.userId, users) || '-'}</div>
+                {/* 订单号和日期同行 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
+                    {t('ordersAdmin.orderNo')}: {order.id.substring(0, 12)}...
+                  </div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+                    {formattedDate}
+                  </div>
+                </div>
+                
+                {/* 用户名和状态同行 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>
+                    {getUserName(order.userId, users)}
                   </div>
                   <span style={{ fontSize: 12, fontWeight: 600, color: getStatusColor(order.status) === 'green' ? '#34d399' : getStatusColor(order.status) === 'red' ? '#f87171' : getStatusColor(order.status) === 'orange' ? '#fb923c' : getStatusColor(order.status) === 'blue' ? '#60a5fa' : '#a78bfa' }}>
                     {getStatusText(order.status, t)}
                   </span>
+                </div>
+                
+                {/* 手机号 */}
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
+                  {getUserPhone(order.userId, users) || '-'}
                 </div>
                 
                 {/* 商品列表 */}
