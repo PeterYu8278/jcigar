@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import { Table, Space, Input, Select, DatePicker, message, Modal } from 'antd'
-import { SearchOutlined } from '@ant-design/icons'
+import { SearchOutlined, CheckOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import BatchDeleteButton from '../../../components/common/BatchDeleteButton'
 import CreateButton from '../../../components/common/CreateButton'
 import OrderDetails from './OrderDetails'
@@ -210,6 +210,38 @@ const AdminOrders: React.FC = () => {
   const filteredSorted = useMemo(() => {
     return sortOrders(filtered, sortDesc)
   }, [filtered, sortDesc])
+
+  // 计算订单匹配状态
+  const getOrderMatchStatus = (orderId: string) => {
+    const order = orders.find(o => o.id === orderId)
+    if (!order) return { matched: 0, total: 0, status: 'none' }
+    
+    const orderTotal = Number(order.total || 0)
+    const matchedAmount = transactions
+      .filter(t => {
+        const relatedOrders = (t as any)?.relatedOrders || []
+        return relatedOrders.some((ro: any) => ro.orderId === orderId)
+      })
+      .reduce((sum, t) => {
+        const relatedOrders = (t as any)?.relatedOrders || []
+        const orderMatch = relatedOrders.find((ro: any) => ro.orderId === orderId)
+        return sum + (orderMatch ? Number(orderMatch.amount || 0) : 0)
+      }, 0)
+    
+    if (matchedAmount >= orderTotal) {
+      return { matched: matchedAmount, total: orderTotal, status: 'fully' }
+    } else if (matchedAmount > 0) {
+      return { matched: matchedAmount, total: orderTotal, status: 'partial' }
+    } else {
+      return { matched: matchedAmount, total: orderTotal, status: 'none' }
+    }
+  }
+
+  // 获取雪茄信息
+  const getCigarName = (cigarId: string) => {
+    const cigar = cigars.find(c => c.id === cigarId)
+    return cigar ? cigar.name : cigarId
+  }
 
   return (
     <div style={{ minHeight: '100vh' }}>
@@ -422,30 +454,62 @@ const AdminOrders: React.FC = () => {
       />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {filteredSorted.map(order => (
-            <div key={order.id} style={{ border: '1px solid rgba(244,175,37,0.2)', borderRadius: 12, padding: 12, background: 'rgba(34,28,16,0.5)', backdropFilter: 'blur(10px)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>{t('ordersAdmin.orderNo')}: {order.id}</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>{dayjs(order.createdAt).format('YYYY-MM-DD')}</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{getUserName(order.userId, users)} {getUserPhone(order.userId, users) || '-'}</div>
-
+          {filteredSorted.map(order => {
+            const matchStatus = getOrderMatchStatus(order.id)
+            const createdDate = order.createdAt ? 
+              (typeof (order.createdAt as any).toDate === 'function' ? (order.createdAt as any).toDate() : order.createdAt) 
+              : new Date()
+            const formattedDate = dayjs(createdDate).isValid() ? dayjs(createdDate).format('YYYY-MM-DD') : '-'
+            
+            return (
+              <div key={order.id} style={{ border: '1px solid rgba(244,175,37,0.2)', borderRadius: 12, padding: 12, background: 'rgba(34,28,16,0.5)', backdropFilter: 'blur(10px)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>{t('ordersAdmin.orderNo')}: {order.id.substring(0, 12)}...</div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>{formattedDate}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', marginTop: 4 }}>{getUserName(order.userId, users)}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{getUserPhone(order.userId, users) || '-'}</div>
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: getStatusColor(order.status) === 'green' ? '#34d399' : getStatusColor(order.status) === 'red' ? '#f87171' : getStatusColor(order.status) === 'orange' ? '#fb923c' : getStatusColor(order.status) === 'blue' ? '#60a5fa' : '#a78bfa' }}>
+                    {getStatusText(order.status, t)}
+                  </span>
                 </div>
-                <div>
+                
+                {/* 商品列表 */}
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(244,175,37,0.1)' }}>
+                  {order.items.slice(0, 2).map((item, index) => (
+                    <div key={`${order.id}_${item.cigarId}_${index}`} style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginBottom: 4 }}>
+                      • {getCigarName(item.cigarId)} × {item.quantity}
+                    </div>
+                  ))}
+                  {order.items.length > 2 && (
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>
+                      +{order.items.length - 2} {t('common.more')}
+                    </div>
+                  )}
                 </div>
-                <span style={{ fontSize: 12, fontWeight: 600, color: getStatusColor(order.status) === 'green' ? '#34d399' : getStatusColor(order.status) === 'red' ? '#f87171' : getStatusColor(order.status) === 'orange' ? '#fb923c' : getStatusColor(order.status) === 'blue' ? '#60a5fa' : '#a78bfa' }}>
-                  {getStatusText(order.status, t)}
-                </span>
+                
+                <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: '#f4af25' }}>RM {order.total.toFixed(2)}</div>
+                    {/* 财务匹配状态 */}
+                    {matchStatus.status === 'fully' && (
+                      <CheckOutlined style={{ color: '#34d399', fontSize: '16px' }} />
+                    )}
+                    {matchStatus.status === 'partial' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <ClockCircleOutlined style={{ color: '#fb923c', fontSize: '14px' }} />
+                        <span style={{ fontSize: 10, color: '#fb923c' }}>RM{matchStatus.matched.toFixed(2)}</span>
+                      </div>
+                    )}
+                  </div>
+                  <button style={{ padding: '4px 8px', borderRadius: 6, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10', fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => { setViewing(order); setIsEditingInView(false) }}>
+                    {t('common.viewDetails')}
+                  </button>
+                </div>
               </div>
-              
-              <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                <div style={{ fontSize: 16, fontWeight: 800, color: '#f4af25' }}>RM {order.total.toFixed(2)}</div>
-                <button style={{ padding: '4px 8px', borderRadius: 6, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10', fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => { setViewing(order); setIsEditingInView(false) }}>
-                  {t('common.viewDetails')}
-                </button>
-              </div>
-            </div>
-          ))}
+            )
+          })}
           {filteredSorted.length === 0 && (
             <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
           )}
