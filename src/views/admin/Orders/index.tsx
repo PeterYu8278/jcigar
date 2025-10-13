@@ -1,7 +1,7 @@
 // 订单管理页面
 import React, { useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
-import { Table, Space, Input, Select, DatePicker, message, Modal, Tabs } from 'antd'
+import { Table, Space, Input, Select, DatePicker, message, Modal } from 'antd'
 import { SearchOutlined, CheckOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import BatchDeleteButton from '../../../components/common/BatchDeleteButton'
 import CreateButton from '../../../components/common/CreateButton'
@@ -181,6 +181,41 @@ const AdminOrders: React.FC = () => {
     }
   }
 
+  const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
+  const [sortDesc, setSortDesc] = useState<boolean>(true)
+
+  // 计算订单匹配状态（需要在filtered之前定义）
+  const getOrderMatchStatus = (orderId: string) => {
+    const order = orders.find(o => o.id === orderId)
+    if (!order) return { matched: 0, total: 0, status: 'none' }
+    
+    const orderTotal = Number(order.total || 0)
+    const matchedAmount = transactions
+      .filter(t => {
+        const relatedOrders = (t as any)?.relatedOrders || []
+        return relatedOrders.some((ro: any) => ro.orderId === orderId)
+      })
+      .reduce((sum, t) => {
+        const relatedOrders = (t as any)?.relatedOrders || []
+        const orderMatch = relatedOrders.find((ro: any) => ro.orderId === orderId)
+        return sum + (orderMatch ? Number(orderMatch.amount || 0) : 0)
+      }, 0)
+    
+    if (matchedAmount >= orderTotal) {
+      return { matched: matchedAmount, total: orderTotal, status: 'fully' }
+    } else if (matchedAmount > 0) {
+      return { matched: matchedAmount, total: orderTotal, status: 'partial' }
+    } else {
+      return { matched: matchedAmount, total: orderTotal, status: 'none' }
+    }
+  }
+
+  // 获取雪茄信息
+  const getCigarName = (cigarId: string) => {
+    const cigar = cigars.find(c => c.id === cigarId)
+    return cigar ? cigar.name : cigarId
+  }
+
   const filtered = useMemo(() => {
     let result = filterOrders(orders, users, keyword, statusFilter, paymentFilter, dateRange, cigars)
     
@@ -220,44 +255,9 @@ const AdminOrders: React.FC = () => {
     onOrderUpdate: loadData
   })
 
-  const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
-  const [sortDesc, setSortDesc] = useState<boolean>(true)
-
   const filteredSorted = useMemo(() => {
     return sortOrders(filtered, sortDesc)
   }, [filtered, sortDesc])
-
-  // 计算订单匹配状态
-  const getOrderMatchStatus = (orderId: string) => {
-    const order = orders.find(o => o.id === orderId)
-    if (!order) return { matched: 0, total: 0, status: 'none' }
-    
-    const orderTotal = Number(order.total || 0)
-    const matchedAmount = transactions
-      .filter(t => {
-        const relatedOrders = (t as any)?.relatedOrders || []
-        return relatedOrders.some((ro: any) => ro.orderId === orderId)
-      })
-      .reduce((sum, t) => {
-        const relatedOrders = (t as any)?.relatedOrders || []
-        const orderMatch = relatedOrders.find((ro: any) => ro.orderId === orderId)
-        return sum + (orderMatch ? Number(orderMatch.amount || 0) : 0)
-      }, 0)
-    
-    if (matchedAmount >= orderTotal) {
-      return { matched: matchedAmount, total: orderTotal, status: 'fully' }
-    } else if (matchedAmount > 0) {
-      return { matched: matchedAmount, total: orderTotal, status: 'partial' }
-    } else {
-      return { matched: matchedAmount, total: orderTotal, status: 'none' }
-    }
-  }
-
-  // 获取雪茄信息
-  const getCigarName = (cigarId: string) => {
-    const cigar = cigars.find(c => c.id === cigarId)
-    return cigar ? cigar.name : cigarId
-  }
 
   return (
     <div style={{ minHeight: '100vh' }}>
@@ -286,40 +286,82 @@ const AdminOrders: React.FC = () => {
         </Space>
       </div>
 
-      {/* 财务匹配状态标签页 */}
-      <Tabs
-        activeKey={matchStatusTab}
-        onChange={(key) => setMatchStatusTab(key as any)}
-        style={{ marginBottom: 16 }}
-        items={[
-          {
-            key: 'all',
-            label: (
-              <span>
-                {t('common.all')} ({orders.length})
-              </span>
+      {/* 财务匹配状态标签 */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid rgba(244,175,37,0.2)' }}>
+          {(['all', 'matched', 'unmatched'] as const).map((tabKey) => {
+            const isActive = matchStatusTab === tabKey
+            const matchedCount = orders.filter(o => getOrderMatchStatus(o.id).status === 'fully').length
+            const unmatchedCount = orders.length - matchedCount
+            
+            const getTabLabel = () => {
+              switch (tabKey) {
+                case 'all':
+                  return `${t('common.all')} (${orders.length})`
+                case 'matched':
+                  return `${t('financeAdmin.fullyMatched')} (${matchedCount})`
+                case 'unmatched':
+                  return `${t('financeAdmin.partialMatched')} (${unmatchedCount})`
+              }
+            }
+            
+            const getTabIcon = () => {
+              switch (tabKey) {
+                case 'matched':
+                  return <CheckOutlined style={{ color: isActive ? '#52c41a' : '#A0A0A0', fontSize: 14 }} />
+                case 'unmatched':
+                  return <ClockCircleOutlined style={{ color: isActive ? '#faad14' : '#A0A0A0', fontSize: 14 }} />
+                default:
+                  return null
+              }
+            }
+            
+            const baseStyle: React.CSSProperties = {
+              padding: '12px 20px',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: 14,
+              fontWeight: 600,
+              position: 'relative',
+              transition: 'all 0.3s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6
+            }
+            
+            const activeStyle: React.CSSProperties = {
+              color: '#FDE08D',
+            }
+            
+            const inactiveStyle: React.CSSProperties = {
+              color: '#A0A0A0',
+            }
+            
+            return (
+              <button
+                key={tabKey}
+                onClick={() => setMatchStatusTab(tabKey)}
+                style={{ ...baseStyle, ...(isActive ? activeStyle : inactiveStyle) }}
+              >
+                {getTabIcon()}
+                {getTabLabel()}
+                {isActive && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: '2px',
+                    background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                    borderRadius: '1px'
+                  }} />
+                )}
+              </button>
             )
-          },
-          {
-            key: 'matched',
-            label: (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <CheckOutlined style={{ color: '#52c41a' }} />
-                {t('financeAdmin.fullyMatched')} ({orders.filter(o => getOrderMatchStatus(o.id).status === 'fully').length})
-              </span>
-            )
-          },
-          {
-            key: 'unmatched',
-            label: (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <ClockCircleOutlined style={{ color: '#faad14' }} />
-                {t('financeAdmin.partialMatched')} ({orders.filter(o => getOrderMatchStatus(o.id).status !== 'fully').length})
-              </span>
-            )
-          }
-        ]}
-      />
+          })}
+        </div>
+      </div>
 
       {/* 搜索和筛选 */}
       {!isMobile ? (
