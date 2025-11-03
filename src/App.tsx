@@ -51,8 +51,7 @@ const AppContent: React.FC = () => {
         display: 'flex',
         flexDirection: 'column',
         background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2d2d2d 100%)',
-        position: 'relative',
-        overflow: 'hidden'
+        position: 'relative'
       }}>
         {/* 全局背景装饰 */}
         <div style={{
@@ -73,15 +72,13 @@ const AppContent: React.FC = () => {
         {user && <AppHeader />}
         <Layout style={{ 
           background: 'transparent',
-          flex: 1,
-          overflow: 'hidden'
+          flex: 1
         }}>
           {showSider && <AppSider onCollapseChange={setSiderCollapsed} />}
           <Layout style={{ 
             background: 'transparent',
             marginLeft: showSider && isDesktop ? (siderCollapsed ? 64 : 240) : 0,
-            height: '100%',
-            overflow: 'hidden'
+            height: '100%'
           }}>
             <Content
               style={{
