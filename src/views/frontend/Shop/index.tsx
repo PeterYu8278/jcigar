@@ -43,43 +43,60 @@ const Shop: React.FC = () => {
   useEffect(() => {
     if (!isMobile) return // 仅手机端启用
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio > 0.3) {
-            const brandName = entry.target.getAttribute('data-brand')
-            if (brandName) {
-              setSelectedBrand(brandName)
-              // 同时滚动左侧品牌导航栏到对应位置
-              const navElement = brandNavRefs.current[brandName]
-              const sidebar = sidebarRef.current
-              if (navElement && sidebar) {
-                const sidebarRect = sidebar.getBoundingClientRect()
-                const navRect = navElement.getBoundingClientRect()
-                const scrollOffset = navRect.top - sidebarRect.top - (sidebarRect.height / 2) + (navRect.height / 2)
-                
-                sidebar.scrollTo({
-                  top: sidebar.scrollTop + scrollOffset,
-                  behavior: 'smooth'
-                })
+    // 延迟初始化，确保所有品牌卡片都已渲染
+    const timer = setTimeout(() => {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          // 找到可见度最高的品牌卡片
+          let maxRatio = 0
+          let topBrand = ''
+          
+          entries.forEach((entry) => {
+            if (entry.isIntersecting && entry.intersectionRatio > maxRatio) {
+              const brandName = entry.target.getAttribute('data-brand')
+              if (brandName) {
+                maxRatio = entry.intersectionRatio
+                topBrand = brandName
               }
             }
+          })
+          
+          // 只更新可见度最高的品牌
+          if (topBrand && maxRatio > 0.1) {
+            setSelectedBrand(topBrand)
+            // 同时滚动左侧品牌导航栏到对应位置
+            const navElement = brandNavRefs.current[topBrand]
+            const sidebar = sidebarRef.current
+            if (navElement && sidebar) {
+              const sidebarRect = sidebar.getBoundingClientRect()
+              const navRect = navElement.getBoundingClientRect()
+              const scrollOffset = navRect.top - sidebarRect.top - (sidebarRect.height / 2) + (navRect.height / 2)
+              
+              sidebar.scrollTo({
+                top: sidebar.scrollTop + scrollOffset,
+                behavior: 'smooth'
+              })
+            }
           }
-        })
-      },
-      {
-        threshold: [0, 0.3, 0.5, 0.7, 1],
-        rootMargin: '-80px 0px -50% 0px' // 顶部留空，只看上半部分
-      }
-    )
+        },
+        {
+          threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+          rootMargin: '-100px 0px -40% 0px' // 顶部留空，监听上半部分
+        }
+      )
 
-    // 监听所有品牌卡片
-    Object.values(brandRefs.current).forEach((ref) => {
-      if (ref) observer.observe(ref)
-    })
+      // 监听所有品牌卡片
+      Object.values(brandRefs.current).forEach((ref) => {
+        if (ref) observer.observe(ref)
+      })
+
+      return () => {
+        observer.disconnect()
+      }
+    }, 100)
 
     return () => {
-      observer.disconnect()
+      clearTimeout(timer)
     }
   }, [isMobile, cigars])
 
@@ -146,7 +163,7 @@ const Shop: React.FC = () => {
   return (
     <div style={{ 
       display: 'flex', 
-      height: '100vh',
+      height: '100%',
       background: 'transparent',
       overflow: 'hidden'
     }}>
@@ -161,10 +178,10 @@ const Shop: React.FC = () => {
           overflowY: 'auto',
           overflowX: 'hidden',
           paddingTop: '16px',
-          paddingBottom: isMobile ? '16px' : '80px',
+          paddingBottom: '80px',
           position: 'sticky',
           top: 0,
-          height: isMobile ? 'calc(100vh - 134px)' : '100vh'  // 手机端扣除 Header(64px) + BottomNav(70px)
+          height: '90vh'
         }}
       >
         {/* 全部分类 - 仅电脑端显示 */}
@@ -421,7 +438,7 @@ const Shop: React.FC = () => {
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        height: isMobile ? 'calc(100vh - 134px)' : '100vh'  // 手机端扣除 Header(64px) + BottomNav(70px)
+        height: '90vh'
       }}>
         {/* 顶部搜索栏 - 固定不滚动 */}
         <div style={{ 

@@ -47,9 +47,12 @@ const AppContent: React.FC = () => {
 
   return (
       <Layout style={{ 
-        minHeight: '100vh',
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
         background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2d2d2d 100%)',
-        position: 'relative'
+        position: 'relative',
+        overflow: 'hidden'
       }}>
         {/* 全局背景装饰 */}
         <div style={{
@@ -68,23 +71,30 @@ const AppContent: React.FC = () => {
         }} />
         
         {user && <AppHeader />}
-        <Layout style={{ background: 'transparent' }}>
+        <Layout style={{ 
+          background: 'transparent',
+          flex: 1,
+          overflow: 'hidden'
+        }}>
           {showSider && <AppSider onCollapseChange={setSiderCollapsed} />}
           <Layout style={{ 
             background: 'transparent',
-            marginLeft: showSider && isDesktop ? (siderCollapsed ? 64 : 240) : 0
+            marginLeft: showSider && isDesktop ? (siderCollapsed ? 64 : 240) : 0,
+            height: '100%',
+            overflow: 'hidden'
           }}>
             <Content
               style={{
                 padding: needsPadding ? 12 : 0,
                 margin: 0,
-                minHeight: 280,
+                minHeight: needsPadding ? 280 : 0,
+                flex: needsPadding ? 'none' : 1,
                 background: 'radial-gradient(ellipse at top, #3c2f1a, #121212)' ,
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
                 backdropFilter: 'blur(10px)',
                 position: 'relative',
                 overflow: 'hidden',
-                paddingBottom: '90px' // 始终为底部导航留出空间
+                paddingBottom: needsPadding ? '90px' : '0px'
               }}
             >
               {/* 内容区域背景装饰 */}
