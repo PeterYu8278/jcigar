@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Layout } from 'antd'
 import AppHeader from './components/layout/AppHeader'
 import AppSider from './components/layout/AppSider'
@@ -31,13 +31,21 @@ import Register from './views/auth/Register'
 
 const { Content } = Layout
 
-function App() {
+const AppContent: React.FC = () => {
   const { user, isAdmin } = useAuthStore()
+  const location = useLocation()
   const isDesktop = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(min-width: 992px)').matches : true
   const [siderCollapsed, setSiderCollapsed] = useState(false)
 
+  // 无需 padding 的页面
+  const noPaddingPages = ['/shop']
+  const needsPadding = !noPaddingPages.includes(location.pathname)
+  
+  // 侧边栏显示逻辑：手机端商城页面隐藏，电脑端商城页面显示
+  // 逻辑：已登录 AND (是电脑端 OR 不是商城页面)
+  const showSider = user && (isDesktop || location.pathname !== '/shop')
+
   return (
-    <Router>
       <Layout style={{ 
         minHeight: '100vh',
         background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2d2d2d 100%)',
@@ -61,14 +69,14 @@ function App() {
         
         {user && <AppHeader />}
         <Layout style={{ background: 'transparent' }}>
-          {user && <AppSider onCollapseChange={setSiderCollapsed} />}
+          {showSider && <AppSider onCollapseChange={setSiderCollapsed} />}
           <Layout style={{ 
             background: 'transparent',
-            marginLeft: user && isDesktop ? (siderCollapsed ? 64 : 240) : 0
+            marginLeft: showSider && isDesktop ? (siderCollapsed ? 64 : 240) : 0
           }}>
             <Content
               style={{
-                padding: 24,
+                padding: needsPadding ? 24 : 0,
                 margin: 0,
                 minHeight: 280,
                 background: 'radial-gradient(ellipse at top, #3c2f1a, #121212)' ,
@@ -76,7 +84,7 @@ function App() {
                 backdropFilter: 'blur(10px)',
                 position: 'relative',
                 overflow: 'hidden',
-                paddingBottom: '90px' // 为底部导航留出空间
+                paddingBottom: needsPadding ? '90px' : '0px' // 为底部导航留出空间
               }}
             >
               {/* 内容区域背景装饰 */}
@@ -125,6 +133,13 @@ function App() {
         {/* 手机端底部导航 */}
         {user && <MobileBottomNav />}
       </Layout>
+  )
+}
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
     </Router>
   )
 }

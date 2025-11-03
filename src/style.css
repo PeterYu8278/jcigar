@@ -117,6 +117,30 @@ a:hover {
   transform: translateY(-2px);
 }
 
+/* 调整 cigar-card 内部的 ant-card-body 间距 */
+.cigar-card .ant-card-body {
+  padding: 16px;  /* 默认是 24px，这里改为 16px */
+  margin: 0;      /* 确保没有外边距 */
+}
+
+/* 商城页面左侧品牌导航栏滚动条样式 */
+.shop-sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.shop-sidebar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.shop-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(244, 175, 37, 0.3);
+  border-radius: 4px;
+}
+
+.shop-sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(244, 175, 37, 0.5);
+}
+
 .cigar-button-primary {
   background: var(--cigar-gradient-gold);
   border: none;
@@ -405,8 +429,8 @@ button + button { margin-left: 8px; }
   /* 手机端调整内容区域 */
   .ant-layout-content {
     margin-left: 0 !important;
-    padding: 16px !important;
-    padding-bottom: 90px !important; /* 为底部导航留出空间 */
+    padding: 16px ;
+    padding-bottom: 90px ; /* 为底部导航留出空间 */
   }
 }
 

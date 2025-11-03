@@ -228,10 +228,6 @@ const Home: React.FC = () => {
         {/* 背景装饰 */}
         <div style={{
           position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
           background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, transparent 100%)',
           pointerEvents: 'none'
         }} />

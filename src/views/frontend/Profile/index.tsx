@@ -21,6 +21,7 @@ import { updateDocument } from '../../../services/firebase/firestore'
 import type { User } from '../../../types'
 import { useTranslation } from 'react-i18next'
 import { MemberProfileCard } from '../../../components/common/MemberProfileCard'
+import { getModalThemeStyles, getModalWidth } from '../../../config/modalTheme'
 import ImageUpload from '../../../components/common/ImageUpload'
 
 const Profile: React.FC = () => {
@@ -31,6 +32,7 @@ const Profile: React.FC = () => {
   const [form] = Form.useForm()
   const [showMemberCard, setShowMemberCard] = useState(false) // 控制头像/会员卡切换
   const [activeTab, setActiveTab] = useState<'purchase' | 'points' | 'activity' | 'referral'>('purchase') // 标签状态
+  const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
 
   // 用户统计数据 - 从实际数据计算
   const userStats = [
@@ -135,6 +137,7 @@ const Profile: React.FC = () => {
             if (!user) return
             form.setFieldsValue({
               displayName: user.displayName,
+              email: user.email,
               phone: user.profile?.phone,
               notifications: user.profile?.preferences?.notifications ?? true,
               avatar: user.profile?.avatar,
@@ -312,22 +315,26 @@ const Profile: React.FC = () => {
         onCancel={() => setEditing(false)}
         onOk={() => form.submit()}
         confirmLoading={saving}
+        width={getModalWidth(isMobile, 520)}
+        styles={getModalThemeStyles(isMobile, true)}
       >
         <Form
           form={form}
           layout="vertical"
-          onFinish={async (values: { displayName: string; phone?: string; notifications: boolean; avatar?: string }) => {
+          style={{ color: '#FFFFFF' }}
+          onFinish={async (values: { displayName: string; email: string; phone?: string; notifications: boolean; avatar?: string }) => {
             if (!user) return
             setSaving(true)
             try {
               const payload: Partial<User> = {
                 displayName: values.displayName,
+                email: values.email,
                 profile: {
                   ...user.profile,
                   phone: values.phone,
                   avatar: values.avatar,
                   preferences: {
-                    ...user.profile?.preferences,
+                  language: user.profile?.preferences?.language || 'zh',
                     notifications: values.notifications,
                   },
                 },
@@ -347,7 +354,7 @@ const Profile: React.FC = () => {
           }}
         >
           <Form.Item
-            label={t('profile.avatar')}
+            label={<span style={{ color: '#FFFFFF' }}>{t('profile.avatar')}</span>}
             name="avatar"
           >
             <ImageUpload
@@ -357,18 +364,29 @@ const Profile: React.FC = () => {
           </Form.Item>
           
           <Form.Item
-            label={t('profile.nameLabel')}
+            label={<span style={{ color: '#FFFFFF' }}>{t('profile.nameLabel')}</span>}
             name="displayName"
             rules={[{ required: true, message: t('profile.nameRequired') }]}
           >
             <Input placeholder={t('profile.namePlaceholder')} />
           </Form.Item>
 
-          <Form.Item label={t('profile.phoneLabel')} name="phone">
+          <Form.Item 
+            label={<span style={{ color: '#FFFFFF' }}>{t('auth.email')}</span>}
+            name="email"
+            rules={[
+              { required: true, message: t('auth.emailRequired') },
+              { type: 'email', message: t('auth.emailInvalid') }
+            ]}
+          >
+            <Input placeholder={t('auth.email')} />
+          </Form.Item>
+
+          <Form.Item label={<span style={{ color: '#FFFFFF' }}>{t('profile.phoneLabel')}</span>} name="phone">
             <Input placeholder={t('profile.phonePlaceholder')} />
           </Form.Item>
 
-          <Form.Item label={t('profile.notificationsToggle')} name="notifications" valuePropName="checked">
+          <Form.Item label={<span style={{ color: '#FFFFFF' }}>{t('profile.notificationsToggle')}</span>} name="notifications" valuePropName="checked">
             <Switch />
           </Form.Item>
         </Form>

@@ -1,5 +1,5 @@
 // 商品导航页面
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { Input, Slider, Button } from 'antd'
 import { SearchOutlined, ArrowLeftOutlined } from '@ant-design/icons'
 import type { Cigar, Brand } from '../../../types'
@@ -15,12 +15,11 @@ const Shop: React.FC = () => {
   const [brands, setBrands] = useState<Brand[]>([])
   const [loading, setLoading] = useState(false)
   const [searchKeyword, setSearchKeyword] = useState('')
-  const [selectedOrigin, setSelectedOrigin] = useState<string>('all')
+  const [selectedBrand, setSelectedBrand] = useState<string>('all')
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 2000])
   const { addToCart, toggleWishlist, wishlist } = useCartStore()
-
-
-  const origins = ['all', '古巴', '新世界']
+  const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
+  const brandRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   useEffect(() => {
     ;(async () => {
@@ -38,389 +37,521 @@ const Shop: React.FC = () => {
     })()
   }, [])
 
+  // 滚动到指定品牌
+  const scrollToBrand = (brandName: string) => {
+    const element = brandRefs.current[brandName]
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
+
+  // 筛选后的商品
+  const filteredCigars = cigars.filter(cigar => {
+    const matchesSearch = !searchKeyword || 
+      cigar.name.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+      cigar.brand?.toLowerCase().includes(searchKeyword.toLowerCase())
+    // 手机端不按品牌筛选，电脑端筛选
+    const matchesBrand = isMobile || selectedBrand === 'all' || cigar.brand === selectedBrand
+    const matchesPrice = cigar.price >= priceRange[0] && cigar.price <= priceRange[1]
+    return matchesSearch && matchesBrand && matchesPrice
+  })
+
+  // 按品牌分组商品（手机端使用）
+  const groupedCigars = filteredCigars.reduce((groups, cigar) => {
+    const brand = cigar.brand || '其他'
+    if (!groups[brand]) {
+      groups[brand] = []
+    }
+    groups[brand].push(cigar)
+    return groups
+  }, {} as Record<string, typeof filteredCigars>)
+
   return (
-    <div>
-      {/* 顶部标题栏 */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h1 style={{ 
-          fontSize: '22px', 
-          fontWeight: 800, 
-          background: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
-          WebkitBackgroundClip: 'text', 
-          color: 'transparent',
-          margin: 0
-        }}>
-          商品导航
-        </h1>
-        
-      </div>
-
-      {/* Search */}
-      <div style={{ marginBottom: '16px' }}>
-        <div style={{ position: 'relative' }}>
-          <div style={{
-            position: 'absolute',
-            top: '50%',
-            left: '16px',
-            transform: 'translateY(-50%)',
-            color: '#999999',
-            pointerEvents: 'none'
-          }}>
-            <SearchOutlined />
-                </div>
-          <Input
-            placeholder={t('shop.searchBrand')}
-            value={searchKeyword}
-            onChange={(e) => setSearchKeyword(e.target.value)}
+    <div style={{ 
+      display: 'flex', 
+      height: '100vh',
+      background: 'transparent',
+      overflow: 'hidden'
+    }}>
+      {/* 左侧品牌导航栏 */}
+      <div 
+        className="shop-sidebar"
+        style={{
+          width: isMobile ? '80px' : '120px',
+          background: 'linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%)',
+          borderRight: '1px solid rgba(255, 215, 0, 0.1)',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          paddingTop: '16px',
+          paddingBottom: '80px',
+          position: 'sticky',
+          top: 0,
+          height: '100vh'
+        }}
+      >
+        {/* 全部分类 - 仅电脑端显示 */}
+        {!isMobile && (
+          <div
+            onClick={() => setSelectedBrand('all')}
             style={{
-              width: '100%',
-              height: '48px',
-              paddingLeft: '48px',
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '24px',
-              color: '#fff',
-              fontSize: '16px'
+              padding: '16px 12px',
+              cursor: 'pointer',
+              borderLeft: selectedBrand === 'all' ? '3px solid #F4AF25' : '3px solid transparent',
+              background: selectedBrand === 'all' ? 'rgba(244, 175, 37, 0.1)' : 'transparent',
+              transition: 'all 0.3s ease'
             }}
-          />
-                    </div>
-                    </div>
+          >
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                width: '64px',
+                height: '64px',
+                margin: '0 auto 8px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #FFD700, #B8860B)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '24px',
+                fontWeight: 'bold',
+                color: '#000'
+              }}>
+                🔥
+              </div>
+              <div style={{
+                fontSize: '12px',
+                fontWeight: 600,
+                color: selectedBrand === 'all' ? '#F4AF25' : '#c0c0c0',
+                textAlign: 'center',
+                lineHeight: 1.2
+              }}>
+                全部
+              </div>
+            </div>
+          </div>
+        )}
 
-      {/* Filter Pills */}
-      <div style={{ marginBottom: '16px' }}>
-        <div style={{ 
-          display: 'flex', 
-          gap: '8px', 
-          overflowX: 'auto', 
-          paddingBottom: '8px',
-          marginBottom: '-8px'
-        }}>
-          {origins.map((origin) => (
-            <button
-              key={origin}
-              onClick={() => setSelectedOrigin(origin)}
+        {/* 品牌列表 */}
+        {brands
+          .filter(brand => brand.status === 'active')
+          .map((brand) => (
+            <div
+              key={brand.id}
+              onClick={() => {
+                if (isMobile) {
+                  // 手机端：滚动到该品牌位置
+                  scrollToBrand(brand.name)
+                } else {
+                  // 电脑端：筛选商品
+                  setSelectedBrand(brand.name)
+                }
+              }}
               style={{
-                padding: '8px 16px',
-                fontSize: '14px',
-                fontWeight: '500',
-                borderRadius: '20px',
-                border: 'none',
+                padding: isMobile ? '12px 8px' : '16px 12px',
                 cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                background: selectedOrigin === origin 
-                  ? 'linear-gradient(to right,#FDE08D,#C48D3A)' 
-                  : 'rgba(255, 255, 255, 0.1)',
-                color: selectedOrigin === origin ? '#111' : '#ccc'
+                borderLeft: selectedBrand === brand.name ? '3px solid #F4AF25' : '3px solid transparent',
+                background: selectedBrand === brand.name ? 'rgba(244, 175, 37, 0.1)' : 'transparent',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                if (selectedBrand !== brand.name) {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (selectedBrand !== brand.name) {
+                  e.currentTarget.style.background = 'transparent'
+                }
               }}
             >
-              {origin === 'all' ? '全部' : origin}
-            </button>
-          ))}
-        </div>
-                    </div>
-                    
-      {/* Price Range */}
-      <div style={{ 
-        padding: '16px', 
-        background: 'rgba(255, 255, 255, 0.05)', 
-        borderRadius: '12px', 
-        marginBottom: '16px'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h3 style={{ 
-            fontWeight: 'bold', 
-            color: '#fff', 
-            margin: 0,
-            fontSize: '16px'
-          }}>
-            价格范围
-          </h3>
-          <span style={{ 
-            fontSize: '14px', 
-            fontWeight: '500', 
-            color: '#F4AF25'
-          }}>
-            RM{priceRange[0]} - RM{priceRange[1]}
-          </span>
-                    </div>
-                    
-        <div style={{ marginBottom: '16px' }}>
-          <Slider
-            range
-            min={0}
-            max={2000}
-            value={priceRange}
-            onChange={(value) => setPriceRange(value as [number, number])}
-            trackStyle={[{ background: '#F4AF25' }]}
-            handleStyle={[{ 
-              borderColor: '#F4AF25',
-              background: '#F4AF25'
-            }]}
-            railStyle={{ background: '#4a4a4a' }}
-          />
-        </div>
-                    </div>
-                    
-      {/* 推荐品牌 */}
-      <div style={{ marginBottom: '32px' }}>
-        <h2 style={{ 
-          fontSize: '18px', 
-          fontWeight: 'bold', 
-          color: '#fff', 
-          marginBottom: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          <span style={{ color: '#F4AF25' }}>🔥</span>
-          推荐品牌
-        </h2>
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(4, 1fr)', 
-          gap: '12px'
-        }}>
-          {brands
-            .filter(brand => brand.status === 'active')
-            .slice(0, 6)
-            .map((brand) => (
-              <div 
-                key={brand.id} 
-                style={{ 
+              <div style={{ textAlign: 'center' }}>
+                <div style={{
+                  width: isMobile ? '48px' : '64px',
+                  height: isMobile ? '48px' : '64px',
+                  margin: '0 auto 8px',
+                  borderRadius: '50%',
+                  background: 'rgba(30,30,30,0.7)',
                   display: 'flex',
-                  flexDirection: 'column',
                   alignItems: 'center',
-                  gap: '8px',
-                  padding: '4px',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease'
-                }}
-                onClick={() => navigate(`/brand/${brand.id}`)}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                  e.currentTarget.style.boxShadow = '0 8px 25px rgba(244, 175, 37, 0.2)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = 'none'
-                }}
-              >
-                <div 
-                  style={{
-                    width: '50px',
-                    height: '50px',
-                    borderRadius: '50%',
-                    background: 'rgba(30,30,30,0.7)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '2px solid rgba(255,215,0,0.2)',
-                    overflow: 'hidden'
-                  }}
-                >
+                  justifyContent: 'center',
+                  border: `2px solid ${selectedBrand === brand.name ? '#F4AF25' : 'rgba(255,215,0,0.2)'}`,
+                  overflow: 'hidden'
+                }}>
                   {brand.logo ? (
                     <img 
                       src={brand.logo} 
                       alt={brand.name} 
-                      style={{ width: '50px', height: '50px', objectFit: 'contain' }} 
+                      style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
                     />
                   ) : (
-                    <div style={{ 
-                      width: '50px', 
-                      height: '50px', 
-                      borderRadius: '50%', 
-                      background: 'linear-gradient(45deg, #FFD700, #B8860B)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#000',
+                    <div style={{
+                      fontSize: isMobile ? '18px' : '24px',
                       fontWeight: 'bold',
-                      fontSize: '20px'
+                      color: '#FFD700'
                     }}>
                       {brand.name.charAt(0).toUpperCase()}
                     </div>
                   )}
                 </div>
-                <div style={{ 
-                  fontSize: '12px', 
-                  color: '#f0f0f0', 
-                  fontWeight: '600',
+                <div style={{
+                  fontSize: isMobile ? '10px' : '11px',
+                  fontWeight: 600,
+                  color: selectedBrand === brand.name ? '#F4AF25' : '#c0c0c0',
                   textAlign: 'center',
-                  overflow: 'hidden',
-                  minHeight: '38px',
-                  textOverflow: 'ellipsis',
-                  width: '100%'
+                  lineHeight: 1.2,
+                  wordWrap: 'break-word',
+                  maxWidth: '100%'
                 }}>
                   {brand.name}
                 </div>
-                <div style={{ 
-                  fontSize: '11px', 
-                  color: '#999',
-                  textAlign: 'center'
-                }}>
-                  {brand.country || ''}
-                </div>
               </div>
-            ))}
-        </div>
+            </div>
+          ))}
       </div>
 
-      {/* 商品展示 */}
-      <div>
-        <h2 style={{ 
-          fontSize: '18px', 
-          fontWeight: 'bold', 
-          color: '#fff', 
-          marginBottom: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          <span style={{ color: '#F4AF25' }}>🛍️</span>
-          精选商品
-        </h2>
+      {/* 右侧商品展示区域 */}
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden'
+      }}>
+        {/* 顶部搜索栏 - 固定不滚动 */}
         <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(4, 1fr)', 
-          gap: '12px'
+          flexShrink: 0,
+          padding: isMobile ? '12px' : '20px',
+          paddingBottom: '16px',
+          borderBottom: '2px solid rgba(255, 215, 0, 0.3)'
         }}>
+          <h1 style={{ 
+            fontSize: '22px', 
+            fontWeight: 800, 
+            background: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
+            WebkitBackgroundClip: 'text', 
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            margin: '0 0 16px 0'
+          }}>
+            {selectedBrand === 'all' ? '商品导航' : selectedBrand}
+          </h1>
+          
+          <div style={{ position: 'relative' }}>
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '16px',
+              transform: 'translateY(-50%)',
+              color: '#999999',
+              pointerEvents: 'none'
+            }}>
+              <SearchOutlined />
+            </div>
+            <Input
+              placeholder={t('shop.searchBrand')}
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              style={{
+                width: '100%',
+                height: '48px',
+                paddingLeft: '48px',
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '24px',
+                color: '#fff',
+                fontSize: '16px'
+              }}
+            />
+          </div>
+        </div>
+
+        {/* 商品网格 - 独立滚动区域 */}
+        <div 
+          className="shop-content-scroll"
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            padding: isMobile ? '16px 12px' : '20px',
+            paddingBottom: '100px'
+          }}
+        >
           {loading ? (
             <div style={{ 
-              gridColumn: '1 / -1', 
               textAlign: 'center', 
-              padding: '24px', 
+              padding: '48px 24px', 
               color: '#9ca3af' 
             }}>
               加载中...
             </div>
-          ) : cigars.length > 0 ? (
-            cigars
-              .filter(cigar => {
-                const matchesSearch = !searchKeyword || 
-                  cigar.name.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-                  cigar.brand?.toLowerCase().includes(searchKeyword.toLowerCase())
-                const matchesOrigin = selectedOrigin === 'all' || cigar.origin === selectedOrigin
-                const matchesPrice = cigar.price >= priceRange[0] && cigar.price <= priceRange[1]
-                return matchesSearch && matchesOrigin && matchesPrice
-              })
-              .slice(0, 8)
-              .map((cigar) => (
-            <div key={cigar.id} style={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center', 
-              gap: '8px',
-              padding: '4px',
-              background: 'rgba(255, 255, 255, 0.05)',
-              borderRadius: '12px',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              transition: 'all 0.3s ease',
-              cursor: 'pointer'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
-              e.currentTarget.style.transform = 'translateY(-2px)'
-              e.currentTarget.style.boxShadow = '0 8px 25px rgba(244, 175, 37, 0.2)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
-              e.currentTarget.style.transform = 'translateY(0)'
-              e.currentTarget.style.boxShadow = 'none'
-            }}
-            >
+          ) : filteredCigars.length > 0 ? (
+            isMobile ? (
+              // 手机端：按品牌分组显示
+              Object.entries(groupedCigars).map(([brandName, brandCigars]) => (
+                <div 
+                  key={brandName}
+                  ref={(el) => { brandRefs.current[brandName] = el }}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    borderRadius: '16px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    marginBottom: '16px',
+                    overflow: 'hidden',
+                    scrollMarginTop: '20px'
+                  }}
+                >
+                  {/* 品牌标题 */}
+                  <div style={{
+                    padding: '4px 16px',
+                    borderBottom: '1px solid rgba(255, 215, 0, 0.2)',
+                    background: 'rgba(255, 215, 0, 0.05)'
+                  }}>
+                    <h2 style={{
+                      fontSize: '18px',
+                      fontWeight: 'bold',
+                      color: '#F4AF25',
+                      margin: 0
+                    }}>
+                      {brandName}
+                    </h2>
+                  </div>
+
+                  {/* 品牌下的商品列表 */}
+                  {brandCigars.map((cigar, index) => (
+                    <React.Fragment key={cigar.id}>
+                      <div 
+                        style={{ 
+                          display: 'flex',
+                          padding: '12px',
+                          cursor: 'pointer',
+                          transition: 'background 0.2s ease'
+                        }}
+                        onClick={() => {
+                          // 点击跳转到商品详情
+                        }}
+                      >
+                        {/* 左侧图片 */}
+                        <div 
+                          style={{
+                            width: '70px',
+                            height: '70px',
+                            flexShrink: 0,
+                            backgroundImage: `url(${cigar.images?.[0] || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQwIiB5PSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEwIiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Q2lnYXI8L3RleHQ+Cjwvc3ZnPgo='})`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                            borderRadius: '12px',
+                            marginRight: '12px'
+                          }}
+                        />
+
+                        {/* 右侧信息 */}
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                          <div>
+                            <h3 style={{ 
+                              fontSize: '15px', 
+                              fontWeight: '700', 
+                              color: '#fff',
+                              margin: '0 0 4px 0',
+                              lineHeight: '1.3',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}>
+                              {cigar.name}
+                            </h3>
+                            
+                            <div style={{ 
+                              fontSize: '12px', 
+                              color: '#999'
+                            }}>
+                              {cigar.origin} · {cigar.size}
+                            </div>
+                          </div>
+
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginTop: '8px'
+                          }}>
+                            <div style={{ 
+                              fontSize: '18px', 
+                              color: '#F4AF25',
+                              fontWeight: 'bold'
+                            }}>
+                              RM {cigar.price}
+                            </div>
+                            
+                            <Button
+                              type="primary"
+                              size="small"
+                              style={{
+                                background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                                border: 'none',
+                                borderRadius: '20px',
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                color: '#000',
+                                padding: '6px 20px',
+                                height: 'auto'
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                addToCart(cigar.id)
+                              }}
+                            >
+                              加入购物车
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* 分割线（最后一个商品不显示） */}
+                      {index < brandCigars.length - 1 && (
+                        <div style={{
+                          height: '1px',
+                          background: 'linear-gradient(90deg, transparent 0%, rgba(255, 215, 0, 0.2) 50%, transparent 100%)',
+                          margin: '0 12px'
+                        }} />
+                      )}
+                    </React.Fragment>
+                  ))}
+                </div>
+              ))
+            ) : (
+              // 电脑端：网格布局
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(5, 1fr)', 
+                gap: '16px'
+              }}>
+                {filteredCigars.map((cigar) => (
               <div 
-                style={{
-                  width: '70px',
-                  height: '70px',
-                  borderRadius: '8px',
-                  backgroundImage: `url(${cigar.images?.[0] || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQwIiB5PSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEwIiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Q2lnYXI8L3RleHQ+Cjwvc3ZnPgo='})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  border: '2px solid rgba(244, 175, 37, 0.2)'
+                key={cigar.id} 
+                style={{ 
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  borderRadius: '16px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  overflow: 'hidden',
+                  transition: 'all 0.3s ease',
+                  cursor: 'pointer'
                 }}
-              />
-              <div style={{ width: '100%', textAlign: 'center' }}>
-                <h3 style={{ 
-                  fontSize: '12px', 
-                  fontWeight: '600', 
-                  color: '#fff',
-                  margin: '0 0 4px 0',
-                  textAlign: 'center',
-                  width: '100%',
-                  lineHeight: '1.2',
-                  minHeight: '28px',
-                  display: 'flex',
-                  alignItems: 'top',
-                  justifyContent: 'center',
-                  wordWrap: 'break-word',
-                  overflowWrap: 'break-word'
-                }}>
-                  {cigar.name}
-                </h3>
-                <p style={{ 
-                  fontSize: '11px', 
-                  color: '#F4AF25',
-                  margin: '0 0 4px 0',
-                  fontWeight: '500',
-                  textAlign: 'center',
-                  width: '100%',
-                  lineHeight: '1.2',
-                  minHeight: '13px',
-                  display: 'flex',
-                  alignItems: 'top',
-                  justifyContent: 'center'
-                }}>
-                  RM {cigar.price}
-                </p>
-                <p style={{ 
-                  fontSize: '10px', 
-                  color: '#999',
-                  margin: 0,
-                  textAlign: 'center',
-                  width: '100%',
-                  lineHeight: '1.2',
-                  minHeight: '12px',
-                  display: 'flex',
-                  alignItems: 'top',
-                  justifyContent: 'center',
-                  wordWrap: 'break-word',
-                  overflowWrap: 'break-word'
-                }}>
-                  {cigar.origin}
-                </p>
-              </div>
-              <Button
-                type="primary"
-                size="small"
-                style={{
-                  width: '100%',
-                  height: '28px',
-                  background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '11px',
-                  fontWeight: '600',
-                  color: '#000'
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'
+                  e.currentTarget.style.transform = 'translateY(-4px)'
+                  e.currentTarget.style.boxShadow = '0 12px 30px rgba(244, 175, 37, 0.25)'
+                  e.currentTarget.style.borderColor = 'rgba(244, 175, 37, 0.3)'
                 }}
-                onClick={() => addToCart(cigar.id)}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = 'none'
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)'
+                }}
               >
-                加入购物车
-              </Button>
-            </div>
-            ))
+                {/* 商品图片 */}
+                <div 
+                  style={{
+                    width: '100%',
+                    aspectRatio: '1',
+                    backgroundImage: `url(${cigar.images?.[0] || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQwIiB5PSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEwIiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Q2lnYXI8L3RleHQ+Cjwvc3ZnPgo='})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    position: 'relative'
+                  }}
+                >
+                  {/* 品牌标签 */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '8px',
+                    left: '8px',
+                    background: 'rgba(244, 175, 37, 0.9)',
+                    backdropFilter: 'blur(4px)',
+                    color: '#000',
+                    fontSize: '10px',
+                    fontWeight: 'bold',
+                    padding: '4px 8px',
+                    borderRadius: '12px'
+                  }}>
+                    {cigar.brand}
+                  </div>
+                </div>
+
+                {/* 商品信息 */}
+                <div style={{ padding: '12px' }}>
+                  <h3 style={{ 
+                    fontSize: isMobile ? '13px' : '14px', 
+                    fontWeight: '700', 
+                    color: '#fff',
+                    margin: '0 0 6px 0',
+                    lineHeight: '1.3',
+                    minHeight: '36px',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}>
+                    {cigar.name}
+                  </h3>
+                  
+                  <div style={{ 
+                    fontSize: '11px', 
+                    color: '#999',
+                    marginBottom: '8px'
+                  }}>
+                    {cigar.origin} · {cigar.size}
+                  </div>
+
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <div style={{ 
+                      fontSize: isMobile ? '16px' : '18px', 
+                      color: '#F4AF25',
+                      fontWeight: 'bold'
+                    }}>
+                      RM {cigar.price}
+                    </div>
+                    
+                    <Button
+                      type="primary"
+                      size="small"
+                      style={{
+                        background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        color: '#000',
+                        padding: '4px 12px',
+                        height: 'auto'
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        addToCart(cigar.id)
+                      }}
+                    >
+                      +
+                    </Button>
+                  </div>
+                </div>
+                  </div>
+                ))}
+              </div>
+            )
           ) : (
             <div style={{ 
-              gridColumn: '1 / -1', 
               textAlign: 'center', 
-              padding: '24px', 
+              padding: '48px 24px', 
               color: '#9ca3af' 
             }}>
-              暂无商品数据
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔍</div>
+              <div style={{ fontSize: '16px', color: '#c0c0c0' }}>
+                {searchKeyword ? '未找到匹配的商品' : '暂无商品数据'}
+              </div>
             </div>
           )}
         </div>

@@ -12,6 +12,7 @@ import { getUsers, createDocument, updateDocument, deleteDocument, COLLECTIONS }
 import type { User } from '../../../types'
 import { sendPasswordResetEmailFor } from '../../../services/firebase/auth'
 import { useTranslation } from 'react-i18next'
+import { getModalThemeStyles, getModalWidth } from '../../../config/modalTheme'
 
 // CSS样式对象
 const glassmorphismInputStyle = {
@@ -777,7 +778,7 @@ const AdminUsers: React.FC = () => {
                     level: editing.membership?.level,
                     phone: (editing as any)?.profile?.phone,
                   })
-                  setEditing(null)
+                  // 不要设置 editing=null，保持编辑状态
                 }}
                 style={{
                   width: '100%',
@@ -1182,20 +1183,22 @@ const AdminUsers: React.FC = () => {
 
       {/* 创建/编辑弹窗 */}
       <Modal
-        title={creating ? t('usersAdmin.addUser') : t('usersAdmin.editUser')}
+        title={editing ? t('usersAdmin.editUser') : t('usersAdmin.addUser')}
         open={creating}
-        onCancel={() => { setCreating(false) }}
-        footer={null}
-        width={400}
-        style={{ top: 20 }}
+        onCancel={() => { 
+          setCreating(false)
+          setEditing(null)
+        }}
+        onOk={() => form.submit()}
+        confirmLoading={loading}
+        width={getModalWidth(isMobile, 520)}
+        styles={getModalThemeStyles(isMobile, true)}
       >
-        <div style={{ 
-          background: 'linear-gradient(165deg, #2a2a2a 0%, #1a1a1a 100%)',
-          borderRadius: 16,
-          padding: 24,
-          margin: -24
-        }}>
-          <Form form={form} layout="vertical" onFinish={async (values) => {
+          <Form 
+            form={form} 
+            layout="vertical" 
+            style={{ color: '#FFFFFF' }}
+            onFinish={async (values) => {
           setLoading(true)
           try {
             if (editing) {
@@ -1227,294 +1230,60 @@ const AdminUsers: React.FC = () => {
             setLoading(false)
           }
         }}>
-            <div style={{ marginBottom: 32 }}>
-              <Form.Item 
-                name="displayName" 
-                rules={[{ required: true, message: t('profile.nameRequired') }]}
-                style={{ marginBottom: 0 }}
-              >
-                <div style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(244, 175, 37, 0.2)',
-                  borderRadius: 12,
-                  padding: 24,
-                  transition: 'all 0.3s ease'
-                }}>
-                  <label style={{ 
-                    display: 'block', 
-                    fontSize: 14, 
-                    fontWeight: 500, 
-                    color: 'rgba(244, 175, 37, 0.8)', 
-                    marginBottom: 8 
-                  }}>
-                    {t('common.name')}
-                  </label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{ 
-                      fontSize: 20, 
-                      color: 'rgba(244, 175, 37, 0.7)',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}>
-                      👤
-                    </span>
-                    <Input 
-                      style={{
-                        background: 'transparent',
-                        color: '#fff',
-                        border: 'none',
-                        borderBottom: '2px solid rgba(255, 255, 255, 0.2)',
-                        borderRadius: 0,
-                        padding: '8px 0',
-                        fontSize: 16,
-                        boxShadow: 'none'
-                      }}
-                      placeholder={t('auth.name')}
-                    />
-                  </div>
-                </div>
+          <Form.Item 
+            label={<span style={{ color: '#FFFFFF' }}>{t('common.name')}</span>}
+            name="displayName" 
+            rules={[{ required: true, message: t('profile.nameRequired') }]}
+          >
+            <Input placeholder={t('auth.name')} />
           </Form.Item>
-            </div>
 
-            <div style={{ marginBottom: 32 }}>
-              <Form.Item 
-                name="email"
-                style={{ marginBottom: 0 }}
-              >
-                <div style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(244, 175, 37, 0.2)',
-                  borderRadius: 12,
-                  padding: 24,
-                  transition: 'all 0.3s ease'
-                }}>
-                  <label style={{ 
-                    display: 'block', 
-                    fontSize: 14, 
-                    fontWeight: 500, 
-                    color: 'rgba(244, 175, 37, 0.8)', 
-                    marginBottom: 8 
-                  }}>
-                    {t('auth.email')}
-                  </label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{ 
-                      fontSize: 20, 
-                      color: 'rgba(244, 175, 37, 0.7)',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}>
-                      ✉️
-                    </span>
-            <Input 
-                      style={{
-                        background: 'transparent',
-                        color: '#fff',
-                        border: 'none',
-                        borderBottom: '2px solid rgba(255, 255, 255, 0.2)',
-                        borderRadius: 0,
-                        padding: '8px 0',
-                        fontSize: 16,
-                        boxShadow: 'none'
-                      }}
-                      placeholder={t('auth.email')}
-                    />
-                  </div>
-                </div>
+          <Form.Item 
+            label={<span style={{ color: '#FFFFFF' }}>{t('auth.email')}</span>}
+            name="email"
+            rules={[
+              { required: true, message: t('auth.emailRequired') },
+              { type: 'email', message: t('auth.emailInvalid') }
+            ]}
+          >
+            <Input placeholder={t('auth.email')} />
           </Form.Item>
-            </div>
 
-            <div style={{ marginBottom: 32 }}>
-              <Form.Item 
-                name="phone" 
-                rules={[{ required: true, message: t('profile.phoneRequired') }]}
-                style={{ marginBottom: 0 }}
-              >
-                <div style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(244, 175, 37, 0.2)',
-                  borderRadius: 12,
-                  padding: 24,
-                  transition: 'all 0.3s ease'
-                }}>
-                  <label style={{ 
-                    display: 'block', 
-                    fontSize: 14, 
-                    fontWeight: 500, 
-                    color: 'rgba(244, 175, 37, 0.8)', 
-                    marginBottom: 8 
-                  }}>
-                    {t('auth.phone')}
-                  </label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{ 
-                      fontSize: 20, 
-                      color: 'rgba(244, 175, 37, 0.7)',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}>
-                      📱
-                    </span>
-                    <Input 
-                      style={{
-                        background: 'transparent',
-                        color: '#fff',
-                        border: 'none',
-                        borderBottom: '2px solid rgba(255, 255, 255, 0.2)',
-                        borderRadius: 0,
-                        padding: '8px 0',
-                        fontSize: 16,
-                        boxShadow: 'none'
-                      }}
-                      placeholder={t('auth.phone')}
-                    />
-                  </div>
-                </div>
+          <Form.Item 
+            label={<span style={{ color: '#FFFFFF' }}>{t('auth.phone')}</span>}
+            name="phone" 
+            rules={[{ required: true, message: t('profile.phoneRequired') }]}
+          >
+            <Input placeholder={t('auth.phone')} />
           </Form.Item>
-            </div>
 
-            <div style={{ marginBottom: 32 }}>
-              <Form.Item 
-                name="role" 
-                rules={[{ required: true }]} 
-                initialValue="member"
-                style={{ marginBottom: 0 }}
-              >
-                <div style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(244, 175, 37, 0.2)',
-                  borderRadius: 12,
-                  padding: 24,
-                  transition: 'all 0.3s ease'
-                }}>
-                  <label style={{ 
-                    display: 'block', 
-                    fontSize: 14, 
-                    fontWeight: 500, 
-                    color: 'rgba(244, 175, 37, 0.8)', 
-                    marginBottom: 8 
-                  }}>
-                    {t('usersAdmin.role')}
-                  </label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{ 
-                      fontSize: 20, 
-                      color: 'rgba(244, 175, 37, 0.7)',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}>
-                      👥
-                    </span>
-                    <Select
-                      style={{ 
-                        flex: 1,
-                        background: 'transparent'
-                      }}
-                      dropdownStyle={{
-                        background: '#2a2a2a',
-                        border: '1px solid rgba(244, 175, 37, 0.2)'
-                      }}
-                    >
-                      <Option value="admin">{t('common.admin')}</Option>
-                      <Option value="member">{t('common.member')}</Option>
-                      <Option value="guest">{t('common.guest')}</Option>
+          <Form.Item 
+            label={<span style={{ color: '#FFFFFF' }}>{t('usersAdmin.role')}</span>}
+            name="role" 
+            rules={[{ required: true }]} 
+            initialValue="member"
+          >
+            <Select>
+              <Option value="admin">{t('common.admin')}</Option>
+              <Option value="member">{t('common.member')}</Option>
+              <Option value="guest">{t('common.guest')}</Option>
             </Select>
-                  </div>
-                </div>
           </Form.Item>
-            </div>
 
-            <div style={{ marginBottom: 32 }}>
-              <Form.Item 
-                name="level" 
-                rules={[{ required: true }]} 
-                initialValue="bronze"
-                style={{ marginBottom: 0 }}
-              >
-                <div style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(244, 175, 37, 0.2)',
-                  borderRadius: 12,
-                  padding: 24,
-                  transition: 'all 0.3s ease'
-                }}>
-                  <label style={{ 
-                    display: 'block', 
-                    fontSize: 14, 
-                    fontWeight: 500, 
-                    color: 'rgba(244, 175, 37, 0.8)', 
-                    marginBottom: 8 
-                  }}>
-                    {t('usersAdmin.membershipLevel')}
-                  </label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{ 
-                      fontSize: 20, 
-                      color: 'rgba(244, 175, 37, 0.7)',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}>
-                      🏆
-                    </span>
-                    <Select
-                      style={{ 
-                        flex: 1,
-                        background: 'transparent'
-                      }}
-                      dropdownStyle={{
-                        background: '#2a2a2a',
-                        border: '1px solid rgba(244, 175, 37, 0.2)'
-                      }}
-                    >
-                      <Option value="bronze">{t('usersAdmin.bronzeMember')}</Option>
-                      <Option value="silver">{t('usersAdmin.silverMember')}</Option>
-                      <Option value="gold">{t('usersAdmin.goldMember')}</Option>
-                      <Option value="platinum">{t('usersAdmin.platinumMember')}</Option>
+          <Form.Item 
+            label={<span style={{ color: '#FFFFFF' }}>{t('usersAdmin.membershipLevel')}</span>}
+            name="level" 
+            rules={[{ required: true }]} 
+            initialValue="bronze"
+          >
+            <Select>
+              <Option value="bronze">{t('usersAdmin.bronzeMember')}</Option>
+              <Option value="silver">{t('usersAdmin.silverMember')}</Option>
+              <Option value="gold">{t('usersAdmin.goldMember')}</Option>
+              <Option value="platinum">{t('usersAdmin.platinumMember')}</Option>
             </Select>
-                  </div>
-                </div>
           </Form.Item>
-            </div>
-
-            <div style={{ marginTop: 64 }}>
-              <button
-                type="submit"
-                disabled={loading}
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  fontSize: 16,
-                  fontWeight: 'bold',
-                  color: '#1a1a1a',
-                  textTransform: 'uppercase',
-                  borderRadius: 8,
-                  background: 'linear-gradient(to right, #DAA520, #F4AF25, #DAA520)',
-                  backgroundSize: '200% auto',
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 10px 25px -5px rgba(244, 175, 37, 0.3), 0 8px 10px -6px rgba(244, 175, 37, 0.2)',
-                  opacity: loading ? 0.6 : 1
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundPosition = 'right center'
-                  e.currentTarget.style.transform = 'scale(1.02)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundPosition = 'left center'
-                  e.currentTarget.style.transform = 'scale(1)'
-                }}
-              >
-                {loading ? t('common.loading') : t('common.save')}
-              </button>
-            </div>
         </Form>
-        </div>
       </Modal>
 
       {/* 删除确认 */}

@@ -240,6 +240,8 @@ export const CardPresets = {
     ...props
   }: CardProps & {
     value: string | number
+    description?: React.ReactNode
+    icon?: React.ReactNode
     trend?: { value: number; isPositive: boolean }
   }) => (
     <Card {...props} hoverable>
@@ -276,7 +278,10 @@ export const CardPresets = {
   /**
    * 信息卡片
    */
-  Info: ({ title, description, icon, ...props }: CardProps & { icon?: React.ReactNode }) => (
+  Info: ({ title, description, icon, ...props }: CardProps & { 
+    description?: React.ReactNode
+    icon?: React.ReactNode 
+  }) => (
     <Card {...props}>
       <CardMeta
         avatar={icon}
@@ -289,7 +294,10 @@ export const CardPresets = {
   /**
    * 操作卡片
    */
-  Action: ({ title, description, actions, ...props }: CardProps & { actions: React.ReactNode[] }) => (
+  Action: ({ title, description, actions, ...props }: CardProps & { 
+    description?: React.ReactNode
+    actions: React.ReactNode[] 
+  }) => (
     <Card {...props} actions={actions}>
       <CardMeta
         title={title}
@@ -301,7 +309,9 @@ export const CardPresets = {
   /**
    * 图片卡片
    */
-  Image: ({ cover, title, description, ...props }: CardProps) => (
+  Image: ({ cover, title, description, ...props }: CardProps & {
+    description?: React.ReactNode
+  }) => (
     <Card {...props} cover={cover}>
       <CardMeta
         title={title}
