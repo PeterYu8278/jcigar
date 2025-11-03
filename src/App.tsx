@@ -76,7 +76,7 @@ const AppContent: React.FC = () => {
           }}>
             <Content
               style={{
-                padding: needsPadding ? 0 : 0,
+                padding: needsPadding ? 12 : 0,
                 margin: 0,
                 minHeight: 280,
                 background: 'radial-gradient(ellipse at top, #3c2f1a, #121212)' ,
