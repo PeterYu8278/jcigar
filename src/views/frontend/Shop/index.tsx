@@ -17,7 +17,7 @@ const Shop: React.FC = () => {
   const [searchKeyword, setSearchKeyword] = useState('')
   const [selectedBrand, setSelectedBrand] = useState<string>('all')
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 2000])
-  const { addToCart, toggleWishlist, wishlist } = useCartStore()
+  const { addToCart, toggleWishlist, wishlist, quantities } = useCartStore()
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
   const brandRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const brandNavRefs = useRef<Record<string, HTMLDivElement | null>>({})
@@ -159,6 +159,13 @@ const Shop: React.FC = () => {
     // 同类品牌按 A-Z 排序
     return brandA.localeCompare(brandB)
   })
+
+  // 计算购物车总数量和总价
+  const cartItemCount = Object.values(quantities).reduce((sum, qty) => sum + qty, 0)
+  const cartTotal = Object.entries(quantities).reduce((sum, [id, qty]) => {
+    const cigar = cigars.find(c => c.id === id)
+    return sum + (cigar ? cigar.price * qty : 0)
+  }, 0)
 
   return (
     <div style={{ 
@@ -795,6 +802,90 @@ const Shop: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* 底部购物车操作栏 - 仅手机端显示 */}
+      {isMobile && (
+        <div style={{
+          position: 'fixed',
+          bottom: '60px',
+          left: 0,
+          right: 0,
+          padding: '12px 16px',
+          zIndex: 100,
+          pointerEvents: 'none'
+        }}>
+          {cartItemCount === 0 ? (
+            // 空状态：显示购物车图标按钮
+            <div style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              pointerEvents: 'auto'
+            }}>
+              <Button
+                style={{
+                  background: 'rgba(100, 100, 100, 0.8)',
+                  backdropFilter: 'blur(8px)',
+                  border: 'none',
+                  borderRadius: '24px',
+                  padding: '12px 24px',
+                  height: 'auto',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+                }}
+                onClick={() => navigate('/cart')}
+              >
+                <span style={{ fontSize: '18px' }}>🛒</span>
+                <span style={{ color: '#fff', fontSize: '14px', fontWeight: '600' }}>
+                  0 item
+                </span>
+              </Button>
+            </div>
+          ) : (
+            // 有商品状态：显示完整购物车底栏
+            <div
+              style={{
+                background: 'linear-gradient(135deg, #4A90E2 0%, #357ABD 100%)',
+                borderRadius: '16px',
+                padding: '16px 20px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                boxShadow: '0 8px 24px rgba(74, 144, 226, 0.4)',
+                cursor: 'pointer',
+                pointerEvents: 'auto'
+              }}
+              onClick={() => navigate('/cart')}
+            >
+              {/* 左侧：购物车图标和数量 */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <span style={{ fontSize: '24px' }}>🛒</span>
+                <span style={{ 
+                  color: '#fff', 
+                  fontSize: '16px',
+                  fontWeight: '600'
+                }}>
+                  {cartItemCount} {cartItemCount === 1 ? 'item' : 'items'}
+                </span>
+              </div>
+
+              {/* 右侧：总价 */}
+              <div style={{
+                color: '#fff',
+                fontSize: '18px',
+                fontWeight: 'bold'
+              }}>
+                RM {cartTotal.toFixed(2)}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
