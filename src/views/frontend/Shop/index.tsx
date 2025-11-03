@@ -636,26 +636,25 @@ const Shop: React.FC = () => {
                               RM {cigar.price}
                             </div>
                             
-                            <Button
-                              type="primary"
-                              size="small"
-                              style={{
-                                background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                                border: 'none',
-                                borderRadius: '20px',
-                                fontSize: '12px',
-                                fontWeight: '600',
-                                color: '#000',
-                                padding: '6px 20px',
-                                height: 'auto'
-                              }}
+                            <button
                               onClick={(e) => {
                                 e.stopPropagation()
                                 addToCart(cigar.id)
                               }}
+                              style={{
+                                padding: '6px 20px',
+                                borderRadius: 20,
+                                background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                                color: '#221c10',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                border: 'none',
+                                fontSize: '12px'
+                              }}
                             >
                               +
-                            </Button>
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -758,38 +757,37 @@ const Shop: React.FC = () => {
       </div>
 
                   <div style={{
-          display: 'flex',
+                    display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center'
-        }}>
-        <div style={{ 
+                  }}>
+                    <div style={{ 
                       fontSize: isMobile ? '16px' : '18px', 
-                  color: '#F4AF25',
+                      color: '#F4AF25',
                       fontWeight: 'bold'
-                }}>
-                  RM {cigar.price}
-              </div>
+                    }}>
+                      RM {cigar.price}
+                    </div>
                     
-              <Button
-                type="primary"
-                size="small"
-                style={{
-                  background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                  border: 'none',
-                        borderRadius: '8px',
-                  fontSize: '11px',
-                  fontWeight: '600',
-                        color: '#000',
-                        padding: '4px 12px',
-                        height: 'auto'
-                }}
+                    <button
                       onClick={(e) => {
                         e.stopPropagation()
                         addToCart(cigar.id)
                       }}
-              >
+                      style={{
+                        padding: '4px 12px',
+                        borderRadius: 8,
+                        background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                        color: '#221c10',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        border: 'none',
+                        fontSize: '11px'
+                      }}
+                    >
                       +
-              </Button>
+                    </button>
             </div>
                 </div>
                   </div>
