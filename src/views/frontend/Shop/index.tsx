@@ -417,7 +417,7 @@ const Shop: React.FC = () => {
             left: 0,
             right: 0,
             height: '40px',
-            background: 'linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%)',
+            background: 'linear-gradient(180deg, #1a1a1a 0%, rgba(26, 26, 26, 0.95) 50%, rgba(26, 26, 26, 0.8) 100%)',
             zIndex: 2,
             pointerEvents: 'none',
             marginLeft: isMobile ? '-12px' : '-20px',
