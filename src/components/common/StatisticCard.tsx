@@ -11,7 +11,7 @@ import {
   MinusOutlined
 } from '@ant-design/icons'
 import type { CardProps } from 'antd'
-import { formatNumber, formatPercent, formatCurrency } from '../../utils/format'
+import { formatNumber, formatPercentage, formatCurrency } from '../../utils/format'
 
 export interface StatisticCardProps extends Omit<CardProps, 'title'> {
   /** 标题 */
@@ -108,12 +108,12 @@ const StatisticCard: React.FC<StatisticCardProps> = ({
 
     switch (valueFormat) {
       case 'currency':
-        return formatCurrency(numValue, currency, precision)
+        return formatCurrency(numValue, { currency, precision })
       case 'percent':
-        return formatPercent(numValue, precision)
+        return formatPercentage(numValue, { precision })
       case 'number':
       default:
-        return formatNumber(numValue, precision)
+        return formatNumber(numValue, { decimals: precision })
     }
   }
 

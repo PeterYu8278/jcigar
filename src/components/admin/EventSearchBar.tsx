@@ -35,7 +35,7 @@ const EventSearchBar: React.FC<EventSearchBarProps> = ({
             onChange={(e) => onKeywordChange(e.target.value)}
           />
         </div>
-        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+        <div style={{ display: 'flex', overflowX: 'auto', paddingBottom: 4 }}>
           <button 
             onClick={() => onStatusFilterChange(undefined)}
             style={statusFilter === undefined ? 

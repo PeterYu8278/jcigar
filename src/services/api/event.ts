@@ -2,16 +2,17 @@
  * 活动相关 API
  */
 
-import { apiCall, ApiConfig } from './base'
+import { apiCall, type ApiConfig } from './base'
 import * as firestoreService from '../firebase/firestore'
 import type { Event } from '../../types'
+import { GLOBAL_COLLECTIONS } from '../../config/globalCollections'
 
 /**
  * 获取活动列表
  */
 export const getEventList = (config?: ApiConfig) => {
   return apiCall(
-    () => firestoreService.getAllEvents(),
+    () => firestoreService.getEvents(),
     config
   )
 }
@@ -31,7 +32,7 @@ export const getEventById = (eventId: string, config?: ApiConfig) => {
  */
 export const createEvent = (eventData: Omit<Event, 'id'>, config?: ApiConfig) => {
   return apiCall(
-    () => firestoreService.createEvent(eventData),
+    () => firestoreService.createDocument(GLOBAL_COLLECTIONS.EVENTS, eventData),
     {
       showSuccess: true,
       successMessage: '活动创建成功',
@@ -45,7 +46,7 @@ export const createEvent = (eventData: Omit<Event, 'id'>, config?: ApiConfig) =>
  */
 export const updateEvent = (eventId: string, eventData: Partial<Event>, config?: ApiConfig) => {
   return apiCall(
-    () => firestoreService.updateEvent(eventId, eventData),
+    () => firestoreService.updateDocument(GLOBAL_COLLECTIONS.EVENTS, eventId, eventData),
     {
       showSuccess: true,
       successMessage: '活动更新成功',
@@ -59,7 +60,7 @@ export const updateEvent = (eventId: string, eventData: Partial<Event>, config?:
  */
 export const deleteEvent = (eventId: string, config?: ApiConfig) => {
   return apiCall(
-    () => firestoreService.deleteEvent(eventId),
+    () => firestoreService.deleteDocument(GLOBAL_COLLECTIONS.EVENTS, eventId),
     {
       showSuccess: true,
       successMessage: '活动删除成功',
@@ -75,7 +76,7 @@ export const batchDeleteEvents = (eventIds: string[], config?: ApiConfig) => {
   return apiCall(
     async () => {
       const results = await Promise.all(
-        eventIds.map(id => firestoreService.deleteEvent(id))
+        eventIds.map(id => firestoreService.deleteDocument(GLOBAL_COLLECTIONS.EVENTS, id))
       )
       return results
     },
@@ -93,7 +94,7 @@ export const batchDeleteEvents = (eventIds: string[], config?: ApiConfig) => {
 export const searchEvents = (keyword: string, config?: ApiConfig) => {
   return apiCall(
     async () => {
-      const events = await firestoreService.getAllEvents()
+      const events = await firestoreService.getEvents()
       
       if (!keyword) return events
 
@@ -101,7 +102,8 @@ export const searchEvents = (keyword: string, config?: ApiConfig) => {
       return events.filter((event: Event) =>
         event.title?.toLowerCase().includes(lowerKeyword) ||
         event.description?.toLowerCase().includes(lowerKeyword) ||
-        event.location?.toLowerCase().includes(lowerKeyword)
+        event.location?.name?.toLowerCase().includes(lowerKeyword) ||
+        event.location?.address?.toLowerCase().includes(lowerKeyword)
       )
     },
     config
@@ -161,7 +163,7 @@ export const updateEventStatus = (
   config?: ApiConfig
 ) => {
   return apiCall(
-    () => firestoreService.updateEvent(eventId, { status }),
+    () => firestoreService.updateDocument(GLOBAL_COLLECTIONS.EVENTS, eventId, { status }),
     {
       showSuccess: true,
       successMessage: '活动状态更新成功',
@@ -175,11 +177,11 @@ export const updateEventStatus = (
  */
 export const cancelEvent = (eventId: string, reason?: string, config?: ApiConfig) => {
   return apiCall(
-    () => firestoreService.updateEvent(eventId, {
-      status: 'cancelled',
+    () => firestoreService.updateDocument(GLOBAL_COLLECTIONS.EVENTS, eventId, {
+      status: 'cancelled' as const,
       cancelReason: reason,
       cancelledAt: new Date()
-    }),
+    } as any),
     {
       showSuccess: true,
       successMessage: '活动已取消',
@@ -197,7 +199,7 @@ export const getEventsByStatus = (
 ) => {
   return apiCall(
     async () => {
-      const events = await firestoreService.getAllEvents()
+      const events = await firestoreService.getEvents()
       return events.filter((event: Event) => event.status === status)
     },
     config
@@ -210,11 +212,13 @@ export const getEventsByStatus = (
 export const getUpcomingEvents = (config?: ApiConfig) => {
   return apiCall(
     async () => {
-      const events = await firestoreService.getAllEvents()
+      const events = await firestoreService.getEvents()
       const now = new Date()
       return events.filter((event: Event) => {
-        const eventDate = event.date instanceof Date ? event.date : new Date(event.date)
-        return eventDate > now && event.status !== 'cancelled'
+        const startDate = event.schedule.startDate instanceof Date 
+          ? event.schedule.startDate 
+          : new Date(event.schedule.startDate)
+        return startDate > now && event.status !== 'cancelled'
       })
     },
     config
@@ -227,11 +231,13 @@ export const getUpcomingEvents = (config?: ApiConfig) => {
 export const getPastEvents = (config?: ApiConfig) => {
   return apiCall(
     async () => {
-      const events = await firestoreService.getAllEvents()
+      const events = await firestoreService.getEvents()
       const now = new Date()
       return events.filter((event: Event) => {
-        const eventDate = event.date instanceof Date ? event.date : new Date(event.date)
-        return eventDate <= now || event.status === 'completed'
+        const endDate = event.schedule.endDate instanceof Date 
+          ? event.schedule.endDate 
+          : new Date(event.schedule.endDate)
+        return endDate <= now || event.status === 'completed'
       })
     },
     config
