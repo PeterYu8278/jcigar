@@ -21,6 +21,7 @@ const Shop: React.FC = () => {
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
   const brandRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const brandNavRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const sidebarRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     ;(async () => {
@@ -51,10 +52,15 @@ const Shop: React.FC = () => {
               setSelectedBrand(brandName)
               // 同时滚动左侧品牌导航栏到对应位置
               const navElement = brandNavRefs.current[brandName]
-              if (navElement) {
-                navElement.scrollIntoView({ 
-                  behavior: 'smooth', 
-                  block: 'center' 
+              const sidebar = sidebarRef.current
+              if (navElement && sidebar) {
+                const sidebarRect = sidebar.getBoundingClientRect()
+                const navRect = navElement.getBoundingClientRect()
+                const scrollOffset = navRect.top - sidebarRect.top - (sidebarRect.height / 2) + (navRect.height / 2)
+                
+                sidebar.scrollTo({
+                  top: sidebar.scrollTop + scrollOffset,
+                  behavior: 'smooth'
                 })
               }
             }
@@ -144,6 +150,7 @@ const Shop: React.FC = () => {
     }}>
       {/* 左侧品牌导航栏 */}
       <div 
+        ref={sidebarRef}
         className="shop-sidebar"
         style={{
           width: isMobile ? '80px' : '120px',
