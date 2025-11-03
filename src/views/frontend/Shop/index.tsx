@@ -20,6 +20,7 @@ const Shop: React.FC = () => {
   const { addToCart, toggleWishlist, wishlist } = useCartStore()
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
   const brandRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const brandNavRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   useEffect(() => {
     ;(async () => {
@@ -36,6 +37,45 @@ const Shop: React.FC = () => {
       }
     })()
   }, [])
+
+  // 滚动监听：自动更新高亮品牌
+  useEffect(() => {
+    if (!isMobile) return // 仅手机端启用
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio > 0.3) {
+            const brandName = entry.target.getAttribute('data-brand')
+            if (brandName) {
+              setSelectedBrand(brandName)
+              // 同时滚动左侧品牌导航栏到对应位置
+              const navElement = brandNavRefs.current[brandName]
+              if (navElement) {
+                navElement.scrollIntoView({ 
+                  behavior: 'smooth', 
+                  block: 'center' 
+                })
+              }
+            }
+          }
+        })
+      },
+      {
+        threshold: [0, 0.3, 0.5, 0.7, 1],
+        rootMargin: '-80px 0px -50% 0px' // 顶部留空，只看上半部分
+      }
+    )
+
+    // 监听所有品牌卡片
+    Object.values(brandRefs.current).forEach((ref) => {
+      if (ref) observer.observe(ref)
+    })
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [isMobile, cigars])
 
   // 滚动到指定品牌
   const scrollToBrand = (brandName: string) => {
@@ -56,18 +96,23 @@ const Shop: React.FC = () => {
     return matchesSearch && matchesBrand && matchesPrice
   })
 
-  // 按产地分组品牌
-  const cubanBrands = brands.filter(brand => 
-    brand.status === 'active' && 
-    (brand.country?.toLowerCase() === 'cuba' || brand.country?.toLowerCase() === 'cuban')
-  )
-  const newWorldBrands = brands.filter(brand => 
-    brand.status === 'active' && 
-    brand.country?.toLowerCase() !== 'cuba' && 
-    brand.country?.toLowerCase() !== 'cuban'
-  )
+  // 按产地分组品牌并排序 A-Z
+  const cubanBrands = brands
+    .filter(brand => 
+      brand.status === 'active' && 
+      (brand.country?.toLowerCase() === 'cuba' || brand.country?.toLowerCase() === 'cuban')
+    )
+    .sort((a, b) => a.name.localeCompare(b.name))
+  
+  const newWorldBrands = brands
+    .filter(brand => 
+      brand.status === 'active' && 
+      brand.country?.toLowerCase() !== 'cuba' && 
+      brand.country?.toLowerCase() !== 'cuban'
+    )
+    .sort((a, b) => a.name.localeCompare(b.name))
 
-  // 按品牌分组商品（手机端使用）
+  // 按品牌分组商品（手机端使用）并按 Cuban > New World, A-Z 排序
   const groupedCigars = filteredCigars.reduce((groups, cigar) => {
     const brand = cigar.brand || '其他'
     if (!groups[brand]) {
@@ -76,6 +121,19 @@ const Shop: React.FC = () => {
     groups[brand].push(cigar)
     return groups
   }, {} as Record<string, typeof filteredCigars>)
+
+  // 排序：Cuban 品牌 A-Z，然后 New World 品牌 A-Z
+  const sortedGroupedCigars = Object.entries(groupedCigars).sort(([brandA], [brandB]) => {
+    const isCubanA = cubanBrands.some(b => b.name === brandA)
+    const isCubanB = cubanBrands.some(b => b.name === brandB)
+    
+    // Cuban 品牌排在前面
+    if (isCubanA && !isCubanB) return -1
+    if (!isCubanA && isCubanB) return 1
+    
+    // 同类品牌按 A-Z 排序
+    return brandA.localeCompare(brandB)
+  })
 
   return (
     <div style={{ 
@@ -170,9 +228,11 @@ const Shop: React.FC = () => {
             {cubanBrands.map((brand) => (
             <div
               key={brand.id}
+              ref={(el) => { brandNavRefs.current[brand.name] = el }}
               onClick={() => {
                 if (isMobile) {
-                  // 手机端：滚动到该品牌位置
+                  // 手机端：滚动到该品牌位置并设置高亮
+                  setSelectedBrand(brand.name)
                   scrollToBrand(brand.name)
                 } else {
                   // 电脑端：筛选商品
@@ -254,7 +314,7 @@ const Shop: React.FC = () => {
 
         {/* New World 品牌区 */}
         {newWorldBrands.length > 0 && (
-          <div>
+    <div>
             {/* New World 标题 - 粘性定位 */}
             <div style={{
               position: 'sticky',
@@ -281,10 +341,14 @@ const Shop: React.FC = () => {
             {newWorldBrands.map((brand) => (
             <div
               key={brand.id}
+              ref={(el) => { brandNavRefs.current[brand.name] = el }}
               onClick={() => {
                 if (isMobile) {
+                  // 手机端：滚动到该品牌位置并设置高亮
+                  setSelectedBrand(brand.name)
                   scrollToBrand(brand.name)
                 } else {
+                  // 电脑端：筛选商品
                   setSelectedBrand(brand.name)
                 }
               }}
@@ -356,46 +420,59 @@ const Shop: React.FC = () => {
           paddingBottom: '16px',
           borderBottom: '2px solid rgba(255, 215, 0, 0.3)'
         }}>
-          <h1 style={{ 
-            fontSize: '22px', 
-            fontWeight: 800, 
-            background: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
-            WebkitBackgroundClip: 'text', 
+        <h1 style={{ 
+          fontSize: '22px', 
+          fontWeight: 800, 
+          background: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
+          WebkitBackgroundClip: 'text', 
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
             margin: '0 0 16px 0'
-          }}>
+        }}>
             {selectedBrand === 'all' ? '商品导航' : selectedBrand}
-          </h1>
-          
-          <div style={{ position: 'relative' }}>
-            <div style={{
-              position: 'absolute',
-              top: '50%',
-              left: '16px',
-              transform: 'translateY(-50%)',
-              color: '#999999',
-              pointerEvents: 'none'
-            }}>
-              <SearchOutlined />
-            </div>
-            <Input
-              placeholder={t('shop.searchBrand')}
-              value={searchKeyword}
-              onChange={(e) => setSearchKeyword(e.target.value)}
-              style={{
-                width: '100%',
-                height: '48px',
-                paddingLeft: '48px',
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '24px',
-                color: '#fff',
-                fontSize: '16px'
-              }}
-            />
-          </div>
-        </div>
+        </h1>
+        
+        <div style={{ position: 'relative' }}>
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '16px',
+            transform: 'translateY(-50%)',
+            color: '#999999',
+            pointerEvents: 'none'
+          }}>
+            <SearchOutlined />
+                </div>
+          <Input
+            placeholder={t('shop.searchBrand')}
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+            style={{
+              width: '100%',
+              height: '48px',
+              paddingLeft: '48px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '24px',
+              color: '#fff',
+              fontSize: '16px'
+            }}
+          />
+                    </div>
+                    </div>
+        <div style={{
+            position: 'sticky',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '30px',
+            background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.02) 100%',
+            zIndex: 2,
+            pointerEvents: 'none',
+            marginTop: isMobile ? '-16px' : '-20px',
+            marginLeft: isMobile ? '-12px' : '-20px',
+            marginRight: isMobile ? '-12px' : '-20px'
+          }} />
 
         {/* 商品网格 - 独立滚动区域 */}
         <div 
@@ -404,28 +481,15 @@ const Shop: React.FC = () => {
             flex: 1,
             overflowY: 'auto',
             overflowX: 'hidden',
-            padding: isMobile ? '16px 12px' : '20px',
+            padding: isMobile ? '0px 12px' : '20px',
             paddingBottom: '100px',
             position: 'relative',
             zIndex: 1
           }}
         >
-          {/* 遮挡层 - 防止内容穿过粘性标题 */}
-          <div style={{
-            position: 'sticky',
-            top: -20,
-            left: 0,
-            right: 0,
-            height: '40px',
-            background: 'linear-gradient(180deg, #1a1a1a 0%, rgba(26, 26, 26, 0.95) 50%, rgba(26, 26, 26, 0.8) 100%)',
-            zIndex: 2,
-            pointerEvents: 'none',
-            marginLeft: isMobile ? '-12px' : '-20px',
-            marginRight: isMobile ? '-12px' : '-20px',
-            marginTop: isMobile ? '-16px' : '-20px'
-          }} />
+          
           {loading ? (
-            <div style={{ 
+        <div style={{ 
               textAlign: 'center', 
               padding: '48px 24px', 
               color: '#9ca3af' 
@@ -434,12 +498,13 @@ const Shop: React.FC = () => {
             </div>
           ) : filteredCigars.length > 0 ? (
             isMobile ? (
-              // 手机端：按品牌分组显示
-              Object.entries(groupedCigars).map(([brandName, brandCigars]) => (
+              // 手机端：按品牌分组显示（Cuban A-Z > New World A-Z）
+              sortedGroupedCigars.map(([brandName, brandCigars]) => (
                 <div 
                   key={brandName}
                   ref={(el) => { brandRefs.current[brandName] = el }}
-                  style={{
+                  data-brand={brandName}
+              style={{
                     background: 'rgba(255, 255, 255, 0.03)',
                     borderRadius: '16px',
                     border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -449,29 +514,30 @@ const Shop: React.FC = () => {
                   }}
                 >
                   {/* 品牌标题 - 粘性定位 */}
-                  <div style={{
+      <div style={{ 
                     position: 'sticky',
                     top: 0,
                     zIndex: 5,
                     padding: '8px 16px',
                     borderBottom: '1px solid rgba(255, 215, 0, 0.3)',
-                    background: 'rgba(255, 215, 0, 0.95)',
+                    background: 'linear-gradient(to right, rgb(253, 224, 141), rgb(196, 141, 58))',
                     backdropFilter: 'blur(8px)',
+                    
                     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
                     borderTopLeftRadius: '16px',
                     borderTopRightRadius: '16px'
                   }}>
                     <h2 style={{
                       fontSize: '18px',
-                      fontWeight: 'bold',
+            fontWeight: 'bold', 
                       color: '#000',
-                      margin: 0,
+            margin: 0,
                       textShadow: '0 1px 2px rgba(255, 255, 255, 0.3)'
-                    }}>
+          }}>
                       {brandName}
                     </h2>
-                  </div>
-
+                    </div>
+                    
                   {/* 品牌下的商品列表 */}
                   {brandCigars.map((cigar, index) => (
                     <React.Fragment key={cigar.id}>
@@ -523,15 +589,15 @@ const Shop: React.FC = () => {
                               color: '#999'
                             }}>
                               {cigar.origin} · {cigar.size}
-                            </div>
-                          </div>
-
+        </div>
+                    </div>
+                    
                           <div style={{
-                            display: 'flex',
+          display: 'flex',
                             justifyContent: 'space-between',
-                            alignItems: 'center',
+          alignItems: 'center',
                             marginTop: '8px'
-                          }}>
+        }}>
                             <div style={{ 
                               fontSize: '18px', 
                               color: '#F4AF25',
@@ -578,11 +644,11 @@ const Shop: React.FC = () => {
               ))
             ) : (
               // 电脑端：网格布局
-              <div style={{ 
-                display: 'grid', 
+        <div style={{ 
+          display: 'grid', 
                 gridTemplateColumns: 'repeat(5, 1fr)', 
                 gap: '16px'
-              }}>
+        }}>
                 {filteredCigars.map((cigar) => (
               <div 
                 key={cigar.id} 
@@ -619,20 +685,20 @@ const Shop: React.FC = () => {
                   }}
                 >
                   {/* 品牌标签 */}
-                  <div style={{
+                    <div style={{ 
                     position: 'absolute',
                     top: '8px',
                     left: '8px',
                     background: 'rgba(244, 175, 37, 0.9)',
                     backdropFilter: 'blur(4px)',
-                    color: '#000',
+                      color: '#000',
                     fontSize: '10px',
-                    fontWeight: 'bold',
+                      fontWeight: 'bold',
                     padding: '4px 8px',
                     borderRadius: '12px'
-                  }}>
+                    }}>
                     {cigar.brand}
-                  </div>
+                    </div>
                 </div>
 
                 {/* 商品信息 */}
@@ -647,54 +713,54 @@ const Shop: React.FC = () => {
                     display: '-webkit-box',
                     WebkitLineClamp: 2,
                     WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
+                  overflow: 'hidden',
                     textOverflow: 'ellipsis'
-                  }}>
+                }}>
                     {cigar.name}
                   </h3>
                   
-                  <div style={{ 
-                    fontSize: '11px', 
-                    color: '#999',
+                <div style={{ 
+                  fontSize: '11px', 
+                  color: '#999',
                     marginBottom: '8px'
-                  }}>
+                }}>
                     {cigar.origin} · {cigar.size}
-                  </div>
+      </div>
 
                   <div style={{
-                    display: 'flex',
+          display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center'
-                  }}>
-                    <div style={{ 
+        }}>
+        <div style={{ 
                       fontSize: isMobile ? '16px' : '18px', 
-                      color: '#F4AF25',
+                  color: '#F4AF25',
                       fontWeight: 'bold'
-                    }}>
-                      RM {cigar.price}
-                    </div>
+                }}>
+                  RM {cigar.price}
+              </div>
                     
-                    <Button
-                      type="primary"
-                      size="small"
-                      style={{
-                        background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                        border: 'none',
+              <Button
+                type="primary"
+                size="small"
+                style={{
+                  background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                  border: 'none',
                         borderRadius: '8px',
-                        fontSize: '11px',
-                        fontWeight: '600',
+                  fontSize: '11px',
+                  fontWeight: '600',
                         color: '#000',
                         padding: '4px 12px',
                         height: 'auto'
-                      }}
+                }}
                       onClick={(e) => {
                         e.stopPropagation()
                         addToCart(cigar.id)
                       }}
-                    >
+              >
                       +
-                    </Button>
-                  </div>
+              </Button>
+            </div>
                 </div>
                   </div>
                 ))}
