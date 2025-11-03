@@ -347,14 +347,17 @@ const Shop: React.FC = () => {
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        position: 'relative'
       }}>
         {/* 顶部搜索栏 - 固定不滚动 */}
         <div style={{ 
           flexShrink: 0,
           padding: isMobile ? '12px' : '20px',
           paddingBottom: '16px',
-          borderBottom: '2px solid rgba(255, 215, 0, 0.3)'
+          borderBottom: '2px solid rgba(255, 215, 0, 0.3)',
+          position: 'relative',
+          zIndex: 3
         }}>
           <h1 style={{ 
             fontSize: '22px', 
@@ -397,6 +400,18 @@ const Shop: React.FC = () => {
           </div>
         </div>
 
+        {/* 遮挡层 - 防止商品穿透品牌标题 */}
+        <div style={{
+          position: 'absolute',
+          top: isMobile ? '65px' : '70px',
+          left: 0,
+          right: 0,
+          height: '15px',
+          background: 'linear-gradient(to bottom, rgba(26, 26, 26, 0.95), transparent)',
+          zIndex: 2,
+          pointerEvents: 'none'
+        }} />
+
         {/* 商品网格 - 独立滚动区域 */}
         <div 
           className="shop-content-scroll"
@@ -405,8 +420,9 @@ const Shop: React.FC = () => {
             overflowY: 'auto',
             overflowX: 'hidden',
             padding: isMobile ? '16px 12px' : '20px',
-            paddingTop: isMobile ? '32px' : '36px',
-            paddingBottom: '100px'
+            paddingBottom: '100px',
+            position: 'relative',
+            zIndex: 1
           }}
         >
           {loading ? (
@@ -438,7 +454,7 @@ const Shop: React.FC = () => {
                     position: 'sticky',
                     top: 0,
                     zIndex: 5,
-                    padding: '12px 16px',
+                    padding: '8px 16px',
                     borderBottom: '1px solid rgba(255, 215, 0, 0.3)',
                     background: 'rgba(255, 215, 0, 0.95)',
                     backdropFilter: 'blur(8px)',
@@ -458,6 +474,7 @@ const Shop: React.FC = () => {
                   </div>
 
                   {/* 品牌下的商品列表 */}
+                  <div style={{ position: 'relative', zIndex: 1 }}>
                   {brandCigars.map((cigar, index) => (
                     <React.Fragment key={cigar.id}>
                       <div 
@@ -559,6 +576,7 @@ const Shop: React.FC = () => {
                       )}
                     </React.Fragment>
                   ))}
+                  </div>
                 </div>
               ))
             ) : (
