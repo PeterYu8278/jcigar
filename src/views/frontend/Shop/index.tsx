@@ -428,7 +428,7 @@ const Shop: React.FC = () => {
                     borderRadius: '16px',
                     border: '1px solid rgba(255, 255, 255, 0.1)',
                     marginBottom: '16px',
-                    overflow: 'visible',
+                    overflow: 'hidden',
                     scrollMarginTop: '20px'
                   }}
                 >
@@ -441,7 +441,9 @@ const Shop: React.FC = () => {
                     borderBottom: '1px solid rgba(255, 215, 0, 0.3)',
                     background: 'rgba(255, 215, 0, 0.95)',
                     backdropFilter: 'blur(8px)',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                    borderTopLeftRadius: '16px',
+                    borderTopRightRadius: '16px'
                   }}>
                     <h2 style={{
                       fontSize: '18px',
