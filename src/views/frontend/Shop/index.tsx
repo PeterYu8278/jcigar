@@ -1,12 +1,13 @@
 // 商品导航页面
 import React, { useEffect, useState, useRef } from 'react'
-import { Input, Slider, Button } from 'antd'
-import { SearchOutlined, ArrowLeftOutlined } from '@ant-design/icons'
+import { Input, Slider, Button, Modal, List, InputNumber } from 'antd'
+import { SearchOutlined, ArrowLeftOutlined, DeleteOutlined, ShoppingCartOutlined } from '@ant-design/icons'
 import type { Cigar, Brand } from '../../../types'
 import { getCigars, getBrands } from '../../../services/firebase/firestore'
 import { useCartStore } from '../../../store/modules'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import { getModalThemeStyles, getModalWidth } from '../../../config/modalTheme'
 
 const Shop: React.FC = () => {
   const { t } = useTranslation()
@@ -17,7 +18,8 @@ const Shop: React.FC = () => {
   const [searchKeyword, setSearchKeyword] = useState('')
   const [selectedBrand, setSelectedBrand] = useState<string>('all')
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 2000])
-  const { addToCart, toggleWishlist, wishlist, quantities } = useCartStore()
+  const [cartModalVisible, setCartModalVisible] = useState(false)
+  const { addToCart, toggleWishlist, wishlist, quantities, setQuantity, removeFromCart, clearCart } = useCartStore()
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
   const brandRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const brandNavRefs = useRef<Record<string, HTMLDivElement | null>>({})
@@ -166,6 +168,12 @@ const Shop: React.FC = () => {
     const cigar = cigars.find(c => c.id === id)
     return sum + (cigar ? cigar.price * qty : 0)
   }, 0)
+
+  // 购物车商品列表
+  const cartItems = Object.entries(quantities).map(([id, qty]) => {
+    const cigar = cigars.find(c => c.id === id)
+    return cigar ? { ...cigar, quantity: qty } : null
+  }).filter(Boolean) as (Cigar & { quantity: number })[]
 
   return (
     <div style={{ 
@@ -834,7 +842,7 @@ const Shop: React.FC = () => {
                   gap: '8px',
                   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
                 }}
-                onClick={() => navigate('/cart')}
+                onClick={() => setCartModalVisible(true)}
               >
                 <span style={{ fontSize: '18px' }}>🛒</span>
                 <span style={{ color: '#fff', fontSize: '14px', fontWeight: '600' }}>
@@ -847,14 +855,13 @@ const Shop: React.FC = () => {
             <Button
               type="primary"
               size="large"
-              onClick={() => navigate('/cart')}
+              onClick={() => setCartModalVisible(true)}
               style={{
                 background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
                 borderRadius: '16px',
                 height: 'auto',
                 width: '100%',
                 padding: '16px 20px',
-                border: 'none',
                 boxShadow: '0 8px 24px rgba(244, 175, 37, 0.5)',
                 pointerEvents: 'auto'
               }}
@@ -894,6 +901,198 @@ const Shop: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* 购物车弹窗 */}
+      <Modal
+        title={null}
+        open={cartModalVisible}
+        onCancel={() => setCartModalVisible(false)}
+        footer={null}
+        width={getModalWidth(isMobile)}
+        style={{ top: isMobile ? 0 : 20 }}
+        styles={getModalThemeStyles(isMobile, true)}
+        destroyOnClose
+        closable={false}
+      >
+        {/* 弹窗标题栏 */}
+        <div style={{
+          padding: '20px 24px',
+          borderBottom: '1px solid rgba(255, 215, 0, 0.2)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          background: 'rgba(0, 0, 0, 0.2)'
+        }}>
+          <h2 style={{
+            margin: 0,
+            fontSize: '20px',
+            fontWeight: 'bold',
+            color: '#F4AF25'
+          }}>
+            <ShoppingCartOutlined style={{ marginRight: '8px' }} />
+            购物车 ({cartItemCount} 件商品)
+          </h2>
+          <Button
+            type="text"
+            onClick={() => setCartModalVisible(false)}
+            style={{ color: '#999' }}
+          >
+            ✕
+          </Button>
+        </div>
+
+        {/* 购物车内容 */}
+        <div style={{ 
+          padding: '24px',
+          maxHeight: isMobile ? 'calc(100vh - 300px)' : '500px',
+          overflowY: 'auto'
+        }}>
+          {cartItems.length === 0 ? (
+            // 空状态
+            <div style={{
+              textAlign: 'center',
+              padding: '60px 20px',
+              color: '#999'
+            }}>
+              <div style={{ fontSize: '64px', marginBottom: '16px' }}>🛒</div>
+              <div style={{ fontSize: '16px', color: '#c0c0c0' }}>
+                购物车是空的
+              </div>
+              <div style={{ fontSize: '14px', color: '#666', marginTop: '8px' }}>
+                快去添加商品吧！
+              </div>
+            </div>
+          ) : (
+            // 商品列表
+            <List
+              dataSource={cartItems}
+              renderItem={(item) => (
+                <List.Item
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    borderRadius: '12px',
+                    marginBottom: '12px',
+                    padding: '16px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)'
+                  }}
+                >
+                  <div style={{ display: 'flex', width: '100%', gap: '16px' }}>
+                    {/* 商品图片 */}
+                    <div
+                      style={{
+                        width: '80px',
+                        height: '80px',
+                        borderRadius: '8px',
+                        backgroundImage: `url(${item.images?.[0] || ''})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundColor: '#333',
+                        flexShrink: 0
+                      }}
+                    />
+
+                    {/* 商品信息 */}
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      <div>
+                        <h4 style={{ margin: '0 0 4px 0', color: '#fff', fontSize: '15px' }}>
+                          {item.name}
+                        </h4>
+                        <div style={{ fontSize: '12px', color: '#999' }}>
+                          {item.brand} · {item.size}
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        {/* 数量调整 */}
+                        <InputNumber
+                          min={1}
+                          value={item.quantity}
+                          onChange={(value) => setQuantity(item.id, value || 1)}
+                          style={{ width: '100px' }}
+                        />
+
+                        {/* 价格和删除 */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                          <div style={{ color: '#F4AF25', fontSize: '16px', fontWeight: 'bold' }}>
+                            RM {(item.price * item.quantity).toFixed(2)}
+                          </div>
+                          <Button
+                            type="text"
+                            danger
+                            icon={<DeleteOutlined />}
+                            onClick={() => removeFromCart(item.id)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </List.Item>
+              )}
+            />
+          )}
+        </div>
+
+        {/* 底部操作栏 */}
+        {cartItems.length > 0 && (
+          <div style={{
+            padding: '20px 24px',
+            borderTop: '1px solid rgba(255, 215, 0, 0.2)',
+            background: 'rgba(0, 0, 0, 0.2)'
+          }}>
+            {/* 总计 */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '16px'
+            }}>
+              <span style={{ fontSize: '16px', color: '#c0c0c0' }}>总计：</span>
+              <span style={{ fontSize: '24px', color: '#F4AF25', fontWeight: 'bold' }}>
+                RM {cartTotal.toFixed(2)}
+              </span>
+            </div>
+
+            {/* 操作按钮 */}
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <Button
+                danger
+                onClick={() => {
+                  Modal.confirm({
+                    title: '确认清空购物车？',
+                    content: '此操作不可恢复',
+                    okText: '确认',
+                    cancelText: '取消',
+                    onOk: () => {
+                      clearCart()
+                      setCartModalVisible(false)
+                    }
+                  })
+                }}
+                style={{ flex: 1 }}
+              >
+                清空购物车
+              </Button>
+              <Button
+                type="primary"
+                size="large"
+                onClick={() => {
+                  setCartModalVisible(false)
+                  // TODO: 跳转到结账页面
+                }}
+                style={{
+                  flex: 2,
+                  background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
+                  border: 'none',
+                  color: '#000',
+                  fontWeight: 'bold'
+                }}
+              >
+                去结算
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }
