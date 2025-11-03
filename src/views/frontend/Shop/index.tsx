@@ -56,6 +56,17 @@ const Shop: React.FC = () => {
     return matchesSearch && matchesBrand && matchesPrice
   })
 
+  // 按产地分组品牌
+  const cubanBrands = brands.filter(brand => 
+    brand.status === 'active' && 
+    (brand.country?.toLowerCase() === 'cuba' || brand.country?.toLowerCase() === 'cuban')
+  )
+  const newWorldBrands = brands.filter(brand => 
+    brand.status === 'active' && 
+    brand.country?.toLowerCase() !== 'cuba' && 
+    brand.country?.toLowerCase() !== 'cuban'
+  )
+
   // 按品牌分组商品（手机端使用）
   const groupedCigars = filteredCigars.reduce((groups, cigar) => {
     const brand = cigar.brand || '其他'
@@ -130,10 +141,33 @@ const Shop: React.FC = () => {
           </div>
         )}
 
-        {/* 品牌列表 */}
-        {brands
-          .filter(brand => brand.status === 'active')
-          .map((brand) => (
+        {/* Cuban 品牌区 */}
+        {cubanBrands.length > 0 && (
+          <div>
+            {/* Cuban 标题 - 粘性定位 */}
+            <div style={{
+              position: 'sticky',
+              top: 0,
+              zIndex: 10,
+              padding: isMobile ? '12px 8px' : '16px 12px',
+              background: 'rgba(139, 69, 19, 0.95)',
+              backdropFilter: 'blur(8px)',
+              borderLeft: '3px solid #8B4513',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+            }}>
+              <div style={{
+                fontSize: isMobile ? '12px' : '13px',
+                fontWeight: 'bold',
+                color: '#F4AF25',
+                textAlign: 'center',
+                letterSpacing: '1px'
+              }}>
+                CUBAN
+              </div>
+            </div>
+
+            {/* Cuban 品牌列表 */}
+            {cubanBrands.map((brand) => (
             <div
               key={brand.id}
               onClick={() => {
@@ -206,6 +240,106 @@ const Shop: React.FC = () => {
               </div>
             </div>
           ))}
+          </div>
+        )}
+
+        {/* 分割线 */}
+        {cubanBrands.length > 0 && newWorldBrands.length > 0 && (
+          <div style={{
+            height: '1px',
+            background: 'linear-gradient(90deg, transparent 0%, rgba(244, 175, 37, 0.3) 50%, transparent 100%)',
+            margin: isMobile ? '8px 0' : '12px 0'
+          }} />
+        )}
+
+        {/* New World 品牌区 */}
+        {newWorldBrands.length > 0 && (
+          <div>
+            {/* New World 标题 - 粘性定位 */}
+            <div style={{
+              position: 'sticky',
+              top: 0,
+              zIndex: 10,
+              padding: isMobile ? '12px 8px' : '16px 12px',
+              background: 'rgba(34, 139, 34, 0.95)',
+              backdropFilter: 'blur(8px)',
+              borderLeft: '3px solid #228B22',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+            }}>
+              <div style={{
+                fontSize: isMobile ? '12px' : '13px',
+                fontWeight: 'bold',
+                color: '#F4AF25',
+                textAlign: 'center',
+                letterSpacing: '1px'
+              }}>
+                NEW WORLD
+              </div>
+            </div>
+
+            {/* New World 品牌列表 */}
+            {newWorldBrands.map((brand) => (
+            <div
+              key={brand.id}
+              onClick={() => {
+                if (isMobile) {
+                  scrollToBrand(brand.name)
+                } else {
+                  setSelectedBrand(brand.name)
+                }
+              }}
+              style={{
+                padding: isMobile ? '12px 8px' : '16px 12px',
+                cursor: 'pointer',
+                borderLeft: selectedBrand === brand.name ? '3px solid #F4AF25' : '3px solid transparent',
+                background: selectedBrand === brand.name ? 'rgba(244, 175, 37, 0.1)' : 'transparent',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                if (selectedBrand !== brand.name) {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (selectedBrand !== brand.name) {
+                  e.currentTarget.style.background = 'transparent'
+                }
+              }}
+            >
+              <div style={{ textAlign: 'center' }}>
+                <div style={{
+                  width: isMobile ? '48px' : '64px',
+                  height: isMobile ? '48px' : '64px',
+                  margin: '0 auto 8px',
+                  borderRadius: '50%',
+                  backgroundImage: brand.logo ? `url(${brand.logo})` : 'none',
+                  backgroundColor: brand.logo ? 'transparent' : 'rgba(255, 255, 255, 0.05)',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: isMobile ? '18px' : '24px',
+                  fontWeight: 'bold',
+                  color: brand.logo ? 'transparent' : '#F4AF25',
+                  border: '2px solid rgba(244, 175, 37, 0.3)'
+                }}>
+                  {!brand.logo && brand.name.charAt(0)}
+                </div>
+                <div style={{
+                  fontSize: isMobile ? '11px' : '12px',
+                  fontWeight: 600,
+                  color: selectedBrand === brand.name ? '#F4AF25' : '#c0c0c0',
+                  textAlign: 'center',
+                  lineHeight: 1.2
+                }}>
+                  {brand.name}
+                </div>
+              </div>
+            </div>
+          ))}
+          </div>
+        )}
       </div>
 
       {/* 右侧商品展示区域 */}
@@ -298,17 +432,23 @@ const Shop: React.FC = () => {
                     scrollMarginTop: '20px'
                   }}
                 >
-                  {/* 品牌标题 */}
+                  {/* 品牌标题 - 粘性定位 */}
                   <div style={{
-                    padding: '4px 16px',
-                    borderBottom: '1px solid rgba(255, 215, 0, 0.2)',
-                    background: 'rgba(255, 215, 0, 0.05)'
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 5,
+                    padding: '12px 16px',
+                    borderBottom: '1px solid rgba(255, 215, 0, 0.3)',
+                    background: 'rgba(255, 215, 0, 0.95)',
+                    backdropFilter: 'blur(8px)',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
                   }}>
                     <h2 style={{
                       fontSize: '18px',
                       fontWeight: 'bold',
-                      color: '#F4AF25',
-                      margin: 0
+                      color: '#000',
+                      margin: 0,
+                      textShadow: '0 1px 2px rgba(255, 255, 255, 0.3)'
                     }}>
                       {brandName}
                     </h2>
@@ -400,7 +540,7 @@ const Shop: React.FC = () => {
                                 addToCart(cigar.id)
                               }}
                             >
-                              加入购物车
+                              +
                             </Button>
                           </div>
                         </div>
