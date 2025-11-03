@@ -643,13 +643,12 @@ const Shop: React.FC = () => {
                               }}
                               style={{
                                 padding: '6px 20px',
-                                borderRadius: 20,
+                                borderRadius: 12,
                                 background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
                                 color: '#221c10',
                                 fontWeight: 600,
                                 cursor: 'pointer',
                                 transition: 'all 0.2s ease',
-                                border: 'none',
                                 fontSize: '12px'
                               }}
                             >
