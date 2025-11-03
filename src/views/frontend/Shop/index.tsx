@@ -353,7 +353,7 @@ const Shop: React.FC = () => {
         <div style={{ 
           flexShrink: 0,
           padding: isMobile ? '12px' : '20px',
-          paddingBottom: '16px',
+          paddingBottom: '32px',
           borderBottom: '2px solid rgba(255, 215, 0, 0.3)'
         }}>
           <h1 style={{ 
@@ -428,7 +428,7 @@ const Shop: React.FC = () => {
                     borderRadius: '16px',
                     border: '1px solid rgba(255, 255, 255, 0.1)',
                     marginBottom: '16px',
-                    overflow: 'hidden',
+                    overflow: 'visible',
                     scrollMarginTop: '20px'
                   }}
                 >
