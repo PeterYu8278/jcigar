@@ -93,7 +93,7 @@ const AppContent: React.FC = () => {
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
                 backdropFilter: 'blur(10px)',
                 position: 'relative',
-                overflow: 'hidden',
+                overflow: needsPadding ? 'auto' : 'hidden',
                 paddingBottom: needsPadding ? '90px' : '0px'
               }}
             >
