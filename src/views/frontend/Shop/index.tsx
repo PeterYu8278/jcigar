@@ -845,45 +845,50 @@ const Shop: React.FC = () => {
           ) : (
             // 有商品状态：显示完整购物车底栏
             <Button
+              type="primary"
+              size="large"
+              onClick={() => navigate('/cart')}
               style={{
                 background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
-                border: 'none',
                 borderRadius: '16px',
-                padding: '16px 20px',
                 height: 'auto',
                 width: '100%',
+                padding: '16px 20px',
+                border: 'none',
+                boxShadow: '0 8px 24px rgba(244, 175, 37, 0.5)',
+                pointerEvents: 'auto'
+              }}
+            >
+              <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                boxShadow: '0 8px 24px rgba(244, 175, 37, 0.5)',
-                cursor: 'pointer',
-                pointerEvents: 'auto'
-              }}
-              onClick={() => navigate('/cart')}
-            >
-              {/* 左侧：购物车图标和数量 */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px'
+                width: '100%'
               }}>
-                <span style={{ fontSize: '24px' }}>🛒</span>
-                <span style={{ 
-                  color: '#000', 
-                  fontSize: '16px',
-                  fontWeight: '600'
+                {/* 左侧：购物车图标和数量 */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px'
                 }}>
-                  {cartItemCount} {cartItemCount === 1 ? 'item' : 'items'}
-                </span>
-              </div>
+                  <span style={{ fontSize: '24px' }}>🛒</span>
+                  <span style={{ 
+                    color: '#000', 
+                    fontSize: '16px',
+                    fontWeight: '600'
+                  }}>
+                    {cartItemCount} {cartItemCount === 1 ? 'item' : 'items'}
+                  </span>
+                </div>
 
-              {/* 右侧：总价 */}
-              <div style={{
-                color: '#000',
-                fontSize: '18px',
-                fontWeight: 'bold'
-              }}>
-                RM {cartTotal.toFixed(2)}
+                {/* 右侧：总价 */}
+                <div style={{
+                  color: '#000',
+                  fontSize: '18px',
+                  fontWeight: 'bold'
+                }}>
+                  RM {cartTotal.toFixed(2)}
+                </div>
               </div>
             </Button>
           )}
