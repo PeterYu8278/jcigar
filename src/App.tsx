@@ -84,7 +84,7 @@ const AppContent: React.FC = () => {
                 backdropFilter: 'blur(10px)',
                 position: 'relative',
                 overflow: 'hidden',
-                paddingBottom: needsPadding ? '90px' : '0px' // 为底部导航留出空间
+                paddingBottom: '90px' // 始终为底部导航留出空间
               }}
             >
               {/* 内容区域背景装饰 */}
