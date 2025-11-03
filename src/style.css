@@ -123,22 +123,19 @@ a:hover {
   margin: 0;      /* 确保没有外边距 */
 }
 
-/* 商城页面左侧品牌导航栏滚动条样式 */
-.shop-sidebar::-webkit-scrollbar {
-  width: 4px;
+/* 商城页面 - 隐藏滚动条 */
+.shop-sidebar::-webkit-scrollbar,
+.shop-content-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
-.shop-sidebar::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.shop-sidebar::-webkit-scrollbar-thumb {
-  background: rgba(244, 175, 37, 0.3);
-  border-radius: 4px;
-}
-
-.shop-sidebar::-webkit-scrollbar-thumb:hover {
-  background: rgba(244, 175, 37, 0.5);
+/* Firefox 隐藏滚动条 */
+.shop-sidebar,
+.shop-content-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .cigar-button-primary {
