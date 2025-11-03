@@ -102,11 +102,12 @@ const Shop: React.FC = () => {
     return matchesSearch && matchesBrand && matchesPrice
   })
 
-  // 按产地分组品牌并排序 A-Z
+  // 按产地分组品牌并排序 A-Z（仅显示有商品的品牌）
   const cubanBrands = brands
     .filter(brand => 
       brand.status === 'active' && 
-      (brand.country?.toLowerCase() === 'cuba' || brand.country?.toLowerCase() === 'cuban')
+      (brand.country?.toLowerCase() === 'cuba' || brand.country?.toLowerCase() === 'cuban') &&
+      cigars.some(cigar => cigar.brand === brand.name)  // 确保该品牌有商品
     )
     .sort((a, b) => a.name.localeCompare(b.name))
   
@@ -114,7 +115,8 @@ const Shop: React.FC = () => {
     .filter(brand => 
       brand.status === 'active' && 
       brand.country?.toLowerCase() !== 'cuba' && 
-      brand.country?.toLowerCase() !== 'cuban'
+      brand.country?.toLowerCase() !== 'cuban' &&
+      cigars.some(cigar => cigar.brand === brand.name)  // 确保该品牌有商品
     )
     .sort((a, b) => a.name.localeCompare(b.name))
 
