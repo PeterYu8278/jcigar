@@ -161,10 +161,10 @@ const Shop: React.FC = () => {
           overflowY: 'auto',
           overflowX: 'hidden',
           paddingTop: '16px',
-          paddingBottom: '80px',
+          paddingBottom: isMobile ? '16px' : '80px',
           position: 'sticky',
           top: 0,
-          height: '100vh'
+          height: isMobile ? 'calc(100vh - 134px)' : '100vh'  // 手机端扣除 Header(64px) + BottomNav(70px)
         }}
       >
         {/* 全部分类 - 仅电脑端显示 */}
@@ -420,7 +420,8 @@ const Shop: React.FC = () => {
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        height: isMobile ? 'calc(100vh - 134px)' : '100vh'  // 手机端扣除 Header(64px) + BottomNav(70px)
       }}>
         {/* 顶部搜索栏 - 固定不滚动 */}
         <div style={{ 
