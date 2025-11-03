@@ -428,7 +428,7 @@ const Shop: React.FC = () => {
                     borderRadius: '16px',
                     border: '1px solid rgba(255, 255, 255, 0.1)',
                     marginBottom: '16px',
-                    overflow: 'hidden',
+                    overflow: 'visible',
                     scrollMarginTop: '20px'
                   }}
                 >
