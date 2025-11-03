@@ -844,15 +844,18 @@ const Shop: React.FC = () => {
             </div>
           ) : (
             // 有商品状态：显示完整购物车底栏
-            <div
+            <Button
               style={{
-                background: 'linear-gradient(135deg, #4A90E2 0%, #357ABD 100%)',
+                background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
+                border: 'none',
                 borderRadius: '16px',
                 padding: '16px 20px',
+                height: 'auto',
+                width: '100%',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                boxShadow: '0 8px 24px rgba(74, 144, 226, 0.4)',
+                boxShadow: '0 8px 24px rgba(244, 175, 37, 0.5)',
                 cursor: 'pointer',
                 pointerEvents: 'auto'
               }}
@@ -866,7 +869,7 @@ const Shop: React.FC = () => {
               }}>
                 <span style={{ fontSize: '24px' }}>🛒</span>
                 <span style={{ 
-                  color: '#fff', 
+                  color: '#000', 
                   fontSize: '16px',
                   fontWeight: '600'
                 }}>
@@ -876,13 +879,13 @@ const Shop: React.FC = () => {
 
               {/* 右侧：总价 */}
               <div style={{
-                color: '#fff',
+                color: '#000',
                 fontSize: '18px',
                 fontWeight: 'bold'
               }}>
                 RM {cartTotal.toFixed(2)}
               </div>
-            </div>
+            </Button>
           )}
         </div>
       )}
