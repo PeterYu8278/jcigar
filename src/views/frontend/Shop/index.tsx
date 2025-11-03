@@ -429,18 +429,6 @@ const Shop: React.FC = () => {
           paddingBottom: '16px',
           borderBottom: '2px solid rgba(255, 215, 0, 0.3)'
         }}>
-        <h1 style={{ 
-          fontSize: '22px', 
-          fontWeight: 800, 
-          background: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
-          WebkitBackgroundClip: 'text', 
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-            margin: '0 0 16px 0'
-        }}>
-            {selectedBrand === 'all' ? '商品导航' : selectedBrand}
-        </h1>
-        
         <div style={{ position: 'relative' }}>
           <div style={{
             position: 'absolute',
