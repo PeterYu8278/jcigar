@@ -844,7 +844,7 @@ const Shop: React.FC = () => {
                 }}
                 onClick={() => setCartModalVisible(true)}
               >
-                <span style={{ fontSize: '18px' }}>🛒</span>
+                <ShoppingCartOutlined style={{ fontSize: '18px', color: '#fff' }} />
                 <span style={{ color: '#fff', fontSize: '14px', fontWeight: '600' }}>
                   0 item
                 </span>
@@ -852,52 +852,41 @@ const Shop: React.FC = () => {
             </div>
           ) : (
             // 有商品状态：显示完整购物车底栏
-            <Button
-              type="primary"
-              size="large"
+            <button
               onClick={() => setCartModalVisible(true)}
               style={{
-                background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
-                borderRadius: '16px',
-                height: 'auto',
-                width: '100%',
                 padding: '16px 20px',
+                borderRadius: 16,
+                background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                color: '#221c10',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                width: '100%',
                 boxShadow: '0 8px 24px rgba(244, 175, 37, 0.5)',
-                pointerEvents: 'auto'
-              }}
-            >
-              <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                width: '100%'
+                pointerEvents: 'auto'
+              }}
+            >
+              {/* 左侧：购物车图标和数量 */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
               }}>
-                {/* 左侧：购物车图标和数量 */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px'
-                }}>
-                  <span style={{ fontSize: '24px' }}>🛒</span>
-                  <span style={{ 
-                    color: '#000', 
-                    fontSize: '16px',
-                    fontWeight: '600'
-                  }}>
-                    {cartItemCount} {cartItemCount === 1 ? 'item' : 'items'}
-                  </span>
-                </div>
-
-                {/* 右侧：总价 */}
-                <div style={{
-                  color: '#000',
-                  fontSize: '18px',
-                  fontWeight: 'bold'
-                }}>
-                  RM {cartTotal.toFixed(2)}
-                </div>
+                <ShoppingCartOutlined style={{ fontSize: '24px' }} />
+                <span style={{ fontSize: '16px', fontWeight: '600' }}>
+                  {cartItemCount} {cartItemCount === 1 ? 'item' : 'items'}
+                </span>
               </div>
-            </Button>
+
+              {/* 右侧：总价 */}
+              <div style={{ fontSize: '18px', fontWeight: 'bold' }}>
+                RM {cartTotal.toFixed(2)}
+              </div>
+            </button>
           )}
         </div>
       )}
