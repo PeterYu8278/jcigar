@@ -59,26 +59,41 @@ const CompleteProfile: React.FC = () => {
 
     setLoading(true)
     try {
+      console.log('🔵 [CompleteProfile] 开始提交，输入值:', values)
+      
       // 1. 标准化手机号
       const normalizedPhone = normalizePhoneNumber(values.phone)
+      console.log('🔵 [CompleteProfile] 标准化后的手机号:', normalizedPhone)
+      
       if (!normalizedPhone) {
+        console.error('❌ [CompleteProfile] 手机号格式无效')
         message.error('手机号格式无效（需10-15位数字）')
         setLoading(false)
         return
       }
 
       // 2. 检查手机号唯一性
+      console.log('🔍 [CompleteProfile] 开始检查手机号唯一性...')
       const phoneQuery = query(
         collection(db, 'users'), 
         where('profile.phone', '==', normalizedPhone),
         limit(1)
       )
       const phoneSnap = await getDocs(phoneQuery)
+      console.log('🔍 [CompleteProfile] 查询结果:', {
+        empty: phoneSnap.empty,
+        size: phoneSnap.size,
+        docs: phoneSnap.docs.map(doc => ({ id: doc.id, phone: doc.data().profile?.phone }))
+      })
+      
       if (!phoneSnap.empty) {
+        console.error('❌ [CompleteProfile] 手机号已被使用！')
         message.error('该手机号已被其他用户使用')
         setLoading(false)
         return
       }
+      
+      console.log('✅ [CompleteProfile] 手机号可用，继续注册...')
 
       // 3. 调用完善用户信息的服务函数
       const { completeGoogleUserProfile } = await import('../../services/firebase/auth')
@@ -90,15 +105,18 @@ const CompleteProfile: React.FC = () => {
       )
 
       if (result.success) {
+        console.log('✅ [CompleteProfile] 注册成功！')
         message.success('账户信息已完善，欢迎加入 Gentleman Club！')
         navigate('/', { replace: true })
       } else {
-        message.error(result.error?.message || '信息保存失败，请重试')
+        console.error('❌ [CompleteProfile] 注册失败:', (result as any).error)
+        message.error((result as any).error?.message || '信息保存失败，请重试')
       }
     } catch (error) {
-      console.error('Complete profile error:', error)
+      console.error('💥 [CompleteProfile] 捕获异常:', error)
       message.error('信息保存失败，请重试')
     } finally {
+      console.log('🔵 [CompleteProfile] 提交流程结束')
       setLoading(false)
     }
   }
