@@ -154,34 +154,41 @@ export const loginWithGoogle = async () => {
     provider.addScope('profile');
     console.log('🟢 [auth.ts] OAuth scopes 已添加');
     
+    // 检测是否为移动设备
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     // 检测是否为开发环境
     const isDev = window.location.hostname === 'localhost' || 
-                  window.location.hostname === '127.0.0.1';
+                  window.location.hostname === '127.0.0.1' ||
+                  window.location.hostname.includes('192.168.');
+    
+    console.log('📱 [auth.ts] 设备检测:', isMobile ? '移动设备' : '桌面设备');
     console.log('🔧 [auth.ts] 环境检测:', isDev ? '开发环境' : '生产环境');
     
     let credential;
     
-    // 所有设备都尝试使用弹窗方式（方案 B）
-    console.log('🪟 [auth.ts] 尝试使用弹窗方式登录');
-    try {
-      console.log('🪟 [auth.ts] 调用 signInWithPopup...');
-      credential = await signInWithPopup(auth, provider);
-      console.log('✅ [auth.ts] signInWithPopup 成功, credential:', credential);
-    } catch (popupError: any) {
-      console.error('❌ [auth.ts] signInWithPopup 失败:', popupError);
-      console.error('❌ [auth.ts] 错误代码:', popupError.code);
-      console.error('❌ [auth.ts] 错误信息:', popupError.message);
-      
-      // 开发环境：不使用 redirect（避免 404 错误）
-      if (isDev) {
-        console.error('🚫 [auth.ts] 开发环境 popup 失败，无法降级到 redirect');
-        throw new Error('Google 登录失败。请在桌面浏览器中测试，或部署到生产环境后使用。');
-      }
-      
-      // 生产环境：降级到 redirect
-      console.log('🔄 [auth.ts] 生产环境 popup 失败，降级到重定向方式');
+    if (isMobile && !isDev) {
+      // 移动端 + 生产环境：使用 redirect（最可靠）
+      console.log('📱 [auth.ts] 移动设备（生产环境），使用重定向方式');
       await signInWithRedirect(auth, provider);
+      console.log('🔄 [auth.ts] signInWithRedirect 调用成功');
       return { success: true, isRedirecting: true } as any;
+    } else {
+      // 桌面端 或 移动端开发环境：使用 popup
+      console.log('🖥️ [auth.ts] 使用弹窗方式登录');
+      try {
+        console.log('🪟 [auth.ts] 调用 signInWithPopup...');
+        credential = await signInWithPopup(auth, provider);
+        console.log('✅ [auth.ts] signInWithPopup 成功, credential:', credential);
+      } catch (popupError: any) {
+        console.error('❌ [auth.ts] signInWithPopup 失败:', popupError);
+        console.error('❌ [auth.ts] 错误代码:', popupError.code);
+        console.error('❌ [auth.ts] 错误信息:', popupError.message);
+        
+        // 任何 popup 失败都降级到 redirect（扩大捕获范围）
+        console.log('🔄 [auth.ts] Popup 失败，自动降级到重定向方式');
+        await signInWithRedirect(auth, provider);
+        return { success: true, isRedirecting: true } as any;
+      }
     }
     
     const user = credential.user;
