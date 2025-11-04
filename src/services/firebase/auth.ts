@@ -6,7 +6,9 @@ import {
   onAuthStateChanged,
   updateProfile,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult
 } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { doc, setDoc, getDoc, collection, getDocs, query, where, limit } from 'firebase/firestore';
@@ -141,7 +143,7 @@ export const loginWithEmailOrPhone = async (identifier: string, password: string
 };
 
 // 使用 Google 登录（新用户需要完善信息）
-export const loginWithGoogle = async () => {
+export const loginWithGoogle = async (useRedirect = false) => {
   try {
     const provider = new GoogleAuthProvider();
     
@@ -149,7 +151,27 @@ export const loginWithGoogle = async () => {
     provider.addScope('email');
     provider.addScope('profile');
     
-    const credential = await signInWithPopup(auth, provider);
+    let credential;
+    
+    if (useRedirect) {
+      // 使用重定向方式（更可靠，但会刷新页面）
+      await signInWithRedirect(auth, provider);
+      return { success: true, isRedirecting: true } as any;
+    } else {
+      // 尝试使用弹窗方式
+      try {
+        credential = await signInWithPopup(auth, provider);
+      } catch (popupError: any) {
+        // 如果弹窗被阻止，自动切换到重定向方式
+        if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/popup-closed-by-user') {
+          console.log('Popup blocked, using redirect instead');
+          await signInWithRedirect(auth, provider);
+          return { success: true, isRedirecting: true } as any;
+        }
+        throw popupError;
+      }
+    }
+    
     const user = credential.user;
 
     // 检查 Firestore 中是否已存在用户文档
@@ -187,6 +209,54 @@ export const loginWithGoogle = async () => {
     return { success: true, user, needsProfile };
   } catch (error) {
     const err = error as any
+    return { success: false, error: err as Error } as { success: false; error: Error };
+  }
+};
+
+// 处理 Google 重定向登录结果
+export const handleGoogleRedirectResult = async () => {
+  try {
+    const result = await getRedirectResult(auth);
+    if (!result) {
+      return { success: false, noResult: true } as any;
+    }
+    
+    const user = result.user;
+
+    // 检查 Firestore 中是否已存在用户文档
+    const ref = doc(db, 'users', user.uid);
+    const snap = await getDoc(ref);
+    
+    if (!snap.exists()) {
+      // 新用户：创建临时用户文档
+      const tempUserData: Omit<User, 'id'> = {
+        email: user.email || '',
+        displayName: user.displayName || '未命名用户',
+        role: 'member',
+        profile: {
+          phone: undefined,
+          preferences: { language: 'zh', notifications: true },
+        },
+        membership: {
+          level: 'bronze',
+          joinDate: new Date(),
+          lastActive: new Date(),
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      await setDoc(ref, tempUserData);
+      
+      return { success: true, user, needsProfile: true };
+    }
+
+    // 已存在用户：检查是否已完善信息
+    const userData = snap.data() as User;
+    const needsProfile = !userData.profile?.phone;
+    
+    return { success: true, user, needsProfile };
+  } catch (error) {
+    const err = error as any;
     return { success: false, error: err as Error } as { success: false; error: Error };
   }
 };
