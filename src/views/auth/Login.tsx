@@ -92,12 +92,6 @@ const Login: React.FC = () => {
   }
 
   const onGoogle = async () => {
-    // 防止在处理重定向结果时再次点击
-    if (hasCheckedRedirect.current) {
-      console.log('⚠️ [Login.tsx] 正在处理重定向结果，请稍候...');
-      return;
-    }
-    
     console.log('🔵 [Login.tsx] onGoogle 开始执行')
     setLoading(true)
     try {

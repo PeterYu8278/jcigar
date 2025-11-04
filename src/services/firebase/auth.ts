@@ -274,22 +274,68 @@ export const loginWithGoogle = async () => {
 // 处理 Google 重定向登录结果
 export const handleGoogleRedirectResult = async () => {
   console.log('🔄 [auth.ts] handleGoogleRedirectResult 开始执行');
+  console.log('🔄 [auth.ts] 当前 URL:', window.location.href);
+  console.log('🔄 [auth.ts] Firebase Auth Domain:', auth.app.options.authDomain);
   
   // 检查是否有 redirect 标记
   const hasPending = sessionStorage.getItem('googleRedirectPending');
   console.log('🔐 [auth.ts] redirect 标记状态:', hasPending);
   
+  // 检查当前用户状态
+  console.log('👤 [auth.ts] 当前登录用户:', auth.currentUser);
+  
   try {
     console.log('🔄 [auth.ts] 调用 getRedirectResult...');
     const result = await getRedirectResult(auth);
     console.log('🔄 [auth.ts] getRedirectResult 返回:', result);
+    console.log('🔄 [auth.ts] getRedirectResult 类型:', typeof result);
+    console.log('🔄 [auth.ts] getRedirectResult 是否为 null:', result === null);
     
     // 清除标记（无论是否有结果）
     sessionStorage.removeItem('googleRedirectPending');
     console.log('🔐 [auth.ts] 已清除 redirect 标记');
     
     if (!result) {
-      console.log('⚪ [auth.ts] 无重定向结果');
+      console.log('⚪ [auth.ts] getRedirectResult 返回 null');
+      
+      // 备用方案：检查是否有标记 + 用户已登录
+      if (hasPending && auth.currentUser) {
+        console.log('🔄 [auth.ts] 检测到标记且用户已登录，使用备用方案');
+        const user = auth.currentUser;
+        console.log('👤 [auth.ts] 当前用户:', { uid: user.uid, email: user.email, displayName: user.displayName });
+        
+        // 检查 Firestore 用户文档
+        const ref = doc(db, 'users', user.uid);
+        const snap = await getDoc(ref);
+        
+        if (!snap.exists()) {
+          console.log('📝 [auth.ts] 备用方案：创建新用户');
+          const tempUserData: Omit<User, 'id'> = {
+            email: user.email || '',
+            displayName: user.displayName || '未命名用户',
+            role: 'member',
+            profile: {
+              preferences: { language: 'zh', notifications: true },
+            },
+            membership: {
+              level: 'bronze',
+              joinDate: new Date(),
+              lastActive: new Date(),
+            },
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+          await setDoc(ref, tempUserData);
+          return { success: true, user, needsProfile: true };
+        }
+        
+        const userData = snap.data() as User;
+        const needsProfile = !userData.profile?.phone;
+        console.log('📋 [auth.ts] 备用方案：用户信息:', { needsProfile });
+        return { success: true, user, needsProfile };
+      }
+      
+      console.log('⚪ [auth.ts] 无重定向结果且无用户登录');
       return { success: false, noResult: true } as any;
     }
     
