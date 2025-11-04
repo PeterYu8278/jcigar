@@ -182,19 +182,24 @@ export const loginWithGoogle = async () => {
     let credential;
     
     if (isMobile) {
-      // 移动端（开发 + 生产环境）：始终使用 redirect
-      console.log('📱 [auth.ts] 移动设备，使用重定向方式');
-      if (isDev) {
-        console.log('⚠️ [auth.ts] 开发环境的 redirect 可能遇到 init.json 404，这是正常的');
+      // 移动端：尝试 popup，失败降级到 redirect
+      console.log('📱 [auth.ts] 移动设备，优先尝试弹窗方式');
+      
+      try {
+        console.log('🪟 [auth.ts] 移动端尝试 signInWithPopup...');
+        credential = await signInWithPopup(auth, provider);
+        console.log('✅ [auth.ts] 移动端 signInWithPopup 成功, credential:', credential);
+      } catch (mobilePopupError: any) {
+        console.error('❌ [auth.ts] 移动端 signInWithPopup 失败:', mobilePopupError);
+        console.error('❌ [auth.ts] 错误代码:', mobilePopupError.code);
+        console.error('❌ [auth.ts] 错误信息:', mobilePopupError.message);
+        
+        // Popup 失败，降级到 redirect
+        console.log('🔄 [auth.ts] 移动端降级到重定向方式');
+        sessionStorage.setItem('googleRedirectPending', 'true');
+        await signInWithRedirect(auth, provider);
+        return { success: true, isRedirecting: true } as any;
       }
-      
-      // 设置标记，防止重定向循环
-      sessionStorage.setItem('googleRedirectPending', 'true');
-      console.log('🔐 [auth.ts] 设置 redirect 标记');
-      
-      await signInWithRedirect(auth, provider);
-      console.log('🔄 [auth.ts] signInWithRedirect 调用成功');
-      return { success: true, isRedirecting: true } as any;
     } else {
       // 桌面端：使用 popup
       console.log('🖥️ [auth.ts] 桌面设备，使用弹窗方式登录');
