@@ -121,7 +121,7 @@ const Login: React.FC = () => {
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
-      minHeight: '100vh',
+      height: '100%',
       position: 'relative',
       overflow: 'hidden'
     }}>
