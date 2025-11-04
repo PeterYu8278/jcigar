@@ -6,8 +6,8 @@
 // 默认国家代码（马来西亚）
 const DEFAULT_COUNTRY_CODE = '60'
 
-// E.164 格式验证正则表达式
-const E164_PATTERN = /^\+\d{7,15}$/
+// E.164 格式验证正则表达式（至少10位数字）
+const E164_PATTERN = /^\+\d{10,15}$/
 
 /**
  * 标准化手机号为 E.164 格式
@@ -87,9 +87,10 @@ export function formatPhoneDisplay(phone: string): string {
  * 
  * @example
  * identifyInputType("admin@example.com")  → 'email'
+ * identifyInputType("user123")            → 'email' (包含字母)
  * identifyInputType("01157288278")        → 'phone'
  * identifyInputType("+601157288278")      → 'phone'
- * identifyInputType("abc123")             → 'unknown'
+ * identifyInputType("1234567890")         → 'phone'
  */
 export function identifyInputType(input: string): 'email' | 'phone' | 'unknown' {
   if (!input) return 'unknown'
@@ -101,9 +102,14 @@ export function identifyInputType(input: string): 'email' | 'phone' | 'unknown' 
     return 'email'
   }
   
-  // 清理后符合手机号格式
+  // 包含字母 → 邮箱（优先识别为邮箱）
+  if (/[a-zA-Z]/.test(trimmed)) {
+    return 'email'
+  }
+  
+  // 清理后符合手机号格式（至少10位数字）
   const cleaned = trimmed.replace(/[^\d+]/g, '')
-  if (/^\+?\d{7,15}$/.test(cleaned)) {
+  if (/^\+?\d{10,15}$/.test(cleaned)) {
     return 'phone'
   }
   
@@ -111,11 +117,28 @@ export function identifyInputType(input: string): 'email' | 'phone' | 'unknown' 
 }
 
 /**
- * 验证邮箱格式（基础验证）
+ * 验证邮箱格式（必须包含 @ 和 .，且 @ 和 . 之间必须有英文字母）
  */
 export function isValidEmail(email: string): boolean {
-  // 基础邮箱格式验证
-  return /.+@.+\..+/.test(email)
+  if (!email) return false
+  
+  // 基本检查：必须包含 @ 和 .
+  if (!email.includes('@') || !email.includes('.')) {
+    return false
+  }
+  
+  // . 必须在 @ 之后
+  if (email.indexOf('@') >= email.lastIndexOf('.')) {
+    return false
+  }
+  
+  // @ 和 . 之间必须有至少一个英文字母
+  // 正则: @ 后面，第一个 . 前面，必须包含英文字母
+  const atIndex = email.indexOf('@')
+  const dotIndex = email.indexOf('.', atIndex)
+  const betweenAtAndDot = email.substring(atIndex + 1, dotIndex)
+  
+  return /[a-zA-Z]/.test(betweenAtAndDot)
 }
 
 /**

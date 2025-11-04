@@ -6,7 +6,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { loginWithEmailOrPhone, loginWithGoogle } from '../../services/firebase/auth'
 import { useAuthStore } from '../../store/modules/auth'
 import { useTranslation } from 'react-i18next'
-import { identifyInputType, normalizePhoneNumber } from '../../utils/phoneNormalization'
+import { identifyInputType, normalizePhoneNumber, isValidEmail } from '../../utils/phoneNormalization'
 
 const { Title, Text } = Typography
 
@@ -106,17 +106,29 @@ const Login: React.FC = () => {
                   validator: (_, value) => {
                     if (!value) return Promise.resolve()
                     
+                    // 检查中文字符
+                    if (/[\u4e00-\u9fa5]/.test(value)) {
+                      return Promise.reject(new Error('不允许输入中文字符'))
+                    }
+                    
                     const type = identifyInputType(value)
                     
                     if (type === 'unknown') {
                       return Promise.reject(new Error('请输入有效的邮箱或手机号'))
                     }
                     
+                    // 邮箱验证：必须包含 @ 和 .
+                    if (type === 'email') {
+                      if (!isValidEmail(value)) {
+                        return Promise.reject(new Error('邮箱格式无效（需包含 @ 和 .）'))
+                      }
+                    }
+                    
                     // 手机号额外验证标准化
                     if (type === 'phone') {
                       const normalized = normalizePhoneNumber(value)
                       if (!normalized) {
-                        return Promise.reject(new Error('手机号格式无效（需7-15位数字）'))
+                        return Promise.reject(new Error('手机号格式无效（需10-15位数字）'))
                       }
                     }
                     
@@ -128,6 +140,15 @@ const Login: React.FC = () => {
               <Input
                 prefix={<UserOutlined style={{ color: '#ffd700' }} />}
                 placeholder="邮箱 / 手机号 (例: admin@example.com 或 01157288278)"
+                onInput={(e) => {
+                  const input = e.currentTarget
+                  // 禁止输入中文字符
+                  input.value = input.value.replace(/[\u4e00-\u9fa5]/g, '')
+                  // 如果不是邮箱（不含@），自动清理空格
+                  if (!input.value.includes('@')) {
+                    input.value = input.value.replace(/\s/g, '')
+                  }
+                }}
                 style={{
                   background: 'rgba(45, 45, 45, 0.8)',
                   border: '1px solid #444444',
