@@ -143,7 +143,8 @@ export const loginWithEmailOrPhone = async (identifier: string, password: string
 };
 
 // 使用 Google 登录（新用户需要完善信息）
-export const loginWithGoogle = async (useRedirect = false) => {
+// 默认使用 redirect 模式以避免 COOP 问题
+export const loginWithGoogle = async (useRedirect = true) => {
   try {
     const provider = new GoogleAuthProvider();
     
@@ -151,25 +152,20 @@ export const loginWithGoogle = async (useRedirect = false) => {
     provider.addScope('email');
     provider.addScope('profile');
     
-    let credential;
-    
+    // 直接使用重定向方式（最可靠，兼容所有浏览器和安全策略）
     if (useRedirect) {
-      // 使用重定向方式（更可靠，但会刷新页面）
       await signInWithRedirect(auth, provider);
       return { success: true, isRedirecting: true } as any;
-    } else {
-      // 尝试使用弹窗方式
-      try {
-        credential = await signInWithPopup(auth, provider);
-      } catch (popupError: any) {
-        // 如果弹窗被阻止，自动切换到重定向方式
-        if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/popup-closed-by-user') {
-          console.log('Popup blocked, using redirect instead');
-          await signInWithRedirect(auth, provider);
-          return { success: true, isRedirecting: true } as any;
-        }
-        throw popupError;
-      }
+    }
+    
+    // 仅在明确指定 useRedirect=false 时使用弹窗（高级用例）
+    let credential;
+    try {
+      credential = await signInWithPopup(auth, provider);
+    } catch (popupError: any) {
+      console.error('Popup failed, falling back to redirect:', popupError);
+      await signInWithRedirect(auth, provider);
+      return { success: true, isRedirecting: true } as any;
     }
     
     const user = credential.user;
