@@ -1,6 +1,6 @@
 // Google 登录后完善用户信息页面
 import React, { useState, useEffect } from 'react'
-import { Form, Input, Button, Card, Typography, Space, message } from 'antd'
+import { Form, Input, Button, Card, Typography, Space, App } from 'antd'
 import { UserOutlined, LockOutlined, PhoneOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -15,6 +15,7 @@ const CompleteProfile: React.FC = () => {
   const [form] = Form.useForm()
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const { message } = App.useApp() // ✅ 使用 App.useApp() 获取 message 实例
 
   // 如果用户未登录或已完善信息，重定向
   useEffect(() => {
