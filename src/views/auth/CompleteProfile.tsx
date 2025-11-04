@@ -62,41 +62,19 @@ const CompleteProfile: React.FC = () => {
     try {
       console.log('🔵 [CompleteProfile] 开始提交，输入值:', values)
       
-      // 1. 标准化手机号
+      // 标准化手机号
       const normalizedPhone = normalizePhoneNumber(values.phone)
       console.log('🔵 [CompleteProfile] 标准化后的手机号:', normalizedPhone)
       
       if (!normalizedPhone) {
         console.error('❌ [CompleteProfile] 手机号格式无效')
-        message.error('手机号格式无效（需10-15位数字）')
         setLoading(false)
         return
       }
 
-      // 2. 检查手机号唯一性
-      console.log('🔍 [CompleteProfile] 开始检查手机号唯一性...')
-      const phoneQuery = query(
-        collection(db, 'users'), 
-        where('profile.phone', '==', normalizedPhone),
-        limit(1)
-      )
-      const phoneSnap = await getDocs(phoneQuery)
-      console.log('🔍 [CompleteProfile] 查询结果:', {
-        empty: phoneSnap.empty,
-        size: phoneSnap.size,
-        docs: phoneSnap.docs.map(doc => ({ id: doc.id, phone: doc.data().profile?.phone }))
-      })
-      
-      if (!phoneSnap.empty) {
-        console.error('❌ [CompleteProfile] 手机号已被使用！')
-        message.error('该手机号已被其他用户使用')
-        setLoading(false)
-        return
-      }
-      
-      console.log('✅ [CompleteProfile] 手机号可用，继续注册...')
+      console.log('✅ [CompleteProfile] 表单验证通过，继续注册...')
 
-      // 3. 调用完善用户信息的服务函数
+      // 调用完善用户信息的服务函数
       const { completeGoogleUserProfile } = await import('../../services/firebase/auth')
       const result = await completeGoogleUserProfile(
         currentUser.uid,
@@ -196,10 +174,29 @@ const CompleteProfile: React.FC = () => {
                   validator: async (_, value) => {
                     if (!value) return Promise.resolve()
                     
+                    // 1. 检查格式
                     const normalized = normalizePhoneNumber(value)
                     if (!normalized) {
                       return Promise.reject(new Error('手机号格式无效（需10-15位数字）'))
                     }
+                    
+                    // 2. 检查是否已被使用
+                    try {
+                      const phoneQuery = query(
+                        collection(db, 'users'), 
+                        where('profile.phone', '==', normalized),
+                        limit(1)
+                      )
+                      const phoneSnap = await getDocs(phoneQuery)
+                      
+                      if (!phoneSnap.empty) {
+                        return Promise.reject(new Error('该手机号已被其他用户使用'))
+                      }
+                    } catch (error) {
+                      console.error('检查手机号唯一性失败:', error)
+                      // 如果查询失败，允许通过（不阻止用户提交）
+                    }
+                    
                     return Promise.resolve()
                   }
                 }
