@@ -44,6 +44,8 @@ const Register: React.FC = () => {
   return (
     <div style={{
       width: '100%',
+      maxWidth: 'calc(100% - 50px)',
+      margin: '0 25px',
       position: 'relative'
     }}>
       <Card style={{ 
