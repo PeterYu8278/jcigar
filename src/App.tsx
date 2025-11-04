@@ -23,6 +23,7 @@ import AdminEvents from './views/admin/Events'
 import AdminOrders from './views/admin/Orders'
 import AdminFinance from './views/admin/Finance'
 import CloudinaryTestPage from './views/admin/CloudinaryTest'
+import PhoneMigration from './views/admin/PhoneMigration'
 import PerformanceMonitor from './components/admin/PerformanceMonitor'
 
 // 认证页面
@@ -127,6 +128,7 @@ const AppContent: React.FC = () => {
                   <Route path="/admin/finance" element={<ProtectedRoute roles={['admin']}><AdminFinance /></ProtectedRoute>} />
                   <Route path="/admin/performance" element={<ProtectedRoute roles={['admin']}><PerformanceMonitor /></ProtectedRoute>} />
                   <Route path="/admin/cloudinary-test" element={<ProtectedRoute roles={['admin']}><CloudinaryTestPage /></ProtectedRoute>} />
+                  <Route path="/admin/phone-migration" element={<ProtectedRoute roles={['admin']}><PhoneMigration /></ProtectedRoute>} />
                   
                   {/* 默认重定向 */}
                   <Route path="*" element={<Navigate to="/" replace />} />
