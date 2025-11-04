@@ -145,6 +145,14 @@ export const loginWithEmailOrPhone = async (identifier: string, password: string
 // 使用 Google 登录（新用户需要完善信息）
 export const loginWithGoogle = async () => {
   console.log('🟢 [auth.ts] loginWithGoogle 开始执行');
+  
+  // 检查是否已有 pending 的 redirect
+  const hasPending = sessionStorage.getItem('googleRedirectPending');
+  if (hasPending) {
+    console.log('⚠️ [auth.ts] 已有 pending 的 redirect，阻止重复调用');
+    return { success: false, error: new Error('重定向正在进行中，请稍候...') } as { success: false; error: Error };
+  }
+  
   try {
     const provider = new GoogleAuthProvider();
     console.log('🟢 [auth.ts] GoogleAuthProvider 创建成功');
@@ -179,6 +187,11 @@ export const loginWithGoogle = async () => {
       if (isDev) {
         console.log('⚠️ [auth.ts] 开发环境的 redirect 可能遇到 init.json 404，这是正常的');
       }
+      
+      // 设置标记，防止重定向循环
+      sessionStorage.setItem('googleRedirectPending', 'true');
+      console.log('🔐 [auth.ts] 设置 redirect 标记');
+      
       await signInWithRedirect(auth, provider);
       console.log('🔄 [auth.ts] signInWithRedirect 调用成功');
       return { success: true, isRedirecting: true } as any;
@@ -261,10 +274,19 @@ export const loginWithGoogle = async () => {
 // 处理 Google 重定向登录结果
 export const handleGoogleRedirectResult = async () => {
   console.log('🔄 [auth.ts] handleGoogleRedirectResult 开始执行');
+  
+  // 检查是否有 redirect 标记
+  const hasPending = sessionStorage.getItem('googleRedirectPending');
+  console.log('🔐 [auth.ts] redirect 标记状态:', hasPending);
+  
   try {
     console.log('🔄 [auth.ts] 调用 getRedirectResult...');
     const result = await getRedirectResult(auth);
     console.log('🔄 [auth.ts] getRedirectResult 返回:', result);
+    
+    // 清除标记（无论是否有结果）
+    sessionStorage.removeItem('googleRedirectPending');
+    console.log('🔐 [auth.ts] 已清除 redirect 标记');
     
     if (!result) {
       console.log('⚪ [auth.ts] 无重定向结果');
