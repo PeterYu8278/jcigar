@@ -66,6 +66,25 @@ const AppContent: React.FC = () => {
     }
   }, [])
 
+  // 控制 body 滚动（认证页面禁止滚动）
+  useEffect(() => {
+    if (!needsPadding) {
+      // 认证页面和商城页面：禁止 body 滚动
+      document.body.style.overflow = 'hidden'
+      document.documentElement.style.overflow = 'hidden'
+    } else {
+      // 其他页面：恢复滚动
+      document.body.style.overflow = 'auto'
+      document.documentElement.style.overflow = 'auto'
+    }
+
+    return () => {
+      // 清理：恢复默认
+      document.body.style.overflow = 'auto'
+      document.documentElement.style.overflow = 'auto'
+    }
+  }, [needsPadding])
+
   return (
       <Layout style={{ 
         height: viewportHeight,
