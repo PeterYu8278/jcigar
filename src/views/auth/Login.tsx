@@ -6,6 +6,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { loginWithEmailOrPhone, loginWithGoogle } from '../../services/firebase/auth'
 import { useAuthStore } from '../../store/modules/auth'
 import { useTranslation } from 'react-i18next'
+import { identifyInputType, normalizePhoneNumber } from '../../utils/phoneNormalization'
 
 const { Title, Text } = Typography
 
@@ -100,29 +101,33 @@ const Login: React.FC = () => {
             <Form.Item
               name="email"
               rules={[
-                { required: true, message: t('auth.emailRequired') },
+                { required: true, message: '请输入邮箱或手机号' },
                 {
                   validator: (_, value) => {
                     if (!value) return Promise.resolve()
-                    const v = String(value).trim()
-                    const isEmail = /.+@.+\..+/.test(v)
-                    const isPhone = /^\+?\d{7,15}$/.test(v)
-                    return (isEmail || isPhone) ? Promise.resolve() : Promise.reject(new Error(t('auth.emailInvalid')))
+                    
+                    const type = identifyInputType(value)
+                    
+                    if (type === 'unknown') {
+                      return Promise.reject(new Error('请输入有效的邮箱或手机号'))
+                    }
+                    
+                    // 手机号额外验证标准化
+                    if (type === 'phone') {
+                      const normalized = normalizePhoneNumber(value)
+                      if (!normalized) {
+                        return Promise.reject(new Error('手机号格式无效（需7-15位数字）'))
+                      }
+                    }
+                    
+                    return Promise.resolve()
                   }
                 }
               ]}
-              getValueFromEvent={(e) => {
-                const raw = e?.target?.value ?? ''
-                // 如果不包含字母和 @，按手机号输入处理，保留数字和+
-                if (!/[a-zA-Z@]/.test(raw)) {
-                  return String(raw).replace(/[^\d+]/g, '')
-                }
-                return raw
-              }}
             >
               <Input
                 prefix={<UserOutlined style={{ color: '#ffd700' }} />}
-                placeholder={t('auth.email')}
+                placeholder="邮箱 / 手机号 (例: admin@example.com 或 01157288278)"
                 style={{
                   background: 'rgba(45, 45, 45, 0.8)',
                   border: '1px solid #444444',

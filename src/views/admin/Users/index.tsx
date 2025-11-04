@@ -13,6 +13,7 @@ import type { User } from '../../../types'
 import { sendPasswordResetEmailFor } from '../../../services/firebase/auth'
 import { useTranslation } from 'react-i18next'
 import { getModalThemeStyles, getModalWidth } from '../../../config/modalTheme'
+import { normalizePhoneNumber } from '../../../utils/phoneNormalization'
 
 // CSS样式对象
 const glassmorphismInputStyle = {
@@ -1201,13 +1202,25 @@ const AdminUsers: React.FC = () => {
             onFinish={async (values) => {
           setLoading(true)
           try {
+            // 标准化手机号
+            let normalizedPhone: string | undefined = undefined
+            if (values.phone) {
+              const normalized = normalizePhoneNumber(values.phone)
+              if (!normalized) {
+                message.error('手机号格式无效')
+                setLoading(false)
+                return
+              }
+              normalizedPhone = normalized
+            }
+            
             if (editing) {
               const res = await updateDocument<User>(COLLECTIONS.USERS, editing.id, {
                 displayName: values.displayName,
                 email: values.email,
                 role: values.role,
                 membership: { ...editing.membership, level: values.level },
-                profile: { ...(editing as any).profile, phone: values.phone },
+                profile: { ...(editing as any).profile, phone: normalizedPhone },
               } as any)
                 if (res.success) message.success(t('usersAdmin.saved'))
             } else {
@@ -1215,7 +1228,7 @@ const AdminUsers: React.FC = () => {
                 displayName: values.displayName,
                 email: values.email,
                 role: values.role,
-                profile: { phone: values.phone, preferences: { language: 'zh', notifications: true } },
+                profile: { phone: normalizedPhone, preferences: { language: 'zh', notifications: true } },
                 membership: { level: values.level, joinDate: new Date(), lastActive: new Date() },
                 createdAt: new Date(),
                 updatedAt: new Date(),
