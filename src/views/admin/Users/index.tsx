@@ -14,6 +14,8 @@ import { sendPasswordResetEmailFor } from '../../../services/firebase/auth'
 import { useTranslation } from 'react-i18next'
 import { getModalThemeStyles, getModalWidth } from '../../../config/modalTheme'
 import { normalizePhoneNumber } from '../../../utils/phoneNormalization'
+import { collection, query, where, getDocs, limit } from 'firebase/firestore'
+import { db } from '../../../config/firebase'
 
 // CSS样式对象
 const glassmorphismInputStyle = {
@@ -1212,6 +1214,24 @@ const AdminUsers: React.FC = () => {
                 return
               }
               normalizedPhone = normalized
+              
+              // 检查手机号唯一性
+              const phoneQuery = query(
+                collection(db, 'users'), 
+                where('profile.phone', '==', normalizedPhone), 
+                limit(1)
+              )
+              const phoneSnap = await getDocs(phoneQuery)
+              
+              if (!phoneSnap.empty) {
+                const existingUserId = phoneSnap.docs[0].id
+                // 如果是编辑模式，检查是否是当前用户自己的手机号
+                if (!editing || existingUserId !== editing.id) {
+                  message.error('该手机号已被其他用户使用')
+                  setLoading(false)
+                  return
+                }
+              }
             }
             
             if (editing) {

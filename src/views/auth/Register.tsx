@@ -1,9 +1,10 @@
 // 注册页面
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Form, Input, Button, Card, Typography, Space, message } from 'antd'
 import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { registerUser } from '../../services/firebase/auth'
+import { useAuthStore } from '../../store/modules/auth'
 import { useTranslation } from 'react-i18next'
 
 const { Title, Text } = Typography
@@ -11,7 +12,25 @@ const { Title, Text } = Typography
 const Register: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
+  const { user } = useAuthStore()
   const { t } = useTranslation()
+
+  const from = location.state?.from?.pathname || '/'
+
+  // 如果用户已登录，根据资料完整性重定向
+  useEffect(() => {
+    if (user) {
+      const isProfileIncomplete = !user.displayName || !user.email || !user.profile?.phone
+      if (isProfileIncomplete) {
+        // 资料不完整，重定向到完善资料页面
+        navigate('/auth/complete-profile', { replace: true })
+      } else {
+        // 资料完整，重定向到首页或原页面
+        navigate(from, { replace: true })
+      }
+    }
+  }, [user, navigate, from])
 
   const onFinish = async (values: { 
     email?: string; 

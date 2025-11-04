@@ -15,11 +15,25 @@ const Login: React.FC = () => {
   const [loginError, setLoginError] = useState<string>('')
   const navigate = useNavigate()
   const location = useLocation()
-  const { setUser } = useAuthStore()
+  const { user, setUser } = useAuthStore()
   const { t } = useTranslation()
   const hasCheckedRedirect = useRef(false) // 防止 StrictMode 重复调用
 
   const from = location.state?.from?.pathname || '/'
+
+  // 如果用户已登录，根据资料完整性重定向
+  useEffect(() => {
+    if (user) {
+      const isProfileIncomplete = !user.displayName || !user.email || !user.profile?.phone
+      if (isProfileIncomplete) {
+        // 资料不完整，重定向到完善资料页面
+        navigate('/auth/complete-profile', { replace: true })
+      } else {
+        // 资料完整，重定向到首页或原页面
+        navigate(from, { replace: true })
+      }
+    }
+  }, [user, navigate, from])
 
   // 检查 Google 重定向登录结果
   useEffect(() => {
@@ -65,10 +79,10 @@ const Login: React.FC = () => {
         navigate(from, { replace: true })
       } else {
         // 使用 placeholder 显示错误
-        setLoginError((result as any).error?.message || t('auth.loginFailed'))
+        setLoginError('登入失败：' + ((result as any).error?.message || t('auth.loginFailed')))
       }
     } catch (error) {
-      setLoginError(t('auth.loginFailed'))
+      setLoginError('登入失败：' + t('auth.loginFailed'))
     } finally {
       setLoading(false)
     }
@@ -98,12 +112,12 @@ const Login: React.FC = () => {
         }
       } else {
         // 使用 placeholder 显示错误
-        setLoginError((res as any).error?.message || t('auth.loginFailed'))
+        setLoginError('登入失败：' + ((res as any).error?.message || t('auth.loginFailed')))
         setLoading(false)
       }
     } catch (error) {
       console.error('Google login error:', error)
-      setLoginError(t('auth.loginFailed'))
+      setLoginError('登入失败：' + t('auth.loginFailed'))
       setLoading(false)
     }
   }

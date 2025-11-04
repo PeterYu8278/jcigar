@@ -33,14 +33,19 @@ import CompleteProfile from './views/auth/CompleteProfile'
 const { Content } = Layout
 
 const AppContent: React.FC = () => {
-  const { user, isAdmin } = useAuthStore()
+  const { user, isAdmin, initializeAuth } = useAuthStore()
   const location = useLocation()
   const isDesktop = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(min-width: 992px)').matches : true
   const [siderCollapsed, setSiderCollapsed] = useState(false)
   const [viewportHeight, setViewportHeight] = useState('100vh')
 
-  // 无需 padding 的页面
-  const noPaddingPages = ['/shop', '/login', '/register', '/auth/complete-profile']
+  // 在应用启动时初始化认证（仅一次）
+  useEffect(() => {
+    initializeAuth()
+  }, [initializeAuth])
+
+  // 无需 padding 的页面（认证页面）
+  const noPaddingPages = ['/login', '/register', '/auth/complete-profile']
   const needsPadding = !noPaddingPages.includes(location.pathname)
   
   // 侧边栏显示逻辑：手机端商城页面隐藏，电脑端商城页面显示

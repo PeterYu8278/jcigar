@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import { Form, Input, Button, Card, Typography, Space, App } from 'antd'
 import { UserOutlined, LockOutlined, PhoneOutlined } from '@ant-design/icons'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { normalizePhoneNumber } from '../../utils/phoneNormalization'
 import { collection, query, where, getDocs, limit } from 'firebase/firestore'
@@ -14,8 +14,12 @@ const CompleteProfile: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [form] = Form.useForm()
   const navigate = useNavigate()
+  const location = useLocation()
   const { t } = useTranslation()
   const { message } = App.useApp() // ✅ 使用 App.useApp() 获取 message 实例
+  
+  // 获取用户原本想访问的页面
+  const from = location.state?.from?.pathname || '/'
 
   // 如果用户未登录或已完善信息，重定向
   useEffect(() => {
@@ -46,9 +50,11 @@ const CompleteProfile: React.FC = () => {
         const { getUserData } = await import('../../services/firebase/auth')
         const userData = await getUserData(currentUser.uid)
         
-        if (userData?.profile?.phone) {
-          // 用户已完善信息，重定向到首页
-          navigate('/', { replace: true })
+        // 检查完整资料：名字、电邮、手机号
+        const isProfileComplete = userData?.displayName && userData?.email && userData?.profile?.phone
+        if (isProfileComplete) {
+          // 用户已完善信息，重定向到原页面或首页
+          navigate(from, { replace: true })
         }
       }
       
@@ -92,7 +98,7 @@ const CompleteProfile: React.FC = () => {
 
       if (result.success) {
         message.success('账户信息已完善，欢迎加入 Gentleman Club！')
-        navigate('/', { replace: true })
+        navigate(from, { replace: true })
       } else {
         message.error((result as any).error?.message || '信息保存失败，请重试')
       }

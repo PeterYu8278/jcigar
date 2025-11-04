@@ -16,25 +16,25 @@ import { auth, db } from '../../config/firebase';
 import type { User } from '../../types';
 import { normalizePhoneNumber, identifyInputType } from '../../utils/phoneNormalization';
 
-// 用户注册
-export const registerUser = async (email: string, password: string, displayName: string, phone?: string) => {
+// 用户注册（所有字段都是必需的）
+export const registerUser = async (email: string, password: string, displayName: string, phone: string) => {
   try {
+    // 验证必需字段
+    if (!email || !password || !displayName || !phone) {
+      return { success: false, error: new Error('所有字段都是必需的'), code: 'missing-required-fields' } as { success: false; error: Error; code?: string }
+    }
+    
     // 标准化手机号为 E.164 格式
-    let normalizedPhone: string | undefined = undefined
-    if (phone) {
-      const normalized = normalizePhoneNumber(phone)
-      if (!normalized) {
-        return { success: false, error: new Error('手机号格式无效'), code: 'invalid-phone' } as { success: false; error: Error; code?: string }
-      }
-      
-      // 检查手机号是否已被使用
-      const phoneQuery = query(collection(db, 'users'), where('profile.phone', '==', normalized), limit(1))
-      const phoneSnap = await getDocs(phoneQuery)
-      if (!phoneSnap.empty) {
-        return { success: false, error: new Error('该手机号已被注册'), code: 'phone-already-in-use' } as { success: false; error: Error; code?: string }
-      }
-      
-      normalizedPhone = normalized
+    const normalizedPhone = normalizePhoneNumber(phone)
+    if (!normalizedPhone) {
+      return { success: false, error: new Error('手机号格式无效'), code: 'invalid-phone' } as { success: false; error: Error; code?: string }
+    }
+    
+    // 检查手机号是否已被使用
+    const phoneQuery = query(collection(db, 'users'), where('profile.phone', '==', normalizedPhone), limit(1))
+    const phoneSnap = await getDocs(phoneQuery)
+    if (!phoneSnap.empty) {
+      return { success: false, error: new Error('该手机号已被注册'), code: 'phone-already-in-use' } as { success: false; error: Error; code?: string }
     }
     
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -214,9 +214,9 @@ export const loginWithGoogle = async () => {
       return { success: true, user, needsProfile: true };
     }
 
-    // 已存在用户：检查是否已完善信息
+    // 已存在用户：检查是否已完善信息（需要：名字、电邮、手机号）
     const userData = snap.data() as User;
-    const needsProfile = !userData.profile?.phone;
+    const needsProfile = !userData.displayName || !userData.email || !userData.profile?.phone;
     
     return { success: true, user, needsProfile };
   } catch (error) {
@@ -272,8 +272,9 @@ export const handleGoogleRedirectResult = async () => {
           return { success: true, user, needsProfile: true };
         }
         
+        // 已存在用户：检查是否已完善信息（需要：名字、电邮、手机号）
         const userData = snap.data() as User;
-        const needsProfile = !userData.profile?.phone;
+        const needsProfile = !userData.displayName || !userData.email || !userData.profile?.phone;
         return { success: true, user, needsProfile };
       }
       
@@ -309,9 +310,9 @@ export const handleGoogleRedirectResult = async () => {
       return { success: true, user, needsProfile: true };
     }
 
-    // 已存在用户：检查是否已完善信息
+    // 已存在用户：检查是否已完善信息（需要：名字、电邮、手机号）
     const userData = snap.data() as User;
-    const needsProfile = !userData.profile?.phone;
+    const needsProfile = !userData.displayName || !userData.email || !userData.profile?.phone;
     
     return { success: true, user, needsProfile };
   } catch (error) {
@@ -329,20 +330,45 @@ export const completeGoogleUserProfile = async (
   password: string
 ) => {
   try {
+    // 验证必需字段
+    if (!uid || !displayName || !phone || !password) {
+      return { success: false, error: new Error('所有字段都是必需的') } as { success: false; error: Error }
+    }
+    
+    // 标准化手机号
+    const normalizedPhone = normalizePhoneNumber(phone)
+    if (!normalizedPhone) {
+      return { success: false, error: new Error('手机号格式无效') } as { success: false; error: Error }
+    }
+    
+    // 检查手机号是否已被其他用户使用
+    const phoneQuery = query(collection(db, 'users'), where('profile.phone', '==', normalizedPhone), limit(1))
+    const phoneSnap = await getDocs(phoneQuery)
+    if (!phoneSnap.empty && phoneSnap.docs[0].id !== uid) {
+      return { success: false, error: new Error('该手机号已被其他用户使用') } as { success: false; error: Error }
+    }
+    
     // 1. 更新 Firestore 用户文档
     const userRef = doc(db, 'users', uid);
+    
+    // 获取当前用户的 email（确保保留）
+    const currentUser = auth.currentUser;
+    if (!currentUser || !currentUser.email) {
+      return { success: false, error: new Error('无法获取用户邮箱信息') } as { success: false; error: Error }
+    }
+    
     await setDoc(userRef, {
+      email: currentUser.email, // 确保 email 字段存在
       displayName,
       profile: {
-        phone,
+        phone: normalizedPhone, // 使用标准化后的手机号
         preferences: { language: 'zh', notifications: true },
       },
       updatedAt: new Date(),
     }, { merge: true });
 
     // 2. 为用户设置密码（通过 Firebase Auth）
-    const currentUser = auth.currentUser;
-    if (currentUser && currentUser.uid === uid) {
+    if (currentUser.uid === uid) {
       const { updatePassword, EmailAuthProvider, linkWithCredential } = await import('firebase/auth');
       
       // 如果用户还没有邮箱/密码凭证，需要先链接
