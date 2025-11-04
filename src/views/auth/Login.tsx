@@ -101,8 +101,8 @@ const Login: React.FC = () => {
           navigate('/auth/complete-profile', { replace: true })
         } else {
           console.log('🎉 [Login.tsx] 用户已完善信息，跳转到:', from)
-          message.success(t('auth.loginSuccess'))
-          navigate(from, { replace: true })
+        message.success(t('auth.loginSuccess'))
+        navigate(from, { replace: true })
         }
       } else {
         console.error('❌ [Login.tsx] 登录失败:', (res as any).error)
@@ -117,17 +117,18 @@ const Login: React.FC = () => {
   }
 
   return (
-    <div style={{
-      width: '100%',
-      maxWidth: 'calc(100% - 50px)',
-      margin: '0 25px',
-      position: 'relative'
-    }}>
+      <div style={{
+        width: '100%',
+        padding: '0 25px',
+        position: 'relative',
+        boxSizing: 'border-box'
+      }}>
       {/* 背景装饰 */}
      
       
       <Card style={{ 
-        width: 400, 
+        width: '100%',
+        maxWidth: 400,
         background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.9) 0%, rgba(45, 45, 45, 0.8) 100%)',
         border: '1px solid rgba(255, 215, 0, 0.2)',
         borderRadius: '16px',

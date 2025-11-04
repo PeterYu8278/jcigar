@@ -42,14 +42,15 @@ const Register: React.FC = () => {
   }
 
   return (
-    <div style={{
-      width: '100%',
-      maxWidth: 'calc(100% - 50px)',
-      margin: '0 25px',
-      position: 'relative'
-    }}>
+      <div style={{
+        width: '100%',
+        padding: '0 25px',
+        position: 'relative',
+        boxSizing: 'border-box'
+      }}>
       <Card style={{ 
-        width: 400, 
+        width: '100%',
+        maxWidth: 400,
         background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.9) 0%, rgba(45, 45, 45, 0.8) 100%)',
         border: '1px solid rgba(255, 215, 0, 0.2)',
         borderRadius: '16px',
