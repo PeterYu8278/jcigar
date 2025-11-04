@@ -1,7 +1,7 @@
 // 临时页面：手机号迁移工具
 import React, { useState } from 'react'
 import { Button, Card, Typography, Space, message, List, Tag, Progress, Alert } from 'antd'
-import { SyncOutlined, CheckCircleOutlined, CloseCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
+import { SyncOutlined, CheckCircleOutlined, CloseCircleOutlined, ExclamationCircleOutlined, EyeOutlined } from '@ant-design/icons'
 import { getUsers, updateDocument, COLLECTIONS } from '../../../services/firebase/firestore'
 import { normalizePhoneNumber } from '../../../utils/phoneNormalization'
 import type { User } from '../../../types'
@@ -19,8 +19,10 @@ interface MigrationResult {
 
 const PhoneMigration: React.FC = () => {
   const [loading, setLoading] = useState(false)
+  const [previewing, setPreviewing] = useState(false)
   const [results, setResults] = useState<MigrationResult[]>([])
   const [progress, setProgress] = useState(0)
+  const [isPreviewed, setIsPreviewed] = useState(false)
   const [stats, setStats] = useState({
     total: 0,
     updated: 0,
@@ -28,8 +30,9 @@ const PhoneMigration: React.FC = () => {
     errors: 0
   })
 
-  const runMigration = async () => {
-    setLoading(true)
+  // 预览迁移
+  const previewMigration = async () => {
+    setPreviewing(true)
     setResults([])
     setProgress(0)
     setStats({ total: 0, updated: 0, skipped: 0, errors: 0 })
@@ -91,35 +94,16 @@ const PhoneMigration: React.FC = () => {
           continue
         }
 
-        // 更新为标准化格式
-        try {
-          await updateDocument<User>(COLLECTIONS.USERS, user.id, {
-            profile: {
-              ...(user.profile || {}),
-              phone: normalized
-            }
-          } as any)
-
-          updated++
-          migrationResults.push({
-            userId: user.id,
-            email: user.email,
-            oldPhone: phone,
-            newPhone: normalized,
-            status: 'success',
-            message: '更新成功'
-          })
-        } catch (error) {
-          errors++
-          migrationResults.push({
-            userId: user.id,
-            email: user.email,
-            oldPhone: phone,
-            newPhone: normalized,
-            status: 'error',
-            message: '更新失败: ' + (error as Error).message
-          })
-        }
+        // 需要更新（仅预览，不实际更新）
+        updated++
+        migrationResults.push({
+          userId: user.id,
+          email: user.email,
+          oldPhone: phone,
+          newPhone: normalized,
+          status: 'success',
+          message: '将被更新'
+        })
       }
 
       setResults(migrationResults)
@@ -129,16 +113,81 @@ const PhoneMigration: React.FC = () => {
         skipped,
         errors
       })
+      setIsPreviewed(true)
+
+      message.success(`预览完成！将更新 ${updated} 个用户`)
+    } catch (error) {
+      message.error('预览失败: ' + (error as Error).message)
+    } finally {
+      setPreviewing(false)
+    }
+  }
+
+  // 执行迁移
+  const runMigration = async () => {
+    if (!isPreviewed) {
+      message.warning('请先预览迁移结果')
+      return
+    }
+
+    setLoading(true)
+    setProgress(0)
+
+    try {
+      const users = await getUsers()
+      let updated = 0
+      let errors = 0
+
+      for (let i = 0; i < users.length; i++) {
+        const user = users[i]
+        const phone = user.profile?.phone || user.phone
+
+        setProgress(Math.round(((i + 1) / users.length) * 100))
+
+        if (!phone) continue
+
+        const normalized = normalizePhoneNumber(phone)
+        if (!normalized || normalized === phone) continue
+
+        // 实际更新数据库
+        try {
+          await updateDocument<User>(COLLECTIONS.USERS, user.id, {
+            profile: {
+              ...(user.profile || {}),
+              phone: normalized
+            }
+          } as any)
+
+          updated++
+
+          // 更新结果状态
+          setResults(prev => prev.map(r => 
+            r.userId === user.id 
+              ? { ...r, status: 'success' as const, message: '更新成功' }
+              : r
+          ))
+        } catch (error) {
+          errors++
+
+          // 更新结果状态
+          setResults(prev => prev.map(r => 
+            r.userId === user.id 
+              ? { ...r, status: 'error' as const, message: '更新失败: ' + (error as Error).message }
+              : r
+          ))
+        }
+      }
 
       if (errors === 0) {
         message.success(`迁移完成！成功更新 ${updated} 个用户`)
       } else {
-        message.warning(`迁移完成，但有 ${errors} 个错误`)
+        message.warning(`迁移完成，成功 ${updated} 个，失败 ${errors} 个`)
       }
     } catch (error) {
       message.error('迁移失败: ' + (error as Error).message)
     } finally {
       setLoading(false)
+      setIsPreviewed(false)
     }
   }
 
@@ -194,35 +243,79 @@ const PhoneMigration: React.FC = () => {
             </div>
           </div>
 
-          {/* 开始按钮 */}
-          <Button
-            type="primary"
-            size="large"
-            icon={<SyncOutlined spin={loading} />}
-            onClick={runMigration}
-            loading={loading}
-            disabled={loading}
-            style={{
-              background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-              border: 'none',
-              color: '#221c10',
-              fontWeight: 600,
-              height: '48px'
-            }}
-          >
-            {loading ? '迁移中...' : '开始迁移'}
-          </Button>
+          {/* 操作按钮 */}
+          <Space size="large" style={{ width: '100%' }}>
+            <Button
+              type="default"
+              size="large"
+              icon={<EyeOutlined />}
+              onClick={previewMigration}
+              loading={previewing}
+              disabled={loading || previewing}
+              style={{
+                flex: 1,
+                height: '48px',
+                fontWeight: 600
+              }}
+            >
+              {previewing ? '预览中...' : '预览迁移'}
+            </Button>
+
+            <Button
+              type="primary"
+              size="large"
+              icon={<SyncOutlined spin={loading} />}
+              onClick={runMigration}
+              loading={loading}
+              disabled={loading || previewing || !isPreviewed}
+              style={{
+                flex: 1,
+                background: isPreviewed 
+                  ? 'linear-gradient(to right, #FDE08D, #C48D3A)' 
+                  : '#d9d9d9',
+                border: 'none',
+                color: isPreviewed ? '#221c10' : '#999',
+                fontWeight: 600,
+                height: '48px'
+              }}
+            >
+              {loading ? '迁移中...' : '确认迁移'}
+            </Button>
+          </Space>
+
+          {/* 预览提示 */}
+          {!isPreviewed && (
+            <Alert
+              type="info"
+              message="请先预览迁移结果，确认无误后再执行迁移"
+              showIcon
+            />
+          )}
+
+          {isPreviewed && !loading && (
+            <Alert
+              type="success"
+              message={`预览完成！将更新 ${stats.updated} 个用户的手机号`}
+              description="确认无误后，请点击'确认迁移'按钮执行实际迁移操作"
+              showIcon
+            />
+          )}
 
           {/* 进度条 */}
-          {loading && (
-            <Progress 
-              percent={progress} 
-              status="active"
-              strokeColor={{
-                '0%': '#FDE08D',
-                '100%': '#C48D3A'
-              }}
-            />
+          {(loading || previewing) && (
+            <div>
+              <Text type="secondary" style={{ display: 'block', marginBottom: '8px' }}>
+                {previewing ? '预览进度：' : '迁移进度：'}
+              </Text>
+              <Progress 
+                percent={progress} 
+                status="active"
+                strokeColor={{
+                  '0%': '#FDE08D',
+                  '100%': '#C48D3A'
+                }}
+              />
+            </div>
           )}
 
           {/* 统计信息 */}
@@ -266,7 +359,16 @@ const PhoneMigration: React.FC = () => {
 
       {/* 迁移结果列表 */}
       {results.length > 0 && (
-        <Card title="迁移详情">
+        <Card 
+          title={
+            <Space>
+              <span>{isPreviewed && !loading ? '预览结果' : '迁移详情'}</span>
+              {isPreviewed && !loading && (
+                <Tag color="orange">预览模式 - 未实际修改数据</Tag>
+              )}
+            </Space>
+          }
+        >
           <List
             dataSource={results}
             renderItem={(item) => (
@@ -287,14 +389,14 @@ const PhoneMigration: React.FC = () => {
                         <ExclamationCircleOutlined />
                       }
                       color={
-                        item.status === 'success' ? 'success' :
+                        item.status === 'success' ? (isPreviewed && !loading ? 'orange' : 'success') :
                         item.status === 'error' ? 'error' :
                         'default'
                       }
                     >
-                      {item.status === 'success' ? '已更新' : 
+                      {item.status === 'success' ? (isPreviewed && !loading ? '将更新' : '已更新') : 
                        item.status === 'error' ? '错误' : 
-                       '已跳过'}
+                       '跳过'}
                     </Tag>
                   </div>
                   <div style={{ marginTop: '8px', fontSize: '13px' }}>
