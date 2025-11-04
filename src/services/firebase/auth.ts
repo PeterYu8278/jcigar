@@ -301,7 +301,9 @@ export const handleGoogleRedirectResult = async () => {
       await setDoc(ref, tempUserData);
       console.log('✅ [auth.ts] 重定向：新用户文档创建成功');
       
-      return { success: true, user, needsProfile: true };
+      const returnValue = { success: true, user, needsProfile: true };
+      console.log('🔵 [auth.ts] 重定向（新用户）：返回值:', returnValue);
+      return returnValue;
     }
 
     // 已存在用户：检查是否已完善信息
@@ -314,7 +316,9 @@ export const handleGoogleRedirectResult = async () => {
       needsProfile 
     });
     
-    return { success: true, user, needsProfile };
+    const returnValue = { success: true, user, needsProfile };
+    console.log('🔵 [auth.ts] 重定向：返回值:', returnValue);
+    return returnValue;
   } catch (error) {
     console.error('💥 [auth.ts] handleGoogleRedirectResult 捕获异常:', error);
     const err = error as any;

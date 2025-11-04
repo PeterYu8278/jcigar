@@ -29,15 +29,22 @@ const Login: React.FC = () => {
         console.log('🔵 [Login.tsx] 调用 handleGoogleRedirectResult');
         const result = await handleGoogleRedirectResult()
         console.log('🔵 [Login.tsx] handleGoogleRedirectResult 返回:', result);
+        console.log('🔵 [Login.tsx] result.success:', result.success);
+        console.log('🔵 [Login.tsx] result.noResult:', (result as any).noResult);
         
         if (result.success) {
           console.log('✅ [Login.tsx] 重定向登录成功');
-          if (result.needsProfile) {
-            console.log('📝 [Login.tsx] 需要完善信息');
+          console.log('🔵 [Login.tsx] result.needsProfile 值:', result.needsProfile);
+          console.log('🔵 [Login.tsx] result 完整对象:', result);
+          
+          if ((result as any).needsProfile) {
+            console.log('📝 [Login.tsx] needsProfile = true, 跳转到 complete-profile');
+            console.log('📝 [Login.tsx] 调用 navigate(\'/auth/complete-profile\', { replace: true })');
             message.info('请完善您的账户信息')
             navigate('/auth/complete-profile', { replace: true })
+            console.log('📝 [Login.tsx] navigate 调用完成');
           } else {
-            console.log('🎉 [Login.tsx] 信息已完善，跳转到:', from);
+            console.log('🎉 [Login.tsx] needsProfile = false, 信息已完善，跳转到:', from);
             message.success(t('auth.loginSuccess'))
             navigate(from, { replace: true })
           }
