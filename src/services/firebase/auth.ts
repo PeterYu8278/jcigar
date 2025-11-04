@@ -166,15 +166,18 @@ export const loginWithGoogle = async () => {
     
     let credential;
     
-    if (isMobile && !isDev) {
-      // 移动端 + 生产环境：使用 redirect（最可靠）
-      console.log('📱 [auth.ts] 移动设备（生产环境），使用重定向方式');
+    if (isMobile) {
+      // 移动端（开发 + 生产环境）：始终使用 redirect
+      console.log('📱 [auth.ts] 移动设备，使用重定向方式');
+      if (isDev) {
+        console.log('⚠️ [auth.ts] 开发环境的 redirect 可能遇到 init.json 404，这是正常的');
+      }
       await signInWithRedirect(auth, provider);
       console.log('🔄 [auth.ts] signInWithRedirect 调用成功');
       return { success: true, isRedirecting: true } as any;
     } else {
-      // 桌面端 或 移动端开发环境：使用 popup
-      console.log('🖥️ [auth.ts] 使用弹窗方式登录');
+      // 桌面端：使用 popup
+      console.log('🖥️ [auth.ts] 桌面设备，使用弹窗方式登录');
       try {
         console.log('🪟 [auth.ts] 调用 signInWithPopup...');
         credential = await signInWithPopup(auth, provider);
