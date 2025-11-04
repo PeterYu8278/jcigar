@@ -20,34 +20,24 @@ const CompleteProfile: React.FC = () => {
   // 如果用户未登录或已完善信息，重定向
   useEffect(() => {
     const checkAndSetup = async () => {
-      console.log('🔵 [CompleteProfile] useEffect 开始');
-      
       // 等待 Firebase Auth 状态同步（最多 2 秒）
       let currentUser = auth.currentUser;
       let attempts = 0;
-      const maxAttempts = 4; // 4 次 × 500ms = 2 秒
+      const maxAttempts = 4;
       
       while (!currentUser && attempts < maxAttempts) {
-        console.log(`⏰ [CompleteProfile] 等待 Firebase Auth 同步 (${attempts + 1}/${maxAttempts})...`);
         await new Promise(resolve => setTimeout(resolve, 500));
         currentUser = auth.currentUser;
         attempts++;
       }
       
-      console.log('👤 [CompleteProfile] 最终用户状态:', currentUser);
-      
       if (!currentUser) {
-        // 等待后仍未登录，重定向到登录页
-        console.log('❌ [CompleteProfile] 未检测到登录用户，重定向到登录页');
         navigate('/login', { replace: true })
         return
       }
       
-      console.log('✅ [CompleteProfile] 用户已登录:', { uid: currentUser.uid, email: currentUser.email });
-      
       // 预填 Google 用户的显示名称
       if (currentUser.displayName) {
-        console.log('📝 [CompleteProfile] 预填显示名称:', currentUser.displayName);
         form.setFieldsValue({ displayName: currentUser.displayName })
       }
       
@@ -55,14 +45,10 @@ const CompleteProfile: React.FC = () => {
       const checkUserProfile = async () => {
         const { getUserData } = await import('../../services/firebase/auth')
         const userData = await getUserData(currentUser.uid)
-        console.log('🔍 [CompleteProfile] 用户数据:', userData);
         
         if (userData?.profile?.phone) {
           // 用户已完善信息，重定向到首页
-          console.log('✅ [CompleteProfile] 用户已完善信息，重定向到首页');
           navigate('/', { replace: true })
-        } else {
-          console.log('📝 [CompleteProfile] 用户需要完善信息，停留在当前页面');
         }
       }
       
@@ -87,19 +73,13 @@ const CompleteProfile: React.FC = () => {
 
     setLoading(true)
     try {
-      console.log('🔵 [CompleteProfile] 开始提交，输入值:', values)
-      
       // 标准化手机号
       const normalizedPhone = normalizePhoneNumber(values.phone)
-      console.log('🔵 [CompleteProfile] 标准化后的手机号:', normalizedPhone)
       
       if (!normalizedPhone) {
-        console.error('❌ [CompleteProfile] 手机号格式无效')
         setLoading(false)
         return
       }
-
-      console.log('✅ [CompleteProfile] 表单验证通过，继续注册...')
 
       // 调用完善用户信息的服务函数
       const { completeGoogleUserProfile } = await import('../../services/firebase/auth')
@@ -111,18 +91,15 @@ const CompleteProfile: React.FC = () => {
       )
 
       if (result.success) {
-        console.log('✅ [CompleteProfile] 注册成功！')
         message.success('账户信息已完善，欢迎加入 Gentleman Club！')
         navigate('/', { replace: true })
       } else {
-        console.error('❌ [CompleteProfile] 注册失败:', (result as any).error)
         message.error((result as any).error?.message || '信息保存失败，请重试')
       }
     } catch (error) {
-      console.error('💥 [CompleteProfile] 捕获异常:', error)
+      console.error('Complete profile error:', error)
       message.error('信息保存失败，请重试')
     } finally {
-      console.log('🔵 [CompleteProfile] 提交流程结束')
       setLoading(false)
     }
   }

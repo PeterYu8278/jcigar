@@ -144,23 +144,16 @@ export const loginWithEmailOrPhone = async (identifier: string, password: string
 
 // 使用 Google 登录（新用户需要完善信息）
 export const loginWithGoogle = async () => {
-  console.log('🟢 [auth.ts] loginWithGoogle 开始执行');
-  
   // 检查是否已有 pending 的 redirect
   const hasPending = sessionStorage.getItem('googleRedirectPending');
   if (hasPending) {
-    console.log('⚠️ [auth.ts] 已有 pending 的 redirect，阻止重复调用');
     return { success: false, error: new Error('重定向正在进行中，请稍候...') } as { success: false; error: Error };
   }
   
   try {
     const provider = new GoogleAuthProvider();
-    console.log('🟢 [auth.ts] GoogleAuthProvider 创建成功');
-    
-    // 添加额外的OAuth参数
     provider.addScope('email');
     provider.addScope('profile');
-    console.log('🟢 [auth.ts] OAuth scopes 已添加');
     
     // 检测是否为移动设备（增强检测）
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
@@ -168,67 +161,36 @@ export const loginWithGoogle = async () => {
                      ('ontouchstart' in window) ||
                      (navigator.maxTouchPoints > 0);
     
-    // 检测是否为开发环境
-    const isDev = window.location.hostname === 'localhost' || 
-                  window.location.hostname === '127.0.0.1' ||
-                  window.location.hostname.includes('192.168.');
-    
-    console.log('📱 [auth.ts] 设备检测:', isMobile ? '移动设备' : '桌面设备');
-    console.log('📱 [auth.ts] UserAgent:', navigator.userAgent);
-    console.log('📱 [auth.ts] Touch支持:', 'ontouchstart' in window);
-    console.log('📱 [auth.ts] 触摸点数:', navigator.maxTouchPoints);
-    console.log('🔧 [auth.ts] 环境检测:', isDev ? '开发环境' : '生产环境');
-    
     let credential;
     
     if (isMobile) {
       // 移动端：尝试 popup，失败降级到 redirect
-      console.log('📱 [auth.ts] 移动设备，优先尝试弹窗方式');
-      
       try {
-        console.log('🪟 [auth.ts] 移动端尝试 signInWithPopup...');
         credential = await signInWithPopup(auth, provider);
-        console.log('✅ [auth.ts] 移动端 signInWithPopup 成功, credential:', credential);
       } catch (mobilePopupError: any) {
-        console.error('❌ [auth.ts] 移动端 signInWithPopup 失败:', mobilePopupError);
-        console.error('❌ [auth.ts] 错误代码:', mobilePopupError.code);
-        console.error('❌ [auth.ts] 错误信息:', mobilePopupError.message);
-        
         // Popup 失败，降级到 redirect
-        console.log('🔄 [auth.ts] 移动端降级到重定向方式');
         sessionStorage.setItem('googleRedirectPending', 'true');
         await signInWithRedirect(auth, provider);
         return { success: true, isRedirecting: true } as any;
       }
     } else {
       // 桌面端：使用 popup
-      console.log('🖥️ [auth.ts] 桌面设备，使用弹窗方式登录');
       try {
-        console.log('🪟 [auth.ts] 调用 signInWithPopup...');
         credential = await signInWithPopup(auth, provider);
-        console.log('✅ [auth.ts] signInWithPopup 成功, credential:', credential);
       } catch (popupError: any) {
-        console.error('❌ [auth.ts] signInWithPopup 失败:', popupError);
-        console.error('❌ [auth.ts] 错误代码:', popupError.code);
-        console.error('❌ [auth.ts] 错误信息:', popupError.message);
-        
-        // 任何 popup 失败都降级到 redirect（扩大捕获范围）
-        console.log('🔄 [auth.ts] Popup 失败，自动降级到重定向方式');
+        // 任何 popup 失败都降级到 redirect
         await signInWithRedirect(auth, provider);
         return { success: true, isRedirecting: true } as any;
       }
     }
     
     const user = credential.user;
-    console.log('👤 [auth.ts] 获取到用户信息:', { uid: user.uid, email: user.email, displayName: user.displayName });
 
     // 检查 Firestore 中是否已存在用户文档
     const ref = doc(db, 'users', user.uid);
-    console.log('🔍 [auth.ts] 检查 Firestore 用户文档, uid:', user.uid);
     const snap = await getDoc(ref);
     
     if (!snap.exists()) {
-      console.log('📝 [auth.ts] 用户文档不存在，创建新用户');
       // 新用户：创建临时用户文档（仅包含邮箱和基础信息）
       const tempUserData: Omit<User, 'id'> = {
         email: user.email || '',
@@ -247,89 +209,50 @@ export const loginWithGoogle = async () => {
         updatedAt: new Date(),
       };
       await setDoc(ref, tempUserData);
-      console.log('✅ [auth.ts] 新用户文档创建成功');
       
       // 返回特殊标识：需要完善信息
       return { success: true, user, needsProfile: true };
     }
 
     // 已存在用户：检查是否已完善信息
-    console.log('✅ [auth.ts] 用户文档已存在，检查信息完整性');
     const userData = snap.data() as User;
-    const needsProfile = !userData.profile?.phone; // 如果没有手机号，需要完善信息
-    console.log('📋 [auth.ts] 用户信息:', { 
-      email: userData.email, 
-      phone: userData.profile?.phone,
-      needsProfile 
-    });
-
+    const needsProfile = !userData.profile?.phone;
+    
     return { success: true, user, needsProfile };
   } catch (error) {
-    console.error('💥 [auth.ts] loginWithGoogle 捕获异常:', error);
+    console.error('Google login error:', error);
     const err = error as any
-    console.error('💥 [auth.ts] 错误详情:', {
-      code: err?.code,
-      message: err?.message,
-      stack: err?.stack
-    });
     return { success: false, error: err as Error } as { success: false; error: Error };
   }
 };
 
 // 处理 Google 重定向登录结果
 export const handleGoogleRedirectResult = async () => {
-  console.log('🔄 [auth.ts] handleGoogleRedirectResult 开始执行');
-  console.log('🔄 [auth.ts] 当前 URL:', window.location.href);
-  console.log('🔄 [auth.ts] Firebase Auth Domain:', auth.app.options.authDomain);
-  console.log('🔄 [auth.ts] Firebase 完整配置:', {
-    apiKey: auth.app.options.apiKey,
-    authDomain: auth.app.options.authDomain,
-    projectId: auth.app.options.projectId
-  });
-  
-  // 检查是否有 redirect 标记
   const hasPending = sessionStorage.getItem('googleRedirectPending');
-  console.log('🔐 [auth.ts] redirect 标记状态:', hasPending);
-  
-  // 检查当前用户状态
-  console.log('👤 [auth.ts] 当前登录用户:', auth.currentUser);
   
   try {
-    console.log('🔄 [auth.ts] 调用 getRedirectResult...');
     const result = await getRedirectResult(auth);
-    console.log('🔄 [auth.ts] getRedirectResult 返回:', result);
-    console.log('🔄 [auth.ts] getRedirectResult 类型:', typeof result);
-    console.log('🔄 [auth.ts] getRedirectResult 是否为 null:', result === null);
     
-    // 如果返回 null，等待一下再检查 currentUser（Firebase Auth 可能需要时间更新）
+    // 如果返回 null，等待一下再检查 currentUser
     if (!result && hasPending) {
-      console.log('⏰ [auth.ts] 等待 Firebase Auth 状态更新...');
-      await new Promise(resolve => setTimeout(resolve, 1000)); // 等待 1 秒
-      console.log('👤 [auth.ts] 1秒后的当前用户:', auth.currentUser);
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
     
-    // 清除标记（无论是否有结果）
+    // 清除标记
     sessionStorage.removeItem('googleRedirectPending');
-    console.log('🔐 [auth.ts] 已清除 redirect 标记');
     
     if (!result) {
-      console.log('⚪ [auth.ts] getRedirectResult 返回 null');
-      
-      // 备用方案：检查是否有标记 + 用户已登录（使用等待后的状态）
+      // 备用方案：检查是否有标记 + 用户已登录
       const currentUser = auth.currentUser;
-      console.log('👤 [auth.ts] 检查备用方案，当前用户:', currentUser);
       
       if (hasPending && currentUser) {
-        console.log('🔄 [auth.ts] 检测到标记且用户已登录，使用备用方案');
         const user = currentUser;
-        console.log('👤 [auth.ts] 当前用户:', { uid: user.uid, email: user.email, displayName: user.displayName });
         
         // 检查 Firestore 用户文档
         const ref = doc(db, 'users', user.uid);
         const snap = await getDoc(ref);
         
         if (!snap.exists()) {
-          console.log('📝 [auth.ts] 备用方案：创建新用户');
           const tempUserData: Omit<User, 'id'> = {
             email: user.email || '',
             displayName: user.displayName || '未命名用户',
@@ -351,24 +274,19 @@ export const handleGoogleRedirectResult = async () => {
         
         const userData = snap.data() as User;
         const needsProfile = !userData.profile?.phone;
-        console.log('📋 [auth.ts] 备用方案：用户信息:', { needsProfile });
         return { success: true, user, needsProfile };
       }
       
-      console.log('⚪ [auth.ts] 无重定向结果且无用户登录');
       return { success: false, noResult: true } as any;
     }
     
     const user = result.user;
-    console.log('👤 [auth.ts] 重定向获取到用户:', { uid: user.uid, email: user.email, displayName: user.displayName });
 
     // 检查 Firestore 中是否已存在用户文档
     const ref = doc(db, 'users', user.uid);
-    console.log('🔍 [auth.ts] 检查 Firestore 用户文档, uid:', user.uid);
     const snap = await getDoc(ref);
     
     if (!snap.exists()) {
-      console.log('📝 [auth.ts] 重定向：用户文档不存在，创建新用户');
       // 新用户：创建临时用户文档
       const tempUserData: Omit<User, 'id'> = {
         email: user.email || '',
@@ -387,34 +305,18 @@ export const handleGoogleRedirectResult = async () => {
         updatedAt: new Date(),
       };
       await setDoc(ref, tempUserData);
-      console.log('✅ [auth.ts] 重定向：新用户文档创建成功');
       
-      const returnValue = { success: true, user, needsProfile: true };
-      console.log('🔵 [auth.ts] 重定向（新用户）：返回值:', returnValue);
-      return returnValue;
+      return { success: true, user, needsProfile: true };
     }
 
     // 已存在用户：检查是否已完善信息
-    console.log('✅ [auth.ts] 重定向：用户文档已存在');
     const userData = snap.data() as User;
     const needsProfile = !userData.profile?.phone;
-    console.log('📋 [auth.ts] 重定向：用户信息:', { 
-      email: userData.email, 
-      phone: userData.profile?.phone,
-      needsProfile 
-    });
     
-    const returnValue = { success: true, user, needsProfile };
-    console.log('🔵 [auth.ts] 重定向：返回值:', returnValue);
-    return returnValue;
+    return { success: true, user, needsProfile };
   } catch (error) {
-    console.error('💥 [auth.ts] handleGoogleRedirectResult 捕获异常:', error);
+    console.error('Redirect result error:', error);
     const err = error as any;
-    console.error('💥 [auth.ts] 错误详情:', {
-      code: err?.code,
-      message: err?.message,
-      stack: err?.stack
-    });
     return { success: false, error: err as Error } as { success: false; error: Error };
   }
 };
