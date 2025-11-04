@@ -3,11 +3,10 @@ import React, { useState, useEffect } from 'react'
 import { Form, Input, Button, Card, Typography, Space, message } from 'antd'
 import { UserOutlined, LockOutlined, PhoneOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../../store/modules/auth'
 import { useTranslation } from 'react-i18next'
 import { normalizePhoneNumber } from '../../utils/phoneNormalization'
 import { collection, query, where, getDocs, limit } from 'firebase/firestore'
-import { db } from '../../config/firebase'
+import { db, auth } from '../../config/firebase'
 
 const { Title, Text } = Typography
 
@@ -15,20 +14,27 @@ const CompleteProfile: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [form] = Form.useForm()
   const navigate = useNavigate()
-  const { user } = useAuthStore()
   const { t } = useTranslation()
 
-  // 如果用户已完善信息（有手机号），重定向到首页
+  // 如果用户未登录或已完善信息，重定向
   useEffect(() => {
-    if (!user) {
+    const currentUser = auth.currentUser
+    
+    if (!currentUser) {
+      // 未登录，重定向到登录页
       navigate('/login', { replace: true })
       return
+    }
+    
+    // 预填 Google 用户的显示名称
+    if (currentUser.displayName) {
+      form.setFieldsValue({ displayName: currentUser.displayName })
     }
     
     // 检查用户是否已有完整信息
     const checkUserProfile = async () => {
       const { getUserData } = await import('../../services/firebase/auth')
-      const userData = await getUserData(user.uid)
+      const userData = await getUserData(currentUser.uid)
       if (userData?.profile?.phone) {
         // 用户已完善信息，重定向到首页
         navigate('/', { replace: true })
@@ -36,14 +42,16 @@ const CompleteProfile: React.FC = () => {
     }
     
     checkUserProfile()
-  }, [user, navigate])
+  }, [navigate, form])
 
   const onFinish = async (values: { 
     displayName: string
     phone: string
     password: string
   }) => {
-    if (!user) {
+    const currentUser = auth.currentUser
+    
+    if (!currentUser) {
       message.error('用户信息不存在，请重新登录')
       navigate('/login')
       return
@@ -75,7 +83,7 @@ const CompleteProfile: React.FC = () => {
       // 3. 调用完善用户信息的服务函数
       const { completeGoogleUserProfile } = await import('../../services/firebase/auth')
       const result = await completeGoogleUserProfile(
-        user.uid,
+        currentUser.uid,
         values.displayName,
         normalizedPhone,
         values.password
