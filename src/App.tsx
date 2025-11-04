@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Layout } from 'antd'
 import AppHeader from './components/layout/AppHeader'
@@ -37,6 +37,7 @@ const AppContent: React.FC = () => {
   const location = useLocation()
   const isDesktop = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(min-width: 992px)').matches : true
   const [siderCollapsed, setSiderCollapsed] = useState(false)
+  const [viewportHeight, setViewportHeight] = useState('100vh')
 
   // 无需 padding 的页面
   const noPaddingPages = ['/shop', '/login', '/register', '/auth/complete-profile']
@@ -46,9 +47,28 @@ const AppContent: React.FC = () => {
   // 逻辑：已登录 AND (是电脑端 OR 不是商城页面)
   const showSider = user && (isDesktop || location.pathname !== '/shop')
 
+  // 设置实际视口高度（适配移动设备地址栏）
+  useEffect(() => {
+    const setVH = () => {
+      const vh = window.innerHeight
+      setViewportHeight(`${vh}px`)
+      // 同时设置 CSS 变量供全局使用
+      document.documentElement.style.setProperty('--vh', `${vh * 0.01}px`)
+    }
+
+    setVH()
+    window.addEventListener('resize', setVH)
+    window.addEventListener('orientationchange', setVH)
+
+    return () => {
+      window.removeEventListener('resize', setVH)
+      window.removeEventListener('orientationchange', setVH)
+    }
+  }, [])
+
   return (
       <Layout style={{ 
-        height: '100vh',
+        height: viewportHeight,
         display: 'flex',
         flexDirection: 'column',
         background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2d2d2d 100%)',
