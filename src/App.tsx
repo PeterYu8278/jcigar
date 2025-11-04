@@ -52,7 +52,8 @@ const AppContent: React.FC = () => {
         display: 'flex',
         flexDirection: 'column',
         background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2d2d2d 100%)',
-        position: 'relative'
+        position: 'relative',
+        overflow: needsPadding ? 'auto' : 'hidden'
       }}>
         {/* 全局背景装饰 */}
         <div style={{
@@ -79,7 +80,9 @@ const AppContent: React.FC = () => {
           <Layout style={{ 
             background: 'transparent',
             marginLeft: showSider && isDesktop ? (siderCollapsed ? 64 : 240) : 0,
-            height: '100%'
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column'
           }}>
             <Content
               style={{
