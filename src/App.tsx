@@ -110,7 +110,7 @@ const AppContent: React.FC = () => {
           zIndex: -1
         }} />
         
-        {user && <AppHeader />}
+        {user && needsPadding && <AppHeader />}
         <Layout style={{ 
           background: 'transparent',
           flex: 1
@@ -180,12 +180,12 @@ const AppContent: React.FC = () => {
                 </Routes>
               </div>
             </Content>
-            {user && <AppFooter />}
+            {user && needsPadding && <AppFooter />}
           </Layout>
         </Layout>
         
         {/* 手机端底部导航 */}
-        {user && <MobileBottomNav />}
+        {user && needsPadding && <MobileBottomNav />}
       </Layout>
   )
 }
