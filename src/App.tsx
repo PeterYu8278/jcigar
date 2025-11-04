@@ -86,13 +86,15 @@ const AppContent: React.FC = () => {
                 padding: needsPadding ? 12 : 0,
                 margin: 0,
                 minHeight: needsPadding ? 280 : 0,
+                height: needsPadding ? 'auto' : '100%',
                 flex: needsPadding ? 'none' : 1,
                 background: 'radial-gradient(ellipse at top, #3c2f1a, #121212)' ,
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
                 backdropFilter: 'blur(10px)',
                 position: 'relative',
                 overflow: needsPadding ? 'auto' : 'hidden',
-                paddingBottom: needsPadding ? '90px' : '0px'
+                paddingBottom: needsPadding ? '90px' : '0px',
+                display: needsPadding ? 'block' : 'flex'
               }}
             >
               {/* 内容区域背景装饰 */}
