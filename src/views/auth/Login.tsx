@@ -21,25 +21,37 @@ const Login: React.FC = () => {
 
   // 检查 Google 重定向登录结果
   useEffect(() => {
+    console.log('🔵 [Login.tsx] useEffect: 检查重定向结果');
     const checkRedirectResult = async () => {
+      console.log('🔵 [Login.tsx] checkRedirectResult 开始');
       setLoading(true)
       try {
+        console.log('🔵 [Login.tsx] 调用 handleGoogleRedirectResult');
         const result = await handleGoogleRedirectResult()
+        console.log('🔵 [Login.tsx] handleGoogleRedirectResult 返回:', result);
+        
         if (result.success) {
+          console.log('✅ [Login.tsx] 重定向登录成功');
           if (result.needsProfile) {
+            console.log('📝 [Login.tsx] 需要完善信息');
             message.info('请完善您的账户信息')
             navigate('/auth/complete-profile', { replace: true })
           } else {
+            console.log('🎉 [Login.tsx] 信息已完善，跳转到:', from);
             message.success(t('auth.loginSuccess'))
             navigate(from, { replace: true })
           }
         } else if (!result.noResult) {
+          console.error('❌ [Login.tsx] 重定向登录失败:', result.error);
           // 有错误但不是 noResult
           message.error(result.error?.message || t('auth.loginFailed'))
+        } else {
+          console.log('⚪ [Login.tsx] 无重定向结果（正常情况）');
         }
       } catch (error) {
-        console.error('Redirect result error:', error)
+        console.error('💥 [Login.tsx] checkRedirectResult 捕获异常:', error)
       } finally {
+        console.log('🔵 [Login.tsx] checkRedirectResult 结束');
         setLoading(false)
       }
     }
@@ -65,12 +77,18 @@ const Login: React.FC = () => {
   }
 
   const onGoogle = async () => {
+    console.log('🔵 [Login.tsx] onGoogle 开始执行')
     setLoading(true)
     try {
+      console.log('🔵 [Login.tsx] 调用 loginWithGoogle()')
       const res = await loginWithGoogle()
+      console.log('🔵 [Login.tsx] loginWithGoogle 返回结果:', res)
+      
       if (res.success) {
+        console.log('✅ [Login.tsx] 登录成功')
         // 检查是否正在重定向
         if ((res as any).isRedirecting) {
+          console.log('🔄 [Login.tsx] 正在重定向到 Google')
           // 重定向中，页面即将刷新，保持 loading 状态
           message.loading('正在跳转到 Google 登录...', 0)
           return
@@ -78,18 +96,21 @@ const Login: React.FC = () => {
         
         // 检查是否需要完善信息
         if ((res as any).needsProfile) {
+          console.log('📝 [Login.tsx] 需要完善信息，跳转到 complete-profile')
           message.info('请完善您的账户信息')
           navigate('/auth/complete-profile', { replace: true })
         } else {
+          console.log('🎉 [Login.tsx] 用户已完善信息，跳转到:', from)
           message.success(t('auth.loginSuccess'))
           navigate(from, { replace: true })
         }
       } else {
+        console.error('❌ [Login.tsx] 登录失败:', (res as any).error)
         message.error((res as any).error?.message || t('auth.loginFailed'))
         setLoading(false)
       }
     } catch (error) {
-      console.error('Google login error:', error)
+      console.error('💥 [Login.tsx] Google login 捕获异常:', error)
       message.error(t('auth.loginFailed'))
       setLoading(false)
     }
@@ -165,8 +186,8 @@ const Login: React.FC = () => {
                     if (type === 'email') {
                       if (!isValidEmail(value)) {
                         return Promise.reject(new Error('邮箱格式无效'))
-                      }
-                    }
+                  }
+                }
                     
                     // 手机号额外验证标准化
                     if (type === 'phone') {

@@ -93,7 +93,7 @@ export default defineConfig({
     port: 3000,
     open: true,
     headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+      'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'unsafe-none'
     }
   },

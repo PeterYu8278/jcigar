@@ -143,38 +143,57 @@ export const loginWithEmailOrPhone = async (identifier: string, password: string
 };
 
 // 使用 Google 登录（新用户需要完善信息）
-// 默认使用 redirect 模式以避免 COOP 问题
-export const loginWithGoogle = async (useRedirect = true) => {
+export const loginWithGoogle = async (useRedirect = false) => {
+  console.log('🟢 [auth.ts] loginWithGoogle 开始执行, useRedirect:', useRedirect);
   try {
     const provider = new GoogleAuthProvider();
+    console.log('🟢 [auth.ts] GoogleAuthProvider 创建成功');
     
     // 添加额外的OAuth参数
     provider.addScope('email');
     provider.addScope('profile');
+    console.log('🟢 [auth.ts] OAuth scopes 已添加');
     
-    // 直接使用重定向方式（最可靠，兼容所有浏览器和安全策略）
-    if (useRedirect) {
-      await signInWithRedirect(auth, provider);
-      return { success: true, isRedirecting: true } as any;
-    }
-    
-    // 仅在明确指定 useRedirect=false 时使用弹窗（高级用例）
     let credential;
-    try {
-      credential = await signInWithPopup(auth, provider);
-    } catch (popupError: any) {
-      console.error('Popup failed, falling back to redirect:', popupError);
+    
+    if (useRedirect) {
+      console.log('🔄 [auth.ts] 使用重定向方式登录');
+      // 使用重定向方式（更可靠，但会刷新页面）
       await signInWithRedirect(auth, provider);
+      console.log('🔄 [auth.ts] signInWithRedirect 调用成功');
       return { success: true, isRedirecting: true } as any;
+    } else {
+      console.log('🪟 [auth.ts] 尝试使用弹窗方式登录');
+      // 尝试使用弹窗方式
+      try {
+        console.log('🪟 [auth.ts] 调用 signInWithPopup...');
+        credential = await signInWithPopup(auth, provider);
+        console.log('✅ [auth.ts] signInWithPopup 成功, credential:', credential);
+      } catch (popupError: any) {
+        console.error('❌ [auth.ts] signInWithPopup 失败:', popupError);
+        console.error('❌ [auth.ts] 错误代码:', popupError.code);
+        console.error('❌ [auth.ts] 错误信息:', popupError.message);
+        
+        // 如果弹窗被阻止，自动切换到重定向方式
+        if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/popup-closed-by-user') {
+          console.log('🔄 [auth.ts] 弹窗被阻止，切换到重定向方式');
+          await signInWithRedirect(auth, provider);
+          return { success: true, isRedirecting: true } as any;
+        }
+        throw popupError;
+      }
     }
     
     const user = credential.user;
+    console.log('👤 [auth.ts] 获取到用户信息:', { uid: user.uid, email: user.email, displayName: user.displayName });
 
     // 检查 Firestore 中是否已存在用户文档
     const ref = doc(db, 'users', user.uid);
+    console.log('🔍 [auth.ts] 检查 Firestore 用户文档, uid:', user.uid);
     const snap = await getDoc(ref);
     
     if (!snap.exists()) {
+      console.log('📝 [auth.ts] 用户文档不存在，创建新用户');
       // 新用户：创建临时用户文档（仅包含邮箱和基础信息）
       const tempUserData: Omit<User, 'id'> = {
         email: user.email || '',
@@ -193,37 +212,58 @@ export const loginWithGoogle = async (useRedirect = true) => {
         updatedAt: new Date(),
       };
       await setDoc(ref, tempUserData);
+      console.log('✅ [auth.ts] 新用户文档创建成功');
       
       // 返回特殊标识：需要完善信息
       return { success: true, user, needsProfile: true };
     }
 
     // 已存在用户：检查是否已完善信息
+    console.log('✅ [auth.ts] 用户文档已存在，检查信息完整性');
     const userData = snap.data() as User;
     const needsProfile = !userData.profile?.phone; // 如果没有手机号，需要完善信息
+    console.log('📋 [auth.ts] 用户信息:', { 
+      email: userData.email, 
+      phone: userData.profile?.phone,
+      needsProfile 
+    });
     
     return { success: true, user, needsProfile };
   } catch (error) {
+    console.error('💥 [auth.ts] loginWithGoogle 捕获异常:', error);
     const err = error as any
+    console.error('💥 [auth.ts] 错误详情:', {
+      code: err?.code,
+      message: err?.message,
+      stack: err?.stack
+    });
     return { success: false, error: err as Error } as { success: false; error: Error };
   }
 };
 
 // 处理 Google 重定向登录结果
 export const handleGoogleRedirectResult = async () => {
+  console.log('🔄 [auth.ts] handleGoogleRedirectResult 开始执行');
   try {
+    console.log('🔄 [auth.ts] 调用 getRedirectResult...');
     const result = await getRedirectResult(auth);
+    console.log('🔄 [auth.ts] getRedirectResult 返回:', result);
+    
     if (!result) {
+      console.log('⚪ [auth.ts] 无重定向结果');
       return { success: false, noResult: true } as any;
     }
     
     const user = result.user;
+    console.log('👤 [auth.ts] 重定向获取到用户:', { uid: user.uid, email: user.email, displayName: user.displayName });
 
     // 检查 Firestore 中是否已存在用户文档
     const ref = doc(db, 'users', user.uid);
+    console.log('🔍 [auth.ts] 检查 Firestore 用户文档, uid:', user.uid);
     const snap = await getDoc(ref);
     
     if (!snap.exists()) {
+      console.log('📝 [auth.ts] 重定向：用户文档不存在，创建新用户');
       // 新用户：创建临时用户文档
       const tempUserData: Omit<User, 'id'> = {
         email: user.email || '',
@@ -242,17 +282,30 @@ export const handleGoogleRedirectResult = async () => {
         updatedAt: new Date(),
       };
       await setDoc(ref, tempUserData);
+      console.log('✅ [auth.ts] 重定向：新用户文档创建成功');
       
       return { success: true, user, needsProfile: true };
     }
 
     // 已存在用户：检查是否已完善信息
+    console.log('✅ [auth.ts] 重定向：用户文档已存在');
     const userData = snap.data() as User;
     const needsProfile = !userData.profile?.phone;
+    console.log('📋 [auth.ts] 重定向：用户信息:', { 
+      email: userData.email, 
+      phone: userData.profile?.phone,
+      needsProfile 
+    });
     
     return { success: true, user, needsProfile };
   } catch (error) {
+    console.error('💥 [auth.ts] handleGoogleRedirectResult 捕获异常:', error);
     const err = error as any;
+    console.error('💥 [auth.ts] 错误详情:', {
+      code: err?.code,
+      message: err?.message,
+      stack: err?.stack
+    });
     return { success: false, error: err as Error } as { success: false; error: Error };
   }
 };

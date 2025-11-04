@@ -70,15 +70,15 @@ const AdminUsers: React.FC = () => {
 
   useEffect(() => {
     ;(async () => {
-      setLoading(true)
-      try {
+    setLoading(true)
+    try {
         const list = await getUsers()
-        setUsers(list)
+      setUsers(list)
       } catch (e) {
-        message.error(t('messages.dataLoadFailed'))
-      } finally {
-        setLoading(false)
-      }
+      message.error(t('messages.dataLoadFailed'))
+    } finally {
+      setLoading(false)
+    }
     })()
   }, [])
 
@@ -249,8 +249,8 @@ const AdminUsers: React.FC = () => {
               }}
               size="small"
             />
-          </Space>
-        )
+        </Space>
+      )
       },
       filterIcon: (filtered: boolean) => (
         <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />
@@ -383,11 +383,11 @@ const AdminUsers: React.FC = () => {
                 }
               }}>{t('usersAdmin.batchDisable')}</Button>
               <Button danger onClick={async () => {
-                Modal.confirm({
+    Modal.confirm({
                   title: t('usersAdmin.batchDeleteConfirm'),
                   content: t('usersAdmin.batchDeleteContent', { count: selectedRowKeys.length }),
-                  okButtonProps: { danger: true },
-                  onOk: async () => {
+      okButtonProps: { danger: true },
+      onOk: async () => {
                     setLoading(true)
                     try {
                       await Promise.all(selectedRowKeys.map(id => deleteDocument(COLLECTIONS.USERS, String(id))))
@@ -874,8 +874,8 @@ const AdminUsers: React.FC = () => {
                       default: return ''
                     }
                   }
-                  
-                  return (
+
+  return (
                     <button
                       key={tabKey}
                       onClick={() => setActiveTab(tabKey)}
@@ -1196,8 +1196,8 @@ const AdminUsers: React.FC = () => {
         styles={getModalThemeStyles(isMobile, true)}
       >
           <Form 
-            form={form} 
-            layout="vertical" 
+          form={form}
+          layout="vertical"
             style={{ color: '#FFFFFF' }}
             onFinish={async (values) => {
           setLoading(true)
