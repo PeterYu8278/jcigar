@@ -86,7 +86,6 @@ const AppContent: React.FC = () => {
                 padding: needsPadding ? 12 : 0,
                 margin: 0,
                 minHeight: needsPadding ? 280 : 0,
-                height: needsPadding ? 'auto' : '100%',
                 flex: needsPadding ? 'none' : 1,
                 background: 'radial-gradient(ellipse at top, #3c2f1a, #121212)' ,
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
@@ -94,7 +93,9 @@ const AppContent: React.FC = () => {
                 position: 'relative',
                 overflow: needsPadding ? 'auto' : 'hidden',
                 paddingBottom: needsPadding ? '90px' : '0px',
-                display: needsPadding ? 'block' : 'flex'
+                display: needsPadding ? 'block' : 'flex',
+                alignItems: needsPadding ? undefined : 'center',
+                justifyContent: needsPadding ? undefined : 'center'
               }}
             >
               {/* 内容区域背景装饰 */}

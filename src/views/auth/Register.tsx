@@ -43,26 +43,18 @@ const Register: React.FC = () => {
 
   return (
     <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
       width: '100%',
-      height: '100%',
-      position: 'relative',
-      overflow: 'hidden'
+      position: 'relative'
     }}>
       <Card style={{ 
-        width: 400,
-        maxWidth: '90%',
-        margin: '0 auto',
+        width: 400, 
         background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.9) 0%, rgba(45, 45, 45, 0.8) 100%)',
         border: '1px solid rgba(255, 215, 0, 0.2)',
         borderRadius: '16px',
         boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5), 0 8px 32px rgba(255, 215, 0, 0.1)',
         backdropFilter: 'blur(10px)',
         position: 'relative',
-        zIndex: 1,
-        flexShrink: 0
+        zIndex: 1
       }}>
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
           <div style={{ textAlign: 'center', paddingTop: '20px' }}>
