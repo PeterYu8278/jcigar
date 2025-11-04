@@ -7,6 +7,10 @@ import { cigarTheme } from './config/theme'
 import './i18n' // 初始化国际化（i18next会自动加载保存的语言设置）
 import LocalizedApp from './components/common/LocalizedApp'
 import { initializePWA, unregisterServiceWorker } from './utils/pwa'
+import { initMobileDebug } from './utils/mobileDebug'
+
+// 初始化移动端调试工具（仅在移动设备上显示）
+initMobileDebug()
 
 // 开发环境：清理旧的Service Worker
 if (import.meta.env.DEV) {
