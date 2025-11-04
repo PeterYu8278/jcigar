@@ -200,7 +200,7 @@ export const loginWithGoogle = async (useRedirect = false) => {
         displayName: user.displayName || '未命名用户',
         role: 'member',
         profile: {
-          phone: undefined, // 待完善
+          // phone 字段省略，待用户完善信息后添加
           preferences: { language: 'zh', notifications: true },
         },
         membership: {
@@ -270,7 +270,7 @@ export const handleGoogleRedirectResult = async () => {
         displayName: user.displayName || '未命名用户',
         role: 'member',
         profile: {
-          phone: undefined,
+          // phone 字段省略，待用户完善信息后添加
           preferences: { language: 'zh', notifications: true },
         },
         membership: {
