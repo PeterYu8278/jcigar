@@ -117,21 +117,21 @@ export const loginWithEmailOrPhone = async (identifier: string, password: string
     
     if (!normalizedPhone) {
       return { success: false, error: new Error('手机号格式无效') } as { success: false; error: Error }
-    }
+      }
     
     // 查找 Firestore 中绑定该手机号的用户（使用标准化格式）
     const usersRef = collection(db, 'users')
     const q = query(usersRef, where('profile.phone', '==', normalizedPhone), limit(1))
     const snap = await getDocs(q)
     
-    if (snap.empty) {
+      if (snap.empty) {
       return { success: false, error: new Error('未找到绑定该手机号的账户') } as { success: false; error: Error }
-    }
+      }
     
     const userDoc = snap.docs[0]
     const email = (userDoc.data() as any)?.email
     
-    if (!email) {
+      if (!email) {
       return { success: false, error: new Error('该手机号未绑定邮箱账户') } as { success: false; error: Error }
     }
     
@@ -143,8 +143,8 @@ export const loginWithEmailOrPhone = async (identifier: string, password: string
 };
 
 // 使用 Google 登录（新用户需要完善信息）
-export const loginWithGoogle = async (useRedirect = false) => {
-  console.log('🟢 [auth.ts] loginWithGoogle 开始执行, useRedirect:', useRedirect);
+export const loginWithGoogle = async () => {
+  console.log('🟢 [auth.ts] loginWithGoogle 开始执行');
   try {
     const provider = new GoogleAuthProvider();
     console.log('🟢 [auth.ts] GoogleAuthProvider 创建成功');
@@ -154,17 +154,21 @@ export const loginWithGoogle = async (useRedirect = false) => {
     provider.addScope('profile');
     console.log('🟢 [auth.ts] OAuth scopes 已添加');
     
+    // 检测是否为移动设备
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    console.log('📱 [auth.ts] 设备检测:', isMobile ? '移动设备' : '桌面设备');
+    
     let credential;
     
-    if (useRedirect) {
-      console.log('🔄 [auth.ts] 使用重定向方式登录');
-      // 使用重定向方式（更可靠，但会刷新页面）
+    if (isMobile) {
+      // 移动端直接使用 redirect（最可靠）
+      console.log('📱 [auth.ts] 移动设备，使用重定向方式');
       await signInWithRedirect(auth, provider);
       console.log('🔄 [auth.ts] signInWithRedirect 调用成功');
       return { success: true, isRedirecting: true } as any;
     } else {
-      console.log('🪟 [auth.ts] 尝试使用弹窗方式登录');
-      // 尝试使用弹窗方式
+      // 桌面端尝试使用弹窗方式
+      console.log('🖥️ [auth.ts] 桌面设备，尝试使用弹窗方式登录');
       try {
         console.log('🪟 [auth.ts] 调用 signInWithPopup...');
         credential = await signInWithPopup(auth, provider);
@@ -174,13 +178,10 @@ export const loginWithGoogle = async (useRedirect = false) => {
         console.error('❌ [auth.ts] 错误代码:', popupError.code);
         console.error('❌ [auth.ts] 错误信息:', popupError.message);
         
-        // 如果弹窗被阻止，自动切换到重定向方式
-        if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/popup-closed-by-user') {
-          console.log('🔄 [auth.ts] 弹窗被阻止，切换到重定向方式');
-          await signInWithRedirect(auth, provider);
-          return { success: true, isRedirecting: true } as any;
-        }
-        throw popupError;
+        // 任何 popup 失败都降级到 redirect（扩大捕获范围）
+        console.log('🔄 [auth.ts] Popup 失败，自动降级到重定向方式');
+        await signInWithRedirect(auth, provider);
+        return { success: true, isRedirecting: true } as any;
       }
     }
     
@@ -227,7 +228,7 @@ export const loginWithGoogle = async (useRedirect = false) => {
       phone: userData.profile?.phone,
       needsProfile 
     });
-    
+
     return { success: true, user, needsProfile };
   } catch (error) {
     console.error('💥 [auth.ts] loginWithGoogle 捕获异常:', error);
