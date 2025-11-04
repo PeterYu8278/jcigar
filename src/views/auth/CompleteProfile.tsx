@@ -19,30 +19,57 @@ const CompleteProfile: React.FC = () => {
 
   // 如果用户未登录或已完善信息，重定向
   useEffect(() => {
-    const currentUser = auth.currentUser
-    
-    if (!currentUser) {
-      // 未登录，重定向到登录页
-      navigate('/login', { replace: true })
-      return
-    }
-    
-    // 预填 Google 用户的显示名称
-    if (currentUser.displayName) {
-      form.setFieldsValue({ displayName: currentUser.displayName })
-    }
-    
-    // 检查用户是否已有完整信息
-    const checkUserProfile = async () => {
-      const { getUserData } = await import('../../services/firebase/auth')
-      const userData = await getUserData(currentUser.uid)
-      if (userData?.profile?.phone) {
-        // 用户已完善信息，重定向到首页
-        navigate('/', { replace: true })
+    const checkAndSetup = async () => {
+      console.log('🔵 [CompleteProfile] useEffect 开始');
+      
+      // 等待 Firebase Auth 状态同步（最多 2 秒）
+      let currentUser = auth.currentUser;
+      let attempts = 0;
+      const maxAttempts = 4; // 4 次 × 500ms = 2 秒
+      
+      while (!currentUser && attempts < maxAttempts) {
+        console.log(`⏰ [CompleteProfile] 等待 Firebase Auth 同步 (${attempts + 1}/${maxAttempts})...`);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        currentUser = auth.currentUser;
+        attempts++;
       }
+      
+      console.log('👤 [CompleteProfile] 最终用户状态:', currentUser);
+      
+      if (!currentUser) {
+        // 等待后仍未登录，重定向到登录页
+        console.log('❌ [CompleteProfile] 未检测到登录用户，重定向到登录页');
+        navigate('/login', { replace: true })
+        return
+      }
+      
+      console.log('✅ [CompleteProfile] 用户已登录:', { uid: currentUser.uid, email: currentUser.email });
+      
+      // 预填 Google 用户的显示名称
+      if (currentUser.displayName) {
+        console.log('📝 [CompleteProfile] 预填显示名称:', currentUser.displayName);
+        form.setFieldsValue({ displayName: currentUser.displayName })
+      }
+      
+      // 检查用户是否已有完整信息
+      const checkUserProfile = async () => {
+        const { getUserData } = await import('../../services/firebase/auth')
+        const userData = await getUserData(currentUser.uid)
+        console.log('🔍 [CompleteProfile] 用户数据:', userData);
+        
+        if (userData?.profile?.phone) {
+          // 用户已完善信息，重定向到首页
+          console.log('✅ [CompleteProfile] 用户已完善信息，重定向到首页');
+          navigate('/', { replace: true })
+        } else {
+          console.log('📝 [CompleteProfile] 用户需要完善信息，停留在当前页面');
+        }
+      }
+      
+      checkUserProfile()
     }
     
-    checkUserProfile()
+    checkAndSetup()
   }, [navigate, form])
 
   const onFinish = async (values: { 
