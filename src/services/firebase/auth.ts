@@ -154,14 +154,21 @@ export const loginWithGoogle = async () => {
     provider.addScope('profile');
     console.log('🟢 [auth.ts] OAuth scopes 已添加');
     
-    // 检测是否为移动设备
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    // 检测是否为移动设备（增强检测）
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                     /Mobile|mobile|Tablet|tablet/i.test(navigator.userAgent) ||
+                     ('ontouchstart' in window) ||
+                     (navigator.maxTouchPoints > 0);
+    
     // 检测是否为开发环境
     const isDev = window.location.hostname === 'localhost' || 
                   window.location.hostname === '127.0.0.1' ||
                   window.location.hostname.includes('192.168.');
     
     console.log('📱 [auth.ts] 设备检测:', isMobile ? '移动设备' : '桌面设备');
+    console.log('📱 [auth.ts] UserAgent:', navigator.userAgent);
+    console.log('📱 [auth.ts] Touch支持:', 'ontouchstart' in window);
+    console.log('📱 [auth.ts] 触摸点数:', navigator.maxTouchPoints);
     console.log('🔧 [auth.ts] 环境检测:', isDev ? '开发环境' : '生产环境');
     
     let credential;
