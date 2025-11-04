@@ -145,9 +145,6 @@ export const loginWithEmailOrPhone = async (identifier: string, password: string
 // 使用 Google 登录（新用户需要完善信息）
 export const loginWithGoogle = async () => {
   console.log('🟢 [auth.ts] loginWithGoogle 开始执行');
-  console.log('🟢 [auth.ts] 当前 URL:', window.location.href);
-  console.log('🟢 [auth.ts] Firebase Auth Domain:', auth.config.authDomain);
-  
   try {
     const provider = new GoogleAuthProvider();
     console.log('🟢 [auth.ts] GoogleAuthProvider 创建成功');
@@ -157,49 +154,34 @@ export const loginWithGoogle = async () => {
     provider.addScope('profile');
     console.log('🟢 [auth.ts] OAuth scopes 已添加');
     
-    // 检测是否为移动设备
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    console.log('📱 [auth.ts] 设备检测:', isMobile ? '移动设备' : '桌面设备');
-    console.log('📱 [auth.ts] User Agent:', navigator.userAgent);
-    console.log('📱 [auth.ts] Platform:', navigator.platform);
+    // 检测是否为开发环境
+    const isDev = window.location.hostname === 'localhost' || 
+                  window.location.hostname === '127.0.0.1';
+    console.log('🔧 [auth.ts] 环境检测:', isDev ? '开发环境' : '生产环境');
     
     let credential;
     
-    if (isMobile) {
-      // 移动端直接使用 redirect（最可靠）
-      console.log('📱 [auth.ts] 移动设备，使用重定向方式');
-      console.log('📱 [auth.ts] Firebase Auth 实例:', auth);
-      console.log('📱 [auth.ts] Provider 配置:', provider);
+    // 所有设备都尝试使用弹窗方式（方案 B）
+    console.log('🪟 [auth.ts] 尝试使用弹窗方式登录');
+    try {
+      console.log('🪟 [auth.ts] 调用 signInWithPopup...');
+      credential = await signInWithPopup(auth, provider);
+      console.log('✅ [auth.ts] signInWithPopup 成功, credential:', credential);
+    } catch (popupError: any) {
+      console.error('❌ [auth.ts] signInWithPopup 失败:', popupError);
+      console.error('❌ [auth.ts] 错误代码:', popupError.code);
+      console.error('❌ [auth.ts] 错误信息:', popupError.message);
       
-      try {
-        console.log('📱 [auth.ts] 准备调用 signInWithRedirect...');
-        await signInWithRedirect(auth, provider);
-        console.log('✅ [auth.ts] signInWithRedirect 调用成功，页面应该正在重定向...');
-        return { success: true, isRedirecting: true } as any;
-      } catch (redirectError: any) {
-        console.error('💥 [auth.ts] signInWithRedirect 失败！', redirectError);
-        console.error('💥 [auth.ts] 错误代码:', redirectError.code);
-        console.error('💥 [auth.ts] 错误信息:', redirectError.message);
-        console.error('💥 [auth.ts] 完整错误:', redirectError);
-        throw redirectError;
+      // 开发环境：不使用 redirect（避免 404 错误）
+      if (isDev) {
+        console.error('🚫 [auth.ts] 开发环境 popup 失败，无法降级到 redirect');
+        throw new Error('Google 登录失败。请在桌面浏览器中测试，或部署到生产环境后使用。');
       }
-    } else {
-      // 桌面端尝试使用弹窗方式
-      console.log('🖥️ [auth.ts] 桌面设备，尝试使用弹窗方式登录');
-      try {
-        console.log('🪟 [auth.ts] 调用 signInWithPopup...');
-        credential = await signInWithPopup(auth, provider);
-        console.log('✅ [auth.ts] signInWithPopup 成功, credential:', credential);
-      } catch (popupError: any) {
-        console.error('❌ [auth.ts] signInWithPopup 失败:', popupError);
-        console.error('❌ [auth.ts] 错误代码:', popupError.code);
-        console.error('❌ [auth.ts] 错误信息:', popupError.message);
-        
-        // 任何 popup 失败都降级到 redirect（扩大捕获范围）
-        console.log('🔄 [auth.ts] Popup 失败，自动降级到重定向方式');
-        await signInWithRedirect(auth, provider);
-        return { success: true, isRedirecting: true } as any;
-      }
+      
+      // 生产环境：降级到 redirect
+      console.log('🔄 [auth.ts] 生产环境 popup 失败，降级到重定向方式');
+      await signInWithRedirect(auth, provider);
+      return { success: true, isRedirecting: true } as any;
     }
     
     const user = credential.user;
