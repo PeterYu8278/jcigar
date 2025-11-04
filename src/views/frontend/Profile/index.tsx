@@ -23,6 +23,9 @@ import { useTranslation } from 'react-i18next'
 import { MemberProfileCard } from '../../../components/common/MemberProfileCard'
 import { getModalThemeStyles, getModalWidth } from '../../../config/modalTheme'
 import ImageUpload from '../../../components/common/ImageUpload'
+import { auth } from '../../../config/firebase'
+import { updateEmail, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth'
+import { normalizePhoneNumber } from '../../../utils/phoneNormalization'
 
 const Profile: React.FC = () => {
   const { user, setUser } = useAuthStore()
@@ -322,32 +325,110 @@ const Profile: React.FC = () => {
           form={form}
           layout="vertical"
           style={{ color: '#FFFFFF' }}
-          onFinish={async (values: { displayName: string; email: string; phone?: string; notifications: boolean; avatar?: string }) => {
+          onFinish={async (values: { 
+            displayName: string; 
+            email: string; 
+            phone?: string; 
+            currentPassword?: string;
+            newPassword?: string;
+            notifications: boolean; 
+            avatar?: string 
+          }) => {
             if (!user) return
             setSaving(true)
             try {
+              const currentUser = auth.currentUser;
+              if (!currentUser) {
+                message.error('用户未登录，请重新登录');
+                return;
+              }
+
+              // 1. 如果要更新邮箱或密码，需要先重新认证
+              let needsReauth = false;
+              if (values.email !== user.email || values.newPassword) {
+                if (!values.currentPassword) {
+                  message.error('更新邮箱或密码需要输入当前密码进行验证');
+                  setSaving(false);
+                  return;
+                }
+                needsReauth = true;
+              }
+
+              // 2. 重新认证（如果需要）
+              if (needsReauth && values.currentPassword) {
+                try {
+                  const credential = EmailAuthProvider.credential(user.email, values.currentPassword);
+                  await reauthenticateWithCredential(currentUser, credential);
+                } catch (error: any) {
+                  message.error('当前密码验证失败，请检查密码是否正确');
+                  setSaving(false);
+                  return;
+                }
+              }
+
+              // 3. 更新 Firebase Auth 邮箱（如果修改了）
+              if (values.email !== user.email) {
+                try {
+                  await updateEmail(currentUser, values.email);
+                } catch (error: any) {
+                  message.error('邮箱更新失败：' + (error.message || '未知错误'));
+                  setSaving(false);
+                  return;
+                }
+              }
+
+              // 4. 更新 Firebase Auth 密码（如果设置了新密码）
+              if (values.newPassword) {
+                try {
+                  await updatePassword(currentUser, values.newPassword);
+                  message.success('密码已更新');
+                } catch (error: any) {
+                  message.error('密码更新失败：' + (error.message || '未知错误'));
+                  setSaving(false);
+                  return;
+                }
+              }
+
+              // 5. 标准化手机号
+              let normalizedPhone = values.phone;
+              if (values.phone) {
+                const normalized = normalizePhoneNumber(values.phone);
+                if (!normalized) {
+                  message.error('手机号格式无效');
+                  setSaving(false);
+                  return;
+                }
+                normalizedPhone = normalized;
+              }
+
+              // 6. 更新 Firestore 用户文档
               const payload: Partial<User> = {
                 displayName: values.displayName,
                 email: values.email,
                 profile: {
                   ...user.profile,
-                  phone: values.phone,
+                  phone: normalizedPhone,
                   avatar: values.avatar,
                   preferences: {
-                  language: user.profile?.preferences?.language || 'zh',
+                    language: user.profile?.preferences?.language || 'zh',
                     notifications: values.notifications,
                   },
                 },
               }
+              
               const res = await updateDocument<User>('users', user.id, payload)
               if (res.success) {
                 message.success(t('profile.saveSuccess'))
                 // 更新本地 store 中的 user
                 setUser({ ...(user as User), ...payload })
                 setEditing(false)
+                form.resetFields()
               } else {
                 message.error(t('profile.saveFailed'))
               }
+            } catch (error) {
+              console.error('Profile update error:', error);
+              message.error('更新失败，请重试');
             } finally {
               setSaving(false)
             }
@@ -384,6 +465,45 @@ const Profile: React.FC = () => {
 
           <Form.Item label={<span style={{ color: '#FFFFFF' }}>{t('profile.phoneLabel')}</span>} name="phone">
             <Input placeholder={t('profile.phonePlaceholder')} />
+          </Form.Item>
+
+          {/* 密码更新区域 */}
+          <Form.Item>
+            <div style={{ 
+              marginTop: '16px', 
+              paddingTop: '16px', 
+              borderTop: '1px solid rgba(255, 215, 0, 0.2)' 
+            }}>
+              <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
+                如需更新邮箱或密码，请先输入当前密码验证身份
+              </Text>
+            </div>
+          </Form.Item>
+
+          <Form.Item 
+            label={<span style={{ color: '#FFFFFF' }}>当前密码</span>} 
+            name="currentPassword"
+            help={<span style={{ color: 'rgba(255, 255, 255, 0.4)' }}>更新邮箱或密码时需要</span>}
+          >
+            <Input.Password placeholder="输入当前密码以验证身份" />
+          </Form.Item>
+
+          <Form.Item 
+            label={<span style={{ color: '#FFFFFF' }}>新密码</span>} 
+            name="newPassword"
+            rules={[
+              {
+                validator: (_, value) => {
+                  if (value && value.length < 6) {
+                    return Promise.reject(new Error('密码至少6位'));
+                  }
+                  return Promise.resolve();
+                }
+              }
+            ]}
+            help={<span style={{ color: 'rgba(255, 255, 255, 0.4)' }}>留空则不修改密码</span>}
+          >
+            <Input.Password placeholder="设置新密码（至少6位，留空不修改）" />
           </Form.Item>
 
           <Form.Item label={<span style={{ color: '#FFFFFF' }}>{t('profile.notificationsToggle')}</span>} name="notifications" valuePropName="checked">
