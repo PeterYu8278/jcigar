@@ -117,7 +117,7 @@ export function identifyInputType(input: string): 'email' | 'phone' | 'unknown' 
 }
 
 /**
- * 验证邮箱格式（必须包含 @ 和 .，且 @ 和 . 之间必须有英文字母）
+ * 验证邮箱格式（必须包含 @ 和 .，且 @ 和 . 之间以及 . 之后都必须有英文字母）
  */
 export function isValidEmail(email: string): boolean {
   if (!email) return false
@@ -128,17 +128,26 @@ export function isValidEmail(email: string): boolean {
   }
   
   // . 必须在 @ 之后
-  if (email.indexOf('@') >= email.lastIndexOf('.')) {
+  const atIndex = email.indexOf('@')
+  const lastDotIndex = email.lastIndexOf('.')
+  if (atIndex >= lastDotIndex) {
     return false
   }
   
   // @ 和 . 之间必须有至少一个英文字母
-  // 正则: @ 后面，第一个 . 前面，必须包含英文字母
-  const atIndex = email.indexOf('@')
   const dotIndex = email.indexOf('.', atIndex)
   const betweenAtAndDot = email.substring(atIndex + 1, dotIndex)
+  if (!/[a-zA-Z]/.test(betweenAtAndDot)) {
+    return false
+  }
   
-  return /[a-zA-Z]/.test(betweenAtAndDot)
+  // . 之后必须有至少一个英文字母
+  const afterDot = email.substring(lastDotIndex + 1)
+  if (!/[a-zA-Z]/.test(afterDot)) {
+    return false
+  }
+  
+  return true
 }
 
 /**
