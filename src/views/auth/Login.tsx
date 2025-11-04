@@ -12,6 +12,7 @@ const { Title, Text } = Typography
 
 const Login: React.FC = () => {
   const [loading, setLoading] = useState(false)
+  const [loginError, setLoginError] = useState<string>('')
   const navigate = useNavigate()
   const location = useLocation()
   const { setUser } = useAuthStore()
@@ -56,16 +57,18 @@ const Login: React.FC = () => {
 
   const onFinish = async (values: { email: string; password: string }) => {
     setLoading(true)
+    setLoginError('') // 清除之前的错误
     try {
       const result = await loginWithEmailOrPhone(values.email, values.password)
       if (result.success) {
         message.success(t('auth.loginSuccess'))
         navigate(from, { replace: true })
       } else {
-        message.error((result as any).error?.message || t('auth.loginFailed'))
+        // 使用 placeholder 显示错误
+        setLoginError((result as any).error?.message || t('auth.loginFailed'))
       }
     } catch (error) {
-      message.error(t('auth.loginFailed'))
+      setLoginError(t('auth.loginFailed'))
     } finally {
       setLoading(false)
     }
@@ -73,6 +76,7 @@ const Login: React.FC = () => {
 
   const onGoogle = async () => {
     setLoading(true)
+    setLoginError('') // 清除之前的错误
     try {
       const res = await loginWithGoogle()
       
@@ -93,12 +97,13 @@ const Login: React.FC = () => {
           navigate(from, { replace: true })
         }
       } else {
-        message.error((res as any).error?.message || t('auth.loginFailed'))
+        // 使用 placeholder 显示错误
+        setLoginError((res as any).error?.message || t('auth.loginFailed'))
         setLoading(false)
       }
     } catch (error) {
       console.error('Google login error:', error)
-      message.error(t('auth.loginFailed'))
+      setLoginError(t('auth.loginFailed'))
       setLoading(false)
     }
   }
@@ -189,10 +194,13 @@ const Login: React.FC = () => {
               ]}
             >
               <Input
-                prefix={<UserOutlined style={{ color: '#ffd700' }} />}
-                placeholder="邮箱 / 手机号 (例: admin@example.com 或 01157288278)"
+                prefix={<UserOutlined style={{ color: loginError ? '#ff4d4f' : '#ffd700' }} />}
+                placeholder={loginError || "邮箱 / 手机号 (例: admin@example.com 或 01157288278)"}
                 onInput={(e) => {
                   const input = e.currentTarget
+                  // 清除错误状态
+                  if (loginError) setLoginError('')
+                  
                   // 禁止输入中文字符
                   input.value = input.value.replace(/[\u4e00-\u9fa5]/g, '')
                   // 如果不是邮箱（不含@），自动清理空格
@@ -200,12 +208,17 @@ const Login: React.FC = () => {
                     input.value = input.value.replace(/\s/g, '')
                   }
                 }}
+                onFocus={() => {
+                  // 获得焦点时清除错误
+                  if (loginError) setLoginError('')
+                }}
                 style={{
                   background: 'rgba(45, 45, 45, 0.8)',
-                  border: '1px solid #444444',
+                  border: loginError ? '1px solid #ff4d4f' : '1px solid #444444',
                   borderRadius: '8px',
                   color: '#f8f8f8'
                 }}
+                className={loginError ? 'login-error-shake' : ''}
               />
             </Form.Item>
 
@@ -214,14 +227,23 @@ const Login: React.FC = () => {
               rules={[{ required: true, message: t('auth.passwordRequired') }]}
             >
               <Input.Password
-                prefix={<LockOutlined style={{ color: '#ffd700' }} />}
+                prefix={<LockOutlined style={{ color: loginError ? '#ff4d4f' : '#ffd700' }} />}
                 placeholder={t('auth.password')}
+                onInput={() => {
+                  // 清除错误状态
+                  if (loginError) setLoginError('')
+                }}
+                onFocus={() => {
+                  // 获得焦点时清除错误
+                  if (loginError) setLoginError('')
+                }}
                 style={{
                   background: 'rgba(45, 45, 45, 0.8)',
-                  border: '1px solid #444444',
+                  border: loginError ? '1px solid #ff4d4f' : '1px solid #444444',
                   borderRadius: '8px',
                   color: '#f8f8f8'
                 }}
+                className={loginError ? 'login-error-shake' : ''}
               />
             </Form.Item>
 
