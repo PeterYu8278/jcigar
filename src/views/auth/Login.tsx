@@ -1,5 +1,5 @@
 // 登录页面
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Form, Input, Button, Card, Typography, Space, message, Divider } from 'antd'
 import { UserOutlined, LockOutlined, GoogleOutlined } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
@@ -16,14 +16,22 @@ const Login: React.FC = () => {
   const location = useLocation()
   const { setUser } = useAuthStore()
   const { t } = useTranslation()
+  const hasCheckedRedirect = useRef(false) // 防止 StrictMode 重复调用
 
   const from = location.state?.from?.pathname || '/'
 
   // 检查 Google 重定向登录结果
   useEffect(() => {
+    // 防止 StrictMode 导致的重复调用
+    if (hasCheckedRedirect.current) {
+      console.log('⚠️ [Login.tsx] 已检查过重定向结果，跳过重复调用');
+      return;
+    }
+    
     console.log('🔵 [Login.tsx] useEffect: 检查重定向结果');
     const checkRedirectResult = async () => {
       console.log('🔵 [Login.tsx] checkRedirectResult 开始');
+      hasCheckedRedirect.current = true; // 标记已执行
       setLoading(true)
       try {
         console.log('🔵 [Login.tsx] 调用 handleGoogleRedirectResult');
