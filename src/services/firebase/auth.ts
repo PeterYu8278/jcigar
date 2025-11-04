@@ -140,7 +140,7 @@ export const loginWithEmailOrPhone = async (identifier: string, password: string
   }
 };
 
-// 使用 Google 登录（首次登录自动创建用户文档）
+// 使用 Google 登录（新用户需要完善信息）
 export const loginWithGoogle = async () => {
   try {
     const provider = new GoogleAuthProvider();
@@ -152,16 +152,18 @@ export const loginWithGoogle = async () => {
     const credential = await signInWithPopup(auth, provider);
     const user = credential.user;
 
-    // 确保 Firestore 中存在用户文档
+    // 检查 Firestore 中是否已存在用户文档
     const ref = doc(db, 'users', user.uid);
     const snap = await getDoc(ref);
+    
     if (!snap.exists()) {
-      const userData: Omit<User, 'id'> = {
+      // 新用户：创建临时用户文档（仅包含邮箱和基础信息）
+      const tempUserData: Omit<User, 'id'> = {
         email: user.email || '',
         displayName: user.displayName || '未命名用户',
         role: 'member',
         profile: {
-          phone: undefined,
+          phone: undefined, // 待完善
           preferences: { language: 'zh', notifications: true },
         },
         membership: {
@@ -172,13 +174,76 @@ export const loginWithGoogle = async () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      await setDoc(ref, userData);
+      await setDoc(ref, tempUserData);
+      
+      // 返回特殊标识：需要完善信息
+      return { success: true, user, needsProfile: true };
     }
 
-    return { success: true, user };
+    // 已存在用户：检查是否已完善信息
+    const userData = snap.data() as User;
+    const needsProfile = !userData.profile?.phone; // 如果没有手机号，需要完善信息
+    
+    return { success: true, user, needsProfile };
   } catch (error) {
     const err = error as any
     return { success: false, error: err as Error } as { success: false; error: Error };
+  }
+};
+
+// 完善 Google 登录用户的信息
+export const completeGoogleUserProfile = async (
+  uid: string,
+  displayName: string,
+  phone: string,
+  password: string
+) => {
+  try {
+    // 1. 更新 Firestore 用户文档
+    const userRef = doc(db, 'users', uid);
+    await setDoc(userRef, {
+      displayName,
+      profile: {
+        phone,
+        preferences: { language: 'zh', notifications: true },
+      },
+      updatedAt: new Date(),
+    }, { merge: true });
+
+    // 2. 为用户设置密码（通过 Firebase Auth）
+    const currentUser = auth.currentUser;
+    if (currentUser && currentUser.uid === uid) {
+      const { updatePassword, EmailAuthProvider, linkWithCredential } = await import('firebase/auth');
+      
+      // 如果用户还没有邮箱/密码凭证，需要先链接
+      const email = currentUser.email;
+      if (email) {
+        try {
+          // 创建邮箱/密码凭证并链接到当前用户
+          const credential = EmailAuthProvider.credential(email, password);
+          await linkWithCredential(currentUser, credential);
+        } catch (linkError: any) {
+          // 如果已经链接过，尝试直接更新密码
+          if (linkError.code === 'auth/provider-already-linked') {
+            await updatePassword(currentUser, password);
+          } else {
+            throw linkError;
+          }
+        }
+      }
+      
+      // 3. 更新 Firebase Auth 的 displayName
+      await updateProfile(currentUser, { displayName });
+    }
+
+    return { success: true };
+  } catch (error) {
+    const err = error as any;
+    const message = 
+      err?.code === 'auth/weak-password' ? '密码强度不足（至少6位）'
+      : err?.code === 'auth/requires-recent-login' ? '请重新登录后再试'
+      : err?.message || '信息保存失败';
+    return { success: false, error: new Error(message) } as { success: false; error: Error };
   }
 };
 

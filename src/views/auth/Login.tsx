@@ -41,8 +41,14 @@ const Login: React.FC = () => {
     try {
       const res = await loginWithGoogle()
       if (res.success) {
-        message.success(t('auth.loginSuccess'))
-        navigate(from, { replace: true })
+        // 检查是否需要完善信息
+        if ((res as any).needsProfile) {
+          message.info('请完善您的账户信息')
+          navigate('/auth/complete-profile', { replace: true })
+        } else {
+          message.success(t('auth.loginSuccess'))
+          navigate(from, { replace: true })
+        }
       } else {
         message.error((res as any).error?.message || t('auth.loginFailed'))
       }

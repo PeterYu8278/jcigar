@@ -28,6 +28,7 @@ import PerformanceMonitor from './components/admin/PerformanceMonitor'
 // 认证页面
 import Login from './views/auth/Login'
 import Register from './views/auth/Register'
+import CompleteProfile from './views/auth/CompleteProfile'
 
 const { Content } = Layout
 
@@ -110,6 +111,7 @@ const AppContent: React.FC = () => {
                   {/* 认证路由 */}
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
+                  <Route path="/auth/complete-profile" element={<CompleteProfile />} />
                   
                   {/* 前端路由 */}
                   <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
