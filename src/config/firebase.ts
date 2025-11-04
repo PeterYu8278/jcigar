@@ -7,7 +7,10 @@ import { getStorage } from 'firebase/storage';
 // Firebase配置
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  // 在开发环境使用 localhost，避免 redirect 登录的 init.json 404 错误
+  authDomain: import.meta.env.DEV 
+    ? 'localhost'
+    : import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
