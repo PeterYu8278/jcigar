@@ -276,6 +276,11 @@ export const handleGoogleRedirectResult = async () => {
   console.log('🔄 [auth.ts] handleGoogleRedirectResult 开始执行');
   console.log('🔄 [auth.ts] 当前 URL:', window.location.href);
   console.log('🔄 [auth.ts] Firebase Auth Domain:', auth.app.options.authDomain);
+  console.log('🔄 [auth.ts] Firebase 完整配置:', {
+    apiKey: auth.app.options.apiKey,
+    authDomain: auth.app.options.authDomain,
+    projectId: auth.app.options.projectId
+  });
   
   // 检查是否有 redirect 标记
   const hasPending = sessionStorage.getItem('googleRedirectPending');
@@ -291,6 +296,13 @@ export const handleGoogleRedirectResult = async () => {
     console.log('🔄 [auth.ts] getRedirectResult 类型:', typeof result);
     console.log('🔄 [auth.ts] getRedirectResult 是否为 null:', result === null);
     
+    // 如果返回 null，等待一下再检查 currentUser（Firebase Auth 可能需要时间更新）
+    if (!result && hasPending) {
+      console.log('⏰ [auth.ts] 等待 Firebase Auth 状态更新...');
+      await new Promise(resolve => setTimeout(resolve, 1000)); // 等待 1 秒
+      console.log('👤 [auth.ts] 1秒后的当前用户:', auth.currentUser);
+    }
+    
     // 清除标记（无论是否有结果）
     sessionStorage.removeItem('googleRedirectPending');
     console.log('🔐 [auth.ts] 已清除 redirect 标记');
@@ -298,10 +310,13 @@ export const handleGoogleRedirectResult = async () => {
     if (!result) {
       console.log('⚪ [auth.ts] getRedirectResult 返回 null');
       
-      // 备用方案：检查是否有标记 + 用户已登录
-      if (hasPending && auth.currentUser) {
+      // 备用方案：检查是否有标记 + 用户已登录（使用等待后的状态）
+      const currentUser = auth.currentUser;
+      console.log('👤 [auth.ts] 检查备用方案，当前用户:', currentUser);
+      
+      if (hasPending && currentUser) {
         console.log('🔄 [auth.ts] 检测到标记且用户已登录，使用备用方案');
-        const user = auth.currentUser;
+        const user = currentUser;
         console.log('👤 [auth.ts] 当前用户:', { uid: user.uid, email: user.email, displayName: user.displayName });
         
         // 检查 Firestore 用户文档
