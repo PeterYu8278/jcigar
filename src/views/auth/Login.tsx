@@ -120,7 +120,7 @@ const Login: React.FC = () => {
                     // 邮箱验证：必须包含 @ 和 .
                     if (type === 'email') {
                       if (!isValidEmail(value)) {
-                        return Promise.reject(new Error('邮箱格式无效（需包含 @ 和 .）'))
+                        return Promise.reject(new Error('邮箱格式无效'))
                       }
                     }
                     
