@@ -39,7 +39,7 @@ const AppContent: React.FC = () => {
   const [siderCollapsed, setSiderCollapsed] = useState(false)
 
   // 无需 padding 的页面
-  const noPaddingPages = ['/shop']
+  const noPaddingPages = ['/shop', '/login', '/register', '/auth/complete-profile']
   const needsPadding = !noPaddingPages.includes(location.pathname)
   
   // 侧边栏显示逻辑：手机端商城页面隐藏，电脑端商城页面显示

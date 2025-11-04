@@ -43,7 +43,12 @@ const Register: React.FC = () => {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      height: '100%',
+      position: 'relative',
+      overflow: 'hidden'
     }}>
       <Card style={{ 
         width: 400, 
