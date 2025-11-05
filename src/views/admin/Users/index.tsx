@@ -8,8 +8,8 @@ const { Title } = Typography
 const { Search } = Input
 const { Option } = Select
 
-import { getUsers, createDocument, updateDocument, deleteDocument, COLLECTIONS } from '../../../services/firebase/firestore'
-import type { User } from '../../../types'
+import { getUsers, createDocument, updateDocument, deleteDocument, COLLECTIONS, getEventsByUser, getOrdersByUser } from '../../../services/firebase/firestore'
+import type { User, Event, Order } from '../../../types'
 import { sendPasswordResetEmailFor } from '../../../services/firebase/auth'
 import { useTranslation } from 'react-i18next'
 import { getModalThemeStyles, getModalWidth } from '../../../config/modalTheme'
@@ -69,6 +69,9 @@ const AdminUsers: React.FC = () => {
   })
   const [activeTab, setActiveTab] = useState<'cigar' | 'points' | 'activity' | 'referral'>('cigar')
   const [showMemberCard, setShowMemberCard] = useState(false) // 控制头像/会员卡切换
+  const [userOrders, setUserOrders] = useState<Order[]>([])
+  const [userEvents, setUserEvents] = useState<Event[]>([])
+  const [loadingUserData, setLoadingUserData] = useState(false)
 
   useEffect(() => {
     ;(async () => {
@@ -90,6 +93,33 @@ const AdminUsers: React.FC = () => {
     window.addEventListener('resize', update)
     return () => window.removeEventListener('resize', update)
   }, [])
+
+  // 加载用户的订单和活动数据
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (!editing?.id) {
+        setUserOrders([])
+        setUserEvents([])
+        return
+      }
+      
+      setLoadingUserData(true)
+      try {
+        const [orders, events] = await Promise.all([
+          getOrdersByUser(editing.id),
+          getEventsByUser(editing.id)
+        ])
+        setUserOrders(orders)
+        setUserEvents(events)
+      } catch (error) {
+        console.error('Failed to load user data:', error)
+      } finally {
+        setLoadingUserData(false)
+      }
+    }
+    
+    loadUserData()
+  }, [editing?.id])
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -815,9 +845,9 @@ const AdminUsers: React.FC = () => {
                 margin: '0 auto 10px auto'
               }}>
                 {[
-                  { title: t('profile.eventsJoined'), value: 12, icon: <CalendarOutlined /> },
-                  { title: t('profile.cigarsPurchased'), value: 28, icon: <ShoppingOutlined /> },
-                  { title: t('profile.communityPoints'), value: 1580, icon: <TrophyOutlined /> },
+                  { title: t('profile.eventsJoined'), value: userEvents.length, icon: <CalendarOutlined /> },
+                  { title: t('profile.cigarsPurchased'), value: userOrders.length, icon: <ShoppingOutlined /> },
+                  { title: t('profile.communityPoints'), value: (editing?.membership as any)?.points || 0, icon: <TrophyOutlined /> },
                 ].map((stat, index) => (
                   <div key={index} style={{
                     background: 'rgba(255, 255, 255, 0.05)',
@@ -908,112 +938,97 @@ const AdminUsers: React.FC = () => {
                   gap: '8px'
                 }}>
                   {activeTab === 'cigar' && (
-                    <>
-                      {/* Sample Purchase Record 1 */}
+                    loadingUserData ? (
                       <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '16px',
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        borderRadius: '8px',
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                        textAlign: 'center',
+                        padding: '40px 20px'
                       }}>
-                        <div style={{ flex: 1 }}>
-                          <p style={{
-                            fontWeight: '600',
-                            color: '#FFFFFF',
-                            margin: 0
-                          }}>
-                            {t('usersAdmin.purchaseCigar')}
-                          </p>
-                          <p style={{
-                            fontSize: '12px',
-                            color: 'rgba(255, 255, 255, 0.6)',
-                            margin: '4px 0 0 0'
-                          }}>
-                            2024-01-15
-                          </p>
-                        </div>
-                        <p style={{
-                          fontSize: '18px',
-                          fontWeight: 'bold',
-                          color: '#F4AF25',
-                          margin: 0
-                        }}>
-                          - ￥1500
+                        <Spin />
+                      </div>
+                    ) : userOrders.length === 0 ? (
+                      <div style={{
+                        textAlign: 'center',
+                        padding: '40px 20px',
+                        color: 'rgba(255, 255, 255, 0.6)'
+                      }}>
+                        <p style={{ margin: 0, fontSize: '14px' }}>
+                          {t('usersAdmin.noCigarRecords')}
                         </p>
                       </div>
-
-                      {/* Sample Purchase Record 2 */}
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '16px',
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        borderRadius: '8px',
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
-                      }}>
-                        <div style={{ flex: 1 }}>
-                          <p style={{
-                            fontWeight: '600',
-                            color: '#FFFFFF',
-                            margin: 0
-                          }}>
-                            {t('usersAdmin.attendTasting')}
-                          </p>
-                          <p style={{
-                            fontSize: '12px',
-                            color: 'rgba(255, 255, 255, 0.6)',
-                            margin: '4px 0 0 0'
-                          }}>
-                            2023-12-20
-                          </p>
-                        </div>
-                        <p style={{
-                          fontSize: '18px',
-                          fontWeight: 'bold',
-                          color: '#F4AF25',
-                          margin: 0
-                        }}>
-                          - ￥500
-                        </p>
-                      </div>
-
-                      {/* Sample Purchase Record 3 */}
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '16px',
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        borderRadius: '8px',
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
-                      }}>
-                        <div style={{ flex: 1 }}>
-                          <p style={{
-                            fontWeight: '600',
-                            color: '#FFFFFF',
-                            margin: 0
-                          }}>
-                            {t('usersAdmin.purchaseAccessories')}
-                          </p>
-                          <p style={{
-                            fontSize: '12px',
-                            color: 'rgba(255, 255, 255, 0.6)',
-                            margin: '4px 0 0 0'
-                          }}>
-                            2023-11-05
-                          </p>
-                        </div>
-                        <p style={{
-                          fontSize: '18px',
-                          fontWeight: 'bold',
-                          color: '#F4AF25',
-                          margin: 0
-                        }}>
-                          - ￥300
-                        </p>
-                      </div>
-                    </>
+                    ) : (
+                      <>
+                        {userOrders.map((order) => {
+                          const createdDate = order.createdAt instanceof Date 
+                            ? order.createdAt 
+                            : (order.createdAt as any)?.toDate 
+                              ? (order.createdAt as any).toDate() 
+                              : new Date(order.createdAt);
+                          
+                          return (
+                            <div key={order.id} style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              padding: '16px',
+                              background: 'rgba(255, 255, 255, 0.05)',
+                              borderRadius: '8px',
+                              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                            }}>
+                              <div style={{ flex: 1 }}>
+                                <p style={{
+                                  fontWeight: '600',
+                                  color: '#FFFFFF',
+                                  margin: 0
+                                }}>
+                                  订单 #{order.orderNo || order.id.slice(0, 8)}
+                                </p>
+                                <p style={{
+                                  fontSize: '12px',
+                                  color: 'rgba(255, 255, 255, 0.6)',
+                                  margin: '4px 0 0 0'
+                                }}>
+                                  {createdDate.toLocaleDateString('zh-CN')}
+                                </p>
+                                <p style={{
+                                  fontSize: '12px',
+                                  color: 'rgba(255, 255, 255, 0.6)',
+                                  margin: '4px 0 0 0'
+                                }}>
+                                  {order.items?.length || 0} 件商品
+                                </p>
+                              </div>
+                              <div style={{ textAlign: 'right' }}>
+                                <p style={{
+                                  fontSize: '18px',
+                                  fontWeight: 'bold',
+                                  color: '#F4AF25',
+                                  margin: 0
+                                }}>
+                                  RM {order.totalAmount?.toFixed(2) || '0.00'}
+                                </p>
+                                <Tag 
+                                  color={
+                                    order.status === 'delivered' ? 'success' :
+                                    order.status === 'shipped' ? 'processing' :
+                                    order.status === 'confirmed' ? 'blue' :
+                                    order.status === 'cancelled' ? 'error' :
+                                    'default'
+                                  }
+                                  style={{ marginTop: '4px', fontSize: '10px' }}
+                                >
+                                  {
+                                    order.status === 'delivered' ? '已送达' :
+                                    order.status === 'shipped' ? '已发货' :
+                                    order.status === 'confirmed' ? '已确认' :
+                                    order.status === 'cancelled' ? '已取消' :
+                                    '待确认'
+                                  }
+                                </Tag>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </>
+                    )
                   )}
 
                   {activeTab === 'points' && (
@@ -1091,77 +1106,125 @@ const AdminUsers: React.FC = () => {
                   )}
 
                   {activeTab === 'activity' && (
-                    <>
-                      {/* Sample Activity Record 1 */}
+                    loadingUserData ? (
                       <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '16px',
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        borderRadius: '8px',
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                        textAlign: 'center',
+                        padding: '40px 20px'
                       }}>
-                        <div style={{ flex: 1 }}>
-                          <p style={{
-                            fontWeight: '600',
-                            color: '#FFFFFF',
-                            margin: 0
-                          }}>
-                            参加雪茄品鉴会
-                          </p>
-                          <p style={{
-                            fontSize: '12px',
-                            color: 'rgba(255, 255, 255, 0.6)',
-                            margin: '4px 0 0 0'
-                          }}>
-                            2024-01-20
-                          </p>
-                        </div>
-                        <p style={{
-                          fontSize: '14px',
-                          fontWeight: 'bold',
-                          color: '#1890ff',
-                          margin: 0
-                        }}>
-                          已参加
+                        <Spin />
+                      </div>
+                    ) : userEvents.length === 0 ? (
+                      <div style={{
+                        textAlign: 'center',
+                        padding: '40px 20px',
+                        color: 'rgba(255, 255, 255, 0.6)'
+                      }}>
+                        <p style={{ margin: 0, fontSize: '14px' }}>
+                          {t('usersAdmin.noActivityRecords')}
                         </p>
                       </div>
-
-                      {/* Sample Activity Record 2 */}
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '16px',
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        borderRadius: '8px',
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
-                      }}>
-                        <div style={{ flex: 1 }}>
-                          <p style={{
-                            fontWeight: '600',
-                            color: '#FFFFFF',
-                            margin: 0
-                          }}>
-                            会员等级升级
-                          </p>
-                          <p style={{
-                            fontSize: '12px',
-                            color: 'rgba(255, 255, 255, 0.6)',
-                            margin: '4px 0 0 0'
-                          }}>
-                            2023-12-15
-                          </p>
-                        </div>
-                        <p style={{
-                          fontSize: '14px',
-                          fontWeight: 'bold',
-                          color: '#f4af25',
-                          margin: 0
-                        }}>
-                          青铜 → 白银
-                        </p>
-                      </div>
-                    </>
+                    ) : (
+                      <>
+                        {userEvents.map((event) => {
+                          const startDate = event.schedule.startDate instanceof Date 
+                            ? event.schedule.startDate 
+                            : (event.schedule.startDate as any)?.toDate 
+                              ? (event.schedule.startDate as any).toDate() 
+                              : new Date(event.schedule.startDate);
+                          
+                          const isRegistered = event.participants?.registered?.includes(editing?.id || '');
+                          const isCheckedIn = event.participants?.checkedIn?.includes(editing?.id || '');
+                          
+                          return (
+                            <div key={event.id} style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              padding: '16px',
+                              background: 'rgba(255, 255, 255, 0.05)',
+                              borderRadius: '8px',
+                              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                              gap: '12px'
+                            }}>
+                              {/* 活动封面 */}
+                              <div style={{
+                                width: '60px',
+                                height: '60px',
+                                borderRadius: '8px',
+                                overflow: 'hidden',
+                                flexShrink: 0,
+                                background: 'rgba(255, 255, 255, 0.1)'
+                              }}>
+                                {event.coverImage ? (
+                                  <img 
+                                    src={event.coverImage} 
+                                    alt={event.title}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  />
+                                ) : (
+                                  <div style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: 'rgba(255, 255, 255, 0.3)'
+                                  }}>
+                                    <CalendarOutlined style={{ fontSize: '24px' }} />
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <div style={{ flex: 1 }}>
+                                <p style={{
+                                  fontWeight: '600',
+                                  color: '#FFFFFF',
+                                  margin: 0
+                                }}>
+                                  {event.title}
+                                </p>
+                                <p style={{
+                                  fontSize: '12px',
+                                  color: 'rgba(255, 255, 255, 0.6)',
+                                  margin: '4px 0 0 0'
+                                }}>
+                                  {startDate.toLocaleDateString('zh-CN')}
+                                </p>
+                              </div>
+                              
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end' }}>
+                                <Tag 
+                                  color={
+                                    event.status === 'upcoming' ? 'blue' :
+                                    event.status === 'ongoing' ? 'green' :
+                                    event.status === 'completed' ? 'default' :
+                                    'red'
+                                  }
+                                  style={{ margin: 0, fontSize: '10px' }}
+                                >
+                                  {
+                                    event.status === 'upcoming' ? '即将开始' :
+                                    event.status === 'ongoing' ? '进行中' :
+                                    event.status === 'completed' ? '已结束' :
+                                    '已取消'
+                                  }
+                                </Tag>
+                                
+                                {isCheckedIn && (
+                                  <Tag color="success" style={{ margin: 0, fontSize: '10px' }}>
+                                    已签到
+                                  </Tag>
+                                )}
+                                {isRegistered && !isCheckedIn && (
+                                  <Tag color="warning" style={{ margin: 0, fontSize: '10px' }}>
+                                    已报名
+                                  </Tag>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </>
+                    )
                   )}
 
                   {activeTab === 'referral' && (
