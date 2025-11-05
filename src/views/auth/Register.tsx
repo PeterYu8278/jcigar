@@ -302,7 +302,6 @@ const Register: React.FC = () => {
             {/* 引荐码（可选） */}
             <Form.Item
               name="referralCode"
-              help={<Text style={{ color: 'rgba(255, 215, 0, 0.6)', fontSize: '12px' }}>输入引荐人的会员编号可获得额外积分（可选）</Text>}
               rules={[
                 {
                   validator: async (_, value) => {
