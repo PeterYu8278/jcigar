@@ -302,10 +302,17 @@ const CompleteProfile: React.FC = () => {
                   validator: async (_, value) => {
                     if (!value) return Promise.resolve()
                     
-                    // ✅ 只检查手机号唯一性（格式验证由 pattern 规则处理）
+                    // ✅ 先验证格式，格式无效则跳过唯一性检查
+                    const formatPattern = /^(\+?60|0)[1-9]\d{7,9}$/
+                    if (!formatPattern.test(value)) {
+                      // 格式无效，不检查唯一性（避免重复错误提示）
+                      return Promise.resolve()
+                    }
+                    
+                    // ✅ 格式有效，检查手机号唯一性
                     const normalized = normalizePhoneNumber(value)
                     
-                    // 如果标准化失败，pattern 已经会报错，这里直接跳过
+                    // 标准化失败，不报错（pattern 已经处理）
                     if (!normalized) {
                       return Promise.resolve()
                     }
