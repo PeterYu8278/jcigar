@@ -111,8 +111,12 @@ const Register: React.FC = () => {
       if (result.success) {
         console.log('🎉 [Register] 注册成功');
         message.success(t('auth.registerSuccess'))
-        // ✅ Firebase 注册后会自动登录，等待状态同步后 useEffect 会自动重定向
-        // 不需要手动导航，useAuthStore 会监听到认证状态变化
+        
+        // ✅ 注册成功后，等待状态同步（500ms），然后导航到首页
+        setTimeout(() => {
+          console.log('🎯 [Register] 导航到首页');
+          navigate(from, { replace: true })
+        }, 500)
       } else {
         console.error('❌ [Register] 注册失败:', (result as any).error?.message);
         message.error((result as any).error?.message || t('auth.registerFailed'))
