@@ -238,14 +238,16 @@ const Register: React.FC = () => {
                   validator: async (_, value) => {
                     if (!value) return Promise.resolve()
                     
-                    // 检查手机号是否已被使用
+                    // ✅ 只检查手机号唯一性（格式验证由 pattern 规则处理）
                     const { normalizePhoneNumber } = await import('../../utils/phoneNormalization')
                     const { collection, query, where, getDocs, limit } = await import('firebase/firestore')
                     const { db } = await import('../../config/firebase')
                     
                     const normalized = normalizePhoneNumber(value)
+                    
+                    // 如果标准化失败，pattern 已经会报错，这里直接跳过
                     if (!normalized) {
-                      return Promise.reject(new Error('手机号格式无效（需10-12位数字）'))
+                      return Promise.resolve()
                     }
                     
                     try {

@@ -302,13 +302,15 @@ const CompleteProfile: React.FC = () => {
                   validator: async (_, value) => {
                     if (!value) return Promise.resolve()
                     
-                    // 1. 检查格式
+                    // ✅ 只检查手机号唯一性（格式验证由 pattern 规则处理）
                     const normalized = normalizePhoneNumber(value)
+                    
+                    // 如果标准化失败，pattern 已经会报错，这里直接跳过
                     if (!normalized) {
-                      return Promise.reject(new Error('手机号格式无效（需10-12位数字）'))
+                      return Promise.resolve()
                     }
                     
-                    // 2. 检查是否已被使用
+                    // 检查是否已被使用
                     try {
                       const phoneQuery = query(
                         collection(db, 'users'), 
@@ -334,7 +336,7 @@ const CompleteProfile: React.FC = () => {
             >
               <Input
                 prefix={<PhoneOutlined style={{ color: '#ffd700' }} />}
-                placeholder="手机号 (例: 01157288278)"
+                placeholder="手机号 (例: 0123456789)"
                 onInput={(e) => {
                   const input = e.currentTarget
                   // 只保留数字、加号和空格
