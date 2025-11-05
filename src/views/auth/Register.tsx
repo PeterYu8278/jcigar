@@ -207,6 +207,7 @@ const Register: React.FC = () => {
             <Form.Item
               name="displayName"
               rules={[{ required: true, message: t('auth.nameRequired') }]}
+              style={{ marginBottom: '12px' }}
             >
               <Input
                 prefix={<UserOutlined style={{ color: '#ffd700' }} />}
@@ -227,6 +228,7 @@ const Register: React.FC = () => {
                 { pattern: /^\+?\d{7,15}$/, message: t('auth.phoneInvalid') }
               ]}
               getValueFromEvent={(e) => e.target.value.replace(/[^\d+]/g, '')}
+              style={{ marginBottom: '12px' }}
             >
               <Input
                 prefix={<UserOutlined style={{ color: '#ffd700' }} />}
@@ -246,6 +248,7 @@ const Register: React.FC = () => {
                 { required: true, message: t('auth.emailRequired') },
                 { type: 'email', message: t('auth.emailInvalid') }
               ]}
+              style={{ marginBottom: '12px' }}
             >
               <Input
                 prefix={<MailOutlined style={{ color: '#ffd700' }} />}
@@ -265,6 +268,7 @@ const Register: React.FC = () => {
                 { required: true, message: t('auth.passwordRequired') },
                 { min: 6, message: t('auth.passwordMinLength') }
               ]}
+              style={{ marginBottom: '12px' }}
             >
               <Input.Password
                 prefix={<LockOutlined style={{ color: '#ffd700' }} />}
@@ -292,6 +296,7 @@ const Register: React.FC = () => {
                   },
                 }),
               ]}
+              style={{ marginBottom: '12px' }}
             >
               <Input.Password
                 prefix={<LockOutlined style={{ color: '#ffd700' }} />}
@@ -308,6 +313,7 @@ const Register: React.FC = () => {
             {/* 引荐码（可选） */}
             <Form.Item
               name="referralCode"
+              style={{ marginBottom: '12px' }}
               rules={[
                 {
                   validator: async (_, value) => {
@@ -354,7 +360,7 @@ const Register: React.FC = () => {
               />
             </Form.Item>
 
-            <Form.Item style={{ marginBottom: '24px' }}>
+            <Form.Item style={{ marginBottom: '0px' }}>
               <Button
                 type="primary"
                 htmlType="submit"
