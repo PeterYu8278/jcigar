@@ -56,28 +56,9 @@ const Register: React.FC = () => {
     }
   }
 
-  // 如果用户已登录，根据资料完整性重定向
-  useEffect(() => {
-    if (user) {
-      console.log('🔵 [Register useEffect] 检测到用户登录:', {
-        displayName: user.displayName,
-        email: user.email,
-        phone: user.profile?.phone,
-        from
-      });
-      
-      const isProfileIncomplete = !user.displayName || !user.email || !user.profile?.phone
-      if (isProfileIncomplete) {
-        // 资料不完整，重定向到完善资料页面
-        console.log('📝 [Register useEffect] 资料不完整，重定向到完善资料页面');
-        navigate('/auth/complete-profile', { replace: true })
-      } else {
-        // 资料完整，重定向到首页或原页面
-        console.log('✅ [Register useEffect] 资料完整，重定向到:', from);
-        navigate(from, { replace: true })
-      }
-    }
-  }, [user, navigate, from])
+  // ✅ 移除自动重定向逻辑
+  // 注册页面不应该在加载时就重定向（让用户可以访问注册页面）
+  // 重定向只在注册成功后的 onFinish 中处理
 
   // 自动填充 URL 中的引荐码
   useEffect(() => {
@@ -121,12 +102,9 @@ const Register: React.FC = () => {
         console.log('🎉 [Register] 注册成功');
         message.success(t('auth.registerSuccess'))
         
-        // ✅ 注册成功后，等待1秒让状态同步，然后导航
-        // 不依赖 useEffect 的 user 监听（可能有延迟）
-        setTimeout(() => {
-          console.log('🎯 [Register] 导航到首页:', from);
-          navigate(from, { replace: true });
-        }, 1000);
+        // ✅ 直接导航到首页（Firebase 注册会自动登录）
+        console.log('🎯 [Register] 导航到首页');
+        navigate('/', { replace: true });
       } else {
         console.error('❌ [Register] 注册失败:', (result as any).error?.message);
         message.error((result as any).error?.message || t('auth.registerFailed'))
