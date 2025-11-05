@@ -138,6 +138,38 @@ a:hover {
   -ms-overflow-style: none;
 }
 
+/* 手机端全局隐藏滚动条（保留滚动功能） */
+@media (max-width: 768px) {
+  body::-webkit-scrollbar,
+  html::-webkit-scrollbar,
+  #root::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+  
+  body,
+  html,
+  #root {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  
+  /* 认证页面容器隐藏滚动条 */
+  .ant-layout::-webkit-scrollbar,
+  .ant-layout-content::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+  
+  .ant-layout,
+  .ant-layout-content {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+}
+
 .cigar-button-primary {
   background: var(--cigar-gradient-gold);
   border: none;
