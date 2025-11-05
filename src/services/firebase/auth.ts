@@ -11,18 +11,33 @@ import {
   getRedirectResult
 } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { doc, setDoc, getDoc, collection, getDocs, query, where, limit } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, getDocs, query, where, limit, updateDoc, arrayUnion, increment } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
 import type { User } from '../../types';
 import { normalizePhoneNumber, identifyInputType } from '../../utils/phoneNormalization';
-import { generateMemberId } from '../../utils/memberIdGenerator';
+import { generateMemberId, getUserByMemberId } from '../../utils/memberId';
 
 // 用户注册（所有字段都是必需的）
-export const registerUser = async (email: string, password: string, displayName: string, phone: string) => {
+export const registerUser = async (
+  email: string, 
+  password: string, 
+  displayName: string, 
+  phone: string,
+  referralCode?: string  // 可选的引荐码（memberId）
+) => {
   try {
-    // 验证必需字段
-    if (!email || !password || !displayName || !phone) {
-      return { success: false, error: new Error('所有字段都是必需的'), code: 'missing-required-fields' } as { success: false; error: Error; code?: string }
+    // 验证必需字段（邮箱可选，会用手机号生成）
+    if (!password || !displayName || !phone) {
+      return { success: false, error: new Error('姓名、手机号和密码都是必需的'), code: 'missing-required-fields' } as { success: false; error: Error; code?: string }
+    }
+    
+    // 如果没有提供邮箱，使用手机号生成临时邮箱
+    let finalEmail = email;
+    if (!finalEmail || finalEmail.trim() === '') {
+      // 使用手机号生成邮箱格式：手机号@temp.jcigar.com
+      const phoneDigits = phone.replace(/\D/g, '');  // 只保留数字
+      finalEmail = `${phoneDigits}@temp.jcigar.com`;
+      console.log('📧 [registerUser] 邮箱为空，使用手机号生成临时邮箱:', finalEmail);
     }
     
     // 标准化手机号为 E.164 格式
@@ -38,21 +53,36 @@ export const registerUser = async (email: string, password: string, displayName:
       return { success: false, error: new Error('该手机号已被注册'), code: 'phone-already-in-use' } as { success: false; error: Error; code?: string }
     }
     
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    // 验证引荐码（如果提供）
+    let referrer: any = null;
+    if (referralCode) {
+      const referralResult = await getUserByMemberId(referralCode.trim());
+      if (!referralResult.success) {
+        return { success: false, error: new Error(referralResult.error || '引荐码无效'), code: 'invalid-referral-code' } as { success: false; error: Error; code?: string }
+      }
+      referrer = referralResult.user;
+    }
+    
+    console.log('📝 [registerUser] 开始创建用户:', { email: finalEmail, displayName, phone: normalizedPhone, hasReferralCode: !!referralCode });
+    
+    const userCredential = await createUserWithEmailAndPassword(auth, finalEmail, password);
     const user = userCredential.user;
+    
+    console.log('✅ [registerUser] Firebase Auth 用户创建成功:', user.uid);
     
     // 更新用户显示名称
     await updateProfile(user, { displayName });
     
-    // 🆕 生成唯一的会员ID
-    const memberId = await generateMemberId(user.uid);
+    // 生成会员编号
+    const memberId = await generateMemberId();
+    console.log('🎫 [registerUser] 会员编号已生成:', memberId);
     
     // 在Firestore中创建用户文档
     const userData: Omit<User, 'id'> = {
-      email: user.email!,
+      email: finalEmail,  // ✅ 使用 finalEmail（可能是用户输入的邮箱或生成的临时邮箱）
       displayName,
       role: 'member',
-      memberId, // 🆕 添加会员ID
+      memberId,  // ✅ 会员编号（用作引荐码）
       profile: {
         phone: normalizedPhone,  // ✅ 使用标准化格式
         preferences: {
@@ -64,17 +94,52 @@ export const registerUser = async (email: string, password: string, displayName:
         level: 'bronze',
         joinDate: new Date(),
         lastActive: new Date(),
+        points: referrer ? 100 : 50,  // 被引荐：100积分，自然注册：50积分
+        referralPoints: 0,
+      },
+      // ✅ 引荐信息（使用 null 替代 undefined，Firestore 不接受 undefined）
+      referral: {
+        referredBy: referrer?.memberId || null,      // 引荐人的 memberId
+        referredByUserId: referrer?.id || null,      // 引荐人的 userId
+        referralDate: referrer ? new Date() : null,  // ✅ 使用 null 替代 undefined
+        referrals: [],                               // 我引荐的人
+        totalReferred: 0,
+        activeReferrals: 0,
       },
       createdAt: new Date(),
       updatedAt: new Date(),
     };
     
     await setDoc(doc(db, 'users', user.uid), userData);
+    console.log('✅ [registerUser] Firestore 用户文档创建成功');
     
-    return { success: true, user, memberId };
+    // ✅ 如果有引荐人，更新引荐人的数据
+    if (referrer) {
+      console.log('👥 [registerUser] 更新引荐人数据:', { referrerId: referrer.id, referrerMemberId: referrer.memberId });
+      try {
+        await updateDoc(doc(db, 'users', referrer.id), {
+          'referral.referrals': arrayUnion(user.uid),
+          'referral.totalReferred': increment(1),
+          'membership.points': increment(200),  // 引荐人获得200积分
+          'membership.referralPoints': increment(200),
+          updatedAt: new Date()
+        });
+        console.log('✅ [registerUser] 引荐人数据更新成功，引荐人获得200积分');
+      } catch (error) {
+        console.error('❌ [registerUser] 更新引荐人信息失败:', error);
+        // 不影响注册流程，静默失败
+      }
+    }
+    
+    console.log('🎉 [registerUser] 注册流程完成，返回成功');
+    return { success: true, user };
   } catch (error) {
+    console.error('❌ [registerUser] 注册失败:', error);
     const err = error as any
     const code = err?.code as string | undefined
+    console.error('❌ [registerUser] 错误代码:', code);
+    console.error('❌ [registerUser] 错误详情:', err);
+    
     const message =
       code === 'auth/email-already-in-use' ? '该邮箱已被注册'
       : code === 'auth/invalid-email' ? '邮箱格式不正确'
@@ -196,15 +261,15 @@ export const loginWithGoogle = async () => {
     const snap = await getDoc(ref);
     
     if (!snap.exists()) {
-      // 🆕 生成唯一的会员ID
-      const memberId = await generateMemberId(user.uid);
-      
       // 新用户：创建临时用户文档（仅包含邮箱和基础信息）
+      // ✅ 生成会员编号
+      const memberId = await generateMemberId();
+      
       const tempUserData: Omit<User, 'id'> = {
         email: user.email || '',
         displayName: user.displayName || '未命名用户',
         role: 'member',
-        memberId, // 🆕 添加会员ID
+        memberId,  // ✅ 添加会员编号
         profile: {
           // phone 字段省略，待用户完善信息后添加
           preferences: { language: 'zh', notifications: true },
@@ -213,6 +278,17 @@ export const loginWithGoogle = async () => {
           level: 'bronze',
           joinDate: new Date(),
           lastActive: new Date(),
+          points: 50,  // 初始积分
+          referralPoints: 0,
+        },
+        // ✅ 初始化引荐信息（Google 登录时没有引荐人）
+        referral: {
+          referredBy: null,        // 使用 null 替代 undefined
+          referredByUserId: null,  // 使用 null 替代 undefined
+          referralDate: null,      // 使用 null 替代 undefined
+          referrals: [],
+          totalReferred: 0,
+          activeReferrals: 0,
         },
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -220,7 +296,7 @@ export const loginWithGoogle = async () => {
       await setDoc(ref, tempUserData);
       
       // 返回特殊标识：需要完善信息
-      return { success: true, user, needsProfile: true, memberId };
+      return { success: true, user, needsProfile: true };
     }
 
     // 已存在用户：检查是否已完善信息（需要：名字、电邮、手机号）
@@ -262,10 +338,14 @@ export const handleGoogleRedirectResult = async () => {
         const snap = await getDoc(ref);
         
         if (!snap.exists()) {
+          // ✅ 生成会员编号
+          const memberId = await generateMemberId();
+          
           const tempUserData: Omit<User, 'id'> = {
             email: user.email || '',
             displayName: user.displayName || '未命名用户',
             role: 'member',
+            memberId,  // ✅ 添加会员编号
             profile: {
               preferences: { language: 'zh', notifications: true },
             },
@@ -273,6 +353,17 @@ export const handleGoogleRedirectResult = async () => {
               level: 'bronze',
               joinDate: new Date(),
               lastActive: new Date(),
+              points: 50,  // 初始积分
+              referralPoints: 0,
+            },
+            // ✅ 初始化引荐信息（Google 登录时没有引荐人）
+            referral: {
+              referredBy: null,        // 使用 null 替代 undefined
+              referredByUserId: null,  // 使用 null 替代 undefined
+              referralDate: null,      // 使用 null 替代 undefined
+              referrals: [],
+              totalReferred: 0,
+              activeReferrals: 0,
             },
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -298,10 +389,14 @@ export const handleGoogleRedirectResult = async () => {
     
     if (!snap.exists()) {
       // 新用户：创建临时用户文档
+      // ✅ 生成会员编号
+      const memberId = await generateMemberId();
+      
       const tempUserData: Omit<User, 'id'> = {
         email: user.email || '',
         displayName: user.displayName || '未命名用户',
         role: 'member',
+        memberId,  // ✅ 添加会员编号
         profile: {
           // phone 字段省略，待用户完善信息后添加
           preferences: { language: 'zh', notifications: true },
@@ -310,6 +405,14 @@ export const handleGoogleRedirectResult = async () => {
           level: 'bronze',
           joinDate: new Date(),
           lastActive: new Date(),
+          points: 50,  // 初始积分
+          referralPoints: 0,
+        },
+        // ✅ 初始化引荐信息
+        referral: {
+          referrals: [],
+          totalReferred: 0,
+          activeReferrals: 0,
         },
         createdAt: new Date(),
         updatedAt: new Date(),

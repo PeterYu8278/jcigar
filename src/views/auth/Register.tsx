@@ -1,11 +1,12 @@
 // 注册页面
 import React, { useState, useEffect, useRef } from 'react'
 import { Form, Input, Button, Card, Typography, Space, message, Spin } from 'antd'
-import { UserOutlined, LockOutlined, MailOutlined, LoadingOutlined } from '@ant-design/icons'
+import { UserOutlined, LockOutlined, MailOutlined, LoadingOutlined, GiftOutlined } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { registerUser } from '../../services/firebase/auth'
 import { useAuthStore } from '../../store/modules/auth'
 import { useTranslation } from 'react-i18next'
+import { getUserByMemberId } from '../../utils/memberId'
 
 const { Title, Text } = Typography
 
@@ -15,6 +16,7 @@ const Register: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const touchStartY = useRef(0)
   const containerRef = useRef<HTMLDivElement>(null)
+  const [form] = Form.useForm()  // ✅ 创建表单实例
   
   const navigate = useNavigate()
   const location = useLocation()
@@ -68,13 +70,33 @@ const Register: React.FC = () => {
     }
   }, [user, navigate, from])
 
+  // 自动填充 URL 中的引荐码
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const refCode = params.get('ref');
+    if (refCode) {
+      form.setFieldsValue({ referralCode: refCode.toUpperCase() });
+      message.info('已自动填写引荐码');
+    }
+  }, [location, form]);
+
   const onFinish = async (values: { 
     email?: string; 
     password: string; 
     confirmPassword: string;
     displayName: string;
     phone: string;
+    referralCode?: string;  // ✅ 新增引荐码字段
   }) => {
+    console.log('📝 [Register] 表单提交:', { 
+      email: values.email, 
+      displayName: values.displayName, 
+      phone: values.phone,
+      hasPassword: !!values.password,
+      hasReferralCode: !!values.referralCode,
+      referralCode: values.referralCode
+    });
+    
     if (values.password !== values.confirmPassword) {
       message.error(t('auth.passwordsDoNotMatch'))
       return
@@ -82,14 +104,23 @@ const Register: React.FC = () => {
 
     setLoading(true)
     try {
-      const result = await registerUser(values.email || '', values.password, values.displayName, values.phone)
+      const result = await registerUser(
+        values.email || '', 
+        values.password, 
+        values.displayName, 
+        values.phone,
+        values.referralCode  // ✅ 传递引荐码
+      )
       if (result.success) {
+        console.log('🎉 [Register] 注册成功');
         message.success(t('auth.registerSuccess'))
         navigate('/login')
       } else {
+        console.error('❌ [Register] 注册失败:', (result as any).error?.message);
         message.error((result as any).error?.message || t('auth.registerFailed'))
       }
     } catch (error) {
+      console.error('❌ [Register] 注册异常:', error);
       message.error(t('auth.registerFailedRetry'))
     } finally {
       setLoading(false)
@@ -164,6 +195,7 @@ const Register: React.FC = () => {
           </div>
 
           <Form
+            form={form}
             name="register"
             onFinish={onFinish}
             autoComplete="off"
@@ -250,6 +282,59 @@ const Register: React.FC = () => {
               <Input.Password
                 prefix={<LockOutlined style={{ color: '#ffd700' }} />}
                 placeholder={t('auth.confirmPassword')}
+                style={{
+                  background: 'rgba(45, 45, 45, 0.8)',
+                  border: '1px solid #444444',
+                  borderRadius: '8px',
+                  color: '#f8f8f8'
+                }}
+              />
+            </Form.Item>
+
+            {/* 引荐码（可选） */}
+            <Form.Item
+              name="referralCode"
+              help={<Text style={{ color: 'rgba(255, 215, 0, 0.6)', fontSize: '12px' }}>输入引荐人的会员编号可获得额外积分（可选）</Text>}
+              rules={[
+                {
+                  validator: async (_, value) => {
+                    // 如果没有输入引荐码，跳过验证（可选字段）
+                    if (!value || value.trim() === '') {
+                      return Promise.resolve();
+                    }
+                    
+                    // 1. 格式验证
+                    const normalized = value.trim().toUpperCase();
+                    if (!normalized.match(/^M\d{6}$/)) {
+                      return Promise.reject(new Error('引荐码格式无效（格式：M000001）'));
+                    }
+                    
+                    // 2. 验证引荐码是否存在
+                    try {
+                      const result = await getUserByMemberId(normalized);
+                      if (!result.success) {
+                        return Promise.reject(new Error(result.error || '引荐码不存在'));
+                      }
+                      
+                      // 验证成功
+                      return Promise.resolve();
+                    } catch (error) {
+                      return Promise.reject(new Error('验证引荐码失败，请重试'));
+                    }
+                  }
+                }
+              ]}
+              validateTrigger="onBlur"
+            >
+              <Input
+                prefix={<GiftOutlined style={{ color: '#ffd700' }} />}
+                placeholder="引荐码 (例: M000001)"
+                maxLength={7}
+                onInput={(e) => {
+                  const input = e.currentTarget;
+                  // 自动转大写，只允许 M 和数字
+                  input.value = input.value.toUpperCase().replace(/[^M0-9]/g, '');
+                }}
                 style={{
                   background: 'rgba(45, 45, 45, 0.8)',
                   border: '1px solid #444444',
