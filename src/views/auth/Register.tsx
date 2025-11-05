@@ -233,9 +233,44 @@ const Register: React.FC = () => {
               name="phone"
               rules={[
                 { required: true, message: t('auth.phoneRequired') },
-                { pattern: /^\+?\d{7,15}$/, message: t('auth.phoneInvalid') }
+                { pattern: /^(\+?60|0)[1-9]\d{7,9}$/, message: '手机号格式无效（需10-12位数字）' },
+                {
+                  validator: async (_, value) => {
+                    if (!value) return Promise.resolve()
+                    
+                    // 检查手机号是否已被使用
+                    const { normalizePhoneNumber } = await import('../../utils/phoneNormalization')
+                    const { collection, query, where, getDocs, limit } = await import('firebase/firestore')
+                    const { db } = await import('../../config/firebase')
+                    
+                    const normalized = normalizePhoneNumber(value)
+                    if (!normalized) {
+                      return Promise.reject(new Error('手机号格式无效（需10-12位数字）'))
+                    }
+                    
+                    try {
+                      const phoneQuery = query(
+                        collection(db, 'users'), 
+                        where('profile.phone', '==', normalized),
+                        limit(1)
+                      )
+                      const phoneSnap = await getDocs(phoneQuery)
+                      
+                      if (!phoneSnap.empty) {
+                        return Promise.reject(new Error('该手机号已被其他用户使用'))
+                      }
+                    } catch (error) {
+                      console.error('检查手机号唯一性失败:', error)
+                      // 如果查询失败，允许通过（不阻止用户提交）
+                    }
+                    
+                    return Promise.resolve()
+                  }
+                }
               ]}
               getValueFromEvent={(e) => e.target.value.replace(/[^\d+]/g, '')}
+              validateTrigger={['onBlur', 'onChange']}
+              validateDebounce={500}
               style={{ marginBottom: '8px' }}
             >
               <Input

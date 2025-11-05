@@ -6,20 +6,21 @@
 // 默认国家代码（马来西亚）
 const DEFAULT_COUNTRY_CODE = '60'
 
-// E.164 格式验证正则表达式（至少10位数字）
-const E164_PATTERN = /^\+\d{10,15}$/
+// E.164 格式验证正则表达式（马来西亚手机号）
+// 格式：+60 + 1-9 + 8-9位数字 = 总共12-13位
+const E164_PATTERN = /^\+60[1-9]\d{8,9}$/
 
 /**
  * 标准化手机号为 E.164 格式
  * @param phone - 原始手机号输入
  * @param countryCode - 国家代码（默认：60 = 马来西亚）
- * @returns E.164 格式手机号（如 +601157288278）或 null（无效格式）
+ * @returns E.164 格式手机号（如 +60123456789）或 null（无效格式）
  * 
  * @example
- * normalizePhoneNumber("+601157288278")    → "+601157288278"
- * normalizePhoneNumber("601157288278")     → "+601157288278"
- * normalizePhoneNumber("01157288278")      → "+601157288278"
- * normalizePhoneNumber("011-5728 8278")    → "+601157288278"
+ * normalizePhoneNumber("+60123456789")    → "+60123456789"
+ * normalizePhoneNumber("60123456789")     → "+60123456789"
+ * normalizePhoneNumber("0123456789")      → "+60123456789"
+ * normalizePhoneNumber("011-5728 8278")    → "+60123456789"
  * normalizePhoneNumber("+6011-5728 8278")  → "+60115728278"
  */
 export function normalizePhoneNumber(
@@ -39,16 +40,16 @@ export function normalizePhoneNumber(
   let normalized: string
   
   if (hasPlus) {
-    // 格式: +601157288278 → +601157288278
+    // 格式: +60123456789 → +60123456789
     normalized = '+' + cleaned
   } else if (cleaned.startsWith(countryCode)) {
-    // 格式: 601157288278 → +601157288278
+    // 格式: 60123456789 → +60123456789
     normalized = '+' + cleaned
   } else if (cleaned.startsWith('0')) {
-    // 格式: 01157288278 → +601157288278 (移除0，添加国家代码)
+    // 格式: 0123456789 → +60123456789 (移除0，添加国家代码)
     normalized = '+' + countryCode + cleaned.substring(1)
   } else {
-    // 格式: 1157288278 → +601157288278
+    // 格式: 1157288278 → +60123456789
     normalized = '+' + countryCode + cleaned
   }
   
@@ -66,7 +67,7 @@ export function normalizePhoneNumber(
  * @returns 格式化后的手机号
  * 
  * @example
- * formatPhoneDisplay("+601157288278")  → "+60 11-5728 8278"
+ * formatPhoneDisplay("+60123456789")  → "+60 11-5728 8278"
  */
 export function formatPhoneDisplay(phone: string): string {
   if (!phone) return ''
@@ -88,8 +89,8 @@ export function formatPhoneDisplay(phone: string): string {
  * @example
  * identifyInputType("admin@example.com")  → 'email'
  * identifyInputType("user123")            → 'email' (包含字母)
- * identifyInputType("01157288278")        → 'phone'
- * identifyInputType("+601157288278")      → 'phone'
+ * identifyInputType("0123456789")        → 'phone'
+ * identifyInputType("+60123456789")      → 'phone'
  * identifyInputType("1234567890")         → 'phone'
  */
 export function identifyInputType(input: string): 'email' | 'phone' | 'unknown' {

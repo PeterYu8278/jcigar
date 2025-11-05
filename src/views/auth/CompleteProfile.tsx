@@ -297,6 +297,7 @@ const CompleteProfile: React.FC = () => {
               name="phone"
               rules={[
                 { required: true, message: '请输入手机号' },
+                { pattern: /^(\+?60|0)[1-9]\d{7,9}$/, message: '手机号格式无效（需10-12位数字）' },
                 {
                   validator: async (_, value) => {
                     if (!value) return Promise.resolve()
@@ -304,7 +305,7 @@ const CompleteProfile: React.FC = () => {
                     // 1. 检查格式
                     const normalized = normalizePhoneNumber(value)
                     if (!normalized) {
-                      return Promise.reject(new Error('手机号格式无效（需10-15位数字）'))
+                      return Promise.reject(new Error('手机号格式无效（需10-12位数字）'))
                     }
                     
                     // 2. 检查是否已被使用
@@ -328,10 +329,12 @@ const CompleteProfile: React.FC = () => {
                   }
                 }
               ]}
+              validateTrigger={['onBlur', 'onChange']}
+              validateDebounce={500}
             >
               <Input
                 prefix={<PhoneOutlined style={{ color: '#ffd700' }} />}
-                placeholder="手机号 (例: 0123456789)"
+                placeholder="手机号 (例: 01157288278)"
                 onInput={(e) => {
                   const input = e.currentTarget
                   // 只保留数字、加号和空格
