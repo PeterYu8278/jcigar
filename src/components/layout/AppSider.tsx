@@ -17,7 +17,8 @@ import {
   CrownOutlined,
   FireOutlined,
   ThunderboltOutlined,
-  SyncOutlined
+  SyncOutlined,
+  TrophyOutlined
 } from '@ant-design/icons'
 import { useAuthStore } from '../../store/modules/auth'
 import { useTranslation } from 'react-i18next'
@@ -102,6 +103,11 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
       key: '/admin/finance',
       icon: <DollarOutlined />,
       label: t('navigation.finance'),
+    },
+    {
+      key: '/admin/points-config',
+      icon: <TrophyOutlined />,
+      label: '积分配置',
     },
     {
       key: '/admin/performance',
