@@ -44,9 +44,13 @@ const AppContent: React.FC = () => {
     initializeAuth()
   }, [initializeAuth])
 
-  // 无需 padding 的页面（认证页面）
-  const noPaddingPages = ['/login', '/register', '/auth/complete-profile']
+  // 无需 padding 的页面（认证页面 + 商城页面）
+  const noPaddingPages = ['/login', '/register', '/auth/complete-profile', '/shop']
   const needsPadding = !noPaddingPages.includes(location.pathname)
+  
+  // 认证页面（不显示 header/footer）
+  const authPages = ['/login', '/register', '/auth/complete-profile']
+  const isAuthPage = authPages.includes(location.pathname)
   
   // 侧边栏显示逻辑：手机端商城页面隐藏，电脑端商城页面显示
   // 逻辑：已登录 AND (是电脑端 OR 不是商城页面)
@@ -71,10 +75,10 @@ const AppContent: React.FC = () => {
     }
   }, [])
 
-  // 控制 body 滚动（认证页面禁止滚动）
+  // 控制 body 滚动（仅认证页面禁止滚动）
   useEffect(() => {
-    if (!needsPadding) {
-      // 认证页面和商城页面：禁止 body 滚动
+    if (isAuthPage) {
+      // 认证页面：禁止 body 滚动
       document.body.style.overflow = 'hidden'
       document.documentElement.style.overflow = 'hidden'
     } else {
@@ -88,7 +92,7 @@ const AppContent: React.FC = () => {
       document.body.style.overflow = 'auto'
       document.documentElement.style.overflow = 'auto'
     }
-  }, [needsPadding])
+  }, [isAuthPage])
 
   return (
       <Layout style={{ 
@@ -115,7 +119,7 @@ const AppContent: React.FC = () => {
           zIndex: -1
         }} />
         
-        {user && needsPadding && <AppHeader />}
+        {user && !isAuthPage && <AppHeader />}
         <Layout style={{ 
           background: 'transparent',
           flex: 1
@@ -139,7 +143,7 @@ const AppContent: React.FC = () => {
                 backdropFilter: 'blur(10px)',
                 position: 'relative',
                 overflow: needsPadding ? 'auto' : 'hidden',
-                paddingBottom: needsPadding ? '90px' : '0px',
+                paddingBottom: !isAuthPage ? '100px' : '0px',
                 display: needsPadding ? 'block' : 'flex',
                 alignItems: needsPadding ? undefined : 'center',
                 justifyContent: needsPadding ? undefined : 'center'
@@ -185,12 +189,12 @@ const AppContent: React.FC = () => {
                 </Routes>
               </div>
             </Content>
-            {user && needsPadding && <AppFooter />}
+            {user && !isAuthPage && <AppFooter />}
           </Layout>
         </Layout>
         
         {/* 手机端底部导航 */}
-        {user && needsPadding && <MobileBottomNav />}
+        {user && !isAuthPage && <MobileBottomNav />}
       </Layout>
   )
 }
