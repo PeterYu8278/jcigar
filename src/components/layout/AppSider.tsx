@@ -16,7 +16,8 @@ import {
   ShoppingCartOutlined,
   CrownOutlined,
   FireOutlined,
-  ThunderboltOutlined
+  ThunderboltOutlined,
+  SyncOutlined
 } from '@ant-design/icons'
 import { useAuthStore } from '../../store/modules/auth'
 import { useTranslation } from 'react-i18next'
@@ -106,6 +107,11 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
       key: '/admin/performance',
       icon: <ThunderboltOutlined />,
       label: t(NAV_KEYS.PERFORMANCE),
+    },
+    {
+      key: '/admin/member-id-migration',
+      icon: <SyncOutlined />,
+      label: '会员ID迁移',
     },
   ]
 
