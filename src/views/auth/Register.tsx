@@ -102,9 +102,29 @@ const Register: React.FC = () => {
         console.log('🎉 [Register] 注册成功');
         message.success(t('auth.registerSuccess'))
         
-        // ✅ 直接导航到首页（Firebase 注册会自动登录）
-        console.log('🎯 [Register] 导航到首页');
-        navigate('/', { replace: true });
+        // ✅ 等待 useAuthStore 状态同步后再导航
+        const waitForAuth = async () => {
+          let attempts = 0;
+          const maxAttempts = 20; // 最多等待 2 秒
+          
+          while (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            const currentUser = useAuthStore.getState().user;
+            
+            if (currentUser) {
+              console.log('✅ [Register] 用户状态已同步，导航到首页');
+              navigate('/', { replace: true });
+              return;
+            }
+            attempts++;
+          }
+          
+          // 超时后强制导航
+          console.log('⚠️ [Register] 状态同步超时，强制导航');
+          navigate('/', { replace: true });
+        };
+        
+        waitForAuth();
       } else {
         console.error('❌ [Register] 注册失败:', (result as any).error?.message);
         message.error((result as any).error?.message || t('auth.registerFailed'))

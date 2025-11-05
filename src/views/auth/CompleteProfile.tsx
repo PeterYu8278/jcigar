@@ -9,6 +9,7 @@ import { collection, query, where, getDocs, limit } from 'firebase/firestore'
 import { db, auth } from '../../config/firebase'
 import { signOut } from 'firebase/auth'
 import { getUserByMemberId } from '../../utils/memberId'
+import { useAuthStore } from '../../store/modules/auth'
 
 const { Title, Text } = Typography
 
@@ -148,7 +149,31 @@ const CompleteProfile: React.FC = () => {
 
       if (result.success) {
         message.success('账户信息已完善，欢迎加入 Gentleman Club！')
-        navigate(from, { replace: true })
+        
+        // ✅ 等待 useAuthStore 状态同步后再导航
+        const waitForAuth = async () => {
+          let attempts = 0;
+          const maxAttempts = 20; // 最多等待 2 秒
+          
+          while (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            const currentUser = useAuthStore.getState().user;
+            
+            // 检查用户状态是否已更新且资料完整
+            if (currentUser && currentUser.displayName && currentUser.email && currentUser.profile?.phone) {
+              console.log('✅ [CompleteProfile] 用户状态已同步，导航到首页');
+              navigate(from, { replace: true });
+              return;
+            }
+            attempts++;
+          }
+          
+          // 超时后强制导航
+          console.log('⚠️ [CompleteProfile] 状态同步超时，强制导航');
+          navigate(from, { replace: true });
+        };
+        
+        waitForAuth();
       } else {
         message.error((result as any).error?.message || '信息保存失败，请重试')
       }
@@ -306,7 +331,7 @@ const CompleteProfile: React.FC = () => {
             >
               <Input
                 prefix={<PhoneOutlined style={{ color: '#ffd700' }} />}
-                placeholder="手机号 (例: 01157288278)"
+                placeholder="手机号 (例: 0123456789)"
                 onInput={(e) => {
                   const input = e.currentTarget
                   // 只保留数字、加号和空格
