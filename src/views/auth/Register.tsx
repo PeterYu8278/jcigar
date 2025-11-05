@@ -97,10 +97,7 @@ const Register: React.FC = () => {
       referralCode: values.referralCode
     });
     
-    if (values.password !== values.confirmPassword) {
-      message.error(t('auth.passwordsDoNotMatch'))
-      return
-    }
+    // ✅ 密码匹配验证已由表单验证器处理，不需要在这里重复检查
 
     setLoading(true)
     try {
@@ -277,7 +274,18 @@ const Register: React.FC = () => {
 
             <Form.Item
               name="confirmPassword"
-              rules={[{ required: true, message: t('auth.confirmPasswordRequired') }]}
+              dependencies={['password']}
+              rules={[
+                { required: true, message: t('auth.confirmPasswordRequired') },
+                ({ getFieldValue }) => ({
+                  validator(_, value) {
+                    if (!value || getFieldValue('password') === value) {
+                      return Promise.resolve();
+                    }
+                    return Promise.reject(new Error(t('auth.passwordsDoNotMatch')));
+                  },
+                }),
+              ]}
             >
               <Input.Password
                 prefix={<LockOutlined style={{ color: '#ffd700' }} />}
@@ -303,13 +311,9 @@ const Register: React.FC = () => {
                       return Promise.resolve();
                     }
                     
-                    // 1. 格式验证
+                    // ✅ 只验证引荐码是否存在（不验证格式）
                     const normalized = value.trim().toUpperCase();
-                    if (!normalized.match(/^M\d{6}$/)) {
-                      return Promise.reject(new Error('引荐码格式无效（格式：M000001）'));
-                    }
                     
-                    // 2. 验证引荐码是否存在
                     try {
                       const result = await getUserByMemberId(normalized);
                       if (!result.success) {
@@ -324,16 +328,17 @@ const Register: React.FC = () => {
                   }
                 }
               ]}
-              validateTrigger="onBlur"
+              validateTrigger={['onBlur', 'onChange']}
+              validateDebounce={500}
             >
               <Input
                 prefix={<GiftOutlined style={{ color: '#ffd700' }} />}
-                placeholder="引荐码 (例: M000001)"
-                maxLength={7}
+                placeholder="引荐码（例: MHAOSXD）"
+                maxLength={20}
                 onInput={(e) => {
                   const input = e.currentTarget;
-                  // 自动转大写，只允许 M 和数字
-                  input.value = input.value.toUpperCase().replace(/[^M0-9]/g, '');
+                  // ✅ 自动转大写，允许所有字母和数字
+                  input.value = input.value.toUpperCase();
                 }}
                 style={{
                   background: 'rgba(45, 45, 45, 0.8)',
