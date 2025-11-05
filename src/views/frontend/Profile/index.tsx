@@ -17,8 +17,8 @@ import {
 const { Title, Paragraph, Text } = Typography
 
 import { useAuthStore } from '../../../store/modules/auth'
-import { updateDocument, getEventsByUser } from '../../../services/firebase/firestore'
-import type { User, Event } from '../../../types'
+import { updateDocument, getEventsByUser, getOrdersByUser } from '../../../services/firebase/firestore'
+import type { User, Event, Order } from '../../../types'
 import { useTranslation } from 'react-i18next'
 import { MemberProfileCard } from '../../../components/common/MemberProfileCard'
 import { getModalThemeStyles, getModalWidth } from '../../../config/modalTheme'
@@ -36,7 +36,9 @@ const Profile: React.FC = () => {
   const [showMemberCard, setShowMemberCard] = useState(false) // 控制头像/会员卡切换
   const [activeTab, setActiveTab] = useState<'cigar' | 'points' | 'activity' | 'referral'>('cigar') // 标签状态
   const [userEvents, setUserEvents] = useState<Event[]>([])
+  const [userOrders, setUserOrders] = useState<Order[]>([])
   const [loadingEvents, setLoadingEvents] = useState(false)
+  const [loadingOrders, setLoadingOrders] = useState(false)
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
 
   // 加载用户参与的活动
@@ -56,10 +58,27 @@ const Profile: React.FC = () => {
     loadUserEvents()
   }, [user?.id])
 
+  // 加载用户订单
+  React.useEffect(() => {
+    const loadUserOrders = async () => {
+      if (!user?.id) return
+      setLoadingOrders(true)
+      try {
+        const orders = await getOrdersByUser(user.id)
+        setUserOrders(orders)
+      } catch (error) {
+        console.error('Failed to load user orders:', error)
+      } finally {
+        setLoadingOrders(false)
+      }
+    }
+    loadUserOrders()
+  }, [user?.id])
+
   // 用户统计数据 - 从实际数据计算
   const userStats = [
     { title: t('profile.eventsJoined'), value: userEvents.length, icon: <CalendarOutlined /> },
-    { title: t('profile.cigarsPurchased'), value: 0, icon: <ShoppingOutlined /> },
+    { title: t('profile.cigarsPurchased'), value: userOrders.length, icon: <ShoppingOutlined /> },
     { title: t('profile.communityPoints'), value: (user?.membership as any)?.points || 0, icon: <TrophyOutlined /> },
   ]
 
@@ -282,15 +301,118 @@ const Profile: React.FC = () => {
         {/* Records List */}
         <div style={{ paddingBottom: '24px' }}>
           {activeTab === 'cigar' && (
-            <div style={{
-              textAlign: 'center',
-              padding: '40px 20px',
-              color: 'rgba(255, 255, 255, 0.6)'
-            }}>
-              <p style={{ margin: 0, fontSize: '14px' }}>
-                {t('usersAdmin.noCigarRecords')}
-              </p>
-            </div>
+            loadingOrders ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px 20px'
+              }}>
+                <Space direction="vertical" size="middle">
+                  <div style={{ fontSize: '24px', color: '#ffd700' }}>
+                    <ShoppingOutlined spin />
+                  </div>
+                  <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                    加载中...
+                  </Text>
+                </Space>
+              </div>
+            ) : userOrders.length === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px 20px',
+                color: 'rgba(255, 255, 255, 0.6)'
+              }}>
+                <p style={{ margin: 0, fontSize: '14px' }}>
+                  {t('usersAdmin.noCigarRecords')}
+                </p>
+              </div>
+            ) : (
+              <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                {userOrders.map((order) => {
+                  const createdDate = order.createdAt instanceof Date 
+                    ? order.createdAt 
+                    : (order.createdAt as any)?.toDate 
+                      ? (order.createdAt as any).toDate() 
+                      : new Date(order.createdAt);
+                  
+                  return (
+                    <div
+                      key={order.id}
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        border: '1px solid rgba(244, 175, 37, 0.2)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}
+                    >
+                      {/* 左侧：订单信息 */}
+                      <div style={{ flex: 1 }}>
+                        <div style={{
+                          fontSize: '16px',
+                          fontWeight: '600',
+                          color: '#FFFFFF',
+                          marginBottom: '4px'
+                        }}>
+                          订单 #{(order as any).orderNo || order.id.slice(0, 8)}
+                        </div>
+                        
+                        <div style={{
+                          fontSize: '12px',
+                          color: 'rgba(255, 255, 255, 0.6)',
+                          marginBottom: '4px'
+                        }}>
+                          {createdDate.toLocaleDateString('zh-CN', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </div>
+                        
+                        <div style={{
+                          fontSize: '12px',
+                          color: 'rgba(255, 255, 255, 0.6)'
+                        }}>
+                          {order.items?.length || 0} 件商品
+                        </div>
+                      </div>
+                      
+                      {/* 右侧：金额和状态 */}
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{
+                          fontSize: '18px',
+                          fontWeight: 'bold',
+                          color: '#F4AF25',
+                          marginBottom: '4px'
+                        }}>
+                          RM {((order as any).totalAmount || order.total || 0).toFixed(2)}
+                        </div>
+                        
+                        <Tag 
+                          color={
+                            order.status === 'delivered' ? 'success' :
+                            order.status === 'shipped' ? 'processing' :
+                            order.status === 'confirmed' ? 'blue' :
+                            order.status === 'cancelled' ? 'error' :
+                            'default'
+                          }
+                          style={{ fontSize: '11px' }}
+                        >
+                          {
+                            order.status === 'delivered' ? '已送达' :
+                            order.status === 'shipped' ? '已发货' :
+                            order.status === 'confirmed' ? '已确认' :
+                            order.status === 'cancelled' ? '已取消' :
+                            '待确认'
+                          }
+                        </Tag>
+                      </div>
+                    </div>
+                  );
+                })}
+              </Space>
+            )
           )}
 
           {activeTab === 'points' && (
