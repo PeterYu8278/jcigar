@@ -233,13 +233,16 @@ const Register: React.FC = () => {
               name="phone"
               rules={[
                 { required: true, message: t('auth.phoneRequired') },
-                { pattern: /^(\+?60|0)[1-9]\d{7,9}$/, message: '手机号格式无效（需10-12位数字）' },
+                { 
+                  pattern: /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/, 
+                  message: '手机号格式无效（需10-12位数字）' 
+                },
                 {
                   validator: async (_, value) => {
                     if (!value) return Promise.resolve()
                     
                     // ✅ 先验证格式，格式无效则跳过唯一性检查
-                    const formatPattern = /^(\+?60|0)[1-9]\d{7,9}$/
+                    const formatPattern = /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/
                     if (!formatPattern.test(value)) {
                       // 格式无效，不检查唯一性（避免重复错误提示）
                       return Promise.resolve()
