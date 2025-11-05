@@ -1,12 +1,13 @@
 // Google 登录后完善用户信息页面
 import React, { useState, useEffect, useRef } from 'react'
 import { Form, Input, Button, Card, Typography, Space, App, Spin } from 'antd'
-import { UserOutlined, LockOutlined, PhoneOutlined, LoadingOutlined } from '@ant-design/icons'
+import { UserOutlined, LockOutlined, PhoneOutlined, LoadingOutlined, LogoutOutlined } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { normalizePhoneNumber } from '../../utils/phoneNormalization'
 import { collection, query, where, getDocs, limit } from 'firebase/firestore'
 import { db, auth } from '../../config/firebase'
+import { signOut } from 'firebase/auth'
 
 const { Title, Text } = Typography
 
@@ -143,6 +144,18 @@ const CompleteProfile: React.FC = () => {
       message.error('信息保存失败，请重试')
     } finally {
       setLoading(false)
+    }
+  }
+
+  // 退出登录并返回登录页
+  const handleLogout = async () => {
+    try {
+      await signOut(auth)
+      message.info('已退出登录')
+      navigate('/login', { replace: true })
+    } catch (error) {
+      console.error('Logout error:', error)
+      message.error('退出登录失败')
     }
   }
 
@@ -316,7 +329,7 @@ const CompleteProfile: React.FC = () => {
             </Form.Item>
 
             {/* 提交按钮 */}
-            <Form.Item style={{ marginBottom: '24px' }}>
+            <Form.Item style={{ marginBottom: '16px' }}>
               <Button
                 type="primary"
                 htmlType="submit"
@@ -334,6 +347,26 @@ const CompleteProfile: React.FC = () => {
                 }}
               >
                 完成注册
+              </Button>
+            </Form.Item>
+
+            {/* 返回登录按钮 */}
+            <Form.Item style={{ marginBottom: '24px' }}>
+              <Button
+                icon={<LogoutOutlined />}
+                onClick={handleLogout}
+                disabled={loading}
+                style={{ 
+                  width: '100%',
+                  height: '40px',
+                  background: 'transparent',
+                  border: '1px solid #444444',
+                  borderRadius: '8px',
+                  color: '#999999',
+                  fontSize: '14px'
+                }}
+              >
+                返回登录
               </Button>
             </Form.Item>
           </Form>
