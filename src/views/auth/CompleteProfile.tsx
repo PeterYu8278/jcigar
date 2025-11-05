@@ -1,7 +1,7 @@
 // Google 登录后完善用户信息页面
-import React, { useState, useEffect } from 'react'
-import { Form, Input, Button, Card, Typography, Space, App } from 'antd'
-import { UserOutlined, LockOutlined, PhoneOutlined } from '@ant-design/icons'
+import React, { useState, useEffect, useRef } from 'react'
+import { Form, Input, Button, Card, Typography, Space, App, Spin } from 'antd'
+import { UserOutlined, LockOutlined, PhoneOutlined, LoadingOutlined } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { normalizePhoneNumber } from '../../utils/phoneNormalization'
@@ -12,7 +12,12 @@ const { Title, Text } = Typography
 
 const CompleteProfile: React.FC = () => {
   const [loading, setLoading] = useState(false)
+  const [pullDistance, setPullDistance] = useState(0)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const touchStartY = useRef(0)
+  const containerRef = useRef<HTMLDivElement>(null)
   const [form] = Form.useForm()
+  
   const navigate = useNavigate()
   const location = useLocation()
   const { t } = useTranslation()
@@ -20,6 +25,37 @@ const CompleteProfile: React.FC = () => {
   
   // 获取用户原本想访问的页面
   const from = location.state?.from?.pathname || '/'
+  
+  // 下拉刷新处理
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (isRefreshing) return
+    
+    const touchY = e.touches[0].clientY
+    const pullDelta = touchY - touchStartY.current
+    
+    if (pullDelta > 0 && window.scrollY === 0) {
+      setPullDistance(Math.min(pullDelta, 150))
+      if (pullDelta > 10) {
+        e.preventDefault()
+      }
+    }
+  }
+
+  const handleTouchEnd = () => {
+    if (pullDistance > 80 && !isRefreshing) {
+      setIsRefreshing(true)
+      setPullDistance(80)
+      setTimeout(() => {
+        window.location.reload()
+      }, 300)
+    } else {
+      setPullDistance(0)
+    }
+  }
 
   // 如果用户未登录或已完善信息，重定向
   useEffect(() => {
@@ -111,12 +147,43 @@ const CompleteProfile: React.FC = () => {
   }
 
   return (
-      <div style={{
-        width: '100%',
-        padding: '0 25px',
-        position: 'relative',
-        boxSizing: 'border-box'
-      }}>
+      <div
+        ref={containerRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{
+          width: '100%',
+          padding: '0 25px',
+          position: 'relative',
+          boxSizing: 'border-box',
+          transform: `translateY(${pullDistance}px)`,
+          transition: isRefreshing ? 'transform 0.3s ease' : pullDistance > 0 ? 'none' : 'transform 0.3s ease'
+        }}>
+      {/* 下拉刷新指示器 */}
+      {pullDistance > 0 && (
+        <div style={{
+          position: 'absolute',
+          top: `-${Math.min(pullDistance, 80)}px`,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '8px',
+          color: '#ffd700',
+          fontSize: '14px',
+          opacity: pullDistance / 80,
+          transition: 'opacity 0.2s ease'
+        }}>
+          <Spin 
+            indicator={<LoadingOutlined style={{ fontSize: 24, color: '#ffd700' }} spin />}
+            spinning={isRefreshing}
+          />
+          <span>{isRefreshing ? '正在刷新...' : pullDistance > 80 ? '释放刷新' : '下拉刷新'}</span>
+        </div>
+      )}
+      
       <Card style={{ 
         width: '100%',
         maxWidth: 400,

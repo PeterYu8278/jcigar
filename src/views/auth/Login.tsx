@@ -1,7 +1,7 @@
 // 登录页面
 import React, { useState, useEffect, useRef } from 'react'
-import { Form, Input, Button, Card, Typography, Space, message, Divider } from 'antd'
-import { UserOutlined, LockOutlined, GoogleOutlined } from '@ant-design/icons'
+import { Form, Input, Button, Card, Typography, Space, message, Divider, Spin } from 'antd'
+import { UserOutlined, LockOutlined, GoogleOutlined, LoadingOutlined } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { loginWithEmailOrPhone, loginWithGoogle, handleGoogleRedirectResult } from '../../services/firebase/auth'
 import { useAuthStore } from '../../store/modules/auth'
@@ -13,6 +13,11 @@ const { Title, Text } = Typography
 const Login: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [loginError, setLoginError] = useState<string>('')
+  const [pullDistance, setPullDistance] = useState(0)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const touchStartY = useRef(0)
+  const containerRef = useRef<HTMLDivElement>(null)
+  
   const navigate = useNavigate()
   const location = useLocation()
   const { user, setUser } = useAuthStore()
@@ -20,6 +25,43 @@ const Login: React.FC = () => {
   const hasCheckedRedirect = useRef(false) // 防止 StrictMode 重复调用
 
   const from = location.state?.from?.pathname || '/'
+  
+  // 下拉刷新处理
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (isRefreshing) return
+    
+    const touchY = e.touches[0].clientY
+    const pullDelta = touchY - touchStartY.current
+    
+    // 只在页面顶部且向下拖动时才触发
+    if (pullDelta > 0 && window.scrollY === 0) {
+      setPullDistance(Math.min(pullDelta, 150))
+      // 阻止默认滚动行为
+      if (pullDelta > 10) {
+        e.preventDefault()
+      }
+    }
+  }
+
+  const handleTouchEnd = () => {
+    if (pullDistance > 80 && !isRefreshing) {
+      // 触发刷新
+      setIsRefreshing(true)
+      setPullDistance(80)
+      
+      // 延迟刷新以显示动画
+      setTimeout(() => {
+        window.location.reload()
+      }, 300)
+    } else {
+      // 回弹
+      setPullDistance(0)
+    }
+  }
 
   // 如果用户已登录，根据资料完整性重定向
   useEffect(() => {
@@ -123,14 +165,42 @@ const Login: React.FC = () => {
   }
 
   return (
-      <div style={{
-        width: '100%',
-        padding: '0 25px',
-        position: 'relative',
-        boxSizing: 'border-box'
-      }}>
-      {/* 背景装饰 */}
-     
+      <div 
+        ref={containerRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{
+          width: '100%',
+          padding: '0 25px',
+          position: 'relative',
+          boxSizing: 'border-box',
+          transform: `translateY(${pullDistance}px)`,
+          transition: isRefreshing ? 'transform 0.3s ease' : pullDistance > 0 ? 'none' : 'transform 0.3s ease'
+        }}>
+      {/* 下拉刷新指示器 */}
+      {pullDistance > 0 && (
+        <div style={{
+          position: 'absolute',
+          top: `-${Math.min(pullDistance, 80)}px`,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '8px',
+          color: '#ffd700',
+          fontSize: '14px',
+          opacity: pullDistance / 80,
+          transition: 'opacity 0.2s ease'
+        }}>
+          <Spin 
+            indicator={<LoadingOutlined style={{ fontSize: 24, color: '#ffd700' }} spin />}
+            spinning={isRefreshing}
+          />
+          <span>{isRefreshing ? '正在刷新...' : pullDistance > 80 ? '释放刷新' : '下拉刷新'}</span>
+        </div>
+      )}
       
       <Card style={{ 
         width: '100%',
