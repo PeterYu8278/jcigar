@@ -1,6 +1,6 @@
 // 用户档案页面
 import React, { useMemo, useState } from 'react'
-import { Row, Col, Card, Typography, Avatar, Tag, Button, Space, Statistic, Modal, Form, Input, Switch, message } from 'antd'
+import { Row, Col, Card, Typography, Avatar, Tag, Button, Space, Statistic, Modal, Form, Input, Switch, message, Spin } from 'antd'
 import { 
   UserOutlined, 
   EditOutlined, 
@@ -17,8 +17,8 @@ import {
 const { Title, Paragraph, Text } = Typography
 
 import { useAuthStore } from '../../../store/modules/auth'
-import { updateDocument, getEventsByUser, getOrdersByUser } from '../../../services/firebase/firestore'
-import type { User, Event, Order } from '../../../types'
+import { updateDocument, getEventsByUser, getUsers } from '../../../services/firebase/firestore'
+import type { User, Event } from '../../../types'
 import { useTranslation } from 'react-i18next'
 import { MemberProfileCard } from '../../../components/common/MemberProfileCard'
 import { getModalThemeStyles, getModalWidth } from '../../../config/modalTheme'
@@ -36,9 +36,9 @@ const Profile: React.FC = () => {
   const [showMemberCard, setShowMemberCard] = useState(false) // 控制头像/会员卡切换
   const [activeTab, setActiveTab] = useState<'cigar' | 'points' | 'activity' | 'referral'>('cigar') // 标签状态
   const [userEvents, setUserEvents] = useState<Event[]>([])
-  const [userOrders, setUserOrders] = useState<Order[]>([])
   const [loadingEvents, setLoadingEvents] = useState(false)
-  const [loadingOrders, setLoadingOrders] = useState(false)
+  const [referredUsers, setReferredUsers] = useState<User[]>([])  // 我引荐的用户
+  const [loadingReferrals, setLoadingReferrals] = useState(false)
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
 
   // 加载用户参与的活动
@@ -58,27 +58,39 @@ const Profile: React.FC = () => {
     loadUserEvents()
   }, [user?.id])
 
-  // 加载用户订单
+  // 加载我引荐的用户
   React.useEffect(() => {
-    const loadUserOrders = async () => {
-      if (!user?.id) return
-      setLoadingOrders(true)
+    const loadReferredUsers = async () => {
+      if (!user?.referral?.referrals || user.referral.referrals.length === 0) {
+        setReferredUsers([])
+        return
+      }
+      
+      setLoadingReferrals(true)
       try {
-        const orders = await getOrdersByUser(user.id)
-        setUserOrders(orders)
+        const allUsers = await getUsers()
+        // 筛选出我引荐的用户
+        const referred = allUsers.filter(u => user.referral?.referrals.includes(u.id))
+        // 按注册日期降序排序（最新的在前）
+        referred.sort((a, b) => {
+          const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt)
+          const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt)
+          return dateB.getTime() - dateA.getTime()
+        })
+        setReferredUsers(referred)
       } catch (error) {
-        console.error('Failed to load user orders:', error)
+        console.error('Failed to load referred users:', error)
       } finally {
-        setLoadingOrders(false)
+        setLoadingReferrals(false)
       }
     }
-    loadUserOrders()
-  }, [user?.id])
+    loadReferredUsers()
+  }, [user?.referral?.referrals])
 
   // 用户统计数据 - 从实际数据计算
   const userStats = [
     { title: t('profile.eventsJoined'), value: userEvents.length, icon: <CalendarOutlined /> },
-    { title: t('profile.cigarsPurchased'), value: userOrders.length, icon: <ShoppingOutlined /> },
+    { title: t('profile.cigarsPurchased'), value: 0, icon: <ShoppingOutlined /> },
     { title: t('profile.communityPoints'), value: (user?.membership as any)?.points || 0, icon: <TrophyOutlined /> },
   ]
 
@@ -301,118 +313,15 @@ const Profile: React.FC = () => {
         {/* Records List */}
         <div style={{ paddingBottom: '24px' }}>
           {activeTab === 'cigar' && (
-            loadingOrders ? (
-              <div style={{
-                textAlign: 'center',
-                padding: '40px 20px'
-              }}>
-                <Space direction="vertical" size="middle">
-                  <div style={{ fontSize: '24px', color: '#ffd700' }}>
-                    <ShoppingOutlined spin />
-                  </div>
-                  <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                    加载中...
-                  </Text>
-                </Space>
-              </div>
-            ) : userOrders.length === 0 ? (
-              <div style={{
-                textAlign: 'center',
-                padding: '40px 20px',
-                color: 'rgba(255, 255, 255, 0.6)'
-              }}>
-                <p style={{ margin: 0, fontSize: '14px' }}>
-                  {t('usersAdmin.noCigarRecords')}
-                </p>
-              </div>
-            ) : (
-              <Space direction="vertical" size={12} style={{ width: '100%' }}>
-                {userOrders.map((order) => {
-                  const createdDate = order.createdAt instanceof Date 
-                    ? order.createdAt 
-                    : (order.createdAt as any)?.toDate 
-                      ? (order.createdAt as any).toDate() 
-                      : new Date(order.createdAt);
-                  
-                  return (
-                    <div
-                      key={order.id}
-                      style={{
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        borderRadius: '12px',
-                        padding: '16px',
-                        border: '1px solid rgba(244, 175, 37, 0.2)',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}
-                    >
-                      {/* 左侧：订单信息 */}
-                      <div style={{ flex: 1 }}>
-                        <div style={{
-                          fontSize: '16px',
-                          fontWeight: '600',
-                          color: '#FFFFFF',
-                          marginBottom: '4px'
-                        }}>
-                          订单 #{(order as any).orderNo || order.id.slice(0, 8)}
-                        </div>
-                        
-                        <div style={{
-                          fontSize: '12px',
-                          color: 'rgba(255, 255, 255, 0.6)',
-                          marginBottom: '4px'
-                        }}>
-                          {createdDate.toLocaleDateString('zh-CN', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
-                        </div>
-                        
-                        <div style={{
-                          fontSize: '12px',
-                          color: 'rgba(255, 255, 255, 0.6)'
-                        }}>
-                          {order.items?.length || 0} 件商品
-                        </div>
-                      </div>
-                      
-                      {/* 右侧：金额和状态 */}
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{
-                          fontSize: '18px',
-                          fontWeight: 'bold',
-                          color: '#F4AF25',
-                          marginBottom: '4px'
-                        }}>
-                          RM {((order as any).totalAmount || order.total || 0).toFixed(2)}
-                        </div>
-                        
-                        <Tag 
-                          color={
-                            order.status === 'delivered' ? 'success' :
-                            order.status === 'shipped' ? 'processing' :
-                            order.status === 'confirmed' ? 'blue' :
-                            order.status === 'cancelled' ? 'error' :
-                            'default'
-                          }
-                          style={{ fontSize: '11px' }}
-                        >
-                          {
-                            order.status === 'delivered' ? '已送达' :
-                            order.status === 'shipped' ? '已发货' :
-                            order.status === 'confirmed' ? '已确认' :
-                            order.status === 'cancelled' ? '已取消' :
-                            '待确认'
-                          }
-                        </Tag>
-                      </div>
-                    </div>
-                  );
-                })}
-              </Space>
-            )
+            <div style={{
+              textAlign: 'center',
+              padding: '40px 20px',
+              color: 'rgba(255, 255, 255, 0.6)'
+            }}>
+              <p style={{ margin: 0, fontSize: '14px' }}>
+                {t('usersAdmin.noCigarRecords')}
+              </p>
+            </div>
           )}
 
           {activeTab === 'points' && (
@@ -571,15 +480,186 @@ const Profile: React.FC = () => {
           )}
 
           {activeTab === 'referral' && (
-            <div style={{
-              textAlign: 'center',
-              padding: '40px 20px',
-              color: 'rgba(255, 255, 255, 0.6)'
-            }}>
-              <p style={{ margin: 0, fontSize: '14px' }}>
-                {t('usersAdmin.noReferralRecords')}
-              </p>
-            </div>
+            <>
+              {/* 引荐码卡片 */}
+              <Card style={{
+                background: 'linear-gradient(135deg, rgba(244, 175, 37, 0.15), rgba(244, 175, 37, 0.05))',
+                border: '2px dashed rgba(244, 175, 37, 0.4)',
+                borderRadius: '12px',
+                marginBottom: '16px'
+              }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.6)', marginBottom: '8px' }}>
+                    我的引荐码
+                  </div>
+                  <div style={{
+                    fontSize: '28px',
+                    fontWeight: 'bold',
+                    color: '#ffd700',
+                    letterSpacing: '3px',
+                    marginBottom: '12px',
+                    fontFamily: 'monospace'
+                  }}>
+                    {user?.memberId || '未生成'}
+                  </div>
+                  <Space size="small">
+                    <Button 
+                      size="small" 
+                      onClick={() => {
+                        if (user?.memberId) {
+                          navigator.clipboard.writeText(user.memberId);
+                          message.success('引荐码已复制');
+                        }
+                      }}
+                    >
+                      复制引荐码
+                    </Button>
+                    <Button 
+                      size="small"
+                      type="primary"
+                      onClick={() => {
+                        if (user?.memberId) {
+                          const shareText = `加入 Gentleman Club，使用我的引荐码：${user.memberId}，注册可获得额外积分！`;
+                          if (navigator.share) {
+                            navigator.share({ text: shareText });
+                          } else {
+                            navigator.clipboard.writeText(shareText);
+                            message.success('邀请文字已复制');
+                          }
+                        }
+                      }}
+                    >
+                      分享邀请
+                    </Button>
+                  </Space>
+                  
+                  <div style={{ 
+                    marginTop: '12px', 
+                    padding: '8px', 
+                    background: 'rgba(82, 196, 26, 0.1)', 
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    color: '#52c41a'
+                  }}>
+                    💰 每成功引荐1人注册获得 200 积分
+                  </div>
+                </div>
+              </Card>
+
+              {/* 引荐统计 */}
+              <Row gutter={12} style={{ marginBottom: '16px' }}>
+                <Col span={12}>
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    border: '1px solid rgba(244, 175, 37, 0.2)',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ffd700' }}>
+                      {user?.referral?.totalReferred || 0}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
+                      累计引荐
+                    </div>
+                  </div>
+                </Col>
+                <Col span={12}>
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    border: '1px solid rgba(244, 175, 37, 0.2)',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ffd700' }}>
+                      {user?.membership?.referralPoints || 0}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
+                      引荐积分
+                    </div>
+                  </div>
+                </Col>
+              </Row>
+
+              {/* 引荐记录列表 */}
+              {loadingReferrals ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '40px 20px'
+                }}>
+                  <Spin />
+                </div>
+              ) : referredUsers.length === 0 ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '40px 20px',
+                  color: 'rgba(255, 255, 255, 0.6)'
+                }}>
+                  <p style={{ margin: 0, fontSize: '14px' }}>
+                    {t('usersAdmin.noReferralRecords')}
+                  </p>
+                  <p style={{ margin: '8px 0 0 0', fontSize: '12px' }}>
+                    分享您的引荐码给好友，邀请他们加入获得奖励
+                  </p>
+                </div>
+              ) : (
+                <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                  {referredUsers.map((referred) => {
+                    const joinDate = referred.createdAt instanceof Date 
+                      ? referred.createdAt 
+                      : new Date(referred.createdAt);
+                    
+                    return (
+                      <div key={referred.id} style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        border: '1px solid rgba(244, 175, 37, 0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px'
+                      }}>
+                        {/* 用户头像 */}
+                        <div style={{
+                          width: '48px',
+                          height: '48px',
+                          borderRadius: '50%',
+                          background: 'linear-gradient(135deg, rgba(244, 175, 37, 0.3), rgba(244, 175, 37, 0.1))',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '20px',
+                          fontWeight: 'bold',
+                          color: '#ffd700',
+                          border: '2px solid rgba(244, 175, 37, 0.3)'
+                        }}>
+                          {referred.displayName?.charAt(0) || '?'}
+                        </div>
+                        
+                        {/* 用户信息 */}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '16px', fontWeight: '600', color: '#fff' }}>
+                            {referred.displayName || '未知用户'}
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '2px' }}>
+                            {joinDate.toLocaleDateString('zh-CN')} 加入
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>
+                            会员编号: {referred.memberId || '-'}
+                          </div>
+                        </div>
+                        
+                        {/* 会员等级标签 */}
+                        <Tag color={getMembershipColor(referred.membership?.level || 'bronze')}>
+                          {getMembershipText(referred.membership?.level || 'bronze')}
+                        </Tag>
+                      </div>
+                    );
+                  })}
+                </Space>
+              )}
+            </>
           )}
         </div>
       </div>

@@ -49,9 +49,9 @@ const Home: React.FC = () => {
     }
   }
   
-  // QR Code Hook - 基于用户ID自动生成
+  // QR Code Hook - 基于会员编号生成引荐链接
   const { qrCodeDataURL, loading: qrLoading, error: qrError } = useQRCode({
-    memberId: user?.id,
+    memberId: user?.memberId,  // ✅ 使用 memberId（会员编号）作为引荐码
     memberName: user?.displayName,
     autoGenerate: true
   })
@@ -667,50 +667,7 @@ const Home: React.FC = () => {
         )}
       </div>
 
-      {/* 快速导航 */}
-      <div style={{ marginBottom: 8 }}>
-        <Title level={4} style={{ margin: '0 0 16px', color: '#f8f8f8' }}>{t('home.quickNavigation')}</Title>
-        <Row gutter={[16, 16]}>
-          {[
-            { title: t('home.bookEvent'), icon: <CalendarOutlined />, path: '/events' },
-            { title: t('home.storeNavigation'), icon: <ShoppingOutlined />, path: '/shop' },
-            { title: t('home.friendInvite'), icon: <StarOutlined />, path: '/profile' },
-            { title: t('home.pointsExchange'), icon: <TrophyOutlined />, path: '/profile' },
-          ].map((f) => (
-            <Col xs={6} key={f.title}>
-              <div 
-                style={{ 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  alignItems: 'center', 
-                  gap: 8, 
-                  background: 'rgba(30,30,30,0.6)', 
-                  borderRadius: 12, 
-                  padding: 12, 
-                  textAlign: 'center', 
-                  border: '1px solid rgba(255,215,0,0.2)',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease'
-                }}
-                onClick={() => navigate(f.path)}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.border = '1px solid rgba(255,215,0,0.6)'
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(255,215,0,0.2)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.border = '1px solid rgba(255,215,0,0.2)'
-                  e.currentTarget.style.transform = 'translateY(0)'
-                  e.currentTarget.style.boxShadow = 'none'
-                }}
-              >
-                <div style={{ color: '#D4AF37', fontSize: 24 }}>{f.icon}</div>
-                <div style={{ fontSize: 12, color: '#f8f8f8', fontWeight: 600 }}>{f.title}</div>
-            </div>
-        </Col>
-          ))}
-      </Row>
-    </div>
+      
 
     </div>
   )

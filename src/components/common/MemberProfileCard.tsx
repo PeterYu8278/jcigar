@@ -31,9 +31,9 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
 
-  // QR Code Hook - 基于用户ID自动生成
+  // QR Code Hook - 基于会员编号生成引荐链接
   const { qrCodeDataURL, loading: qrLoading, error: qrError } = useQRCode({
-    memberId: user?.id,
+    memberId: user?.memberId,  // ✅ 使用 memberId 而不是 user.id
     memberName: user?.displayName,
     autoGenerate: true
   })
@@ -295,7 +295,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
                     textShadow: '0 2px 4px rgba(0,0,0,0.7)',
                     fontFamily: "'Noto Sans SC', sans-serif"
                   }}>
-                    {user?.memberId || 'C00000'}
+                    {user?.memberId || 'M000000'}
                   </div>
                   <div style={{ 
                     color: 'rgba(255,255,255,0.7)', 

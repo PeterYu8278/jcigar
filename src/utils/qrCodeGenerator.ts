@@ -76,8 +76,9 @@ export const generateSimpleMemberQRCode = async (memberId: string): Promise<stri
 
 /**
  * 生成会员卡专用的QR Code
- * @param memberId 会员ID
- * @param memberName 会员姓名
+ * 内容：带引荐码参数的注册链接
+ * @param memberId 会员编号（用作引荐码）
+ * @param memberName 会员姓名（未使用，保留兼容性）
  * @returns Promise<string> Base64编码的QR Code图片
  */
 export const generateMemberCardQRCode = async (
@@ -85,13 +86,14 @@ export const generateMemberCardQRCode = async (
   memberName?: string
 ): Promise<string> => {
   try {
-    const qrContent = JSON.stringify({
-      type: 'member_card',
-      memberId: memberId,
-      memberName: memberName || 'Gentleman Club Member',
-      club: 'Gentleman Club',
-      generatedAt: new Date().toISOString()
-    })
+    // 获取当前域名（生产环境或开发环境）
+    const baseUrl = typeof window !== 'undefined' 
+      ? window.location.origin 
+      : 'https://jcigar.netlify.app';
+    
+    // 生成带引荐码参数的注册链接
+    // 格式：https://jcigar.netlify.app/register?ref=M000123
+    const qrContent = `${baseUrl}/register?ref=${memberId}`;
 
     const qrCodeDataURL = await QRCode.toDataURL(qrContent, {
       width: 200,
@@ -100,7 +102,7 @@ export const generateMemberCardQRCode = async (
         dark: '#000000',
         light: '#FFFFFF'
       },
-      errorCorrectionLevel: 'M'
+      errorCorrectionLevel: 'M'  // M级纠错（适合URL）
     })
 
     return qrCodeDataURL

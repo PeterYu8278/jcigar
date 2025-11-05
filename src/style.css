@@ -138,18 +138,6 @@ a:hover {
   -ms-overflow-style: none;
 }
 
-/* 字母索引侧边栏 - 隐藏滚动条 */
-.alpha-sidebar-scroll::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-  display: none;
-}
-
-.alpha-sidebar-scroll {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
 /* 手机端全局隐藏滚动条（保留滚动功能） */
 @media (max-width: 768px) {
   body::-webkit-scrollbar,

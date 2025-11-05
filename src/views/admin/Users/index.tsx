@@ -72,6 +72,9 @@ const AdminUsers: React.FC = () => {
   const [userOrders, setUserOrders] = useState<Order[]>([])
   const [userEvents, setUserEvents] = useState<Event[]>([])
   const [loadingUserData, setLoadingUserData] = useState(false)
+  const [activeIndex, setActiveIndex] = useState<string>('') // 当前高亮的字母
+  const [showBubble, setShowBubble] = useState(false) // 字母气泡显示
+  const [bubbleLetter, setBubbleLetter] = useState('') // 气泡字母
 
   useEffect(() => {
     ;(async () => {
@@ -364,7 +367,30 @@ const AdminUsers: React.FC = () => {
   }, [])
 
   const [alphaY, setAlphaY] = useState<number>(typeof window !== 'undefined' ? window.innerHeight / 2 : 300)
-  const [sidebarExpanded, setSidebarExpanded] = useState(false)
+
+  // 监听滚动，更新当前高亮字母
+  useEffect(() => {
+    if (!isMobile) return
+
+    const handleScroll = () => {
+      for (const group of groupedByInitial) {
+        const el = document.getElementById(`group-${group.key}`)
+        if (el) {
+          const rect = el.getBoundingClientRect()
+          // 如果分组在可视区域顶部附近
+          if (rect.top >= 0 && rect.top < 200) {
+            setActiveIndex(group.key)
+            break
+          }
+        }
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    handleScroll() // 初始化
+
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [groupedByInitial, isMobile])
 
   const maskPhone = (phone?: string) => {
     if (!phone) return ''
@@ -526,81 +552,99 @@ const AdminUsers: React.FC = () => {
 
       {/* 移动端：列表视图 */}
       {isMobile && (
-        <div>
-          {/* 顶部栏 */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', marginBottom: 12 }}>{t('navigation.users')}</h1>
-          <div style={{ width: 32 }} />
-          </div>
-          {/* 搜索框 */}
-          <div style={{ position: 'relative', marginBottom: 12 }}>
-            <Search
-              placeholder={t('usersAdmin.searchByNameOrEmail')}
-              allowClear
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              style={{ width: '100%' }}
-              prefix={<SearchOutlined />}
-            />
-          </div>
-          {/* 筛选与添加 */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', overflowX: 'auto', paddingBottom: 8, marginBottom: 12 }}>
-            <Dropdown
-              menu={{
-                items: [
-                  { key: 'all', label: t('common.all') },
-                  { key: 'admin', label: t('common.admin') },
-                  { key: 'member', label: t('common.member') },
-                  { key: 'guest', label: t('common.guest') },
-                ],
-                onClick: ({ key }) => setRoleFilter(key === 'all' ? undefined : (key as string)),
-              }}
-            >
-              <Button shape="round">
-                {t('usersAdmin.role')}{roleFilter ? `: ${getRoleText(roleFilter)}` : ''}
-              </Button>
-            </Dropdown>
-            <Dropdown
-              menu={{
-                items: [
-                  { key: 'all', label: t('common.all') },
-                  { key: 'bronze', label: t('usersAdmin.bronzeMember') },
-                  { key: 'silver', label: t('usersAdmin.silverMember') },
-                  { key: 'gold', label: t('usersAdmin.goldMember') },
-                  { key: 'platinum', label: t('usersAdmin.platinumMember') },
-                ],
-                onClick: ({ key }) => setLevelFilter(key === 'all' ? undefined : (key as string)),
-              }}
-            >
-              <Button shape="round">
-                {t('usersAdmin.level')}{levelFilter ? `：${getMembershipText(levelFilter)}` : ''}
-              </Button>
-            </Dropdown>
-            <Dropdown
-              menu={{
-                items: [
-                  { key: 'all', label: t('common.all') },
-                  { key: 'active', label: t('usersAdmin.active') },
-                  { key: 'inactive', label: t('usersAdmin.inactive') },
-                ],
-                onClick: ({ key }) => setStatusFilter(key === 'all' ? undefined : (key as string)),
-              }}
-            >
-              <Button shape="round">
-                {t('usersAdmin.status')}{statusFilter ? `: ${getStatusText(statusFilter)}` : ''}
-              </Button>
-            </Dropdown>
-            <div style={{ flex: 1 }} />
-            <button onClick={() => { setCreating(true); form.resetFields() }} style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 8, padding: '8px 16px', background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, cursor: 'pointer' }}>{t('usersAdmin.addUser')}</button>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '90vh',
+          overflow: 'hidden'
+        }}>
+          {/* 固定顶部区域 - 不滚动 */}
+          <div style={{ flexShrink: 0 }}>
+            {/* 标题栏 */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
+              <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', margin: 0 }}>{t('navigation.users')}</h1>
+              <div style={{ width: 32 }} />
+            </div>
+            
+            {/* 搜索框 */}
+            <div style={{ position: 'relative', padding: '0 16px', marginBottom: 12 }}>
+              <Search
+                placeholder={t('usersAdmin.searchByNameOrEmail')}
+                allowClear
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                style={{ width: '100%' }}
+                prefix={<SearchOutlined />}
+              />
+            </div>
+            
+            {/* 筛选与添加 */}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', overflowX: 'auto', padding: '0 16px 12px 16px', borderBottom: '2px solid rgba(255, 215, 0, 0.2)' }}>
+              <Dropdown
+                menu={{
+                  items: [
+                    { key: 'all', label: t('common.all') },
+                    { key: 'admin', label: t('common.admin') },
+                    { key: 'member', label: t('common.member') },
+                    { key: 'guest', label: t('common.guest') },
+                  ],
+                  onClick: ({ key }) => setRoleFilter(key === 'all' ? undefined : (key as string)),
+                }}
+              >
+                <Button shape="round" size="small">
+                  {t('usersAdmin.role')}{roleFilter ? `: ${getRoleText(roleFilter)}` : ''}
+                </Button>
+              </Dropdown>
+              <Dropdown
+                menu={{
+                  items: [
+                    { key: 'all', label: t('common.all') },
+                    { key: 'bronze', label: t('usersAdmin.bronzeMember') },
+                    { key: 'silver', label: t('usersAdmin.silverMember') },
+                    { key: 'gold', label: t('usersAdmin.goldMember') },
+                    { key: 'platinum', label: t('usersAdmin.platinumMember') },
+                  ],
+                  onClick: ({ key }) => setLevelFilter(key === 'all' ? undefined : (key as string)),
+                }}
+              >
+                <Button shape="round" size="small">
+                  {t('usersAdmin.level')}{levelFilter ? `：${getMembershipText(levelFilter)}` : ''}
+                </Button>
+              </Dropdown>
+              <Dropdown
+                menu={{
+                  items: [
+                    { key: 'all', label: t('common.all') },
+                    { key: 'active', label: t('usersAdmin.active') },
+                    { key: 'inactive', label: t('usersAdmin.inactive') },
+                  ],
+                  onClick: ({ key }) => setStatusFilter(key === 'all' ? undefined : (key as string)),
+                }}
+              >
+                <Button shape="round" size="small">
+                  {t('usersAdmin.status')}{statusFilter ? `: ${getStatusText(statusFilter)}` : ''}
+                </Button>
+              </Dropdown>
+              <div style={{ flex: 1 }} />
+              <button onClick={() => { setCreating(true); form.resetFields() }} style={{ display: 'flex', alignItems: 'center', gap: 6, borderRadius: 8, padding: '6px 12px', background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, cursor: 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>{t('usersAdmin.addUser')}</button>
+            </div>
           </div>
 
-          {loading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
-              <Spin />
-            </div>
-          ) : (
-            <div>
-              {groupedByInitial.map(group => (
+          {/* 可滚动内容区域 - 独立滚动 */}
+          <div style={{
+            flex: 1,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            padding: '16px',
+            paddingBottom: '100px'
+          }}>
+            {loading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
+                <Spin />
+              </div>
+            ) : (
+              <>
+                {groupedByInitial.map(group => (
                 <div key={group.key} id={`group-${group.key}`} style={{ marginBottom: 12 }}>
                   <div style={{ color: '#f4af25', fontWeight: 600, marginBottom: 8 }}>{group.key}</div>
                   {group.items.map((u) => {
@@ -636,123 +680,137 @@ const AdminUsers: React.FC = () => {
                   })}
                 </div>
               ))}
-              {groupedByInitial.length === 0 && (
-                <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
-              )}
-              {/* 右侧字母索引侧边栏 */}
-              <div
-                style={{
-                  position: 'fixed',
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: sidebarExpanded ? '80px' : '40px',
-                  zIndex: 1000,
-                  background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(45, 45, 45, 0.9) 100%)',
-                  borderLeft: '2px solid rgba(255, 215, 0, 0.3)',
-                  backdropFilter: 'blur(10px)',
-                  WebkitBackdropFilter: 'blur(10px)',
-                  boxShadow: '-4px 0 20px rgba(0, 0, 0, 0.5)',
-                  transition: 'width 0.3s ease',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  paddingTop: '60px',
-                  paddingBottom: '80px'
-                }}
-                onClick={() => setSidebarExpanded(!sidebarExpanded)}
-              >
-                {/* 展开/收起指示器 */}
-                <div style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: sidebarExpanded ? '8px' : '50%',
-                  transform: sidebarExpanded ? 'translateY(-50%)' : 'translate(-50%, -50%)',
-                  fontSize: '10px',
-                  color: 'rgba(255, 215, 0, 0.6)',
-                  fontWeight: 600,
-                  transition: 'all 0.3s ease',
-                  pointerEvents: 'none'
-                }}>
-                  {sidebarExpanded ? '◀' : '▶'}
-                </div>
-
-                {/* 字母列表 */}
-                <div style={{ 
-                  flex: 1,
-                  overflowY: 'auto',
-                  overflowX: 'hidden',
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  alignItems: 'center', 
-                  gap: sidebarExpanded ? 8 : 4,
-                  padding: sidebarExpanded ? '8px' : '4px 0',
-                  scrollbarWidth: 'none',
-                  msOverflowStyle: 'none'
-                }}
-                  className="alpha-sidebar-scroll"
-                >
-                  {alphaIndex.map(letter => {
-                    const enabled = groupedByInitial.some(g => g.key === letter)
-                    const group = groupedByInitial.find(g => g.key === letter)
-                    const count = group?.items.length || 0
-                    
-                    return (
-                      <a
-                        key={letter}
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          const el = document.getElementById(`group-${letter}`)
-                          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                        }}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: sidebarExpanded ? 'space-between' : 'center',
-                          width: '100%',
-                          color: enabled ? '#ffd700' : 'rgba(255, 255, 255, 0.3)',
-                          textDecoration: 'none',
-                          padding: sidebarExpanded ? '8px 12px' : '4px 8px',
-                          cursor: enabled ? 'pointer' : 'default',
-                          fontSize: sidebarExpanded ? '16px' : '12px',
-                          fontWeight: 700,
-                          borderRadius: '6px',
-                          transition: 'all 0.2s ease',
-                          background: enabled ? 'transparent' : 'transparent',
-                          border: enabled ? '1px solid transparent' : '1px solid transparent'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (enabled) {
-                            e.currentTarget.style.background = 'rgba(255, 215, 0, 0.15)'
-                            e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.4)'
-                            e.currentTarget.style.transform = 'translateX(-2px)'
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'transparent'
-                          e.currentTarget.style.borderColor = 'transparent'
-                          e.currentTarget.style.transform = 'translateX(0)'
-                        }}
-                      >
-                        <span>{letter}</span>
-                        {sidebarExpanded && enabled && (
-                          <span style={{ 
-                            fontSize: '11px', 
-                            color: 'rgba(255, 215, 0, 0.6)',
-                            fontWeight: 500
-                          }}>
-                            {count}
-                          </span>
-                        )}
-                      </a>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
+                {groupedByInitial.length === 0 && (
+                  <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       )}
+
+      {/* 右侧字母索引（可拖动浮动）- 移至最外层 */}
+      {isMobile && (
+        <div
+          style={{
+            position: 'fixed',
+            right: 3,
+            top: alphaY,
+            transform: 'translateY(-30%)',
+            padding: 6,
+            zIndex: 1000,
+            background: 'rgba(0,0,0,0.35)',
+            border: '1px solid rgba(255,215,0,0.25)',
+            borderRadius: 12,
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
+            boxShadow: '0 6px 20px rgba(0,0,0,0.25)'
+          }}
+          onTouchStart={(e) => {
+            if (!e.touches || e.touches.length === 0) return
+            const touch = e.touches[0]
+            const vh = typeof window !== 'undefined' ? window.innerHeight : 800
+            const min = 48
+            const max = vh - 96
+            const next = Math.max(min, Math.min(max, touch.clientY))
+            setAlphaY(next)
+          }}
+          onTouchMove={(e) => {
+            if (!e.touches || e.touches.length === 0) return
+            const touch = e.touches[0]
+            const vh = typeof window !== 'undefined' ? window.innerHeight : 800
+            const min = 48
+            const max = vh - 96
+            const next = Math.max(min, Math.min(max, touch.clientY))
+            setAlphaY(next)
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}>
+            {alphaIndex.map(letter => {
+              const enabled = groupedByInitial.some(g => g.key === letter)
+              const isActive = letter === activeIndex
+              return (
+                <a
+                  key={letter}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    if (!enabled) return
+                    
+                    // 1. 触摸振动反馈
+                    if (navigator.vibrate) {
+                      navigator.vibrate(10)
+                    }
+                    
+                    // 2. 显示字母气泡
+                    setBubbleLetter(letter)
+                    setShowBubble(true)
+                    setTimeout(() => setShowBubble(false), 500)
+                    
+                    // 3. 滚动到对应分组
+                    const el = document.getElementById(`group-${letter}`)
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }}
+                  style={{
+                    color: isActive ? '#fff' : enabled ? '#f4af25' : '#777',
+                    background: isActive ? 'rgba(244, 175, 37, 0.8)' : 'transparent',
+                    textDecoration: 'none',
+                    padding: '2px 4px',
+                    borderRadius: '4px',
+                    cursor: enabled ? 'pointer' : 'default',
+                    transition: 'all 0.3s ease',
+                    fontWeight: isActive ? 700 : 600
+                  }}
+                >
+                  {letter}
+                </a>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 字母气泡提示 - 移至最外层 */}
+      {showBubble && isMobile && (
+        <div style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '100px',
+          height: '100px',
+          background: 'rgba(244, 175, 37, 0.95)',
+          borderRadius: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '56px',
+          fontWeight: 'bold',
+          color: '#111',
+          zIndex: 9999,
+          pointerEvents: 'none',
+          boxShadow: '0 8px 32px rgba(244, 175, 37, 0.6)',
+          animation: 'bubblePop 0.3s ease-out'
+        }}>
+          {bubbleLetter}
+        </div>
+      )}
+
+      {/* 字母气泡动画 */}
+      <style>{`
+        @keyframes bubblePop {
+          0% {
+            transform: translate(-50%, -50%) scale(0.5);
+            opacity: 0;
+          }
+          50% {
+            transform: translate(-50%, -50%) scale(1.1);
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+          }
+        }
+      `}</style>
 
       {/* 查看用户详情弹窗 */}
       <Modal
