@@ -1,13 +1,14 @@
 // Google 登录后完善用户信息页面
 import React, { useState, useEffect, useRef } from 'react'
 import { Form, Input, Button, Card, Typography, Space, App, Spin } from 'antd'
-import { UserOutlined, LockOutlined, PhoneOutlined, LoadingOutlined, LogoutOutlined } from '@ant-design/icons'
+import { UserOutlined, LockOutlined, PhoneOutlined, LoadingOutlined, LogoutOutlined, GiftOutlined } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { normalizePhoneNumber } from '../../utils/phoneNormalization'
 import { collection, query, where, getDocs, limit } from 'firebase/firestore'
 import { db, auth } from '../../config/firebase'
 import { signOut } from 'firebase/auth'
+import { getUserByMemberId } from '../../utils/memberId'
 
 const { Title, Text } = Typography
 
@@ -58,6 +59,16 @@ const CompleteProfile: React.FC = () => {
     }
   }
 
+  // 自动填充 URL 中的引荐码
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const refCode = params.get('ref');
+    if (refCode) {
+      form.setFieldsValue({ referralCode: refCode.toUpperCase() });
+      message.info('已自动填写引荐码');
+    }
+  }, [location, form]);
+
   // 如果用户未登录或已完善信息，重定向
   useEffect(() => {
     const checkAndSetup = async () => {
@@ -105,6 +116,7 @@ const CompleteProfile: React.FC = () => {
     displayName: string
     phone: string
     password: string
+    referralCode?: string  // ✅ 添加引荐码字段
   }) => {
     const currentUser = auth.currentUser
     
@@ -130,7 +142,8 @@ const CompleteProfile: React.FC = () => {
         currentUser.uid,
         values.displayName,
         normalizedPhone,
-        values.password
+        values.password,
+        values.referralCode  // ✅ 传递引荐码
       )
 
       if (result.success) {
@@ -319,6 +332,55 @@ const CompleteProfile: React.FC = () => {
               <Input.Password
                 prefix={<LockOutlined style={{ color: '#ffd700' }} />}
                 placeholder="设置密码（至少6位）"
+                style={{
+                  background: 'rgba(45, 45, 45, 0.8)',
+                  border: '1px solid #444444',
+                  borderRadius: '8px',
+                  color: '#f8f8f8'
+                }}
+              />
+            </Form.Item>
+
+            {/* 引荐码（可选） */}
+            <Form.Item
+              name="referralCode"
+              rules={[
+                {
+                  validator: async (_, value) => {
+                    // 如果没有输入引荐码，跳过验证（可选字段）
+                    if (!value || value.trim() === '') {
+                      return Promise.resolve();
+                    }
+                    
+                    // ✅ 只验证引荐码是否存在（不验证格式）
+                    const normalized = value.trim().toUpperCase();
+                    
+                    try {
+                      const result = await getUserByMemberId(normalized);
+                      if (!result.success) {
+                        return Promise.reject(new Error(result.error || '引荐码不存在'));
+                      }
+                      
+                      // 验证成功
+                      return Promise.resolve();
+                    } catch (error) {
+                      return Promise.reject(new Error('验证引荐码失败，请重试'));
+                    }
+                  }
+                }
+              ]}
+              validateTrigger={['onBlur', 'onChange']}
+              validateDebounce={500}
+            >
+              <Input
+                prefix={<GiftOutlined style={{ color: '#ffd700' }} />}
+                placeholder="引荐码"
+                maxLength={20}
+                onInput={(e) => {
+                  const input = e.currentTarget;
+                  // ✅ 自动转大写
+                  input.value = input.value.toUpperCase();
+                }}
                 style={{
                   background: 'rgba(45, 45, 45, 0.8)',
                   border: '1px solid #444444',

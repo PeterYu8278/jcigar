@@ -430,7 +430,8 @@ export const completeGoogleUserProfile = async (
   uid: string,
   displayName: string,
   phone: string,
-  password: string
+  password: string,
+  referralCode?: string  // ✅ 添加引荐码参数
 ) => {
   try {
     // 验证必需字段
@@ -451,6 +452,16 @@ export const completeGoogleUserProfile = async (
       return { success: false, error: new Error('该手机号已被其他用户使用') } as { success: false; error: Error }
     }
     
+    // ✅ 验证引荐码（如果提供）
+    let referrer: any = null;
+    if (referralCode) {
+      const referralResult = await getUserByMemberId(referralCode.trim());
+      if (!referralResult.success) {
+        return { success: false, error: new Error(referralResult.error || '引荐码无效') } as { success: false; error: Error }
+      }
+      referrer = referralResult.user;
+    }
+    
     // 1. 更新 Firestore 用户文档
     const userRef = doc(db, 'users', uid);
     
@@ -460,7 +471,8 @@ export const completeGoogleUserProfile = async (
       return { success: false, error: new Error('无法获取用户邮箱信息') } as { success: false; error: Error }
     }
     
-    await setDoc(userRef, {
+    // ✅ 准备更新数据
+    const updateData: any = {
       email: currentUser.email, // 确保 email 字段存在
       displayName,
       profile: {
@@ -468,7 +480,28 @@ export const completeGoogleUserProfile = async (
         preferences: { language: 'zh', notifications: true },
       },
       updatedAt: new Date(),
-    }, { merge: true });
+    };
+    
+    // ✅ 如果有引荐人，更新引荐信息和积分
+    if (referrer) {
+      updateData.referral = {
+        referredBy: referrer.memberId,
+        referredByUserId: referrer.id,
+        referralDate: new Date(),
+        referrals: [],
+        totalReferred: 0,
+        activeReferrals: 0,
+      };
+      updateData.membership = {
+        level: 'bronze',
+        joinDate: new Date(),
+        lastActive: new Date(),
+        points: 100,  // 被引荐用户获得100积分
+        referralPoints: 0,
+      };
+    }
+    
+    await setDoc(userRef, updateData, { merge: true });
 
     // 2. 为用户设置密码（通过 Firebase Auth）
     if (currentUser.uid === uid) {
@@ -493,6 +526,22 @@ export const completeGoogleUserProfile = async (
       
       // 3. 更新 Firebase Auth 的 displayName
       await updateProfile(currentUser, { displayName });
+    }
+    
+    // 4. ✅ 如果有引荐人，更新引荐人的数据
+    if (referrer) {
+      try {
+        await updateDoc(doc(db, 'users', referrer.id), {
+          'referral.referrals': arrayUnion(uid),
+          'referral.totalReferred': increment(1),
+          'membership.points': increment(200),  // 引荐人获得200积分
+          'membership.referralPoints': increment(200),
+          updatedAt: new Date()
+        });
+      } catch (error) {
+        console.error('更新引荐人信息失败:', error);
+        // 不影响完善资料流程，静默失败
+      }
     }
 
     return { success: true };
