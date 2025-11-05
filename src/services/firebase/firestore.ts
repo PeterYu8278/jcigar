@@ -231,15 +231,46 @@ export const getEventById = async (id: string): Promise<Event | null> => {
 
 export const getUpcomingEvents = async (): Promise<Event[]> => {
   try {
+    // 获取所有活动，然后在内存中过滤（避免 Firestore 复合索引问题）
+    const allEvents = await getEvents();
     const now = new Date();
-    const q = query(
-      collection(db, COLLECTIONS.EVENTS), 
-      where('schedule.startDate', '>=', now),
-      orderBy('schedule.startDate', 'asc')
-    );
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Event));
+    
+    return allEvents
+      .filter((event: Event) => {
+        // 检查活动是否有 schedule 和 startDate
+        if (!event.schedule || !event.schedule.startDate) return false;
+        
+        // 将 startDate 转换为 Date 对象
+        let startDate: Date;
+        if (event.schedule.startDate instanceof Date) {
+          startDate = event.schedule.startDate;
+        } else if ((event.schedule.startDate as any)?.toDate) {
+          // Firestore Timestamp
+          startDate = (event.schedule.startDate as any).toDate();
+        } else {
+          // 字符串或其他格式
+          startDate = new Date(event.schedule.startDate);
+        }
+        
+        // 过滤出未来的活动（不包括已取消的）
+        return startDate >= now && event.status !== 'cancelled';
+      })
+      .sort((a, b) => {
+        // 按开始日期升序排序
+        const dateA = a.schedule.startDate instanceof Date 
+          ? a.schedule.startDate 
+          : (a.schedule.startDate as any)?.toDate 
+            ? (a.schedule.startDate as any).toDate() 
+            : new Date(a.schedule.startDate);
+        const dateB = b.schedule.startDate instanceof Date 
+          ? b.schedule.startDate 
+          : (b.schedule.startDate as any)?.toDate 
+            ? (b.schedule.startDate as any).toDate() 
+            : new Date(b.schedule.startDate);
+        return dateA.getTime() - dateB.getTime();
+      });
   } catch (error) {
+    console.error('Error fetching upcoming events:', error);
     return [];
   }
 };
