@@ -204,3 +204,39 @@ export interface RoutePermission {
   roles: UserRole[];
   component: React.ComponentType;
 }
+
+// 积分配置类型
+export interface PointsConfig {
+  id: string;  // 固定为 'default'
+  
+  // 注册相关积分
+  registration: {
+    base: number;              // 基础注册积分
+    withReferral: number;      // 被引荐注册积分
+    referrerReward: number;    // 引荐人奖励积分
+  };
+  
+  // 购买相关积分
+  purchase: {
+    firstOrder: number;        // 首次购买奖励
+    perRinggit: number;        // 每消费1马币获得积分
+    referrerFirstOrder: number; // 被引荐人首次购买，引荐人获得积分
+  };
+  
+  // 活动相关积分
+  event: {
+    registration: number;      // 活动报名积分
+    checkIn: number;           // 活动签到积分
+    completion: number;        // 完成活动积分
+  };
+  
+  // 其他积分
+  other: {
+    profileComplete: number;   // 完善资料积分
+    firstLogin: number;        // 首次登录积分
+    dailyCheckIn: number;      // 每日签到积分
+  };
+  
+  updatedAt: Date;
+  updatedBy: string;  // 更新人的 userId
+}
