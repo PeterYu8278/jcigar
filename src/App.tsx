@@ -24,6 +24,7 @@ import AdminOrders from './views/admin/Orders'
 import AdminFinance from './views/admin/Finance'
 import CloudinaryTestPage from './views/admin/CloudinaryTest'
 import PerformanceMonitor from './components/admin/PerformanceMonitor'
+import EventOrderDebug from './views/admin/EventOrderDebug'
 
 // 认证页面
 import Login from './views/auth/Login'
@@ -183,6 +184,7 @@ const AppContent: React.FC = () => {
                   <Route path="/admin/finance" element={<ProtectedRoute roles={['admin']}><AdminFinance /></ProtectedRoute>} />
                   <Route path="/admin/performance" element={<ProtectedRoute roles={['admin']}><PerformanceMonitor /></ProtectedRoute>} />
                   <Route path="/admin/cloudinary-test" element={<ProtectedRoute roles={['admin']}><CloudinaryTestPage /></ProtectedRoute>} />
+                  <Route path="/admin/debug-orders" element={<ProtectedRoute roles={['admin']}><EventOrderDebug /></ProtectedRoute>} />
                   
                   {/* 默认重定向 */}
                   <Route path="*" element={<Navigate to="/" replace />} />
