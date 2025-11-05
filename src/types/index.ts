@@ -7,9 +7,6 @@ export interface User {
   displayName: string;
   role: 'admin' | 'member' | 'guest';
   
-  // 会员ID（唯一标识符，用于会员卡显示）
-  memberId?: string; // 例如: CA3F7, CB2K9, CX9P4
-  
   // 扁平化的常用属性（向后兼容）
   photoURL?: string;
   phone?: string;
@@ -17,12 +14,26 @@ export interface User {
   status?: 'active' | 'inactive' | 'suspended';
   lastActive?: Date;
   
+  // 会员编号（唯一标识，用于引荐码）
+  memberId?: string;  // 格式：M000001, M000002...
+  
   // 会员信息（对象形式）
   membership?: {
     level: 'bronze' | 'silver' | 'gold' | 'platinum';
     joinDate?: Date;
     lastActive?: Date;
     points?: number;
+    referralPoints?: number;  // 引荐获得的积分
+  };
+  
+  // 引荐信息
+  referral?: {
+    referredBy?: string | null;       // 引荐人的 memberId（不是 userId）
+    referredByUserId?: string | null; // 引荐人的 userId（方便查询）
+    referralDate?: Date | null;       // 被引荐日期
+    referrals: string[];              // 我引荐的人的 userId 列表
+    totalReferred: number;            // 累计引荐人数
+    activeReferrals: number;          // 活跃引荐人数（已完成首单）
   };
   
   // 用户配置

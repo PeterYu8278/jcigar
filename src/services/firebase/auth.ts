@@ -73,8 +73,8 @@ export const registerUser = async (
     // 更新用户显示名称
     await updateProfile(user, { displayName });
     
-    // 生成会员编号
-    const memberId = await generateMemberId();
+    // 生成会员编号（基于 userId hash）
+    const memberId = await generateMemberId(user.uid);
     console.log('🎫 [registerUser] 会员编号已生成:', memberId);
     
     // 在Firestore中创建用户文档
@@ -99,10 +99,10 @@ export const registerUser = async (
       },
       // ✅ 引荐信息（使用 null 替代 undefined，Firestore 不接受 undefined）
       referral: {
-        referredBy: referrer?.memberId || null,      // 引荐人的 memberId
-        referredByUserId: referrer?.id || null,      // 引荐人的 userId
-        referralDate: referrer ? new Date() : null,  // ✅ 使用 null 替代 undefined
-        referrals: [],                               // 我引荐的人
+        referredBy: (referrer?.memberId || null) as string | null,
+        referredByUserId: (referrer?.id || null) as string | null,
+        referralDate: (referrer ? new Date() : null) as Date | null,
+        referrals: [],
         totalReferred: 0,
         activeReferrals: 0,
       },
@@ -262,8 +262,8 @@ export const loginWithGoogle = async () => {
     
     if (!snap.exists()) {
       // 新用户：创建临时用户文档（仅包含邮箱和基础信息）
-      // ✅ 生成会员编号
-      const memberId = await generateMemberId();
+      // ✅ 生成会员编号（基于 userId hash）
+      const memberId = await generateMemberId(user.uid);
       
       const tempUserData: Omit<User, 'id'> = {
         email: user.email || '',
@@ -283,9 +283,9 @@ export const loginWithGoogle = async () => {
         },
         // ✅ 初始化引荐信息（Google 登录时没有引荐人）
         referral: {
-          referredBy: null,        // 使用 null 替代 undefined
-          referredByUserId: null,  // 使用 null 替代 undefined
-          referralDate: null,      // 使用 null 替代 undefined
+          referredBy: null as string | null,
+          referredByUserId: null as string | null,
+          referralDate: null as Date | null,
           referrals: [],
           totalReferred: 0,
           activeReferrals: 0,
@@ -338,8 +338,8 @@ export const handleGoogleRedirectResult = async () => {
         const snap = await getDoc(ref);
         
         if (!snap.exists()) {
-          // ✅ 生成会员编号
-          const memberId = await generateMemberId();
+          // ✅ 生成会员编号（基于 userId hash）
+          const memberId = await generateMemberId(user.uid);
           
           const tempUserData: Omit<User, 'id'> = {
             email: user.email || '',
@@ -358,9 +358,9 @@ export const handleGoogleRedirectResult = async () => {
             },
             // ✅ 初始化引荐信息（Google 登录时没有引荐人）
             referral: {
-              referredBy: null,        // 使用 null 替代 undefined
-              referredByUserId: null,  // 使用 null 替代 undefined
-              referralDate: null,      // 使用 null 替代 undefined
+              referredBy: null as string | null,
+              referredByUserId: null as string | null,
+              referralDate: null as Date | null,
               referrals: [],
               totalReferred: 0,
               activeReferrals: 0,
@@ -389,8 +389,8 @@ export const handleGoogleRedirectResult = async () => {
     
     if (!snap.exists()) {
       // 新用户：创建临时用户文档
-      // ✅ 生成会员编号
-      const memberId = await generateMemberId();
+      // ✅ 生成会员编号（基于 userId hash）
+      const memberId = await generateMemberId(user.uid);
       
       const tempUserData: Omit<User, 'id'> = {
         email: user.email || '',

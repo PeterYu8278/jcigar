@@ -1,62 +1,75 @@
 /**
  * 会员编号生成工具
- * memberId 格式：M + 6位数字（如 M000001, M000002）
+ * memberId 格式：M + 6位大写字母数字组合（基于 userId hash）
  * memberId 用途：
  * 1. 会员唯一标识
  * 2. 引荐码（直接使用 memberId）
  * 3. 会员卡展示
  */
 
-import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore'
+import { collection, query, limit, getDocs, where } from 'firebase/firestore'
 import { db } from '../config/firebase'
 
 /**
- * 生成下一个会员编号
- * @returns Promise<string> 格式：M000001
+ * 简单的字符串 hash 函数
+ * @param str 输入字符串
+ * @returns 数字 hash 值
  */
-export const generateMemberId = async (): Promise<string> => {
+const simpleHash = (str: string): number => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash);
+};
+
+/**
+ * 将数字转换为 Base36 (0-9, A-Z)
+ * @param num 数字
+ * @param length 目标长度
+ * @returns Base36 字符串
+ */
+const toBase36 = (num: number, length: number = 6): string => {
+  return num.toString(36).toUpperCase().padStart(length, '0').slice(-length);
+};
+
+/**
+ * 基于用户 ID 生成会员编号
+ * @param userId Firebase 用户文档 ID
+ * @returns Promise<string> 格式：M + 6位大写字母数字（如 M3K7Y2W）
+ */
+export const generateMemberId = async (userId: string): Promise<string> => {
   try {
-    // 查询最新的会员编号
-    const q = query(
-      collection(db, 'users'),
-      orderBy('memberId', 'desc'),
-      limit(1)
-    );
+    // 基于 userId 生成 hash
+    const hash = simpleHash(userId);
     
-    const snapshot = await getDocs(q);
+    // 转换为 Base36 格式（0-9, A-Z），取6位
+    const code = toBase36(hash, 6);
     
-    let nextNumber = 1;
+    const memberId = `M${code}`;
     
-    if (!snapshot.empty) {
-      const lastMemberId = snapshot.docs[0].data().memberId;
-      if (lastMemberId && typeof lastMemberId === 'string') {
-        // 提取数字部分
-        const match = lastMemberId.match(/M(\d+)/);
-        if (match) {
-          nextNumber = parseInt(match[1], 10) + 1;
-        }
-      }
-    }
+    console.log(`🎫 [generateMemberId] userId: ${userId} → memberId: ${memberId}`);
     
-    // 格式化为6位数字
-    const memberId = `M${String(nextNumber).padStart(6, '0')}`;
-    
-    // 二次验证唯一性
+    // 验证唯一性（极小概率会冲突）
     const exists = await checkMemberIdExists(memberId);
     if (exists) {
-      // 如果存在冲突，递归生成下一个
-      console.warn(`memberId ${memberId} 已存在，生成下一个`);
-      return generateMemberId();
+      // 如果存在冲突，使用 userId + timestamp 重新生成
+      console.warn(`⚠️ [generateMemberId] ${memberId} 已存在，使用备用方案`);
+      const timestamp = Date.now();
+      const fallbackHash = simpleHash(`${userId}-${timestamp}`);
+      const fallbackCode = toBase36(fallbackHash, 6);
+      return `M${fallbackCode}`;
     }
     
     return memberId;
   } catch (error) {
-    console.error('生成会员编号失败:', error);
-    // 如果查询失败（如索引不存在），使用基于时间戳的生成
+    console.error('❌ [generateMemberId] 生成会员编号失败:', error);
+    // 降级方案：使用时间戳
     const timestamp = Date.now();
-    const randomSuffix = Math.floor(Math.random() * 1000);
-    const number = (timestamp % 999999) + randomSuffix;
-    return `M${String(number).padStart(6, '0')}`;
+    const fallbackCode = toBase36(timestamp, 6);
+    return `M${fallbackCode}`;
   }
 };
 
