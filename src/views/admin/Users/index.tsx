@@ -67,7 +67,7 @@ const AdminUsers: React.FC = () => {
     action: true,
     }
   })
-  const [activeTab, setActiveTab] = useState<'purchase' | 'points' | 'activity' | 'referral'>('purchase')
+  const [activeTab, setActiveTab] = useState<'cigar' | 'points' | 'activity' | 'referral'>('cigar')
   const [showMemberCard, setShowMemberCard] = useState(false) // 控制头像/会员卡切换
 
   useEffect(() => {
@@ -844,7 +844,7 @@ const AdminUsers: React.FC = () => {
                 borderBottom: '1px solid rgba(244,175,37,0.2)',
                 marginBottom: '24px'
               }}>
-                {(['purchase', 'points', 'activity', 'referral'] as const).map((tabKey) => {
+                {(['cigar', 'points', 'activity', 'referral'] as const).map((tabKey) => {
                   const isActive = activeTab === tabKey
                   const baseStyle: React.CSSProperties = {
                     flex: 1,
@@ -869,7 +869,7 @@ const AdminUsers: React.FC = () => {
                   
                   const getTabLabel = (key: string) => {
                     switch (key) {
-                      case 'purchase': return t('usersAdmin.purchaseRecords')
+                      case 'cigar': return t('usersAdmin.cigarRecords')
                       case 'points': return t('usersAdmin.pointsRecords')
                       case 'activity': return t('usersAdmin.activityRecords')
                       case 'referral': return t('usersAdmin.referralRecords')
@@ -907,7 +907,7 @@ const AdminUsers: React.FC = () => {
                   flexDirection: 'column',
                   gap: '8px'
                 }}>
-                  {activeTab === 'purchase' && (
+                  {activeTab === 'cigar' && (
                     <>
                       {/* Sample Purchase Record 1 */}
                       <div style={{
