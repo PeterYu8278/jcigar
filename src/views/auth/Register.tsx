@@ -102,29 +102,30 @@ const Register: React.FC = () => {
         console.log('🎉 [Register] 注册成功');
         message.success(t('auth.registerSuccess'))
         
-        // ✅ 等待 useAuthStore 状态同步后再导航
-        const waitForAuth = async () => {
-          let attempts = 0;
-          const maxAttempts = 20; // 最多等待 2 秒
-          
-          while (attempts < maxAttempts) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            const currentUser = useAuthStore.getState().user;
+        // ✅ 等待 Firestore 写入完成，然后手动设置用户状态
+        const setupUserState = async () => {
+          if (result.user) {
+            // 等待 500ms 让 Firestore 写入完成
+            await new Promise(resolve => setTimeout(resolve, 500));
             
-            if (currentUser) {
-              console.log('✅ [Register] 用户状态已同步，导航到首页');
-              navigate('/', { replace: true });
-              return;
+            const { getUserData } = await import('../../services/firebase/auth');
+            const userData = await getUserData(result.user.uid);
+            
+            if (userData) {
+              console.log('✅ [Register] 手动设置用户状态:', userData);
+              useAuthStore.getState().setUser(userData);
+              useAuthStore.getState().setLoading(false);
             }
-            attempts++;
           }
           
-          // 超时后强制导航
-          console.log('⚠️ [Register] 状态同步超时，强制导航');
+          // 再等待 200ms 让 React 更新完成
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+          console.log('🎯 [Register] 导航到首页');
           navigate('/', { replace: true });
         };
         
-        waitForAuth();
+        setupUserState();
       } else {
         console.error('❌ [Register] 注册失败:', (result as any).error?.message);
         message.error((result as any).error?.message || t('auth.registerFailed'))

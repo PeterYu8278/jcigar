@@ -150,30 +150,30 @@ const CompleteProfile: React.FC = () => {
       if (result.success) {
         message.success('账户信息已完善，欢迎加入 Gentleman Club！')
         
-        // ✅ 等待 useAuthStore 状态同步后再导航
-        const waitForAuth = async () => {
-          let attempts = 0;
-          const maxAttempts = 20; // 最多等待 2 秒
-          
-          while (attempts < maxAttempts) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            const currentUser = useAuthStore.getState().user;
+        // ✅ 等待 Firestore 写入完成，然后手动设置用户状态
+        const setupUserState = async () => {
+          if (currentUser) {
+            // 等待 500ms 让 Firestore 写入完成
+            await new Promise(resolve => setTimeout(resolve, 500));
             
-            // 检查用户状态是否已更新且资料完整
-            if (currentUser && currentUser.displayName && currentUser.email && currentUser.profile?.phone) {
-              console.log('✅ [CompleteProfile] 用户状态已同步，导航到首页');
-              navigate(from, { replace: true });
-              return;
+            const { getUserData } = await import('../../services/firebase/auth');
+            const userData = await getUserData(currentUser.uid);
+            
+            if (userData) {
+              console.log('✅ [CompleteProfile] 手动设置用户状态:', userData);
+              useAuthStore.getState().setUser(userData);
+              useAuthStore.getState().setLoading(false);
             }
-            attempts++;
           }
           
-          // 超时后强制导航
-          console.log('⚠️ [CompleteProfile] 状态同步超时，强制导航');
+          // 再等待 200ms 让 React 更新完成
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+          console.log('🎯 [CompleteProfile] 导航到首页');
           navigate(from, { replace: true });
         };
         
-        waitForAuth();
+        setupUserState();
       } else {
         message.error((result as any).error?.message || '信息保存失败，请重试')
       }
