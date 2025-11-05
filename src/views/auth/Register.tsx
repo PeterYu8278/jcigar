@@ -81,7 +81,7 @@ const Register: React.FC = () => {
   }, [location, form]);
 
   const onFinish = async (values: { 
-    email?: string; 
+    email: string;  // ✅ 邮箱改为必填
     password: string; 
     confirmPassword: string;
     displayName: string;
@@ -102,7 +102,7 @@ const Register: React.FC = () => {
     setLoading(true)
     try {
       const result = await registerUser(
-        values.email || '', 
+        values.email,  // ✅ 邮箱必填，不需要 fallback
         values.password, 
         values.displayName, 
         values.phone,
@@ -243,12 +243,13 @@ const Register: React.FC = () => {
             <Form.Item
               name="email"
               rules={[
+                { required: true, message: t('auth.emailRequired') },
                 { type: 'email', message: t('auth.emailInvalid') }
               ]}
             >
               <Input
                 prefix={<MailOutlined style={{ color: '#ffd700' }} />}
-                placeholder={t('auth.emailOptional')}
+                placeholder={t('auth.email')}
                 style={{
                   background: 'rgba(45, 45, 45, 0.8)',
                   border: '1px solid #444444',

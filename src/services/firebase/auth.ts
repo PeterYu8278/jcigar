@@ -26,18 +26,9 @@ export const registerUser = async (
   referralCode?: string  // 可选的引荐码（memberId）
 ) => {
   try {
-    // 验证必需字段（邮箱可选，会用手机号生成）
-    if (!password || !displayName || !phone) {
-      return { success: false, error: new Error('姓名、手机号和密码都是必需的'), code: 'missing-required-fields' } as { success: false; error: Error; code?: string }
-    }
-    
-    // 如果没有提供邮箱，使用手机号生成临时邮箱
-    let finalEmail = email;
-    if (!finalEmail || finalEmail.trim() === '') {
-      // 使用手机号生成邮箱格式：手机号@temp.jcigar.com
-      const phoneDigits = phone.replace(/\D/g, '');  // 只保留数字
-      finalEmail = `${phoneDigits}@temp.jcigar.com`;
-      console.log('📧 [registerUser] 邮箱为空，使用手机号生成临时邮箱:', finalEmail);
+    // 验证必需字段（所有字段都是必需的）
+    if (!email || !password || !displayName || !phone) {
+      return { success: false, error: new Error('所有字段都是必需的'), code: 'missing-required-fields' } as { success: false; error: Error; code?: string }
     }
     
     // 标准化手机号为 E.164 格式
@@ -63,9 +54,9 @@ export const registerUser = async (
       referrer = referralResult.user;
     }
     
-    console.log('📝 [registerUser] 开始创建用户:', { email: finalEmail, displayName, phone: normalizedPhone, hasReferralCode: !!referralCode });
+    console.log('📝 [registerUser] 开始创建用户:', { email, displayName, phone: normalizedPhone, hasReferralCode: !!referralCode });
     
-    const userCredential = await createUserWithEmailAndPassword(auth, finalEmail, password);
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
     
     console.log('✅ [registerUser] Firebase Auth 用户创建成功:', user.uid);
@@ -79,7 +70,7 @@ export const registerUser = async (
     
     // 在Firestore中创建用户文档
     const userData: Omit<User, 'id'> = {
-      email: finalEmail,  // ✅ 使用 finalEmail（可能是用户输入的邮箱或生成的临时邮箱）
+      email,  // ✅ 邮箱必填
       displayName,
       role: 'member',
       memberId,  // ✅ 会员编号（用作引荐码）
