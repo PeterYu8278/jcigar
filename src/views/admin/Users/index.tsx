@@ -364,6 +364,7 @@ const AdminUsers: React.FC = () => {
   }, [])
 
   const [alphaY, setAlphaY] = useState<number>(typeof window !== 'undefined' ? window.innerHeight / 2 : 300)
+  const [sidebarExpanded, setSidebarExpanded] = useState(false)
 
   const maskPhone = (phone?: string) => {
     if (!phone) return ''
@@ -638,60 +639,111 @@ const AdminUsers: React.FC = () => {
               {groupedByInitial.length === 0 && (
                 <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
               )}
-              {/* 右侧字母索引（可拖动浮动） */}
+              {/* 右侧字母索引侧边栏 */}
               <div
                 style={{
                   position: 'fixed',
-                  right: 3,
-                  top: alphaY,
-                  transform: 'translateY(-30%)',
-                  padding: 6,
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: sidebarExpanded ? '80px' : '40px',
                   zIndex: 1000,
-                  background: 'rgba(0,0,0,0.35)',
-                  border: '1px solid rgba(255,215,0,0.25)',
-                  borderRadius: 12,
-                  backdropFilter: 'blur(6px)',
-                  WebkitBackdropFilter: 'blur(6px)',
-                  boxShadow: '0 6px 20px rgba(0,0,0,0.25)'
+                  background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(45, 45, 45, 0.9) 100%)',
+                  borderLeft: '2px solid rgba(255, 215, 0, 0.3)',
+                  backdropFilter: 'blur(10px)',
+                  WebkitBackdropFilter: 'blur(10px)',
+                  boxShadow: '-4px 0 20px rgba(0, 0, 0, 0.5)',
+                  transition: 'width 0.3s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  paddingTop: '60px',
+                  paddingBottom: '80px'
                 }}
-                onTouchStart={(e) => {
-                  if (!e.touches || e.touches.length === 0) return
-                  const touch = e.touches[0]
-                  const vh = typeof window !== 'undefined' ? window.innerHeight : 800
-                  const min = 48
-                  const max = vh - 96
-                  const next = Math.max(min, Math.min(max, touch.clientY))
-                  setAlphaY(next)
-                }}
-                onTouchMove={(e) => {
-                  if (!e.touches || e.touches.length === 0) return
-                  const touch = e.touches[0]
-                  const vh = typeof window !== 'undefined' ? window.innerHeight : 800
-                  const min = 48
-                  const max = vh - 96
-                  const next = Math.max(min, Math.min(max, touch.clientY))
-                  setAlphaY(next)
-                }}
+                onClick={() => setSidebarExpanded(!sidebarExpanded)}
               >
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}>
+                {/* 展开/收起指示器 */}
+                <div style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: sidebarExpanded ? '8px' : '50%',
+                  transform: sidebarExpanded ? 'translateY(-50%)' : 'translate(-50%, -50%)',
+                  fontSize: '10px',
+                  color: 'rgba(255, 215, 0, 0.6)',
+                  fontWeight: 600,
+                  transition: 'all 0.3s ease',
+                  pointerEvents: 'none'
+                }}>
+                  {sidebarExpanded ? '◀' : '▶'}
+                </div>
+
+                {/* 字母列表 */}
+                <div style={{ 
+                  flex: 1,
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  gap: sidebarExpanded ? 8 : 4,
+                  padding: sidebarExpanded ? '8px' : '4px 0',
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none'
+                }}
+                  className="alpha-sidebar-scroll"
+                >
                   {alphaIndex.map(letter => {
                     const enabled = groupedByInitial.some(g => g.key === letter)
+                    const group = groupedByInitial.find(g => g.key === letter)
+                    const count = group?.items.length || 0
+                    
                     return (
                       <a
                         key={letter}
                         onClick={(e) => {
                           e.preventDefault()
+                          e.stopPropagation()
                           const el = document.getElementById(`group-${letter}`)
                           if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
                         }}
                         style={{
-                          color: enabled ? '#f4af25' : '#777',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: sidebarExpanded ? 'space-between' : 'center',
+                          width: '100%',
+                          color: enabled ? '#ffd700' : 'rgba(255, 255, 255, 0.3)',
                           textDecoration: 'none',
-                          padding: '2px 4px',
+                          padding: sidebarExpanded ? '8px 12px' : '4px 8px',
                           cursor: enabled ? 'pointer' : 'default',
+                          fontSize: sidebarExpanded ? '16px' : '12px',
+                          fontWeight: 700,
+                          borderRadius: '6px',
+                          transition: 'all 0.2s ease',
+                          background: enabled ? 'transparent' : 'transparent',
+                          border: enabled ? '1px solid transparent' : '1px solid transparent'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (enabled) {
+                            e.currentTarget.style.background = 'rgba(255, 215, 0, 0.15)'
+                            e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.4)'
+                            e.currentTarget.style.transform = 'translateX(-2px)'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'transparent'
+                          e.currentTarget.style.borderColor = 'transparent'
+                          e.currentTarget.style.transform = 'translateX(0)'
                         }}
                       >
-                        {letter}
+                        <span>{letter}</span>
+                        {sidebarExpanded && enabled && (
+                          <span style={{ 
+                            fontSize: '11px', 
+                            color: 'rgba(255, 215, 0, 0.6)',
+                            fontWeight: 500
+                          }}>
+                            {count}
+                          </span>
+                        )}
                       </a>
                     )
                   })}

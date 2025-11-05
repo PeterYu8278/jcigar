@@ -7,6 +7,9 @@ export interface User {
   displayName: string;
   role: 'admin' | 'member' | 'guest';
   
+  // 会员ID（唯一标识符，用于会员卡显示）
+  memberId?: string; // 例如: CA3F7, CB2K9, CX9P4
+  
   // 扁平化的常用属性（向后兼容）
   photoURL?: string;
   phone?: string;

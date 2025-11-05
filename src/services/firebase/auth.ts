@@ -15,6 +15,7 @@ import { doc, setDoc, getDoc, collection, getDocs, query, where, limit } from 'f
 import { auth, db } from '../../config/firebase';
 import type { User } from '../../types';
 import { normalizePhoneNumber, identifyInputType } from '../../utils/phoneNormalization';
+import { generateMemberId } from '../../utils/memberIdGenerator';
 
 // 用户注册（所有字段都是必需的）
 export const registerUser = async (email: string, password: string, displayName: string, phone: string) => {
@@ -43,11 +44,15 @@ export const registerUser = async (email: string, password: string, displayName:
     // 更新用户显示名称
     await updateProfile(user, { displayName });
     
+    // 🆕 生成唯一的会员ID
+    const memberId = await generateMemberId(user.uid);
+    
     // 在Firestore中创建用户文档
     const userData: Omit<User, 'id'> = {
       email: user.email!,
       displayName,
       role: 'member',
+      memberId, // 🆕 添加会员ID
       profile: {
         phone: normalizedPhone,  // ✅ 使用标准化格式
         preferences: {
@@ -66,7 +71,7 @@ export const registerUser = async (email: string, password: string, displayName:
     
     await setDoc(doc(db, 'users', user.uid), userData);
     
-    return { success: true, user };
+    return { success: true, user, memberId };
   } catch (error) {
     const err = error as any
     const code = err?.code as string | undefined
@@ -191,11 +196,15 @@ export const loginWithGoogle = async () => {
     const snap = await getDoc(ref);
     
     if (!snap.exists()) {
+      // 🆕 生成唯一的会员ID
+      const memberId = await generateMemberId(user.uid);
+      
       // 新用户：创建临时用户文档（仅包含邮箱和基础信息）
       const tempUserData: Omit<User, 'id'> = {
         email: user.email || '',
         displayName: user.displayName || '未命名用户',
         role: 'member',
+        memberId, // 🆕 添加会员ID
         profile: {
           // phone 字段省略，待用户完善信息后添加
           preferences: { language: 'zh', notifications: true },
@@ -211,7 +220,7 @@ export const loginWithGoogle = async () => {
       await setDoc(ref, tempUserData);
       
       // 返回特殊标识：需要完善信息
-      return { success: true, user, needsProfile: true };
+      return { success: true, user, needsProfile: true, memberId };
     }
 
     // 已存在用户：检查是否已完善信息（需要：名字、电邮、手机号）
