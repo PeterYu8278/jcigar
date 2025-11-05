@@ -179,7 +179,7 @@ const Register: React.FC = () => {
             }}>
               Gentleman Club
             </Title>
-            <Text style={{ color: '#c0c0c0', fontSize: '16px' }}>
+            <Text style={{ color: '#c0c0c0', fontSize: '14px' }}>
               创建您的账户，加入Gentleman Club社区
             </Text>
           </div>
