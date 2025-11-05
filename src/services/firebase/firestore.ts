@@ -302,6 +302,39 @@ export const unregisterFromEvent = async (eventId: string, userId: string) => {
   }
 };
 
+// 获取用户参与的活动（已报名 + 已签到）
+export const getEventsByUser = async (userId: string): Promise<Event[]> => {
+  try {
+    // 获取所有活动，然后在内存中过滤用户参与的活动
+    const allEvents = await getEvents();
+    
+    return allEvents
+      .filter((event: Event) => {
+        const registered = event.participants?.registered || [];
+        const checkedIn = event.participants?.checkedIn || [];
+        // 用户在已报名或已签到列表中
+        return registered.includes(userId) || checkedIn.includes(userId);
+      })
+      .sort((a, b) => {
+        // 按开始日期降序排序（最新的在前）
+        const dateA = a.schedule.startDate instanceof Date 
+          ? a.schedule.startDate 
+          : (a.schedule.startDate as any)?.toDate 
+            ? (a.schedule.startDate as any).toDate() 
+            : new Date(a.schedule.startDate);
+        const dateB = b.schedule.startDate instanceof Date 
+          ? b.schedule.startDate 
+          : (b.schedule.startDate as any)?.toDate 
+            ? (b.schedule.startDate as any).toDate() 
+            : new Date(b.schedule.startDate);
+        return dateB.getTime() - dateA.getTime();
+      });
+  } catch (error) {
+    console.error('Error fetching user events:', error);
+    return [];
+  }
+};
+
 // 订单相关操作
 export const getOrdersByUser = async (userId: string): Promise<Order[]> => {
   try {

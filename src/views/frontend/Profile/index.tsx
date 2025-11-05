@@ -17,8 +17,8 @@ import {
 const { Title, Paragraph, Text } = Typography
 
 import { useAuthStore } from '../../../store/modules/auth'
-import { updateDocument } from '../../../services/firebase/firestore'
-import type { User } from '../../../types'
+import { updateDocument, getEventsByUser } from '../../../services/firebase/firestore'
+import type { User, Event } from '../../../types'
 import { useTranslation } from 'react-i18next'
 import { MemberProfileCard } from '../../../components/common/MemberProfileCard'
 import { getModalThemeStyles, getModalWidth } from '../../../config/modalTheme'
@@ -35,11 +35,30 @@ const Profile: React.FC = () => {
   const [form] = Form.useForm()
   const [showMemberCard, setShowMemberCard] = useState(false) // 控制头像/会员卡切换
   const [activeTab, setActiveTab] = useState<'purchase' | 'points' | 'activity' | 'referral'>('purchase') // 标签状态
+  const [userEvents, setUserEvents] = useState<Event[]>([])
+  const [loadingEvents, setLoadingEvents] = useState(false)
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
+
+  // 加载用户参与的活动
+  React.useEffect(() => {
+    const loadUserEvents = async () => {
+      if (!user?.id) return
+      setLoadingEvents(true)
+      try {
+        const events = await getEventsByUser(user.id)
+        setUserEvents(events)
+      } catch (error) {
+        console.error('Failed to load user events:', error)
+      } finally {
+        setLoadingEvents(false)
+      }
+    }
+    loadUserEvents()
+  }, [user?.id])
 
   // 用户统计数据 - 从实际数据计算
   const userStats = [
-    { title: t('profile.eventsJoined'), value: 0, icon: <CalendarOutlined /> },
+    { title: t('profile.eventsJoined'), value: userEvents.length, icon: <CalendarOutlined /> },
     { title: t('profile.cigarsPurchased'), value: 0, icon: <ShoppingOutlined /> },
     { title: t('profile.communityPoints'), value: (user?.membership as any)?.points || 0, icon: <TrophyOutlined /> },
   ]
@@ -287,15 +306,146 @@ const Profile: React.FC = () => {
           )}
 
           {activeTab === 'activity' && (
-            <div style={{
-              textAlign: 'center',
-              padding: '40px 20px',
-              color: 'rgba(255, 255, 255, 0.6)'
-            }}>
-              <p style={{ margin: 0, fontSize: '14px' }}>
-                {t('usersAdmin.noActivityRecords')}
-              </p>
-            </div>
+            loadingEvents ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px 20px'
+              }}>
+                <Space direction="vertical" size="middle">
+                  <div style={{ fontSize: '24px', color: '#ffd700' }}>
+                    <CalendarOutlined spin />
+                  </div>
+                  <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                    加载中...
+                  </Text>
+                </Space>
+              </div>
+            ) : userEvents.length === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px 20px',
+                color: 'rgba(255, 255, 255, 0.6)'
+              }}>
+                <p style={{ margin: 0, fontSize: '14px' }}>
+                  {t('usersAdmin.noActivityRecords')}
+                </p>
+              </div>
+            ) : (
+              <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                {userEvents.map((event) => {
+                  const startDate = event.schedule.startDate instanceof Date 
+                    ? event.schedule.startDate 
+                    : (event.schedule.startDate as any)?.toDate 
+                      ? (event.schedule.startDate as any).toDate() 
+                      : new Date(event.schedule.startDate);
+                  
+                  const isRegistered = event.participants?.registered?.includes(user?.id || '');
+                  const isCheckedIn = event.participants?.checkedIn?.includes(user?.id || '');
+                  
+                  return (
+                    <div
+                      key={event.id}
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        border: '1px solid rgba(244, 175, 37, 0.2)',
+                        display: 'flex',
+                        gap: '12px'
+                      }}
+                    >
+                      {/* 活动封面 */}
+                      <div style={{
+                        width: '80px',
+                        height: '80px',
+                        borderRadius: '8px',
+                        overflow: 'hidden',
+                        flexShrink: 0,
+                        background: 'rgba(255, 255, 255, 0.1)'
+                      }}>
+                        {event.coverImage ? (
+                          <img 
+                            src={event.coverImage} 
+                            alt={event.title}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        ) : (
+                          <div style={{
+                            width: '100%',
+                            height: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'rgba(255, 255, 255, 0.3)'
+                          }}>
+                            <CalendarOutlined style={{ fontSize: '32px' }} />
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* 活动信息 */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          fontSize: '16px',
+                          fontWeight: '600',
+                          color: '#FFFFFF',
+                          marginBottom: '4px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {event.title}
+                        </div>
+                        
+                        <div style={{
+                          fontSize: '12px',
+                          color: 'rgba(255, 255, 255, 0.6)',
+                          marginBottom: '8px'
+                        }}>
+                          {startDate.toLocaleDateString('zh-CN', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </div>
+                        
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          {/* 状态标签 */}
+                          <Tag 
+                            color={
+                              event.status === 'upcoming' ? 'blue' :
+                              event.status === 'ongoing' ? 'green' :
+                              event.status === 'completed' ? 'default' :
+                              'red'
+                            }
+                            style={{ margin: 0, fontSize: '11px' }}
+                          >
+                            {
+                              event.status === 'upcoming' ? '即将开始' :
+                              event.status === 'ongoing' ? '进行中' :
+                              event.status === 'completed' ? '已结束' :
+                              '已取消'
+                            }
+                          </Tag>
+                          
+                          {/* 参与状态标签 */}
+                          {isCheckedIn && (
+                            <Tag color="success" style={{ margin: 0, fontSize: '11px' }}>
+                              已签到
+                            </Tag>
+                          )}
+                          {isRegistered && !isCheckedIn && (
+                            <Tag color="warning" style={{ margin: 0, fontSize: '11px' }}>
+                              已报名
+                            </Tag>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </Space>
+            )
           )}
 
           {activeTab === 'referral' && (
