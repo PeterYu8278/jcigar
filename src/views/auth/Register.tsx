@@ -384,7 +384,7 @@ const Register: React.FC = () => {
 
           <div style={{ textAlign: 'center', paddingBottom: '20px' }}>
             <Text style={{ color: '#999999' }}>
-              {t('auth.noAccount')}{' '}
+              已有账户？{' '}
               <Button 
                 type="link" 
                 onClick={() => navigate('/login')}
