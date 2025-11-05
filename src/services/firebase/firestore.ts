@@ -338,14 +338,30 @@ export const getEventsByUser = async (userId: string): Promise<Event[]> => {
 // 订单相关操作
 export const getOrdersByUser = async (userId: string): Promise<Order[]> => {
   try {
+    // 只用 where，不用 orderBy（避免 Firestore 复合索引问题）
     const q = query(
       collection(db, COLLECTIONS.ORDERS), 
-      where('userId', '==', userId),
-      orderBy('createdAt', 'desc')
+      where('userId', '==', userId)
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+    const orders = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+    
+    // 在内存中按创建时间降序排序
+    return orders.sort((a, b) => {
+      const dateA = a.createdAt instanceof Date 
+        ? a.createdAt 
+        : (a.createdAt as any)?.toDate 
+          ? (a.createdAt as any).toDate() 
+          : new Date(a.createdAt);
+      const dateB = b.createdAt instanceof Date 
+        ? b.createdAt 
+        : (b.createdAt as any)?.toDate 
+          ? (b.createdAt as any).toDate() 
+          : new Date(b.createdAt);
+      return dateB.getTime() - dateA.getTime();
+    });
   } catch (error) {
+    console.error('Error fetching user orders:', error);
     return [];
   }
 };
