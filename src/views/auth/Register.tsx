@@ -111,7 +111,8 @@ const Register: React.FC = () => {
       if (result.success) {
         console.log('🎉 [Register] 注册成功');
         message.success(t('auth.registerSuccess'))
-        navigate('/login')
+        // ✅ Firebase 注册后会自动登录，等待状态同步后 useEffect 会自动重定向
+        // 不需要手动导航，useAuthStore 会监听到认证状态变化
       } else {
         console.error('❌ [Register] 注册失败:', (result as any).error?.message);
         message.error((result as any).error?.message || t('auth.registerFailed'))
@@ -332,7 +333,7 @@ const Register: React.FC = () => {
             >
               <Input
                 prefix={<GiftOutlined style={{ color: '#ffd700' }} />}
-                placeholder="引荐码（例: MHAOSXD）"
+                placeholder="引荐码"
                 maxLength={20}
                 onInput={(e) => {
                   const input = e.currentTarget;
