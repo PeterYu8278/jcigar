@@ -1003,7 +1003,7 @@ const AdminUsers: React.FC = () => {
                                   color: '#F4AF25',
                                   margin: 0
                                 }}>
-                                  RM {order.totalAmount?.toFixed(2) || '0.00'}
+                                  RM {order.total?.toFixed(2) || '0.00'}
                                 </p>
                                 <Tag 
                                   color={
