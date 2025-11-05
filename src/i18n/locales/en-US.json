@@ -452,7 +452,7 @@
     "memberDetails": "Member Details",
     "editProfile": "Edit Profile",
     "points": "Points",
-    "purchaseRecords": "Purchase Records",
+    "cigarRecords": "Cigar Records",
     "pointsRecords": "Points Records",
     "activityRecords": "Activity Records",
     "referralRecords": "Referral Records",
@@ -468,7 +468,7 @@
     "memberId": "Member ID",
     "clickToReturnAvatar": "Click to return to avatar",
     "clickToViewMemberCard": "Click to view member card",
-    "noPurchaseRecords": "No purchase records"
+    "noCigarRecords": "No cigar records"
   },
 
   "ordersAdmin": {

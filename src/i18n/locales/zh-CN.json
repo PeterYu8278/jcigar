@@ -436,7 +436,7 @@
     "memberDetails": "会员详情",
     "editProfile": "编辑资料",
     "points": "积分",
-    "purchaseRecords": "消费记录",
+    "cigarRecords": "雪茄记录",
     "pointsRecords": "积分记录",
     "activityRecords": "活动记录",
     "referralRecords": "引荐人记录",
@@ -452,7 +452,7 @@
     "memberId": "会员ID",
     "clickToReturnAvatar": "点击返回头像",
     "clickToViewMemberCard": "点击查看会员卡",
-    "noPurchaseRecords": "暂无购买记录"
+    "noCigarRecords": "暂无雪茄记录"
   },
   
   "ordersAdmin": {

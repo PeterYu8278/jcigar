@@ -34,7 +34,7 @@ const Profile: React.FC = () => {
   const [saving, setSaving] = useState(false)
   const [form] = Form.useForm()
   const [showMemberCard, setShowMemberCard] = useState(false) // 控制头像/会员卡切换
-  const [activeTab, setActiveTab] = useState<'purchase' | 'points' | 'activity' | 'referral'>('purchase') // 标签状态
+  const [activeTab, setActiveTab] = useState<'cigar' | 'points' | 'activity' | 'referral'>('cigar') // 标签状态
   const [userEvents, setUserEvents] = useState<Event[]>([])
   const [loadingEvents, setLoadingEvents] = useState(false)
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
@@ -223,7 +223,7 @@ const Profile: React.FC = () => {
           borderBottom: '1px solid rgba(244,175,37,0.2)',
           marginBottom: '24px'
         }}>
-          {(['purchase', 'points', 'activity', 'referral'] as const).map((tabKey) => {
+          {(['cigar', 'points', 'activity', 'referral'] as const).map((tabKey) => {
             const isActive = activeTab === tabKey
             const baseStyle: React.CSSProperties = {
               flex: 1,
@@ -248,7 +248,7 @@ const Profile: React.FC = () => {
 
             const getTabLabel = (key: string) => {
               switch (key) {
-                case 'purchase': return t('usersAdmin.purchaseRecords')
+                case 'cigar': return t('usersAdmin.cigarRecords')
                 case 'points': return t('usersAdmin.pointsRecords')
                 case 'activity': return t('usersAdmin.activityRecords')
                 case 'referral': return t('usersAdmin.referralRecords')
@@ -281,14 +281,14 @@ const Profile: React.FC = () => {
 
         {/* Records List */}
         <div style={{ paddingBottom: '24px' }}>
-          {activeTab === 'purchase' && (
+          {activeTab === 'cigar' && (
             <div style={{
               textAlign: 'center',
               padding: '40px 20px',
               color: 'rgba(255, 255, 255, 0.6)'
             }}>
               <p style={{ margin: 0, fontSize: '14px' }}>
-                {t('usersAdmin.noPurchaseRecords')}
+                {t('usersAdmin.noCigarRecords')}
               </p>
             </div>
           )}
