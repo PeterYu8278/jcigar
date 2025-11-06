@@ -26,6 +26,7 @@ import CloudinaryTestPage from './views/admin/CloudinaryTest'
 import PerformanceMonitor from './components/admin/PerformanceMonitor'
 import EventOrderDebug from './views/admin/EventOrderDebug'
 import PointsConfigPage from './views/admin/PointsConfig'
+import AuthFirestoreSync from './views/admin/AuthFirestoreSync'
 
 // 认证页面
 import Login from './views/auth/Login'
@@ -184,6 +185,7 @@ const AppContent: React.FC = () => {
                   <Route path="/admin/orders" element={<ProtectedRoute roles={['admin']}><AdminOrders /></ProtectedRoute>} />
                   <Route path="/admin/finance" element={<ProtectedRoute roles={['admin']}><AdminFinance /></ProtectedRoute>} />
                   <Route path="/admin/points-config" element={<ProtectedRoute roles={['admin']}><PointsConfigPage /></ProtectedRoute>} />
+                  <Route path="/admin/auth-sync" element={<ProtectedRoute roles={['admin']}><AuthFirestoreSync /></ProtectedRoute>} />
                   <Route path="/admin/performance" element={<ProtectedRoute roles={['admin']}><PerformanceMonitor /></ProtectedRoute>} />
                   <Route path="/admin/cloudinary-test" element={<ProtectedRoute roles={['admin']}><CloudinaryTestPage /></ProtectedRoute>} />
                   <Route path="/admin/debug-orders" element={<ProtectedRoute roles={['admin']}><EventOrderDebug /></ProtectedRoute>} />

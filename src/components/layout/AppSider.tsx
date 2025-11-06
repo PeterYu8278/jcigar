@@ -18,7 +18,8 @@ import {
   FireOutlined,
   ThunderboltOutlined,
   SyncOutlined,
-  TrophyOutlined
+  TrophyOutlined,
+  SafetyOutlined
 } from '@ant-design/icons'
 import { useAuthStore } from '../../store/modules/auth'
 import { useTranslation } from 'react-i18next'
@@ -108,6 +109,11 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
       key: '/admin/points-config',
       icon: <TrophyOutlined />,
       label: t('navigation.pointsConfig'),
+    },
+    {
+      key: '/admin/auth-sync',
+      icon: <SafetyOutlined />,
+      label: '数据同步诊断',
     },
     {
       key: '/admin/performance',
