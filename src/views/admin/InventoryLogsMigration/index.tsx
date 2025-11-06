@@ -36,6 +36,7 @@ const InventoryLogsMigration: React.FC = () => {
   // 分析需要处理的记录
   const analyzeRecords = async () => {
     console.log('🔍 [Migration] 开始分析记录...');
+    console.log('🔍 [Migration] Firestore db 实例:', db);
     setAnalyzing(true);
     setAffectedLogs([]);
     setMigrationResults(null);
@@ -43,14 +44,33 @@ const InventoryLogsMigration: React.FC = () => {
     try {
       console.log('📊 [Migration] 获取 inventoryLogs 集合...');
       const logsRef = collection(db, 'inventoryLogs');
+      console.log('📊 [Migration] Collection 引用:', logsRef);
+      
       const snapshot = await getDocs(logsRef);
+      console.log('📊 [Migration] Snapshot:', snapshot);
       console.log(`📊 [Migration] 获取到 ${snapshot.docs.length} 条记录`);
+      console.log('📊 [Migration] Snapshot.empty:', snapshot.empty);
+      console.log('📊 [Migration] Snapshot.size:', snapshot.size);
       
       const affected: LogRecord[] = [];
+      const allRecords: any[] = [];
       
-      snapshot.docs.forEach(docSnap => {
+      snapshot.docs.forEach((docSnap, index) => {
         const data = docSnap.data();
         const referenceNo = data.referenceNo || '';
+        
+        console.log(`📄 [Migration] 记录 ${index + 1}:`, {
+          id: docSnap.id,
+          referenceNo: referenceNo,
+          type: data.type,
+          reason: data.reason
+        });
+        
+        allRecords.push({
+          id: docSnap.id,
+          referenceNo: referenceNo,
+          hasPrefix: referenceNo.startsWith('ORDER:')
+        });
         
         // 查找所有带 ORDER: 前缀的记录
         if (referenceNo.startsWith('ORDER:')) {
@@ -69,6 +89,7 @@ const InventoryLogsMigration: React.FC = () => {
         }
       });
 
+      console.log('📋 [Migration] 所有记录汇总:', allRecords);
       console.log(`✅ [Migration] 分析完成，找到 ${affected.length} 条待处理记录`);
       setAffectedLogs(affected);
       
@@ -79,6 +100,8 @@ const InventoryLogsMigration: React.FC = () => {
       }
     } catch (error: any) {
       console.error('❌ [Migration] 分析失败:', error);
+      console.error('❌ [Migration] Error stack:', error.stack);
+      console.error('❌ [Migration] Error code:', error.code);
       message.error(t('inventoryLogsMigration.analyzeFailed') + ': ' + error.message);
     } finally {
       setAnalyzing(false);
