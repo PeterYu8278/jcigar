@@ -747,7 +747,9 @@ const Profile: React.FC = () => {
                   {referredUsers.map((referred) => {
                     const joinDate = referred.createdAt instanceof Date 
                       ? referred.createdAt 
-                      : new Date(referred.createdAt);
+                      : (referred.createdAt as any)?.toDate 
+                        ? (referred.createdAt as any).toDate() 
+                        : new Date(referred.createdAt);
                     
                     return (
                       <div key={referred.id} style={{
