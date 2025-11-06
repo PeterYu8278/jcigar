@@ -237,7 +237,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
                     letterSpacing: 2, 
                     textAlign: 'left',
                     textShadow: '0 1px 2px rgba(0,0,0,0.5)'
-                  }}>CIGAR CONNOISSEUR</div>
+                  }}>CIGAR World</div>
                 </div>
                 <QRCodeDisplay
                   qrCodeDataURL={qrCodeDataURL}

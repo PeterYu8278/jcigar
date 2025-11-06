@@ -16,7 +16,7 @@ export default defineConfig({
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       selfDestroying: true, // 允许Service Worker自毁
       manifest: {
-        name: 'Gentleman Club - Cigar Connoisseur',
+        name: 'Gentleman Club - Cigar World',
         short_name: 'Gentleman Club',
         description: 'Premium cigar club management platform',
         theme_color: '#D4AF37',
