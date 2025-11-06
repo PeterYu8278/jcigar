@@ -13,7 +13,7 @@
  *    npm install firebase-admin
  * 
  * 3. 运行脚本:
- *    node scripts/restore-missing-auth-user.js
+ *    node scripts/restore-missing-auth-user.cjs
  */
 
 const admin = require('firebase-admin');
