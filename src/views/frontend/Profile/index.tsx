@@ -17,8 +17,8 @@ import {
 const { Title, Paragraph, Text } = Typography
 
 import { useAuthStore } from '../../../store/modules/auth'
-import { updateDocument, getEventsByUser, getUsers } from '../../../services/firebase/firestore'
-import type { User, Event } from '../../../types'
+import { updateDocument, getEventsByUser, getUsers, getOrdersByUser } from '../../../services/firebase/firestore'
+import type { User, Event, Order } from '../../../types'
 import { useTranslation } from 'react-i18next'
 import { MemberProfileCard } from '../../../components/common/MemberProfileCard'
 import { getModalThemeStyles, getModalWidth } from '../../../config/modalTheme'
@@ -37,6 +37,8 @@ const Profile: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'cigar' | 'points' | 'activity' | 'referral'>('cigar') // 标签状态
   const [userEvents, setUserEvents] = useState<Event[]>([])
   const [loadingEvents, setLoadingEvents] = useState(false)
+  const [userOrders, setUserOrders] = useState<Order[]>([])
+  const [loadingOrders, setLoadingOrders] = useState(false)
   const [referredUsers, setReferredUsers] = useState<User[]>([])  // 我引荐的用户
   const [loadingReferrals, setLoadingReferrals] = useState(false)
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
@@ -55,6 +57,22 @@ const Profile: React.FC = () => {
       }
     }
     loadUserEvents()
+  }, [user?.id])
+
+  // 加载用户订单
+  React.useEffect(() => {
+    const loadUserOrders = async () => {
+      if (!user?.id) return
+      setLoadingOrders(true)
+      try {
+        const orders = await getOrdersByUser(user.id)
+        setUserOrders(orders)
+      } catch (error) {
+      } finally {
+        setLoadingOrders(false)
+      }
+    }
+    loadUserOrders()
   }, [user?.id])
 
   // 加载我引荐的用户
@@ -85,10 +103,19 @@ const Profile: React.FC = () => {
     loadReferredUsers()
   }, [user?.referral?.referrals])
 
+  // 计算雪茄购买总数量
+  const totalCigarsPurchased = useMemo(() => {
+    return userOrders.reduce((total, order) => {
+      // 计算订单中所有雪茄的总数量
+      const orderTotal = order.items.reduce((sum, item) => sum + item.quantity, 0)
+      return total + orderTotal
+    }, 0)
+  }, [userOrders])
+
   // 用户统计数据 - 从实际数据计算
   const userStats = [
     { title: t('profile.eventsJoined'), value: userEvents.length, icon: <CalendarOutlined /> },
-    { title: t('profile.cigarsPurchased'), value: 0, icon: <ShoppingOutlined /> },
+    { title: t('profile.cigarsPurchased'), value: totalCigarsPurchased, icon: <ShoppingOutlined /> },
     { title: t('profile.communityPoints'), value: (user?.membership as any)?.points || 0, icon: <TrophyOutlined /> },
   ]
 
@@ -311,15 +338,106 @@ const Profile: React.FC = () => {
         {/* Records List */}
         <div style={{ paddingBottom: '24px' }}>
           {activeTab === 'cigar' && (
-            <div style={{
-              textAlign: 'center',
-              padding: '40px 20px',
-              color: 'rgba(255, 255, 255, 0.6)'
-            }}>
-              <p style={{ margin: 0, fontSize: '14px' }}>
-                {t('usersAdmin.noCigarRecords')}
-              </p>
-            </div>
+            loadingOrders ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px 20px'
+              }}>
+                <Space direction="vertical" size="middle">
+                  <div style={{ fontSize: '24px', color: '#ffd700' }}>
+                    <ShoppingOutlined spin />
+                  </div>
+                  <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                    {t('common.loading')}
+                  </Text>
+                </Space>
+              </div>
+            ) : userOrders.length === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px 20px',
+                color: 'rgba(255, 255, 255, 0.6)'
+              }}>
+                <p style={{ margin: 0, fontSize: '14px' }}>
+                  {t('usersAdmin.noCigarRecords')}
+                </p>
+              </div>
+            ) : (
+              <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                {userOrders.map((order) => {
+                  const orderDate = order.createdAt instanceof Date 
+                    ? order.createdAt 
+                    : (order.createdAt as any)?.toDate 
+                      ? (order.createdAt as any).toDate() 
+                      : new Date(order.createdAt)
+                  
+                  const totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0)
+                  
+                  return (
+                    <Card
+                      key={order.id}
+                      size="small"
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                        <div>
+                          <Text strong style={{ color: '#ffd700', fontSize: '14px' }}>
+                            {t('ordersAdmin.order')} #{order.id.slice(-6).toUpperCase()}
+                          </Text>
+                          <div style={{ marginTop: '4px' }}>
+                            <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
+                              {orderDate.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' })}
+                            </Text>
+                          </div>
+                        </div>
+                        <Tag color={order.status === 'completed' ? 'success' : order.status === 'pending' ? 'warning' : 'default'}>
+                          {order.status === 'completed' ? t('ordersAdmin.status.completed') : 
+                           order.status === 'pending' ? t('ordersAdmin.status.pending') : 
+                           order.status === 'cancelled' ? t('ordersAdmin.status.cancelled') : order.status}
+                        </Tag>
+                      </div>
+                      
+                      <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                        {order.items.map((item, index) => (
+                          <div key={index} style={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between',
+                            padding: '8px 0',
+                            borderTop: index > 0 ? '1px solid rgba(255, 255, 255, 0.05)' : 'none'
+                          }}>
+                            <Text style={{ color: 'rgba(255, 255, 255, 0.85)' }}>
+                              {item.name || item.cigarId}
+                            </Text>
+                            <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                              × {item.quantity}
+                            </Text>
+                          </div>
+                        ))}
+                      </Space>
+                      
+                      <div style={{ 
+                        marginTop: '12px', 
+                        paddingTop: '12px', 
+                        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
+                        <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
+                          {t('ordersAdmin.totalQuantity')}: {totalQuantity}
+                        </Text>
+                        <Text strong style={{ color: '#ffd700', fontSize: '16px' }}>
+                          RM {order.total.toFixed(2)}
+                        </Text>
+                      </div>
+                    </Card>
+                  )
+                })}
+              </Space>
+            )
           )}
 
           {activeTab === 'points' && (

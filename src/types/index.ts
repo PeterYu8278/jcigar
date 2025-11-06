@@ -136,11 +136,12 @@ export interface Order {
   userId: string;
   items: {
     cigarId: string;
+    name?: string; // 雪茄名称（可选，用于显示）
     quantity: number;
     price: number;
   }[];
   total: number;
-  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'completed' | 'cancelled';
   source?: {
     type: 'event' | 'direct';
     eventId?: string; // 当来源为活动时记录

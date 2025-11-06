@@ -386,6 +386,7 @@
   },
   
   "ordersAdmin": {
+    "order": "订单",
     "orderId": "订单ID",
     "orderNo": "订单号",
     "orderDetails": "订单详情",
@@ -406,12 +407,14 @@
     "user": "用户",
     "items": "商品",
     "totalAmount": "总金额",
+    "totalQuantity": "总数量",
     "status": {
       "title": "订单状态",
       "pending": "待确认",
       "confirmed": "已确认",
       "shipped": "已发货",
       "delivered": "已送达",
+      "completed": "已完成",
       "cancelled": "已取消"
     },
     "payment": {

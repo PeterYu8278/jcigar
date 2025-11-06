@@ -1088,7 +1088,7 @@ const AdminUsers: React.FC = () => {
                                   color: '#FFFFFF',
                                   margin: 0
                                 }}>
-                                  订单 #{order.orderNo || order.id.slice(0, 8)}
+                                  订单 #{order.orderNo || order.id.slice(0, 100)}
                                 </p>
                                 <p style={{
                                   fontSize: '12px',

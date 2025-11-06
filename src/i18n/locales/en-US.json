@@ -388,6 +388,7 @@
   },
 
   "ordersAdmin": {
+    "order": "Order",
     "orderId": "Order ID",
     "orderNo": "Order No",
     "orderDetails": "Order Details",
@@ -408,12 +409,14 @@
     "user": "User",
     "items": "Items",
     "totalAmount": "Total Amount",
+    "totalQuantity": "Total Quantity",
     "status": {
       "title": "Order Status",
       "pending": "Pending",
       "confirmed": "Confirmed",
       "shipped": "Shipped",
       "delivered": "Delivered",
+      "completed": "Completed",
       "cancelled": "Cancelled"
     },
     "payment": {
