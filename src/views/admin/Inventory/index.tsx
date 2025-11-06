@@ -2133,12 +2133,27 @@ const AdminInventory: React.FC = () => {
               dataIndex: 'userId', 
               key: 'userId', 
               render: (userId: string, record: any) => {
-                if (!userId) return '-';
-                // 优先显示记录中的 userName
+                // 1. 优先使用记录中直接保存的 userName
                 if (record.userName) return record.userName;
-                // 从 users 列表中查找
-                const user = users.find(u => u.id === userId);
-                return user?.displayName || userId;
+                
+                // 2. 如果有 userId，从 users 列表查找
+                if (userId) {
+                  const user = users.find(u => u.id === userId);
+                  if (user?.displayName) return user.displayName;
+                }
+                
+                // 3. 尝试从 referenceNo 查找订单关联的用户
+                if (record.referenceNo) {
+                  const order = orders.find(o => o.id === record.referenceNo);
+                  if (order?.userId) {
+                    const user = users.find(u => u.id === order.userId);
+                    if (user?.displayName) return user.displayName;
+                    return order.userId;
+                  }
+                }
+                
+                // 4. 都没有则显示 -
+                return '-';
               }
             },
             { 
