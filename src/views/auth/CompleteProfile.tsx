@@ -153,8 +153,8 @@ const CompleteProfile: React.FC = () => {
         // ✅ 等待 Firestore 写入完成，然后手动设置用户状态
         const setupUserState = async () => {
           if (currentUser) {
-            // 等待 500ms 让 Firestore 写入完成
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // 等待 800ms 让 Firestore 写入完成
+            await new Promise(resolve => setTimeout(resolve, 800));
             
             const { getUserData } = await import('../../services/firebase/auth');
             const userData = await getUserData(currentUser.uid);
@@ -163,11 +163,11 @@ const CompleteProfile: React.FC = () => {
               console.log('✅ [CompleteProfile] 手动设置用户状态:', userData);
               useAuthStore.getState().setUser(userData);
               useAuthStore.getState().setLoading(false);
+              
+              // 等待 500ms 让 React 重渲染完成（关键！）
+              await new Promise(resolve => setTimeout(resolve, 500));
             }
           }
-          
-          // 再等待 200ms 让 React 更新完成
-          await new Promise(resolve => setTimeout(resolve, 200));
           
           console.log('🎯 [CompleteProfile] 导航到首页');
           navigate(from, { replace: true });
