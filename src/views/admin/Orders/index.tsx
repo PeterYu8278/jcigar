@@ -92,7 +92,7 @@ const AdminOrders: React.FC = () => {
     try {
       const inventoryLogs = await getAllInventoryLogs()
       const relatedLogs = inventoryLogs.filter((log: any) => 
-        log?.referenceNo?.startsWith(`ORDER:${orderId}`) && log?.type === 'out'
+        log?.referenceNo === orderId && log?.type === 'out'
       )
       
       if (relatedLogs.length > 0) {

@@ -637,8 +637,8 @@ const AdminInventory: React.FC = () => {
     // 来自手动出库日志的出库
     for (const log of filteredOutLogs) {
       const ref = String((log as any).referenceNo || '')
-      // 避免重复：订单出库已由 orders 渲染一遍，过滤掉 referenceNo 以 ORDER: 开头的日志
-      if (ref.startsWith('ORDER:')) continue
+      // 避免重复：订单出库已由 orders 渲染一遍，过滤掉 referenceNo 匹配订单ID的日志
+      if (orders.some(o => o.id === ref)) continue
       const cigar = cigarMap.get((log as any).cigarId)
       rows.push({
         id: `manual_${(log as any).id || ((log as any).referenceNo || '')}_${(log as any).cigarId}`,

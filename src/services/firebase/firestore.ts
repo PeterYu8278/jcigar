@@ -520,7 +520,7 @@ export const createOrdersFromEventAllocations = async (eventId: string): Promise
               // 仅对真实存在的雪茄生成库存日志（费用行不会匹配到实体雪茄）
               const cigarExists = await getCigarById(it.cigarId)
               if (!cigarExists) continue
-              const ref = `ORDER:${orderId}`
+              const ref = orderId
               // 去重：如果同一订单、同一雪茄的出库记录已存在，则跳过
               const dupQ = query(
                 collection(db, COLLECTIONS.INVENTORY_LOGS),
@@ -634,7 +634,7 @@ export const createDirectSaleOrder = async (params: { userId: string; items: { c
       for (const item of itemsDetailed) {
         const exists = await getCigarById(item.cigarId)
         if (!exists) continue
-        const ref = `ORDER:${result.id}`
+        const ref = result.id
         // 去重：如果同一订单、同一雪茄的出库记录已存在，则跳过
         const dupQ = query(
           collection(db, COLLECTIONS.INVENTORY_LOGS),
