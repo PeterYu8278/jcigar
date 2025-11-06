@@ -1,6 +1,6 @@
 // 库存记录迁移 - 去除 ORDER: 前缀（临时工具）
 import React, { useState } from 'react';
-import { Card, Button, Space, Typography, Alert, Table, Tag, message, Progress, Spin } from 'antd';
+import { Card, Button, Space, Typography, Alert, Table, Tag, App, Progress, Spin } from 'antd';
 import { ThunderboltOutlined, CheckCircleOutlined, CloseCircleOutlined, SyncOutlined } from '@ant-design/icons';
 import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
@@ -21,6 +21,7 @@ interface LogRecord {
 
 const InventoryLogsMigration: React.FC = () => {
   const { t } = useTranslation();
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [migrating, setMigrating] = useState(false);
@@ -34,13 +35,16 @@ const InventoryLogsMigration: React.FC = () => {
 
   // 分析需要处理的记录
   const analyzeRecords = async () => {
+    console.log('🔍 [Migration] 开始分析记录...');
     setAnalyzing(true);
     setAffectedLogs([]);
     setMigrationResults(null);
 
     try {
+      console.log('📊 [Migration] 获取 inventoryLogs 集合...');
       const logsRef = collection(db, 'inventoryLogs');
       const snapshot = await getDocs(logsRef);
+      console.log(`📊 [Migration] 获取到 ${snapshot.docs.length} 条记录`);
       
       const affected: LogRecord[] = [];
       
@@ -51,6 +55,7 @@ const InventoryLogsMigration: React.FC = () => {
         // 查找所有带 ORDER: 前缀的记录
         if (referenceNo.startsWith('ORDER:')) {
           const newReferenceNo = referenceNo.replace(/^ORDER:/, '');
+          console.log(`🔍 [Migration] 找到待处理记录: ${referenceNo} -> ${newReferenceNo}`);
           affected.push({
             id: docSnap.id,
             referenceNo: referenceNo,
@@ -64,6 +69,7 @@ const InventoryLogsMigration: React.FC = () => {
         }
       });
 
+      console.log(`✅ [Migration] 分析完成，找到 ${affected.length} 条待处理记录`);
       setAffectedLogs(affected);
       
       if (affected.length === 0) {
@@ -72,6 +78,7 @@ const InventoryLogsMigration: React.FC = () => {
         message.info(t('inventoryLogsMigration.foundRecords', { count: affected.length }));
       }
     } catch (error: any) {
+      console.error('❌ [Migration] 分析失败:', error);
       message.error(t('inventoryLogsMigration.analyzeFailed') + ': ' + error.message);
     } finally {
       setAnalyzing(false);
@@ -85,6 +92,7 @@ const InventoryLogsMigration: React.FC = () => {
       return;
     }
 
+    console.log(`⚡ [Migration] 开始迁移 ${affectedLogs.length} 条记录...`);
     setMigrating(true);
     setProgress(0);
 
@@ -102,8 +110,10 @@ const InventoryLogsMigration: React.FC = () => {
         await updateDoc(logRef, {
           referenceNo: log.newReferenceNo
         });
+        console.log(`✅ [Migration] 成功更新 ${i + 1}/${affectedLogs.length}: ${log.oldReferenceNo} -> ${log.newReferenceNo}`);
         results.success++;
       } catch (error: any) {
+        console.error(`❌ [Migration] 更新失败 ${i + 1}/${affectedLogs.length}:`, error);
         results.failed++;
         results.errors.push({
           id: log.id,
@@ -115,6 +125,7 @@ const InventoryLogsMigration: React.FC = () => {
       setProgress(Math.round(((i + 1) / affectedLogs.length) * 100));
     }
 
+    console.log(`🎉 [Migration] 迁移完成 - 成功: ${results.success}, 失败: ${results.failed}`);
     setMigrationResults(results);
     
     if (results.success > 0) {
@@ -206,12 +217,12 @@ const InventoryLogsMigration: React.FC = () => {
           <Space>
             <Button
               type="primary"
-              icon={<SyncOutlined />}
+              icon={<SyncOutlined spin={analyzing} />}
               onClick={analyzeRecords}
               loading={analyzing}
               disabled={migrating}
             >
-              {t('inventoryLogsMigration.analyzeRecords')}
+              {analyzing ? '分析中...' : t('inventoryLogsMigration.analyzeRecords')}
             </Button>
 
             {affectedLogs.length > 0 && !migrating && (
@@ -226,6 +237,16 @@ const InventoryLogsMigration: React.FC = () => {
               </Button>
             )}
           </Space>
+
+          {/* 分析中加载状态 */}
+          {analyzing && (
+            <Card type="inner">
+              <Space>
+                <Spin />
+                <Text>正在扫描 inventoryLogs 集合，请稍候...</Text>
+              </Space>
+            </Card>
+          )}
 
           {/* 分析结果 */}
           {affectedLogs.length > 0 && (
