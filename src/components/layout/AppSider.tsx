@@ -110,11 +110,6 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
       label: t('navigation.pointsConfig'),
     },
     {
-      key: '/admin/user-migration',
-      icon: <SyncOutlined />,
-      label: t('navigation.userMigration'),
-    },
-    {
       key: '/admin/performance',
       icon: <ThunderboltOutlined />,
       label: t(NAV_KEYS.PERFORMANCE),
