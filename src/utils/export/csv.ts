@@ -79,7 +79,6 @@ export function exportToCSV(options: CsvExportOptions): void {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     downloadBlob(blob, filename)
   } catch (error) {
-    console.error('CSV 导出失败:', error)
     throw new Error('CSV 导出失败')
   }
 }

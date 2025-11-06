@@ -362,7 +362,6 @@ if (typeof window !== 'undefined') {
   setInterval(() => {
     const cleaned = memoryCache.cleanup()
     if (cleaned > 0) {
-      console.log(`Cleaned ${cleaned} expired cache items`)
     }
   }, 5 * 60 * 1000)
 }

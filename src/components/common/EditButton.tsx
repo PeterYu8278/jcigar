@@ -41,8 +41,6 @@ const EditButton: React.FC<EditButtonProps> = ({
   const { t } = useTranslation()
 
   const handleEdit = () => {
-    console.log('Edit button clicked for item:', itemId)
-    console.log('Item name:', itemName)
     
     // 这里可以添加更多逻辑，比如获取完整的项目数据
     onEdit({ id: itemId, name: itemName })

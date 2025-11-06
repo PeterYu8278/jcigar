@@ -41,8 +41,6 @@ const ViewButton: React.FC<ViewButtonProps> = ({
   const { t } = useTranslation()
 
   const handleView = () => {
-    console.log('View button clicked for item:', itemId)
-    console.log('Item name:', itemName)
     
     // 这里可以添加更多逻辑，比如获取完整的项目数据
     onView({ id: itemId, name: itemName })

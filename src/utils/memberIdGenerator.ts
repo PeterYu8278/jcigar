@@ -71,7 +71,6 @@ export const validateMemberIdUniqueness = async (memberId: string): Promise<bool
     const snapshot = await getDocs(q)
     return snapshot.empty // true = 唯一
   } catch (error) {
-    console.error('验证会员ID唯一性失败:', error)
     // 出错时返回 false，确保安全
     return false
   }
@@ -118,14 +117,12 @@ export const generateMemberId = async (
     }
     
     // 如果冲突（极罕见），尝试添加后缀重试
-    console.warn('检测到会员ID冲突，正在重试...', baseMemberId)
     
     for (let i = 1; i <= maxRetries; i++) {
       const retryMemberId = generateMemberIdFromUID(`${firebaseUid}_${i}`)
       const isRetryUnique = await validateMemberIdUniqueness(retryMemberId)
       
       if (isRetryUnique) {
-        console.log(`会员ID生成成功（重试${i}次）:`, retryMemberId)
         return retryMemberId
       }
     }
@@ -134,7 +131,6 @@ export const generateMemberId = async (
     throw new Error(`无法生成唯一会员ID，已尝试 ${maxRetries + 1} 次`)
     
   } catch (error) {
-    console.error('生成会员ID时发生错误:', error)
     throw error
   }
 }
@@ -177,7 +173,6 @@ export const generateMemberIdsForExistingUsers = async (
         name: user.displayName
       })
     } catch (error) {
-      console.error(`为用户 ${user.id} 生成会员ID失败:`, error)
     }
   }
   

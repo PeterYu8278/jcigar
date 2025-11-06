@@ -50,13 +50,10 @@ export const generateMemberId = async (userId: string): Promise<string> => {
     
     const memberId = `M${code}`;
     
-    console.log(`🎫 [generateMemberId] userId: ${userId} → memberId: ${memberId}`);
-    
     // 验证唯一性（极小概率会冲突）
     const exists = await checkMemberIdExists(memberId);
     if (exists) {
       // 如果存在冲突，使用 userId + timestamp 重新生成
-      console.warn(`⚠️ [generateMemberId] ${memberId} 已存在，使用备用方案`);
       const timestamp = Date.now();
       const fallbackHash = simpleHash(`${userId}-${timestamp}`);
       const fallbackCode = toBase36(fallbackHash, 6);
@@ -65,7 +62,6 @@ export const generateMemberId = async (userId: string): Promise<string> => {
     
     return memberId;
   } catch (error) {
-    console.error('❌ [generateMemberId] 生成会员编号失败:', error);
     // 降级方案：使用时间戳
     const timestamp = Date.now();
     const fallbackCode = toBase36(timestamp, 6);
@@ -86,7 +82,6 @@ export const checkMemberIdExists = async (memberId: string): Promise<boolean> =>
     const snapshot = await getDocs(q);
     return !snapshot.empty;
   } catch (error) {
-    console.error('检查会员编号失败:', error);
     return false;
   }
 };
@@ -122,7 +117,6 @@ export const getUserByMemberId = async (memberId: string): Promise<{ success: bo
     
     return { success: true, user: userData };
   } catch (error) {
-    console.error('查找会员失败:', error);
     return { success: false, error: '查询失败，请重试' };
   }
 };

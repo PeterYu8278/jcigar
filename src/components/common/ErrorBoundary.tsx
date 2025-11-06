@@ -43,7 +43,6 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     // 记录错误信息
-    console.error('ErrorBoundary caught an error:', error, errorInfo)
     
     this.setState({
       error,
@@ -72,7 +71,6 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       }
       
       // 发送到错误日志服务
-      console.log('Error logged:', errorLog)
       
       // 示例：发送到后端
       // fetch('/api/logs/error', {
@@ -81,7 +79,6 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       //   body: JSON.stringify(errorLog)
       // })
     } catch (loggingError) {
-      console.error('Failed to log error:', loggingError)
     }
   }
 

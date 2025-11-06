@@ -78,16 +78,7 @@ const Register: React.FC = () => {
     phone: string;
     referralCode?: string;  // ✅ 新增引荐码字段
   }) => {
-    console.log('📝 [Register] 表单提交:', { 
-      email: values.email, 
-      displayName: values.displayName, 
-      phone: values.phone,
-      hasPassword: !!values.password,
-      hasReferralCode: !!values.referralCode,
-      referralCode: values.referralCode
-    });
-    
-    // ✅ 密码匹配验证已由表单验证器处理，不需要在这里重复检查
+    // 密码匹配验证已由表单验证器处理，不需要在这里重复检查
 
     setLoading(true)
     try {
@@ -99,7 +90,6 @@ const Register: React.FC = () => {
         values.referralCode  // ✅ 传递引荐码
       )
       if (result.success) {
-        console.log('🎉 [Register] 注册成功');
         message.success(t('auth.registerSuccess'))
         
         // ✅ 等待 Firestore 写入完成，然后手动设置用户状态
@@ -112,7 +102,6 @@ const Register: React.FC = () => {
             const userData = await getUserData(result.user.uid);
             
             if (userData) {
-              console.log('✅ [Register] 手动设置用户状态:', userData);
               useAuthStore.getState().setUser(userData);
               useAuthStore.getState().setLoading(false);
               
@@ -121,17 +110,14 @@ const Register: React.FC = () => {
             }
           }
           
-          console.log('🎯 [Register] 导航到首页');
           navigate('/', { replace: true });
         };
         
         setupUserState();
       } else {
-        console.error('❌ [Register] 注册失败:', (result as any).error?.message);
         message.error((result as any).error?.message || t('auth.registerFailed'))
       }
     } catch (error) {
-      console.error('❌ [Register] 注册异常:', error);
       message.error(t('auth.registerFailedRetry'))
     } finally {
       setLoading(false)
@@ -273,7 +259,6 @@ const Register: React.FC = () => {
                         return Promise.reject(new Error('该手机号已被其他用户使用'))
                       }
                     } catch (error) {
-                      console.error('检查手机号唯一性失败:', error)
                       // 如果查询失败，允许通过（不阻止用户提交）
                     }
                     

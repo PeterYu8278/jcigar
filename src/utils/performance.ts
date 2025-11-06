@@ -184,7 +184,6 @@ const observeWebVitals = (): void => {
       })
       fcpObserver.observe({ entryTypes: ['paint'] })
     } catch (e) {
-      console.error('FCP observation failed:', e)
     }
 
     // Largest Contentful Paint (LCP)
@@ -196,7 +195,6 @@ const observeWebVitals = (): void => {
       })
       lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] })
     } catch (e) {
-      console.error('LCP observation failed:', e)
     }
 
     // First Input Delay (FID)
@@ -210,7 +208,6 @@ const observeWebVitals = (): void => {
       })
       fidObserver.observe({ entryTypes: ['first-input'] })
     } catch (e) {
-      console.error('FID observation failed:', e)
     }
 
     // Cumulative Layout Shift (CLS)
@@ -226,7 +223,6 @@ const observeWebVitals = (): void => {
       })
       clsObserver.observe({ entryTypes: ['layout-shift'] })
     } catch (e) {
-      console.error('CLS observation failed:', e)
     }
   }
 }
@@ -272,7 +268,6 @@ export const measurePerformance = (name: string, startMark: string, endMark: str
       return measure.duration
     }
   } catch (e) {
-    console.error('Performance measure failed:', e)
   }
 
   return null
@@ -355,11 +350,9 @@ const reportMetrics = (): void => {
   }
 
   if (warnings.length > 0) {
-    console.warn('Performance warnings:', warnings)
   }
 
   // 发送到分析服务
-  console.log('Performance report:', report)
 
   // 示例：发送到后端
   // fetch('/api/analytics/performance', {
@@ -441,12 +434,10 @@ export const observeLongTasks = (): void => {
       const observer = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
           addMetric('Long Task', entry.duration, 'ms', 'custom')
-          console.warn('Long task detected:', entry.duration, 'ms')
         }
       })
       observer.observe({ entryTypes: ['longtask'] })
     } catch (e) {
-      console.error('Long task observation failed:', e)
     }
   }
 }

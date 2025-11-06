@@ -37,7 +37,6 @@ interface MigrationResult {
  * ```
  */
 export const migrateAllUserMemberIds = async (): Promise<MigrationResult> => {
-  console.log('🚀 开始会员ID迁移...')
   
   const result: MigrationResult = {
     total: 0,
@@ -53,7 +52,6 @@ export const migrateAllUserMemberIds = async (): Promise<MigrationResult> => {
     const snapshot = await getDocs(usersRef)
     
     result.total = snapshot.size
-    console.log(`📊 找到 ${result.total} 个用户`)
     
     // 遍历每个用户
     for (const userDoc of snapshot.docs) {
@@ -63,7 +61,6 @@ export const migrateAllUserMemberIds = async (): Promise<MigrationResult> => {
       try {
         // 检查是否已有会员ID
         if (userData.memberId) {
-          console.log(`⏭️  跳过: ${userData.displayName || uid} - 已有会员ID: ${userData.memberId}`)
           result.skipped++
           result.results.push({
             uid,
@@ -83,7 +80,6 @@ export const migrateAllUserMemberIds = async (): Promise<MigrationResult> => {
           updatedAt: new Date()
         })
         
-        console.log(`✅ 成功: ${userData.displayName || uid} -> ${memberId}`)
         result.success++
         result.results.push({
           uid,
@@ -94,7 +90,6 @@ export const migrateAllUserMemberIds = async (): Promise<MigrationResult> => {
         
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : '未知错误'
-        console.error(`❌ 失败: ${userData.displayName || uid} - ${errorMessage}`)
         result.failed++
         result.results.push({
           uid,
@@ -106,16 +101,10 @@ export const migrateAllUserMemberIds = async (): Promise<MigrationResult> => {
     }
     
     // 打印总结
-    console.log('\n📈 迁移完成！')
-    console.log(`总计: ${result.total}`)
-    console.log(`成功: ${result.success} ✅`)
-    console.log(`失败: ${result.failed} ❌`)
-    console.log(`跳过: ${result.skipped} ⏭️`)
     
     return result
     
   } catch (error) {
-    console.error('❌ 迁移过程发生严重错误:', error)
     throw error
   }
 }
@@ -133,11 +122,9 @@ export const migrateSingleUser = async (uid: string): Promise<string> => {
       updatedAt: new Date()
     })
     
-    console.log(`✅ 用户 ${uid} 的会员ID已生成: ${memberId}`)
     return memberId
     
   } catch (error) {
-    console.error(`❌ 为用户 ${uid} 生成会员ID失败:`, error)
     throw error
   }
 }
@@ -150,7 +137,6 @@ export const validateAllMemberIds = async (): Promise<{
   unique: number
   duplicates: Array<{ memberId: string; count: number; uids: string[] }>
 }> => {
-  console.log('🔍 开始验证会员ID唯一性...')
   
   const usersRef = collection(db, 'users')
   const snapshot = await getDocs(usersRef)
@@ -186,18 +172,11 @@ export const validateAllMemberIds = async (): Promise<{
     duplicates
   }
   
-  console.log('\n📊 验证结果:')
-  console.log(`总会员ID数: ${result.total}`)
-  console.log(`唯一ID数: ${result.unique}`)
-  console.log(`重复ID数: ${duplicates.length}`)
   
   if (duplicates.length > 0) {
-    console.warn('⚠️  发现重复的会员ID:')
     duplicates.forEach(dup => {
-      console.warn(`  - ${dup.memberId}: ${dup.count} 个用户 (${dup.uids.join(', ')})`)
     })
   } else {
-    console.log('✅ 所有会员ID都是唯一的！')
   }
   
   return result
@@ -209,10 +188,5 @@ if (typeof window !== 'undefined') {
   (window as any).validateMemberIds = validateAllMemberIds;
   (window as any).migrateSingleUserMemberId = migrateSingleUser;
   
-  console.log('💡 会员ID迁移工具已加载！')
-  console.log('使用方法:')
-  console.log('  - window.migrateMemberIds() - 迁移所有用户')
-  console.log('  - window.validateMemberIds() - 验证唯一性')
-  console.log('  - window.migrateSingleUserMemberId(uid) - 迁移单个用户')
 }
 

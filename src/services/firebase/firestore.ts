@@ -270,7 +270,6 @@ export const getUpcomingEvents = async (): Promise<Event[]> => {
         return dateA.getTime() - dateB.getTime();
       });
   } catch (error) {
-    console.error('Error fetching upcoming events:', error);
     return [];
   }
 };
@@ -330,7 +329,6 @@ export const getEventsByUser = async (userId: string): Promise<Event[]> => {
         return dateB.getTime() - dateA.getTime();
       });
   } catch (error) {
-    console.error('Error fetching user events:', error);
     return [];
   }
 };
@@ -361,7 +359,6 @@ export const getOrdersByUser = async (userId: string): Promise<Order[]> => {
       return dateB.getTime() - dateA.getTime();
     });
   } catch (error) {
-    console.error('Error fetching user orders:', error);
     return [];
   }
 };
@@ -476,9 +473,7 @@ export const createOrdersFromEventAllocations = async (eventId: string): Promise
             if (updateResult.success) {
               orderId = allocation.orderId;
               updatedOrdersCount++;
-              console.log(`Updated existing order ${orderId} for user ${userId}`);
             } else {
-              console.error(`Failed to update order ${allocation.orderId} for user ${userId}:`, updateResult.error);
               continue;
             }
           } else {
@@ -517,7 +512,6 @@ export const createOrdersFromEventAllocations = async (eventId: string): Promise
             orderId = newId;
             isNewOrder = true;
             createdOrdersCount++;
-            console.log(`Created new order ${orderId} for user ${userId}`);
           }
 
           // 如果是新订单，创建出库记录（仅对真实雪茄行生成，不含费用行）

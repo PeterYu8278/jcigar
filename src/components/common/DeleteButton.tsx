@@ -56,38 +56,29 @@ const DeleteButton: React.FC<DeleteButtonProps> = ({
   const { t } = useTranslation()
 
   const handleDelete = async () => {
-    console.log('Delete button clicked for item:', itemId)
-    console.log('Item name:', itemName)
     
     const defaultTitle = confirmTitle || t('common.deleteConfirm')
     const defaultContent = confirmContent || `确定要删除${itemName ? ` "${itemName}"` : ''}吗？`
     
     const confirmed = window.confirm(`${defaultTitle}\n\n${defaultContent}`)
-    console.log('Window confirm result:', confirmed)
     
     if (confirmed) {
-      console.log('User confirmed deletion, starting delete process for item:', itemId)
       try {
-        console.log('Deleting item:', itemId)
         const result = await onDelete(itemId)
         
         if (result.success) {
-          console.log('Item deleted successfully:', itemId)
           message.success(t('common.deleted'))
           onSuccess?.()
         } else {
-          console.error('Item deletion failed:', result.error)
           const errorMessage = result.error instanceof Error ? result.error.message : result.error || 'Unknown error'
           message.error(t('common.deleteFailed') + ': ' + errorMessage)
           onError?.(new Error(errorMessage))
         }
       } catch (error) {
-        console.error('Error in delete process:', error)
         message.error(t('common.deleteFailed') + ': ' + (error as Error).message)
         onError?.(error as Error)
       }
     } else {
-      console.log('User cancelled deletion for item:', itemId)
     }
   }
 

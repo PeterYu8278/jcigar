@@ -49,7 +49,6 @@ export const formatDate = (
   try {
     return dayjs(date).format(format)
   } catch (error) {
-    console.error('日期格式化失败:', error)
     return '-'
   }
 }
@@ -74,7 +73,6 @@ export const formatRelativeTime = (
     dayjs.locale(locale)
     return dayjs(date).fromNow()
   } catch (error) {
-    console.error('相对时间格式化失败:', error)
     return '-'
   }
 }
@@ -118,7 +116,6 @@ export const getDaysDiff = (
   try {
     return dayjs(endDate).diff(dayjs(startDate), 'day')
   } catch (error) {
-    console.error('计算日期差失败:', error)
     return 0
   }
 }
@@ -217,7 +214,6 @@ export const getFriendlyDate = (
     
     return d.format('YYYY-MM-DD HH:mm')
   } catch (error) {
-    console.error('友好日期格式化失败:', error)
     return '-'
   }
 }

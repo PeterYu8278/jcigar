@@ -52,17 +52,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // 排除完善资料页面本身，避免重定向循环
   const isProfileIncomplete = !user?.displayName || !user?.email || !user?.profile?.phone
   
-  // 调试日志
-  if (user && isProfileIncomplete) {
-    console.log('[ProtectedRoute] 资料完整性检查:', {
-      displayName: user.displayName,
-      email: user.email,
-      phone: user.profile?.phone,
-      isProfileIncomplete,
-      currentPath: location.pathname
-    })
-  }
-  
   if (user && isProfileIncomplete && location.pathname !== '/auth/complete-profile') {
     message.warning('请先完善您的账户信息')
     return <Navigate to="/auth/complete-profile" state={{ from: location }} replace />

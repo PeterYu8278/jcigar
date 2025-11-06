@@ -201,7 +201,6 @@ export async function apiCall<T>(
     }
 
     // 错误日志
-    console.error('[API Error]', {
       type: apiError.type,
       message: apiError.message,
       details: apiError.details,

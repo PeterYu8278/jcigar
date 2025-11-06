@@ -159,7 +159,6 @@ export function useModal(config: UseModalConfig = {}): UseModalReturn {
       
       close()
     } catch (error) {
-      console.error('模态框确认操作失败:', error)
       throw error
     } finally {
       setLoading(false)

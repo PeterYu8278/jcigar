@@ -102,7 +102,6 @@ const Login: React.FC = () => {
           message.error(result.error?.message || t('auth.loginFailed'))
         }
       } catch (error) {
-        console.error('Redirect result error:', error)
       } finally {
         setLoading(false)
       }
@@ -158,7 +157,6 @@ const Login: React.FC = () => {
         setLoading(false)
       }
     } catch (error) {
-      console.error('Google login error:', error)
       setLoginError('登入失败：' + t('auth.loginFailed'))
       setLoading(false)
     }
@@ -279,7 +277,7 @@ const Login: React.FC = () => {
             >
               <Input
                 prefix={<UserOutlined style={{ color: loginError ? '#ff4d4f' : '#ffd700' }} />}
-                placeholder={loginError || "邮箱 / 手机号 (例: admin@example.com 或 01157288278)"}
+                placeholder={loginError || "邮箱 / 手机号 (例: admin@example.com 或 0123456789)"}
                 onInput={(e) => {
                   const input = e.currentTarget
                   // 清除错误状态

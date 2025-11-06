@@ -67,7 +67,6 @@ export const formatCurrency = (
     
     return formatter.format(numAmount)
   } catch (error) {
-    console.error('Currency formatting error:', error)
     return '-'
   }
 }
@@ -110,7 +109,6 @@ export const formatNumber = (
       useGrouping
     })
   } catch (error) {
-    console.error('Number formatting error:', error)
     return '-'
   }
 }
@@ -154,7 +152,6 @@ export const formatPercentage = (
       maximumFractionDigits
     })}%`
   } catch (error) {
-    console.error('Percentage formatting error:', error)
     return '-'
   }
 }
@@ -200,7 +197,6 @@ export const formatFileSize = (
       maximumFractionDigits: 1
     })} ${units[i]}`
   } catch (error) {
-    console.error('File size formatting error:', error)
     return '-'
   }
 }
@@ -270,7 +266,6 @@ export const formatDistance = (
     
     return `${Math.round(numDistance)} m`
   } catch (error) {
-    console.error('Distance formatting error:', error)
     return '-'
   }
 }
@@ -315,7 +310,6 @@ export const formatTemperature = (
     
     return `${formatted}°${unit}`
   } catch (error) {
-    console.error('Temperature formatting error:', error)
     return '-'
   }
 }
@@ -350,7 +344,6 @@ export const formatFraction = (
     
     return `${Math.round(num)}/${Math.round(den)}`
   } catch (error) {
-    console.error('Fraction formatting error:', error)
     return '-'
   }
 }
@@ -389,7 +382,6 @@ export const formatRatio = (
     
     return `${Math.round(num) / divisor}:${Math.round(den) / divisor}`
   } catch (error) {
-    console.error('Ratio formatting error:', error)
     return '-'
   }
 }

@@ -301,8 +301,6 @@ export const createStoreDebugger = <T>(store: any, name: string) => {
     logChanges: () => {
       return store.subscribe((state: T, prevState: T) => {
         console.group(`[${name}] State Changed`)
-        console.log('Previous:', prevState)
-        console.log('Current:', state)
         console.groupEnd()
       })
     },
@@ -312,7 +310,6 @@ export const createStoreDebugger = <T>(store: any, name: string) => {
      */
     snapshot: () => {
       const state = store.getState()
-      console.log(`[${name}] Snapshot:`, state)
       return state
     },
 
@@ -329,7 +326,6 @@ export const createStoreDebugger = <T>(store: any, name: string) => {
         }
       })
 
-      console.log(`[${name}] Differences:`, differences)
       return differences
     },
 
@@ -340,7 +336,6 @@ export const createStoreDebugger = <T>(store: any, name: string) => {
       const start = performance.now()
       operation()
       const end = performance.now()
-      console.log(`[${name}] Operation took ${end - start}ms`)
     }
   }
 }

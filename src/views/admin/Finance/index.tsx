@@ -117,7 +117,6 @@ const AdminFinance: React.FC = () => {
       const d = v instanceof Date ? v : new Date(v)
       return isNaN(d.getTime()) ? null : d
     } catch (error) {
-      console.warn('Invalid date value:', val, error)
       return null
     }
   }
@@ -127,7 +126,6 @@ const AdminFinance: React.FC = () => {
     try {
       return dayjs(d).format('YYYY-MM-DD')
     } catch (error) {
-      console.warn('Invalid date format:', d, error)
       return '-'
     }
   }

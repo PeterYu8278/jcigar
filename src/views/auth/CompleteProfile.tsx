@@ -160,7 +160,6 @@ const CompleteProfile: React.FC = () => {
             const userData = await getUserData(currentUser.uid);
             
             if (userData) {
-              console.log('✅ [CompleteProfile] 手动设置用户状态:', userData);
               useAuthStore.getState().setUser(userData);
               useAuthStore.getState().setLoading(false);
               
@@ -169,7 +168,6 @@ const CompleteProfile: React.FC = () => {
             }
           }
           
-          console.log('🎯 [CompleteProfile] 导航到首页');
           navigate(from, { replace: true });
         };
         
@@ -178,7 +176,6 @@ const CompleteProfile: React.FC = () => {
         message.error((result as any).error?.message || '信息保存失败，请重试')
       }
     } catch (error) {
-      console.error('Complete profile error:', error)
       message.error('信息保存失败，请重试')
     } finally {
       setLoading(false)
@@ -192,7 +189,6 @@ const CompleteProfile: React.FC = () => {
       message.info('已退出登录')
       navigate('/login', { replace: true })
     } catch (error) {
-      console.error('Logout error:', error)
       message.error('退出登录失败')
     }
   }
@@ -333,7 +329,6 @@ const CompleteProfile: React.FC = () => {
                         return Promise.reject(new Error('该手机号已被其他用户使用'))
                       }
                     } catch (error) {
-                      console.error('检查手机号唯一性失败:', error)
                       // 如果查询失败，允许通过（不阻止用户提交）
                     }
                     

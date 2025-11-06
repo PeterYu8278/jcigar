@@ -28,9 +28,7 @@ const EventOrderDebug: React.FC = () => {
       setDebugInfo(info)
       
       // 同时打印到控制台
-      console.log('🔍 调试结果:', info)
     } catch (error) {
-      console.error('调试失败:', error)
     } finally {
       setLoading(false)
     }
@@ -45,7 +43,6 @@ const EventOrderDebug: React.FC = () => {
     try {
       await debugUserOrders(userId.trim())
     } catch (error) {
-      console.error('调试失败:', error)
     } finally {
       setLoading(false)
     }

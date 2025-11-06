@@ -101,7 +101,6 @@ export function exportToExcel(options: ExcelExportOptions): void {
     // 导出文件
     XLSX.writeFile(workbook, filename)
   } catch (error) {
-    console.error('Excel 导出失败:', error)
     throw new Error('Excel 导出失败')
   }
 }
@@ -171,7 +170,6 @@ export function exportToExcelMultiSheet(
 
     XLSX.writeFile(workbook, filename)
   } catch (error) {
-    console.error('Excel 多表导出失败:', error)
     throw new Error('Excel 多表导出失败')
   }
 }

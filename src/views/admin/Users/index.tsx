@@ -115,7 +115,6 @@ const AdminUsers: React.FC = () => {
         setUserOrders(orders)
         setUserEvents(events)
       } catch (error) {
-        console.error('Failed to load user data:', error)
       } finally {
         setLoadingUserData(false)
       }

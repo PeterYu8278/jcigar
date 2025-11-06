@@ -38,7 +38,6 @@ const CreateButton: React.FC<CreateButtonProps> = ({
   const { t } = useTranslation()
 
   const handleCreate = () => {
-    console.log('Create button clicked')
     onCreate()
   }
 

@@ -765,56 +765,40 @@ const AdminInventory: React.FC = () => {
                         }
                       }}>{t('inventory.batchDisable')}</Button>
                       <Button danger onClick={async () => {
-                        console.log('Inventory batch delete button clicked')
-                        console.log('Selected product IDs:', selectedRowKeys)
-                        console.log('Number of products to delete:', selectedRowKeys.length)
                         
                         const confirmed = window.confirm(`确定要删除选中的 ${selectedRowKeys.length} 个产品吗？`)
-                        console.log('Window confirm result:', confirmed)
                         
                         if (confirmed) {
-                          console.log('User confirmed batch deletion, starting delete process')
                             setLoading(true)
                             try {
-                            console.log('Starting inventory batch deletion process...')
                             
                             const ids = selectedRowKeys.map(id => String(id))
-                            console.log('Product IDs to process:', ids)
                             
                             const blocked = ids.filter(id => hasInventoryHistory(id))
                             const allowed = ids.filter(id => !hasInventoryHistory(id))
                             
-                            console.log('Blocked products (have inventory history):', blocked)
-                            console.log('Allowed products (no inventory history):', allowed)
                             
                             if (blocked.length > 0) {
-                              console.log('Warning: Some products blocked due to inventory history')
                               message.warning(t('inventory.deleteBlockedDueToLogs'))
                             }
                             
                             if (allowed.length === 0) {
-                              console.log('No products can be deleted (all blocked)')
                               return
                             }
                             
-                            console.log('Deleting allowed products:', allowed)
                             await Promise.all(allowed.map(id => deleteDocument(COLLECTIONS.CIGARS, id)))
                             
-                            console.log('Inventory batch deletion completed successfully')
                               message.success(t('inventory.batchDeleted'))
                             
-                            console.log('Refreshing product list...')
                               const list = await getCigars()
                               setItems(list)
                               setSelectedRowKeys([])
                           } catch (error) {
-                            console.error('Error in inventory batch delete process:', error)
                             message.error(t('inventory.batchDeleteFailed') + ': ' + (error as Error).message)
                             } finally {
                               setLoading(false)
                             }
                         } else {
-                          console.log('User cancelled inventory batch deletion')
                           }
                       }}>{t('inventory.batchDelete')}</Button>
                     </>
@@ -1279,36 +1263,27 @@ const AdminInventory: React.FC = () => {
                             </Button>
                             <Button 
                                 onClick={async () => {
-                                  console.log('Delete button clicked for brand:', brand.id)
-                                  console.log('Current brand:', brand)
                                   
                                   const confirmed = window.confirm(`确定要删除品牌 "${brand.name}" 吗？`)
-                                  console.log('Window confirm result:', confirmed)
                                   
                                   if (confirmed) {
-                                    console.log('User confirmed deletion, starting delete process for brand:', brand.id)
                                     try {
                                       setLoading(true)
                                       
-                                      console.log('Deleting brand:', brand.id)
                                       const result = await deleteDocument(COLLECTIONS.BRANDS, brand.id)
                                       
                                       if (result.success) {
-                                        console.log('Brand deleted successfully:', brand.id)
                                         message.success(t('inventory.brandDeleted'))
                                         setBrandList(await getBrands())
                                       } else {
-                                        console.error('Brand deletion failed:', result.error)
                                         message.error(t('inventory.brandDeleteFailed'))
                                       }
                                     } catch (error) {
-                                      console.error('Error in brand delete process:', error)
                                       message.error(t('inventory.brandDeleteFailed') + ': ' + (error as Error).message)
                                     } finally {
                                       setLoading(false)
                                     }
                                   } else {
-                                    console.log('User cancelled deletion for brand:', brand.id)
                                   }
                                 }}
                                 style={{
@@ -1809,27 +1784,20 @@ const AdminInventory: React.FC = () => {
                       content: `确定删除产品 ${productName} 吗？`,
                       okButtonProps: { danger: true },
                       onOk: async () => {
-                        console.log('Delete button clicked in edit modal for product:', productId)
-                        console.log('Product name:', productName)
-                        console.log('Current editing product:', editing)
                         
                         setLoading(true)
                         try {
-                          console.log('Starting product deletion process...')
                           const res = await deleteDocument(COLLECTIONS.CIGARS, productId)
                           
                           if (res.success) {
-                            console.log('Product deleted successfully:', productId)
                             message.success(t('common.deleted'))
                             setItems(await getCigars())
                             setSelectedRowKeys([])
                             setEditing(null)
                           } else {
-                            console.error('Product deletion failed:', res.error)
                             message.error(t('common.deleteFailed'))
                           }
                         } catch (error) {
-                          console.error('Error in product delete process:', error)
                           message.error(t('common.deleteFailed') + ': ' + (error as Error).message)
                         } finally {
                           setLoading(false)
@@ -2044,25 +2012,18 @@ const AdminInventory: React.FC = () => {
         onOk={async () => {
           if (!deleting) return
           
-          console.log('Delete button clicked in delete modal for product:', (deleting as any).id)
-          console.log('Product name:', (deleting as any)?.name)
-          console.log('Current deleting product:', deleting)
           
           setLoading(true)
           try {
-            console.log('Starting product deletion process...')
             const res = await deleteDocument(COLLECTIONS.CIGARS, (deleting as any).id)
             
             if (res.success) {
-              console.log('Product deleted successfully:', (deleting as any).id)
               message.success(t('common.deleted'))
               setItems(await getCigars())
             } else {
-              console.error('Product deletion failed:', res.error)
               message.error(t('common.deleteFailed'))
             }
           } catch (error) {
-            console.error('Error in product delete process:', error)
             message.error(t('common.deleteFailed') + ': ' + (error as Error).message)
           } finally {
             setLoading(false)

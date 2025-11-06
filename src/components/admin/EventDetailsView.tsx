@@ -302,7 +302,6 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
                   // 退出编辑模式
                   onToggleEdit()
                 } catch (error) {
-                  console.error('保存失败:', error)
                 }
               } else {
                 // 非编辑模式下，进入编辑模式

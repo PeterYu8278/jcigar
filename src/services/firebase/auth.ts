@@ -54,19 +54,14 @@ export const registerUser = async (
       referrer = referralResult.user;
     }
     
-    console.log('📝 [registerUser] 开始创建用户:', { email, displayName, phone: normalizedPhone, hasReferralCode: !!referralCode });
-    
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-    
-    console.log('✅ [registerUser] Firebase Auth 用户创建成功:', user.uid);
     
     // 更新用户显示名称
     await updateProfile(user, { displayName });
     
     // 生成会员编号（基于 userId hash）
     const memberId = await generateMemberId(user.uid);
-    console.log('🎫 [registerUser] 会员编号已生成:', memberId);
     
     // 在Firestore中创建用户文档
     const userData: Omit<User, 'id'> = {
@@ -102,11 +97,9 @@ export const registerUser = async (
     };
     
     await setDoc(doc(db, 'users', user.uid), userData);
-    console.log('✅ [registerUser] Firestore 用户文档创建成功');
     
     // ✅ 如果有引荐人，更新引荐人的数据
     if (referrer) {
-      console.log('👥 [registerUser] 更新引荐人数据:', { referrerId: referrer.id, referrerMemberId: referrer.memberId });
       try {
         await updateDoc(doc(db, 'users', referrer.id), {
           'referral.referrals': arrayUnion(user.uid),
@@ -115,21 +108,15 @@ export const registerUser = async (
           'membership.referralPoints': increment(200),
           updatedAt: new Date()
         });
-        console.log('✅ [registerUser] 引荐人数据更新成功，引荐人获得200积分');
       } catch (error) {
-        console.error('❌ [registerUser] 更新引荐人信息失败:', error);
         // 不影响注册流程，静默失败
       }
     }
     
-    console.log('🎉 [registerUser] 注册流程完成，返回成功');
     return { success: true, user };
   } catch (error) {
-    console.error('❌ [registerUser] 注册失败:', error);
     const err = error as any
     const code = err?.code as string | undefined
-    console.error('❌ [registerUser] 错误代码:', code);
-    console.error('❌ [registerUser] 错误详情:', err);
     
     const message =
       code === 'auth/email-already-in-use' ? '该邮箱已被注册'
@@ -296,7 +283,6 @@ export const loginWithGoogle = async () => {
     
     return { success: true, user, needsProfile };
   } catch (error) {
-    console.error('Google login error:', error);
     const err = error as any
     return { success: false, error: err as Error } as { success: false; error: Error };
   }
@@ -419,7 +405,6 @@ export const handleGoogleRedirectResult = async () => {
     
     return { success: true, user, needsProfile };
   } catch (error) {
-    console.error('Redirect result error:', error);
     const err = error as any;
     return { success: false, error: err as Error } as { success: false; error: Error };
   }
@@ -539,7 +524,6 @@ export const completeGoogleUserProfile = async (
           updatedAt: new Date()
         });
       } catch (error) {
-        console.error('更新引荐人信息失败:', error);
         // 不影响完善资料流程，静默失败
       }
     }

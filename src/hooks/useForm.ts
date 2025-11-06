@@ -263,7 +263,6 @@ export function useForm<T = any>(config: UseFormConfig<T> = {}): UseFormReturn<T
       // 重置脏标记
       setIsDirty(false)
     } catch (error: any) {
-      console.error('表单提交失败:', error)
 
       // 错误回调
       if (onError) {

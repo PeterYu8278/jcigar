@@ -57,7 +57,6 @@ const MemberIdMigration: React.FC = () => {
       }
     } catch (error) {
       message.error('迁移失败: ' + (error instanceof Error ? error.message : '未知错误'))
-      console.error('迁移错误:', error)
     } finally {
       setMigrating(false)
     }
@@ -81,7 +80,6 @@ const MemberIdMigration: React.FC = () => {
       }
     } catch (error) {
       message.error('验证失败: ' + (error instanceof Error ? error.message : '未知错误'))
-      console.error('验证错误:', error)
     } finally {
       setValidating(false)
     }

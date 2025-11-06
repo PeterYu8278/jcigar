@@ -50,7 +50,6 @@ const Profile: React.FC = () => {
         const events = await getEventsByUser(user.id)
         setUserEvents(events)
       } catch (error) {
-        console.error('Failed to load user events:', error)
       } finally {
         setLoadingEvents(false)
       }
@@ -79,7 +78,6 @@ const Profile: React.FC = () => {
         })
         setReferredUsers(referred)
       } catch (error) {
-        console.error('Failed to load referred users:', error)
       } finally {
         setLoadingReferrals(false)
       }
@@ -779,7 +777,6 @@ const Profile: React.FC = () => {
                 message.error(t('profile.saveFailed'))
               }
             } catch (error) {
-              console.error('Profile update error:', error);
               message.error('更新失败，请重试');
             } finally {
               setSaving(false)

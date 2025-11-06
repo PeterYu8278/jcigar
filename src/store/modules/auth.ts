@@ -64,25 +64,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         try {
           const userData = await getUserData(firebaseUser.uid)
           if (userData) {
-            console.log('[AuthStore] 用户数据已加载:', {
-              id: userData.id,
-              email: userData.email,
-              displayName: userData.displayName,
-              phone: userData.profile?.phone,
-              role: userData.role
-            })
             setUser(userData)
             setFirebaseUser(firebaseUser)
             set({ isAdmin: userData.role === 'admin' })
-          } else {
-            console.log('[AuthStore] 用户数据不存在')
           }
         } catch (error) {
-          console.error('[AuthStore] 获取用户数据失败:', error)
           set({ error: '获取用户数据失败' })
         }
       } else {
-        console.log('[AuthStore] 用户已登出')
         setUser(null)
         setFirebaseUser(null)
         set({ isAdmin: false })

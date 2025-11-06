@@ -56,41 +56,30 @@ const BatchDeleteButton: React.FC<BatchDeleteButtonProps> = ({
   const { t } = useTranslation()
 
   const handleBatchDelete = async () => {
-    console.log('Batch delete button clicked')
-    console.log('Selected IDs:', selectedIds)
-    console.log('Number of items to delete:', selectedIds.length)
     
     const defaultTitle = confirmTitle || t('common.batchDeleteConfirm')
     const defaultContent = confirmContent || `确定要删除选中的 ${selectedIds.length} 个${itemTypeName}吗？`
     
     const confirmed = window.confirm(`${defaultTitle}\n\n${defaultContent}`)
-    console.log('Window confirm result:', confirmed)
     
     if (confirmed) {
-      console.log('User confirmed batch deletion, starting delete process')
       try {
-        console.log('Starting batch deletion process...')
-        console.log('Deleting items:', selectedIds)
         
         const result = await onBatchDelete(selectedIds.map(id => String(id)))
         
         if (result.success) {
-          console.log('Batch deletion completed successfully')
           message.success(t('common.batchDeleted'))
           onSuccess?.()
         } else {
-          console.error('Batch deletion failed:', result.error)
           const errorMessage = result.error instanceof Error ? result.error.message : result.error || 'Unknown error'
           message.error(t('common.batchDeleteFailed') + ': ' + errorMessage)
           onError?.(new Error(errorMessage))
         }
       } catch (error) {
-        console.error('Error in batch delete process:', error)
         message.error(t('common.batchDeleteFailed') + ': ' + (error as Error).message)
         onError?.(error as Error)
       }
     } else {
-      console.log('User cancelled batch deletion')
     }
   }
 

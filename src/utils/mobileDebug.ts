@@ -20,9 +20,7 @@ export const initMobileDebug = () => {
         defaultPlugins: ['system', 'network', 'element', 'storage'],
         maxLogNumber: 1000
       })
-      console.log('✅ VConsole 已启动（移动端调试工具）')
     }).catch(error => {
-      console.error('VConsole 加载失败:', error)
     })
   }
 }
@@ -31,7 +29,6 @@ export const destroyMobileDebug = () => {
   if (vConsole) {
     vConsole.destroy()
     vConsole = null
-    console.log('🔴 VConsole 已关闭')
   }
 }
 

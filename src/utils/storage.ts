@@ -36,7 +36,6 @@ const serialize = (data: any): string => {
   try {
     return JSON.stringify(data)
   } catch (error) {
-    console.error('Storage serialize error:', error)
     return ''
   }
 }
@@ -48,7 +47,6 @@ const deserialize = <T = any>(data: string): T | null => {
   try {
     return JSON.parse(data)
   } catch (error) {
-    console.error('Storage deserialize error:', error)
     return null
   }
 }
@@ -88,7 +86,6 @@ export const setStorage = (
     
     return false
   } catch (error) {
-    console.error('Storage set error:', error)
     return false
   }
 }
@@ -118,7 +115,6 @@ export const getStorageValue = <T = any>(
     
     return item.value
   } catch (error) {
-    console.error('Storage get error:', error)
     return null
   }
 }
@@ -136,7 +132,6 @@ export const removeStorage = (
     storage.removeItem(key)
     return true
   } catch (error) {
-    console.error('Storage remove error:', error)
     return false
   }
 }
@@ -151,7 +146,6 @@ export const clearStorage = (options: StorageOptions = {}): boolean => {
     storage.clear()
     return true
   } catch (error) {
-    console.error('Storage clear error:', error)
     return false
   }
 }
@@ -173,7 +167,6 @@ export const getStorageSize = (options: StorageOptions = {}): number => {
     
     return total
   } catch (error) {
-    console.error('Storage size error:', error)
     return 0
   }
 }
@@ -187,7 +180,6 @@ export const getStorageKeys = (options: StorageOptions = {}): string[] => {
     const storage = getStorageObject(type)
     return Object.keys(storage)
   } catch (error) {
-    console.error('Storage keys error:', error)
     return []
   }
 }
@@ -204,7 +196,6 @@ export const hasStorage = (
     const storage = getStorageObject(type)
     return storage.getItem(key) !== null
   } catch (error) {
-    console.error('Storage has error:', error)
     return false
   }
 }

@@ -140,7 +140,6 @@ const AdminOrders: React.FC = () => {
         }
       }
     } catch (error) {
-      console.error('Error deleting order from event allocations:', error)
     }
   }
 
@@ -177,7 +176,6 @@ const AdminOrders: React.FC = () => {
         }
       }
     } catch (error) {
-      console.error('Error batch-deleting orders from event allocations:', error)
     }
   }
 

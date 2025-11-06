@@ -18,7 +18,6 @@ export const getPointsConfig = async (): Promise<PointsConfig | null> => {
     // 如果不存在，返回默认配置
     return getDefaultPointsConfig();
   } catch (error) {
-    console.error('获取积分配置失败:', error);
     return null;
   }
 };
@@ -41,7 +40,6 @@ export const updatePointsConfig = async (
     
     return { success: true };
   } catch (error) {
-    console.error('更新积分配置失败:', error);
     return { success: false, error: '更新失败，请重试' };
   }
 };
@@ -88,7 +86,7 @@ export const initializePointsConfig = async (userId: string): Promise<void> => {
       await updatePointsConfig(defaultConfig, userId);
     }
   } catch (error) {
-    console.error('初始化积分配置失败:', error);
+    // 静默失败
   }
 };
 
