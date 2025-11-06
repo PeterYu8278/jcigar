@@ -2132,7 +2132,21 @@ const AdminInventory: React.FC = () => {
               title: t('inventory.operator'), 
               dataIndex: 'operatorId', 
               key: 'operatorId', 
-              render: (v: any) => v || '-'
+              width: 150,
+              render: (operatorId: string) => {
+                if (!operatorId) return '-';
+                const user = users.find(u => u.id === operatorId);
+                return (
+                  <div>
+                    <div style={{ fontWeight: 500 }}>{user?.displayName || user?.email || operatorId}</div>
+                    {user && (
+                      <div style={{ fontSize: '11px', color: '#999' }}>
+                        {user.role === 'admin' ? t('common.admin') : t('common.member')}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
             },
           ]}
           dataSource={currentProductLogs}
