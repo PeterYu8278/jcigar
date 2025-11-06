@@ -243,3 +243,18 @@ export interface PointsConfig {
   updatedAt: Date;
   updatedBy: string;  // 更新人的 userId
 }
+
+// 积分记录类型
+export interface PointsRecord {
+  id: string;
+  userId: string;           // 用户ID
+  userName?: string;        // 用户名（冗余字段，方便查询）
+  type: 'earn' | 'spend';   // 获得 | 消费
+  amount: number;           // 积分数量
+  source: 'registration' | 'referral' | 'purchase' | 'event' | 'profile' | 'checkin' | 'admin' | 'other';  // 来源
+  description: string;      // 描述
+  relatedId?: string;       // 关联ID（订单ID、活动ID等）
+  balance?: number;         // 操作后余额
+  createdAt: Date;
+  createdBy?: string;       // 创建人（管理员手动调整时）
+}

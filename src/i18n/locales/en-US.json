@@ -846,10 +846,37 @@
     "title": "Points Configuration",
     "description": "Configure point rewards for various system operations",
     "loadFailed": "Failed to load configuration",
+    "loadRecordsFailed": "Failed to load points records",
     "userNotFound": "User information not found",
     "saveSuccess": "Points configuration updated",
     "saveFailed": "Save failed, please try again",
     "resetSuccess": "Reset to default values",
+    "tabs": {
+      "config": "Configuration",
+      "records": "Points Records"
+    },
+    "records": {
+      "time": "Time",
+      "user": "User",
+      "type": "Type",
+      "amount": "Points",
+      "source": "Source",
+      "description": "Description",
+      "balance": "Balance",
+      "earn": "Earn",
+      "spend": "Spend",
+      "noRecords": "No points records",
+      "sources": {
+        "registration": "Registration",
+        "referral": "Referral",
+        "purchase": "Purchase",
+        "event": "Event",
+        "profile": "Profile",
+        "checkin": "Check-in",
+        "admin": "Admin Adjustment",
+        "other": "Other"
+      }
+    },
     "registration": {
       "title": "Registration Points",
       "base": "Base Registration Points",

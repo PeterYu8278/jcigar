@@ -837,10 +837,37 @@
     "title": "积分配置管理",
     "description": "配置系统中各项操作获得的积分奖励",
     "loadFailed": "加载配置失败",
+    "loadRecordsFailed": "加载积分记录失败",
     "userNotFound": "用户信息不存在",
     "saveSuccess": "积分配置已更新",
     "saveFailed": "保存失败，请重试",
     "resetSuccess": "已重置为默认值",
+    "tabs": {
+      "config": "配置管理",
+      "records": "积分记录"
+    },
+    "records": {
+      "time": "时间",
+      "user": "用户",
+      "type": "类型",
+      "amount": "积分",
+      "source": "来源",
+      "description": "描述",
+      "balance": "余额",
+      "earn": "获得",
+      "spend": "消费",
+      "noRecords": "暂无积分记录",
+      "sources": {
+        "registration": "注册",
+        "referral": "引荐",
+        "purchase": "购买",
+        "event": "活动",
+        "profile": "完善资料",
+        "checkin": "签到",
+        "admin": "管理员调整",
+        "other": "其他"
+      }
+    },
     "registration": {
       "title": "注册相关积分",
       "base": "基础注册积分",
