@@ -933,6 +933,31 @@
       "total": "总资源"
     }
   },
+  "inventoryLogsMigration": {
+    "title": "库存记录迁移 - 去除 ORDER: 前缀",
+    "description": "批量处理现有库存记录，移除 referenceNo 中的 ORDER: 前缀",
+    "warning": "重要提示",
+    "warningDescription": "此操作将批量更新 inventoryLogs 集合中的 referenceNo 字段。建议先备份数据！",
+    "analyzeRecords": "分析记录",
+    "analyzeFailed": "分析失败",
+    "noRecordsToMigrate": "没有需要迁移的记录（所有记录都已是正确格式）",
+    "foundRecords": "找到 {{count}} 条需要处理的记录",
+    "reviewChanges": "请仔细检查下列更改，确认无误后点击\"开始迁移\"",
+    "startMigration": "开始迁移（{{count}} 条记录）",
+    "migrating": "正在迁移中...",
+    "processed": "已处理: {{current}} / {{total}}",
+    "migrationComplete": "迁移完成：成功 {{success}} 条，失败 {{failed}} 条",
+    "oldReference": "旧参考号（带前缀）",
+    "newReference": "新参考号（无前缀）",
+    "type": "类型",
+    "quantity": "数量",
+    "reason": "原因",
+    "logId": "记录ID",
+    "error": "错误",
+    "successCount": "成功",
+    "failedCount": "失败",
+    "failedRecords": "失败的记录"
+  },
   "userMigration": {
     "title": "用户数据迁移",
     "description": "将用户数据从一个文档ID迁移到另一个指定的文档ID",

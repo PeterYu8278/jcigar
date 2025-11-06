@@ -942,6 +942,31 @@
       "total": "Total Resources"
     }
   },
+  "inventoryLogsMigration": {
+    "title": "Inventory Logs Migration - Remove ORDER: Prefix",
+    "description": "Batch process existing inventory logs to remove ORDER: prefix from referenceNo",
+    "warning": "Important Notice",
+    "warningDescription": "This operation will batch update the referenceNo field in inventoryLogs collection. Backup recommended!",
+    "analyzeRecords": "Analyze Records",
+    "analyzeFailed": "Analysis failed",
+    "noRecordsToMigrate": "No records to migrate (all records are in correct format)",
+    "foundRecords": "Found {{count}} records to process",
+    "reviewChanges": "Please review the changes below carefully, then click 'Start Migration' to proceed",
+    "startMigration": "Start Migration ({{count}} records)",
+    "migrating": "Migrating...",
+    "processed": "Processed: {{current}} / {{total}}",
+    "migrationComplete": "Migration complete: {{success}} succeeded, {{failed}} failed",
+    "oldReference": "Old Reference (with prefix)",
+    "newReference": "New Reference (no prefix)",
+    "type": "Type",
+    "quantity": "Quantity",
+    "reason": "Reason",
+    "logId": "Log ID",
+    "error": "Error",
+    "successCount": "Success",
+    "failedCount": "Failed",
+    "failedRecords": "Failed Records"
+  },
   "userMigration": {
     "title": "User Data Migration",
     "description": "Migrate user data from one document ID to another specified document ID",
