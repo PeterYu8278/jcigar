@@ -2129,24 +2129,23 @@ const AdminInventory: React.FC = () => {
               render: (v: any) => v || '-'
             },
             { 
+              title: t('inventory.customer'), 
+              dataIndex: 'userId', 
+              key: 'userId', 
+              render: (userId: string, record: any) => {
+                if (!userId) return '-';
+                // 优先显示记录中的 userName
+                if (record.userName) return record.userName;
+                // 从 users 列表中查找
+                const user = users.find(u => u.id === userId);
+                return user?.displayName || userId;
+              }
+            },
+            { 
               title: t('inventory.operator'), 
               dataIndex: 'operatorId', 
               key: 'operatorId', 
-              width: 150,
-              render: (operatorId: string) => {
-                if (!operatorId) return '-';
-                const user = users.find(u => u.id === operatorId);
-                return (
-                  <div>
-                    <div style={{ fontWeight: 500 }}>{user?.displayName || user?.email || operatorId}</div>
-                    {user && (
-                      <div style={{ fontSize: '11px', color: '#999' }}>
-                        {user.role === 'admin' ? t('common.admin') : t('common.member')}
-                      </div>
-                    )}
-                  </div>
-                );
-              }
+              render: (v: any) => v || '-'
             },
           ]}
           dataSource={currentProductLogs}

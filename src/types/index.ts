@@ -182,6 +182,8 @@ export interface InventoryLog {
   reason: string;
   referenceNo?: string;
   operatorId: string;
+  userId?: string;        // 关联的顾客ID（出库时）
+  userName?: string;      // 关联的顾客名称（冗余字段）
   createdAt: Date;
 }
 

@@ -493,6 +493,7 @@
     "quantity": "Quantity",
     "referenceNo": "Reference No",
     "reason": "Reason",
+    "customer": "Customer",
     "operator": "Operator",
     "stockIn": "Stock In",
     "allBrands": "All Brands",

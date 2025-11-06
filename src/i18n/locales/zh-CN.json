@@ -491,6 +491,7 @@
     "quantity": "数量",
     "referenceNo": "单号",
     "reason": "原因",
+    "customer": "顾客",
     "operator": "操作人",
     "stockIn": "入库",
     "stockOut": "出库",
