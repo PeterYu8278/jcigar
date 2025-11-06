@@ -107,17 +107,17 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
     {
       key: '/admin/points-config',
       icon: <TrophyOutlined />,
-      label: '积分配置',
+      label: t('navigation.pointsConfig'),
+    },
+    {
+      key: '/admin/user-migration',
+      icon: <SyncOutlined />,
+      label: t('navigation.userMigration'),
     },
     {
       key: '/admin/performance',
       icon: <ThunderboltOutlined />,
       label: t(NAV_KEYS.PERFORMANCE),
-    },
-    {
-      key: '/admin/member-id-migration',
-      icon: <SyncOutlined />,
-      label: '会员ID迁移',
     },
   ]
 

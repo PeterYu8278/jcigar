@@ -140,7 +140,7 @@ const Register: React.FC = () => {
         }}>
       {/* 下拉刷新指示器 */}
       {pullDistance > 0 && (
-        <div style={{
+    <div style={{
           position: 'absolute',
           top: `-${Math.min(pullDistance, 80)}px`,
           left: '50%',
