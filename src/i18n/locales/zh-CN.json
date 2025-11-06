@@ -452,7 +452,10 @@
     "memberId": "会员ID",
     "clickToReturnAvatar": "点击返回头像",
     "clickToViewMemberCard": "点击查看会员卡",
-    "noCigarRecords": "暂无雪茄记录"
+    "noCigarRecords": "暂无雪茄记录",
+    "noPointsRecords": "暂无积分记录",
+    "noActivityRecords": "暂无活动记录",
+    "noReferralRecords": "暂无引荐记录"
   },
   
   "ordersAdmin": {
@@ -786,7 +789,11 @@
     "orderId": "订单ID",
     "orderDate": "订单日期",
     "userName": "用户名称",
-    "quantity": "数量"
+    "quantity": "数量",
+    "balance": "余额"
+  },
+  "financialAdmin": {
+    "balance": "余额"
   },
   "participants": {
     "loadingParticipants": "加载参与者信息中...",
@@ -835,6 +842,118 @@
   },
   "brand": {
     "loadFailed": "加载品牌信息失败"
+  },
+  "profile": {
+    "myReferralCode": "我的引荐码",
+    "notGenerated": "未生成",
+    "copyReferralCode": "复制引荐码",
+    "shareInvitation": "分享邀请",
+    "referralCodeCopied": "引荐码已复制",
+    "inviteTextCopied": "邀请文字已复制",
+    "referralReward": "💰 每成功引荐1人注册获得 200 积分",
+    "totalReferred": "累计引荐",
+    "referralPoints": "引荐积分",
+    "shareWithFriends": "分享您的引荐码给好友，邀请他们加入获得奖励",
+    "unknownUser": "未知用户",
+    "joined": "加入",
+    "memberNumber": "会员编号",
+    "eventStatus": {
+      "upcoming": "即将开始",
+      "ongoing": "进行中",
+      "completed": "已结束",
+      "cancelled": "已取消"
+    },
+    "participationStatus": {
+      "checkedIn": "已签到",
+      "registered": "已报名"
+    },
+    "currentPassword": "当前密码",
+    "currentPasswordHelp": "更新邮箱或密码时需要",
+    "currentPasswordPlaceholder": "输入当前密码以验证身份",
+    "newPassword": "新密码",
+    "newPasswordHelp": "留空则不修改密码",
+    "newPasswordPlaceholder": "设置新密码（至少6位，留空不修改）",
+    "passwordMinLength": "密码至少6位",
+    "authRequired": "如需更新邮箱或密码，请先输入当前密码验证身份",
+    "notLoggedIn": "用户未登录，请重新登录",
+    "authRequiredForEmailPassword": "更新邮箱或密码需要输入当前密码进行验证",
+    "currentPasswordWrong": "当前密码验证失败，请检查密码是否正确",
+    "emailUpdateFailed": "邮箱更新失败",
+    "passwordUpdated": "密码已更新",
+    "passwordUpdateFailed": "密码更新失败",
+    "phoneInvalidFormat": "手机号格式无效",
+    "updateFailed": "更新失败，请重试",
+    "shareText": "加入 Gentleman Club，使用我的引荐码：{{code}}，注册可获得额外积分！"
+  },
+  "pointsConfig": {
+    "title": "积分配置管理",
+    "description": "配置系统中各项操作获得的积分奖励",
+    "loadFailed": "加载配置失败",
+    "userNotFound": "用户信息不存在",
+    "saveSuccess": "积分配置已更新",
+    "saveFailed": "保存失败，请重试",
+    "resetSuccess": "已重置为默认值",
+    "registration": {
+      "title": "注册相关积分",
+      "base": "基础注册积分",
+      "withReferral": "被引荐注册积分",
+      "referrerReward": "引荐人奖励积分"
+    },
+    "purchase": {
+      "title": "购买相关积分",
+      "firstOrder": "首次购买奖励",
+      "perRinggit": "每消费1马币积分",
+      "referrerFirstOrder": "被引荐人首购，引荐人奖励"
+    },
+    "event": {
+      "title": "活动相关积分",
+      "registration": "活动报名积分",
+      "checkIn": "活动签到积分",
+      "completion": "完成活动积分"
+    },
+    "other": {
+      "title": "其他积分",
+      "profileComplete": "完善资料积分",
+      "firstLogin": "首次登录积分",
+      "dailyCheckIn": "每日签到积分"
+    },
+    "units": {
+      "points": "积分",
+      "pointsPerRM": "积分/RM"
+    },
+    "validation": {
+      "required": "请输入积分值"
+    },
+    "actions": {
+      "resetToDefault": "重置为默认值",
+      "saveConfig": "保存配置"
+    }
+  },
+  "performance": {
+    "title": "性能监控",
+    "overview": "性能总览",
+    "detailedMetrics": "详细指标",
+    "autoRefreshOn": "开启自动刷新",
+    "autoRefreshOff": "停止自动刷新",
+    "loading": "正在加载性能数据...",
+    "notSupported": "不支持",
+    "target": "目标",
+    "metrics": {
+      "fcp": "首次内容绘制 (FCP)",
+      "lcp": "最大内容绘制 (LCP)",
+      "fid": "首次输入延迟 (FID)",
+      "cls": "累积布局偏移 (CLS)",
+      "pageLoad": "页面加载",
+      "tti": "可交互时间",
+      "memory": "内存使用"
+    },
+    "resources": {
+      "title": "资源统计",
+      "scripts": "脚本",
+      "stylesheets": "样式表",
+      "images": "图片",
+      "total": "总资源"
+    }
   },
   "footer": {
     "tagline": "尊贵雪茄体验 · 品质生活方式",

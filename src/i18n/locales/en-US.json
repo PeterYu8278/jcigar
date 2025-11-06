@@ -145,34 +145,6 @@
     "exportReport": "Export Report",
     "clearData": "Clear Data"
   },
-  "performance": {
-    "title": "Performance Monitor",
-    "overview": "Performance Overview",
-    "detailedMetrics": "Detailed Metrics",
-    "autoRefreshOn": "Enable Auto Refresh",
-    "autoRefreshOff": "Stop Auto Refresh",
-    "metricName": "Metric Name",
-    "value": "Value",
-    "category": "Category",
-    "timestamp": "Timestamp",
-    "fcp": "First Contentful Paint (FCP)",
-    "lcp": "Largest Contentful Paint (LCP)",
-    "fid": "First Input Delay (FID)",
-    "cls": "Cumulative Layout Shift (CLS)",
-    "ttfb": "Time to First Byte (TTFB)",
-    "renderTime": "Render Time",
-    "domReady": "DOM Ready Time",
-    "totalLoad": "Total Load Time",
-    "resourceCount": "Resource Count",
-    "totalSize": "Total Size",
-    "cacheHitRate": "Cache Hit Rate",
-    "jsHeapSize": "JS Heap Size",
-    "jsExecutionTime": "JS Execution Time",
-    "excellent": "Excellent",
-    "good": "Good",
-    "needsImprovement": "Needs Improvement",
-    "poor": "Poor"
-  },
   "container": {
     "loadFailed": "Load failed",
     "noData": "No data"
@@ -226,66 +198,6 @@
     "orders": "Orders",
     "finance": "Finance",
     "performance": "Performance"
-  },
-  "profile": {
-    "title": "Profile",
-    "editProfile": "Edit Profile",
-    "avatar": "Avatar",
-    "nickname": "Nickname",
-    "realName": "Real Name",
-    "phone": "Phone",
-    "email": "Email",
-    "role": "Role",
-    "memberSince": "Member Since",
-    "lastLogin": "Last Login",
-    "updateSuccess": "Profile updated successfully",
-    "updateFailed": "Profile update failed",
-    "eventsJoined": "Events Joined",
-    "cigarsPurchased": "Cigars Purchased",
-    "communityPoints": "Community Points",
-    "bronzeMember": "Bronze Member",
-    "silverMember": "Silver Member",
-    "goldMember": "Gold Member",
-    "platinumMember": "Platinum Member",
-    "regularMember": "Regular Member",
-    "noNameSet": "No Name Set",
-    "basicInfo": "Basic Information",
-    "notSet": "Not Set",
-    "unknown": "Unknown",
-    "preferences": "Preferences",
-    "languageLabel": "Language",
-    "notificationsLabel": "Notifications",
-    "myStats": "My Statistics",
-    "recentEvents": "Recent Events",
-    "joinedTag": "Joined",
-    "registeredTag": "Registered",
-    "recentPurchases": "Recent Purchases",
-    "saveSuccess": "Saved successfully",
-    "saveFailed": "Save failed, please try again",
-    "nameLabel": "Name",
-    "nameRequired": "Please enter your name",
-    "namePlaceholder": "Enter name",
-    "phoneLabel": "Phone",
-    "phonePlaceholder": "Enter phone number",
-    "notificationsToggle": "Enable Notifications",
-    "phoneRequired": "Please enter phone number",
-    "phoneInvalid": "Please enter a valid phone number (7-15 digits, + allowed)",
-    "membershipLevel": "Membership Level",
-    "points": "Points",
-    "eventName": "Event Name",
-    "eventTime": "Event Time",
-    "location": "Location",
-    "registration": "Registration",
-    "people": "people",
-    "fee": "Fee",
-    "revenue": "Revenue",
-    "status": "Status",
-    "draft": "Draft",
-    "published": "Published",
-    "ongoing": "Ongoing",
-    "completed": "Completed",
-    "cancelled": "Cancelled",
-    "statusUpdateFailed": "Failed to update event status"
   },
   "events": {
     "registerFailed": "Registration failed",
@@ -468,7 +380,10 @@
     "memberId": "Member ID",
     "clickToReturnAvatar": "Click to return to avatar",
     "clickToViewMemberCard": "Click to view member card",
-    "noCigarRecords": "No cigar records"
+    "noCigarRecords": "No cigar records",
+    "noPointsRecords": "No points records",
+    "noActivityRecords": "No activity records",
+    "noReferralRecords": "No referral records"
   },
 
   "ordersAdmin": {
@@ -809,7 +724,11 @@
     "orderId": "Order ID",
     "orderDate": "Order Date",
     "userName": "User Name",
-    "quantity": "Quantity"
+    "quantity": "Quantity",
+    "balance": "Balance"
+  },
+  "financialAdmin": {
+    "balance": "Balance"
   },
   "participants": {
     "loadingParticipants": "Loading participant information...",
@@ -858,6 +777,140 @@
   },
   "brand": {
     "loadFailed": "Failed to load brand information"
+  },
+  "profile": {
+    "title": "Profile",
+    "editProfile": "Edit Profile",
+    "avatar": "Avatar",
+    "nameLabel": "Name",
+    "nameRequired": "Please enter your name",
+    "namePlaceholder": "Enter name",
+    "phoneLabel": "Phone",
+    "phonePlaceholder": "Enter phone number",
+    "notificationsToggle": "Enable Notifications",
+    "noNameSet": "No Name Set",
+    "notSet": "Not Set",
+    "points": "Points",
+    "eventsJoined": "Events Joined",
+    "cigarsPurchased": "Cigars Purchased",
+    "communityPoints": "Community Points",
+    "bronzeMember": "Bronze Member",
+    "silverMember": "Silver Member",
+    "goldMember": "Gold Member",
+    "platinumMember": "Platinum Member",
+    "regularMember": "Regular Member",
+    "saveSuccess": "Saved successfully",
+    "saveFailed": "Save failed, please try again",
+    "myReferralCode": "My Referral Code",
+    "notGenerated": "Not Generated",
+    "copyReferralCode": "Copy Referral Code",
+    "shareInvitation": "Share Invitation",
+    "referralCodeCopied": "Referral code copied",
+    "inviteTextCopied": "Invitation text copied",
+    "referralReward": "💰 Earn 200 points for each successful referral",
+    "totalReferred": "Total Referred",
+    "referralPoints": "Referral Points",
+    "shareWithFriends": "Share your referral code with friends and earn rewards",
+    "unknownUser": "Unknown User",
+    "joined": "Joined",
+    "memberNumber": "Member ID",
+    "eventStatus": {
+      "upcoming": "Upcoming",
+      "ongoing": "Ongoing",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "participationStatus": {
+      "checkedIn": "Checked In",
+      "registered": "Registered"
+    },
+    "currentPassword": "Current Password",
+    "currentPasswordHelp": "Required when updating email or password",
+    "currentPasswordPlaceholder": "Enter current password to verify identity",
+    "newPassword": "New Password",
+    "newPasswordHelp": "Leave blank to keep current password",
+    "newPasswordPlaceholder": "Set new password (min 6 characters, leave blank to skip)",
+    "passwordMinLength": "Password must be at least 6 characters",
+    "authRequired": "Please enter current password to update email or password",
+    "notLoggedIn": "Not logged in, please login again",
+    "authRequiredForEmailPassword": "Current password required to update email or password",
+    "currentPasswordWrong": "Current password verification failed, please check your password",
+    "emailUpdateFailed": "Email update failed",
+    "passwordUpdated": "Password updated",
+    "passwordUpdateFailed": "Password update failed",
+    "phoneInvalidFormat": "Invalid phone number format",
+    "updateFailed": "Update failed, please try again",
+    "shareText": "Join Gentleman Club! Use my referral code: {{code}} to earn extra points!"
+  },
+  "pointsConfig": {
+    "title": "Points Configuration",
+    "description": "Configure point rewards for various system operations",
+    "loadFailed": "Failed to load configuration",
+    "userNotFound": "User information not found",
+    "saveSuccess": "Points configuration updated",
+    "saveFailed": "Save failed, please try again",
+    "resetSuccess": "Reset to default values",
+    "registration": {
+      "title": "Registration Points",
+      "base": "Base Registration Points",
+      "withReferral": "Registration with Referral Points",
+      "referrerReward": "Referrer Reward Points"
+    },
+    "purchase": {
+      "title": "Purchase Points",
+      "firstOrder": "First Order Reward",
+      "perRinggit": "Points per Ringgit Spent",
+      "referrerFirstOrder": "Referrer Reward for Referee's First Order"
+    },
+    "event": {
+      "title": "Event Points",
+      "registration": "Event Registration Points",
+      "checkIn": "Event Check-in Points",
+      "completion": "Event Completion Points"
+    },
+    "other": {
+      "title": "Other Points",
+      "profileComplete": "Profile Completion Points",
+      "firstLogin": "First Login Points",
+      "dailyCheckIn": "Daily Check-in Points"
+    },
+    "units": {
+      "points": "points",
+      "pointsPerRM": "points/RM"
+    },
+    "validation": {
+      "required": "Please enter points value"
+    },
+    "actions": {
+      "resetToDefault": "Reset to Default",
+      "saveConfig": "Save Configuration"
+    }
+  },
+  "performance": {
+    "title": "Performance Monitor",
+    "overview": "Performance Overview",
+    "detailedMetrics": "Detailed Metrics",
+    "autoRefreshOn": "Enable Auto Refresh",
+    "autoRefreshOff": "Stop Auto Refresh",
+    "loading": "Loading performance data...",
+    "notSupported": "Not Supported",
+    "target": "Target",
+    "metrics": {
+      "fcp": "First Contentful Paint (FCP)",
+      "lcp": "Largest Contentful Paint (LCP)",
+      "fid": "First Input Delay (FID)",
+      "cls": "Cumulative Layout Shift (CLS)",
+      "pageLoad": "Page Load",
+      "tti": "Time to Interactive",
+      "memory": "Memory Usage"
+    },
+    "resources": {
+      "title": "Resource Statistics",
+      "scripts": "Scripts",
+      "stylesheets": "Stylesheets",
+      "images": "Images",
+      "total": "Total Resources"
+    }
   },
   "footer": {
     "tagline": "Premium Cigar Experience · Quality Lifestyle",

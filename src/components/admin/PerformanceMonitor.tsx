@@ -108,7 +108,7 @@ const PerformanceMonitor: React.FC = () => {
   if (!report) {
     return (
       <Card>
-        <Empty description="正在加载性能数据..." />
+        <Empty description={t('performance.loading')} />
       </Card>
     )
   }
@@ -163,7 +163,7 @@ const PerformanceMonitor: React.FC = () => {
                 }}
               >
                 <Statistic
-                  title={<span style={{ color: 'var(--cigar-text-secondary)' }}>首次内容绘制 (FCP)</span>}
+                  title={<span style={{ color: 'var(--cigar-text-secondary)' }}>{t('performance.metrics.fcp')}</span>}
                   value={report.summary.firstContentfulPaint || 0}
                   suffix="ms"
                   valueStyle={{ color: getScoreColor(report.summary.firstContentfulPaint, thresholds.fcp.warning) }}
@@ -174,7 +174,7 @@ const PerformanceMonitor: React.FC = () => {
                     {getPerformanceGrade(report.summary.firstContentfulPaint, thresholds.fcp)}
                   </Tag>
                   <span style={{ color: 'var(--cigar-text-tertiary)', fontSize: 12 }}>
-                    目标: &lt; {thresholds.fcp.good}ms
+                    {t('performance.target')}: &lt; {thresholds.fcp.good}ms
                   </span>
                 </div>
               </Card>
@@ -188,7 +188,7 @@ const PerformanceMonitor: React.FC = () => {
                 }}
               >
                 <Statistic
-                  title={<span style={{ color: 'var(--cigar-text-secondary)' }}>最大内容绘制 (LCP)</span>}
+                  title={<span style={{ color: 'var(--cigar-text-secondary)' }}>{t('performance.metrics.lcp')}</span>}
                   value={report.summary.largestContentfulPaint || 0}
                   suffix="ms"
                   valueStyle={{ color: getScoreColor(report.summary.largestContentfulPaint, thresholds.lcp.warning) }}
@@ -199,7 +199,7 @@ const PerformanceMonitor: React.FC = () => {
                     {getPerformanceGrade(report.summary.largestContentfulPaint, thresholds.lcp)}
                   </Tag>
                   <span style={{ color: 'var(--cigar-text-tertiary)', fontSize: 12 }}>
-                    目标: &lt; {thresholds.lcp.good}ms
+                    {t('performance.target')}: &lt; {thresholds.lcp.good}ms
                   </span>
                 </div>
               </Card>
@@ -213,7 +213,7 @@ const PerformanceMonitor: React.FC = () => {
                 }}
               >
                 <Statistic
-                  title={<span style={{ color: 'var(--cigar-text-secondary)' }}>首次输入延迟 (FID)</span>}
+                  title={<span style={{ color: 'var(--cigar-text-secondary)' }}>{t('performance.metrics.fid')}</span>}
                   value={report.summary.firstInputDelay || 0}
                   suffix="ms"
                   valueStyle={{ color: getScoreColor(report.summary.firstInputDelay, thresholds.fid.warning) }}
@@ -224,7 +224,7 @@ const PerformanceMonitor: React.FC = () => {
                     {getPerformanceGrade(report.summary.firstInputDelay, thresholds.fid)}
                   </Tag>
                   <span style={{ color: 'var(--cigar-text-tertiary)', fontSize: 12 }}>
-                    目标: &lt; {thresholds.fid.good}ms
+                    {t('performance.target')}: &lt; {thresholds.fid.good}ms
                   </span>
                 </div>
               </Card>
@@ -238,7 +238,7 @@ const PerformanceMonitor: React.FC = () => {
                 }}
               >
                 <Statistic
-                  title={<span style={{ color: 'var(--cigar-text-secondary)' }}>累积布局偏移 (CLS)</span>}
+                  title={<span style={{ color: 'var(--cigar-text-secondary)' }}>{t('performance.metrics.cls')}</span>}
                   value={(report.summary.cumulativeLayoutShift || 0).toFixed(3)}
                   valueStyle={{ color: getScoreColor(report.summary.cumulativeLayoutShift, thresholds.cls.warning) }}
                   prefix={<WarningOutlined />}
@@ -248,7 +248,7 @@ const PerformanceMonitor: React.FC = () => {
                     {getPerformanceGrade(report.summary.cumulativeLayoutShift, thresholds.cls)}
                   </Tag>
                   <span style={{ color: 'var(--cigar-text-tertiary)', fontSize: 12 }}>
-                    目标: &lt; {thresholds.cls.good}
+                    {t('performance.target')}: &lt; {thresholds.cls.good}
                   </span>
                 </div>
               </Card>
@@ -259,7 +259,7 @@ const PerformanceMonitor: React.FC = () => {
           <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
             <Col xs={24} sm={12} lg={8}>
               <Card
-                title={<span style={{ color: 'var(--cigar-text-primary)' }}>页面加载</span>}
+                title={<span style={{ color: 'var(--cigar-text-primary)' }}>{t('performance.metrics.pageLoad')}</span>}
                 style={{
                   background: 'var(--cigar-black-secondary)',
                   borderColor: 'var(--cigar-border-primary)'
@@ -280,7 +280,7 @@ const PerformanceMonitor: React.FC = () => {
 
             <Col xs={24} sm={12} lg={8}>
               <Card
-                title={<span style={{ color: 'var(--cigar-text-primary)' }}>可交互时间</span>}
+                title={<span style={{ color: 'var(--cigar-text-primary)' }}>{t('performance.metrics.tti')}</span>}
                 style={{
                   background: 'var(--cigar-black-secondary)',
                   borderColor: 'var(--cigar-border-primary)'
@@ -296,7 +296,7 @@ const PerformanceMonitor: React.FC = () => {
 
             <Col xs={24} sm={12} lg={8}>
               <Card
-                title={<span style={{ color: 'var(--cigar-text-primary)' }}>内存使用</span>}
+                title={<span style={{ color: 'var(--cigar-text-primary)' }}>{t('performance.metrics.memory')}</span>}
                 style={{
                   background: 'var(--cigar-black-secondary)',
                   borderColor: 'var(--cigar-border-primary)'
@@ -314,7 +314,7 @@ const PerformanceMonitor: React.FC = () => {
                     </div>
                   </>
                 ) : (
-                  <div style={{ color: 'var(--cigar-text-secondary)' }}>不支持</div>
+                  <div style={{ color: 'var(--cigar-text-secondary)' }}>{t('performance.notSupported')}</div>
                 )}
               </Card>
             </Col>
@@ -322,7 +322,7 @@ const PerformanceMonitor: React.FC = () => {
 
           {/* 资源统计 */}
           <Card
-            title={<span style={{ color: 'var(--cigar-text-primary)' }}>资源统计</span>}
+            title={<span style={{ color: 'var(--cigar-text-primary)' }}>{t('performance.resources.title')}</span>}
             style={{
               background: 'var(--cigar-black-secondary)',
               borderColor: 'var(--cigar-border-primary)'
@@ -331,28 +331,28 @@ const PerformanceMonitor: React.FC = () => {
             <Row gutter={16}>
               <Col span={6}>
                 <Statistic
-                  title={<span style={{ color: 'var(--cigar-text-secondary)' }}>脚本</span>}
+                  title={<span style={{ color: 'var(--cigar-text-secondary)' }}>{t('performance.resources.scripts')}</span>}
                   value={report.resources.scripts}
                   valueStyle={{ color: 'var(--cigar-text-primary)' }}
                 />
               </Col>
               <Col span={6}>
                 <Statistic
-                  title={<span style={{ color: 'var(--cigar-text-secondary)' }}>样式表</span>}
+                  title={<span style={{ color: 'var(--cigar-text-secondary)' }}>{t('performance.resources.stylesheets')}</span>}
                   value={report.resources.stylesheets}
                   valueStyle={{ color: 'var(--cigar-text-primary)' }}
                 />
               </Col>
               <Col span={6}>
                 <Statistic
-                  title={<span style={{ color: 'var(--cigar-text-secondary)' }}>图片</span>}
+                  title={<span style={{ color: 'var(--cigar-text-secondary)' }}>{t('performance.resources.images')}</span>}
                   value={report.resources.images}
                   valueStyle={{ color: 'var(--cigar-text-primary)' }}
                 />
               </Col>
               <Col span={6}>
                 <Statistic
-                  title={<span style={{ color: 'var(--cigar-text-secondary)' }}>总资源</span>}
+                  title={<span style={{ color: 'var(--cigar-text-secondary)' }}>{t('performance.resources.total')}</span>}
                   value={report.resources.total}
                   valueStyle={{ color: 'var(--cigar-text-primary)' }}
                 />

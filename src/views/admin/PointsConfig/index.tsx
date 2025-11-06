@@ -4,6 +4,7 @@ import { Card, Form, InputNumber, Button, Space, Typography, Row, Col, Divider, 
 import { SaveOutlined, ReloadOutlined } from '@ant-design/icons';
 import { getPointsConfig, updatePointsConfig, getDefaultPointsConfig } from '../../../services/firebase/pointsConfig';
 import { useAuthStore } from '../../../store/modules/auth';
+import { useTranslation } from 'react-i18next';
 import type { PointsConfig } from '../../../types';
 
 const { Title, Text } = Typography;
@@ -13,6 +14,7 @@ const PointsConfigPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const { user } = useAuthStore();
+  const { t } = useTranslation();
 
   // 加载积分配置
   useEffect(() => {
@@ -31,7 +33,7 @@ const PointsConfigPage: React.FC = () => {
         form.setFieldsValue(defaultConfig);
       }
     } catch (error) {
-      message.error('加载配置失败');
+      message.error(t('pointsConfig.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -40,7 +42,7 @@ const PointsConfigPage: React.FC = () => {
   // 保存配置
   const onFinish = async (values: any) => {
     if (!user?.id) {
-      message.error('用户信息不存在');
+      message.error(t('pointsConfig.userNotFound'));
       return;
     }
 
@@ -48,12 +50,12 @@ const PointsConfigPage: React.FC = () => {
     try {
       const result = await updatePointsConfig(values, user.id);
       if (result.success) {
-        message.success('积分配置已更新');
+        message.success(t('pointsConfig.saveSuccess'));
       } else {
-        message.error(result.error || '更新失败');
+        message.error(result.error || t('pointsConfig.saveFailed'));
       }
     } catch (error) {
-      message.error('保存失败，请重试');
+      message.error(t('pointsConfig.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -63,7 +65,7 @@ const PointsConfigPage: React.FC = () => {
   const resetToDefault = () => {
     const defaultConfig = getDefaultPointsConfig();
     form.setFieldsValue(defaultConfig);
-    message.info('已重置为默认值');
+    message.info(t('pointsConfig.resetSuccess'));
   };
 
   if (loading) {
@@ -79,8 +81,8 @@ const PointsConfigPage: React.FC = () => {
       <Card>
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
           <div>
-            <Title level={4}>积分配置管理</Title>
-            <Text type="secondary">配置系统中各项操作获得的积分奖励</Text>
+            <Title level={4}>{t('pointsConfig.title')}</Title>
+            <Text type="secondary">{t('pointsConfig.description')}</Text>
           </div>
 
           <Form
@@ -90,47 +92,47 @@ const PointsConfigPage: React.FC = () => {
             initialValues={getDefaultPointsConfig()}
           >
             {/* 注册相关积分 */}
-            <Card type="inner" title="注册相关积分" style={{ marginBottom: 16 }}>
+            <Card type="inner" title={t('pointsConfig.registration.title')} style={{ marginBottom: 16 }}>
               <Row gutter={16}>
                 <Col xs={24} sm={8}>
                   <Form.Item
-                    label="基础注册积分"
+                    label={t('pointsConfig.registration.base')}
                     name={['registration', 'base']}
-                    rules={[{ required: true, message: '请输入积分值' }]}
+                    rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
                     <InputNumber
                       min={0}
                       max={10000}
                       style={{ width: '100%' }}
-                      addonAfter="积分"
+                      addonAfter={t('pointsConfig.units.points')}
                     />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={8}>
                   <Form.Item
-                    label="被引荐注册积分"
+                    label={t('pointsConfig.registration.withReferral')}
                     name={['registration', 'withReferral']}
-                    rules={[{ required: true, message: '请输入积分值' }]}
+                    rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
                     <InputNumber
                       min={0}
                       max={10000}
                       style={{ width: '100%' }}
-                      addonAfter="积分"
+                      addonAfter={t('pointsConfig.units.points')}
                     />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={8}>
                   <Form.Item
-                    label="引荐人奖励积分"
+                    label={t('pointsConfig.registration.referrerReward')}
                     name={['registration', 'referrerReward']}
-                    rules={[{ required: true, message: '请输入积分值' }]}
+                    rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
                     <InputNumber
                       min={0}
                       max={10000}
                       style={{ width: '100%' }}
-                      addonAfter="积分"
+                      addonAfter={t('pointsConfig.units.points')}
                     />
                   </Form.Item>
                 </Col>
@@ -138,27 +140,27 @@ const PointsConfigPage: React.FC = () => {
             </Card>
 
             {/* 购买相关积分 */}
-            <Card type="inner" title="购买相关积分" style={{ marginBottom: 16 }}>
+            <Card type="inner" title={t('pointsConfig.purchase.title')} style={{ marginBottom: 16 }}>
               <Row gutter={16}>
                 <Col xs={24} sm={8}>
                   <Form.Item
-                    label="首次购买奖励"
+                    label={t('pointsConfig.purchase.firstOrder')}
                     name={['purchase', 'firstOrder']}
-                    rules={[{ required: true, message: '请输入积分值' }]}
+                    rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
                     <InputNumber
                       min={0}
                       max={10000}
                       style={{ width: '100%' }}
-                      addonAfter="积分"
+                      addonAfter={t('pointsConfig.units.points')}
                     />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={8}>
                   <Form.Item
-                    label="每消费1马币积分"
+                    label={t('pointsConfig.purchase.perRinggit')}
                     name={['purchase', 'perRinggit']}
-                    rules={[{ required: true, message: '请输入积分值' }]}
+                    rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
                     <InputNumber
                       min={0}
@@ -166,21 +168,21 @@ const PointsConfigPage: React.FC = () => {
                       step={0.1}
                       precision={1}
                       style={{ width: '100%' }}
-                      addonAfter="积分/RM"
+                      addonAfter={t('pointsConfig.units.pointsPerRM')}
                     />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={8}>
                   <Form.Item
-                    label="被引荐人首购，引荐人奖励"
+                    label={t('pointsConfig.purchase.referrerFirstOrder')}
                     name={['purchase', 'referrerFirstOrder']}
-                    rules={[{ required: true, message: '请输入积分值' }]}
+                    rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
                     <InputNumber
                       min={0}
                       max={10000}
                       style={{ width: '100%' }}
-                      addonAfter="积分"
+                      addonAfter={t('pointsConfig.units.points')}
                     />
                   </Form.Item>
                 </Col>
@@ -188,47 +190,47 @@ const PointsConfigPage: React.FC = () => {
             </Card>
 
             {/* 活动相关积分 */}
-            <Card type="inner" title="活动相关积分" style={{ marginBottom: 16 }}>
+            <Card type="inner" title={t('pointsConfig.event.title')} style={{ marginBottom: 16 }}>
               <Row gutter={16}>
                 <Col xs={24} sm={8}>
                   <Form.Item
-                    label="活动报名积分"
+                    label={t('pointsConfig.event.registration')}
                     name={['event', 'registration']}
-                    rules={[{ required: true, message: '请输入积分值' }]}
+                    rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
                     <InputNumber
                       min={0}
                       max={1000}
                       style={{ width: '100%' }}
-                      addonAfter="积分"
+                      addonAfter={t('pointsConfig.units.points')}
                     />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={8}>
                   <Form.Item
-                    label="活动签到积分"
+                    label={t('pointsConfig.event.checkIn')}
                     name={['event', 'checkIn']}
-                    rules={[{ required: true, message: '请输入积分值' }]}
+                    rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
                     <InputNumber
                       min={0}
                       max={1000}
                       style={{ width: '100%' }}
-                      addonAfter="积分"
+                      addonAfter={t('pointsConfig.units.points')}
                     />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={8}>
                   <Form.Item
-                    label="完成活动积分"
+                    label={t('pointsConfig.event.completion')}
                     name={['event', 'completion']}
-                    rules={[{ required: true, message: '请输入积分值' }]}
+                    rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
                     <InputNumber
                       min={0}
                       max={1000}
                       style={{ width: '100%' }}
-                      addonAfter="积分"
+                      addonAfter={t('pointsConfig.units.points')}
                     />
                   </Form.Item>
                 </Col>
@@ -236,47 +238,47 @@ const PointsConfigPage: React.FC = () => {
             </Card>
 
             {/* 其他积分 */}
-            <Card type="inner" title="其他积分" style={{ marginBottom: 16 }}>
+            <Card type="inner" title={t('pointsConfig.other.title')} style={{ marginBottom: 16 }}>
               <Row gutter={16}>
                 <Col xs={24} sm={8}>
                   <Form.Item
-                    label="完善资料积分"
+                    label={t('pointsConfig.other.profileComplete')}
                     name={['other', 'profileComplete']}
-                    rules={[{ required: true, message: '请输入积分值' }]}
+                    rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
                     <InputNumber
                       min={0}
                       max={1000}
                       style={{ width: '100%' }}
-                      addonAfter="积分"
+                      addonAfter={t('pointsConfig.units.points')}
                     />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={8}>
                   <Form.Item
-                    label="首次登录积分"
+                    label={t('pointsConfig.other.firstLogin')}
                     name={['other', 'firstLogin']}
-                    rules={[{ required: true, message: '请输入积分值' }]}
+                    rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
                     <InputNumber
                       min={0}
                       max={1000}
                       style={{ width: '100%' }}
-                      addonAfter="积分"
+                      addonAfter={t('pointsConfig.units.points')}
                     />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={8}>
                   <Form.Item
-                    label="每日签到积分"
+                    label={t('pointsConfig.other.dailyCheckIn')}
                     name={['other', 'dailyCheckIn']}
-                    rules={[{ required: true, message: '请输入积分值' }]}
+                    rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
                     <InputNumber
                       min={0}
                       max={1000}
                       style={{ width: '100%' }}
-                      addonAfter="积分"
+                      addonAfter={t('pointsConfig.units.points')}
                     />
                   </Form.Item>
                 </Col>
@@ -291,7 +293,7 @@ const PointsConfigPage: React.FC = () => {
                   onClick={resetToDefault}
                   disabled={saving}
                 >
-                  重置为默认值
+                  {t('pointsConfig.actions.resetToDefault')}
                 </Button>
                 <Button
                   type="primary"
@@ -299,7 +301,7 @@ const PointsConfigPage: React.FC = () => {
                   htmlType="submit"
                   loading={saving}
                 >
-                  保存配置
+                  {t('pointsConfig.actions.saveConfig')}
                 </Button>
               </Space>
             </div>

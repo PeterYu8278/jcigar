@@ -345,7 +345,7 @@ const Profile: React.FC = () => {
                     <CalendarOutlined spin />
                   </div>
                   <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                    加载中...
+                    {t('common.loading')}
                   </Text>
                 </Space>
               </div>
@@ -450,22 +450,22 @@ const Profile: React.FC = () => {
                             style={{ margin: 0, fontSize: '11px' }}
                           >
                             {
-                              event.status === 'upcoming' ? '即将开始' :
-                              event.status === 'ongoing' ? '进行中' :
-                              event.status === 'completed' ? '已结束' :
-                              '已取消'
+                              event.status === 'upcoming' ? t('profile.eventStatus.upcoming') :
+                              event.status === 'ongoing' ? t('profile.eventStatus.ongoing') :
+                              event.status === 'completed' ? t('profile.eventStatus.completed') :
+                              t('profile.eventStatus.cancelled')
                             }
                           </Tag>
                           
                           {/* 参与状态标签 */}
                           {isCheckedIn && (
                             <Tag color="success" style={{ margin: 0, fontSize: '11px' }}>
-                              已签到
+                              {t('profile.participationStatus.checkedIn')}
                             </Tag>
                           )}
                           {isRegistered && !isCheckedIn && (
                             <Tag color="warning" style={{ margin: 0, fontSize: '11px' }}>
-                              已报名
+                              {t('profile.participationStatus.registered')}
                             </Tag>
                           )}
                         </div>
@@ -488,7 +488,7 @@ const Profile: React.FC = () => {
               }}>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.6)', marginBottom: '8px' }}>
-                    我的引荐码
+                    {t('profile.myReferralCode')}
                   </div>
                   <div style={{
                     fontSize: '28px',
@@ -498,7 +498,7 @@ const Profile: React.FC = () => {
                     marginBottom: '12px',
                     fontFamily: 'monospace'
                   }}>
-                    {user?.memberId || '未生成'}
+                    {user?.memberId || t('profile.notGenerated')}
                   </div>
                   <Space size="small">
                     <Button 
@@ -506,28 +506,28 @@ const Profile: React.FC = () => {
                       onClick={() => {
                         if (user?.memberId) {
                           navigator.clipboard.writeText(user.memberId);
-                          message.success('引荐码已复制');
+                          message.success(t('profile.referralCodeCopied'));
                         }
                       }}
                     >
-                      复制引荐码
+                      {t('profile.copyReferralCode')}
                     </Button>
                     <Button 
                       size="small"
                       type="primary"
                       onClick={() => {
                         if (user?.memberId) {
-                          const shareText = `加入 Gentleman Club，使用我的引荐码：${user.memberId}，注册可获得额外积分！`;
+                          const shareText = t('profile.shareText', { code: user.memberId });
                           if (navigator.share) {
                             navigator.share({ text: shareText });
                           } else {
                             navigator.clipboard.writeText(shareText);
-                            message.success('邀请文字已复制');
+                            message.success(t('profile.inviteTextCopied'));
                           }
                         }
                       }}
                     >
-                      分享邀请
+                      {t('profile.shareInvitation')}
                     </Button>
                   </Space>
                   
@@ -539,7 +539,7 @@ const Profile: React.FC = () => {
                     fontSize: '12px',
                     color: '#52c41a'
                   }}>
-                    💰 每成功引荐1人注册获得 200 积分
+                    {t('profile.referralReward')}
                   </div>
                 </div>
               </Card>
@@ -558,7 +558,7 @@ const Profile: React.FC = () => {
                       {user?.referral?.totalReferred || 0}
                     </div>
                     <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
-                      累计引荐
+                      {t('profile.totalReferred')}
                     </div>
                   </div>
                 </Col>
@@ -574,7 +574,7 @@ const Profile: React.FC = () => {
                       {user?.membership?.referralPoints || 0}
                     </div>
                     <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
-                      引荐积分
+                      {t('profile.referralPoints')}
                     </div>
                   </div>
                 </Col>
@@ -598,7 +598,7 @@ const Profile: React.FC = () => {
                     {t('usersAdmin.noReferralRecords')}
                   </p>
                   <p style={{ margin: '8px 0 0 0', fontSize: '12px' }}>
-                    分享您的引荐码给好友，邀请他们加入获得奖励
+                    {t('profile.shareWithFriends')}
                   </p>
                 </div>
               ) : (
@@ -638,13 +638,13 @@ const Profile: React.FC = () => {
                         {/* 用户信息 */}
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: '16px', fontWeight: '600', color: '#fff' }}>
-                            {referred.displayName || '未知用户'}
+                            {referred.displayName || t('profile.unknownUser')}
                           </div>
                           <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '2px' }}>
-                            {joinDate.toLocaleDateString('zh-CN')} 加入
+                            {joinDate.toLocaleDateString('zh-CN')} {t('profile.joined')}
                           </div>
                           <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>
-                            会员编号: {referred.memberId || '-'}
+                            {t('profile.memberNumber')}: {referred.memberId || '-'}
                           </div>
                         </div>
                         
@@ -689,7 +689,7 @@ const Profile: React.FC = () => {
             try {
               const currentUser = auth.currentUser;
               if (!currentUser) {
-                message.error('用户未登录，请重新登录');
+                message.error(t('profile.notLoggedIn'));
                 return;
               }
 
@@ -697,7 +697,7 @@ const Profile: React.FC = () => {
               let needsReauth = false;
               if (values.email !== user.email || values.newPassword) {
                 if (!values.currentPassword) {
-                  message.error('更新邮箱或密码需要输入当前密码进行验证');
+                  message.error(t('profile.authRequiredForEmailPassword'));
                   setSaving(false);
                   return;
                 }
@@ -710,7 +710,7 @@ const Profile: React.FC = () => {
                   const credential = EmailAuthProvider.credential(user.email, values.currentPassword);
                   await reauthenticateWithCredential(currentUser, credential);
                 } catch (error: any) {
-                  message.error('当前密码验证失败，请检查密码是否正确');
+                  message.error(t('profile.currentPasswordWrong'));
                   setSaving(false);
                   return;
                 }
@@ -721,7 +721,7 @@ const Profile: React.FC = () => {
                 try {
                   await updateEmail(currentUser, values.email);
                 } catch (error: any) {
-                  message.error('邮箱更新失败：' + (error.message || '未知错误'));
+                  message.error(t('profile.emailUpdateFailed') + ': ' + (error.message || ''));
                   setSaving(false);
                   return;
                 }
@@ -731,9 +731,9 @@ const Profile: React.FC = () => {
               if (values.newPassword) {
                 try {
                   await updatePassword(currentUser, values.newPassword);
-                  message.success('密码已更新');
+                  message.success(t('profile.passwordUpdated'));
                 } catch (error: any) {
-                  message.error('密码更新失败：' + (error.message || '未知错误'));
+                  message.error(t('profile.passwordUpdateFailed') + ': ' + (error.message || ''));
                   setSaving(false);
                   return;
                 }
@@ -744,7 +744,7 @@ const Profile: React.FC = () => {
               if (values.phone) {
                 const normalized = normalizePhoneNumber(values.phone);
                 if (!normalized) {
-                  message.error('手机号格式无效');
+                  message.error(t('profile.phoneInvalidFormat'));
                   setSaving(false);
                   return;
                 }
@@ -777,7 +777,7 @@ const Profile: React.FC = () => {
                 message.error(t('profile.saveFailed'))
               }
             } catch (error) {
-              message.error('更新失败，请重试');
+              message.error(t('profile.updateFailed'));
             } finally {
               setSaving(false)
             }
@@ -824,35 +824,35 @@ const Profile: React.FC = () => {
               borderTop: '1px solid rgba(255, 215, 0, 0.2)' 
             }}>
               <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
-                如需更新邮箱或密码，请先输入当前密码验证身份
+                {t('profile.authRequired')}
               </Text>
             </div>
           </Form.Item>
 
           <Form.Item 
-            label={<span style={{ color: '#FFFFFF' }}>当前密码</span>} 
+            label={<span style={{ color: '#FFFFFF' }}>{t('profile.currentPassword')}</span>} 
             name="currentPassword"
-            help={<span style={{ color: 'rgba(255, 255, 255, 0.4)' }}>更新邮箱或密码时需要</span>}
+            help={<span style={{ color: 'rgba(255, 255, 255, 0.4)' }}>{t('profile.currentPasswordHelp')}</span>}
           >
-            <Input.Password placeholder="输入当前密码以验证身份" />
+            <Input.Password placeholder={t('profile.currentPasswordPlaceholder')} />
           </Form.Item>
 
           <Form.Item 
-            label={<span style={{ color: '#FFFFFF' }}>新密码</span>} 
+            label={<span style={{ color: '#FFFFFF' }}>{t('profile.newPassword')}</span>} 
             name="newPassword"
             rules={[
               {
                 validator: (_, value) => {
                   if (value && value.length < 6) {
-                    return Promise.reject(new Error('密码至少6位'));
+                    return Promise.reject(new Error(t('profile.passwordMinLength')));
                   }
                   return Promise.resolve();
                 }
               }
             ]}
-            help={<span style={{ color: 'rgba(255, 255, 255, 0.4)' }}>留空则不修改密码</span>}
+            help={<span style={{ color: 'rgba(255, 255, 255, 0.4)' }}>{t('profile.newPasswordHelp')}</span>}
           >
-            <Input.Password placeholder="设置新密码（至少6位，留空不修改）" />
+            <Input.Password placeholder={t('profile.newPasswordPlaceholder')} />
           </Form.Item>
 
           <Form.Item label={<span style={{ color: '#FFFFFF' }}>{t('profile.notificationsToggle')}</span>} name="notifications" valuePropName="checked">

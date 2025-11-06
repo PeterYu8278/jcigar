@@ -113,6 +113,7 @@ export interface Event {
   };
   participants: {
     registered: string[]; // user IDs
+    checkedIn?: string[]; // 已签到的 user IDs
     maxParticipants: number;
     fee: number;
   };
@@ -121,7 +122,8 @@ export interface Event {
     tasting: string[]; // cigar IDs
   };
   image?: string; // 活动图片URL
-  status: 'draft' | 'published' | 'ongoing' | 'completed' | 'cancelled';
+  coverImage?: string; // 活动封面图片URL（别名）
+  status: 'draft' | 'published' | 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
   isPrivate?: boolean; // 是否为私人活动
   createdAt: Date;
   updatedAt: Date;
@@ -130,6 +132,7 @@ export interface Event {
 // 订单类型
 export interface Order {
   id: string;
+  orderNo?: string; // 订单编号
   userId: string;
   items: {
     cigarId: string;

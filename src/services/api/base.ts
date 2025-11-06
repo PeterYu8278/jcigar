@@ -200,13 +200,6 @@ export async function apiCall<T>(
       message.error(finalConfig.errorMessage || apiError.message)
     }
 
-    // 错误日志
-      type: apiError.type,
-      message: apiError.message,
-      details: apiError.details,
-      originalError: error
-    })
-
     return {
       success: false,
       error: apiError.message
