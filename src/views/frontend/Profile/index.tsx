@@ -17,8 +17,8 @@ import {
 const { Title, Paragraph, Text } = Typography
 
 import { useAuthStore } from '../../../store/modules/auth'
-import { updateDocument, getEventsByUser, getUsers, getOrdersByUser } from '../../../services/firebase/firestore'
-import type { User, Event, Order } from '../../../types'
+import { updateDocument, getEventsByUser, getUsers, getOrdersByUser, getCigars } from '../../../services/firebase/firestore'
+import type { User, Event, Order, Cigar } from '../../../types'
 import { useTranslation } from 'react-i18next'
 import { MemberProfileCard } from '../../../components/common/MemberProfileCard'
 import { getModalThemeStyles, getModalWidth } from '../../../config/modalTheme'
@@ -59,14 +59,30 @@ const Profile: React.FC = () => {
     loadUserEvents()
   }, [user?.id])
 
-  // 加载用户订单
+  // 加载用户订单并填充雪茄名称
   React.useEffect(() => {
     const loadUserOrders = async () => {
       if (!user?.id) return
       setLoadingOrders(true)
       try {
-        const orders = await getOrdersByUser(user.id)
-        setUserOrders(orders)
+        const [orders, cigars] = await Promise.all([
+          getOrdersByUser(user.id),
+          getCigars()
+        ])
+        
+        // 创建雪茄ID到名称的映射
+        const cigarMap = new Map(cigars.map(c => [c.id, c.name]))
+        
+        // 为每个订单项填充雪茄名称
+        const ordersWithNames = orders.map(order => ({
+          ...order,
+          items: order.items.map(item => ({
+            ...item,
+            name: item.name || cigarMap.get(item.cigarId) || item.cigarId
+          }))
+        }))
+        
+        setUserOrders(ordersWithNames)
       } catch (error) {
       } finally {
         setLoadingOrders(false)
@@ -401,21 +417,28 @@ const Profile: React.FC = () => {
                       </div>
                       
                       <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                        {order.items.map((item, index) => (
-                          <div key={index} style={{ 
-                            display: 'flex', 
-                            justifyContent: 'space-between',
-                            padding: '8px 0',
-                            borderTop: index > 0 ? '1px solid rgba(255, 255, 255, 0.05)' : 'none'
-                          }}>
-                            <Text style={{ color: 'rgba(255, 255, 255, 0.85)' }}>
-                              {item.name || item.cigarId}
-                            </Text>
-                            <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                              × {item.quantity}
-                            </Text>
-                          </div>
-                        ))}
+                        {order.items.map((item, index) => {
+                          // 处理特殊费用项
+                          const displayName = item.cigarId.startsWith('FEE:') 
+                            ? t('eventsAdmin.eventFee')
+                            : (item.name || item.cigarId)
+                          
+                          return (
+                            <div key={index} style={{ 
+                              display: 'flex', 
+                              justifyContent: 'space-between',
+                              padding: '8px 0',
+                              borderTop: index > 0 ? '1px solid rgba(255, 255, 255, 0.05)' : 'none'
+                            }}>
+                              <Text style={{ color: 'rgba(255, 255, 255, 0.85)' }}>
+                                {displayName}
+                              </Text>
+                              <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                                × {item.quantity}
+                              </Text>
+                            </div>
+                          )
+                        })}
                       </Space>
                       
                       <div style={{ 
