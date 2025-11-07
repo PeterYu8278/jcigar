@@ -492,6 +492,7 @@
     "stockNormal": "Normal",
     "stockLow": "Low Stock",
     "stockCritical": "Critical",
+    "stockNegative": "Negative Stock (Abnormal)",
     "time": "Time",
     "product": "Product",
     "type": "Type",

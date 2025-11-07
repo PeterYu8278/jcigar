@@ -138,6 +138,7 @@ const AdminInventory: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case 'negative': return 'red'
       case 'normal': return 'green'
       case 'low': return 'orange'
       case 'critical': return 'red'
@@ -147,6 +148,7 @@ const AdminInventory: React.FC = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
+      case 'negative': return t('inventory.stockNegative')
       case 'normal': return t('inventory.stockNormal')
       case 'low': return t('inventory.stockLow')
       case 'critical': return t('inventory.stockCritical')
@@ -194,8 +196,8 @@ const AdminInventory: React.FC = () => {
   const getComputedStock = (cigarId?: string) => {
     if (!cigarId) return 0
     const net = stockByCigarId.get(cigarId) ?? 0
-    // 展示时夹到 >= 0，避免出现负数库存展示
-    return Math.max(0, net)
+    // 允许显示负库存，以便管理员发现库存异常
+    return net
   }
 
   // 每个商品的总入库/总出库数量
@@ -295,10 +297,20 @@ const AdminInventory: React.FC = () => {
       title: t('inventory.stockStatus'),
       key: 'stockStatus',
       width: 150,
-      render: (_: any, record: any) => (
+      render: (_: any, record: any) => {
+        const currentStock = getComputedStock((record as any)?.id)
+        const isNegative = currentStock < 0
+        
+        return (
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-            <span>{t('inventory.currentStock')}: {getComputedStock((record as any)?.id)}</span>
+            <span style={{ 
+              color: isNegative ? '#ff4d4f' : 'inherit',
+              fontWeight: isNegative ? 'bold' : 'normal'
+            }}>
+              {isNegative && <WarningOutlined style={{ marginRight: 4 }} />}
+              {t('inventory.currentStock')}: {currentStock}
+            </span>
             <span>{t('inventory.reserved')}: {(record as any)?.inventory?.reserved ?? 0}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 12, color: '#666' }}>
@@ -310,16 +322,27 @@ const AdminInventory: React.FC = () => {
             ) })()}
           </div>
           <Progress
-            percent={getStockProgress(getComputedStock((record as any)?.id), (record as any)?.inventory?.minStock ?? 0)}
-            status={getProgressStatus(getComputedStock((record as any)?.id), (record as any)?.inventory?.minStock ?? 0)}
+            percent={getStockProgress(currentStock, (record as any)?.inventory?.minStock ?? 0)}
+            status={getProgressStatus(currentStock, (record as any)?.inventory?.minStock ?? 0)}
             size="small"
-            format={() => `${getComputedStock((record as any)?.id)}/${(((record as any)?.inventory?.minStock ?? 0) * 2)}`}
+            format={() => `${currentStock}/${(((record as any)?.inventory?.minStock ?? 0) * 2)}`}
           />
-          <Tag color={getStatusColor((getComputedStock((record as any)?.id) <= ((record as any)?.inventory?.minStock ?? 0)) ? 'critical' : (getComputedStock((record as any)?.id) <= (((record as any)?.inventory?.minStock ?? 0) * 1.5)) ? 'low' : 'normal')} style={{ marginTop: 4 }}>
-            {getStatusText((getComputedStock((record as any)?.id) <= ((record as any)?.inventory?.minStock ?? 0)) ? 'critical' : (getComputedStock((record as any)?.id) <= (((record as any)?.inventory?.minStock ?? 0) * 1.5)) ? 'low' : 'normal')}
+          <Tag color={getStatusColor(
+            currentStock < 0 ? 'negative' : 
+            currentStock <= ((record as any)?.inventory?.minStock ?? 0) ? 'critical' : 
+            currentStock <= (((record as any)?.inventory?.minStock ?? 0) * 1.5) ? 'low' : 
+            'normal'
+          )} style={{ marginTop: 4 }}>
+            {getStatusText(
+              currentStock < 0 ? 'negative' : 
+              currentStock <= ((record as any)?.inventory?.minStock ?? 0) ? 'critical' : 
+              currentStock <= (((record as any)?.inventory?.minStock ?? 0) * 1.5) ? 'low' : 
+              'normal'
+            )}
           </Tag>
         </div>
-      ),
+        )
+      },
     },
     {
       title: t('inventory.actions'),
