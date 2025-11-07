@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
-import { Space, Select, Button, Upload, message } from 'antd'
-import { CheckCircleOutlined, DownloadOutlined, UploadOutlined } from '@ant-design/icons'
+import { Space, Select, Button, Upload, message, Modal, Form, Input } from 'antd'
+import { CheckCircleOutlined, DownloadOutlined, UploadOutlined, PlusOutlined } from '@ant-design/icons'
 import type { Event, User, Cigar } from '../../types'
 import ParticipantsList from './ParticipantsList'
 import ParticipantsSummary from './ParticipantsSummary'
-import { registerForEvent, createOrdersFromEventAllocations, updateDocument, COLLECTIONS, getEvents } from '../../services/firebase/firestore'
+import { registerForEvent, createOrdersFromEventAllocations, updateDocument, COLLECTIONS, getEvents, createDocument, getUsers } from '../../services/firebase/firestore'
 import { useTranslation } from 'react-i18next'
+import { normalizePhoneNumber } from '../../utils/phoneNormalization'
 
 const { Option } = Select
 
@@ -29,6 +30,9 @@ const EventParticipantsManager: React.FC<EventParticipantsManagerProps> = ({
   const [manualAddLoading, setManualAddLoading] = useState(false)
   const [participantsLoading, setParticipantsLoading] = useState(false)
   const [allocSaving, setAllocSaving] = useState<string | null>(null)
+  const [showCreateUserModal, setShowCreateUserModal] = useState(false)
+  const [createUserLoading, setCreateUserLoading] = useState(false)
+  const [createUserForm] = Form.useForm()
 
   const handleAddParticipant = async () => {
     if (!event) return
@@ -41,16 +45,42 @@ const EventParticipantsManager: React.FC<EventParticipantsManagerProps> = ({
       if (!byId) {
         if (raw.includes('@')) {
           const match = participantsUsers.find(u => u.email?.toLowerCase() === raw.toLowerCase())
-          if (!match) { message.error(t('common.userNotFound')); return }
+          if (!match) { 
+            // 用户不存在，打开创建用户弹窗
+            setManualAddLoading(false)
+            createUserForm.setFieldsValue({ email: raw })
+            setShowCreateUserModal(true)
+            return 
+          }
           userId = match.id
         } else if (/^\+?\d[\d\s-]{5,}$/.test(raw)) {
           const match = participantsUsers.find(u => ((u as any)?.profile?.phone || '').replace(/\s|-/g,'') === raw.replace(/\s|-/g,''))
-          if (!match) { message.error(t('common.userNotFound')); return }
+          if (!match) { 
+            // 用户不存在，打开创建用户弹窗
+            setManualAddLoading(false)
+            createUserForm.setFieldsValue({ phone: raw })
+            setShowCreateUserModal(true)
+            return 
+          }
           userId = match.id
         } else {
           const matches = participantsUsers.filter(u => (u.displayName || '').toLowerCase().includes(raw.toLowerCase()))
           if (matches.length === 1) userId = matches[0].id
-          else { message.info(t('common.pleaseSelectUniqueUser')); return }
+          else { 
+            // 名字搜索不到或有多个匹配，询问是否创建新用户
+            setManualAddLoading(false)
+            Modal.confirm({
+              title: t('common.userNotFound'),
+              content: t('common.createNewUserWithName', { name: raw }),
+              okText: t('common.create'),
+              cancelText: t('common.cancel'),
+              onOk: () => {
+                createUserForm.setFieldsValue({ displayName: raw })
+                setShowCreateUserModal(true)
+              }
+            })
+            return 
+          }
         }
       }
       const res = await registerForEvent((event as any).id, userId)
@@ -122,6 +152,75 @@ const EventParticipantsManager: React.FC<EventParticipantsManagerProps> = ({
     const next = list.find((e: any) => e.id === (event as any).id) as any
     onEventUpdate(next)
     return false
+  }
+
+  const handleCreateUser = async () => {
+    try {
+      const values = await createUserForm.validateFields()
+      setCreateUserLoading(true)
+
+      // 标准化手机号
+      let normalizedPhone: string | undefined = undefined
+      if (values.phone) {
+        normalizedPhone = normalizePhoneNumber(values.phone)
+        if (!normalizedPhone) {
+          message.error(t('auth.phoneInvalid'))
+          return
+        }
+      }
+
+      // 创建用户
+      const userData: Partial<User> = {
+        displayName: values.displayName,
+        email: values.email,
+        role: 'member',
+        profile: { 
+          phone: normalizedPhone,
+          preferences: { language: 'zh', notifications: true } 
+        },
+        membership: { 
+          level: 'bronze', 
+          joinDate: new Date(), 
+          lastActive: new Date() 
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+
+      const res = await createDocument(COLLECTIONS.USERS, userData as any)
+      
+      if ((res as any)?.success) {
+        const newUserId = (res as any).id
+        message.success(t('usersAdmin.created'))
+        
+        // 刷新用户列表
+        const updatedUsers = await getUsers()
+        
+        // 自动将新创建的用户添加到活动参与者
+        const registerRes = await registerForEvent((event as any).id, newUserId)
+        if ((registerRes as any)?.success) {
+          message.success(t('common.participantAdded'))
+          const list = await getEvents()
+          const next = list.find((e: any) => e.id === (event as any).id) as any
+          onEventUpdate(next)
+          setManualAddValue('')
+        }
+        
+        setShowCreateUserModal(false)
+        createUserForm.resetFields()
+      } else {
+        message.error(t('usersAdmin.createFailed'))
+      }
+    } catch (error: any) {
+      console.error('Error creating user:', error)
+      if (error.errorFields) {
+        // 表单验证错误，不显示消息
+        return
+      }
+      message.error(t('usersAdmin.createFailed'))
+    } finally {
+      setCreateUserLoading(false)
+    }
   }
 
   return (
@@ -285,6 +384,59 @@ const EventParticipantsManager: React.FC<EventParticipantsManagerProps> = ({
           />
         </div>
       </div>
+
+      {/* 创建用户弹窗 */}
+      <Modal
+        title={
+          <Space>
+            <PlusOutlined />
+            {t('usersAdmin.addUser')}
+          </Space>
+        }
+        open={showCreateUserModal}
+        onCancel={() => {
+          setShowCreateUserModal(false)
+          createUserForm.resetFields()
+        }}
+        onOk={handleCreateUser}
+        confirmLoading={createUserLoading}
+        okText={t('common.createAndAdd')}
+        cancelText={t('common.cancel')}
+        width={480}
+      >
+        <Form
+          form={createUserForm}
+          layout="vertical"
+          style={{ marginTop: '24px' }}
+        >
+          <Form.Item
+            name="displayName"
+            label={t('common.name')}
+            rules={[{ required: true, message: t('profile.nameRequired') }]}
+          >
+            <Input placeholder={t('auth.name')} />
+          </Form.Item>
+
+          <Form.Item
+            name="email"
+            label={t('auth.email')}
+            rules={[
+              { required: true, message: t('auth.emailRequired') },
+              { type: 'email', message: t('auth.emailInvalid') }
+            ]}
+          >
+            <Input placeholder={t('auth.email')} />
+          </Form.Item>
+
+          <Form.Item
+            name="phone"
+            label={t('auth.phone')}
+            rules={[{ required: true, message: t('profile.phoneRequired') }]}
+          >
+            <Input placeholder={t('auth.phone')} />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   )
 }

@@ -985,7 +985,7 @@ const AdminUsers: React.FC = () => {
             label={<span style={{ color: '#FFFFFF' }}>{t('auth.email')}</span>}
             name="email"
             rules={[
-              { required: true, message: t('auth.emailRequired') },
+              { required: false, message: t('auth.emailRequired') },
               { type: 'email', message: t('auth.emailInvalid') }
             ]}
           >
