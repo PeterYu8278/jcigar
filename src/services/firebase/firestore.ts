@@ -518,8 +518,8 @@ export const createOrdersFromEventAllocations = async (eventId: string): Promise
           if (isNewOrder) {
             for (const it of orderItems) {
               // 仅对真实存在的雪茄生成库存日志（费用行不会匹配到实体雪茄）
-              const cigarExists = await getCigarById(it.cigarId)
-              if (!cigarExists) continue
+              const cigar = await getCigarById(it.cigarId)
+              if (!cigar) continue
               const ref = orderId
               // 去重：如果同一订单、同一雪茄的出库记录已存在，则跳过
               const dupQ = query(
@@ -532,6 +532,7 @@ export const createOrdersFromEventAllocations = async (eventId: string): Promise
               if (!dupSnap.empty) continue
               await createDocument(COLLECTIONS.INVENTORY_LOGS, {
                 cigarId: it.cigarId,
+                cigarName: cigar.name,
                 type: 'out',
                 quantity: it.quantity,
                 reason: String((event as any)?.title || '活动订单出库'),
@@ -632,8 +633,8 @@ export const createDirectSaleOrder = async (params: { userId: string; items: { c
     // 如果订单创建成功，创建对应的出库记录
     if (result.success) {
       for (const item of itemsDetailed) {
-        const exists = await getCigarById(item.cigarId)
-        if (!exists) continue
+        const cigar = await getCigarById(item.cigarId)
+        if (!cigar) continue
         const ref = result.id
         // 去重：如果同一订单、同一雪茄的出库记录已存在，则跳过
         const dupQ = query(
@@ -646,6 +647,7 @@ export const createDirectSaleOrder = async (params: { userId: string; items: { c
         if (!dupSnap.empty) continue
         await createDocument(COLLECTIONS.INVENTORY_LOGS, {
           cigarId: item.cigarId,
+          cigarName: cigar.name,
           type: 'out',
           quantity: item.quantity,
           reason: '直接销售出库',

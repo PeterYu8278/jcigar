@@ -377,7 +377,15 @@ const AdminInventory: React.FC = () => {
 
   const logColumns = [
     { title: t('inventory.time'), dataIndex: 'createdAt', key: 'createdAt', render: (v: any) => formatYMD(toDateSafe(v)) },
-    { title: t('inventory.product'), dataIndex: 'cigarId', key: 'cigarId', render: (id: string) => items.find(i => i.id === id)?.name || id },
+    { 
+      title: t('inventory.product'), 
+      dataIndex: 'cigarId', 
+      key: 'cigarId', 
+      render: (id: string, record: any) => {
+        // 优先使用保存的雪茄名称，避免雪茄被删除后无法显示
+        return record.cigarName || items.find(i => i.id === id)?.name || id
+      }
+    },
     { title: t('inventory.type'), dataIndex: 'type', key: 'type', render: (type: string) => type === 'in' ? t('inventory.stockIn') : t('inventory.stockOut') },
     { title: t('inventory.quantity'), dataIndex: 'quantity', key: 'quantity' },
     { 
@@ -1409,6 +1417,7 @@ const AdminInventory: React.FC = () => {
                     const qty = Math.max(1, Math.floor(line.quantity || 1))
                     await createDocument(COLLECTIONS.INVENTORY_LOGS, {
                       cigarId: target.id,
+                      cigarName: target.name,
                       type: 'in',
                       quantity: qty,
                       reason: values.reason || t('inventory.inStock'),
@@ -1615,6 +1624,7 @@ const AdminInventory: React.FC = () => {
                       const qty = Math.max(1, Math.floor(line.quantity || 1))
                       await createDocument(COLLECTIONS.INVENTORY_LOGS, {
                         cigarId: target.id,
+                        cigarName: target.name,
                         type: 'out',
                         quantity: qty,
                         reason: values.reason || t('inventory.outStock'),
@@ -1998,6 +2008,7 @@ const AdminInventory: React.FC = () => {
           try {
             await createDocument<InventoryLog>(COLLECTIONS.INVENTORY_LOGS, {
               cigarId: (target as any).id,
+              cigarName: (target as any).name,
               type: adjustingIn ? 'in' : 'out',
               quantity: Math.abs(delta),
               reason: values.reason || (adjustingIn ? t('inventory.inStock') : t('inventory.outStock')),
