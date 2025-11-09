@@ -1,7 +1,7 @@
 // 库存管理页面
 import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Table, Button, Tag, Space, Typography, Input, Select, Progress, Modal, Form, InputNumber, message, Dropdown, Checkbox, Card, Upload } from 'antd'
+import { Table, Button, Tag, Space, Typography, Input, Select, Progress, Modal, Form, InputNumber, message, Dropdown, Checkbox, Card, Upload, Row, Col } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, WarningOutlined, UploadOutlined, DownloadOutlined, MinusCircleOutlined, FilePdfOutlined, FileImageOutlined, EyeOutlined } from '@ant-design/icons'
 import type { Cigar, InventoryLog, Brand, InboundOrder, OutboundOrder, InventoryMovement } from '../../../types'
 import type { UploadFile } from 'antd'
@@ -38,7 +38,7 @@ const AdminInventory: React.FC = () => {
   const [inboundOrders, setInboundOrders] = useState<InboundOrder[]>([])
   const [outboundOrders, setOutboundOrders] = useState<OutboundOrder[]>([])
   const [inventoryMovements, setInventoryMovements] = useState<InventoryMovement[]>([])
-  const [useNewArchitecture, setUseNewArchitecture] = useState(false) // 控制是否使用新架构
+  const [useNewArchitecture, setUseNewArchitecture] = useState(true) // 控制是否使用新架构（已启用）
   const [viewingReference, setViewingReference] = useState<string | null>(null)
   const [viewingProductLogs, setViewingProductLogs] = useState<string | null>(null)
   const [imageList, setImageList] = useState<any[]>([])
@@ -52,6 +52,8 @@ const AdminInventory: React.FC = () => {
   const [inLogsExpandedKeys, setInLogsExpandedKeys] = useState<React.Key[]>([])
   const [editingInLog, setEditingInLog] = useState<any>(null)
   const [inLogEditForm] = Form.useForm()
+  const [editingOrder, setEditingOrder] = useState<InboundOrder | null>(null)
+  const [orderEditForm] = Form.useForm()
   const [inSearchKeyword, setInSearchKeyword] = useState('')
   const [inBrandFilter, setInBrandFilter] = useState<string | undefined>()
   const [outSearchKeyword, setOutSearchKeyword] = useState('')
@@ -138,8 +140,8 @@ const AdminInventory: React.FC = () => {
           // 使用旧架构
           console.log('⚠️ [Inventory] Using legacy architecture (inventory_logs)')
           setUseNewArchitecture(false)
-          const logs = await getAllInventoryLogs()
-          setInventoryLogs(logs)
+        const logs = await getAllInventoryLogs()
+        setInventoryLogs(logs)
         }
         
         const [os, us, bs, txs] = await Promise.all([getAllOrders(), getUsers(), getBrands(), getAllTransactions()])
@@ -225,7 +227,7 @@ const AdminInventory: React.FC = () => {
     const map = new Map<string, number>()
     
     if (useNewArchitecture) {
-      // 新架构：使用 inventory_movements
+      // 新架构：使用 inventory_movements，但需过滤掉 cancelled 订单
       for (const movement of inventoryMovements) {
         const id = movement.cigarId
         if (!id) continue
@@ -234,39 +236,49 @@ const AdminInventory: React.FC = () => {
         const itemType = movement.itemType
         if (itemType && itemType !== 'cigar') continue
         
+        // ✅ 过滤掉已取消订单的库存变动
+        if (movement.inboundOrderId) {
+          const order = inboundOrders.find(o => o.id === movement.inboundOrderId)
+          if (order && order.status === 'cancelled') continue  // 跳过已取消订单
+        }
+        if (movement.outboundOrderId) {
+          const order = outboundOrders.find(o => o.id === movement.outboundOrderId)
+          if (order && order.status === 'cancelled') continue  // 跳过已取消订单
+        }
+        
         const type = movement.type
-        const qty = Number.isFinite(movement.quantity) ? Math.max(0, Math.floor(movement.quantity)) : 0
+        const qty = Number.isFinite(movement.quantity) ? Math.floor(movement.quantity) : 0  // ✅ 支持负数（退货）
         const prev = map.get(id) ?? 0
         if (type === 'in') {
-          map.set(id, prev + qty)
+          map.set(id, prev + qty)  // qty 可以是负数（退货）
         } else if (type === 'out') {
           map.set(id, prev - qty)
         }
       }
     } else {
       // 旧架构：使用 inventory_logs
-      for (const log of inventoryLogs) {
-        const id = (log as any)?.cigarId
-        if (!id) continue
+    for (const log of inventoryLogs) {
+      const id = (log as any)?.cigarId
+      if (!id) continue
         
         // 只统计雪茄产品（itemType === 'cigar' 或未指定itemType的历史记录）
         const itemType = (log as any)?.itemType
         if (itemType && itemType !== 'cigar') continue
         
-        const type = (log as any)?.type
-        const qtyRaw = (log as any)?.quantity ?? 0
-        const qty = Number.isFinite(qtyRaw) ? Math.max(0, Math.floor(qtyRaw)) : 0
-        const prev = map.get(id) ?? 0
-        if (type === 'in') {
-          map.set(id, prev + qty)
-        } else if (type === 'out') {
-          map.set(id, prev - qty)
-        }
+      const type = (log as any)?.type
+      const qtyRaw = (log as any)?.quantity ?? 0
+      const qty = Number.isFinite(qtyRaw) ? Math.max(0, Math.floor(qtyRaw)) : 0
+      const prev = map.get(id) ?? 0
+      if (type === 'in') {
+        map.set(id, prev + qty)
+      } else if (type === 'out') {
+        map.set(id, prev - qty)
       }
+    }
     }
     
     return map
-  }, [useNewArchitecture, inventoryMovements, inventoryLogs])
+  }, [useNewArchitecture, inventoryMovements, inventoryLogs, inboundOrders, outboundOrders])
 
   const getComputedStock = (cigarId?: string) => {
     if (!cigarId) return 0
@@ -516,12 +528,25 @@ const AdminInventory: React.FC = () => {
     if (!referenceNo) return { matched: 0, total: 0, status: 'none' }
     
     // 计算该单号的总价值
-    const referenceLogs = inventoryLogs.filter((log: any) => 
-      log.referenceNo === referenceNo && log.type === 'in'
-    )
-    const totalValue = referenceLogs.reduce((sum, log: any) => {
-      return sum + (Number(log.quantity || 0) * Number((log as any).unitPrice || 0))
-    }, 0)
+    let totalValue = 0
+    
+    if (useNewArchitecture) {
+      // 新架构：从 inboundOrders 获取
+      const order = inboundOrders.find(o => o.referenceNo === referenceNo)
+      if (order) {
+        totalValue = order.totalValue || order.items.reduce((sum, item) => {
+          return sum + (Number(item.quantity || 0) * Number(item.unitPrice || 0))
+        }, 0)
+      }
+    } else {
+      // 旧架构：从 inventoryLogs 聚合
+      const referenceLogs = inventoryLogs.filter((log: any) => 
+        log.referenceNo === referenceNo && log.type === 'in'
+      )
+      totalValue = referenceLogs.reduce((sum, log: any) => {
+        return sum + (Number(log.quantity || 0) * Number((log as any).unitPrice || 0))
+      }, 0)
+    }
     
     // 查找匹配该单号的交易记录
     const matchedAmount = transactions
@@ -1280,7 +1305,7 @@ const AdminInventory: React.FC = () => {
                                 }}
                               >
                                 {t('inventory.view')}
-                              </button>
+                            </button>
                             </div>
                           </div>
                         ))}
@@ -1686,15 +1711,15 @@ const AdminInventory: React.FC = () => {
                     let totalQuantity = 0
                     let totalValue = 0
                     
-                    for (const line of lines) {
+                  for (const line of lines) {
                       const lineItemType = line.itemType || 'cigar'
                       const qty = Math.max(1, Math.floor(line.quantity || 1))
                       let cigarId = ''
                       let cigarName = ''
                       
                       if (lineItemType === 'cigar') {
-                        const target = items.find(i => i.id === line.cigarId) as any
-                        if (!target) continue
+                    const target = items.find(i => i.id === line.cigarId) as any
+                    if (!target) continue
                         cigarId = target.id
                         cigarName = target.name
                       } else {
@@ -1710,21 +1735,25 @@ const AdminInventory: React.FC = () => {
                         cigarName = line.customName.trim()
                       }
                       
-                      const unitPrice = line.unitPrice != null ? Number(line.unitPrice) : undefined
-                      const subtotal = unitPrice ? unitPrice * qty : undefined
-                      
-                      orderItems.push({
+                      const orderItem: any = {
                         cigarId,
                         cigarName,
                         itemType: lineItemType as any,
-                        quantity: qty,
-                        unitPrice,
-                        subtotal
-                      })
+                        quantity: qty
+                      }
+                      
+                      // 只在有值时添加 unitPrice 和 subtotal
+                      if (line.unitPrice != null) {
+                        const unitPrice = Number(line.unitPrice)
+                        orderItem.unitPrice = unitPrice
+                        orderItem.subtotal = unitPrice * qty
+                      }
+                      
+                      orderItems.push(orderItem)
                       
                       totalQuantity += qty
-                      if (subtotal) {
-                        totalValue += subtotal
+                      if (orderItem.subtotal) {
+                        totalValue += orderItem.subtotal
                       }
                     }
                     
@@ -1759,24 +1788,24 @@ const AdminInventory: React.FC = () => {
                     
                     for (const line of lines) {
                       const lineItemType = line.itemType || 'cigar'
-                      const qty = Math.max(1, Math.floor(line.quantity || 1))
+                    const qty = Math.max(1, Math.floor(line.quantity || 1))
                       
                       if (lineItemType === 'cigar') {
                         const target = items.find(i => i.id === line.cigarId) as any
                         if (!target) continue
-                        await createDocument(COLLECTIONS.INVENTORY_LOGS, {
-                          cigarId: target.id,
+                    await createDocument(COLLECTIONS.INVENTORY_LOGS, {
+                      cigarId: target.id,
                           cigarName: target.name,
                           itemType: 'cigar',
-                          type: 'in',
-                          quantity: qty,
-                          reason: values.reason || t('inventory.inStock'),
-                          referenceNo: values.referenceNo,
-                          unitPrice: (line.unitPrice != null ? Number(line.unitPrice) : undefined),
+                      type: 'in',
+                      quantity: qty,
+                      reason: values.reason || t('inventory.inStock'),
+                      referenceNo: values.referenceNo,
+                      unitPrice: (line.unitPrice != null ? Number(line.unitPrice) : undefined),
                           attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
-                          operatorId: 'system',
-                          createdAt: new Date(),
-                        } as any)
+                      operatorId: 'system',
+                      createdAt: new Date(),
+                    } as any)
                       } else {
                         if (!line.customName || !line.customName.trim()) continue
                         const prefixMap: { [key: string]: string } = {
@@ -1804,11 +1833,11 @@ const AdminInventory: React.FC = () => {
                       }
                     }
                     
-                    message.success(t('inventory.inStockSuccess'))
-                    inForm.resetFields()
-                    setItems(await getCigars())
-                    setInventoryLogs(await getAllInventoryLogs())
-                    setInModalOpen(false)
+                  message.success(t('inventory.inStockSuccess'))
+                  inForm.resetFields()
+                  setItems(await getCigars())
+                  setInventoryLogs(await getAllInventoryLogs())
+                  setInModalOpen(false)
                     setAttachmentFileList([])
                     setUploadedAttachments([])
                   }
@@ -2153,55 +2182,8 @@ const AdminInventory: React.FC = () => {
                               )
                             }
                           },
-                          {
-                            title: t('inventory.actions'),
-                            key: 'actions',
-                            width: 100,
-                            render: (_: any, rec: any) => (
-                              <Space size="small">
-                                <Button 
-                                  type="link" 
-                                  icon={<EditOutlined />} 
-                                  size="small"
-                                  onClick={() => {
-                                    setEditingInLog(rec)
-                                    inLogEditForm.setFieldsValue({
-                                      quantity: rec.quantity,
-                                      unitPrice: rec.unitPrice || undefined,
-                                      reason: rec.reason
-                                    })
-                                  }}
-                                />
-                                <Button 
-                                  type="link" 
-                                  icon={<DeleteOutlined />} 
-                                  size="small"
-                                  danger
-                                  onClick={() => {
-                                    Modal.confirm({
-                                      title: t('inventory.deleteInLog'),
-                                      content: t('inventory.deleteInLogConfirm'),
-                                      okText: t('common.confirm'),
-                                      cancelText: t('common.cancel'),
-                                      okType: 'danger',
-                                      onOk: async () => {
-                                        setLoading(true)
-                                        try {
-                                          await deleteDocument(COLLECTIONS.INVENTORY_LOGS, rec.id)
-                                          message.success(t('inventory.deleteSuccess'))
-                                          setInventoryLogs(await getAllInventoryLogs())
-                                        } catch (error) {
-                                          message.error(t('common.deleteFailed'))
-                                        } finally {
-                                          setLoading(false)
-                                        }
-                                      }
-                                    })
-                                  }}
-                                />
-                              </Space>
-                            )
-                          }
+                          // ✅ 新架构：移除产品级别的编辑/删除（订单应不可变）
+                          // 如需修改，请使用"取消订单"或"创建反向订单"
                         ]}
                       />
                     ),
@@ -2287,6 +2269,26 @@ const AdminInventory: React.FC = () => {
                       render: (reason: string) => reason || '-'
                     },
                     {
+                      title: t('common.status'),
+                      key: 'orderStatus',
+                      width: 100,
+                      render: (_: any, group: any) => {
+                        if (!useNewArchitecture) return null
+                        
+                        const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                        if (!order) return null
+                        
+                        if (order.status === 'completed') {
+                          return <Tag color="success">✓ {t('common.completed')}</Tag>
+                        } else if (order.status === 'cancelled') {
+                          return <Tag color="error">✕ {t('common.cancelled')}</Tag>
+                        } else if (order.status === 'pending') {
+                          return <Tag color="warning">⏳ {t('common.pending')}</Tag>
+                        }
+                        return null
+                      }
+                    },
+                    {
                       title: t('inventory.paymentStatus'),
                       key: 'paymentStatus',
                       width: 120,
@@ -2314,42 +2316,195 @@ const AdminInventory: React.FC = () => {
                     {
                       title: t('inventory.actions'),
                       key: 'actions',
-                      width: 80,
+                      width: 150,
                       render: (_: any, group: any) => (
-                        <Button 
-                          type="link" 
-                          icon={<DeleteOutlined />} 
-                          size="small"
-                          danger
-                          onClick={() => {
-                            Modal.confirm({
-                              title: t('inventory.deleteReferenceGroup'),
-                              content: t('inventory.deleteReferenceGroupConfirm', { 
-                                referenceNo: group.referenceNo, 
-                                count: group.productCount 
-                              }),
-                              okText: t('common.confirm'),
-                              cancelText: t('common.cancel'),
-                              okType: 'danger',
-                              onOk: async () => {
-                                setLoading(true)
-                                try {
-                                  await Promise.all(
-                                    group.logs.map((log: any) => 
-                                      deleteDocument(COLLECTIONS.INVENTORY_LOGS, log.id)
-                                    )
-                                  )
-                                  message.success(t('inventory.deleteSuccess'))
-                                  setInventoryLogs(await getAllInventoryLogs())
-                                } catch (error) {
-                                  message.error(t('common.deleteFailed'))
-                                } finally {
-                                  setLoading(false)
+                        <Space size="small">
+                          {/* 编辑订单 */}
+                          <Button 
+                            type="link" 
+                            icon={<EditOutlined />}
+                            size="small"
+                            onClick={() => {
+                              if (useNewArchitecture) {
+                                const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                                if (order) {
+                                  setEditingOrder(order)
+                                  orderEditForm.setFieldsValue({
+                                    referenceNo: order.referenceNo,
+                                    reason: order.reason,
+                                    items: order.items
+                                  })
+                                } else {
+                                  message.error('订单未找到')
                                 }
+                              } else {
+                                message.error('编辑订单功能仅支持新架构')
                               }
-                            })
-                          }}
-                        />
+                            }}
+                          >
+                            编辑
+                          </Button>
+                          
+                          {/* 取消订单（标记为cancelled，不删除） */}
+                          <Button 
+                            type="link" 
+                            size="small"
+                            style={{ color: '#faad14' }}
+                            onClick={() => {
+                              Modal.confirm({
+                                title: '⚠️ 取消订单',
+                                content: (
+                                  <div>
+                                    <p>将订单 <strong>{group.referenceNo}</strong> 标记为已取消状态</p>
+                                    <p style={{ marginTop: 8, fontSize: 12, color: '#8c8c8c' }}>• 订单数据将被保留（用于审计）</p>
+                                    <p style={{ fontSize: 12, color: '#8c8c8c' }}>• 库存计算将忽略此订单</p>
+                                    <p style={{ fontSize: 12, color: '#8c8c8c' }}>• 可以通过"退货"功能创建反向订单来冲销库存</p>
+                                  </div>
+                                ),
+                                okText: '确认取消',
+                                cancelText: '返回',
+                                onOk: async () => {
+                                  setLoading(true)
+                                  try {
+                                    if (useNewArchitecture) {
+                                      const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                                      if (order) {
+                                        await updateInboundOrder(order.id, { status: 'cancelled' })
+                                        message.success('✅ 订单已取消')
+                                        setInboundOrders(await getAllInboundOrders())
+                                      } else {
+                                        message.error('订单未找到')
+                                      }
+                                    } else {
+                                      message.error('取消订单功能仅支持新架构')
+                                    }
+                                  } catch (error: any) {
+                                    message.error('操作失败: ' + error.message)
+                                  } finally {
+                                    setLoading(false)
+                                  }
+                                }
+                              })
+                            }}
+                          >
+                            ⚠️ 取消
+                          </Button>
+                          
+                          {/* 反向订单（退货/红冲） */}
+                          <Button 
+                            type="link" 
+                            size="small"
+                            style={{ color: '#ff7a45' }}
+                            onClick={() => {
+                              Modal.confirm({
+                                title: '🔄 创建反向订单',
+                                content: (
+                                  <div>
+                                    <p>将为订单 <strong>{group.referenceNo}</strong> 创建反向订单（退货）</p>
+                                    <p>• 原订单数量：<span style={{ color: '#52c41a' }}>+{group.totalQuantity}</span></p>
+                                    <p>• 反向订单数量：<span style={{ color: '#ff4d4f' }}>-{group.totalQuantity}</span></p>
+                                    <p style={{ marginTop: 12, color: '#faad14' }}>⚠️ 此操作将创建一个负数量的退货订单，用于冲销原订单的库存影响。</p>
+                                  </div>
+                                ),
+                                okText: '确认创建',
+                                cancelText: '取消',
+                                onOk: async () => {
+                                  setLoading(true)
+                                  try {
+                                    if (useNewArchitecture) {
+                                      const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                                      if (!order) {
+                                        message.error('原订单未找到')
+                                        return
+                                      }
+                                      
+                                      // 创建反向订单（退货）
+                                      const returnOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
+                                        referenceNo: `RETURN-${group.referenceNo}-${Date.now()}`,
+                                        type: 'return',
+                                        reason: `退货冲销: ${group.referenceNo}`,
+                                        items: order.items.map(item => ({
+                                          ...item,
+                                          quantity: -item.quantity  // ✅ 负数量
+                                        })),
+                                        totalQuantity: -order.totalQuantity,  // ✅ 负总数
+                                        totalValue: -order.totalValue,
+                                        status: 'completed',
+                                        operatorId: 'system',
+                                        createdAt: new Date()
+                                      }
+                                      
+                                      await createInboundOrder(returnOrderData)
+                                      message.success('✅ 反向订单已创建')
+                                      // 刷新数据
+                                      setInboundOrders(await getAllInboundOrders())
+                                      setInventoryMovements(await getAllInventoryMovements())
+                                    } else {
+                                      message.error('反向订单功能仅支持新架构')
+                                    }
+                                  } catch (error: any) {
+                                    message.error('创建失败: ' + error.message)
+                                  } finally {
+                                    setLoading(false)
+                                  }
+                                }
+                              })
+                            }}
+                          >
+                            🔄 退货
+                          </Button>
+                          
+                          {/* 删除订单 */}
+                          <Button 
+                            type="link" 
+                            icon={<DeleteOutlined />} 
+                            size="small"
+                            danger
+                            onClick={() => {
+                              Modal.confirm({
+                                title: t('inventory.deleteReferenceGroup'),
+                                content: t('inventory.deleteReferenceGroupConfirm', { 
+                                  referenceNo: group.referenceNo, 
+                                  count: group.productCount 
+                                }),
+                                okText: t('common.confirm'),
+                                cancelText: t('common.cancel'),
+                                okType: 'danger',
+                                onOk: async () => {
+                                  setLoading(true)
+                                  try {
+                                    if (useNewArchitecture) {
+                                      // 新架构：通过 referenceNo 查找订单 ID，然后删除
+                                      const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                                      if (order) {
+                                        await deleteInboundOrder(order.id)
+                                        message.success(t('inventory.deleteSuccess'))
+                                        // 刷新数据
+                                        setInboundOrders(await getAllInboundOrders())
+                                        setInventoryMovements(await getAllInventoryMovements())
+                                      } else {
+                                        message.error('订单未找到')
+                                      }
+                                    } else {
+                                      // 旧架构：遍历删除所有 log
+                                      await Promise.all(
+                                        group.logs.map((log: any) => 
+                                          deleteDocument(COLLECTIONS.INVENTORY_LOGS, log.id)
+                                        )
+                                      )
+                                      message.success(t('inventory.deleteSuccess'))
+                                      setInventoryLogs(await getAllInventoryLogs())
+                                    }
+                                  } catch (error) {
+                                    message.error(t('common.deleteFailed'))
+                                  } finally {
+                                    setLoading(false)
+                                  }
+                                }
+                              })
+                            }}
+                          />
+                        </Space>
                       )
                     }
                   ]}
@@ -2397,8 +2552,9 @@ const AdminInventory: React.FC = () => {
                               <div style={{ 
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: 8,
-                                marginBottom: 4
+                                gap: 6,
+                                marginBottom: 4,
+                                flexWrap: 'wrap'
                               }}>
                                 <div style={{ 
                                   fontSize: 14, 
@@ -2408,6 +2564,44 @@ const AdminInventory: React.FC = () => {
                                 }}>
                                   📦 {group.referenceNo}
                                 </div>
+                                {(() => {
+                                  // 订单状态标签
+                                  if (useNewArchitecture) {
+                                    const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                                    if (order) {
+                                      if (order.status === 'cancelled') {
+                                        return (
+                                          <span style={{
+                                            padding: '2px 6px',
+                                            fontSize: 10,
+                                            fontWeight: 600,
+                                            background: 'rgba(255, 77, 79, 0.2)',
+                                            color: '#ff4d4f',
+                                            borderRadius: 4,
+                                            border: '1px solid rgba(255, 77, 79, 0.4)'
+                                          }}>
+                                            ✕ 已取消
+                                          </span>
+                                        )
+                                      } else if (order.status === 'pending') {
+                                        return (
+                                          <span style={{
+                                            padding: '2px 6px',
+                                            fontSize: 10,
+                                            fontWeight: 600,
+                                            background: 'rgba(250, 173, 20, 0.2)',
+                                            color: '#faad14',
+                                            borderRadius: 4,
+                                            border: '1px solid rgba(250, 173, 20, 0.4)'
+                                          }}>
+                                            ⏳ 待处理
+                                          </span>
+                                        )
+                                      }
+                                    }
+                                  }
+                                  return null
+                                })()}
                                 {(() => {
                                   const status = getInboundReferenceMatchStatus(group.referenceNo)
                                   if (status.status === 'fully') {
@@ -2477,52 +2671,221 @@ const AdminInventory: React.FC = () => {
                             </div>
                           </div>
                           
-                          {/* 删除整组按钮 */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              Modal.confirm({
-                                title: t('inventory.deleteReferenceGroup'),
-                                content: t('inventory.deleteReferenceGroupConfirm', { 
-                                  referenceNo: group.referenceNo, 
-                                  count: group.productCount 
-                                }),
-                                okText: t('common.confirm'),
-                                cancelText: t('common.cancel'),
-                                okType: 'danger',
-                                onOk: async () => {
-                                  setLoading(true)
-                                  try {
-                                    await Promise.all(
-                                      group.logs.map((log: any) => 
-                                        deleteDocument(COLLECTIONS.INVENTORY_LOGS, log.id)
-                                      )
-                                    )
-                                    message.success(t('inventory.deleteSuccess'))
-                                    setInventoryLogs(await getAllInventoryLogs())
-                                  } catch (error) {
-                                    message.error(t('common.deleteFailed'))
-                                  } finally {
-                                    setLoading(false)
+                          {/* 操作按钮组 */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                            {/* 编辑订单按钮 */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (useNewArchitecture) {
+                                  const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                                  if (order) {
+                                    setEditingOrder(order)
+                                    orderEditForm.setFieldsValue({
+                                      referenceNo: order.referenceNo,
+                                      reason: order.reason,
+                                      items: order.items
+                                    })
+                                  } else {
+                                    message.error('订单未找到')
                                   }
+                                } else {
+                                  message.error('编辑订单功能仅支持新架构')
                                 }
-                              })
-                            }}
-                            style={{
-                              width: 50,
-                              background: 'rgba(255, 77, 79, 0.15)',
-                              border: 'none',
-                              borderLeft: '1px solid rgba(82, 196, 26, 0.3)',
-                              color: '#ff4d4f',
-                              cursor: 'pointer',
-                              fontSize: 16,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}
-                          >
-                            🗑️
-                          </button>
+                              }}
+                              style={{
+                                padding: '3px 6px',
+                                border: '1px solid rgba(24, 144, 255, 0.5)',
+                                borderRadius: 4,
+                                background: 'rgba(24, 144, 255, 0.1)',
+                                color: '#1890ff',
+                                fontSize: 10,
+                                fontWeight: 600,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              ✏️
+                            </button>
+                            
+                            {/* 取消订单按钮 */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                Modal.confirm({
+                                  title: '⚠️ 取消订单',
+                                  content: (
+                                    <div>
+                                      <p>将订单 <strong>{group.referenceNo}</strong> 标记为已取消状态</p>
+                                      <p style={{ marginTop: 8, fontSize: 12, color: '#8c8c8c' }}>• 订单数据将被保留</p>
+                                      <p style={{ fontSize: 12, color: '#8c8c8c' }}>• 库存计算将忽略此订单</p>
+                                    </div>
+                                  ),
+                                  okText: '确认取消',
+                                  cancelText: '返回',
+                                  onOk: async () => {
+                                    setLoading(true)
+                                    try {
+                                      if (useNewArchitecture) {
+                                        const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                                        if (order) {
+                                          await updateInboundOrder(order.id, { status: 'cancelled' })
+                                          message.success('✅ 订单已取消')
+                                          setInboundOrders(await getAllInboundOrders())
+                                        } else {
+                                          message.error('订单未找到')
+                                        }
+                                      } else {
+                                        message.error('取消订单功能仅支持新架构')
+                                      }
+                                    } catch (error: any) {
+                                      message.error('操作失败: ' + error.message)
+                                    } finally {
+                                      setLoading(false)
+                                    }
+                                  }
+                                })
+                              }}
+                              style={{
+                                padding: '3px 6px',
+                                border: '1px solid rgba(250, 173, 20, 0.5)',
+                                borderRadius: 4,
+                                background: 'rgba(250, 173, 20, 0.1)',
+                                color: '#faad14',
+                                fontSize: 10,
+                                fontWeight: 600,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              ⚠️
+                            </button>
+                            
+                            {/* 退货按钮 */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                Modal.confirm({
+                                  title: '🔄 创建反向订单',
+                                  content: (
+                                    <div>
+                                      <p>将为订单 <strong>{group.referenceNo}</strong> 创建反向订单（退货）</p>
+                                      <p>• 原订单数量：<span style={{ color: '#52c41a' }}>+{group.totalQuantity}</span></p>
+                                      <p>• 反向订单数量：<span style={{ color: '#ff4d4f' }}>-{group.totalQuantity}</span></p>
+                                      <p style={{ marginTop: 12, color: '#faad14', fontSize: 12 }}>⚠️ 此操作将创建一个负数量的退货订单，用于冲销原订单的库存影响。</p>
+                                    </div>
+                                  ),
+                                  okText: '确认创建',
+                                  cancelText: '取消',
+                                  onOk: async () => {
+                                    setLoading(true)
+                                    try {
+                                      if (useNewArchitecture) {
+                                        const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                                        if (!order) {
+                                          message.error('原订单未找到')
+                                          return
+                                        }
+                                        
+                                        const returnOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
+                                          referenceNo: `RETURN-${group.referenceNo}-${Date.now()}`,
+                                          type: 'return',
+                                          reason: `退货冲销: ${group.referenceNo}`,
+                                          items: order.items.map(item => ({
+                                            ...item,
+                                            quantity: -item.quantity
+                                          })),
+                                          totalQuantity: -order.totalQuantity,
+                                          totalValue: -order.totalValue,
+                                          status: 'completed',
+                                          operatorId: 'system',
+                                          createdAt: new Date()
+                                        }
+                                        
+                                        await createInboundOrder(returnOrderData)
+                                        message.success('✅ 反向订单已创建')
+                                        setInboundOrders(await getAllInboundOrders())
+                                        setInventoryMovements(await getAllInventoryMovements())
+                                      } else {
+                                        message.error('反向订单功能仅支持新架构')
+                                      }
+                                    } catch (error: any) {
+                                      message.error('创建失败: ' + error.message)
+                                    } finally {
+                                      setLoading(false)
+                                    }
+                                  }
+                                })
+                              }}
+                              style={{
+                                padding: '6px 8px',
+                                border: '1px solid rgba(255, 122, 69, 0.5)',
+                                borderRadius: 6,
+                                background: 'rgba(255, 122, 69, 0.1)',
+                                color: '#ff7a45',
+                                fontSize: 11,
+                                fontWeight: 600,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              🔄 退货
+                            </button>
+                            
+                            {/* 删除订单按钮 */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                Modal.confirm({
+                                  title: t('inventory.deleteReferenceGroup'),
+                                  content: t('inventory.deleteReferenceGroupConfirm', { 
+                                    referenceNo: group.referenceNo, 
+                                    count: group.productCount 
+                                  }),
+                                  okText: t('common.confirm'),
+                                  cancelText: t('common.cancel'),
+                                  okType: 'danger',
+                                  onOk: async () => {
+                                    setLoading(true)
+                                    try {
+                                      if (useNewArchitecture) {
+                                        const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                                        if (order) {
+                                          await deleteInboundOrder(order.id)
+                                          message.success(t('inventory.deleteSuccess'))
+                                          setInboundOrders(await getAllInboundOrders())
+                                          setInventoryMovements(await getAllInventoryMovements())
+                                        } else {
+                                          message.error('订单未找到')
+                                        }
+                                      } else {
+                                        await Promise.all(
+                                          group.logs.map((log: any) => 
+                                            deleteDocument(COLLECTIONS.INVENTORY_LOGS, log.id)
+                                          )
+                                        )
+                                        message.success(t('inventory.deleteSuccess'))
+                                        setInventoryLogs(await getAllInventoryLogs())
+                                      }
+                                    } catch (error) {
+                                      message.error(t('common.deleteFailed'))
+                                    } finally {
+                                      setLoading(false)
+                                    }
+                                  }
+                                })
+                              }}
+                              style={{
+                                padding: '4px 6px',
+                                border: '1px solid rgba(255, 77, 79, 0.5)',
+                                borderRadius: 4,
+                                background: 'rgba(255, 77, 79, 0.1)',
+                                color: '#ff4d4f',
+                                fontSize: 10,
+                                fontWeight: 600,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              🗑️
+                            </button>
+                          </div>
                         </div>
                         
                         {/* 展开的产品列表 */}
@@ -2645,70 +3008,8 @@ const AdminInventory: React.FC = () => {
                                     </div>
                                   )}
                                   
-                                  {/* 操作按钮 */}
-                                  <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        setEditingInLog(log)
-                                        inLogEditForm.setFieldsValue({
-                                          quantity: log.quantity,
-                                          unitPrice: log.unitPrice || undefined,
-                                          reason: log.reason
-                                        })
-                                      }}
-                                      style={{
-                                        flex: 1,
-                                        padding: '4px 8px',
-                                        fontSize: 11,
-                                        background: 'rgba(255,255,255,0.1)',
-                                        border: '1px solid rgba(255,255,255,0.2)',
-                                        borderRadius: 4,
-                                        color: '#fff',
-                                        cursor: 'pointer',
-                                        fontWeight: 500
-                                      }}
-                                    >
-                                      ✏️ {t('common.edit')}
-                                    </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        Modal.confirm({
-                                          title: t('inventory.deleteInLog'),
-                                          content: t('inventory.deleteInLogConfirm'),
-                                          okText: t('common.confirm'),
-                                          cancelText: t('common.cancel'),
-                                          okType: 'danger',
-                                          onOk: async () => {
-                                            setLoading(true)
-                                            try {
-                                              await deleteDocument(COLLECTIONS.INVENTORY_LOGS, log.id)
-                                              message.success(t('inventory.deleteSuccess'))
-                                              setInventoryLogs(await getAllInventoryLogs())
-                                            } catch (error) {
-                                              message.error(t('common.deleteFailed'))
-                                            } finally {
-                                              setLoading(false)
-                                            }
-                                          }
-                                        })
-                                      }}
-                                      style={{
-                                        flex: 1,
-                                        padding: '4px 8px',
-                                        fontSize: 11,
-                                        background: 'rgba(255, 77, 79, 0.1)',
-                                        border: '1px solid rgba(255, 77, 79, 0.3)',
-                                        borderRadius: 4,
-                                        color: '#ff4d4f',
-                                        cursor: 'pointer',
-                                        fontWeight: 500
-                                      }}
-                                    >
-                                      🗑️ {t('common.delete')}
-                                    </button>
-                                  </div>
+                                  {/* ✅ 新架构：移除产品级别的编辑/删除 */}
+                                  {/* 如需修改，请使用订单级别的"退货"或"删除订单"功能 */}
                                 </div>
                               )
                             })}
@@ -3409,7 +3710,7 @@ const AdminInventory: React.FC = () => {
                     // 4. 都没有则显示 -
                     return '-';
                   }
-                },
+            },
             { 
               title: t('inventory.operator'), 
               dataIndex: 'operatorId', 
@@ -4205,6 +4506,248 @@ const AdminInventory: React.FC = () => {
           ]}
         />
         </div>
+      </Modal>
+      
+      {/* 订单编辑Modal */}
+      <Modal
+        title="📝 编辑入库订单"
+        open={!!editingOrder}
+        onCancel={() => {
+          setEditingOrder(null)
+          orderEditForm.resetFields()
+        }}
+        width={800}
+        footer={null}
+      >
+        <Form
+          form={orderEditForm}
+          layout="vertical"
+          onFinish={async (values) => {
+            if (!editingOrder) return
+            
+            setLoading(true)
+            try {
+              // 重新计算汇总
+              const items = values.items || []
+              const totalQuantity = items.reduce((sum: number, item: any) => 
+                sum + (Number(item.quantity) || 0), 0
+              )
+              const totalValue = items.reduce((sum: number, item: any) => {
+                const qty = Number(item.quantity) || 0
+                const price = Number(item.unitPrice) || 0
+                return sum + (qty * price)
+              }, 0)
+              
+              // 更新订单
+              await updateInboundOrder(editingOrder.id, {
+                referenceNo: values.referenceNo,
+                reason: values.reason,
+                items: items.map((item: any) => ({
+                  cigarId: item.cigarId,
+                  cigarName: item.cigarName,
+                  itemType: item.itemType,
+                  quantity: Number(item.quantity),
+                  ...(item.unitPrice != null && {
+                    unitPrice: Number(item.unitPrice),
+                    subtotal: Number(item.quantity) * Number(item.unitPrice)
+                  })
+                })),
+                totalQuantity,
+                totalValue
+              })
+              
+              // 同步更新 inventory_movements
+              // 先删除旧的 movements
+              const oldMovements = inventoryMovements.filter(m => 
+                m.inboundOrderId === editingOrder.id
+              )
+              for (const m of oldMovements) {
+                await deleteDocument(COLLECTIONS.INVENTORY_MOVEMENTS, m.id)
+              }
+              
+              // 创建新的 movements
+              for (const item of items) {
+                const movement = {
+                  cigarId: item.cigarId,
+                  cigarName: item.cigarName,
+                  itemType: item.itemType,
+                  type: 'in' as const,
+                  quantity: Number(item.quantity),
+                  referenceNo: values.referenceNo,
+                  orderType: 'inbound' as const,
+                  inboundOrderId: editingOrder.id,
+                  reason: values.reason,
+                  unitPrice: item.unitPrice ? Number(item.unitPrice) : undefined,
+                  createdAt: editingOrder.createdAt
+                }
+                await createDocument(COLLECTIONS.INVENTORY_MOVEMENTS, movement)
+              }
+              
+              message.success('✅ 订单已更新')
+              setEditingOrder(null)
+              orderEditForm.resetFields()
+              setInboundOrders(await getAllInboundOrders())
+              setInventoryMovements(await getAllInventoryMovements())
+            } catch (error: any) {
+              message.error('更新失败: ' + error.message)
+            } finally {
+              setLoading(false)
+            }
+          }}
+        >
+          <Form.Item
+            label="单号"
+            name="referenceNo"
+            rules={[{ required: true, message: '请输入单号' }]}
+          >
+            <Input placeholder="例如: YI-001" />
+          </Form.Item>
+          
+          <Form.Item
+            label="原因"
+            name="reason"
+          >
+            <Input placeholder="例如: 入库" />
+          </Form.Item>
+          
+          <Form.List name="items">
+            {(fields, { add, remove }) => (
+              <>
+                <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4 style={{ margin: 0 }}>产品列表</h4>
+                  <Button
+                    type="dashed"
+                    onClick={() => add()}
+                    icon={<PlusOutlined />}
+                    size="small"
+                  >
+                    添加产品
+                  </Button>
+                </div>
+                
+                {fields.map((field, index) => (
+                  <div
+                    key={field.key}
+                    style={{
+                      padding: 12,
+                      border: '1px solid #d9d9d9',
+                      borderRadius: 8,
+                      marginBottom: 12,
+                      background: '#fafafa'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <h5 style={{ margin: 0 }}>产品 {index + 1}</h5>
+                      <Button
+                        type="link"
+                        danger
+                        size="small"
+                        onClick={() => remove(field.name)}
+                      >
+                        删除
+                      </Button>
+                    </div>
+                    
+                    <Form.Item
+                      {...field}
+                      name={[field.name, 'cigarId']}
+                      label="产品"
+                      rules={[{ required: true, message: '请选择产品' }]}
+                      style={{ marginBottom: 12 }}
+                    >
+                      <Select
+                        showSearch
+                        placeholder="选择雪茄产品"
+                        optionFilterProp="children"
+                        onChange={(value) => {
+                          const cigar = items.find(c => c.id === value)
+                          if (cigar) {
+                            const currentItems = orderEditForm.getFieldValue('items') || []
+                            currentItems[index] = {
+                              ...currentItems[index],
+                              cigarId: value,
+                              cigarName: cigar.name,
+                              itemType: 'cigar'
+                            }
+                            orderEditForm.setFieldsValue({ items: currentItems })
+                          }
+                        }}
+                      >
+                        {items.map((cigar: any) => (
+                          <Select.Option key={cigar.id} value={cigar.id}>
+                            {cigar.name}
+                          </Select.Option>
+                        ))}
+                      </Select>
+                    </Form.Item>
+                    
+                    <Form.Item
+                      {...field}
+                      name={[field.name, 'cigarName']}
+                      hidden
+                    >
+                      <Input />
+                    </Form.Item>
+                    
+                    <Form.Item
+                      {...field}
+                      name={[field.name, 'itemType']}
+                      hidden
+                      initialValue="cigar"
+                    >
+                      <Input />
+                    </Form.Item>
+                    
+                    <Row gutter={12}>
+                      <Col span={12}>
+                        <Form.Item
+                          {...field}
+                          name={[field.name, 'quantity']}
+                          label="数量"
+                          rules={[{ required: true, message: '请输入数量' }]}
+                        >
+                          <InputNumber
+                            placeholder="数量"
+                            min={1}
+                            style={{ width: '100%' }}
+                          />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item
+                          {...field}
+                          name={[field.name, 'unitPrice']}
+                          label="单价 (RM)"
+                        >
+                          <InputNumber
+                            placeholder="单价"
+                            min={0}
+                            precision={2}
+                            style={{ width: '100%' }}
+                          />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  </div>
+                ))}
+              </>
+            )}
+          </Form.List>
+          
+          <Form.Item style={{ marginTop: 24, marginBottom: 0 }}>
+            <Space>
+              <Button type="primary" htmlType="submit" loading={loading}>
+                保存更改
+              </Button>
+              <Button onClick={() => {
+                setEditingOrder(null)
+                orderEditForm.resetFields()
+              }}>
+                取消
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   )
