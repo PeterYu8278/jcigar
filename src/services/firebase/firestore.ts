@@ -18,7 +18,7 @@ import {
   arrayRemove
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-import type { User, Brand, Cigar, Event, Order, Transaction, InventoryLog } from '../../types';
+import type { User, Brand, Cigar, Event, Order, Transaction, InventoryLog, InboundOrder, OutboundOrder, InventoryMovement } from '../../types';
 
 // 清洗数据：移除undefined，转换日期/时间戳，深拷贝数组和对象
 const sanitizeForFirestore = (input: any): any => {
@@ -62,7 +62,10 @@ export const COLLECTIONS = {
   EVENTS: 'events',
   ORDERS: 'orders',
   TRANSACTIONS: 'transactions',
-  INVENTORY_LOGS: 'inventory_logs',
+  INVENTORY_LOGS: 'inventory_logs',           // 旧架构（保留向后兼容）
+  INBOUND_ORDERS: 'inbound_orders',           // 新架构：入库订单
+  OUTBOUND_ORDERS: 'outbound_orders',         // 新架构：出库订单
+  INVENTORY_MOVEMENTS: 'inventory_movements', // 新架构：库存变动索引
 } as const;
 
 // 通用CRUD操作
@@ -775,5 +778,253 @@ export const subscribeToCollection = <T>(
     const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
     callback(data);
   });
+};
+
+// ============================================
+// 新架构：入库/出库订单管理
+// ============================================
+
+/**
+ * 检测是否已迁移到新架构
+ */
+export const isUsingNewArchitecture = async (): Promise<boolean> => {
+  try {
+    const movements = await getDocs(query(collection(db, COLLECTIONS.INVENTORY_MOVEMENTS), limit(1)));
+    return !movements.empty;
+  } catch (error) {
+    return false;
+  }
+};
+
+/**
+ * 获取所有入库订单
+ */
+export const getAllInboundOrders = async (): Promise<InboundOrder[]> => {
+  try {
+    const q = query(collection(db, COLLECTIONS.INBOUND_ORDERS), orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InboundOrder));
+  } catch (error) {
+    console.error('Error fetching inbound orders:', error);
+    return [];
+  }
+};
+
+/**
+ * 获取单个入库订单
+ */
+export const getInboundOrderById = async (referenceNo: string): Promise<InboundOrder | null> => {
+  try {
+    const docRef = doc(db, COLLECTIONS.INBOUND_ORDERS, referenceNo);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return { id: docSnap.id, ...docSnap.data() } as InboundOrder;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching inbound order:', error);
+    return null;
+  }
+};
+
+/**
+ * 创建入库订单（同时创建 inventory_movements）
+ */
+export const createInboundOrder = async (orderData: Omit<InboundOrder, 'id' | 'updatedAt'>): Promise<string> => {
+  try {
+    const referenceNo = orderData.referenceNo;
+    
+    // 1. 创建入库订单
+    const sanitized = sanitizeForFirestore(orderData);
+    await setDoc(doc(db, COLLECTIONS.INBOUND_ORDERS, referenceNo), {
+      ...sanitized,
+      updatedAt: new Date()
+    });
+    
+    // 2. 创建对应的 inventory_movements
+    for (const item of orderData.items) {
+      const movement = {
+        cigarId: item.cigarId,
+        cigarName: item.cigarName,
+        itemType: item.itemType,
+        type: 'in' as const,
+        quantity: item.quantity,
+        referenceNo: referenceNo,
+        orderType: 'inbound' as const,
+        reason: orderData.reason,
+        unitPrice: item.unitPrice,
+        createdAt: orderData.createdAt
+      };
+      
+      await createDocument(COLLECTIONS.INVENTORY_MOVEMENTS, movement);
+    }
+    
+    return referenceNo;
+  } catch (error) {
+    console.error('Error creating inbound order:', error);
+    throw error;
+  }
+};
+
+/**
+ * 更新入库订单
+ */
+export const updateInboundOrder = async (referenceNo: string, updates: Partial<InboundOrder>): Promise<void> => {
+  try {
+    const sanitized = sanitizeForFirestore(updates);
+    await updateDoc(doc(db, COLLECTIONS.INBOUND_ORDERS, referenceNo), {
+      ...sanitized,
+      updatedAt: new Date()
+    });
+  } catch (error) {
+    console.error('Error updating inbound order:', error);
+    throw error;
+  }
+};
+
+/**
+ * 删除入库订单（同时删除关联的 inventory_movements）
+ */
+export const deleteInboundOrder = async (referenceNo: string): Promise<void> => {
+  try {
+    // 1. 删除关联的 movements
+    const q = query(
+      collection(db, COLLECTIONS.INVENTORY_MOVEMENTS),
+      where('referenceNo', '==', referenceNo),
+      where('orderType', '==', 'inbound')
+    );
+    const snapshot = await getDocs(q);
+    await Promise.all(snapshot.docs.map(doc => deleteDoc(doc.ref)));
+    
+    // 2. 删除订单
+    await deleteDoc(doc(db, COLLECTIONS.INBOUND_ORDERS, referenceNo));
+  } catch (error) {
+    console.error('Error deleting inbound order:', error);
+    throw error;
+  }
+};
+
+/**
+ * 获取所有出库订单
+ */
+export const getAllOutboundOrders = async (): Promise<OutboundOrder[]> => {
+  try {
+    const q = query(collection(db, COLLECTIONS.OUTBOUND_ORDERS), orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as OutboundOrder));
+  } catch (error) {
+    console.error('Error fetching outbound orders:', error);
+    return [];
+  }
+};
+
+/**
+ * 获取单个出库订单
+ */
+export const getOutboundOrderById = async (referenceNo: string): Promise<OutboundOrder | null> => {
+  try {
+    const docRef = doc(db, COLLECTIONS.OUTBOUND_ORDERS, referenceNo);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return { id: docSnap.id, ...docSnap.data() } as OutboundOrder;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching outbound order:', error);
+    return null;
+  }
+};
+
+/**
+ * 创建出库订单（同时创建 inventory_movements）
+ */
+export const createOutboundOrder = async (orderData: Omit<OutboundOrder, 'id' | 'updatedAt'>): Promise<string> => {
+  try {
+    const referenceNo = orderData.referenceNo;
+    
+    // 1. 创建出库订单
+    const sanitized = sanitizeForFirestore(orderData);
+    await setDoc(doc(db, COLLECTIONS.OUTBOUND_ORDERS, referenceNo), {
+      ...sanitized,
+      updatedAt: new Date()
+    });
+    
+    // 2. 创建对应的 inventory_movements
+    for (const item of orderData.items) {
+      const movement = {
+        cigarId: item.cigarId,
+        cigarName: item.cigarName,
+        itemType: item.itemType,
+        type: 'out' as const,
+        quantity: item.quantity,
+        referenceNo: referenceNo,
+        orderType: 'outbound' as const,
+        reason: orderData.reason,
+        unitPrice: item.unitPrice,
+        createdAt: orderData.createdAt
+      };
+      
+      await createDocument(COLLECTIONS.INVENTORY_MOVEMENTS, movement);
+    }
+    
+    return referenceNo;
+  } catch (error) {
+    console.error('Error creating outbound order:', error);
+    throw error;
+  }
+};
+
+/**
+ * 删除出库订单（同时删除关联的 inventory_movements）
+ */
+export const deleteOutboundOrder = async (referenceNo: string): Promise<void> => {
+  try {
+    // 1. 删除关联的 movements
+    const q = query(
+      collection(db, COLLECTIONS.INVENTORY_MOVEMENTS),
+      where('referenceNo', '==', referenceNo),
+      where('orderType', '==', 'outbound')
+    );
+    const snapshot = await getDocs(q);
+    await Promise.all(snapshot.docs.map(doc => deleteDoc(doc.ref)));
+    
+    // 2. 删除订单
+    await deleteDoc(doc(db, COLLECTIONS.OUTBOUND_ORDERS, referenceNo));
+  } catch (error) {
+    console.error('Error deleting outbound order:', error);
+    throw error;
+  }
+};
+
+/**
+ * 获取所有库存变动记录（索引表）
+ */
+export const getAllInventoryMovements = async (): Promise<InventoryMovement[]> => {
+  try {
+    const q = query(collection(db, COLLECTIONS.INVENTORY_MOVEMENTS), orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryMovement));
+  } catch (error) {
+    console.error('Error fetching inventory movements:', error);
+    return [];
+  }
+};
+
+/**
+ * 按产品ID获取库存变动记录
+ */
+export const getInventoryMovementsByCigarId = async (cigarId: string): Promise<InventoryMovement[]> => {
+  try {
+    const q = query(
+      collection(db, COLLECTIONS.INVENTORY_MOVEMENTS),
+      where('cigarId', '==', cigarId),
+      orderBy('createdAt', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryMovement));
+  } catch (error) {
+    console.error('Error fetching movements by cigar ID:', error);
+    return [];
+  }
 };
 

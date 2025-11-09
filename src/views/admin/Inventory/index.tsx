@@ -3,9 +3,9 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Table, Button, Tag, Space, Typography, Input, Select, Progress, Modal, Form, InputNumber, message, Dropdown, Checkbox, Card, Upload } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, WarningOutlined, UploadOutlined, DownloadOutlined, MinusCircleOutlined, FilePdfOutlined, FileImageOutlined, EyeOutlined } from '@ant-design/icons'
-import type { Cigar, InventoryLog, Brand } from '../../../types'
+import type { Cigar, InventoryLog, Brand, InboundOrder, OutboundOrder, InventoryMovement } from '../../../types'
 import type { UploadFile } from 'antd'
-import { getCigars, createDocument, updateDocument, deleteDocument, COLLECTIONS, getAllInventoryLogs, getAllOrders, getUsers, getBrands, getBrandById, getAllTransactions } from '../../../services/firebase/firestore'
+import { getCigars, createDocument, updateDocument, deleteDocument, COLLECTIONS, getAllInventoryLogs, getAllOrders, getUsers, getBrands, getBrandById, getAllTransactions, getAllInboundOrders, getAllOutboundOrders, getAllInventoryMovements, createInboundOrder, deleteInboundOrder, updateInboundOrder } from '../../../services/firebase/firestore'
 import ImageUpload from '../../../components/common/ImageUpload'
 import { getModalTheme, getResponsiveModalConfig, getModalThemeStyles } from '../../../config/modalTheme'
 import { useCloudinary } from '../../../hooks/useCloudinary'
@@ -33,6 +33,12 @@ const AdminInventory: React.FC = () => {
   const [orders, setOrders] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
   const [transactions, setTransactions] = useState<any[]>([])
+  
+  // 新架构数据
+  const [inboundOrders, setInboundOrders] = useState<InboundOrder[]>([])
+  const [outboundOrders, setOutboundOrders] = useState<OutboundOrder[]>([])
+  const [inventoryMovements, setInventoryMovements] = useState<InventoryMovement[]>([])
+  const [useNewArchitecture, setUseNewArchitecture] = useState(false) // 控制是否使用新架构
   const [viewingReference, setViewingReference] = useState<string | null>(null)
   const [viewingProductLogs, setViewingProductLogs] = useState<string | null>(null)
   const [imageList, setImageList] = useState<any[]>([])
@@ -113,13 +119,35 @@ const AdminInventory: React.FC = () => {
       try {
         const list = await getCigars()
         setItems(list)
-        const logs = await getAllInventoryLogs()
-        setInventoryLogs(logs)
+        
+        // 检测是否已迁移到新架构
+        const [inOrders, movements] = await Promise.all([
+          getAllInboundOrders(),
+          getAllInventoryMovements()
+        ])
+        
+        if (inOrders.length > 0 || movements.length > 0) {
+          // 使用新架构
+          console.log('✅ [Inventory] Using new architecture (inbound_orders + inventory_movements)')
+          setUseNewArchitecture(true)
+          setInboundOrders(inOrders)
+          setInventoryMovements(movements)
+          const outOrders = await getAllOutboundOrders()
+          setOutboundOrders(outOrders)
+        } else {
+          // 使用旧架构
+          console.log('⚠️ [Inventory] Using legacy architecture (inventory_logs)')
+          setUseNewArchitecture(false)
+          const logs = await getAllInventoryLogs()
+          setInventoryLogs(logs)
+        }
+        
         const [os, us, bs, txs] = await Promise.all([getAllOrders(), getUsers(), getBrands(), getAllTransactions()])
         setOrders(os)
         setUsers(us)
         setBrandList(bs)
         setTransactions(txs)
+        
         // 初始化分页（本地持久化）
         try {
           const raw = localStorage.getItem('inventory_pagination')
@@ -195,26 +223,50 @@ const AdminInventory: React.FC = () => {
   const stockByCigarId = useMemo(() => {
     // 精确计算：sum(IN) - sum(OUT)，不在逐步相减时夹0，避免顺序依赖
     const map = new Map<string, number>()
-    for (const log of inventoryLogs) {
-      const id = (log as any)?.cigarId
-      if (!id) continue
-      
-      // 只统计雪茄产品（itemType === 'cigar' 或未指定itemType的历史记录）
-      const itemType = (log as any)?.itemType
-      if (itemType && itemType !== 'cigar') continue
-      
-      const type = (log as any)?.type
-      const qtyRaw = (log as any)?.quantity ?? 0
-      const qty = Number.isFinite(qtyRaw) ? Math.max(0, Math.floor(qtyRaw)) : 0
-      const prev = map.get(id) ?? 0
-      if (type === 'in') {
-        map.set(id, prev + qty)
-      } else if (type === 'out') {
-        map.set(id, prev - qty)
+    
+    if (useNewArchitecture) {
+      // 新架构：使用 inventory_movements
+      for (const movement of inventoryMovements) {
+        const id = movement.cigarId
+        if (!id) continue
+        
+        // 只统计雪茄产品
+        const itemType = movement.itemType
+        if (itemType && itemType !== 'cigar') continue
+        
+        const type = movement.type
+        const qty = Number.isFinite(movement.quantity) ? Math.max(0, Math.floor(movement.quantity)) : 0
+        const prev = map.get(id) ?? 0
+        if (type === 'in') {
+          map.set(id, prev + qty)
+        } else if (type === 'out') {
+          map.set(id, prev - qty)
+        }
+      }
+    } else {
+      // 旧架构：使用 inventory_logs
+      for (const log of inventoryLogs) {
+        const id = (log as any)?.cigarId
+        if (!id) continue
+        
+        // 只统计雪茄产品（itemType === 'cigar' 或未指定itemType的历史记录）
+        const itemType = (log as any)?.itemType
+        if (itemType && itemType !== 'cigar') continue
+        
+        const type = (log as any)?.type
+        const qtyRaw = (log as any)?.quantity ?? 0
+        const qty = Number.isFinite(qtyRaw) ? Math.max(0, Math.floor(qtyRaw)) : 0
+        const prev = map.get(id) ?? 0
+        if (type === 'in') {
+          map.set(id, prev + qty)
+        } else if (type === 'out') {
+          map.set(id, prev - qty)
+        }
       }
     }
+    
     return map
-  }, [inventoryLogs])
+  }, [useNewArchitecture, inventoryMovements, inventoryLogs])
 
   const getComputedStock = (cigarId?: string) => {
     if (!cigarId) return 0
@@ -500,43 +552,107 @@ const AdminInventory: React.FC = () => {
 
   // 入库记录按单号分组
   const inLogsGroupedByReference = useMemo(() => {
-    const grouped = new Map<string, {
-      referenceNo: string;
-      date: Date | null;
-      reason: string;
-      logs: any[];
-      totalQuantity: number;
-      totalValue: number;
-      productCount: number;
-    }>();
-    
-    filteredInLogs.forEach(log => {
-      const key = log.referenceNo || '__NO_REFERENCE__';
-      if (!grouped.has(key)) {
-        grouped.set(key, {
-          referenceNo: log.referenceNo || t('inventory.unassignedReference'),
-          date: toDateSafe(log.createdAt),
-          reason: (log as any).reason || '-',
-          logs: [],
-          totalQuantity: 0,
-          totalValue: 0,
-          productCount: 0
+    if (useNewArchitecture) {
+      // ============================================
+      // 新架构：直接使用 inboundOrders，无需分组
+      // ============================================
+      
+      return inboundOrders
+        .filter(order => {
+          // 品牌筛选
+          if (inBrandFilter) {
+            const hasBrand = order.items.some(item => {
+              const cigar = items.find(c => c.id === item.cigarId)
+              return cigar?.brand === inBrandFilter
+            })
+            if (!hasBrand) return false
+          }
+          
+          // 关键字搜索
+          if (inSearchKeyword) {
+            const kw = inSearchKeyword.toLowerCase()
+            const refNo = order.referenceNo.toLowerCase()
+            const reason = order.reason.toLowerCase()
+            const hasMatchingProduct = order.items.some(item => 
+              item.cigarName.toLowerCase().includes(kw)
+            )
+            
+            if (!refNo.includes(kw) && !reason.includes(kw) && !hasMatchingProduct) {
+              return false
+            }
+          }
+          
+          return true
+        })
+        .map(order => ({
+          referenceNo: order.referenceNo,
+          date: toDateSafe(order.createdAt),
+          reason: order.reason,
+          logs: order.items.map(item => ({
+            id: `${order.id}_${item.cigarId}`,
+            cigarId: item.cigarId,
+            cigarName: item.cigarName,
+            itemType: item.itemType,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            createdAt: order.createdAt,
+            reason: order.reason,
+            attachments: order.attachments // 附件在订单级别
+          })),
+          totalQuantity: order.totalQuantity,
+          totalValue: order.totalValue,
+          productCount: order.items.length,
+          attachments: order.attachments // 订单级别的附件
+        }))
+        .sort((a, b) => {
+          const dateA = a.date?.getTime() || 0;
+          const dateB = b.date?.getTime() || 0;
+          return dateB - dateA;
         });
-      }
-      const group = grouped.get(key)!;
-      group.logs.push(log);
-      group.totalQuantity += Number(log.quantity || 0);
-      group.totalValue += Number(log.quantity || 0) * Number((log as any).unitPrice || 0);
-      group.productCount = group.logs.length;
-    });
-    
-    return Array.from(grouped.values())
-      .sort((a, b) => {
-        const dateA = a.date?.getTime() || 0;
-        const dateB = b.date?.getTime() || 0;
-        return dateB - dateA; // 最新的在上面
+      
+    } else {
+      // ============================================
+      // 旧架构：从 filteredInLogs 分组
+      // ============================================
+      
+      const grouped = new Map<string, {
+        referenceNo: string;
+        date: Date | null;
+        reason: string;
+        logs: any[];
+        totalQuantity: number;
+        totalValue: number;
+        productCount: number;
+      }>();
+      
+      filteredInLogs.forEach(log => {
+        const key = log.referenceNo || '__NO_REFERENCE__';
+        if (!grouped.has(key)) {
+          grouped.set(key, {
+            referenceNo: log.referenceNo || t('inventory.unassignedReference'),
+            date: toDateSafe(log.createdAt),
+            reason: (log as any).reason || '-',
+            logs: [],
+            totalQuantity: 0,
+            totalValue: 0,
+            productCount: 0
+          });
+        }
+        const group = grouped.get(key)!;
+        group.logs.push(log);
+        group.totalQuantity += Number(log.quantity || 0);
+        group.totalValue += Number(log.quantity || 0) * Number((log as any).unitPrice || 0);
+        group.productCount = group.logs.length;
       });
-  }, [filteredInLogs, items, t])
+      
+      return Array.from(grouped.values())
+        .sort((a, b) => {
+          const dateA = a.date?.getTime() || 0;
+          const dateB = b.date?.getTime() || 0;
+          return dateB - dateA; // 最新的在上面
+        });
+    }
+  }, [useNewArchitecture, inboundOrders, filteredInLogs, items, t, inSearchKeyword, inBrandFilter])
   
   // 出库记录筛选
   const filteredOutLogs = useMemo(() => {
@@ -1129,22 +1245,22 @@ const AdminInventory: React.FC = () => {
                                   width: '100%'
                                 }} 
                                 onClick={() => {
-                                  setEditing(record)
-                                  form.setFieldsValue({
-                                    name: (record as any).name,
-                                    brand: (record as any).brand,
-                                    origin: (record as any).origin,
-                                    size: (record as any).size,
-                                    strength: (record as any).strength,
-                                    price: (record as any).price,
-                                    stock: getComputedStock((record as any)?.id) ?? 0,
-                                    minStock: (record as any)?.inventory?.minStock ?? 0,
-                                    reserved: (record as any)?.inventory?.reserved ?? 0,
-                                  })
+                              setEditing(record)
+                              form.setFieldsValue({
+                                name: (record as any).name,
+                                brand: (record as any).brand,
+                                origin: (record as any).origin,
+                                size: (record as any).size,
+                                strength: (record as any).strength,
+                                price: (record as any).price,
+                                stock: getComputedStock((record as any)?.id) ?? 0,
+                                minStock: (record as any)?.inventory?.minStock ?? 0,
+                                reserved: (record as any)?.inventory?.reserved ?? 0,
+                              })
                                 }}
                               >
-                                {t('common.edit')}
-                              </button>
+                              {t('common.edit')}
+                            </button>
                               <button 
                                 style={{ 
                                   padding: '4px 8px', 
@@ -1552,63 +1668,150 @@ const AdminInventory: React.FC = () => {
               <Form form={inForm} layout="vertical" className="dark-theme-form" onFinish={async (values: { referenceNo?: string; reason?: string; items: { itemType?: string; cigarId?: string; customName?: string; quantity: number; unitPrice?: number }[] }) => {
                 const lines = (values.items || []).filter(it => it?.quantity > 0 && (it?.cigarId || it?.customName))
                 if (lines.length === 0) { message.warning(t('inventory.pleaseAddAtLeastOneInStockDetail')); return }
+                
+                // 检查单号
+                if (!values.referenceNo || !values.referenceNo.trim()) {
+                  message.error(t('inventory.pleaseInputReferenceNo'))
+                  return
+                }
+                
                 setLoading(true)
                 try {
-                  for (const line of lines) {
-                    const lineItemType = line.itemType || 'cigar'
-                    const qty = Math.max(1, Math.floor(line.quantity || 1))
+                  if (useNewArchitecture) {
+                    // ============================================
+                    // 新架构：创建入库订单
+                    // ============================================
                     
-                    if (lineItemType === 'cigar') {
-                      // 雪茄产品：使用现有逻辑
-                      const target = items.find(i => i.id === line.cigarId) as any
-                      if (!target) continue
-                      await createDocument(COLLECTIONS.INVENTORY_LOGS, {
-                        cigarId: target.id,
-                        cigarName: target.name,
-                        itemType: 'cigar',
-                        type: 'in',
-                        quantity: qty,
-                        reason: values.reason || t('inventory.inStock'),
-                        referenceNo: values.referenceNo,
-                        unitPrice: (line.unitPrice != null ? Number(line.unitPrice) : undefined),
-                        attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
-                        operatorId: 'system',
-                        createdAt: new Date(),
-                      } as any)
-                    } else {
-                      // 非雪茄项目：使用自定义名称
-                      if (!line.customName || !line.customName.trim()) continue
-                      const prefixMap: { [key: string]: string } = {
-                        'activity': 'ACTIVITY:',
-                        'gift': 'GIFT:',
-                        'service': 'SERVICE:',
-                        'other': 'OTHER:'
-                      }
-                      const prefix = prefixMap[lineItemType] || 'OTHER:'
-                      const uniqueId = `${prefix}${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                    const orderItems = []
+                    let totalQuantity = 0
+                    let totalValue = 0
+                    
+                    for (const line of lines) {
+                      const lineItemType = line.itemType || 'cigar'
+                      const qty = Math.max(1, Math.floor(line.quantity || 1))
+                      let cigarId = ''
+                      let cigarName = ''
                       
-                      await createDocument(COLLECTIONS.INVENTORY_LOGS, {
-                        cigarId: uniqueId,
-                        cigarName: line.customName.trim(),
+                      if (lineItemType === 'cigar') {
+                        const target = items.find(i => i.id === line.cigarId) as any
+                        if (!target) continue
+                        cigarId = target.id
+                        cigarName = target.name
+                      } else {
+                        if (!line.customName || !line.customName.trim()) continue
+                        const prefixMap: { [key: string]: string } = {
+                          'activity': 'ACTIVITY:',
+                          'gift': 'GIFT:',
+                          'service': 'SERVICE:',
+                          'other': 'OTHER:'
+                        }
+                        const prefix = prefixMap[lineItemType] || 'OTHER:'
+                        cigarId = `${prefix}${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                        cigarName = line.customName.trim()
+                      }
+                      
+                      const unitPrice = line.unitPrice != null ? Number(line.unitPrice) : undefined
+                      const subtotal = unitPrice ? unitPrice * qty : undefined
+                      
+                      orderItems.push({
+                        cigarId,
+                        cigarName,
                         itemType: lineItemType as any,
-                        type: 'in',
                         quantity: qty,
-                        reason: values.reason || t('inventory.inStock'),
-                        referenceNo: values.referenceNo,
-                        unitPrice: (line.unitPrice != null ? Number(line.unitPrice) : undefined),
-                        attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
-                        operatorId: 'system',
-                        createdAt: new Date(),
-                      } as any)
+                        unitPrice,
+                        subtotal
+                      })
+                      
+                      totalQuantity += qty
+                      if (subtotal) {
+                        totalValue += subtotal
+                      }
                     }
+                    
+                    const inboundOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
+                      referenceNo: values.referenceNo.trim(),
+                      type: 'purchase',
+                      reason: values.reason || t('inventory.inStock'),
+                      items: orderItems,
+                      totalQuantity,
+                      totalValue,
+                      attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
+                      status: 'completed',
+                      operatorId: 'system',
+                      createdAt: new Date()
+                    }
+                    
+                    await createInboundOrder(inboundOrderData)
+                    
+                    message.success(t('inventory.inStockSuccess'))
+                    inForm.resetFields()
+                    setItems(await getCigars())
+                    setInboundOrders(await getAllInboundOrders())
+                    setInventoryMovements(await getAllInventoryMovements())
+                    setInModalOpen(false)
+                    setAttachmentFileList([])
+                    setUploadedAttachments([])
+                    
+                  } else {
+                    // ============================================
+                    // 旧架构：逐行创建 inventory_logs
+                    // ============================================
+                    
+                    for (const line of lines) {
+                      const lineItemType = line.itemType || 'cigar'
+                      const qty = Math.max(1, Math.floor(line.quantity || 1))
+                      
+                      if (lineItemType === 'cigar') {
+                        const target = items.find(i => i.id === line.cigarId) as any
+                        if (!target) continue
+                        await createDocument(COLLECTIONS.INVENTORY_LOGS, {
+                          cigarId: target.id,
+                          cigarName: target.name,
+                          itemType: 'cigar',
+                          type: 'in',
+                          quantity: qty,
+                          reason: values.reason || t('inventory.inStock'),
+                          referenceNo: values.referenceNo,
+                          unitPrice: (line.unitPrice != null ? Number(line.unitPrice) : undefined),
+                          attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
+                          operatorId: 'system',
+                          createdAt: new Date(),
+                        } as any)
+                      } else {
+                        if (!line.customName || !line.customName.trim()) continue
+                        const prefixMap: { [key: string]: string } = {
+                          'activity': 'ACTIVITY:',
+                          'gift': 'GIFT:',
+                          'service': 'SERVICE:',
+                          'other': 'OTHER:'
+                        }
+                        const prefix = prefixMap[lineItemType] || 'OTHER:'
+                        const uniqueId = `${prefix}${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                        
+                        await createDocument(COLLECTIONS.INVENTORY_LOGS, {
+                          cigarId: uniqueId,
+                          cigarName: line.customName.trim(),
+                          itemType: lineItemType as any,
+                          type: 'in',
+                          quantity: qty,
+                          reason: values.reason || t('inventory.inStock'),
+                          referenceNo: values.referenceNo,
+                          unitPrice: (line.unitPrice != null ? Number(line.unitPrice) : undefined),
+                          attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
+                          operatorId: 'system',
+                          createdAt: new Date(),
+                        } as any)
+                      }
+                    }
+                    
+                    message.success(t('inventory.inStockSuccess'))
+                    inForm.resetFields()
+                    setItems(await getCigars())
+                    setInventoryLogs(await getAllInventoryLogs())
+                    setInModalOpen(false)
+                    setAttachmentFileList([])
+                    setUploadedAttachments([])
                   }
-                  message.success(t('inventory.inStockSuccess'))
-                  inForm.resetFields()
-                  setItems(await getCigars())
-                  setInventoryLogs(await getAllInventoryLogs())
-                  setInModalOpen(false)
-                  setAttachmentFileList([])
-                  setUploadedAttachments([])
                 } finally {
                   setLoading(false)
                 }
@@ -1660,31 +1863,31 @@ const AdminInventory: React.FC = () => {
                                 const itemType = getFieldValue(['items', name, 'itemType']) || 'cigar'
                                 
                                 return itemType === 'cigar' ? (
-                                  <Form.Item
-                                    {...restField}
-                                    name={[name, 'cigarId']}
-                                    rules={[{ required: true, message: t('inventory.pleaseSelectProduct') }]}
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'cigarId']}
+                            rules={[{ required: true, message: t('inventory.pleaseSelectProduct') }]}
                                     style={{ minWidth: 280 }}
-                                  >
-                                    <Select
-                                      placeholder={t('inventory.pleaseSelectProduct')}
-                                      showSearch
-                                      optionFilterProp="children"
-                                      filterOption={(input, option) => {
-                                        const kw = (input || '').toLowerCase()
-                                        const text = String((option?.children as any) || '').toLowerCase()
-                                        return text.includes(kw)
-                                      }}
-                                    >
-                                      {groupedCigars.map(group => (
-                                        <Select.OptGroup key={group.brand} label={group.brand}>
-                                          {group.list.map(i => (
-                                            <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（{t('inventory.stock')}：{getComputedStock(i.id)}）</Option>
-                                          ))}
-                                        </Select.OptGroup>
-                                      ))}
-                                    </Select>
-                                  </Form.Item>
+                          >
+                            <Select
+                              placeholder={t('inventory.pleaseSelectProduct')}
+                              showSearch
+                              optionFilterProp="children"
+                              filterOption={(input, option) => {
+                                const kw = (input || '').toLowerCase()
+                                const text = String((option?.children as any) || '').toLowerCase()
+                                return text.includes(kw)
+                              }}
+                            >
+                              {groupedCigars.map(group => (
+                                <Select.OptGroup key={group.brand} label={group.brand}>
+                                  {group.list.map(i => (
+                                    <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（{t('inventory.stock')}：{getComputedStock(i.id)}）</Option>
+                                  ))}
+                                </Select.OptGroup>
+                              ))}
+                            </Select>
+                          </Form.Item>
                                 ) : (
                                   <Form.Item
                                     {...restField}
@@ -1698,27 +1901,27 @@ const AdminInventory: React.FC = () => {
                               }}
                             </Form.Item>
                             
-                            <Form.Item
-                              {...restField}
-                              name={[name, 'quantity']}
-                              rules={[{ required: true, message: t('inventory.pleaseInputQuantity') }]}
-                            >
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'quantity']}
+                            rules={[{ required: true, message: t('inventory.pleaseInputQuantity') }]}
+                          >
                               <InputNumber min={1} placeholder={t('inventory.quantity')} style={{ width: 100 }} />
-                            </Form.Item>
-                            <Form.Item
-                              {...restField}
-                              name={[name, 'unitPrice']}
-                              rules={[]}
-                            >
+                          </Form.Item>
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'unitPrice']}
+                            rules={[]}
+                          >
                               <InputNumber min={0} step={0.01} placeholder={t('inventory.price')} style={{ width: 120 }} />
-                            </Form.Item>
-                            {fields.length > 1 && (
+                          </Form.Item>
+                          {fields.length > 1 && (
                               <MinusCircleOutlined 
                                 onClick={() => remove(name)} 
                                 style={{ color: '#ff4d4f', fontSize: 18, cursor: 'pointer' }}
                               />
-                            )}
-                          </Space>
+                          )}
+                        </Space>
                         </div>
                       ))}
                       <Form.Item>
@@ -2326,9 +2529,9 @@ const AdminInventory: React.FC = () => {
                         {isExpanded && (
                           <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                             {group.logs.map((log: any) => {
-                              const cigar = items.find(i => i.id === log.cigarId)
+                    const cigar = items.find(i => i.id === log.cigarId)
                               const itemValue = Number(log.quantity || 0) * Number(log.unitPrice || 0)
-                              return (
+                    return (
                                 <div 
                                   key={log.id}
                                   style={{
@@ -2339,9 +2542,9 @@ const AdminInventory: React.FC = () => {
                                   }}
                                 >
                                   <div style={{ 
-                                    display: 'flex', 
+                        display: 'flex',
                                     justifyContent: 'space-between',
-                                    alignItems: 'center',
+                        alignItems: 'center',
                                     marginBottom: 6
                                   }}>
                                     <div style={{ 
@@ -2381,7 +2584,7 @@ const AdminInventory: React.FC = () => {
                                           </>
                                         )
                                       })()}
-                                    </div>
+                          </div>
                                     <div style={{ 
                                       fontSize: 16, 
                                       fontWeight: 700, 
@@ -2389,8 +2592,8 @@ const AdminInventory: React.FC = () => {
                                       whiteSpace: 'nowrap'
                                     }}>
                                       +{log.quantity}
-                                    </div>
-                                  </div>
+                          </div>
+                        </div>
                                   <div style={{ 
                                     display: 'flex', 
                                     justifyContent: 'space-between',
@@ -2400,7 +2603,7 @@ const AdminInventory: React.FC = () => {
                                   }}>
                                     <div>
                                       {log.unitPrice ? `${t('inventory.unitPrice')}: RM ${log.unitPrice.toFixed(2)}` : ''}
-                                    </div>
+                      </div>
                                     <div>
                                       {itemValue > 0 ? `${t('inventory.totalValue')}: RM ${itemValue.toFixed(2)}` : ''}
                                     </div>
@@ -3122,63 +3325,63 @@ const AdminInventory: React.FC = () => {
         {!isMobile ? (
           // 电脑端 - 使用表格
           <>
-            <Table
-              columns={[
-                { 
-                  title: t('inventory.time'), 
-                  dataIndex: 'createdAt', 
-                  key: 'createdAt', 
-                  render: (v: any) => { 
-                    const d = toDateSafe(v); 
-                    return d ? d.toLocaleString() : '-' 
-                  },
-                  sorter: (a: any, b: any) => {
-                    const da = toDateSafe(a.createdAt)?.getTime() || 0
-                    const db = toDateSafe(b.createdAt)?.getTime() || 0
-                    return da - db
-                  }
-                },
-                { 
-                  title: t('inventory.type'), 
-                  dataIndex: 'type', 
-                  key: 'type', 
-                  render: (type: string) => {
-                    const color = type === 'in' ? 'green' : type === 'out' ? 'red' : 'blue'
-                    const text = type === 'in' ? t('inventory.stockIn') : type === 'out' ? t('inventory.stockOut') : t('inventory.adjustment')
-                    return <Tag color={color}>{text}</Tag>
-                  },
-                  filters: [
-                    { text: t('inventory.stockIn'), value: 'in' },
-                    { text: t('inventory.stockOut'), value: 'out' },
-                    { text: t('inventory.adjustment'), value: 'adjustment' }
-                  ],
-                  onFilter: (value: any, record: any) => record.type === value
-                },
-                { 
-                  title: t('inventory.quantity'), 
-                  dataIndex: 'quantity', 
-                  key: 'quantity',
-                  render: (quantity: number, record: any) => {
-                    const color = record.type === 'in' ? 'green' : record.type === 'out' ? 'red' : 'blue'
-                    const prefix = record.type === 'in' ? '+' : record.type === 'out' ? '-' : ''
-                    return <span style={{ color: color === 'green' ? '#52c41a' : color === 'red' ? '#ff4d4f' : '#1890ff' }}>
-                      {prefix}{quantity}
-                    </span>
-                  },
-                  sorter: (a: any, b: any) => a.quantity - b.quantity
-                },
-                { 
-                  title: t('inventory.referenceNo'), 
-                  dataIndex: 'referenceNo', 
-                  key: 'referenceNo', 
-                  render: (v: any) => v || '-'
-                },
-                { 
-                  title: t('inventory.reason'), 
-                  dataIndex: 'reason', 
-                  key: 'reason', 
-                  render: (v: any) => v || '-'
-                },
+        <Table
+          columns={[
+            { 
+              title: t('inventory.time'), 
+              dataIndex: 'createdAt', 
+              key: 'createdAt', 
+              render: (v: any) => { 
+                const d = toDateSafe(v); 
+                return d ? d.toLocaleString() : '-' 
+              },
+              sorter: (a: any, b: any) => {
+                const da = toDateSafe(a.createdAt)?.getTime() || 0
+                const db = toDateSafe(b.createdAt)?.getTime() || 0
+                return da - db
+              }
+            },
+            { 
+              title: t('inventory.type'), 
+              dataIndex: 'type', 
+              key: 'type', 
+              render: (type: string) => {
+                const color = type === 'in' ? 'green' : type === 'out' ? 'red' : 'blue'
+                const text = type === 'in' ? t('inventory.stockIn') : type === 'out' ? t('inventory.stockOut') : t('inventory.adjustment')
+                return <Tag color={color}>{text}</Tag>
+              },
+              filters: [
+                { text: t('inventory.stockIn'), value: 'in' },
+                { text: t('inventory.stockOut'), value: 'out' },
+                { text: t('inventory.adjustment'), value: 'adjustment' }
+              ],
+              onFilter: (value: any, record: any) => record.type === value
+            },
+            { 
+              title: t('inventory.quantity'), 
+              dataIndex: 'quantity', 
+              key: 'quantity',
+              render: (quantity: number, record: any) => {
+                const color = record.type === 'in' ? 'green' : record.type === 'out' ? 'red' : 'blue'
+                const prefix = record.type === 'in' ? '+' : record.type === 'out' ? '-' : ''
+                return <span style={{ color: color === 'green' ? '#52c41a' : color === 'red' ? '#ff4d4f' : '#1890ff' }}>
+                  {prefix}{quantity}
+                </span>
+              },
+              sorter: (a: any, b: any) => a.quantity - b.quantity
+            },
+            { 
+              title: t('inventory.referenceNo'), 
+              dataIndex: 'referenceNo', 
+              key: 'referenceNo', 
+              render: (v: any) => v || '-'
+            },
+            { 
+              title: t('inventory.reason'), 
+              dataIndex: 'reason', 
+              key: 'reason', 
+              render: (v: any) => v || '-'
+            },
                 { 
                   title: t('inventory.customer'), 
                   dataIndex: 'userId', 
@@ -3207,30 +3410,30 @@ const AdminInventory: React.FC = () => {
                     return '-';
                   }
                 },
-                { 
-                  title: t('inventory.operator'), 
-                  dataIndex: 'operatorId', 
-                  key: 'operatorId', 
+            { 
+              title: t('inventory.operator'), 
+              dataIndex: 'operatorId', 
+              key: 'operatorId', 
                   render: (v: any) => v || '-'
-                },
-              ]}
-              dataSource={currentProductLogs}
-              rowKey="id"
-              pagination={{
-                pageSize: 10,
-                showSizeChanger: true,
-                showQuickJumper: true,
-                showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total })
-              }}
-              size="small"
-            />
-            <div style={{ marginTop: 16, padding: 12, background: '#f5f5f5', borderRadius: 6 }}>
-              <div style={{ fontWeight: 'bold', marginBottom: 8 }}>{t('inventory.summary')}</div>
-              <div>{t('inventory.totalRecords')}：{currentProductLogs.length} {t('inventory.records')}</div>
-              <div>{t('inventory.totalInStock')}：{currentProductLogs.filter(log => log.type === 'in').reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
-              <div>{t('inventory.totalOutStock')}：{currentProductLogs.filter(log => log.type === 'out').reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
-              <div>{t('inventory.currentStock')}：{getComputedStock(viewingProductLogs || '')} {t('inventory.sticks')}</div>
-            </div>
+            },
+          ]}
+          dataSource={currentProductLogs}
+          rowKey="id"
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total })
+          }}
+          size="small"
+        />
+        <div style={{ marginTop: 16, padding: 12, background: '#f5f5f5', borderRadius: 6 }}>
+          <div style={{ fontWeight: 'bold', marginBottom: 8 }}>{t('inventory.summary')}</div>
+          <div>{t('inventory.totalRecords')}：{currentProductLogs.length} {t('inventory.records')}</div>
+          <div>{t('inventory.totalInStock')}：{currentProductLogs.filter(log => log.type === 'in').reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
+          <div>{t('inventory.totalOutStock')}：{currentProductLogs.filter(log => log.type === 'out').reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
+          <div>{t('inventory.currentStock')}：{getComputedStock(viewingProductLogs || '')} {t('inventory.sticks')}</div>
+        </div>
           </>
         ) : (
           // 手机端 - 使用卡片式布局

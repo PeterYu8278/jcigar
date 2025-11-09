@@ -174,7 +174,7 @@ export interface Transaction {
   createdAt: Date;
 }
 
-// 库存变动记录类型
+// 库存变动记录类型（旧架构，保留用于向后兼容）
 export interface InventoryLog {
   id: string;
   cigarId: string;
@@ -193,6 +193,110 @@ export interface InventoryLog {
     filename: string;      // 原始文件名
     uploadedAt: Date;      // 上传时间
   }>;
+  createdAt: Date;
+}
+
+// 入库订单类型（新架构 - 订单维度）
+export interface InboundOrder {
+  id: string;                   // 单号作为 document ID
+  referenceNo: string;          // 单号（冗余，便于显示）
+  type: 'purchase' | 'return' | 'adjustment' | 'other'; // 入库类型
+  reason: string;               // 原因
+  
+  // 产品明细
+  items: Array<{
+    cigarId: string;            // 产品ID（雪茄或特殊前缀）
+    cigarName: string;          // 产品名称
+    itemType: 'cigar' | 'activity' | 'gift' | 'service' | 'other';
+    quantity: number;           // 数量
+    unitPrice?: number;         // 单价
+    subtotal?: number;          // 小计
+  }>;
+  
+  // 金额汇总
+  totalQuantity: number;        // 总数量
+  totalValue: number;           // 总价值
+  
+  // 附件（订单级别，不重复）
+  attachments?: Array<{
+    url: string;
+    type: 'pdf' | 'image';
+    filename: string;
+    uploadedAt: Date;
+  }>;
+  
+  // 供应商信息（可选）
+  supplier?: {
+    name: string;
+    contact?: string;
+    phone?: string;
+  };
+  
+  // 状态和审计
+  status: 'pending' | 'completed' | 'cancelled';
+  operatorId: string;           // 操作人
+  notes?: string;               // 备注
+  
+  // 时间戳
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// 出库订单类型（新架构 - 订单维度）
+export interface OutboundOrder {
+  id: string;                   // 单号作为 document ID
+  referenceNo: string;          // 单号
+  type: 'sale' | 'event' | 'transfer' | 'other'; // 出库类型
+  reason: string;
+  
+  // 产品明细
+  items: Array<{
+    cigarId: string;
+    cigarName: string;
+    itemType: 'cigar' | 'activity' | 'gift' | 'service' | 'other';
+    quantity: number;
+    unitPrice?: number;
+    subtotal?: number;
+  }>;
+  
+  // 金额汇总
+  totalQuantity: number;
+  totalValue: number;
+  
+  // 关联信息
+  orderId?: string;             // 关联的销售订单ID
+  userId?: string;              // 关联的顾客ID
+  userName?: string;            // 关联的顾客名称
+  eventId?: string;             // 关联的活动ID
+  
+  // 状态和审计
+  status: 'pending' | 'completed' | 'cancelled';
+  operatorId: string;
+  notes?: string;
+  
+  // 时间戳
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// 库存变动索引表（新架构 - 产品维度，用于快速查询）
+export interface InventoryMovement {
+  id: string;                   // 自动生成的ID
+  cigarId: string;              // 产品ID
+  cigarName: string;            // 产品名称
+  itemType: 'cigar' | 'activity' | 'gift' | 'service' | 'other';
+  type: 'in' | 'out';           // 入库/出库
+  quantity: number;             // 数量
+  
+  // 指向主表的外键
+  referenceNo: string;          // 单号（指向 inbound_orders 或 outbound_orders）
+  orderType: 'inbound' | 'outbound'; // 订单类型
+  
+  // 冗余字段（用于快速显示，避免二次查询）
+  reason?: string;              // 原因
+  unitPrice?: number;           // 单价
+  
+  // 时间戳
   createdAt: Date;
 }
 
