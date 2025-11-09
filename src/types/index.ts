@@ -289,8 +289,10 @@ export interface InventoryMovement {
   quantity: number;             // 数量
   
   // 指向主表的外键
-  referenceNo: string;          // 单号（指向 inbound_orders 或 outbound_orders）
+  referenceNo: string;          // 单号（用于显示和搜索）
   orderType: 'inbound' | 'outbound'; // 订单类型
+  inboundOrderId?: string;      // 入库订单的 Document ID（精确访问）
+  outboundOrderId?: string;     // 出库订单的 Document ID（精确访问）
   
   // 冗余字段（用于快速显示，避免二次查询）
   reason?: string;              // 原因

@@ -3,7 +3,7 @@ import React, { useState } from 'react'
 import { Card, Button, Progress, Space, message, Typography, Alert, Statistic, Row, Col, Steps, Table, Tag, Collapse, Descriptions } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { WarningOutlined, CheckCircleOutlined, EyeOutlined } from '@ant-design/icons'
-import { collection, getDocs, setDoc, doc, query, where, deleteDoc, Timestamp } from 'firebase/firestore'
+import { collection, getDocs, setDoc, addDoc, doc, query, where, deleteDoc, Timestamp } from 'firebase/firestore'
 import { db } from '../../../config/firebase'
 import { COLLECTIONS, createDocument } from '../../../services/firebase/firestore'
 import type { InboundOrder, OutboundOrder, InventoryMovement } from '../../../types'
@@ -366,7 +366,7 @@ const InventoryMigration: React.FC = () => {
         }
         
         if (type === 'in') {
-          // 创建入库订单
+          // 创建入库订单（使用 Auto ID）
           const inboundOrder: any = {
             referenceNo: refNo,
             type: 'purchase',
@@ -381,39 +381,45 @@ const InventoryMigration: React.FC = () => {
             updatedAt: Timestamp.now()
           }
           
+          let generatedId: string | null = null
           try {
-            await setDoc(doc(db, COLLECTIONS.INBOUND_ORDERS, refNo), inboundOrder)
+            const docRef = await addDoc(collection(db, COLLECTIONS.INBOUND_ORDERS), inboundOrder)
+            generatedId = docRef.id  // 获取自动生成的 ID
             inboundCreated++
-            addLog(`✅ 入库订单: ${refNo}`)
+            addLog(`✅ 入库订单: ${refNo} (ID: ${generatedId})`)
           } catch (error: any) {
             addLog(`❌ 入库订单失败: ${refNo} - ${error.message}`)
+            continue  // 如果订单创建失败，跳过创建索引
           }
           
-          // 创建索引
-          for (const item of items) {
-            const movement: any = {
-              cigarId: item.cigarId,
-              cigarName: item.cigarName,
-              itemType: item.itemType,
-              type: 'in',
-              quantity: item.quantity,
-              referenceNo: refNo,
-              orderType: 'inbound',
-              reason: reason || undefined,
-              unitPrice: item.unitPrice || undefined,
-              createdAt: Timestamp.fromDate(createdAt)
-            }
-            
-            try {
-              await createDocument(COLLECTIONS.INVENTORY_MOVEMENTS, movement)
-              movementsCreated++
-            } catch (error: any) {
-              addLog(`❌ 索引创建失败: ${item.cigarName}`)
+          // 创建索引（包含实际的 document ID）
+          if (generatedId) {
+            for (const item of items) {
+              const movement: any = {
+                cigarId: item.cigarId,
+                cigarName: item.cigarName,
+                itemType: item.itemType,
+                type: 'in',
+                quantity: item.quantity,
+                referenceNo: refNo,
+                orderType: 'inbound',
+                inboundOrderId: generatedId,  // 添加实际的 document ID
+                reason: reason || undefined,
+                unitPrice: item.unitPrice || undefined,
+                createdAt: Timestamp.fromDate(createdAt)
+              }
+              
+              try {
+                await createDocument(COLLECTIONS.INVENTORY_MOVEMENTS, movement)
+                movementsCreated++
+              } catch (error: any) {
+                addLog(`❌ 索引创建失败: ${item.cigarName}`)
+              }
             }
           }
           
         } else if (type === 'out') {
-          // 创建出库订单
+          // 创建出库订单（使用 Auto ID）
           let outboundType = 'other'
           if (reason.includes('活动') || reason.includes('event')) {
             outboundType = 'event'
@@ -437,34 +443,40 @@ const InventoryMigration: React.FC = () => {
             updatedAt: Timestamp.now()
           }
           
+          let generatedId: string | null = null
           try {
-            await setDoc(doc(db, COLLECTIONS.OUTBOUND_ORDERS, refNo), outboundOrder)
+            const docRef = await addDoc(collection(db, COLLECTIONS.OUTBOUND_ORDERS), outboundOrder)
+            generatedId = docRef.id  // 获取自动生成的 ID
             outboundCreated++
-            addLog(`✅ 出库订单: ${refNo}`)
+            addLog(`✅ 出库订单: ${refNo} (ID: ${generatedId})`)
           } catch (error: any) {
             addLog(`❌ 出库订单失败: ${refNo} - ${error.message}`)
+            continue  // 如果订单创建失败，跳过创建索引
           }
           
-          // 创建索引
-          for (const item of items) {
-            const movement: any = {
-              cigarId: item.cigarId,
-              cigarName: item.cigarName,
-              itemType: item.itemType,
-              type: 'out',
-              quantity: item.quantity,
-              referenceNo: refNo,
-              orderType: 'outbound',
-              reason: reason || undefined,
-              unitPrice: item.unitPrice || undefined,
-              createdAt: Timestamp.fromDate(createdAt)
-            }
-            
-            try {
-              await createDocument(COLLECTIONS.INVENTORY_MOVEMENTS, movement)
-              movementsCreated++
-            } catch (error: any) {
-              addLog(`❌ 索引创建失败: ${item.cigarName}`)
+          // 创建索引（包含实际的 document ID）
+          if (generatedId) {
+            for (const item of items) {
+              const movement: any = {
+                cigarId: item.cigarId,
+                cigarName: item.cigarName,
+                itemType: item.itemType,
+                type: 'out',
+                quantity: item.quantity,
+                referenceNo: refNo,
+                orderType: 'outbound',
+                outboundOrderId: generatedId,  // 添加实际的 document ID
+                reason: reason || undefined,
+                unitPrice: item.unitPrice || undefined,
+                createdAt: Timestamp.fromDate(createdAt)
+              }
+              
+              try {
+                await createDocument(COLLECTIONS.INVENTORY_MOVEMENTS, movement)
+                movementsCreated++
+              } catch (error: any) {
+                addLog(`❌ 索引创建失败: ${item.cigarName}`)
+              }
             }
           }
         }

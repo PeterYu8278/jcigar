@@ -811,11 +811,11 @@ export const getAllInboundOrders = async (): Promise<InboundOrder[]> => {
 };
 
 /**
- * 获取单个入库订单
+ * 按 Document ID 获取单个入库订单（精确查询）
  */
-export const getInboundOrderById = async (referenceNo: string): Promise<InboundOrder | null> => {
+export const getInboundOrderById = async (id: string): Promise<InboundOrder | null> => {
   try {
-    const docRef = doc(db, COLLECTIONS.INBOUND_ORDERS, referenceNo);
+    const docRef = doc(db, COLLECTIONS.INBOUND_ORDERS, id);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       return { id: docSnap.id, ...docSnap.data() } as InboundOrder;
@@ -828,20 +828,46 @@ export const getInboundOrderById = async (referenceNo: string): Promise<InboundO
 };
 
 /**
+ * 按单号查询入库订单（可能返回多个，如果不同供应商使用相同单号）
+ */
+export const getInboundOrdersByReferenceNo = async (referenceNo: string): Promise<InboundOrder[]> => {
+  try {
+    const q = query(
+      collection(db, COLLECTIONS.INBOUND_ORDERS),
+      where('referenceNo', '==', referenceNo),
+      orderBy('createdAt', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InboundOrder));
+  } catch (error) {
+    console.error('Error fetching inbound orders by reference:', error);
+    return [];
+  }
+};
+
+/**
  * 创建入库订单（同时创建 inventory_movements）
+ * 使用 Auto ID 以支持不同供应商的相同单号
  */
 export const createInboundOrder = async (orderData: Omit<InboundOrder, 'id' | 'updatedAt'>): Promise<string> => {
   try {
     const referenceNo = orderData.referenceNo;
     
-    // 1. 创建入库订单
+    // 1. 检查是否已存在相同单号（可选，如果需要防止重复）
+    // 注意：如果允许不同供应商使用相同单号，可以跳过此检查
+    // 或添加供应商条件
+    
+    // 2. 创建入库订单（使用 Auto ID）
     const sanitized = sanitizeForFirestore(orderData);
-    await setDoc(doc(db, COLLECTIONS.INBOUND_ORDERS, referenceNo), {
+    const docRef = await addDoc(collection(db, COLLECTIONS.INBOUND_ORDERS), {
       ...sanitized,
+      createdAt: orderData.createdAt || new Date(),
       updatedAt: new Date()
     });
     
-    // 2. 创建对应的 inventory_movements
+    const generatedId = docRef.id;  // 自动生成的 Document ID
+    
+    // 3. 创建对应的 inventory_movements，包含实际的 document ID
     for (const item of orderData.items) {
       const movement = {
         cigarId: item.cigarId,
@@ -849,17 +875,18 @@ export const createInboundOrder = async (orderData: Omit<InboundOrder, 'id' | 'u
         itemType: item.itemType,
         type: 'in' as const,
         quantity: item.quantity,
-        referenceNo: referenceNo,
+        referenceNo: referenceNo,           // 单号（用于显示和搜索）
         orderType: 'inbound' as const,
+        inboundOrderId: generatedId,        // 实际的 document ID（用于精确访问）
         reason: orderData.reason,
         unitPrice: item.unitPrice,
-        createdAt: orderData.createdAt
+        createdAt: orderData.createdAt || new Date()
       };
       
       await createDocument(COLLECTIONS.INVENTORY_MOVEMENTS, movement);
     }
     
-    return referenceNo;
+    return generatedId;  // 返回自动生成的 ID
   } catch (error) {
     console.error('Error creating inbound order:', error);
     throw error;
@@ -867,12 +894,12 @@ export const createInboundOrder = async (orderData: Omit<InboundOrder, 'id' | 'u
 };
 
 /**
- * 更新入库订单
+ * 更新入库订单（使用 Document ID）
  */
-export const updateInboundOrder = async (referenceNo: string, updates: Partial<InboundOrder>): Promise<void> => {
+export const updateInboundOrder = async (id: string, updates: Partial<InboundOrder>): Promise<void> => {
   try {
     const sanitized = sanitizeForFirestore(updates);
-    await updateDoc(doc(db, COLLECTIONS.INBOUND_ORDERS, referenceNo), {
+    await updateDoc(doc(db, COLLECTIONS.INBOUND_ORDERS, id), {
       ...sanitized,
       updatedAt: new Date()
     });
@@ -884,20 +911,20 @@ export const updateInboundOrder = async (referenceNo: string, updates: Partial<I
 
 /**
  * 删除入库订单（同时删除关联的 inventory_movements）
+ * 使用 Document ID
  */
-export const deleteInboundOrder = async (referenceNo: string): Promise<void> => {
+export const deleteInboundOrder = async (id: string): Promise<void> => {
   try {
-    // 1. 删除关联的 movements
+    // 1. 删除关联的 movements（通过 inboundOrderId）
     const q = query(
       collection(db, COLLECTIONS.INVENTORY_MOVEMENTS),
-      where('referenceNo', '==', referenceNo),
-      where('orderType', '==', 'inbound')
+      where('inboundOrderId', '==', id)
     );
     const snapshot = await getDocs(q);
     await Promise.all(snapshot.docs.map(doc => deleteDoc(doc.ref)));
     
     // 2. 删除订单
-    await deleteDoc(doc(db, COLLECTIONS.INBOUND_ORDERS, referenceNo));
+    await deleteDoc(doc(db, COLLECTIONS.INBOUND_ORDERS, id));
   } catch (error) {
     console.error('Error deleting inbound order:', error);
     throw error;
@@ -919,11 +946,11 @@ export const getAllOutboundOrders = async (): Promise<OutboundOrder[]> => {
 };
 
 /**
- * 获取单个出库订单
+ * 按 Document ID 获取单个出库订单（精确查询）
  */
-export const getOutboundOrderById = async (referenceNo: string): Promise<OutboundOrder | null> => {
+export const getOutboundOrderById = async (id: string): Promise<OutboundOrder | null> => {
   try {
-    const docRef = doc(db, COLLECTIONS.OUTBOUND_ORDERS, referenceNo);
+    const docRef = doc(db, COLLECTIONS.OUTBOUND_ORDERS, id);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       return { id: docSnap.id, ...docSnap.data() } as OutboundOrder;
@@ -936,20 +963,42 @@ export const getOutboundOrderById = async (referenceNo: string): Promise<Outboun
 };
 
 /**
+ * 按单号查询出库订单（可能返回多个）
+ */
+export const getOutboundOrdersByReferenceNo = async (referenceNo: string): Promise<OutboundOrder[]> => {
+  try {
+    const q = query(
+      collection(db, COLLECTIONS.OUTBOUND_ORDERS),
+      where('referenceNo', '==', referenceNo),
+      orderBy('createdAt', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as OutboundOrder));
+  } catch (error) {
+    console.error('Error fetching outbound orders by reference:', error);
+    return [];
+  }
+};
+
+/**
  * 创建出库订单（同时创建 inventory_movements）
+ * 使用 Auto ID 以支持可能的单号重复
  */
 export const createOutboundOrder = async (orderData: Omit<OutboundOrder, 'id' | 'updatedAt'>): Promise<string> => {
   try {
     const referenceNo = orderData.referenceNo;
     
-    // 1. 创建出库订单
+    // 1. 创建出库订单（使用 Auto ID）
     const sanitized = sanitizeForFirestore(orderData);
-    await setDoc(doc(db, COLLECTIONS.OUTBOUND_ORDERS, referenceNo), {
+    const docRef = await addDoc(collection(db, COLLECTIONS.OUTBOUND_ORDERS), {
       ...sanitized,
+      createdAt: orderData.createdAt || new Date(),
       updatedAt: new Date()
     });
     
-    // 2. 创建对应的 inventory_movements
+    const generatedId = docRef.id;  // 自动生成的 Document ID
+    
+    // 2. 创建对应的 inventory_movements，包含实际的 document ID
     for (const item of orderData.items) {
       const movement = {
         cigarId: item.cigarId,
@@ -957,17 +1006,18 @@ export const createOutboundOrder = async (orderData: Omit<OutboundOrder, 'id' | 
         itemType: item.itemType,
         type: 'out' as const,
         quantity: item.quantity,
-        referenceNo: referenceNo,
+        referenceNo: referenceNo,           // 单号（用于显示和搜索）
         orderType: 'outbound' as const,
+        outboundOrderId: generatedId,       // 实际的 document ID（用于精确访问）
         reason: orderData.reason,
         unitPrice: item.unitPrice,
-        createdAt: orderData.createdAt
+        createdAt: orderData.createdAt || new Date()
       };
       
       await createDocument(COLLECTIONS.INVENTORY_MOVEMENTS, movement);
     }
     
-    return referenceNo;
+    return generatedId;  // 返回自动生成的 ID
   } catch (error) {
     console.error('Error creating outbound order:', error);
     throw error;
@@ -976,20 +1026,20 @@ export const createOutboundOrder = async (orderData: Omit<OutboundOrder, 'id' | 
 
 /**
  * 删除出库订单（同时删除关联的 inventory_movements）
+ * 使用 Document ID
  */
-export const deleteOutboundOrder = async (referenceNo: string): Promise<void> => {
+export const deleteOutboundOrder = async (id: string): Promise<void> => {
   try {
-    // 1. 删除关联的 movements
+    // 1. 删除关联的 movements（通过 outboundOrderId）
     const q = query(
       collection(db, COLLECTIONS.INVENTORY_MOVEMENTS),
-      where('referenceNo', '==', referenceNo),
-      where('orderType', '==', 'outbound')
+      where('outboundOrderId', '==', id)
     );
     const snapshot = await getDocs(q);
     await Promise.all(snapshot.docs.map(doc => deleteDoc(doc.ref)));
     
     // 2. 删除订单
-    await deleteDoc(doc(db, COLLECTIONS.OUTBOUND_ORDERS, referenceNo));
+    await deleteDoc(doc(db, COLLECTIONS.OUTBOUND_ORDERS, id));
   } catch (error) {
     console.error('Error deleting outbound order:', error);
     throw error;

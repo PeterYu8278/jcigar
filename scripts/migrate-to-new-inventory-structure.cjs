@@ -144,7 +144,7 @@ async function migrateInboundRecords(byReference) {
       }
     }
     
-    // 创建 inbound_order
+    // 创建 inbound_order（使用 Auto ID）
     const inboundOrder = {
       referenceNo: refNo,
       type: 'purchase',
@@ -159,35 +159,40 @@ async function migrateInboundRecords(byReference) {
       updatedAt: admin.firestore.Timestamp.now()
     }
     
+    let generatedId = null
     try {
-      await db.collection(COLLECTIONS.INBOUND_ORDERS).doc(refNo).set(inboundOrder)
+      const docRef = await db.collection(COLLECTIONS.INBOUND_ORDERS).add(inboundOrder)
+      generatedId = docRef.id  // 获取自动生成的 ID
       ordersCreated++
-      console.log(`   ✅ Created inbound_order: ${refNo}`)
+      console.log(`   ✅ Created inbound_order: ${refNo} (ID: ${generatedId})`)
     } catch (error) {
       console.error(`   ❌ Failed to create inbound_order: ${refNo}`, error.message)
       continue
     }
     
-    // 创建对应的 inventory_movements
-    for (const item of items) {
-      const movement = {
-        cigarId: item.cigarId,
-        cigarName: item.cigarName,
-        itemType: item.itemType,
-        type: 'in',
-        quantity: item.quantity,
-        referenceNo: refNo,
-        orderType: 'inbound',
-        reason: reason || undefined,
-        unitPrice: item.unitPrice || undefined,
-        createdAt: admin.firestore.Timestamp.fromDate(createdAt)
-      }
-      
-      try {
-        await db.collection(COLLECTIONS.INVENTORY_MOVEMENTS).add(movement)
-        movementsCreated++
-      } catch (error) {
-        console.error(`   ❌ Failed to create movement for ${item.cigarName}`, error.message)
+    // 创建对应的 inventory_movements（包含实际的 document ID）
+    if (generatedId) {
+      for (const item of items) {
+        const movement = {
+          cigarId: item.cigarId,
+          cigarName: item.cigarName,
+          itemType: item.itemType,
+          type: 'in',
+          quantity: item.quantity,
+          referenceNo: refNo,
+          orderType: 'inbound',
+          inboundOrderId: generatedId,  // 添加实际的 document ID
+          reason: reason || undefined,
+          unitPrice: item.unitPrice || undefined,
+          createdAt: admin.firestore.Timestamp.fromDate(createdAt)
+        }
+        
+        try {
+          await db.collection(COLLECTIONS.INVENTORY_MOVEMENTS).add(movement)
+          movementsCreated++
+        } catch (error) {
+          console.error(`   ❌ Failed to create movement for ${item.cigarName}`, error.message)
+        }
       }
     }
   }
@@ -272,7 +277,7 @@ async function migrateOutboundRecords(byReference) {
       outboundType = 'sale'
     }
     
-    // 创建 outbound_order
+    // 创建 outbound_order（使用 Auto ID）
     const outboundOrder = {
       referenceNo: refNo,
       type: outboundType,
@@ -289,35 +294,40 @@ async function migrateOutboundRecords(byReference) {
       updatedAt: admin.firestore.Timestamp.now()
     }
     
+    let generatedId = null
     try {
-      await db.collection(COLLECTIONS.OUTBOUND_ORDERS).doc(refNo).set(outboundOrder)
+      const docRef = await db.collection(COLLECTIONS.OUTBOUND_ORDERS).add(outboundOrder)
+      generatedId = docRef.id  // 获取自动生成的 ID
       ordersCreated++
-      console.log(`   ✅ Created outbound_order: ${refNo}`)
+      console.log(`   ✅ Created outbound_order: ${refNo} (ID: ${generatedId})`)
     } catch (error) {
       console.error(`   ❌ Failed to create outbound_order: ${refNo}`, error.message)
       continue
     }
     
-    // 创建对应的 inventory_movements
-    for (const item of items) {
-      const movement = {
-        cigarId: item.cigarId,
-        cigarName: item.cigarName,
-        itemType: item.itemType,
-        type: 'out',
-        quantity: item.quantity,
-        referenceNo: refNo,
-        orderType: 'outbound',
-        reason: reason || undefined,
-        unitPrice: item.unitPrice || undefined,
-        createdAt: admin.firestore.Timestamp.fromDate(createdAt)
-      }
-      
-      try {
-        await db.collection(COLLECTIONS.INVENTORY_MOVEMENTS).add(movement)
-        movementsCreated++
-      } catch (error) {
-        console.error(`   ❌ Failed to create movement for ${item.cigarName}`, error.message)
+    // 创建对应的 inventory_movements（包含实际的 document ID）
+    if (generatedId) {
+      for (const item of items) {
+        const movement = {
+          cigarId: item.cigarId,
+          cigarName: item.cigarName,
+          itemType: item.itemType,
+          type: 'out',
+          quantity: item.quantity,
+          referenceNo: refNo,
+          orderType: 'outbound',
+          outboundOrderId: generatedId,  // 添加实际的 document ID
+          reason: reason || undefined,
+          unitPrice: item.unitPrice || undefined,
+          createdAt: admin.firestore.Timestamp.fromDate(createdAt)
+        }
+        
+        try {
+          await db.collection(COLLECTIONS.INVENTORY_MOVEMENTS).add(movement)
+          movementsCreated++
+        } catch (error) {
+          console.error(`   ❌ Failed to create movement for ${item.cigarName}`, error.message)
+        }
       }
     }
   }
