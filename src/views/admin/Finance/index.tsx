@@ -162,7 +162,51 @@ const AdminFinance: React.FC = () => {
   const totalMatchedAmount = watchedRelatedOrders.reduce((sum: number, item: any) => sum + Number(item?.amount || 0), 0)
   const remainingAmount = transactionAmount - totalMatchedAmount
 
-  // 获取关联订单的入库记录
+  // 判断当前交易类型（收入/支出）
+  const isExpenseTransaction = useMemo(() => {
+    return computedExpense > 0 && computedIncome === 0
+  }, [computedIncome, computedExpense])
+
+  // 获取入库单号列表（用于支出交易）
+  const inboundReferenceOptions = useMemo(() => {
+    const refMap = new Map<string, {
+      referenceNo: string;
+      totalQuantity: number;
+      totalValue: number;
+      productCount: number;
+      date: Date | null;
+      reason: string;
+    }>();
+    
+    inventoryLogs
+      .filter((log: any) => log.type === 'in' && log.referenceNo)
+      .forEach((log: any) => {
+        const ref = log.referenceNo;
+        if (!refMap.has(ref)) {
+          refMap.set(ref, {
+            referenceNo: ref,
+            totalQuantity: 0,
+            totalValue: 0,
+            productCount: 0,
+            date: log.createdAt,
+            reason: log.reason || ''
+          });
+        }
+        const group = refMap.get(ref)!;
+        group.totalQuantity += Number(log.quantity || 0);
+        group.totalValue += Number(log.quantity || 0) * Number(log.unitPrice || 0);
+        group.productCount += 1;
+      });
+    
+    return Array.from(refMap.values())
+      .sort((a, b) => {
+        const dateA = a.date?.getTime?.() || 0;
+        const dateB = b.date?.getTime?.() || 0;
+        return dateB - dateA;
+      });
+  }, [inventoryLogs]);
+
+  // 获取关联的库存记录
   const relatedInventoryLogs = useMemo(() => {
     const orderIds = watchedRelatedOrders
       .map((ro: any) => ro?.orderId)
@@ -170,10 +214,14 @@ const AdminFinance: React.FC = () => {
     
     if (orderIds.length === 0) return []
     
+    // 如果是支出交易，显示入库记录
+    // 如果是收入交易，显示出库记录
+    const logType = isExpenseTransaction ? 'in' : 'out'
+    
     return inventoryLogs.filter((log: any) => 
-      orderIds.includes(log.referenceNo) && log.type === 'out'
+      orderIds.includes(log.referenceNo) && log.type === logType
     )
-  }, [watchedRelatedOrders, inventoryLogs])
+  }, [watchedRelatedOrders, inventoryLogs, isExpenseTransaction])
 
   // 计算订单匹配状态
   const getOrderMatchStatus = (orderId: string) => {
@@ -1184,7 +1232,9 @@ const AdminFinance: React.FC = () => {
                   {(fields, { add, remove }) => (
                     <div style={theme.card.base}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                        <strong style={{ color: '#FFFFFF' }}>{t('financeAdmin.relatedOrders')}</strong>
+                        <strong style={{ color: '#FFFFFF' }}>
+                          {isExpenseTransaction ? t('financeAdmin.relatedInboundReferences') : t('financeAdmin.relatedOrders')}
+                        </strong>
                         {isEditing && (
                           <button type="button" onClick={() => add({ orderId: undefined, amount: 0 })} className="cigar-btn-gradient" style={theme.button.text}>{t('common.add')}</button>
                         )}
@@ -1198,36 +1248,68 @@ const AdminFinance: React.FC = () => {
                             <Select
                               allowClear
                               showSearch
-                              placeholder={t('financeAdmin.relatedOrderId')}
+                              placeholder={isExpenseTransaction ? t('financeAdmin.selectInboundReference') : t('financeAdmin.relatedOrderId')}
                               disabled={!isEditing}
                               filterOption={(input, option) => {
                                 const searchText = (input || '').toLowerCase()
                                 const searchableText = (option as any)?.searchText || ''
                                 return searchableText.toLowerCase().includes(searchText)
                               }}
-                              options={(orders || [])
-                                .filter(o => !isOrderFullyMatched(o.id))
-                                .map(o => {
-                                const u = (users || []).find((x: any) => x.id === o.userId)
-                                const name = u?.displayName || u?.email || o.userId
-                                const addr = (o as any)?.shipping?.address || '-'
-                                const total = Number((o as any)?.total || 0)
-                                const searchText = `${o.id} ${name} ${addr} ${total.toFixed(2)}`
-                                return { 
-                                  label: (
-          <div>
-                                      <div>{o.id} · {name} · RM{total.toFixed(2)}</div>
-                                      <div style={{ fontSize: '12px', color: '#bab09c' }}>{addr}</div>
-          </div>
-                                  ), 
-                                  value: o.id,
-                                  searchText
-                                }
-                              })}
+                              options={isExpenseTransaction ? (
+                                // 支出交易：显示入库单号
+                                inboundReferenceOptions.map(ref => {
+                                  const searchText = `${ref.referenceNo} ${ref.reason} ${ref.totalValue.toFixed(2)}`
+                                  return {
+                                    label: (
+                                      <div>
+                                        <div>
+                                          📦 {ref.referenceNo} · {ref.productCount} {t('inventory.types')} · RM{ref.totalValue.toFixed(2)}
+                                        </div>
+                                        <div style={{ fontSize: '12px', color: '#bab09c' }}>
+                                          {ref.reason || '-'}
+                                        </div>
+                                      </div>
+                                    ),
+                                    value: ref.referenceNo,
+                                    searchText
+                                  }
+                                })
+                              ) : (
+                                // 收入交易：显示销售订单
+                                (orders || [])
+                                  .filter(o => !isOrderFullyMatched(o.id))
+                                  .map(o => {
+                                    const u = (users || []).find((x: any) => x.id === o.userId)
+                                    const name = u?.displayName || u?.email || o.userId
+                                    const addr = (o as any)?.shipping?.address || '-'
+                                    const total = Number((o as any)?.total || 0)
+                                    const searchText = `${o.id} ${name} ${addr} ${total.toFixed(2)}`
+                                    return { 
+                                      label: (
+                                        <div>
+                                          <div>{o.id} · {name} · RM{total.toFixed(2)}</div>
+                                          <div style={{ fontSize: '12px', color: '#bab09c' }}>{addr}</div>
+                                        </div>
+                                      ), 
+                                      value: o.id,
+                                      searchText
+                                    }
+                                  })
+                              )}
                               onChange={(val) => {
                                 const arr = Array.isArray(editForm.getFieldValue('relatedOrders')) ? [...editForm.getFieldValue('relatedOrders')] : []
-                                const order = (orders || []).find((o: any) => o.id === val)
-                                const defaultAmt = Number((order as any)?.total || 0)
+                                
+                                let defaultAmt = 0
+                                if (isExpenseTransaction) {
+                                  // 支出交易：使用入库单的总价值
+                                  const inboundRef = inboundReferenceOptions.find(r => r.referenceNo === val)
+                                  defaultAmt = inboundRef?.totalValue || 0
+                                } else {
+                                  // 收入交易：使用销售订单的总额
+                                  const order = (orders || []).find((o: any) => o.id === val)
+                                  defaultAmt = Number((order as any)?.total || 0)
+                                }
+                                
                                 arr[field.name] = { ...(arr[field.name] || {}), orderId: val, amount: defaultAmt }
                                 editForm.setFieldsValue({ relatedOrders: arr })
                               }}
@@ -1267,14 +1349,14 @@ const AdminFinance: React.FC = () => {
                         )
                       })()}
                       
-                      {/* 关联的入库记录 */}
+                      {/* 关联的库存记录 */}
                       {relatedInventoryLogs.length > 0 && (
                         <div style={{
                           marginTop: 16,
                           padding: 12,
-                          background: 'rgba(82, 196, 26, 0.08)',
+                          background: isExpenseTransaction ? 'rgba(82, 196, 26, 0.08)' : 'rgba(255, 77, 79, 0.08)',
                           borderRadius: 8,
-                          border: '1px solid rgba(82, 196, 26, 0.3)'
+                          border: isExpenseTransaction ? '1px solid rgba(82, 196, 26, 0.3)' : '1px solid rgba(255, 77, 79, 0.3)'
                         }}>
                           <div style={{ 
                             fontSize: 14, 
@@ -1285,15 +1367,16 @@ const AdminFinance: React.FC = () => {
                             alignItems: 'center',
                             gap: 6
                           }}>
-                            📦 {t('financeAdmin.relatedInventoryLogs')}
+                            📦 {isExpenseTransaction ? t('financeAdmin.relatedInboundLogs') : t('financeAdmin.relatedOutboundLogs')}
                           </div>
                           
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                             {relatedInventoryLogs.map((log: any) => {
                               const cigar = cigars.find(c => c.id === log.cigarId)
                               const cigarName = log.cigarName || cigar?.name || log.cigarId
-                              const order = orders.find(o => o.id === log.referenceNo)
                               const matchedOrder = watchedRelatedOrders.find((ro: any) => ro?.orderId === log.referenceNo)
+                              const logColor = isExpenseTransaction ? '#52c41a' : '#ff4d4f'
+                              const logPrefix = isExpenseTransaction ? '+' : '-'
                               
                               return (
                                 <div 
@@ -1302,7 +1385,7 @@ const AdminFinance: React.FC = () => {
                                     padding: 10,
                                     background: 'rgba(255,255,255,0.05)',
                                     borderRadius: 6,
-                                    border: matchedOrder ? '1px solid rgba(82, 196, 26, 0.4)' : '1px solid rgba(255,255,255,0.1)'
+                                    border: matchedOrder ? `1px solid ${logColor}66` : '1px solid rgba(255,255,255,0.1)'
                                   }}
                                 >
                                   <div style={{ 
@@ -1322,11 +1405,11 @@ const AdminFinance: React.FC = () => {
                                     <div style={{ 
                                       fontSize: 14, 
                                       fontWeight: 700, 
-                                      color: '#ff4d4f',
+                                      color: logColor,
                                       whiteSpace: 'nowrap',
                                       marginLeft: 8
                                     }}>
-                                      -{log.quantity}
+                                      {logPrefix}{log.quantity}
                                     </div>
                                   </div>
                                   
@@ -1364,15 +1447,17 @@ const AdminFinance: React.FC = () => {
                           <div style={{
                             marginTop: 12,
                             padding: 8,
-                            background: 'rgba(82, 196, 26, 0.1)',
+                            background: isExpenseTransaction ? 'rgba(82, 196, 26, 0.1)' : 'rgba(255, 77, 79, 0.1)',
                             borderRadius: 6,
                             fontSize: 12,
                             color: '#fff'
                           }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <div>{t('financeAdmin.totalOutboundItems')}</div>
-                              <div style={{ fontWeight: 600, color: '#ff4d4f' }}>
-                                -{relatedInventoryLogs.reduce((sum: number, log: any) => sum + Number(log.quantity || 0), 0)} {t('inventory.sticks')}
+                              <div>
+                                {isExpenseTransaction ? t('financeAdmin.totalInboundItems') : t('financeAdmin.totalOutboundItems')}
+                              </div>
+                              <div style={{ fontWeight: 600, color: isExpenseTransaction ? '#52c41a' : '#ff4d4f' }}>
+                                {isExpenseTransaction ? '+' : '-'}{relatedInventoryLogs.reduce((sum: number, log: any) => sum + Number(log.quantity || 0), 0)} {t('inventory.sticks')}
                               </div>
                             </div>
                             <div style={{ 
