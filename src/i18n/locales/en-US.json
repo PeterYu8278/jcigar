@@ -629,7 +629,9 @@
     "products": "products",
     "sticks": "sticks",
     "expandAll": "Expand All",
-    "collapseAll": "Collapse All"
+    "collapseAll": "Collapse All",
+    "unassignedReference": "Unassigned Reference",
+    "unitPrice": "Unit Price"
   },
   "financeAdmin": {
     "title": "Financial Management",

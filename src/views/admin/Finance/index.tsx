@@ -132,16 +132,20 @@ const AdminFinance: React.FC = () => {
 
   // 当viewing改变时，更新表单值
   useEffect(() => {
+    console.log('👁️ [Finance] Viewing changed:', viewing)
     if (viewing && editForm) {
-      editForm.setFieldsValue({
+      const formValues = {
         transactionDate: toDateSafe(viewing.createdAt) ? dayjs(toDateSafe(viewing.createdAt)) : dayjs(),
         incomeAmount: viewing.amount > 0 ? viewing.amount : 0,
         expenseAmount: viewing.amount < 0 ? Math.abs(viewing.amount) : 0,
         description: viewing.description,
         relatedId: viewing.relatedId || undefined,
         relatedOrders: (viewing as any)?.relatedOrders || [],
-      })
+      }
+      console.log('📝 [Finance] Setting form values:', formValues)
+      editForm.setFieldsValue(formValues)
       setIsEditing(false) // 重置编辑状态
+      console.log('✅ [Finance] Form initialized, editing mode: false')
     }
   }, [viewing, editForm])
 
@@ -356,7 +360,10 @@ const AdminFinance: React.FC = () => {
       key: 'action',
       render: (_: any, record: Transaction) => (
         <Space size="small" style={{ justifyContent: 'center', width: '100%' }}>
-          <Button type="link" icon={<EyeOutlined />} size="small" onClick={() => setViewing(record)}>
+          <Button type="link" icon={<EyeOutlined />} size="small" onClick={() => {
+            console.log('👁️ [Finance] View button clicked for transaction:', record)
+            setViewing(record)
+          }}>
           </Button>
         </Space>
       ),
@@ -943,7 +950,10 @@ const AdminFinance: React.FC = () => {
                 type="link" 
                 icon={<EyeOutlined />} 
                 size="small" 
-                onClick={() => setViewing(transaction)}
+                onClick={() => {
+                  console.log('👁️ [Finance Mobile] View button clicked for transaction:', transaction)
+                  setViewing(transaction)
+                }}
                 style={{ marginLeft: 8 }}
               />
             </div>
@@ -971,11 +981,22 @@ const AdminFinance: React.FC = () => {
             {t('common.delete')}
           </button>,
           !isEditing ? (
-            <button key="edit" type="button" className="cigar-btn-gradient" onClick={() => setIsEditing(true)} style={theme.button.primary}>
+            <button key="edit" type="button" className="cigar-btn-gradient" onClick={() => {
+              console.log('✏️ [Finance] Edit button clicked')
+              console.log('📝 [Finance] Form values before edit:', editForm.getFieldsValue())
+              setIsEditing(true)
+            }} style={theme.button.primary}>
               {t('common.edit')}
             </button>
           ) : (
-            <button key="save" type="button" className="cigar-btn-gradient" onClick={() => editForm.submit()} style={theme.button.primary}>
+            <button key="save" type="button" className="cigar-btn-gradient" onClick={() => {
+              console.log('💾 [Finance] Save button clicked')
+              console.log('📋 [Finance] Form instance:', editForm)
+              console.log('📝 [Finance] Current form values (all):', editForm.getFieldsValue(true))
+              console.log('📱 [Finance] Mobile tab:', isMobile ? mobileTxTab : 'N/A')
+              console.log('🔄 [Finance] Is editing:', isEditing)
+              editForm.submit()
+            }} style={theme.button.primary}>
               {t('common.save')}
             </button>
           )
@@ -1015,7 +1036,11 @@ const AdminFinance: React.FC = () => {
                   return (
                     <button
                       key={tabKey}
-                      onClick={() => setMobileTxTab(tabKey)}
+                      onClick={() => {
+                        console.log('📱 [Finance] Mobile tab switching from', mobileTxTab, 'to', tabKey)
+                        console.log('📝 [Finance] Form values before tab switch:', editForm.getFieldsValue(true))
+                        setMobileTxTab(tabKey)
+                      }}
                       style={{ ...baseStyle, ...(isActive ? activeStyle : inactiveStyle) }}
                     >
                       {tabKey === 'details' ? t('financeAdmin.transactionDetails') : t('financeAdmin.relatedOrders')}
@@ -1047,27 +1072,45 @@ const AdminFinance: React.FC = () => {
               '--required-mark-color': theme.form.requiredMarkColor
             } as React.CSSProperties}
             onFinish={async (values: any) => {
+              console.log('🔍 [Finance] Form onFinish triggered')
+              console.log('📝 [Finance] Form values:', values)
+              console.log('👤 [Finance] Current viewing transaction:', viewing)
+              console.log('🔄 [Finance] Is editing mode:', isEditing)
+              
               setLoading(true)
+              console.log('⏳ [Finance] Loading set to true')
+              
               try {
                 const income = Number(values.incomeAmount || 0)
                 const expense = Number(values.expenseAmount || 0)
+                console.log('💰 [Finance] Income:', income, 'Expense:', expense)
+                
                 if (income <= 0 && expense <= 0) {
+                  console.log('❌ [Finance] Validation failed: no income or expense')
                   message.error(t('financeAdmin.enterIncomeOrExpense'))
                   setLoading(false)
                   return
                 }
+                
                 const amount = income - expense
+                console.log('💵 [Finance] Calculated amount:', amount)
+                
                 // 校验relatedOrders分配总额
                 const ro: Array<{ orderId: string; amount: number }> = Array.isArray(values.relatedOrders) ? values.relatedOrders.filter((r: any) => r?.orderId && Number(r?.amount) > 0).map((r: any) => ({ orderId: String(r.orderId), amount: Number(r.amount) })) : []
                 const roSum = ro.reduce((s, r) => s + r.amount, 0)
                 const absTx = Math.abs(amount)
                 const roSumCents = Math.round(roSum * 100)
                 const absTxCents = Math.round(absTx * 100)
+                console.log('🔗 [Finance] Related orders:', ro)
+                console.log('📊 [Finance] Related orders sum:', roSum, 'Transaction amount:', absTx)
+                
                 if (roSumCents > absTxCents) {
+                  console.log('❌ [Finance] Validation failed: related orders exceed transaction amount')
                   message.error(t('financeAdmin.relatedOrdersExceed'))
                   setLoading(false)
                   return
                 }
+                
                 const updated = {
                   amount,
                   description: values.description,
@@ -1075,21 +1118,34 @@ const AdminFinance: React.FC = () => {
                   relatedOrders: ro.length ? ro : undefined,
                   createdAt: values.transactionDate ? (dayjs(values.transactionDate).toDate()) : new Date()
                 }
+                console.log('📦 [Finance] Update payload:', updated)
+                console.log('🎯 [Finance] Updating transaction ID:', viewing.id)
+                
                 await updateDocument(COLLECTIONS.TRANSACTIONS, viewing.id, updated as any)
+                console.log('✅ [Finance] Update successful')
+                
                 message.success(t('financeAdmin.updated'))
                 setIsEditing(false)
                 setViewing(null)
+                console.log('🚪 [Finance] Modal closed, editing mode off')
+                
                 await loadTransactions()
+                console.log('🔄 [Finance] Transactions reloaded')
               } catch (error) {
+                console.error('❌ [Finance] Save error:', error)
                 message.error(t('common.updateFailed'))
               } finally {
                 setLoading(false)
+                console.log('⏳ [Finance] Loading set to false')
               }
             }}
           >
             <div style={{ display: isMobile ? 'block' : 'flex', gap: 16 }}>
-              {(isMobile ? mobileTxTab === 'details' : true) && (
-              <div style={{ width: isMobile ? '100%' : 360, minWidth: isMobile ? 'auto' : 320 }}>
+              <div style={{ 
+                width: isMobile ? '100%' : 360, 
+                minWidth: isMobile ? 'auto' : 320,
+                display: isMobile && mobileTxTab !== 'details' ? 'none' : 'block'
+              }}>
                 <Form.Item label={t('financeAdmin.transactionDate')} name="transactionDate" rules={[{ required: true, message: t('financeAdmin.selectTransactionDate') }]}> 
                   <DatePicker style={{ width: '100%' }} disabled={!isEditing} />
                 </Form.Item>
@@ -1103,9 +1159,11 @@ const AdminFinance: React.FC = () => {
                   <Input.TextArea rows={3} disabled={!isEditing} />
                 </Form.Item>
               </div>
-              )}
-              {(isMobile ? mobileTxTab === 'matching' : true) && (
-              <div style={{ flex: 1, minWidth: isMobile ? 'auto' : 380 }}>
+              <div style={{ 
+                flex: 1, 
+                minWidth: isMobile ? 'auto' : 380,
+                display: isMobile && mobileTxTab !== 'matching' ? 'none' : 'block'
+              }}>
                 <Form.List name="relatedOrders">
                   {(fields, { add, remove }) => (
                     <div style={theme.card.base}>
@@ -1196,7 +1254,6 @@ const AdminFinance: React.FC = () => {
                   )}
                 </Form.List>
               </div>
-              )}
           </div>
           </Form>
           </>

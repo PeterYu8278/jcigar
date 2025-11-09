@@ -40,6 +40,7 @@ const AdminInventory: React.FC = () => {
   const [outModalOpen, setOutModalOpen] = useState(false)
   const [outStatsExpandedKeys, setOutStatsExpandedKeys] = useState<React.Key[]>([])
   const [inStatsExpandedKeys, setInStatsExpandedKeys] = useState<React.Key[]>([])
+  const [inLogsExpandedKeys, setInLogsExpandedKeys] = useState<React.Key[]>([])
   const [inSearchKeyword, setInSearchKeyword] = useState('')
   const [inBrandFilter, setInBrandFilter] = useState<string | undefined>()
   const [outSearchKeyword, setOutSearchKeyword] = useState('')
@@ -430,6 +431,46 @@ const AdminInventory: React.FC = () => {
       return true
     })
   }, [inLogs, inSearchKeyword, inBrandFilter, items])
+  
+  // 入库记录按单号分组
+  const inLogsGroupedByReference = useMemo(() => {
+    const grouped = new Map<string, {
+      referenceNo: string;
+      date: Date | null;
+      reason: string;
+      logs: any[];
+      totalQuantity: number;
+      totalValue: number;
+      productCount: number;
+    }>();
+    
+    filteredInLogs.forEach(log => {
+      const key = log.referenceNo || '__NO_REFERENCE__';
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          referenceNo: log.referenceNo || t('inventory.unassignedReference'),
+          date: toDateSafe(log.createdAt),
+          reason: (log as any).reason || '-',
+          logs: [],
+          totalQuantity: 0,
+          totalValue: 0,
+          productCount: 0
+        });
+      }
+      const group = grouped.get(key)!;
+      group.logs.push(log);
+      group.totalQuantity += Number(log.quantity || 0);
+      group.totalValue += Number(log.quantity || 0) * Number((log as any).unitPrice || 0);
+      group.productCount = group.logs.length;
+    });
+    
+    return Array.from(grouped.values())
+      .sort((a, b) => {
+        const dateA = a.date?.getTime() || 0;
+        const dateB = b.date?.getTime() || 0;
+        return dateB - dateA; // 最新的在上面
+      });
+  }, [filteredInLogs, items, t])
   
   // 出库记录筛选
   const filteredOutLogs = useMemo(() => {
@@ -1545,9 +1586,8 @@ const AdminInventory: React.FC = () => {
               <Table
                   style={{ marginTop: 1 }}
                 title={() => t('inventory.inStockRecord')}
-                columns={logColumns}
-                  dataSource={filteredInLogs}
-                rowKey="id"
+                  dataSource={inLogsGroupedByReference}
+                  rowKey={(record) => record.referenceNo || 'no-ref'}
                   pagination={{ 
                     pageSize: inPageSize,
                     showSizeChanger: true,
@@ -1559,35 +1599,313 @@ const AdminInventory: React.FC = () => {
                       try { localStorage.setItem('inventory_in_page_size', String(next)) } catch {}
                     }
                   }}
+                  expandable={{
+                    expandedRowKeys: inLogsExpandedKeys,
+                    onExpandedRowsChange: (keys) => setInLogsExpandedKeys([...keys]),
+                    expandedRowRender: (record: any) => (
+                      <Table
+                        dataSource={record.logs}
+                        rowKey="id"
+                        pagination={false}
+                        size="small"
+                        showHeader={true}
+                        style={{ marginLeft: 20 }}
+                        columns={[
+                          { 
+                            title: t('inventory.product'), 
+                            dataIndex: 'cigarId', 
+                            key: 'cigarId', 
+                            render: (id: string, rec: any) => {
+                              const cigar = items.find(i => i.id === id)
+                              return rec.cigarName || cigar?.name || id
+                            }
+                          },
+                          { 
+                            title: t('inventory.quantity'), 
+                            dataIndex: 'quantity', 
+                            key: 'quantity',
+                            render: (qty: number) => (
+                              <span style={{ color: '#52c41a', fontWeight: 600 }}>+{qty}</span>
+                            )
+                          },
+                          { 
+                            title: t('inventory.unitPrice'), 
+                            dataIndex: 'unitPrice', 
+                            key: 'unitPrice',
+                            render: (price: number) => price ? `RM ${price.toFixed(2)}` : '-'
+                          },
+                          { 
+                            title: t('inventory.totalValue'), 
+                            key: 'totalValue',
+                            render: (_: any, rec: any) => {
+                              const val = Number(rec.quantity || 0) * Number(rec.unitPrice || 0)
+                              return val > 0 ? `RM ${val.toFixed(2)}` : '-'
+                            }
+                          },
+                          { 
+                            title: t('inventory.time'), 
+                            dataIndex: 'createdAt', 
+                            key: 'createdAt', 
+                            render: (v: any) => {
+                              const d = toDateSafe(v)
+                              return d ? d.toLocaleString('zh-CN', { 
+                                month: '2-digit', 
+                                day: '2-digit', 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              }) : '-'
+                            }
+                          }
+                        ]}
+                      />
+                    ),
+                    columnWidth: 60,
+                    columnTitle: (
+                      <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <button
+                          onClick={() => {
+                            if (inLogsExpandedKeys.length > 0) {
+                              setInLogsExpandedKeys([])
+                            } else {
+                              setInLogsExpandedKeys(inLogsGroupedByReference.map(g => g.referenceNo || 'no-ref'))
+                            }
+                          }}
+                          style={{
+                            padding: '2px 8px',
+                            fontSize: 12,
+                            background: 'rgba(244, 175, 37, 0.1)',
+                            border: '1px solid rgba(244, 175, 37, 0.3)',
+                            borderRadius: 4,
+                            color: '#f4af25',
+                            cursor: 'pointer',
+                            fontWeight: 600
+                          }}
+                        >
+                          {inLogsExpandedKeys.length > 0 ? t('inventory.collapseAll') : t('inventory.expandAll')}
+                        </button>
+                      </div>
+                    )
+                  }}
+                  columns={[
+                    {
+                      title: t('inventory.referenceNo'),
+                      dataIndex: 'referenceNo',
+                      key: 'referenceNo',
+                      render: (refNo: string) => (
+                        <span style={{ 
+                          fontFamily: 'monospace', 
+                          fontWeight: 600,
+                          color: refNo === t('inventory.unassignedReference') ? '#999' : '#1890ff'
+                        }}>
+                          {refNo}
+                        </span>
+                      )
+                    },
+                    {
+                      title: t('inventory.time'),
+                      dataIndex: 'date',
+                      key: 'date',
+                      render: (date: Date | null) => formatYMD(date),
+                      sorter: (a: any, b: any) => {
+                        const dateA = a.date?.getTime() || 0;
+                        const dateB = b.date?.getTime() || 0;
+                        return dateA - dateB;
+                      }
+                    },
+                    {
+                      title: t('inventory.productTypes'),
+                      dataIndex: 'productCount',
+                      key: 'productCount',
+                      render: (count: number) => (
+                        <span>{count} {t('inventory.types')}</span>
+                      )
+                    },
+                    {
+                      title: t('inventory.totalQuantity'),
+                      dataIndex: 'totalQuantity',
+                      key: 'totalQuantity',
+                      render: (qty: number) => (
+                        <span style={{ color: '#52c41a', fontWeight: 600 }}>+{qty}</span>
+                      )
+                    },
+                    {
+                      title: t('inventory.totalValue'),
+                      dataIndex: 'totalValue',
+                      key: 'totalValue',
+                      render: (val: number) => val > 0 ? `RM ${val.toFixed(2)}` : '-'
+                    },
+                    {
+                      title: t('inventory.reason'),
+                      dataIndex: 'reason',
+                      key: 'reason',
+                      render: (reason: string) => reason || '-'
+                    }
+                  ]}
                 />
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div style={{ fontWeight: 600, marginBottom: 4 }}>{t('inventory.inStockRecord')}</div>
-                  {filteredInLogs.map((log: any) => {
-                    const cigar = items.find(i => i.id === log.cigarId)
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ fontWeight: 600, marginBottom: 4, color: '#fff' }}>{t('inventory.inStockRecord')}</div>
+                  {inLogsGroupedByReference.map((group: any) => {
+                    const isExpanded = inLogsExpandedKeys.includes(group.referenceNo || 'no-ref')
                     return (
-                      <div key={log.id} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: 12,
-                        borderRadius: 10,
-                        background: 'rgba(255,255,255,0.7)',
-                        border: '1px solid rgba(0,0,0,0.06)'
-                      }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                            <div style={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cigar?.name || log.cigarId}</div>
-                            <div style={{ color: '#999', fontSize: 12 }}>{formatYMD(toDateSafe(log.createdAt))}</div>
+                      <div 
+                        key={group.referenceNo || 'no-ref'} 
+                        style={{
+                          borderRadius: 12,
+                          background: 'rgba(82, 196, 26, 0.08)',
+                          border: '1px solid rgba(82, 196, 26, 0.3)',
+                          overflow: 'hidden'
+                        }}
+                      >
+                        {/* 单号头部 */}
+                        <div 
+                          onClick={() => {
+                            const key = group.referenceNo || 'no-ref'
+                            if (isExpanded) {
+                              setInLogsExpandedKeys(prev => prev.filter(k => k !== key))
+                            } else {
+                              setInLogsExpandedKeys(prev => [...prev, key])
+                            }
+                          }}
+                          style={{
+                            padding: 12,
+                            background: 'rgba(82, 196, 26, 0.15)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }}
+                        >
+                          <div style={{ flex: 1 }}>
+                            <div style={{ 
+                              fontSize: 14, 
+                              fontWeight: 700, 
+                              color: '#fff',
+                              fontFamily: 'monospace',
+                              marginBottom: 4
+                            }}>
+                              📦 {group.referenceNo}
+                            </div>
+                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>
+                              {formatYMD(group.date)} · {group.productCount} {t('inventory.types')} · {group.totalQuantity} {t('inventory.sticks')}
+                            </div>
                           </div>
-                          <div style={{ marginTop: 6, display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12 }}>
-                            <div style={{ color: '#666' }}>{t('inventory.referenceNo')}: {log.referenceNo || '-'}</div>
-                            <div style={{ color: '#666' }}>{t('inventory.quantity')}: {log.quantity}</div>
+                          <div style={{ 
+                            fontSize: 18, 
+                            fontWeight: 700, 
+                            color: '#52c41a',
+                            marginRight: 8
+                          }}>
+                            {isExpanded ? '▲' : '▼'}
                           </div>
-                          <div style={{ marginTop: 6, color: '#888', fontSize: 12 }}>{t('inventory.reason')}: {log.reason || '-'}</div>
                         </div>
+                        
+                        {/* 展开的产品列表 */}
+                        {isExpanded && (
+                          <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {group.logs.map((log: any) => {
+                              const cigar = items.find(i => i.id === log.cigarId)
+                              const itemValue = Number(log.quantity || 0) * Number(log.unitPrice || 0)
+                              return (
+                                <div 
+                                  key={log.id}
+                                  style={{
+                                    padding: 10,
+                                    background: 'rgba(255,255,255,0.05)',
+                                    borderRadius: 8,
+                                    border: '1px solid rgba(82, 196, 26, 0.2)'
+                                  }}
+                                >
+                                  <div style={{ 
+                                    display: 'flex', 
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginBottom: 6
+                                  }}>
+                                    <div style={{ 
+                                      fontSize: 13, 
+                                      fontWeight: 600, 
+                                      color: '#fff',
+                                      flex: 1,
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap',
+                                      marginRight: 8
+                                    }}>
+                                      {log.cigarName || cigar?.name || log.cigarId}
+                                    </div>
+                                    <div style={{ 
+                                      fontSize: 16, 
+                                      fontWeight: 700, 
+                                      color: '#52c41a',
+                                      whiteSpace: 'nowrap'
+                                    }}>
+                                      +{log.quantity}
+                                    </div>
+                                  </div>
+                                  <div style={{ 
+                                    display: 'flex', 
+                                    justifyContent: 'space-between',
+                                    fontSize: 11,
+                                    color: 'rgba(255,255,255,0.6)'
+                                  }}>
+                                    <div>
+                                      {log.unitPrice ? `${t('inventory.unitPrice')}: RM ${log.unitPrice.toFixed(2)}` : ''}
+                                    </div>
+                                    <div>
+                                      {itemValue > 0 ? `${t('inventory.totalValue')}: RM ${itemValue.toFixed(2)}` : ''}
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                            
+                            {/* 单号汇总 */}
+                            <div style={{
+                              marginTop: 4,
+                              padding: 10,
+                              background: 'rgba(82, 196, 26, 0.1)',
+                              borderRadius: 8,
+                              border: '1px solid rgba(82, 196, 26, 0.3)'
+                            }}>
+                              <div style={{ 
+                                display: 'flex', 
+                                justifyContent: 'space-between',
+                                fontSize: 12,
+                                color: '#fff',
+                                fontWeight: 600
+                              }}>
+                                <div>{t('inventory.summary')}</div>
+                                <div style={{ color: '#52c41a' }}>
+                                  +{group.totalQuantity} {t('inventory.sticks')}
+                                  {group.totalValue > 0 ? ` · RM ${group.totalValue.toFixed(2)}` : ''}
+                                </div>
+                              </div>
+                              {group.reason && group.reason !== '-' && (
+                                <div style={{ 
+                                  marginTop: 4,
+                                  fontSize: 11, 
+                                  color: 'rgba(255,255,255,0.6)' 
+                                }}>
+                                  📝 {group.reason}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )
                   })}
+                  {inLogsGroupedByReference.length === 0 && (
+                    <div style={{ 
+                      padding: 40, 
+                      textAlign: 'center', 
+                      color: 'rgba(255,255,255,0.4)',
+                      fontSize: 14
+                    }}>
+                      {t('common.noData')}
+                    </div>
+                  )}
                 </div>
               )}
             </Card>

@@ -626,7 +626,9 @@
     "products": "个产品",
     "sticks": "支",
     "expandAll": "全部展开",
-    "collapseAll": "全部收起"
+    "collapseAll": "全部收起",
+    "unassignedReference": "未分配单号",
+    "unitPrice": "单价"
   },
   "financeAdmin": {
     "title": "财务管理",
