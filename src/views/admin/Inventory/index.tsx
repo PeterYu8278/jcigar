@@ -437,11 +437,15 @@ const AdminInventory: React.FC = () => {
           {/* 分隔线 */}
           <div style={{ borderTop: '1px solid #e8e8e8', margin: '4px 0' }} />
           
-          {/* 第二行：总出库 | 状态标签 */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+          {/* 第二行：总出库 */}
+          <div style={{ marginTop: 4, marginBottom: 6 }}>
             <span style={{ color: '#ff4d4f', fontSize: 13 }}>
               {t('inventory.totalOut')}: {totalOut}
             </span>
+          </div>
+          
+          {/* 第三行：状态标签 */}
+          <div>
             <Tag color={getStatusColor(
               currentStock < 0 ? 'negative' : 
               currentStock <= ((record as any)?.inventory?.minStock ?? 0) ? 'critical' : 
