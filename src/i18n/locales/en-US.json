@@ -631,7 +631,17 @@
     "expandAll": "Expand All",
     "collapseAll": "Collapse All",
     "unassignedReference": "Unassigned Reference",
-    "unitPrice": "Unit Price"
+    "unitPrice": "Unit Price",
+    "editInLog": "Edit Inbound Record",
+    "deleteInLog": "Delete Inbound Record",
+    "deleteInLogConfirm": "Confirm deletion of this inbound record? This action cannot be undone.",
+    "deleteReferenceGroup": "Delete Reference Group",
+    "deleteReferenceGroupConfirm": "Confirm deletion of all {{count}} records for reference {{referenceNo}}? This action cannot be undone.",
+    "updateSuccess": "Update successful",
+    "deleteSuccess": "Delete successful",
+    "quantityMinOne": "Quantity must be at least 1",
+    "pleaseInputUnitPrice": "Please enter unit price",
+    "pleaseInputReason": "Please enter reason"
   },
   "financeAdmin": {
     "title": "Financial Management",

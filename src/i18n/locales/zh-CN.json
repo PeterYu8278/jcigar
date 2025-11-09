@@ -628,7 +628,17 @@
     "expandAll": "全部展开",
     "collapseAll": "全部收起",
     "unassignedReference": "未分配单号",
-    "unitPrice": "单价"
+    "unitPrice": "单价",
+    "editInLog": "编辑入库记录",
+    "deleteInLog": "删除入库记录",
+    "deleteInLogConfirm": "确认删除这条入库记录？此操作不可恢复。",
+    "deleteReferenceGroup": "删除整组记录",
+    "deleteReferenceGroupConfirm": "确认删除单号 {{referenceNo}} 的所有 {{count}} 条记录？此操作不可恢复。",
+    "updateSuccess": "更新成功",
+    "deleteSuccess": "删除成功",
+    "quantityMinOne": "数量至少为1",
+    "pleaseInputUnitPrice": "请输入单价",
+    "pleaseInputReason": "请输入原因"
   },
   "financeAdmin": {
     "title": "财务管理",

@@ -41,6 +41,8 @@ const AdminInventory: React.FC = () => {
   const [outStatsExpandedKeys, setOutStatsExpandedKeys] = useState<React.Key[]>([])
   const [inStatsExpandedKeys, setInStatsExpandedKeys] = useState<React.Key[]>([])
   const [inLogsExpandedKeys, setInLogsExpandedKeys] = useState<React.Key[]>([])
+  const [editingInLog, setEditingInLog] = useState<any>(null)
+  const [inLogEditForm] = Form.useForm()
   const [inSearchKeyword, setInSearchKeyword] = useState('')
   const [inBrandFilter, setInBrandFilter] = useState<string | undefined>()
   const [outSearchKeyword, setOutSearchKeyword] = useState('')
@@ -1655,6 +1657,55 @@ const AdminInventory: React.FC = () => {
                                 minute: '2-digit' 
                               }) : '-'
                             }
+                          },
+                          {
+                            title: t('inventory.actions'),
+                            key: 'actions',
+                            width: 100,
+                            render: (_: any, rec: any) => (
+                              <Space size="small">
+                                <Button 
+                                  type="link" 
+                                  icon={<EditOutlined />} 
+                                  size="small"
+                                  onClick={() => {
+                                    setEditingInLog(rec)
+                                    inLogEditForm.setFieldsValue({
+                                      quantity: rec.quantity,
+                                      unitPrice: rec.unitPrice || undefined,
+                                      reason: rec.reason
+                                    })
+                                  }}
+                                />
+                                <Button 
+                                  type="link" 
+                                  icon={<DeleteOutlined />} 
+                                  size="small"
+                                  danger
+                                  onClick={() => {
+                                    Modal.confirm({
+                                      title: t('inventory.deleteInLog'),
+                                      content: t('inventory.deleteInLogConfirm'),
+                                      okText: t('common.confirm'),
+                                      cancelText: t('common.cancel'),
+                                      okType: 'danger',
+                                      onOk: async () => {
+                                        setLoading(true)
+                                        try {
+                                          await deleteDocument(COLLECTIONS.INVENTORY_LOGS, rec.id)
+                                          message.success(t('inventory.deleteSuccess'))
+                                          setInventoryLogs(await getAllInventoryLogs())
+                                        } catch (error) {
+                                          message.error(t('common.deleteFailed'))
+                                        } finally {
+                                          setLoading(false)
+                                        }
+                                      }
+                                    })
+                                  }}
+                                />
+                              </Space>
+                            )
                           }
                         ]}
                       />
@@ -1739,6 +1790,47 @@ const AdminInventory: React.FC = () => {
                       dataIndex: 'reason',
                       key: 'reason',
                       render: (reason: string) => reason || '-'
+                    },
+                    {
+                      title: t('inventory.actions'),
+                      key: 'actions',
+                      width: 80,
+                      render: (_: any, group: any) => (
+                        <Button 
+                          type="link" 
+                          icon={<DeleteOutlined />} 
+                          size="small"
+                          danger
+                          onClick={() => {
+                            Modal.confirm({
+                              title: t('inventory.deleteReferenceGroup'),
+                              content: t('inventory.deleteReferenceGroupConfirm', { 
+                                referenceNo: group.referenceNo, 
+                                count: group.productCount 
+                              }),
+                              okText: t('common.confirm'),
+                              cancelText: t('common.cancel'),
+                              okType: 'danger',
+                              onOk: async () => {
+                                setLoading(true)
+                                try {
+                                  await Promise.all(
+                                    group.logs.map((log: any) => 
+                                      deleteDocument(COLLECTIONS.INVENTORY_LOGS, log.id)
+                                    )
+                                  )
+                                  message.success(t('inventory.deleteSuccess'))
+                                  setInventoryLogs(await getAllInventoryLogs())
+                                } catch (error) {
+                                  message.error(t('common.deleteFailed'))
+                                } finally {
+                                  setLoading(false)
+                                }
+                              }
+                            })
+                          }}
+                        />
+                      )
                     }
                   ]}
                 />
@@ -1758,46 +1850,99 @@ const AdminInventory: React.FC = () => {
                         }}
                       >
                         {/* 单号头部 */}
-                        <div 
-                          onClick={() => {
-                            const key = group.referenceNo || 'no-ref'
-                            if (isExpanded) {
-                              setInLogsExpandedKeys(prev => prev.filter(k => k !== key))
-                            } else {
-                              setInLogsExpandedKeys(prev => [...prev, key])
-                            }
-                          }}
-                          style={{
-                            padding: 12,
-                            background: 'rgba(82, 196, 26, 0.15)',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
-                          }}
-                        >
-                          <div style={{ flex: 1 }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'stretch'
+                        }}>
+                          <div 
+                            onClick={() => {
+                              const key = group.referenceNo || 'no-ref'
+                              if (isExpanded) {
+                                setInLogsExpandedKeys(prev => prev.filter(k => k !== key))
+                              } else {
+                                setInLogsExpandedKeys(prev => [...prev, key])
+                              }
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: 12,
+                              background: 'rgba(82, 196, 26, 0.15)',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center'
+                            }}
+                          >
+                            <div style={{ flex: 1 }}>
+                              <div style={{ 
+                                fontSize: 14, 
+                                fontWeight: 700, 
+                                color: '#fff',
+                                fontFamily: 'monospace',
+                                marginBottom: 4
+                              }}>
+                                📦 {group.referenceNo}
+                              </div>
+                              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>
+                                {formatYMD(group.date)} · {group.productCount} {t('inventory.types')} · {group.totalQuantity} {t('inventory.sticks')}
+                              </div>
+                            </div>
                             <div style={{ 
-                              fontSize: 14, 
+                              fontSize: 18, 
                               fontWeight: 700, 
-                              color: '#fff',
-                              fontFamily: 'monospace',
-                              marginBottom: 4
+                              color: '#52c41a',
+                              marginRight: 8
                             }}>
-                              📦 {group.referenceNo}
-                            </div>
-                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>
-                              {formatYMD(group.date)} · {group.productCount} {t('inventory.types')} · {group.totalQuantity} {t('inventory.sticks')}
+                              {isExpanded ? '▲' : '▼'}
                             </div>
                           </div>
-                          <div style={{ 
-                            fontSize: 18, 
-                            fontWeight: 700, 
-                            color: '#52c41a',
-                            marginRight: 8
-                          }}>
-                            {isExpanded ? '▲' : '▼'}
-                          </div>
+                          
+                          {/* 删除整组按钮 */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              Modal.confirm({
+                                title: t('inventory.deleteReferenceGroup'),
+                                content: t('inventory.deleteReferenceGroupConfirm', { 
+                                  referenceNo: group.referenceNo, 
+                                  count: group.productCount 
+                                }),
+                                okText: t('common.confirm'),
+                                cancelText: t('common.cancel'),
+                                okType: 'danger',
+                                onOk: async () => {
+                                  setLoading(true)
+                                  try {
+                                    await Promise.all(
+                                      group.logs.map((log: any) => 
+                                        deleteDocument(COLLECTIONS.INVENTORY_LOGS, log.id)
+                                      )
+                                    )
+                                    message.success(t('inventory.deleteSuccess'))
+                                    setInventoryLogs(await getAllInventoryLogs())
+                                  } catch (error) {
+                                    message.error(t('common.deleteFailed'))
+                                  } finally {
+                                    setLoading(false)
+                                  }
+                                }
+                              })
+                            }}
+                            style={{
+                              width: 50,
+                              background: 'rgba(255, 77, 79, 0.15)',
+                              border: 'none',
+                              borderLeft: '1px solid rgba(82, 196, 26, 0.3)',
+                              color: '#ff4d4f',
+                              cursor: 'pointer',
+                              fontSize: 16,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            🗑️
+                          </button>
                         </div>
                         
                         {/* 展开的产品列表 */}
@@ -1847,7 +1992,8 @@ const AdminInventory: React.FC = () => {
                                     display: 'flex', 
                                     justifyContent: 'space-between',
                                     fontSize: 11,
-                                    color: 'rgba(255,255,255,0.6)'
+                                    color: 'rgba(255,255,255,0.6)',
+                                    marginBottom: 6
                                   }}>
                                     <div>
                                       {log.unitPrice ? `${t('inventory.unitPrice')}: RM ${log.unitPrice.toFixed(2)}` : ''}
@@ -1855,6 +2001,71 @@ const AdminInventory: React.FC = () => {
                                     <div>
                                       {itemValue > 0 ? `${t('inventory.totalValue')}: RM ${itemValue.toFixed(2)}` : ''}
                                     </div>
+                                  </div>
+                                  
+                                  {/* 操作按钮 */}
+                                  <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setEditingInLog(log)
+                                        inLogEditForm.setFieldsValue({
+                                          quantity: log.quantity,
+                                          unitPrice: log.unitPrice || undefined,
+                                          reason: log.reason
+                                        })
+                                      }}
+                                      style={{
+                                        flex: 1,
+                                        padding: '4px 8px',
+                                        fontSize: 11,
+                                        background: 'rgba(255,255,255,0.1)',
+                                        border: '1px solid rgba(255,255,255,0.2)',
+                                        borderRadius: 4,
+                                        color: '#fff',
+                                        cursor: 'pointer',
+                                        fontWeight: 500
+                                      }}
+                                    >
+                                      ✏️ {t('common.edit')}
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        Modal.confirm({
+                                          title: t('inventory.deleteInLog'),
+                                          content: t('inventory.deleteInLogConfirm'),
+                                          okText: t('common.confirm'),
+                                          cancelText: t('common.cancel'),
+                                          okType: 'danger',
+                                          onOk: async () => {
+                                            setLoading(true)
+                                            try {
+                                              await deleteDocument(COLLECTIONS.INVENTORY_LOGS, log.id)
+                                              message.success(t('inventory.deleteSuccess'))
+                                              setInventoryLogs(await getAllInventoryLogs())
+                                            } catch (error) {
+                                              message.error(t('common.deleteFailed'))
+                                            } finally {
+                                              setLoading(false)
+                                            }
+                                          }
+                                        })
+                                      }}
+                                      style={{
+                                        flex: 1,
+                                        padding: '4px 8px',
+                                        fontSize: 11,
+                                        background: 'rgba(255, 77, 79, 0.1)',
+                                        border: '1px solid rgba(255, 77, 79, 0.3)',
+                                        borderRadius: 4,
+                                        color: '#ff4d4f',
+                                        cursor: 'pointer',
+                                        fontWeight: 500
+                                      }}
+                                    >
+                                      🗑️ {t('common.delete')}
+                                    </button>
                                   </div>
                                 </div>
                               )
@@ -2936,6 +3147,90 @@ const AdminInventory: React.FC = () => {
       >
         {t('inventory.deleteBrandContent', { name: deletingBrand?.name })}
       </Modal>
+      {/* 编辑入库记录弹窗 */}
+      <Modal
+        title={t('inventory.editInLog')}
+        open={!!editingInLog}
+        onCancel={() => {
+          setEditingInLog(null)
+          inLogEditForm.resetFields()
+        }}
+        onOk={() => inLogEditForm.submit()}
+        confirmLoading={loading}
+        {...getResponsiveModalConfig(isMobile, true, 500)}
+      >
+        <Form
+          form={inLogEditForm}
+          layout="vertical"
+          className="dark-theme-form"
+          onFinish={async (values: any) => {
+            if (!editingInLog) return
+            setLoading(true)
+            try {
+              const updated = {
+                quantity: Number(values.quantity),
+                unitPrice: values.unitPrice ? Number(values.unitPrice) : undefined,
+                reason: values.reason || editingInLog.reason
+              }
+              await updateDocument(COLLECTIONS.INVENTORY_LOGS, editingInLog.id, updated)
+              message.success(t('inventory.updateSuccess'))
+              setEditingInLog(null)
+              inLogEditForm.resetFields()
+              setInventoryLogs(await getAllInventoryLogs())
+            } catch (error) {
+              message.error(t('common.updateFailed'))
+            } finally {
+              setLoading(false)
+            }
+          }}
+        >
+          <Form.Item 
+            label={t('inventory.product')}
+          >
+            <Input 
+              value={editingInLog?.cigarName || items.find(i => i.id === editingInLog?.cigarId)?.name || editingInLog?.cigarId} 
+              disabled 
+              style={{ color: '#fff' }}
+            />
+          </Form.Item>
+          <Form.Item 
+            label={t('inventory.quantity')} 
+            name="quantity"
+            rules={[
+              { required: true, message: t('common.pleaseInputQuantity') },
+              { type: 'number', min: 1, message: t('inventory.quantityMinOne') }
+            ]}
+          >
+            <InputNumber 
+              min={1} 
+              style={{ width: '100%' }} 
+              placeholder={t('common.pleaseInputQuantity')}
+            />
+          </Form.Item>
+          <Form.Item 
+            label={t('inventory.unitPrice')} 
+            name="unitPrice"
+          >
+            <InputNumber 
+              min={0} 
+              step={0.01}
+              style={{ width: '100%' }} 
+              placeholder={t('inventory.pleaseInputUnitPrice')}
+              prefix="RM"
+            />
+          </Form.Item>
+          <Form.Item 
+            label={t('inventory.reason')} 
+            name="reason"
+          >
+            <Input.TextArea 
+              rows={3}
+              placeholder={t('inventory.pleaseInputReason')}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
       {/* 入库统计弹窗 */}
       <Modal
         title={t('inventory.inStatsTitle')}
