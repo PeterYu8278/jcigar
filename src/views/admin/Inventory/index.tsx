@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Table, Button, Tag, Space, Typography, Input, Select, Progress, Modal, Form, InputNumber, message, Dropdown, Checkbox, Card, Upload } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, WarningOutlined, UploadOutlined, DownloadOutlined, MinusCircleOutlined } from '@ant-design/icons'
 import type { Cigar, InventoryLog, Brand } from '../../../types'
-import { getCigars, createDocument, updateDocument, deleteDocument, COLLECTIONS, getAllInventoryLogs, getAllOrders, getUsers, getBrands, getBrandById } from '../../../services/firebase/firestore'
+import { getCigars, createDocument, updateDocument, deleteDocument, COLLECTIONS, getAllInventoryLogs, getAllOrders, getUsers, getBrands, getBrandById, getAllTransactions } from '../../../services/firebase/firestore'
 import ImageUpload from '../../../components/common/ImageUpload'
 import { getModalTheme, getResponsiveModalConfig, getModalThemeStyles } from '../../../config/modalTheme'
 
@@ -30,6 +30,7 @@ const AdminInventory: React.FC = () => {
   const [inventoryLogs, setInventoryLogs] = useState<InventoryLog[]>([])
   const [orders, setOrders] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
+  const [transactions, setTransactions] = useState<any[]>([])
   const [viewingReference, setViewingReference] = useState<string | null>(null)
   const [viewingProductLogs, setViewingProductLogs] = useState<string | null>(null)
   const [imageList, setImageList] = useState<any[]>([])
@@ -101,10 +102,11 @@ const AdminInventory: React.FC = () => {
         setItems(list)
         const logs = await getAllInventoryLogs()
         setInventoryLogs(logs)
-        const [os, us, bs] = await Promise.all([getAllOrders(), getUsers(), getBrands()])
+        const [os, us, bs, txs] = await Promise.all([getAllOrders(), getUsers(), getBrands(), getAllTransactions()])
         setOrders(os)
         setUsers(us)
         setBrandList(bs)
+        setTransactions(txs)
         // 初始化分页（本地持久化）
         try {
           const raw = localStorage.getItem('inventory_pagination')
@@ -434,6 +436,45 @@ const AdminInventory: React.FC = () => {
     })
   }, [inLogs, inSearchKeyword, inBrandFilter, items])
   
+  // 计算入库单号的财务匹配状态
+  const getInboundReferenceMatchStatus = (referenceNo: string) => {
+    if (!referenceNo) return { matched: 0, total: 0, status: 'none' }
+    
+    // 计算该单号的总价值
+    const referenceLogs = inventoryLogs.filter((log: any) => 
+      log.referenceNo === referenceNo && log.type === 'in'
+    )
+    const totalValue = referenceLogs.reduce((sum, log: any) => {
+      return sum + (Number(log.quantity || 0) * Number((log as any).unitPrice || 0))
+    }, 0)
+    
+    // 查找匹配该单号的交易记录
+    const matchedAmount = transactions
+      .filter((t: any) => {
+        const relatedOrders = (t as any)?.relatedOrders || []
+        return relatedOrders.some((ro: any) => ro.orderId === referenceNo)
+      })
+      .reduce((sum, t: any) => {
+        const relatedOrders = (t as any)?.relatedOrders || []
+        const refMatch = relatedOrders.find((ro: any) => ro.orderId === referenceNo)
+        return sum + (refMatch ? Number(refMatch.amount || 0) : 0)
+      }, 0)
+    
+    if (totalValue === 0) {
+      return { matched: matchedAmount, total: 0, status: 'none' }
+    }
+    
+    const matchPercentage = (matchedAmount / totalValue) * 100
+    
+    if (matchPercentage >= 99) {
+      return { matched: matchedAmount, total: totalValue, status: 'fully' }
+    } else if (matchedAmount > 0) {
+      return { matched: matchedAmount, total: totalValue, status: 'partial' }
+    } else {
+      return { matched: matchedAmount, total: totalValue, status: 'none' }
+    }
+  }
+
   // 入库记录按单号分组
   const inLogsGroupedByReference = useMemo(() => {
     const grouped = new Map<string, {
@@ -1792,6 +1833,31 @@ const AdminInventory: React.FC = () => {
                       render: (reason: string) => reason || '-'
                     },
                     {
+                      title: t('inventory.paymentStatus'),
+                      key: 'paymentStatus',
+                      width: 120,
+                      render: (_: any, group: any) => {
+                        const status = getInboundReferenceMatchStatus(group.referenceNo)
+                        
+                        if (status.status === 'none' || status.total === 0) {
+                          return <Tag color="default">{t('inventory.unpaid')}</Tag>
+                        } else if (status.status === 'fully') {
+                          return (
+                            <Tag color="success">
+                              ✓ {t('inventory.fullyPaid')}
+                            </Tag>
+                          )
+                        } else if (status.status === 'partial') {
+                          return (
+                            <Tag color="warning">
+                              {t('inventory.partiallyPaid')} ({Math.round((status.matched / status.total) * 100)}%)
+                            </Tag>
+                          )
+                        }
+                        return null
+                      }
+                    },
+                    {
                       title: t('inventory.actions'),
                       key: 'actions',
                       width: 80,
@@ -1875,16 +1941,76 @@ const AdminInventory: React.FC = () => {
                           >
                             <div style={{ flex: 1 }}>
                               <div style={{ 
-                                fontSize: 14, 
-                                fontWeight: 700, 
-                                color: '#fff',
-                                fontFamily: 'monospace',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
                                 marginBottom: 4
                               }}>
-                                📦 {group.referenceNo}
+                                <div style={{ 
+                                  fontSize: 14, 
+                                  fontWeight: 700, 
+                                  color: '#fff',
+                                  fontFamily: 'monospace'
+                                }}>
+                                  📦 {group.referenceNo}
+                                </div>
+                                {(() => {
+                                  const status = getInboundReferenceMatchStatus(group.referenceNo)
+                                  if (status.status === 'fully') {
+                                    return (
+                                      <span style={{
+                                        padding: '2px 6px',
+                                        fontSize: 10,
+                                        fontWeight: 600,
+                                        background: 'rgba(82, 196, 26, 0.2)',
+                                        color: '#52c41a',
+                                        borderRadius: 4,
+                                        border: '1px solid rgba(82, 196, 26, 0.4)'
+                                      }}>
+                                        ✓ {t('inventory.fullyPaid')}
+                                      </span>
+                                    )
+                                  } else if (status.status === 'partial') {
+                                    return (
+                                      <span style={{
+                                        padding: '2px 6px',
+                                        fontSize: 10,
+                                        fontWeight: 600,
+                                        background: 'rgba(250, 173, 20, 0.2)',
+                                        color: '#faad14',
+                                        borderRadius: 4,
+                                        border: '1px solid rgba(250, 173, 20, 0.4)'
+                                      }}>
+                                        {t('inventory.partiallyPaid')} {Math.round((status.matched / status.total) * 100)}%
+                                      </span>
+                                    )
+                                  } else if (status.total > 0) {
+                                    return (
+                                      <span style={{
+                                        padding: '2px 6px',
+                                        fontSize: 10,
+                                        fontWeight: 600,
+                                        background: 'rgba(255,255,255,0.1)',
+                                        color: 'rgba(255,255,255,0.6)',
+                                        borderRadius: 4,
+                                        border: '1px solid rgba(255,255,255,0.2)'
+                                      }}>
+                                        {t('inventory.unpaid')}
+                                      </span>
+                                    )
+                                  }
+                                  return null
+                                })()}
                               </div>
                               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>
                                 {formatYMD(group.date)} · {group.productCount} {t('inventory.types')} · {group.totalQuantity} {t('inventory.sticks')}
+                                {(() => {
+                                  const status = getInboundReferenceMatchStatus(group.referenceNo)
+                                  if (status.total > 0) {
+                                    return ` · RM ${status.total.toFixed(2)}`
+                                  }
+                                  return ''
+                                })()}
                               </div>
                             </div>
                             <div style={{ 

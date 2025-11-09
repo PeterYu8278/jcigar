@@ -638,7 +638,11 @@
     "deleteSuccess": "删除成功",
     "quantityMinOne": "数量至少为1",
     "pleaseInputUnitPrice": "请输入单价",
-    "pleaseInputReason": "请输入原因"
+    "pleaseInputReason": "请输入原因",
+    "paymentStatus": "付款状态",
+    "fullyPaid": "已全额支付",
+    "partiallyPaid": "部分支付",
+    "unpaid": "未支付"
   },
   "financeAdmin": {
     "title": "财务管理",

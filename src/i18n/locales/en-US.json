@@ -640,7 +640,11 @@
     "deleteSuccess": "Delete successful",
     "quantityMinOne": "Quantity must be at least 1",
     "pleaseInputUnitPrice": "Please enter unit price",
-    "pleaseInputReason": "Please enter reason"
+    "pleaseInputReason": "Please enter reason",
+    "paymentStatus": "Payment Status",
+    "fullyPaid": "Fully Paid",
+    "partiallyPaid": "Partially Paid",
+    "unpaid": "Unpaid"
   },
   "financeAdmin": {
     "title": "Financial Management",
