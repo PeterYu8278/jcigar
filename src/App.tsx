@@ -146,7 +146,7 @@ const AppContent: React.FC = () => {
                 backdropFilter: 'blur(10px)',
                 position: 'relative',
                 overflow: needsPadding ? 'auto' : 'hidden',
-                paddingBottom: !isAuthPage ? '100px' : '0px',
+                paddingBottom: !isAuthPage ? '0px' : '0px',
                 display: needsPadding ? 'block' : 'flex',
                 alignItems: needsPadding ? undefined : 'center',
                 justifyContent: needsPadding ? undefined : 'center'
