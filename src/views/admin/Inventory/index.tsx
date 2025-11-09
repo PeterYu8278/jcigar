@@ -4724,39 +4724,6 @@ const AdminInventory: React.FC = () => {
                     
                     <Form.Item
                       {...field}
-                      name={[field.name, 'cigarId']}
-                      label="产品"
-                      rules={[{ required: true, message: '请选择产品' }]}
-                      style={{ marginBottom: 12 }}
-                    >
-                      <Select
-                        showSearch
-                        placeholder="选择雪茄产品"
-                        optionFilterProp="children"
-                        onChange={(value) => {
-                          const cigar = items.find(c => c.id === value)
-                          if (cigar) {
-                            const currentItems = orderEditForm.getFieldValue('items') || []
-                            currentItems[index] = {
-                              ...currentItems[index],
-                              cigarId: value,
-                              cigarName: cigar.name,
-                              itemType: 'cigar'
-                            }
-                            orderEditForm.setFieldsValue({ items: currentItems })
-                          }
-                        }}
-                      >
-                        {items.map((cigar: any) => (
-                          <Select.Option key={cigar.id} value={cigar.id}>
-                            {cigar.name}
-                          </Select.Option>
-                        ))}
-                      </Select>
-                    </Form.Item>
-                    
-                    <Form.Item
-                      {...field}
                       name={[field.name, 'cigarName']}
                       hidden
                     >
@@ -4772,8 +4739,42 @@ const AdminInventory: React.FC = () => {
                       <Input />
                     </Form.Item>
                     
+                    {/* 产品、数量、单价同行显示 */}
                     <Row gutter={12}>
                       <Col span={12}>
+                        <Form.Item
+                          {...field}
+                          name={[field.name, 'cigarId']}
+                          label="产品"
+                          rules={[{ required: true, message: '请选择产品' }]}
+                        >
+                          <Select
+                            showSearch
+                            placeholder="选择雪茄产品"
+                            optionFilterProp="children"
+                            onChange={(value) => {
+                              const cigar = items.find(c => c.id === value)
+                              if (cigar) {
+                                const currentItems = orderEditForm.getFieldValue('items') || []
+                                currentItems[index] = {
+                                  ...currentItems[index],
+                                  cigarId: value,
+                                  cigarName: cigar.name,
+                                  itemType: 'cigar'
+                                }
+                                orderEditForm.setFieldsValue({ items: currentItems })
+                              }
+                            }}
+                          >
+                            {items.map((cigar: any) => (
+                              <Select.Option key={cigar.id} value={cigar.id}>
+                                {cigar.name}
+                              </Select.Option>
+                            ))}
+                          </Select>
+                        </Form.Item>
+                      </Col>
+                      <Col span={6}>
                         <Form.Item
                           {...field}
                           name={[field.name, 'quantity']}
@@ -4787,7 +4788,7 @@ const AdminInventory: React.FC = () => {
                           />
                         </Form.Item>
                       </Col>
-                      <Col span={12}>
+                      <Col span={6}>
                         <Form.Item
                           {...field}
                           name={[field.name, 'unitPrice']}
