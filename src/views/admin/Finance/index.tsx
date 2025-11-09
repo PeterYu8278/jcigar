@@ -1190,17 +1190,30 @@ const AdminFinance: React.FC = () => {
                   return
                 }
                 
-                const updated = {
+                const updated: any = {
                   amount,
                   description: values.description,
-                  relatedId: values.relatedId || undefined,
-                  relatedOrders: ro.length ? ro : undefined,
                   createdAt: values.transactionDate ? (dayjs(values.transactionDate).toDate()) : new Date()
                 }
+                
+                // 处理 relatedId：有值则设置，无值则删除字段
+                if (values.relatedId) {
+                  updated.relatedId = values.relatedId
+                } else {
+                  updated.relatedId = null // 明确设置为 null 以删除字段
+                }
+                
+                // 处理 relatedOrders：有订单则设置数组，无订单则删除字段
+                if (ro.length > 0) {
+                  updated.relatedOrders = ro
+                } else {
+                  updated.relatedOrders = [] // 明确设置为空数组以清空关联
+                }
+                
                 console.log('📦 [Finance] Update payload:', updated)
                 console.log('🎯 [Finance] Updating transaction ID:', viewing.id)
                 
-                await updateDocument(COLLECTIONS.TRANSACTIONS, viewing.id, updated as any)
+                await updateDocument(COLLECTIONS.TRANSACTIONS, viewing.id, updated)
                 console.log('✅ [Finance] Update successful')
                 
                 message.success(t('financeAdmin.updated'))

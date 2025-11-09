@@ -49,13 +49,22 @@ async function analyzeData() {
     else if (type === 'out') byType.out++
     else if (type === 'adjustment') byType.adjustment++
     
-    // 统计单号
+    // 统计单号（包括无单号记录）
     if (!refNo || refNo.trim() === '') {
       emptyReference.push(doc.id)
+      // 为无单号记录创建临时分组（每条单独一组，状态为 pending）
+      const tempKey = `${type}:__PENDING_${doc.id}__`
+      byReference.set(tempKey, {
+        type,
+        refNo: `PENDING-${type.toUpperCase()}-${Date.now()}`,  // 生成临时单号
+        count: 1,
+        records: [{ id: doc.id, data }],
+        isPending: true  // 标记为待处理
+      })
     } else {
       const key = `${type}:${refNo}`
       if (!byReference.has(key)) {
-        byReference.set(key, { type, refNo, count: 0, records: [] })
+        byReference.set(key, { type, refNo, count: 0, records: [], isPending: false })
       }
       const group = byReference.get(key)
       group.count++
@@ -65,7 +74,7 @@ async function analyzeData() {
   
   console.log(`📈 [Migration] By type: IN=${byType.in}, OUT=${byType.out}, ADJUSTMENT=${byType.adjustment}`)
   console.log(`📋 [Migration] Unique reference numbers: ${byReference.size}`)
-  console.log(`⚠️ [Migration] Records without referenceNo: ${emptyReference.length}`)
+  console.log(`⚠️ [Migration] Records without referenceNo: ${emptyReference.length} (将创建为 pending 状态)`)
   
   // 显示前10个分组
   let count = 0
@@ -153,7 +162,7 @@ async function migrateInboundRecords(byReference) {
       totalQuantity,
       totalValue,
       attachments: attachments || undefined,
-      status: 'completed',
+      status: group.isPending ? 'pending' : 'completed',  // 无单号记录设为 pending
       operatorId,
       createdAt: admin.firestore.Timestamp.fromDate(createdAt),
       updatedAt: admin.firestore.Timestamp.now()
@@ -164,7 +173,8 @@ async function migrateInboundRecords(byReference) {
       const docRef = await db.collection(COLLECTIONS.INBOUND_ORDERS).add(inboundOrder)
       generatedId = docRef.id  // 获取自动生成的 ID
       ordersCreated++
-      console.log(`   ✅ Created inbound_order: ${refNo} (ID: ${generatedId})`)
+      const statusLabel = group.isPending ? '[PENDING]' : ''
+      console.log(`   ✅ Created inbound_order: ${refNo} ${statusLabel} (ID: ${generatedId})`)
     } catch (error) {
       console.error(`   ❌ Failed to create inbound_order: ${refNo}`, error.message)
       continue
@@ -288,7 +298,7 @@ async function migrateOutboundRecords(byReference) {
       orderId: refNo.startsWith('ORD-') ? refNo : undefined,
       userId,
       userName,
-      status: 'completed',
+      status: group.isPending ? 'pending' : 'completed',  // 无单号记录设为 pending
       operatorId,
       createdAt: admin.firestore.Timestamp.fromDate(createdAt),
       updatedAt: admin.firestore.Timestamp.now()
@@ -299,7 +309,8 @@ async function migrateOutboundRecords(byReference) {
       const docRef = await db.collection(COLLECTIONS.OUTBOUND_ORDERS).add(outboundOrder)
       generatedId = docRef.id  // 获取自动生成的 ID
       ordersCreated++
-      console.log(`   ✅ Created outbound_order: ${refNo} (ID: ${generatedId})`)
+      const statusLabel = group.isPending ? '[PENDING]' : ''
+      console.log(`   ✅ Created outbound_order: ${refNo} ${statusLabel} (ID: ${generatedId})`)
     } catch (error) {
       console.error(`   ❌ Failed to create outbound_order: ${refNo}`, error.message)
       continue

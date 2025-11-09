@@ -109,6 +109,7 @@ const InventoryMigration: React.FC = () => {
         type: 'in' | 'out' | 'adjustment'
         refNo: string
         records: any[]
+        isPending?: boolean  // 标记无单号记录
       }>()
       let emptyRefCount = 0
       
@@ -122,13 +123,24 @@ const InventoryMigration: React.FC = () => {
         else if (type === 'out') byType.out++
         else if (type === 'adjustment') byType.adjustment++
         
-        // 分组
+        // 分组（包括无单号记录）
         if (!refNo || refNo.trim() === '') {
           emptyRefCount++
+          // 为无单号记录创建临时分组（每条单独一组，状态为 pending）
+          const tempKey = `${type}:__PENDING_${docSnap.id}__`
+          grouped.set(tempKey, { 
+            type, 
+            refNo: `PENDING-${type.toUpperCase()}-${Date.now()}`, // 生成临时单号
+            records: [{
+              id: docSnap.id,
+              data: { ...data, createdAt: data.createdAt }
+            }],
+            isPending: true  // 标记为待处理
+          })
         } else {
           const key = `${type}:${refNo}`
           if (!grouped.has(key)) {
-            grouped.set(key, { type, refNo, records: [] })
+            grouped.set(key, { type, refNo, records: [], isPending: false })
           }
           grouped.get(key)!.records.push({
             id: docSnap.id,
@@ -241,14 +253,14 @@ const InventoryMigration: React.FC = () => {
         }
       }
       
-      // 添加空单号警告
+      // 添加空单号提示
       if (emptyRefCount > 0) {
         warnings.push({
           type: 'empty_reference',
-          severity: 'warning',
+          severity: 'info',
           count: emptyRefCount,
           message: `${emptyRefCount} 条记录没有单号`,
-          details: '这些记录将被跳过，不会迁移'
+          details: '这些记录将创建为 pending 状态，并分配临时单号（可后续补充）'
         })
       }
       
@@ -375,7 +387,7 @@ const InventoryMigration: React.FC = () => {
             totalQuantity,
             totalValue,
             attachments: attachments || undefined,
-            status: 'completed',
+            status: group.isPending ? 'pending' : 'completed',  // 无单号记录设为 pending
             operatorId,
             createdAt: Timestamp.fromDate(createdAt),
             updatedAt: Timestamp.now()
@@ -386,7 +398,8 @@ const InventoryMigration: React.FC = () => {
             const docRef = await addDoc(collection(db, COLLECTIONS.INBOUND_ORDERS), inboundOrder)
             generatedId = docRef.id  // 获取自动生成的 ID
             inboundCreated++
-            addLog(`✅ 入库订单: ${refNo} (ID: ${generatedId})`)
+            const statusLabel = group.isPending ? '[PENDING]' : ''
+            addLog(`✅ 入库订单: ${refNo} ${statusLabel} (ID: ${generatedId})`)
           } catch (error: any) {
             addLog(`❌ 入库订单失败: ${refNo} - ${error.message}`)
             continue  // 如果订单创建失败，跳过创建索引
@@ -437,7 +450,7 @@ const InventoryMigration: React.FC = () => {
             orderId: refNo.startsWith('ORD-') ? refNo : undefined,
             userId,
             userName,
-            status: 'completed',
+            status: group.isPending ? 'pending' : 'completed',  // 无单号记录设为 pending
             operatorId,
             createdAt: Timestamp.fromDate(createdAt),
             updatedAt: Timestamp.now()
@@ -448,7 +461,8 @@ const InventoryMigration: React.FC = () => {
             const docRef = await addDoc(collection(db, COLLECTIONS.OUTBOUND_ORDERS), outboundOrder)
             generatedId = docRef.id  // 获取自动生成的 ID
             outboundCreated++
-            addLog(`✅ 出库订单: ${refNo} (ID: ${generatedId})`)
+            const statusLabel = group.isPending ? '[PENDING]' : ''
+            addLog(`✅ 出库订单: ${refNo} ${statusLabel} (ID: ${generatedId})`)
           } catch (error: any) {
             addLog(`❌ 出库订单失败: ${refNo} - ${error.message}`)
             continue  // 如果订单创建失败，跳过创建索引
