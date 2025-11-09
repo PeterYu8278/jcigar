@@ -1440,7 +1440,6 @@ const AdminInventory: React.FC = () => {
                 open={inModalOpen}
                 onCancel={() => setInModalOpen(false)}
                 footer={null}
-                destroyOnHidden
                 {...getResponsiveModalConfig(isMobile, true, 720)}
               >
               <Form form={inForm} layout="vertical" className="dark-theme-form" onFinish={async (values: { referenceNo?: string; reason?: string; items: { cigarId: string; quantity: number; unitPrice?: number }[] }) => {
@@ -1647,7 +1646,6 @@ const AdminInventory: React.FC = () => {
                 open={outModalOpen}
                 onCancel={() => setOutModalOpen(false)}
                 footer={null}
-                destroyOnHidden
                 {...getResponsiveModalConfig(isMobile, true, 680)}
               >
                 <Form form={outForm} layout="vertical" className="dark-theme-form" onFinish={async (values: { referenceNo?: string; reason?: string; items: { cigarId: string; quantity: number }[] }) => {
@@ -2142,13 +2140,16 @@ const AdminInventory: React.FC = () => {
         footer={null}
         width={isMobile ? '100%' : 900}
         style={isMobile ? { top: 0, paddingBottom: 0, maxHeight: '100vh' } : {}}
-        styles={{
-          ...getModalThemeStyles(isMobile, true),
-          body: {
-            ...getModalThemeStyles(isMobile, true).body,
-            ...(isMobile ? { padding: '12px', maxHeight: 'calc(100vh - 55px)', overflow: 'auto' } : {})
-          }
-        }}
+        styles={(() => {
+          const baseStyles = getModalThemeStyles(isMobile, true);
+          return {
+            ...baseStyles,
+            body: {
+              ...(baseStyles?.body || {}),
+              ...(isMobile ? { padding: '12px', maxHeight: 'calc(100vh - 55px)', overflow: 'auto' } : {})
+            }
+          };
+        })()}
       >
         {!isMobile ? (
           // 电脑端 - 使用表格

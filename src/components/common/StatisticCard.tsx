@@ -13,7 +13,7 @@ import {
 import type { CardProps } from 'antd'
 import { formatNumber, formatPercentage, formatCurrency } from '../../utils/format'
 
-export interface StatisticCardProps extends Omit<CardProps, 'title'> {
+export interface StatisticCardProps extends Omit<CardProps, 'title' | 'prefix' | 'variant'> {
   /** 标题 */
   title: string
   /** 数值 */
@@ -108,12 +108,22 @@ const StatisticCard: React.FC<StatisticCardProps> = ({
 
     switch (valueFormat) {
       case 'currency':
-        return formatCurrency(numValue, { currency, precision })
+        return formatCurrency(numValue, { 
+          currency, 
+          minimumFractionDigits: precision,
+          maximumFractionDigits: precision 
+        })
       case 'percent':
-        return formatPercentage(numValue, { precision })
+        return formatPercentage(numValue, { 
+          minimumFractionDigits: precision ?? 1,
+          maximumFractionDigits: precision ?? 2
+        })
       case 'number':
       default:
-        return formatNumber(numValue, { decimals: precision })
+        return formatNumber(numValue, { 
+          minimumFractionDigits: precision ?? 0,
+          maximumFractionDigits: precision ?? 2
+        })
     }
   }
 
