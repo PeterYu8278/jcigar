@@ -424,10 +424,11 @@ const AdminUsers: React.FC = () => {
   return (
     <div style={{ 
       height: isMobile ? '90vh' : 'auto',
-      minHeight: isMobile ? '90vh' : '100vh',
       display: 'flex',
       flexDirection: 'column',
-      overflow: isMobile ? 'hidden' : 'visible'
+      overflow: isMobile ? 'hidden' : 'visible',
+      margin: 0,
+      padding: 0
     }}>
       {!isMobile && (
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -642,7 +643,7 @@ const AdminUsers: React.FC = () => {
             overflowY: 'auto',
             overflowX: 'hidden',
             padding: '16px',
-            paddingBottom: '100px'
+            paddingBottom: '80px'
           }}>
             {loading ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
