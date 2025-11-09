@@ -1,7 +1,7 @@
 // 库存管理页面
 import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Table, Button, Tag, Space, Typography, Input, Select, Progress, Modal, Form, InputNumber, message, Dropdown, Checkbox, Card, Upload, Row, Col } from 'antd'
+import { Table, Button, Tag, Space, Typography, Input, Select, Modal, Form, InputNumber, message, Dropdown, Checkbox, Card, Upload, Row, Col } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, WarningOutlined, UploadOutlined, DownloadOutlined, MinusCircleOutlined, FilePdfOutlined, FileImageOutlined, EyeOutlined } from '@ant-design/icons'
 import type { Cigar, InventoryLog, Brand, InboundOrder, OutboundOrder, InventoryMovement } from '../../../types'
 import type { UploadFile } from 'antd'
@@ -204,16 +204,6 @@ const AdminInventory: React.FC = () => {
     }
   }
 
-  const getStockProgress = (stock: number, minStock: number) => {
-    const percentage = (stock / (minStock * 2)) * 100
-    return Math.min(percentage, 100)
-  }
-
-  const getProgressStatus = (stock: number, minStock: number) => {
-    if (stock <= minStock) return 'exception'
-    if (stock <= minStock * 1.5) return 'active'
-    return 'success'
-  }
 
   // 商品是否存在入/出库记录（存在则禁止删除）
   const hasInventoryHistory = (cigarId: string | undefined) => {
@@ -438,7 +428,7 @@ const AdminInventory: React.FC = () => {
             </span>
             <span>{t('inventory.reserved')}: {(record as any)?.inventory?.reserved ?? 0}</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 12, color: '#666' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 12, color: '#666' }}>
             {(() => { const { totalIn, totalOut } = getTotals((record as any)?.id); return (
               <>
                 <span>{t('inventory.totalIn')}: {totalIn}</span>
@@ -446,12 +436,6 @@ const AdminInventory: React.FC = () => {
               </>
             ) })()}
           </div>
-          <Progress
-            percent={getStockProgress(currentStock, (record as any)?.inventory?.minStock ?? 0)}
-            status={getProgressStatus(currentStock, (record as any)?.inventory?.minStock ?? 0)}
-            size="small"
-            format={() => `${currentStock}/${(((record as any)?.inventory?.minStock ?? 0) * 2)}`}
-          />
           <Tag color={getStatusColor(
             currentStock < 0 ? 'negative' : 
             currentStock <= ((record as any)?.inventory?.minStock ?? 0) ? 'critical' : 
