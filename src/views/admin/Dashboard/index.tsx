@@ -9,8 +9,7 @@ import {
   getAllOrders, 
   getEvents, 
   getAllTransactions,
-  getCigars,
-  getAllInventoryLogs
+  getCigars
 } from '../../../services/firebase/firestore'
 import type { User, Order, Event, Transaction, Cigar } from '../../../types'
 import { useTranslation } from 'react-i18next'
@@ -26,7 +25,6 @@ const AdminDashboard: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [cigars, setCigars] = useState<Cigar[]>([])
-  const [inventoryLogs, setInventoryLogs] = useState<any[]>([])
 
   // 加载数据
   useEffect(() => {
@@ -36,13 +34,12 @@ const AdminDashboard: React.FC = () => {
   const loadDashboardData = async () => {
     setLoading(true)
     try {
-      const [usersData, ordersData, eventsData, transactionsData, cigarsData, inventoryLogsData] = await Promise.all([
+      const [usersData, ordersData, eventsData, transactionsData, cigarsData] = await Promise.all([
         getUsers(),
         getAllOrders(),
         getEvents(),
         getAllTransactions(),
-        getCigars(),
-        getAllInventoryLogs()
+        getCigars()
       ])
       
       setUsers(usersData)
@@ -50,7 +47,6 @@ const AdminDashboard: React.FC = () => {
       setEvents(eventsData)
       setTransactions(transactionsData)
       setCigars(cigarsData)
-      setInventoryLogs(inventoryLogsData)
     } catch (error) {
       message.error(t('messages.dataLoadFailed'))
     } finally {
