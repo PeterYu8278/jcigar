@@ -56,7 +56,7 @@ async function analyzeData() {
       const tempKey = `${type}:__PENDING_${doc.id}__`
       byReference.set(tempKey, {
         type,
-        refNo: `PENDING-${type.toUpperCase()}-${Date.now()}`,  // 生成临时单号
+        refNo: `PENDING-${type.toUpperCase()}-${doc.id}`,  // 使用 document ID 确保唯一性
         count: 1,
         records: [{ id: doc.id, data }],
         isPending: true  // 标记为待处理
@@ -118,14 +118,20 @@ async function migrateInboundRecords(byReference) {
     for (const rec of group.records) {
       const data = rec.data
       
-      items.push({
+      const item = {
         cigarId: data.cigarId,
         cigarName: data.cigarName || data.cigarId,
         itemType: data.itemType || 'cigar',
-        quantity: Number(data.quantity) || 0,
-        unitPrice: data.unitPrice ? Number(data.unitPrice) : undefined,
-        subtotal: data.unitPrice ? Number(data.unitPrice) * Number(data.quantity) : undefined
-      })
+        quantity: Number(data.quantity) || 0
+      }
+      
+      // 只在有值时添加 unitPrice 和 subtotal
+      if (data.unitPrice) {
+        item.unitPrice = Number(data.unitPrice)
+        item.subtotal = Number(data.unitPrice) * Number(data.quantity)
+      }
+      
+      items.push(item)
       
       totalQuantity += Number(data.quantity) || 0
       if (data.unitPrice) {
@@ -161,7 +167,7 @@ async function migrateInboundRecords(byReference) {
       items,
       totalQuantity,
       totalValue,
-      attachments: attachments || undefined,
+      ...(attachments && attachments.length > 0 && { attachments }),  // 只在有附件时添加字段
       status: group.isPending ? 'pending' : 'completed',  // 无单号记录设为 pending
       operatorId,
       createdAt: admin.firestore.Timestamp.fromDate(createdAt),
@@ -242,14 +248,20 @@ async function migrateOutboundRecords(byReference) {
     for (const rec of group.records) {
       const data = rec.data
       
-      items.push({
+      const item = {
         cigarId: data.cigarId,
         cigarName: data.cigarName || data.cigarId,
         itemType: data.itemType || 'cigar',
-        quantity: Number(data.quantity) || 0,
-        unitPrice: data.unitPrice ? Number(data.unitPrice) : undefined,
-        subtotal: data.unitPrice ? Number(data.unitPrice) * Number(data.quantity) : undefined
-      })
+        quantity: Number(data.quantity) || 0
+      }
+      
+      // 只在有值时添加 unitPrice 和 subtotal
+      if (data.unitPrice) {
+        item.unitPrice = Number(data.unitPrice)
+        item.subtotal = Number(data.unitPrice) * Number(data.quantity)
+      }
+      
+      items.push(item)
       
       totalQuantity += Number(data.quantity) || 0
       if (data.unitPrice) {
@@ -295,9 +307,9 @@ async function migrateOutboundRecords(byReference) {
       items,
       totalQuantity,
       totalValue,
-      orderId: refNo.startsWith('ORD-') ? refNo : undefined,
-      userId,
-      userName,
+      ...(refNo.startsWith('ORD-') && { orderId: refNo }),  // 只在是订单时添加
+      ...(userId && { userId }),  // 只在有userId时添加
+      ...(userName && { userName }),  // 只在有userName时添加
       status: group.isPending ? 'pending' : 'completed',  // 无单号记录设为 pending
       operatorId,
       createdAt: admin.firestore.Timestamp.fromDate(createdAt),

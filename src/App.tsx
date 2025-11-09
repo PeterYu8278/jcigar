@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { Layout } from 'antd'
+import { Layout, App as AntApp } from 'antd'
 import AppHeader from './components/layout/AppHeader'
 import AppSider from './components/layout/AppSider'
 import AppFooter from './components/layout/AppFooter'
@@ -27,7 +27,6 @@ import PerformanceMonitor from './components/admin/PerformanceMonitor'
 import EventOrderDebug from './views/admin/EventOrderDebug'
 import PointsConfigPage from './views/admin/PointsConfig'
 import OrphanedUserCleanup from './views/admin/OrphanedUserCleanup'
-import InventoryMigration from './views/admin/InventoryMigration'
 
 // 认证页面
 import Login from './views/auth/Login'
@@ -190,7 +189,6 @@ const AppContent: React.FC = () => {
                   <Route path="/admin/performance" element={<ProtectedRoute roles={['admin']}><PerformanceMonitor /></ProtectedRoute>} />
                   <Route path="/admin/cloudinary-test" element={<ProtectedRoute roles={['admin']}><CloudinaryTestPage /></ProtectedRoute>} />
                   <Route path="/admin/debug-orders" element={<ProtectedRoute roles={['admin']}><EventOrderDebug /></ProtectedRoute>} />
-                  <Route path="/admin/inventory-migration" element={<ProtectedRoute roles={['admin']}><InventoryMigration /></ProtectedRoute>} />
                   
                   {/* 默认重定向 */}
                   <Route path="*" element={<Navigate to="/" replace />} />
@@ -210,7 +208,9 @@ const AppContent: React.FC = () => {
 function App() {
   return (
     <Router>
-      <AppContent />
+      <AntApp>
+        <AppContent />
+      </AntApp>
     </Router>
   )
 }
