@@ -5,7 +5,7 @@ import { Table, Button, Tag, Space, Typography, Input, Select, Modal, Form, Inpu
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, WarningOutlined, UploadOutlined, DownloadOutlined, MinusCircleOutlined, FilePdfOutlined, FileImageOutlined, EyeOutlined } from '@ant-design/icons'
 import type { Cigar, InventoryLog, Brand, InboundOrder, OutboundOrder, InventoryMovement } from '../../../types'
 import type { UploadFile } from 'antd'
-import { getCigars, createDocument, updateDocument, deleteDocument, COLLECTIONS, getAllInventoryLogs, getAllOrders, getUsers, getBrands, getBrandById, getAllTransactions, getAllInboundOrders, getAllOutboundOrders, getAllInventoryMovements, createInboundOrder, deleteInboundOrder, updateInboundOrder, getInboundOrdersByReferenceNo } from '../../../services/firebase/firestore'
+import { getCigars, createDocument, updateDocument, deleteDocument, COLLECTIONS, getAllInventoryLogs, getAllOrders, getUsers, getBrands, getBrandById, getAllTransactions, getAllInboundOrders, getAllOutboundOrders, getAllInventoryMovements, createInboundOrder, deleteInboundOrder, updateInboundOrder, getInboundOrdersByReferenceNo, createOutboundOrder } from '../../../services/firebase/firestore'
 import ImageUpload from '../../../components/common/ImageUpload'
 import { getModalTheme, getResponsiveModalConfig, getModalThemeStyles } from '../../../config/modalTheme'
 import { useCloudinary } from '../../../hooks/useCloudinary'
@@ -208,7 +208,13 @@ const AdminInventory: React.FC = () => {
   // 商品是否存在入/出库记录（存在则禁止删除）
   const hasInventoryHistory = (cigarId: string | undefined) => {
     if (!cigarId) return false
-    return inventoryLogs.some((log: any) => log?.cigarId === cigarId)
+    if (useNewArchitecture) {
+      // 新架构：检查 inventoryMovements
+      return inventoryMovements.some(m => m.cigarId === cigarId)
+    } else {
+      // 旧架构：检查 inventoryLogs
+      return inventoryLogs.some((log: any) => log?.cigarId === cigarId)
+    }
   }
 
   // 基于入库/出库日志的实时库存计算（只统计雪茄产品，不统计活动物料等）
@@ -542,8 +548,69 @@ const AdminInventory: React.FC = () => {
     { title: t('inventory.operator'), dataIndex: 'operatorId', key: 'operatorId', render: (v: any) => v || '-' },
   ]
 
-  const inLogs = useMemo(() => inventoryLogs.filter(l => (l as any).type === 'in'), [inventoryLogs])
-  const outLogs = useMemo(() => inventoryLogs.filter(l => (l as any).type === 'out'), [inventoryLogs])
+  const inLogs = useMemo(() => {
+    if (useNewArchitecture) {
+      // 新架构：从 inventoryMovements 转换
+      return inventoryMovements
+        .filter(m => m.type === 'in')
+        .map(m => {
+          // 获取操作人信息
+          let operatorId = 'system'
+          if (m.inboundOrderId) {
+            const order = inboundOrders.find(o => o.id === m.inboundOrderId)
+            if (order) operatorId = order.operatorId
+          }
+          
+          return {
+            id: m.id,
+            cigarId: m.cigarId,
+            cigarName: m.cigarName,
+            itemType: m.itemType,
+            type: m.type,
+            quantity: m.quantity,
+            unitPrice: m.unitPrice,
+            referenceNo: m.referenceNo,
+            reason: m.reason,
+            operatorId: operatorId,
+            createdAt: m.createdAt
+          } as InventoryLog
+        })
+    } else {
+      return inventoryLogs.filter(l => (l as any).type === 'in')
+    }
+  }, [useNewArchitecture, inventoryMovements, inventoryLogs, inboundOrders])
+  
+  const outLogs = useMemo(() => {
+    if (useNewArchitecture) {
+      // 新架构：从 inventoryMovements 转换
+      return inventoryMovements
+        .filter(m => m.type === 'out')
+        .map(m => {
+          // 获取操作人信息
+          let operatorId = 'system'
+          if (m.outboundOrderId) {
+            const order = outboundOrders.find(o => o.id === m.outboundOrderId)
+            if (order) operatorId = order.operatorId
+          }
+          
+          return {
+            id: m.id,
+            cigarId: m.cigarId,
+            cigarName: m.cigarName,
+            itemType: m.itemType,
+            type: m.type,
+            quantity: m.quantity,
+            unitPrice: m.unitPrice,
+            referenceNo: m.referenceNo,
+            reason: m.reason,
+            operatorId: operatorId,
+            createdAt: m.createdAt
+          } as InventoryLog
+        })
+    } else {
+      return inventoryLogs.filter(l => (l as any).type === 'out')
+    }
+  }, [useNewArchitecture, inventoryMovements, inventoryLogs, outboundOrders])
   
   // 入库记录筛选
   const filteredInLogs = useMemo(() => {
@@ -3212,28 +3279,82 @@ const AdminInventory: React.FC = () => {
                 <Form form={outForm} layout="vertical" className="dark-theme-form" onFinish={async (values: { referenceNo?: string; reason?: string; items: { cigarId: string; quantity: number }[] }) => {
                   const lines = (values.items || []).filter(it => it?.cigarId && it?.quantity > 0)
                   if (lines.length === 0) { message.warning(t('inventory.pleaseAddAtLeastOneOutStockDetail')); return }
+                  
+                  // 检查单号
+                  if (!values.referenceNo || !values.referenceNo.trim()) {
+                    message.error(t('inventory.pleaseInputReferenceNo'))
+                    return
+                  }
+                  
                   setLoading(true)
                   try {
-                    for (const line of lines) {
-                      const target = items.find(i => i.id === line.cigarId) as any
-                      if (!target) continue
-                      const qty = Math.max(1, Math.floor(line.quantity || 1))
-                      await createDocument(COLLECTIONS.INVENTORY_LOGS, {
-                        cigarId: target.id,
-                        cigarName: target.name,
-                        type: 'out',
-                        quantity: qty,
+                    if (useNewArchitecture) {
+                      // 新架构：创建出库订单
+                      const orderItems = []
+                      let totalQuantity = 0
+                      let totalValue = 0
+                      
+                      for (const line of lines) {
+                        const target = items.find(i => i.id === line.cigarId) as any
+                        if (!target) continue
+                        const qty = Math.max(1, Math.floor(line.quantity || 1))
+                        
+                        const orderItem = {
+                          cigarId: target.id,
+                          cigarName: target.name,
+                          itemType: 'cigar' as const,
+                          quantity: qty,
+                          unitPrice: target.price,
+                          subtotal: qty * target.price
+                        }
+                        
+                        orderItems.push(orderItem)
+                        totalQuantity += qty
+                        totalValue += orderItem.subtotal
+                      }
+                      
+                      const outboundOrderData: Omit<OutboundOrder, 'id' | 'updatedAt'> = {
+                        referenceNo: values.referenceNo.trim(),
+                        type: 'other',
                         reason: values.reason || t('inventory.outStock'),
-                        referenceNo: values.referenceNo,
+                        items: orderItems,
+                        totalQuantity,
+                        totalValue,
+                        status: 'completed',
                         operatorId: 'system',
-                        createdAt: new Date(),
-                      } as any)
+                        createdAt: new Date()
+                      }
+                      
+                      await createOutboundOrder(outboundOrderData)
+                      message.success(t('inventory.outStockSuccess'))
+                      outForm.resetFields()
+                      setOutModalOpen(false)
+                      setItems(await getCigars())
+                      setOutboundOrders(await getAllOutboundOrders())
+                      setInventoryMovements(await getAllInventoryMovements())
+                    } else {
+                      // 旧架构：创建 inventory_logs
+                      for (const line of lines) {
+                        const target = items.find(i => i.id === line.cigarId) as any
+                        if (!target) continue
+                        const qty = Math.max(1, Math.floor(line.quantity || 1))
+                        await createDocument(COLLECTIONS.INVENTORY_LOGS, {
+                          cigarId: target.id,
+                          cigarName: target.name,
+                          type: 'out',
+                          quantity: qty,
+                          reason: values.reason || t('inventory.outStock'),
+                          referenceNo: values.referenceNo,
+                          operatorId: 'system',
+                          createdAt: new Date(),
+                        } as any)
+                      }
+                      message.success(t('inventory.outStockSuccess'))
+                      outForm.resetFields()
+                      setOutModalOpen(false)
+                      setItems(await getCigars())
+                      setInventoryLogs(await getAllInventoryLogs())
                     }
-                    message.success(t('inventory.outStockSuccess'))
-                    outForm.resetFields()
-                    setOutModalOpen(false)
-                    setItems(await getCigars())
-                    setInventoryLogs(await getAllInventoryLogs())
                   } finally {
                     setLoading(false)
                   }
@@ -3384,9 +3505,20 @@ const AdminInventory: React.FC = () => {
                     
                     if (hasInventoryHistory(productId)) {
                       // 显示有库存记录的提示窗
-                      const relatedLogs = inventoryLogs.filter((log: any) => log?.cigarId === productId)
-                      const inCount = relatedLogs.filter((log: any) => log?.type === 'in').length
-                      const outCount = relatedLogs.filter((log: any) => log?.type === 'out').length
+                      let inCount = 0
+                      let outCount = 0
+                      
+                      if (useNewArchitecture) {
+                        // 新架构：从 inventoryMovements 统计
+                        const relatedMovements = inventoryMovements.filter(m => m.cigarId === productId)
+                        inCount = relatedMovements.filter(m => m.type === 'in').length
+                        outCount = relatedMovements.filter(m => m.type === 'out').length
+                      } else {
+                        // 旧架构：从 inventoryLogs 统计
+                        const relatedLogs = inventoryLogs.filter((log: any) => log?.cigarId === productId)
+                        inCount = relatedLogs.filter((log: any) => log?.type === 'in').length
+                        outCount = relatedLogs.filter((log: any) => log?.type === 'out').length
+                      }
                       
                       Modal.info({
                         title: t('inventory.deleteBlocked'),
@@ -3599,23 +3731,78 @@ const AdminInventory: React.FC = () => {
         <Form form={adjForm} layout="vertical" onFinish={async (values: { quantity: number; reason?: string; referenceNo?: string }) => {
           const target = adjustingIn || adjustingOut
           if (!target) return
-          const delta = (adjustingIn ? 1 : -1) * Math.max(1, Math.floor(values.quantity || 1))
+          const qty = Math.max(1, Math.floor(values.quantity || 1))
+          const isInbound = !!adjustingIn
+          
           setLoading(true)
           try {
-            await createDocument<InventoryLog>(COLLECTIONS.INVENTORY_LOGS, {
-              cigarId: (target as any).id,
-              cigarName: (target as any).name,
-              type: adjustingIn ? 'in' : 'out',
-              quantity: Math.abs(delta),
-              reason: values.reason || (adjustingIn ? t('inventory.inStock') : t('inventory.outStock')),
-              referenceNo: values.referenceNo,
-              operatorId: 'system',
-              createdAt: new Date(),
-            } as any)
-            message.success(t('inventory.stockUpdated'))
-            setItems(await getCigars())
-            setAdjustingIn(null)
-            setAdjustingOut(null)
+            if (useNewArchitecture) {
+              // 新架构：创建单品订单
+              const referenceNo = values.referenceNo || `ADJ-${Date.now()}`
+              const orderItem = {
+                cigarId: (target as any).id,
+                cigarName: (target as any).name,
+                itemType: 'cigar' as const,
+                quantity: qty,
+                unitPrice: (target as any).price,
+                subtotal: qty * (target as any).price
+              }
+              
+              if (isInbound) {
+                // 创建入库订单
+                const inboundOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
+                  referenceNo,
+                  type: 'adjustment',
+                  reason: values.reason || t('inventory.inStock'),
+                  items: [orderItem],
+                  totalQuantity: qty,
+                  totalValue: orderItem.subtotal,
+                  status: 'completed',
+                  operatorId: 'system',
+                  createdAt: new Date()
+                }
+                await createInboundOrder(inboundOrderData)
+              } else {
+                // 创建出库订单
+                const outboundOrderData: Omit<OutboundOrder, 'id' | 'updatedAt'> = {
+                  referenceNo,
+                  type: 'other',
+                  reason: values.reason || t('inventory.outStock'),
+                  items: [orderItem],
+                  totalQuantity: qty,
+                  totalValue: orderItem.subtotal,
+                  status: 'completed',
+                  operatorId: 'system',
+                  createdAt: new Date()
+                }
+                await createOutboundOrder(outboundOrderData)
+              }
+              
+              message.success(t('inventory.stockUpdated'))
+              setItems(await getCigars())
+              setInboundOrders(await getAllInboundOrders())
+              setOutboundOrders(await getAllOutboundOrders())
+              setInventoryMovements(await getAllInventoryMovements())
+              setAdjustingIn(null)
+              setAdjustingOut(null)
+            } else {
+              // 旧架构：创建 inventory_logs
+              await createDocument<InventoryLog>(COLLECTIONS.INVENTORY_LOGS, {
+                cigarId: (target as any).id,
+                cigarName: (target as any).name,
+                type: isInbound ? 'in' : 'out',
+                quantity: qty,
+                reason: values.reason || (isInbound ? t('inventory.inStock') : t('inventory.outStock')),
+                referenceNo: values.referenceNo,
+                operatorId: 'system',
+                createdAt: new Date(),
+              } as any)
+              message.success(t('inventory.stockUpdated'))
+              setItems(await getCigars())
+              setInventoryLogs(await getAllInventoryLogs())
+              setAdjustingIn(null)
+              setAdjustingOut(null)
+            }
           } finally {
             setLoading(false)
           }
@@ -4179,15 +4366,22 @@ const AdminInventory: React.FC = () => {
       >
         {t('inventory.deleteBrandContent', { name: deletingBrand?.name })}
       </Modal>
-      {/* 编辑入库记录弹窗 */}
+      {/* 编辑入库记录弹窗（仅旧架构） */}
       <Modal
         title={t('inventory.editInLog')}
-        open={!!editingInLog}
+        open={!!editingInLog && !useNewArchitecture}
         onCancel={() => {
           setEditingInLog(null)
           inLogEditForm.resetFields()
         }}
-        onOk={() => inLogEditForm.submit()}
+        onOk={() => {
+          if (useNewArchitecture) {
+            message.warning('新架构请使用"编辑订单"功能')
+            setEditingInLog(null)
+            return
+          }
+          inLogEditForm.submit()
+        }}
         confirmLoading={loading}
         {...getResponsiveModalConfig(isMobile, true, 500)}
       >
@@ -4197,6 +4391,11 @@ const AdminInventory: React.FC = () => {
           className="dark-theme-form"
           onFinish={async (values: any) => {
             if (!editingInLog) return
+            if (useNewArchitecture) {
+              message.warning('新架构请使用"编辑订单"功能')
+              setEditingInLog(null)
+              return
+            }
             setLoading(true)
             try {
               const updated = {
