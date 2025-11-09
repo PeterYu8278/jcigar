@@ -369,7 +369,7 @@ const AdminInventory: React.FC = () => {
               <span style={{ color: '#52c41a' }}>
                 {t('inventory.totalIn')}: {totalIn}
               </span>
-            </div>
+          </div>
             
             {/* 分隔线 */}
             <div style={{ borderTop: '1px solid #e8e8e8', margin: '4px 0' }} />
@@ -378,7 +378,7 @@ const AdminInventory: React.FC = () => {
               <span style={{ color: '#ff4d4f', fontSize: 13 }}>
                 {t('inventory.totalOut')}: {totalOut}
               </span>
-            </div>
+          </div>
           </div>
           
           {/* 右侧：当前库存（大字体，跨越两行） */}
@@ -420,8 +420,8 @@ const AdminInventory: React.FC = () => {
                   currentStock <= (((record as any)?.inventory?.minStock ?? 0) * 1.5) ? 'low' : 
                   'normal'
                 )}
-              </Tag>
-            </div>
+          </Tag>
+        </div>
           </div>
         </div>
         )
@@ -1338,29 +1338,29 @@ const AdminInventory: React.FC = () => {
               {/* 搜索栏和添加品牌按钮 */}
               <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', alignItems: 'center' }}>
                 <div style={{ position: 'relative', flex: 1 }}>
-                  <div style={{ 
-                    position: 'absolute', 
-                    top: '50%', 
-                    left: '16px', 
-                    transform: 'translateY(-50%)',
-                    color: 'rgba(255,255,255,0.5)'
-                  }}>
-                    <SearchOutlined style={{ fontSize: '20px' }} />
-                  </div>
-                  <Input
-                    placeholder={t('inventory.searchBrand')}
-                    value={keyword}
-                    onChange={(e) => setKeyword(e.target.value)}
-                    style={{
-                      width: '100%',
-                      borderRadius: '9999px',
-                      border: 'none',
-                      background: 'rgba(255,255,255,0.05)',
-                      padding: '12px 16px 12px 48px',
-                      color: 'white',
-                      fontSize: '16px'
-                    }}
-                  />
+                <div style={{ 
+                  position: 'absolute', 
+                  top: '50%', 
+                  left: '16px', 
+                  transform: 'translateY(-50%)',
+                  color: 'rgba(255,255,255,0.5)'
+                }}>
+                  <SearchOutlined style={{ fontSize: '20px' }} />
+                </div>
+                <Input
+                  placeholder={t('inventory.searchBrand')}
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  style={{
+                    width: '100%',
+                    borderRadius: '9999px',
+                    border: 'none',
+                    background: 'rgba(255,255,255,0.05)',
+                    padding: '12px 16px 12px 48px',
+                    color: 'white',
+                    fontSize: '16px'
+                  }}
+                />
                 </div>
                 
                 {/* 添加品牌按钮 */}
@@ -1726,8 +1726,8 @@ const AdminInventory: React.FC = () => {
                     let cigarName = ''
                     
                     if (lineItemType === 'cigar') {
-                      const target = items.find(i => i.id === line.cigarId) as any
-                      if (!target) continue
+                    const target = items.find(i => i.id === line.cigarId) as any
+                    if (!target) continue
                       cigarId = target.id
                       cigarName = target.name
                     } else {
@@ -1766,13 +1766,13 @@ const AdminInventory: React.FC = () => {
                   const inboundOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
                     referenceNo: values.referenceNo.trim(),
                     type: 'purchase',
-                    reason: values.reason || t('inventory.inStock'),
+                      reason: values.reason || t('inventory.inStock'),
                     items: orderItems,
                     totalQuantity,
                     totalValue,
                     attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
                     status: 'completed',
-                    operatorId: 'system',
+                      operatorId: 'system',
                     createdAt: new Date()
                   }
                   
@@ -3049,12 +3049,12 @@ const AdminInventory: React.FC = () => {
                     const outboundOrderData: Omit<OutboundOrder, 'id' | 'updatedAt'> = {
                       referenceNo: values.referenceNo.trim(),
                       type: 'other',
-                      reason: values.reason || t('inventory.outStock'),
+                        reason: values.reason || t('inventory.outStock'),
                       items: orderItems,
                       totalQuantity,
                       totalValue,
                       status: 'completed',
-                      operatorId: 'system',
+                        operatorId: 'system',
                       createdAt: new Date()
                     }
                     
@@ -3454,7 +3454,7 @@ const AdminInventory: React.FC = () => {
                 totalQuantity: qty,
                 totalValue: orderItem.subtotal,
                 status: 'completed',
-                operatorId: 'system',
+              operatorId: 'system',
                 createdAt: new Date()
               }
               await createInboundOrder(inboundOrderData)
@@ -3668,7 +3668,7 @@ const AdminInventory: React.FC = () => {
               title: t('inventory.operator'), 
               dataIndex: 'operatorId', 
               key: 'operatorId', 
-                  render: (v: any) => v || '-'
+              render: (v: any) => v || '-'
             },
           ]}
           dataSource={currentProductLogs}

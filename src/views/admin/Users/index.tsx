@@ -697,15 +697,15 @@ const AdminUsers: React.FC = () => {
         </div>
       )}
 
-      {/* 右侧字母索引（可拖动浮动）- 移至最外层 */}
+      {/* 右侧字母索引（固定居中）- 移至最外层 */}
       {isMobile && (
         <div
-          className="alpha-index-scroll"
           style={{
             position: 'fixed',
             right: 3,
-            top: alphaY,
-            transform: 'translateY(-60%)',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            maxHeight: '90vh',
             padding: 6,
             zIndex: 1000,
             background: 'rgba(0,0,0,0.35)',
@@ -714,30 +714,12 @@ const AdminUsers: React.FC = () => {
             backdropFilter: 'blur(6px)',
             WebkitBackdropFilter: 'blur(6px)',
             boxShadow: '0 6px 20px rgba(0,0,0,0.25)',
-            maxHeight: '90vh',
-            overflowY: 'auto',
-            overflowX: 'hidden'
-          }}
-          onTouchStart={(e) => {
-            if (!e.touches || e.touches.length === 0) return
-            const touch = e.touches[0]
-            const vh = typeof window !== 'undefined' ? window.innerHeight : 800
-            const min = 48
-            const max = vh - 96
-            const next = Math.max(min, Math.min(max, touch.clientY))
-            setAlphaY(next)
-          }}
-          onTouchMove={(e) => {
-            if (!e.touches || e.touches.length === 0) return
-            const touch = e.touches[0]
-            const vh = typeof window !== 'undefined' ? window.innerHeight : 800
-            const min = 48
-            const max = vh - 96
-            const next = Math.max(min, Math.min(max, touch.clientY))
-            setAlphaY(next)
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center'
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, fontSize: 10, fontWeight: 600 }}>
             {alphaIndex.map(letter => {
               const enabled = groupedByInitial.some(g => g.key === letter)
               const isActive = letter === activeIndex
@@ -766,11 +748,12 @@ const AdminUsers: React.FC = () => {
                     color: isActive ? '#fff' : enabled ? '#f4af25' : '#777',
                     background: isActive ? 'rgba(244, 175, 37, 0.8)' : 'transparent',
                     textDecoration: 'none',
-                    padding: '2px 4px',
-                    borderRadius: '4px',
+                    padding: '1px 3px',
+                    borderRadius: '3px',
                     cursor: enabled ? 'pointer' : 'default',
                     transition: 'all 0.3s ease',
-                    fontWeight: isActive ? 700 : 600
+                    fontWeight: isActive ? 700 : 600,
+                    lineHeight: 1
                   }}
                 >
                   {letter}
@@ -823,20 +806,11 @@ const AdminUsers: React.FC = () => {
           }
         }
         
-        /* 隐藏用户列表滚动条 */
+        /* 隐藏滚动条但保持滚动功能 */
         .users-scroll-area::-webkit-scrollbar {
           display: none;
         }
         .users-scroll-area {
-          -ms-overflow-style: none;  /* IE and Edge */
-          scrollbar-width: none;  /* Firefox */
-        }
-        
-        /* 隐藏字母索引滚动条 */
-        .alpha-index-scroll::-webkit-scrollbar {
-          display: none;
-        }
-        .alpha-index-scroll {
           -ms-overflow-style: none;  /* IE and Edge */
           scrollbar-width: none;  /* Firefox */
         }
