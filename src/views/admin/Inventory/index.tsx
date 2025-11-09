@@ -6,7 +6,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, WarningOutl
 import type { Cigar, InventoryLog, Brand } from '../../../types'
 import { getCigars, createDocument, updateDocument, deleteDocument, COLLECTIONS, getAllInventoryLogs, getAllOrders, getUsers, getBrands, getBrandById } from '../../../services/firebase/firestore'
 import ImageUpload from '../../../components/common/ImageUpload'
-import { getModalTheme, getResponsiveModalConfig } from '../../../config/modalTheme'
+import { getModalTheme, getResponsiveModalConfig, getModalThemeStyles } from '../../../config/modalTheme'
 
 const { Title } = Typography
 const { Search } = Input
@@ -2142,7 +2142,13 @@ const AdminInventory: React.FC = () => {
         footer={null}
         width={isMobile ? '100%' : 900}
         style={isMobile ? { top: 0, paddingBottom: 0, maxHeight: '100vh' } : {}}
-        bodyStyle={isMobile ? { padding: '12px', maxHeight: 'calc(100vh - 55px)', overflow: 'auto' } : {}}
+        styles={{
+          ...getModalThemeStyles(isMobile, true),
+          body: {
+            ...getModalThemeStyles(isMobile, true).body,
+            ...(isMobile ? { padding: '12px', maxHeight: 'calc(100vh - 55px)', overflow: 'auto' } : {})
+          }
+        }}
       >
         {!isMobile ? (
           // 电脑端 - 使用表格
