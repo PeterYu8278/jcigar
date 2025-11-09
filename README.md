@@ -106,7 +106,10 @@ src/
 - `events` - 聚会活动
 - `orders` - 订单记录
 - `transactions` - 财务交易
-- `inventory_logs` - 库存变动记录
+- `inbound_orders` - 入库订单（新架构）
+- `outbound_orders` - 出库订单（新架构）
+- `inventory_movements` - 库存变动索引（新架构）
+- `inventory_logs` - 库存变动记录（旧架构，向后兼容）
 
 ### 安全规则
 确保在 Firebase Console 中配置适当的 Firestore 安全规则。

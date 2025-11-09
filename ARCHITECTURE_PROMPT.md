@@ -70,7 +70,19 @@ src/
   - `amount`, `description`, `referenceId`
   - `createdAt`
 
-- **inventory_logs** - 库存变动记录
+- **inbound_orders** - 入库订单（新架构）
+  - `referenceNo`, `type`, `reason`, `items[]`, `totalQuantity`, `totalValue`
+  - `status` (pending/completed/cancelled), `operatorId`, `createdAt`
+
+- **outbound_orders** - 出库订单（新架构）
+  - `referenceNo`, `type`, `reason`, `items[]`, `totalQuantity`, `totalValue`
+  - `status` (pending/completed/cancelled), `operatorId`, `createdAt`
+
+- **inventory_movements** - 库存变动索引（新架构）
+  - `cigarId`, `type` (in/out), `quantity`, `referenceNo`
+  - `inboundOrderId` / `outboundOrderId`, `createdAt`
+
+- **inventory_logs** - 库存变动记录（旧架构，仅向后兼容）
   - `cigarId`, `type` (in/out/adjustment), `quantity`, `reason`
   - `referenceId`, `createdAt`
 
