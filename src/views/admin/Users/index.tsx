@@ -427,7 +427,7 @@ const AdminUsers: React.FC = () => {
       display: 'flex',
       flexDirection: 'column',
       overflow: isMobile ? 'hidden' : 'visible',
-      paddingRight:  '0'  // 为右侧索引栏预留空间
+      paddingRight: isMobile ? '32px' : '0'  // 为右侧索引栏预留空间
     }}>
       {!isMobile && (
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -567,13 +567,13 @@ const AdminUsers: React.FC = () => {
           {/* 固定顶部区域 - 不滚动 */}
           <div style={{ flexShrink: 0 }}>
             {/* 标题栏 */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0px' }}>
               <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', margin: 0 }}>{t('navigation.users')}</h1>
               <div style={{ width: 32 }} />
             </div>
             
             {/* 搜索框 */}
-            <div style={{ position: 'relative', padding: '0 16px', marginBottom: 12 }}>
+            <div style={{ position: 'relative', marginBottom: 12 }}>
               <Search
                 placeholder={t('usersAdmin.searchByNameOrEmail')}
                 allowClear
@@ -585,7 +585,7 @@ const AdminUsers: React.FC = () => {
             </div>
             
             {/* 筛选与添加 */}
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', overflowX: 'auto', padding: '0 16px 12px 16px', borderBottom: '2px solid rgba(255, 215, 0, 0.2)' }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', overflowX: 'auto', padding: '0 0px 12px 0px', borderBottom: '2px solid rgba(255, 215, 0, 0.2)' }}>
               <Dropdown
                 menu={{
                   items: [
@@ -643,7 +643,6 @@ const AdminUsers: React.FC = () => {
               flex: 1,
               overflowY: 'auto',
               overflowX: 'hidden',
-              padding: '16px',
               paddingBottom: '100px'
             }}
           >
@@ -701,11 +700,12 @@ const AdminUsers: React.FC = () => {
       {/* 右侧字母索引（可拖动浮动）- 移至最外层 */}
       {isMobile && (
         <div
+          className="alpha-index-scroll"
           style={{
             position: 'fixed',
             right: 3,
             top: alphaY,
-            transform: 'translateY(-30%)',
+            transform: 'translateY(-60%)',
             padding: 6,
             zIndex: 1000,
             background: 'rgba(0,0,0,0.35)',
@@ -713,7 +713,10 @@ const AdminUsers: React.FC = () => {
             borderRadius: 12,
             backdropFilter: 'blur(6px)',
             WebkitBackdropFilter: 'blur(6px)',
-            boxShadow: '0 6px 20px rgba(0,0,0,0.25)'
+            boxShadow: '0 6px 20px rgba(0,0,0,0.25)',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            overflowX: 'hidden'
           }}
           onTouchStart={(e) => {
             if (!e.touches || e.touches.length === 0) return
@@ -820,11 +823,20 @@ const AdminUsers: React.FC = () => {
           }
         }
         
-        /* 隐藏滚动条但保持滚动功能 */
+        /* 隐藏用户列表滚动条 */
         .users-scroll-area::-webkit-scrollbar {
           display: none;
         }
         .users-scroll-area {
+          -ms-overflow-style: none;  /* IE and Edge */
+          scrollbar-width: none;  /* Firefox */
+        }
+        
+        /* 隐藏字母索引滚动条 */
+        .alpha-index-scroll::-webkit-scrollbar {
+          display: none;
+        }
+        .alpha-index-scroll {
           -ms-overflow-style: none;  /* IE and Edge */
           scrollbar-width: none;  /* Firefox */
         }
