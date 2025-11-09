@@ -829,8 +829,37 @@ const AdminInventory: React.FC = () => {
   // 当前查看的产品相关记录
   const currentProductLogs = useMemo(() => {
     if (!viewingProductLogs) return []
-    return inventoryLogs.filter(log => log.cigarId === viewingProductLogs)
-  }, [viewingProductLogs, inventoryLogs])
+    
+    if (useNewArchitecture) {
+      // 新架构：从 inventoryMovements 获取并转换为统一格式
+      return inventoryMovements
+        .filter((movement: InventoryMovement) => movement.cigarId === viewingProductLogs)
+        .map((movement: InventoryMovement) => ({
+          id: movement.id,
+          cigarId: movement.cigarId,
+          cigarName: movement.cigarName,
+          itemType: movement.itemType,
+          type: movement.type,
+          quantity: movement.quantity,
+          unitPrice: movement.unitPrice,
+          referenceNo: movement.referenceNo,
+          reason: movement.reason,
+          operatorId: movement.operatorId,
+          createdAt: movement.createdAt,
+          // 额外信息
+          inboundOrderId: movement.inboundOrderId,
+          outboundOrderId: movement.outboundOrderId
+        }))
+        .sort((a, b) => {
+          const dateA = a.createdAt?.getTime?.() || 0
+          const dateB = b.createdAt?.getTime?.() || 0
+          return dateB - dateA  // 最新的在前
+        })
+    } else {
+      // 旧架构：从 inventoryLogs 获取
+      return inventoryLogs.filter(log => log.cigarId === viewingProductLogs)
+    }
+  }, [viewingProductLogs, inventoryLogs, inventoryMovements, useNewArchitecture])
 
   const outFromOrders = useMemo(() => {
     // 将订单按商品拆分为出库行
