@@ -2,11 +2,13 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Table, Button, Tag, Space, Typography, Input, Select, Progress, Modal, Form, InputNumber, message, Dropdown, Checkbox, Card, Upload } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, WarningOutlined, UploadOutlined, DownloadOutlined, MinusCircleOutlined } from '@ant-design/icons'
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, WarningOutlined, UploadOutlined, DownloadOutlined, MinusCircleOutlined, FilePdfOutlined, FileImageOutlined, EyeOutlined } from '@ant-design/icons'
 import type { Cigar, InventoryLog, Brand } from '../../../types'
+import type { UploadFile } from 'antd'
 import { getCigars, createDocument, updateDocument, deleteDocument, COLLECTIONS, getAllInventoryLogs, getAllOrders, getUsers, getBrands, getBrandById, getAllTransactions } from '../../../services/firebase/firestore'
 import ImageUpload from '../../../components/common/ImageUpload'
 import { getModalTheme, getResponsiveModalConfig, getModalThemeStyles } from '../../../config/modalTheme'
+import { useCloudinary } from '../../../hooks/useCloudinary'
 
 const { Title } = Typography
 const { Search } = Input
@@ -48,6 +50,17 @@ const AdminInventory: React.FC = () => {
   const [inBrandFilter, setInBrandFilter] = useState<string | undefined>()
   const [outSearchKeyword, setOutSearchKeyword] = useState('')
   const [outBrandFilter, setOutBrandFilter] = useState<string | undefined>()
+  
+  // 文件上传相关
+  const { upload: cloudinaryUpload, uploading: uploadingFile } = useCloudinary()
+  const [attachmentFileList, setAttachmentFileList] = useState<UploadFile[]>([])
+  const [uploadedAttachments, setUploadedAttachments] = useState<Array<{
+    url: string
+    type: 'pdf' | 'image'
+    filename: string
+    uploadedAt: Date
+  }>>([])
+  
   const toDateSafe = (val: any): Date | null => {
     if (!val) return null
     let v: any = val
@@ -1558,6 +1571,7 @@ const AdminInventory: React.FC = () => {
                         reason: values.reason || t('inventory.inStock'),
                         referenceNo: values.referenceNo,
                         unitPrice: (line.unitPrice != null ? Number(line.unitPrice) : undefined),
+                        attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
                         operatorId: 'system',
                         createdAt: new Date(),
                       } as any)
@@ -1582,6 +1596,7 @@ const AdminInventory: React.FC = () => {
                         reason: values.reason || t('inventory.inStock'),
                         referenceNo: values.referenceNo,
                         unitPrice: (line.unitPrice != null ? Number(line.unitPrice) : undefined),
+                        attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
                         operatorId: 'system',
                         createdAt: new Date(),
                       } as any)
@@ -1592,6 +1607,8 @@ const AdminInventory: React.FC = () => {
                   setItems(await getCigars())
                   setInventoryLogs(await getAllInventoryLogs())
                   setInModalOpen(false)
+                  setAttachmentFileList([])
+                  setUploadedAttachments([])
                 } finally {
                   setLoading(false)
                 }
@@ -1718,9 +1735,86 @@ const AdminInventory: React.FC = () => {
                 <Form.Item label={t('inventory.reason')} name="reason">
                   <Input placeholder={t('inventory.forExample') + t('inventory.purchaseInStock')} />
                 </Form.Item>
+                <Form.Item label={t('inventory.attachments')}>
+                  <Upload
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    fileList={attachmentFileList}
+                    beforeUpload={(file) => {
+                      const isPDF = file.type === 'application/pdf'
+                      const isImage = file.type.startsWith('image/')
+                      if (!isPDF && !isImage) {
+                        message.error(t('inventory.supportedFormats'))
+                        return Upload.LIST_IGNORE
+                      }
+                      const isLt10M = file.size / 1024 / 1024 < 10
+                      if (!isLt10M) {
+                        message.error(t('inventory.maxFileSize'))
+                        return Upload.LIST_IGNORE
+                      }
+                      return false // 阻止自动上传，手动控制
+                    }}
+                    onChange={async (info) => {
+                      setAttachmentFileList(info.fileList)
+                      
+                      // 处理新上传的文件
+                      const file = info.file
+                      if (file.originFileObj && file.status === undefined) {
+                        try {
+                          const uploadResult = await cloudinaryUpload(file.originFileObj, {
+                            folder: 'inventory_documents'
+                          })
+                          
+                          const isPDF = file.type === 'application/pdf'
+                          const newAttachment = {
+                            url: uploadResult.secure_url,
+                            type: (isPDF ? 'pdf' : 'image') as 'pdf' | 'image',
+                            filename: file.name,
+                            uploadedAt: new Date()
+                          }
+                          
+                          setUploadedAttachments(prev => [...prev, newAttachment])
+                          
+                          // 更新文件列表状态
+                          setAttachmentFileList(prev => 
+                            prev.map(f => 
+                              f.uid === file.uid 
+                                ? { ...f, status: 'done', url: uploadResult.secure_url }
+                                : f
+                            )
+                          )
+                          
+                          message.success(t('inventory.uploadSuccess'))
+                        } catch (error) {
+                          message.error(t('inventory.uploadFailed'))
+                          // 移除失败的文件
+                          setAttachmentFileList(prev => prev.filter(f => f.uid !== file.uid))
+                        }
+                      }
+                    }}
+                    onRemove={(file) => {
+                      const fileUrl = file.url
+                      if (fileUrl) {
+                        setUploadedAttachments(prev => prev.filter(att => att.url !== fileUrl))
+                      }
+                    }}
+                    listType="picture"
+                    maxCount={5}
+                  >
+                    <Button icon={<UploadOutlined />} loading={uploadingFile}>
+                      {t('inventory.uploadOrderDocument')}
+                    </Button>
+                  </Upload>
+                  <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 4 }}>
+                    {t('inventory.supportedFormats')} · {t('inventory.maxFileSize')}
+                  </div>
+                </Form.Item>
                 <Form.Item>
                   <Space>
-                    <Button onClick={() => setInModalOpen(false)}>{t('common.cancel')}</Button>
+                    <Button onClick={() => {
+                      setInModalOpen(false)
+                      setAttachmentFileList([])
+                      setUploadedAttachments([])
+                    }}>{t('common.cancel')}</Button>
                     <Button type="primary" htmlType="submit" loading={loading}>{t('inventory.confirmInStock')}</Button>
                   </Space>
                 </Form.Item>
@@ -1824,6 +1918,36 @@ const AdminInventory: React.FC = () => {
                                 hour: '2-digit', 
                                 minute: '2-digit' 
                               }) : '-'
+                            }
+                          },
+                          {
+                            title: t('inventory.attachments'),
+                            key: 'attachments',
+                            width: 120,
+                            render: (_: any, rec: any) => {
+                              const attachments = rec.attachments || []
+                              if (attachments.length === 0) {
+                                return <span style={{ color: '#8c8c8c' }}>-</span>
+                              }
+                              return (
+                                <Space size="small">
+                                  {attachments.map((att: any, idx: number) => {
+                                    const isPDF = att.type === 'pdf'
+                                    return (
+                                      <Button
+                                        key={idx}
+                                        type="link"
+                                        size="small"
+                                        icon={isPDF ? <FilePdfOutlined /> : <FileImageOutlined />}
+                                        onClick={() => window.open(att.url, '_blank')}
+                                        title={att.filename}
+                                      >
+                                        {isPDF ? 'PDF' : t('common.image')}
+                                      </Button>
+                                    )
+                                  })}
+                                </Space>
+                              )
                             }
                           },
                           {
@@ -2281,6 +2405,42 @@ const AdminInventory: React.FC = () => {
                                       {itemValue > 0 ? `${t('inventory.totalValue')}: RM ${itemValue.toFixed(2)}` : ''}
                                     </div>
                                   </div>
+                                  
+                                  {/* 附件显示 */}
+                                  {log.attachments && log.attachments.length > 0 && (
+                                    <div style={{
+                                      marginTop: 8,
+                                      marginBottom: 8,
+                                      display: 'flex',
+                                      flexWrap: 'wrap',
+                                      gap: 6
+                                    }}>
+                                      {log.attachments.map((att: any, idx: number) => {
+                                        const isPDF = att.type === 'pdf'
+                                        return (
+                                          <button
+                                            key={idx}
+                                            onClick={() => window.open(att.url, '_blank')}
+                                            style={{
+                                              padding: '4px 8px',
+                                              fontSize: 10,
+                                              background: 'rgba(24, 144, 255, 0.1)',
+                                              border: '1px solid rgba(24, 144, 255, 0.3)',
+                                              borderRadius: 4,
+                                              color: '#1890ff',
+                                              cursor: 'pointer',
+                                              fontWeight: 500,
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              gap: 4
+                                            }}
+                                          >
+                                            {isPDF ? '📄' : '🖼️'} {att.filename.substring(0, 15)}{att.filename.length > 15 ? '...' : ''}
+                                          </button>
+                                        )
+                                      })}
+                                    </div>
+                                  )}
                                   
                                   {/* 操作按钮 */}
                                   <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>

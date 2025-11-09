@@ -653,7 +653,19 @@
     "customItemName": "项目名称",
     "pleaseInputItemName": "请输入项目名称",
     "itemNameRequired": "项目名称不能为空",
-    "itemNamePlaceholder": "例如：会员活动横幅"
+    "itemNamePlaceholder": "例如：会员活动横幅",
+    "attachments": "附件",
+    "uploadAttachments": "上传附件",
+    "uploadOrderDocument": "上传订单文档",
+    "supportedFormats": "支持 PDF、JPG、PNG 格式",
+    "maxFileSize": "单个文件最大 10MB",
+    "uploadSuccess": "上传成功",
+    "uploadFailed": "上传失败",
+    "viewAttachment": "查看附件",
+    "downloadAttachment": "下载附件",
+    "deleteAttachment": "删除附件",
+    "confirmDeleteAttachment": "确定删除此附件？",
+    "noAttachments": "暂无附件"
   },
   "financeAdmin": {
     "title": "财务管理",

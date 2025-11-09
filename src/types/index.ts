@@ -187,6 +187,12 @@ export interface InventoryLog {
   operatorId: string;
   userId?: string;        // 关联的顾客ID（出库时）
   userName?: string;      // 关联的顾客名称（冗余字段）
+  attachments?: Array<{   // 附件（订单PDF或图片）
+    url: string;          // Cloudinary URL
+    type: 'pdf' | 'image'; // 文件类型
+    filename: string;      // 原始文件名
+    uploadedAt: Date;      // 上传时间
+  }>;
   createdAt: Date;
 }
 
