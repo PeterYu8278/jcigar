@@ -3,9 +3,9 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Table, Button, Tag, Space, Typography, Input, Select, Modal, Form, InputNumber, message, Dropdown, Checkbox, Card, Upload, Row, Col } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, WarningOutlined, UploadOutlined, DownloadOutlined, MinusCircleOutlined, FilePdfOutlined, FileImageOutlined, EyeOutlined } from '@ant-design/icons'
-import type { Cigar, InventoryLog, Brand, InboundOrder, OutboundOrder, InventoryMovement } from '../../../types'
+import type { Cigar, Brand, InboundOrder, OutboundOrder, InventoryMovement } from '../../../types'
 import type { UploadFile } from 'antd'
-import { getCigars, createDocument, updateDocument, deleteDocument, COLLECTIONS, getAllInventoryLogs, getAllOrders, getUsers, getBrands, getBrandById, getAllTransactions, getAllInboundOrders, getAllOutboundOrders, getAllInventoryMovements, createInboundOrder, deleteInboundOrder, updateInboundOrder, getInboundOrdersByReferenceNo, createOutboundOrder } from '../../../services/firebase/firestore'
+import { getCigars, createDocument, updateDocument, deleteDocument, COLLECTIONS, getAllOrders, getUsers, getBrands, getBrandById, getAllTransactions, getAllInboundOrders, getAllOutboundOrders, getAllInventoryMovements, createInboundOrder, deleteInboundOrder, updateInboundOrder, getInboundOrdersByReferenceNo, createOutboundOrder } from '../../../services/firebase/firestore'
 import ImageUpload from '../../../components/common/ImageUpload'
 import { getModalTheme, getResponsiveModalConfig, getModalThemeStyles } from '../../../config/modalTheme'
 import { useCloudinary } from '../../../hooks/useCloudinary'
@@ -29,7 +29,6 @@ const AdminInventory: React.FC = () => {
   const [inForm] = Form.useForm()
   const [outForm] = Form.useForm()
   const [activeTab, setActiveTab] = useState<string>('list')
-  const [inventoryLogs, setInventoryLogs] = useState<InventoryLog[]>([])
   const [orders, setOrders] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
   const [transactions, setTransactions] = useState<any[]>([])
@@ -38,7 +37,6 @@ const AdminInventory: React.FC = () => {
   const [inboundOrders, setInboundOrders] = useState<InboundOrder[]>([])
   const [outboundOrders, setOutboundOrders] = useState<OutboundOrder[]>([])
   const [inventoryMovements, setInventoryMovements] = useState<InventoryMovement[]>([])
-  const [useNewArchitecture, setUseNewArchitecture] = useState(true) // 控制是否使用新架构（已启用）
   const [viewingReference, setViewingReference] = useState<string | null>(null)
   const [viewingProductLogs, setViewingProductLogs] = useState<string | null>(null)
   const [imageList, setImageList] = useState<any[]>([])
@@ -50,8 +48,6 @@ const AdminInventory: React.FC = () => {
   const [outStatsExpandedKeys, setOutStatsExpandedKeys] = useState<React.Key[]>([])
   const [inStatsExpandedKeys, setInStatsExpandedKeys] = useState<React.Key[]>([])
   const [inLogsExpandedKeys, setInLogsExpandedKeys] = useState<React.Key[]>([])
-  const [editingInLog, setEditingInLog] = useState<any>(null)
-  const [inLogEditForm] = Form.useForm()
   const [editingOrder, setEditingOrder] = useState<InboundOrder | null>(null)
   const [orderEditForm] = Form.useForm()
   const [inSearchKeyword, setInSearchKeyword] = useState('')
@@ -122,29 +118,20 @@ const AdminInventory: React.FC = () => {
         const list = await getCigars()
         setItems(list)
         
-        // 检测是否已迁移到新架构
-        const [inOrders, movements] = await Promise.all([
+        // 加载新架构数据
+        const [inOrders, outOrders, movements, os, us, bs, txs] = await Promise.all([
           getAllInboundOrders(),
-          getAllInventoryMovements()
+          getAllOutboundOrders(),
+          getAllInventoryMovements(),
+          getAllOrders(),
+          getUsers(),
+          getBrands(),
+          getAllTransactions()
         ])
         
-        if (inOrders.length > 0 || movements.length > 0) {
-          // 使用新架构
-          console.log('✅ [Inventory] Using new architecture (inbound_orders + inventory_movements)')
-          setUseNewArchitecture(true)
-          setInboundOrders(inOrders)
-          setInventoryMovements(movements)
-          const outOrders = await getAllOutboundOrders()
-          setOutboundOrders(outOrders)
-        } else {
-          // 使用旧架构
-          console.log('⚠️ [Inventory] Using legacy architecture (inventory_logs)')
-          setUseNewArchitecture(false)
-        const logs = await getAllInventoryLogs()
-        setInventoryLogs(logs)
-        }
-        
-        const [os, us, bs, txs] = await Promise.all([getAllOrders(), getUsers(), getBrands(), getAllTransactions()])
+        setInboundOrders(inOrders)
+        setOutboundOrders(outOrders)
+        setInventoryMovements(movements)
         setOrders(os)
         setUsers(us)
         setBrandList(bs)
@@ -208,13 +195,7 @@ const AdminInventory: React.FC = () => {
   // 商品是否存在入/出库记录（存在则禁止删除）
   const hasInventoryHistory = (cigarId: string | undefined) => {
     if (!cigarId) return false
-    if (useNewArchitecture) {
-      // 新架构：检查 inventoryMovements
-      return inventoryMovements.some(m => m.cigarId === cigarId)
-    } else {
-      // 旧架构：检查 inventoryLogs
-      return inventoryLogs.some((log: any) => log?.cigarId === cigarId)
-    }
+    return inventoryMovements.some(m => m.cigarId === cigarId)
   }
 
   // 基于入库/出库日志的实时库存计算（只统计雪茄产品，不统计活动物料等）
@@ -222,48 +203,26 @@ const AdminInventory: React.FC = () => {
     // 精确计算：sum(IN) - sum(OUT)，不在逐步相减时夹0，避免顺序依赖
     const map = new Map<string, number>()
     
-    if (useNewArchitecture) {
-      // 新架构：使用 inventory_movements，但需过滤掉 cancelled 订单
-      for (const movement of inventoryMovements) {
-        const id = movement.cigarId
-        if (!id) continue
-        
-        // 只统计雪茄产品
-        const itemType = movement.itemType
-        if (itemType && itemType !== 'cigar') continue
-        
-        // ✅ 过滤掉已取消订单的库存变动
-        if (movement.inboundOrderId) {
-          const order = inboundOrders.find(o => o.id === movement.inboundOrderId)
-          if (order && order.status === 'cancelled') continue  // 跳过已取消订单
-        }
-        if (movement.outboundOrderId) {
-          const order = outboundOrders.find(o => o.id === movement.outboundOrderId)
-          if (order && order.status === 'cancelled') continue  // 跳过已取消订单
-        }
-        
-        const type = movement.type
-        const qty = Number.isFinite(movement.quantity) ? Math.floor(movement.quantity) : 0  // ✅ 支持负数（退货）
-        const prev = map.get(id) ?? 0
-        if (type === 'in') {
-          map.set(id, prev + qty)  // qty 可以是负数（退货）
-        } else if (type === 'out') {
-          map.set(id, prev - qty)
-        }
-      }
-    } else {
-      // 旧架构：使用 inventory_logs
-    for (const log of inventoryLogs) {
-      const id = (log as any)?.cigarId
+    for (const movement of inventoryMovements) {
+      const id = movement.cigarId
       if (!id) continue
-        
-        // 只统计雪茄产品（itemType === 'cigar' 或未指定itemType的历史记录）
-        const itemType = (log as any)?.itemType
-        if (itemType && itemType !== 'cigar') continue
-        
-      const type = (log as any)?.type
-      const qtyRaw = (log as any)?.quantity ?? 0
-      const qty = Number.isFinite(qtyRaw) ? Math.max(0, Math.floor(qtyRaw)) : 0
+      
+      // 只统计雪茄产品
+      const itemType = movement.itemType
+      if (itemType && itemType !== 'cigar') continue
+      
+      // 过滤掉已取消订单的库存变动
+      if (movement.inboundOrderId) {
+        const order = inboundOrders.find(o => o.id === movement.inboundOrderId)
+        if (order && order.status === 'cancelled') continue
+      }
+      if (movement.outboundOrderId) {
+        const order = outboundOrders.find(o => o.id === movement.outboundOrderId)
+        if (order && order.status === 'cancelled') continue
+      }
+      
+      const type = movement.type
+      const qty = Number.isFinite(movement.quantity) ? Math.floor(movement.quantity) : 0
       const prev = map.get(id) ?? 0
       if (type === 'in') {
         map.set(id, prev + qty)
@@ -271,10 +230,9 @@ const AdminInventory: React.FC = () => {
         map.set(id, prev - qty)
       }
     }
-    }
     
     return map
-  }, [useNewArchitecture, inventoryMovements, inventoryLogs, inboundOrders, outboundOrders])
+  }, [inventoryMovements, inboundOrders, outboundOrders])
 
   const getComputedStock = (cigarId?: string) => {
     if (!cigarId) return 0
@@ -287,56 +245,35 @@ const AdminInventory: React.FC = () => {
   const totalsByCigarId = useMemo(() => {
     const map = new Map<string, { totalIn: number; totalOut: number }>()
     
-    if (useNewArchitecture) {
-      // 新架构：使用 inventoryMovements，过滤已取消订单
-      for (const movement of inventoryMovements) {
-        const id = movement.cigarId
-        if (!id) continue
-        
-        // 只统计雪茄产品
-        const itemType = movement.itemType
-        if (itemType && itemType !== 'cigar') continue
-        
-        // 过滤已取消订单
-        if (movement.inboundOrderId) {
-          const order = inboundOrders.find(o => o.id === movement.inboundOrderId)
-          if (order && order.status === 'cancelled') continue
-        }
-        if (movement.outboundOrderId) {
-          const order = outboundOrders.find(o => o.id === movement.outboundOrderId)
-          if (order && order.status === 'cancelled') continue
-        }
-        
-        const type = movement.type
-        const qtyRaw = movement.quantity ?? 0
-        const qty = Number.isFinite(qtyRaw) ? Math.max(0, Math.floor(Math.abs(qtyRaw))) : 0  // 取绝对值
-        const prev = map.get(id) || { totalIn: 0, totalOut: 0 }
-        if (type === 'in') prev.totalIn += qty
-        else if (type === 'out') prev.totalOut += qty
-        map.set(id, prev)
+    for (const movement of inventoryMovements) {
+      const id = movement.cigarId
+      if (!id) continue
+      
+      // 只统计雪茄产品
+      const itemType = movement.itemType
+      if (itemType && itemType !== 'cigar') continue
+      
+      // 过滤已取消订单
+      if (movement.inboundOrderId) {
+        const order = inboundOrders.find(o => o.id === movement.inboundOrderId)
+        if (order && order.status === 'cancelled') continue
       }
-    } else {
-      // 旧架构：使用 inventoryLogs
-      for (const log of inventoryLogs) {
-        const id = (log as any)?.cigarId
-        if (!id) continue
-        
-        // 只统计雪茄产品
-        const itemType = (log as any)?.itemType
-        if (itemType && itemType !== 'cigar') continue
-        
-        const type = (log as any)?.type
-        const qtyRaw = (log as any)?.quantity ?? 0
-        const qty = Number.isFinite(qtyRaw) ? Math.max(0, Math.floor(qtyRaw)) : 0
-        const prev = map.get(id) || { totalIn: 0, totalOut: 0 }
-        if (type === 'in') prev.totalIn += qty
-        else if (type === 'out') prev.totalOut += qty
-        map.set(id, prev)
+      if (movement.outboundOrderId) {
+        const order = outboundOrders.find(o => o.id === movement.outboundOrderId)
+        if (order && order.status === 'cancelled') continue
       }
+      
+      const type = movement.type
+      const qtyRaw = movement.quantity ?? 0
+      const qty = Number.isFinite(qtyRaw) ? Math.max(0, Math.floor(Math.abs(qtyRaw))) : 0
+      const prev = map.get(id) || { totalIn: 0, totalOut: 0 }
+      if (type === 'in') prev.totalIn += qty
+      else if (type === 'out') prev.totalOut += qty
+      map.set(id, prev)
     }
     
     return map
-  }, [useNewArchitecture, inventoryLogs, inventoryMovements, inboundOrders, outboundOrders])
+  }, [inventoryMovements, inboundOrders, outboundOrders])
 
   const getTotals = (cigarId?: string) => {
     if (!cigarId) return { totalIn: 0, totalOut: 0 }
@@ -549,68 +486,58 @@ const AdminInventory: React.FC = () => {
   ]
 
   const inLogs = useMemo(() => {
-    if (useNewArchitecture) {
-      // 新架构：从 inventoryMovements 转换
-      return inventoryMovements
-        .filter(m => m.type === 'in')
-        .map(m => {
-          // 获取操作人信息
-          let operatorId = 'system'
-          if (m.inboundOrderId) {
-            const order = inboundOrders.find(o => o.id === m.inboundOrderId)
-            if (order) operatorId = order.operatorId
-          }
-          
-          return {
-            id: m.id,
-            cigarId: m.cigarId,
-            cigarName: m.cigarName,
-            itemType: m.itemType,
-            type: m.type,
-            quantity: m.quantity,
-            unitPrice: m.unitPrice,
-            referenceNo: m.referenceNo,
-            reason: m.reason,
-            operatorId: operatorId,
-            createdAt: m.createdAt
-          } as InventoryLog
-        })
-    } else {
-      return inventoryLogs.filter(l => (l as any).type === 'in')
-    }
-  }, [useNewArchitecture, inventoryMovements, inventoryLogs, inboundOrders])
+    return inventoryMovements
+      .filter(m => m.type === 'in')
+      .map(m => {
+        // 获取操作人信息
+        let operatorId = 'system'
+        if (m.inboundOrderId) {
+          const order = inboundOrders.find(o => o.id === m.inboundOrderId)
+          if (order) operatorId = order.operatorId
+        }
+        
+        return {
+          id: m.id,
+          cigarId: m.cigarId,
+          cigarName: m.cigarName,
+          itemType: m.itemType,
+          type: m.type,
+          quantity: m.quantity,
+          unitPrice: m.unitPrice,
+          referenceNo: m.referenceNo,
+          reason: m.reason,
+          operatorId: operatorId,
+          createdAt: m.createdAt
+        }
+      })
+  }, [inventoryMovements, inboundOrders])
   
   const outLogs = useMemo(() => {
-    if (useNewArchitecture) {
-      // 新架构：从 inventoryMovements 转换
-      return inventoryMovements
-        .filter(m => m.type === 'out')
-        .map(m => {
-          // 获取操作人信息
-          let operatorId = 'system'
-          if (m.outboundOrderId) {
-            const order = outboundOrders.find(o => o.id === m.outboundOrderId)
-            if (order) operatorId = order.operatorId
-          }
-          
-          return {
-            id: m.id,
-            cigarId: m.cigarId,
-            cigarName: m.cigarName,
-            itemType: m.itemType,
-            type: m.type,
-            quantity: m.quantity,
-            unitPrice: m.unitPrice,
-            referenceNo: m.referenceNo,
-            reason: m.reason,
-            operatorId: operatorId,
-            createdAt: m.createdAt
-          } as InventoryLog
-        })
-    } else {
-      return inventoryLogs.filter(l => (l as any).type === 'out')
-    }
-  }, [useNewArchitecture, inventoryMovements, inventoryLogs, outboundOrders])
+    return inventoryMovements
+      .filter(m => m.type === 'out')
+      .map(m => {
+        // 获取操作人信息
+        let operatorId = 'system'
+        if (m.outboundOrderId) {
+          const order = outboundOrders.find(o => o.id === m.outboundOrderId)
+          if (order) operatorId = order.operatorId
+        }
+        
+        return {
+          id: m.id,
+          cigarId: m.cigarId,
+          cigarName: m.cigarName,
+          itemType: m.itemType,
+          type: m.type,
+          quantity: m.quantity,
+          unitPrice: m.unitPrice,
+          referenceNo: m.referenceNo,
+          reason: m.reason,
+          operatorId: operatorId,
+          createdAt: m.createdAt
+        }
+      })
+  }, [inventoryMovements, outboundOrders])
   
   // 入库记录筛选
   const filteredInLogs = useMemo(() => {
@@ -642,26 +569,11 @@ const AdminInventory: React.FC = () => {
   const getInboundReferenceMatchStatus = (referenceNo: string) => {
     if (!referenceNo) return { matched: 0, total: 0, status: 'none' }
     
-    // 计算该单号的总价值
-    let totalValue = 0
-    
-    if (useNewArchitecture) {
-      // 新架构：从 inboundOrders 获取
-      const order = inboundOrders.find(o => o.referenceNo === referenceNo)
-      if (order) {
-        totalValue = order.totalValue || order.items.reduce((sum, item) => {
-          return sum + (Number(item.quantity || 0) * Number(item.unitPrice || 0))
-        }, 0)
-      }
-    } else {
-      // 旧架构：从 inventoryLogs 聚合
-      const referenceLogs = inventoryLogs.filter((log: any) => 
-        log.referenceNo === referenceNo && log.type === 'in'
-      )
-      totalValue = referenceLogs.reduce((sum, log: any) => {
-        return sum + (Number(log.quantity || 0) * Number((log as any).unitPrice || 0))
-      }, 0)
-    }
+    // 从 inboundOrders 获取总价值
+    const order = inboundOrders.find(o => o.referenceNo === referenceNo)
+    const totalValue = order ? (order.totalValue || order.items.reduce((sum, item) => {
+      return sum + (Number(item.quantity || 0) * Number(item.unitPrice || 0))
+    }, 0)) : 0
     
     // 查找匹配该单号的交易记录
     const matchedAmount = transactions
@@ -690,109 +602,61 @@ const AdminInventory: React.FC = () => {
     }
   }
 
-  // 入库记录按单号分组
+  // 入库记录按单号分组（直接使用 inboundOrders）
   const inLogsGroupedByReference = useMemo(() => {
-    if (useNewArchitecture) {
-      // ============================================
-      // 新架构：直接使用 inboundOrders，无需分组
-      // ============================================
-      
-      return inboundOrders
-        .filter(order => {
-          // 品牌筛选
-          if (inBrandFilter) {
-            const hasBrand = order.items.some(item => {
-              const cigar = items.find(c => c.id === item.cigarId)
-              return cigar?.brand === inBrandFilter
-            })
-            if (!hasBrand) return false
-          }
-          
-          // 关键字搜索
-          if (inSearchKeyword) {
-            const kw = inSearchKeyword.toLowerCase()
-            const refNo = order.referenceNo.toLowerCase()
-            const reason = order.reason.toLowerCase()
-            const hasMatchingProduct = order.items.some(item => 
-              item.cigarName.toLowerCase().includes(kw)
-            )
-            
-            if (!refNo.includes(kw) && !reason.includes(kw) && !hasMatchingProduct) {
-              return false
-            }
-          }
-          
-          return true
-        })
-        .map(order => ({
-          referenceNo: order.referenceNo,
-          date: toDateSafe(order.createdAt),
-          reason: order.reason,
-          logs: order.items.map(item => ({
-            id: `${order.id}_${item.cigarId}`,
-            cigarId: item.cigarId,
-            cigarName: item.cigarName,
-            itemType: item.itemType,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            createdAt: order.createdAt,
-            reason: order.reason,
-            attachments: order.attachments // 附件在订单级别
-          })),
-          totalQuantity: order.totalQuantity,
-          totalValue: order.totalValue,
-          productCount: order.items.length,
-          attachments: order.attachments // 订单级别的附件
-        }))
-        .sort((a, b) => {
-          const dateA = a.date?.getTime() || 0;
-          const dateB = b.date?.getTime() || 0;
-          return dateB - dateA;
-        });
-      
-    } else {
-      // ============================================
-      // 旧架构：从 filteredInLogs 分组
-      // ============================================
-      
-      const grouped = new Map<string, {
-        referenceNo: string;
-        date: Date | null;
-        reason: string;
-        logs: any[];
-        totalQuantity: number;
-        totalValue: number;
-        productCount: number;
-      }>();
-      
-      filteredInLogs.forEach(log => {
-        const key = log.referenceNo || '__NO_REFERENCE__';
-        if (!grouped.has(key)) {
-          grouped.set(key, {
-            referenceNo: log.referenceNo || t('inventory.unassignedReference'),
-            date: toDateSafe(log.createdAt),
-            reason: (log as any).reason || '-',
-            logs: [],
-            totalQuantity: 0,
-            totalValue: 0,
-            productCount: 0
-          });
+    return inboundOrders
+      .filter(order => {
+        // 品牌筛选
+        if (inBrandFilter) {
+          const hasBrand = order.items.some(item => {
+            const cigar = items.find(c => c.id === item.cigarId)
+            return cigar?.brand === inBrandFilter
+          })
+          if (!hasBrand) return false
         }
-        const group = grouped.get(key)!;
-        group.logs.push(log);
-        group.totalQuantity += Number(log.quantity || 0);
-        group.totalValue += Number(log.quantity || 0) * Number((log as any).unitPrice || 0);
-        group.productCount = group.logs.length;
+        
+        // 关键字搜索
+        if (inSearchKeyword) {
+          const kw = inSearchKeyword.toLowerCase()
+          const refNo = order.referenceNo.toLowerCase()
+          const reason = order.reason.toLowerCase()
+          const hasMatchingProduct = order.items.some(item => 
+            item.cigarName.toLowerCase().includes(kw)
+          )
+          
+          if (!refNo.includes(kw) && !reason.includes(kw) && !hasMatchingProduct) {
+            return false
+          }
+        }
+        
+        return true
+      })
+      .map(order => ({
+        referenceNo: order.referenceNo,
+        date: toDateSafe(order.createdAt),
+        reason: order.reason,
+        logs: order.items.map(item => ({
+          id: `${order.id}_${item.cigarId}`,
+          cigarId: item.cigarId,
+          cigarName: item.cigarName,
+          itemType: item.itemType,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          createdAt: order.createdAt,
+          reason: order.reason,
+          attachments: order.attachments
+        })),
+        totalQuantity: order.totalQuantity,
+        totalValue: order.totalValue,
+        productCount: order.items.length,
+        attachments: order.attachments
+      }))
+      .sort((a, b) => {
+        const dateA = a.date?.getTime() || 0;
+        const dateB = b.date?.getTime() || 0;
+        return dateB - dateA;
       });
-      
-      return Array.from(grouped.values())
-        .sort((a, b) => {
-          const dateA = a.date?.getTime() || 0;
-          const dateB = b.date?.getTime() || 0;
-          return dateB - dateA; // 最新的在上面
-        });
-    }
-  }, [useNewArchitecture, inboundOrders, filteredInLogs, items, t, inSearchKeyword, inBrandFilter])
+  }, [inboundOrders, items, inSearchKeyword, inBrandFilter])
   
   // 出库记录筛选
   const filteredOutLogs = useMemo(() => {
@@ -922,7 +786,7 @@ const AdminInventory: React.FC = () => {
   
   // 按单号分组的入库记录
   const referenceGroups = useMemo(() => {
-    const groups: Record<string, InventoryLog[]> = {}
+    const groups: Record<string, any[]> = {}
     inLogs.forEach(log => {
       const refNo = (log as any).referenceNo
       if (refNo) {
@@ -945,48 +809,41 @@ const AdminInventory: React.FC = () => {
   const currentProductLogs = useMemo(() => {
     if (!viewingProductLogs) return []
     
-    if (useNewArchitecture) {
-      // 新架构：从 inventoryMovements 获取并转换为统一格式
-      return inventoryMovements
-        .filter((movement: InventoryMovement) => movement.cigarId === viewingProductLogs)
-        .map((movement: InventoryMovement) => {
-          // 获取操作人信息（从关联的订单中获取）
-          let operatorId = 'system'
-          if (movement.inboundOrderId) {
-            const order = inboundOrders.find(o => o.id === movement.inboundOrderId)
-            if (order) operatorId = order.operatorId
-          } else if (movement.outboundOrderId) {
-            const order = outboundOrders.find(o => o.id === movement.outboundOrderId)
-            if (order) operatorId = order.operatorId
-          }
-          
-          return {
-            id: movement.id,
-            cigarId: movement.cigarId,
-            cigarName: movement.cigarName,
-            itemType: movement.itemType,
-            type: movement.type,
-            quantity: movement.quantity,
-            unitPrice: movement.unitPrice,
-            referenceNo: movement.referenceNo,
-            reason: movement.reason,
-            operatorId: operatorId,
-            createdAt: movement.createdAt,
-            // 额外信息
-            inboundOrderId: movement.inboundOrderId,
-            outboundOrderId: movement.outboundOrderId
-          }
-        })
-        .sort((a, b) => {
-          const dateA = a.createdAt?.getTime?.() || 0
-          const dateB = b.createdAt?.getTime?.() || 0
-          return dateB - dateA  // 最新的在前
-        })
-    } else {
-      // 旧架构：从 inventoryLogs 获取
-      return inventoryLogs.filter(log => log.cigarId === viewingProductLogs)
-    }
-  }, [viewingProductLogs, inventoryLogs, inventoryMovements, useNewArchitecture])
+    return inventoryMovements
+      .filter((movement: InventoryMovement) => movement.cigarId === viewingProductLogs)
+      .map((movement: InventoryMovement) => {
+        // 获取操作人信息（从关联的订单中获取）
+        let operatorId = 'system'
+        if (movement.inboundOrderId) {
+          const order = inboundOrders.find(o => o.id === movement.inboundOrderId)
+          if (order) operatorId = order.operatorId
+        } else if (movement.outboundOrderId) {
+          const order = outboundOrders.find(o => o.id === movement.outboundOrderId)
+          if (order) operatorId = order.operatorId
+        }
+        
+        return {
+          id: movement.id,
+          cigarId: movement.cigarId,
+          cigarName: movement.cigarName,
+          itemType: movement.itemType,
+          type: movement.type,
+          quantity: movement.quantity,
+          unitPrice: movement.unitPrice,
+          referenceNo: movement.referenceNo,
+          reason: movement.reason,
+          operatorId: operatorId,
+          createdAt: movement.createdAt,
+          inboundOrderId: movement.inboundOrderId,
+          outboundOrderId: movement.outboundOrderId
+        }
+      })
+      .sort((a, b) => {
+        const dateA = a.createdAt?.getTime?.() || 0
+        const dateB = b.createdAt?.getTime?.() || 0
+        return dateB - dateA
+      })
+  }, [viewingProductLogs, inventoryMovements, inboundOrders, outboundOrders])
 
   const outFromOrders = useMemo(() => {
     // 将订单按商品拆分为出库行
@@ -1858,145 +1715,76 @@ const AdminInventory: React.FC = () => {
                 
                 setLoading(true)
                 try {
-                  if (useNewArchitecture) {
-                    // ============================================
-                    // 新架构：创建入库订单
-                    // ============================================
-                    
-                    const orderItems = []
-                    let totalQuantity = 0
-                    let totalValue = 0
-                    
+                  const orderItems = []
+                  let totalQuantity = 0
+                  let totalValue = 0
+                  
                   for (const line of lines) {
-                      const lineItemType = line.itemType || 'cigar'
-                      const qty = Math.max(1, Math.floor(line.quantity || 1))
-                      let cigarId = ''
-                      let cigarName = ''
-                      
-                      if (lineItemType === 'cigar') {
-                    const target = items.find(i => i.id === line.cigarId) as any
-                    if (!target) continue
-                        cigarId = target.id
-                        cigarName = target.name
-                      } else {
-                        if (!line.customName || !line.customName.trim()) continue
-                        const prefixMap: { [key: string]: string } = {
-                          'activity': 'ACTIVITY:',
-                          'gift': 'GIFT:',
-                          'service': 'SERVICE:',
-                          'other': 'OTHER:'
-                        }
-                        const prefix = prefixMap[lineItemType] || 'OTHER:'
-                        cigarId = `${prefix}${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-                        cigarName = line.customName.trim()
-                      }
-                      
-                      const orderItem: any = {
-                        cigarId,
-                        cigarName,
-                        itemType: lineItemType as any,
-                        quantity: qty
-                      }
-                      
-                      // 只在有值时添加 unitPrice 和 subtotal
-                      if (line.unitPrice != null) {
-                        const unitPrice = Number(line.unitPrice)
-                        orderItem.unitPrice = unitPrice
-                        orderItem.subtotal = unitPrice * qty
-                      }
-                      
-                      orderItems.push(orderItem)
-                      
-                      totalQuantity += qty
-                      if (orderItem.subtotal) {
-                        totalValue += orderItem.subtotal
-                      }
-                    }
-                    
-                    const inboundOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
-                      referenceNo: values.referenceNo.trim(),
-                      type: 'purchase',
-                      reason: values.reason || t('inventory.inStock'),
-                      items: orderItems,
-                      totalQuantity,
-                      totalValue,
-                      attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
-                      status: 'completed',
-                      operatorId: 'system',
-                      createdAt: new Date()
-                    }
-                    
-                    await createInboundOrder(inboundOrderData)
-                    
-                    message.success(t('inventory.inStockSuccess'))
-                    inForm.resetFields()
-                    setItems(await getCigars())
-                    setInboundOrders(await getAllInboundOrders())
-                    setInventoryMovements(await getAllInventoryMovements())
-                    setInModalOpen(false)
-                    setAttachmentFileList([])
-                    setUploadedAttachments([])
-                    
-                  } else {
-                    // ============================================
-                    // 旧架构：逐行创建 inventory_logs
-                    // ============================================
-                    
-                    for (const line of lines) {
-                      const lineItemType = line.itemType || 'cigar'
+                    const lineItemType = line.itemType || 'cigar'
                     const qty = Math.max(1, Math.floor(line.quantity || 1))
-                      
-                      if (lineItemType === 'cigar') {
-                        const target = items.find(i => i.id === line.cigarId) as any
-                        if (!target) continue
-                    await createDocument(COLLECTIONS.INVENTORY_LOGS, {
-                      cigarId: target.id,
-                          cigarName: target.name,
-                          itemType: 'cigar',
-                      type: 'in',
-                      quantity: qty,
-                      reason: values.reason || t('inventory.inStock'),
-                      referenceNo: values.referenceNo,
-                      unitPrice: (line.unitPrice != null ? Number(line.unitPrice) : undefined),
-                          attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
-                      operatorId: 'system',
-                      createdAt: new Date(),
-                    } as any)
-                      } else {
-                        if (!line.customName || !line.customName.trim()) continue
-                        const prefixMap: { [key: string]: string } = {
-                          'activity': 'ACTIVITY:',
-                          'gift': 'GIFT:',
-                          'service': 'SERVICE:',
-                          'other': 'OTHER:'
-                        }
-                        const prefix = prefixMap[lineItemType] || 'OTHER:'
-                        const uniqueId = `${prefix}${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-                        
-                        await createDocument(COLLECTIONS.INVENTORY_LOGS, {
-                          cigarId: uniqueId,
-                          cigarName: line.customName.trim(),
-                          itemType: lineItemType as any,
-                          type: 'in',
-                          quantity: qty,
-                          reason: values.reason || t('inventory.inStock'),
-                          referenceNo: values.referenceNo,
-                          unitPrice: (line.unitPrice != null ? Number(line.unitPrice) : undefined),
-                          attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
-                          operatorId: 'system',
-                          createdAt: new Date(),
-                        } as any)
+                    let cigarId = ''
+                    let cigarName = ''
+                    
+                    if (lineItemType === 'cigar') {
+                      const target = items.find(i => i.id === line.cigarId) as any
+                      if (!target) continue
+                      cigarId = target.id
+                      cigarName = target.name
+                    } else {
+                      if (!line.customName || !line.customName.trim()) continue
+                      const prefixMap: { [key: string]: string } = {
+                        'activity': 'ACTIVITY:',
+                        'gift': 'GIFT:',
+                        'service': 'SERVICE:',
+                        'other': 'OTHER:'
                       }
+                      const prefix = prefixMap[lineItemType] || 'OTHER:'
+                      cigarId = `${prefix}${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                      cigarName = line.customName.trim()
                     }
                     
+                    const orderItem: any = {
+                      cigarId,
+                      cigarName,
+                      itemType: lineItemType as any,
+                      quantity: qty
+                    }
+                    
+                    if (line.unitPrice != null) {
+                      const unitPrice = Number(line.unitPrice)
+                      orderItem.unitPrice = unitPrice
+                      orderItem.subtotal = unitPrice * qty
+                    }
+                    
+                    orderItems.push(orderItem)
+                    totalQuantity += qty
+                    if (orderItem.subtotal) {
+                      totalValue += orderItem.subtotal
+                    }
+                  }
+                  
+                  const inboundOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
+                    referenceNo: values.referenceNo.trim(),
+                    type: 'purchase',
+                    reason: values.reason || t('inventory.inStock'),
+                    items: orderItems,
+                    totalQuantity,
+                    totalValue,
+                    attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
+                    status: 'completed',
+                    operatorId: 'system',
+                    createdAt: new Date()
+                  }
+                  
+                  await createInboundOrder(inboundOrderData)
                   message.success(t('inventory.inStockSuccess'))
                   inForm.resetFields()
                   setItems(await getCigars())
-                  setInventoryLogs(await getAllInventoryLogs())
+                  setInboundOrders(await getAllInboundOrders())
+                  setInventoryMovements(await getAllInventoryMovements())
                   setInModalOpen(false)
-                    setAttachmentFileList([])
-                    setUploadedAttachments([])
-                  }
+                  setAttachmentFileList([])
+                  setUploadedAttachments([])
                 } finally {
                   setLoading(false)
                 }
@@ -2429,8 +2217,6 @@ const AdminInventory: React.FC = () => {
                       key: 'orderStatus',
                       width: 100,
                       render: (_: any, group: any) => {
-                        if (!useNewArchitecture) return null
-                        
                         const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
                         if (!order) return null
                         
@@ -2481,20 +2267,16 @@ const AdminInventory: React.FC = () => {
                             icon={<EditOutlined />}
                             size="small"
                             onClick={() => {
-                              if (useNewArchitecture) {
-                                const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
-                                if (order) {
-                                  setEditingOrder(order)
-                                  orderEditForm.setFieldsValue({
-                                    referenceNo: order.referenceNo,
-                                    reason: order.reason,
-                                    items: order.items
-                                  })
-                                } else {
-                                  message.error('订单未找到')
-                                }
+                              const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                              if (order) {
+                                setEditingOrder(order)
+                                orderEditForm.setFieldsValue({
+                                  referenceNo: order.referenceNo,
+                                  reason: order.reason,
+                                  items: order.items
+                                })
                               } else {
-                                message.error('编辑订单功能仅支持新架构')
+                                message.error('订单未找到')
                               }
                             }}
                           >
@@ -2522,17 +2304,13 @@ const AdminInventory: React.FC = () => {
                                 onOk: async () => {
                                   setLoading(true)
                                   try {
-                                    if (useNewArchitecture) {
-                                      const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
-                                      if (order) {
-                                        await updateInboundOrder(order.id, { status: 'cancelled' })
-                                        message.success('✅ 订单已取消')
-                                        setInboundOrders(await getAllInboundOrders())
-                                      } else {
-                                        message.error('订单未找到')
-                                      }
+                                    const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                                    if (order) {
+                                      await updateInboundOrder(order.id, { status: 'cancelled' })
+                                      message.success('✅ 订单已取消')
+                                      setInboundOrders(await getAllInboundOrders())
                                     } else {
-                                      message.error('取消订单功能仅支持新架构')
+                                      message.error('订单未找到')
                                     }
                                   } catch (error: any) {
                                     message.error('操作失败: ' + error.message)
@@ -2567,37 +2345,32 @@ const AdminInventory: React.FC = () => {
                                 onOk: async () => {
                                   setLoading(true)
                                   try {
-                                    if (useNewArchitecture) {
-                                      const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
-                                      if (!order) {
-                                        message.error('原订单未找到')
-                                        return
-                                      }
-                                      
-                                      // 创建反向订单（退货）
-                                      const returnOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
-                                        referenceNo: `RETURN-${group.referenceNo}-${Date.now()}`,
-                                        type: 'return',
-                                        reason: `退货冲销: ${group.referenceNo}`,
-                                        items: order.items.map(item => ({
-                                          ...item,
-                                          quantity: -item.quantity  // ✅ 负数量
-                                        })),
-                                        totalQuantity: -order.totalQuantity,  // ✅ 负总数
-                                        totalValue: -order.totalValue,
-                                        status: 'completed',
-                                        operatorId: 'system',
-                                        createdAt: new Date()
-                                      }
-                                      
-                                      await createInboundOrder(returnOrderData)
-                                      message.success('✅ 反向订单已创建')
-                                      // 刷新数据
-                                      setInboundOrders(await getAllInboundOrders())
-                                      setInventoryMovements(await getAllInventoryMovements())
-                                    } else {
-                                      message.error('反向订单功能仅支持新架构')
+                                    const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                                    if (!order) {
+                                      message.error('原订单未找到')
+                                      return
                                     }
+                                    
+                                    // 创建反向订单（退货）
+                                    const returnOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
+                                      referenceNo: `RETURN-${group.referenceNo}-${Date.now()}`,
+                                      type: 'return',
+                                      reason: `退货冲销: ${group.referenceNo}`,
+                                      items: order.items.map(item => ({
+                                        ...item,
+                                        quantity: -item.quantity
+                                      })),
+                                      totalQuantity: -order.totalQuantity,
+                                      totalValue: -order.totalValue,
+                                      status: 'completed',
+                                      operatorId: 'system',
+                                      createdAt: new Date()
+                                    }
+                                    
+                                    await createInboundOrder(returnOrderData)
+                                    message.success('✅ 反向订单已创建')
+                                    setInboundOrders(await getAllInboundOrders())
+                                    setInventoryMovements(await getAllInventoryMovements())
                                   } catch (error: any) {
                                     message.error('创建失败: ' + error.message)
                                   } finally {
@@ -2629,27 +2402,14 @@ const AdminInventory: React.FC = () => {
                                 onOk: async () => {
                                   setLoading(true)
                                   try {
-                                    if (useNewArchitecture) {
-                                      // 新架构：通过 referenceNo 查找订单 ID，然后删除
-                                      const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
-                                      if (order) {
-                                        await deleteInboundOrder(order.id)
-                                        message.success(t('inventory.deleteSuccess'))
-                                        // 刷新数据
-                                        setInboundOrders(await getAllInboundOrders())
-                                        setInventoryMovements(await getAllInventoryMovements())
-                                      } else {
-                                        message.error('订单未找到')
-                                      }
-                                    } else {
-                                      // 旧架构：遍历删除所有 log
-                                      await Promise.all(
-                                        group.logs.map((log: any) => 
-                                          deleteDocument(COLLECTIONS.INVENTORY_LOGS, log.id)
-                                        )
-                                      )
+                                    const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                                    if (order) {
+                                      await deleteInboundOrder(order.id)
                                       message.success(t('inventory.deleteSuccess'))
-                                      setInventoryLogs(await getAllInventoryLogs())
+                                      setInboundOrders(await getAllInboundOrders())
+                                      setInventoryMovements(await getAllInventoryMovements())
+                                    } else {
+                                      message.error('订单未找到')
                                     }
                                   } catch (error) {
                                     message.error(t('common.deleteFailed'))
@@ -2721,39 +2481,36 @@ const AdminInventory: React.FC = () => {
                                   📦 {group.referenceNo}
                                 </div>
                                 {(() => {
-                                  // 订单状态标签
-                                  if (useNewArchitecture) {
-                                    const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
-                                    if (order) {
-                                      if (order.status === 'cancelled') {
-                                        return (
-                                          <span style={{
-                                            padding: '2px 6px',
-                                            fontSize: 10,
-                                            fontWeight: 600,
-                                            background: 'rgba(255, 77, 79, 0.2)',
-                                            color: '#ff4d4f',
-                                            borderRadius: 4,
-                                            border: '1px solid rgba(255, 77, 79, 0.4)'
-                                          }}>
-                                            ✕ 已取消
-                                          </span>
-                                        )
-                                      } else if (order.status === 'pending') {
-                                        return (
-                                          <span style={{
-                                            padding: '2px 6px',
-                                            fontSize: 10,
-                                            fontWeight: 600,
-                                            background: 'rgba(250, 173, 20, 0.2)',
-                                            color: '#faad14',
-                                            borderRadius: 4,
-                                            border: '1px solid rgba(250, 173, 20, 0.4)'
-                                          }}>
-                                            ⏳ 待处理
-                                          </span>
-                                        )
-                                      }
+                                  const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                                  if (order) {
+                                    if (order.status === 'cancelled') {
+                                      return (
+                                        <span style={{
+                                          padding: '2px 6px',
+                                          fontSize: 10,
+                                          fontWeight: 600,
+                                          background: 'rgba(255, 77, 79, 0.2)',
+                                          color: '#ff4d4f',
+                                          borderRadius: 4,
+                                          border: '1px solid rgba(255, 77, 79, 0.4)'
+                                        }}>
+                                          ✕ 已取消
+                                        </span>
+                                      )
+                                    } else if (order.status === 'pending') {
+                                      return (
+                                        <span style={{
+                                          padding: '2px 6px',
+                                          fontSize: 10,
+                                          fontWeight: 600,
+                                          background: 'rgba(250, 173, 20, 0.2)',
+                                          color: '#faad14',
+                                          borderRadius: 4,
+                                          border: '1px solid rgba(250, 173, 20, 0.4)'
+                                        }}>
+                                          ⏳ 待处理
+                                        </span>
+                                      )
                                     }
                                   }
                                   return null
@@ -2833,20 +2590,16 @@ const AdminInventory: React.FC = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
-                                if (useNewArchitecture) {
-                                  const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
-                                  if (order) {
-                                    setEditingOrder(order)
-                                    orderEditForm.setFieldsValue({
-                                      referenceNo: order.referenceNo,
-                                      reason: order.reason,
-                                      items: order.items
-                                    })
-                                  } else {
-                                    message.error('订单未找到')
-                                  }
+                                const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                                if (order) {
+                                  setEditingOrder(order)
+                                  orderEditForm.setFieldsValue({
+                                    referenceNo: order.referenceNo,
+                                    reason: order.reason,
+                                    items: order.items
+                                  })
                                 } else {
-                                  message.error('编辑订单功能仅支持新架构')
+                                  message.error('订单未找到')
                                 }
                               }}
                               style={{
@@ -2881,17 +2634,13 @@ const AdminInventory: React.FC = () => {
                                   onOk: async () => {
                                     setLoading(true)
                                     try {
-                                      if (useNewArchitecture) {
-                                        const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
-                                        if (order) {
-                                          await updateInboundOrder(order.id, { status: 'cancelled' })
-                                          message.success('✅ 订单已取消')
-                                          setInboundOrders(await getAllInboundOrders())
-                                        } else {
-                                          message.error('订单未找到')
-                                        }
+                                      const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                                      if (order) {
+                                        await updateInboundOrder(order.id, { status: 'cancelled' })
+                                        message.success('✅ 订单已取消')
+                                        setInboundOrders(await getAllInboundOrders())
                                       } else {
-                                        message.error('取消订单功能仅支持新架构')
+                                        message.error('订单未找到')
                                       }
                                     } catch (error: any) {
                                       message.error('操作失败: ' + error.message)
@@ -2934,35 +2683,31 @@ const AdminInventory: React.FC = () => {
                                   onOk: async () => {
                                     setLoading(true)
                                     try {
-                                      if (useNewArchitecture) {
-                                        const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
-                                        if (!order) {
-                                          message.error('原订单未找到')
-                                          return
-                                        }
-                                        
-                                        const returnOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
-                                          referenceNo: `RETURN-${group.referenceNo}-${Date.now()}`,
-                                          type: 'return',
-                                          reason: `退货冲销: ${group.referenceNo}`,
-                                          items: order.items.map(item => ({
-                                            ...item,
-                                            quantity: -item.quantity
-                                          })),
-                                          totalQuantity: -order.totalQuantity,
-                                          totalValue: -order.totalValue,
-                                          status: 'completed',
-                                          operatorId: 'system',
-                                          createdAt: new Date()
-                                        }
-                                        
-                                        await createInboundOrder(returnOrderData)
-                                        message.success('✅ 反向订单已创建')
-                                        setInboundOrders(await getAllInboundOrders())
-                                        setInventoryMovements(await getAllInventoryMovements())
-                                      } else {
-                                        message.error('反向订单功能仅支持新架构')
+                                      const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                                      if (!order) {
+                                        message.error('原订单未找到')
+                                        return
                                       }
+                                      
+                                      const returnOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
+                                        referenceNo: `RETURN-${group.referenceNo}-${Date.now()}`,
+                                        type: 'return',
+                                        reason: `退货冲销: ${group.referenceNo}`,
+                                        items: order.items.map(item => ({
+                                          ...item,
+                                          quantity: -item.quantity
+                                        })),
+                                        totalQuantity: -order.totalQuantity,
+                                        totalValue: -order.totalValue,
+                                        status: 'completed',
+                                        operatorId: 'system',
+                                        createdAt: new Date()
+                                      }
+                                      
+                                      await createInboundOrder(returnOrderData)
+                                      message.success('✅ 反向订单已创建')
+                                      setInboundOrders(await getAllInboundOrders())
+                                      setInventoryMovements(await getAllInventoryMovements())
                                     } catch (error: any) {
                                       message.error('创建失败: ' + error.message)
                                     } finally {
@@ -3001,24 +2746,14 @@ const AdminInventory: React.FC = () => {
                                   onOk: async () => {
                                     setLoading(true)
                                     try {
-                                      if (useNewArchitecture) {
-                                        const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
-                                        if (order) {
-                                          await deleteInboundOrder(order.id)
-                                          message.success(t('inventory.deleteSuccess'))
-                                          setInboundOrders(await getAllInboundOrders())
-                                          setInventoryMovements(await getAllInventoryMovements())
-                                        } else {
-                                          message.error('订单未找到')
-                                        }
-                                      } else {
-                                        await Promise.all(
-                                          group.logs.map((log: any) => 
-                                            deleteDocument(COLLECTIONS.INVENTORY_LOGS, log.id)
-                                          )
-                                        )
+                                      const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                                      if (order) {
+                                        await deleteInboundOrder(order.id)
                                         message.success(t('inventory.deleteSuccess'))
-                                        setInventoryLogs(await getAllInventoryLogs())
+                                        setInboundOrders(await getAllInboundOrders())
+                                        setInventoryMovements(await getAllInventoryMovements())
+                                      } else {
+                                        message.error('订单未找到')
                                       }
                                     } catch (error) {
                                       message.error(t('common.deleteFailed'))
@@ -3288,73 +3023,48 @@ const AdminInventory: React.FC = () => {
                   
                   setLoading(true)
                   try {
-                    if (useNewArchitecture) {
-                      // 新架构：创建出库订单
-                      const orderItems = []
-                      let totalQuantity = 0
-                      let totalValue = 0
+                    const orderItems = []
+                    let totalQuantity = 0
+                    let totalValue = 0
+                    
+                    for (const line of lines) {
+                      const target = items.find(i => i.id === line.cigarId) as any
+                      if (!target) continue
+                      const qty = Math.max(1, Math.floor(line.quantity || 1))
                       
-                      for (const line of lines) {
-                        const target = items.find(i => i.id === line.cigarId) as any
-                        if (!target) continue
-                        const qty = Math.max(1, Math.floor(line.quantity || 1))
-                        
-                        const orderItem = {
-                          cigarId: target.id,
-                          cigarName: target.name,
-                          itemType: 'cigar' as const,
-                          quantity: qty,
-                          unitPrice: target.price,
-                          subtotal: qty * target.price
-                        }
-                        
-                        orderItems.push(orderItem)
-                        totalQuantity += qty
-                        totalValue += orderItem.subtotal
+                      const orderItem = {
+                        cigarId: target.id,
+                        cigarName: target.name,
+                        itemType: 'cigar' as const,
+                        quantity: qty,
+                        unitPrice: target.price,
+                        subtotal: qty * target.price
                       }
                       
-                      const outboundOrderData: Omit<OutboundOrder, 'id' | 'updatedAt'> = {
-                        referenceNo: values.referenceNo.trim(),
-                        type: 'other',
-                        reason: values.reason || t('inventory.outStock'),
-                        items: orderItems,
-                        totalQuantity,
-                        totalValue,
-                        status: 'completed',
-                        operatorId: 'system',
-                        createdAt: new Date()
-                      }
-                      
-                      await createOutboundOrder(outboundOrderData)
-                      message.success(t('inventory.outStockSuccess'))
-                      outForm.resetFields()
-                      setOutModalOpen(false)
-                      setItems(await getCigars())
-                      setOutboundOrders(await getAllOutboundOrders())
-                      setInventoryMovements(await getAllInventoryMovements())
-                    } else {
-                      // 旧架构：创建 inventory_logs
-                      for (const line of lines) {
-                        const target = items.find(i => i.id === line.cigarId) as any
-                        if (!target) continue
-                        const qty = Math.max(1, Math.floor(line.quantity || 1))
-                        await createDocument(COLLECTIONS.INVENTORY_LOGS, {
-                          cigarId: target.id,
-                          cigarName: target.name,
-                          type: 'out',
-                          quantity: qty,
-                          reason: values.reason || t('inventory.outStock'),
-                          referenceNo: values.referenceNo,
-                          operatorId: 'system',
-                          createdAt: new Date(),
-                        } as any)
-                      }
-                      message.success(t('inventory.outStockSuccess'))
-                      outForm.resetFields()
-                      setOutModalOpen(false)
-                      setItems(await getCigars())
-                      setInventoryLogs(await getAllInventoryLogs())
+                      orderItems.push(orderItem)
+                      totalQuantity += qty
+                      totalValue += orderItem.subtotal
                     }
+                    
+                    const outboundOrderData: Omit<OutboundOrder, 'id' | 'updatedAt'> = {
+                      referenceNo: values.referenceNo.trim(),
+                      type: 'other',
+                      reason: values.reason || t('inventory.outStock'),
+                      items: orderItems,
+                      totalQuantity,
+                      totalValue,
+                      status: 'completed',
+                      operatorId: 'system',
+                      createdAt: new Date()
+                    }
+                    
+                    await createOutboundOrder(outboundOrderData)
+                    message.success(t('inventory.outStockSuccess'))
+                    outForm.resetFields()
+                    setOutModalOpen(false)
+                    setItems(await getCigars())
+                    setOutboundOrders(await getAllOutboundOrders())
+                    setInventoryMovements(await getAllInventoryMovements())
                   } finally {
                     setLoading(false)
                   }
@@ -3505,20 +3215,9 @@ const AdminInventory: React.FC = () => {
                     
                     if (hasInventoryHistory(productId)) {
                       // 显示有库存记录的提示窗
-                      let inCount = 0
-                      let outCount = 0
-                      
-                      if (useNewArchitecture) {
-                        // 新架构：从 inventoryMovements 统计
-                        const relatedMovements = inventoryMovements.filter(m => m.cigarId === productId)
-                        inCount = relatedMovements.filter(m => m.type === 'in').length
-                        outCount = relatedMovements.filter(m => m.type === 'out').length
-                      } else {
-                        // 旧架构：从 inventoryLogs 统计
-                        const relatedLogs = inventoryLogs.filter((log: any) => log?.cigarId === productId)
-                        inCount = relatedLogs.filter((log: any) => log?.type === 'in').length
-                        outCount = relatedLogs.filter((log: any) => log?.type === 'out').length
-                      }
+                      const relatedMovements = inventoryMovements.filter(m => m.cigarId === productId)
+                      const inCount = relatedMovements.filter(m => m.type === 'in').length
+                      const outCount = relatedMovements.filter(m => m.type === 'out').length
                       
                       Modal.info({
                         title: t('inventory.deleteBlocked'),
@@ -3736,73 +3435,51 @@ const AdminInventory: React.FC = () => {
           
           setLoading(true)
           try {
-            if (useNewArchitecture) {
-              // 新架构：创建单品订单
-              const referenceNo = values.referenceNo || `ADJ-${Date.now()}`
-              const orderItem = {
-                cigarId: (target as any).id,
-                cigarName: (target as any).name,
-                itemType: 'cigar' as const,
-                quantity: qty,
-                unitPrice: (target as any).price,
-                subtotal: qty * (target as any).price
-              }
-              
-              if (isInbound) {
-                // 创建入库订单
-                const inboundOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
-                  referenceNo,
-                  type: 'adjustment',
-                  reason: values.reason || t('inventory.inStock'),
-                  items: [orderItem],
-                  totalQuantity: qty,
-                  totalValue: orderItem.subtotal,
-                  status: 'completed',
-                  operatorId: 'system',
-                  createdAt: new Date()
-                }
-                await createInboundOrder(inboundOrderData)
-              } else {
-                // 创建出库订单
-                const outboundOrderData: Omit<OutboundOrder, 'id' | 'updatedAt'> = {
-                  referenceNo,
-                  type: 'other',
-                  reason: values.reason || t('inventory.outStock'),
-                  items: [orderItem],
-                  totalQuantity: qty,
-                  totalValue: orderItem.subtotal,
-                  status: 'completed',
-                  operatorId: 'system',
-                  createdAt: new Date()
-                }
-                await createOutboundOrder(outboundOrderData)
-              }
-              
-              message.success(t('inventory.stockUpdated'))
-              setItems(await getCigars())
-              setInboundOrders(await getAllInboundOrders())
-              setOutboundOrders(await getAllOutboundOrders())
-              setInventoryMovements(await getAllInventoryMovements())
-              setAdjustingIn(null)
-              setAdjustingOut(null)
-            } else {
-              // 旧架构：创建 inventory_logs
-              await createDocument<InventoryLog>(COLLECTIONS.INVENTORY_LOGS, {
-                cigarId: (target as any).id,
-                cigarName: (target as any).name,
-                type: isInbound ? 'in' : 'out',
-                quantity: qty,
-                reason: values.reason || (isInbound ? t('inventory.inStock') : t('inventory.outStock')),
-                referenceNo: values.referenceNo,
-                operatorId: 'system',
-                createdAt: new Date(),
-              } as any)
-              message.success(t('inventory.stockUpdated'))
-              setItems(await getCigars())
-              setInventoryLogs(await getAllInventoryLogs())
-              setAdjustingIn(null)
-              setAdjustingOut(null)
+            const referenceNo = values.referenceNo || `ADJ-${Date.now()}`
+            const orderItem = {
+              cigarId: (target as any).id,
+              cigarName: (target as any).name,
+              itemType: 'cigar' as const,
+              quantity: qty,
+              unitPrice: (target as any).price,
+              subtotal: qty * (target as any).price
             }
+            
+            if (isInbound) {
+              const inboundOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
+                referenceNo,
+                type: 'adjustment',
+                reason: values.reason || t('inventory.inStock'),
+                items: [orderItem],
+                totalQuantity: qty,
+                totalValue: orderItem.subtotal,
+                status: 'completed',
+                operatorId: 'system',
+                createdAt: new Date()
+              }
+              await createInboundOrder(inboundOrderData)
+            } else {
+              const outboundOrderData: Omit<OutboundOrder, 'id' | 'updatedAt'> = {
+                referenceNo,
+                type: 'other',
+                reason: values.reason || t('inventory.outStock'),
+                items: [orderItem],
+                totalQuantity: qty,
+                totalValue: orderItem.subtotal,
+                status: 'completed',
+                operatorId: 'system',
+                createdAt: new Date()
+              }
+              await createOutboundOrder(outboundOrderData)
+            }
+            
+            message.success(t('inventory.stockUpdated'))
+            setItems(await getCigars())
+            setInboundOrders(await getAllInboundOrders())
+            setOutboundOrders(await getAllOutboundOrders())
+            setInventoryMovements(await getAllInventoryMovements())
+            setAdjustingIn(null)
+            setAdjustingOut(null)
           } finally {
             setLoading(false)
           }
@@ -4365,101 +4042,6 @@ const AdminInventory: React.FC = () => {
         okButtonProps={{ danger: true }}
       >
         {t('inventory.deleteBrandContent', { name: deletingBrand?.name })}
-      </Modal>
-      {/* 编辑入库记录弹窗（仅旧架构） */}
-      <Modal
-        title={t('inventory.editInLog')}
-        open={!!editingInLog && !useNewArchitecture}
-        onCancel={() => {
-          setEditingInLog(null)
-          inLogEditForm.resetFields()
-        }}
-        onOk={() => {
-          if (useNewArchitecture) {
-            message.warning('新架构请使用"编辑订单"功能')
-            setEditingInLog(null)
-            return
-          }
-          inLogEditForm.submit()
-        }}
-        confirmLoading={loading}
-        {...getResponsiveModalConfig(isMobile, true, 500)}
-      >
-        <Form
-          form={inLogEditForm}
-          layout="vertical"
-          className="dark-theme-form"
-          onFinish={async (values: any) => {
-            if (!editingInLog) return
-            if (useNewArchitecture) {
-              message.warning('新架构请使用"编辑订单"功能')
-              setEditingInLog(null)
-              return
-            }
-            setLoading(true)
-            try {
-              const updated = {
-                quantity: Number(values.quantity),
-                unitPrice: values.unitPrice ? Number(values.unitPrice) : undefined,
-                reason: values.reason || editingInLog.reason
-              }
-              await updateDocument(COLLECTIONS.INVENTORY_LOGS, editingInLog.id, updated)
-              message.success(t('inventory.updateSuccess'))
-              setEditingInLog(null)
-              inLogEditForm.resetFields()
-              setInventoryLogs(await getAllInventoryLogs())
-            } catch (error) {
-              message.error(t('common.updateFailed'))
-            } finally {
-              setLoading(false)
-            }
-          }}
-        >
-          <Form.Item 
-            label={t('inventory.product')}
-          >
-            <Input 
-              value={editingInLog?.cigarName || items.find(i => i.id === editingInLog?.cigarId)?.name || editingInLog?.cigarId} 
-              disabled 
-              style={{ color: '#fff' }}
-            />
-          </Form.Item>
-          <Form.Item 
-            label={t('inventory.quantity')} 
-            name="quantity"
-            rules={[
-              { required: true, message: t('common.pleaseInputQuantity') },
-              { type: 'number', min: 1, message: t('inventory.quantityMinOne') }
-            ]}
-          >
-            <InputNumber 
-              min={1} 
-              style={{ width: '100%' }} 
-              placeholder={t('common.pleaseInputQuantity')}
-            />
-          </Form.Item>
-          <Form.Item 
-            label={t('inventory.unitPrice')} 
-            name="unitPrice"
-          >
-            <InputNumber 
-              min={0} 
-              step={0.01}
-              style={{ width: '100%' }} 
-              placeholder={t('inventory.pleaseInputUnitPrice')}
-              prefix="RM"
-            />
-          </Form.Item>
-          <Form.Item 
-            label={t('inventory.reason')} 
-            name="reason"
-          >
-            <Input.TextArea 
-              rows={3}
-              placeholder={t('inventory.pleaseInputReason')}
-            />
-          </Form.Item>
-        </Form>
       </Modal>
 
       {/* 入库统计弹窗 */}

@@ -18,7 +18,7 @@ import {
   arrayRemove
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-import type { User, Brand, Cigar, Event, Order, Transaction, InventoryLog, InboundOrder, OutboundOrder, InventoryMovement } from '../../types';
+import type { User, Brand, Cigar, Event, Order, Transaction, InboundOrder, OutboundOrder, InventoryMovement } from '../../types';
 
 // 清洗数据：移除undefined，转换日期/时间戳，深拷贝数组和对象
 const sanitizeForFirestore = (input: any): any => {
@@ -62,10 +62,9 @@ export const COLLECTIONS = {
   EVENTS: 'events',
   ORDERS: 'orders',
   TRANSACTIONS: 'transactions',
-  INVENTORY_LOGS: 'inventory_logs',           // 旧架构（保留向后兼容）
-  INBOUND_ORDERS: 'inbound_orders',           // 新架构：入库订单
-  OUTBOUND_ORDERS: 'outbound_orders',         // 新架构：出库订单
-  INVENTORY_MOVEMENTS: 'inventory_movements', // 新架构：库存变动索引
+  INBOUND_ORDERS: 'inbound_orders',
+  OUTBOUND_ORDERS: 'outbound_orders',
+  INVENTORY_MOVEMENTS: 'inventory_movements',
 } as const;
 
 // 通用CRUD操作
@@ -743,25 +742,6 @@ export const createTransaction = async (transactionData: Omit<Transaction, 'id'>
   }
 };
 
-// 库存变动记录相关操作
-export const getAllInventoryLogs = async (): Promise<InventoryLog[]> => {
-  try {
-    const q = query(collection(db, COLLECTIONS.INVENTORY_LOGS), orderBy('createdAt', 'desc'));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryLog));
-  } catch (error) {
-    return [];
-  }
-};
-
-export const createInventoryLog = async (logData: Omit<InventoryLog, 'id'>) => {
-  try {
-    const result = await createDocument<InventoryLog>(COLLECTIONS.INVENTORY_LOGS, logData);
-    return result;
-  } catch (error) {
-    return { success: false, error: error as Error };
-  }
-};
 
 // 实时监听
 export const subscribeToCollection = <T>(
@@ -781,20 +761,8 @@ export const subscribeToCollection = <T>(
 };
 
 // ============================================
-// 新架构：入库/出库订单管理
+// 入库/出库订单管理
 // ============================================
-
-/**
- * 检测是否已迁移到新架构
- */
-export const isUsingNewArchitecture = async (): Promise<boolean> => {
-  try {
-    const movements = await getDocs(query(collection(db, COLLECTIONS.INVENTORY_MOVEMENTS), limit(1)));
-    return !movements.empty;
-  } catch (error) {
-    return false;
-  }
-};
 
 /**
  * 获取所有入库订单

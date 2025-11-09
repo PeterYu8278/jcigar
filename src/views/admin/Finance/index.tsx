@@ -3,7 +3,7 @@ import React, { useEffect, useState, useMemo } from 'react'
 import { Table, Card, Row, Col, Statistic, Typography, DatePicker, Select, Button, Space, message, Modal, Form, InputNumber, Input, Spin } from 'antd'
 import { DollarOutlined, ShoppingOutlined, CalendarOutlined, ArrowUpOutlined, ArrowDownOutlined, PlusOutlined, EyeOutlined, BarChartOutlined, PieChartOutlined, DeleteOutlined, CheckOutlined } from '@ant-design/icons'
 import type { Transaction, User, InboundOrder, OutboundOrder, InventoryMovement } from '../../../types'
-import { getAllTransactions, getAllOrders, getAllInventoryLogs, createTransaction, COLLECTIONS, getAllUsers, updateDocument, deleteDocument, getCigars, getAllInboundOrders, getAllOutboundOrders, getAllInventoryMovements } from '../../../services/firebase/firestore'
+import { getAllTransactions, getAllOrders, createTransaction, COLLECTIONS, getAllUsers, updateDocument, deleteDocument, getCigars, getAllInboundOrders, getAllOutboundOrders, getAllInventoryMovements } from '../../../services/firebase/firestore'
 import dayjs from 'dayjs'
 import { useTranslation } from 'react-i18next'
 import { getModalThemeStyles, getModalWidth, getModalTheme, getResponsiveModalConfig } from '../../../config/modalTheme'
@@ -18,13 +18,11 @@ const AdminFinance: React.FC = () => {
   const [orders, setOrders] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
   const [cigars, setCigars] = useState<any[]>([])
-  const [inventoryLogs, setInventoryLogs] = useState<any[]>([])
   
   // 新架构数据
   const [inboundOrders, setInboundOrders] = useState<InboundOrder[]>([])
   const [outboundOrders, setOutboundOrders] = useState<OutboundOrder[]>([])
   const [inventoryMovements, setInventoryMovements] = useState<InventoryMovement[]>([])
-  const [useNewArchitecture, setUseNewArchitecture] = useState(true) // 默认使用新架构
   
   const [loading, setLoading] = useState(false)
   const [creating, setCreating] = useState(false)
@@ -176,61 +174,21 @@ const AdminFinance: React.FC = () => {
 
   // 获取入库单号列表（用于支出交易）
   const inboundReferenceOptions = useMemo(() => {
-    if (useNewArchitecture) {
-      // 新架构：直接从 inboundOrders 获取
-      return inboundOrders
-        .map((order: InboundOrder) => ({
-          referenceNo: order.referenceNo,
-          totalQuantity: order.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
-          totalValue: order.items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.unitPrice || 0)), 0),
-          productCount: order.items.length,
-          date: order.createdAt,
-          reason: order.reason || ''
-        }))
-        .sort((a, b) => {
-          const dateA = a.date?.getTime?.() || 0;
-          const dateB = b.date?.getTime?.() || 0;
-          return dateB - dateA;
-        });
-    } else {
-      // 旧架构：从 inventoryLogs 聚合
-      const refMap = new Map<string, {
-        referenceNo: string;
-        totalQuantity: number;
-        totalValue: number;
-        productCount: number;
-        date: Date | null;
-        reason: string;
-      }>();
-      
-      inventoryLogs
-        .filter((log: any) => log.type === 'in' && log.referenceNo)
-        .forEach((log: any) => {
-          const ref = log.referenceNo;
-          if (!refMap.has(ref)) {
-            refMap.set(ref, {
-              referenceNo: ref,
-              totalQuantity: 0,
-              totalValue: 0,
-              productCount: 0,
-              date: log.createdAt,
-              reason: log.reason || ''
-            });
-          }
-          const group = refMap.get(ref)!;
-          group.totalQuantity += Number(log.quantity || 0);
-          group.totalValue += Number(log.quantity || 0) * Number(log.unitPrice || 0);
-          group.productCount += 1;
-        });
-      
-      return Array.from(refMap.values())
-        .sort((a, b) => {
-          const dateA = a.date?.getTime?.() || 0;
-          const dateB = b.date?.getTime?.() || 0;
-          return dateB - dateA;
-        });
-    }
-  }, [useNewArchitecture, inboundOrders, inventoryLogs]);
+    return inboundOrders
+      .map((order: InboundOrder) => ({
+        referenceNo: order.referenceNo,
+        totalQuantity: order.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
+        totalValue: order.items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.unitPrice || 0)), 0),
+        productCount: order.items.length,
+        date: order.createdAt,
+        reason: order.reason || ''
+      }))
+      .sort((a, b) => {
+        const dateA = a.date?.getTime?.() || 0;
+        const dateB = b.date?.getTime?.() || 0;
+        return dateB - dateA;
+      });
+  }, [inboundOrders]);
 
   // 获取关联的库存记录
   const relatedInventoryLogs = useMemo(() => {
@@ -240,37 +198,26 @@ const AdminFinance: React.FC = () => {
     
     if (orderIds.length === 0) return []
     
-    if (useNewArchitecture) {
-      // 新架构：从 inventoryMovements 获取
-      // 如果是支出交易，显示入库记录（type: 'in'）
-      // 如果是收入交易，显示出库记录（type: 'out'）
-      const movementType = isExpenseTransaction ? 'in' : 'out'
-      
-      return inventoryMovements
-        .filter((movement: InventoryMovement) => 
-          orderIds.includes(movement.referenceNo) && movement.type === movementType
-        )
-        .map((movement: InventoryMovement) => ({
-          // 转换为旧格式以兼容现有 UI
-          id: movement.id,
-          type: movement.type,
-          referenceNo: movement.referenceNo,
-          cigarId: movement.cigarId,
-          cigarName: movement.cigarName,
-          quantity: movement.quantity,
-          unitPrice: movement.unitPrice,
-          reason: movement.reason,
-          createdAt: movement.createdAt
-        }))
-    } else {
-      // 旧架构：从 inventoryLogs 获取
-      const logType = isExpenseTransaction ? 'in' : 'out'
-      
-      return inventoryLogs.filter((log: any) => 
-        orderIds.includes(log.referenceNo) && log.type === logType
+    // 如果是支出交易，显示入库记录（type: 'in'）
+    // 如果是收入交易，显示出库记录（type: 'out'）
+    const movementType = isExpenseTransaction ? 'in' : 'out'
+    
+    return inventoryMovements
+      .filter((movement: InventoryMovement) => 
+        orderIds.includes(movement.referenceNo) && movement.type === movementType
       )
-    }
-  }, [watchedRelatedOrders, inventoryLogs, inventoryMovements, isExpenseTransaction, useNewArchitecture])
+      .map((movement: InventoryMovement) => ({
+        id: movement.id,
+        type: movement.type,
+        referenceNo: movement.referenceNo,
+        cigarId: movement.cigarId,
+        cigarName: movement.cigarName,
+        quantity: movement.quantity,
+        unitPrice: movement.unitPrice,
+        reason: movement.reason,
+        createdAt: movement.createdAt
+      }))
+  }, [watchedRelatedOrders, inventoryMovements, isExpenseTransaction])
 
   // 计算订单匹配状态
   const getOrderMatchStatus = (orderId: string) => {
@@ -321,45 +268,21 @@ const AdminFinance: React.FC = () => {
   useEffect(() => {
     loadTransactions()
     ;(async () => {
-      // 检测是否使用新架构
-      const [inOrders, movements] = await Promise.all([
+      const [inOrders, outOrders, movements, orderList, userList, cigarList] = await Promise.all([
         getAllInboundOrders(),
-        getAllInventoryMovements()
+        getAllOutboundOrders(),
+        getAllInventoryMovements(),
+        getAllOrders(),
+        getAllUsers(),
+        getCigars()
       ])
       
-      if (inOrders.length > 0 || movements.length > 0) {
-        // 使用新架构
-        console.log('✅ [Finance] Using new architecture (inbound_orders + outbound_orders + inventory_movements)')
-        setUseNewArchitecture(true)
-        setInboundOrders(inOrders)
-        setInventoryMovements(movements)
-        
-        const [orderList, userList, cigarList, outOrders] = await Promise.all([
-          getAllOrders(),
-          getAllUsers(),
-          getCigars(),
-          getAllOutboundOrders()
-        ])
-        setOrders(orderList || [])
-        setUsers(userList || [])
-        setCigars(cigarList || [])
-        setOutboundOrders(outOrders)
-      } else {
-        // 使用旧架构（向后兼容）
-        console.log('⚠️ [Finance] Using legacy architecture (inventory_logs)')
-        setUseNewArchitecture(false)
-        
-        const [orderList, userList, cigarList, logList] = await Promise.all([
-          getAllOrders(),
-          getAllUsers(),
-          getCigars(),
-          getAllInventoryLogs()
-        ])
-        setOrders(orderList || [])
-        setUsers(userList || [])
-        setCigars(cigarList || [])
-        setInventoryLogs(logList || [])
-      }
+      setInboundOrders(inOrders)
+      setOutboundOrders(outOrders)
+      setInventoryMovements(movements)
+      setOrders(orderList || [])
+      setUsers(userList || [])
+      setCigars(cigarList || [])
     })()
   }, [])
 

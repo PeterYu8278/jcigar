@@ -9,7 +9,7 @@ import OrderDetails from './OrderDetails'
 import CreateOrderForm from './CreateOrderForm'
 import { useOrderColumns } from './useOrderColumns'
 import type { Order, User, Cigar, Transaction, OutboundOrder, InventoryMovement } from '../../../types'
-import { getAllOrders, getUsers, getCigars, updateDocument, deleteDocument, COLLECTIONS, getAllInventoryLogs, getAllTransactions, getAllOutboundOrders, getAllInventoryMovements, deleteOutboundOrder } from '../../../services/firebase/firestore'
+import { getAllOrders, getUsers, getCigars, updateDocument, deleteDocument, COLLECTIONS, getAllTransactions, getAllOutboundOrders, getAllInventoryMovements, deleteOutboundOrder } from '../../../services/firebase/firestore'
 import { useTranslation } from 'react-i18next'
 import { filterOrders, sortOrders, getStatusColor, getStatusText, getUserName, getUserPhone } from './helpers'
 import { getModalThemeStyles, getModalWidth, getResponsiveModalConfig } from '../../../config/modalTheme'
@@ -90,43 +90,19 @@ const AdminOrders: React.FC = () => {
   // 删除订单相关的出库记录
   const deleteOrderInventoryLogs = async (orderId: string) => {
     try {
-      // 检测是否使用新架构
-      const [outboundOrders, movements] = await Promise.all([
-        getAllOutboundOrders(),
-        getAllInventoryMovements()
-      ])
+      const outboundOrders = await getAllOutboundOrders()
       
-      if (outboundOrders.length > 0 || movements.length > 0) {
-        // 新架构：删除 outbound_orders 和 inventory_movements
-        console.log('🗑️ [Orders] Deleting outbound order (new architecture):', orderId)
-        
-        // 查找匹配的出库订单
-        const relatedOutboundOrders = outboundOrders.filter((order: OutboundOrder) => 
-          order.referenceNo === orderId
-        )
-        
-        // 删除出库订单（会自动删除关联的 inventory_movements）
-        if (relatedOutboundOrders.length > 0) {
-          await Promise.all(relatedOutboundOrders.map((order: OutboundOrder) => 
-            deleteOutboundOrder(order.id)
-          ))
-          console.log('✅ [Orders] Deleted', relatedOutboundOrders.length, 'outbound orders')
-        }
-      } else {
-        // 旧架构：删除 inventory_logs
-        console.log('🗑️ [Orders] Deleting inventory logs (legacy architecture):', orderId)
-        
-        const inventoryLogs = await getAllInventoryLogs()
-        const relatedLogs = inventoryLogs.filter((log: any) => 
-          log?.referenceNo === orderId && log?.type === 'out'
-        )
-        
-        if (relatedLogs.length > 0) {
-          await Promise.all(relatedLogs.map((log: any) => 
-            deleteDocument(COLLECTIONS.INVENTORY_LOGS, log.id)
-          ))
-          console.log('✅ [Orders] Deleted', relatedLogs.length, 'inventory logs')
-        }
+      // 查找匹配的出库订单
+      const relatedOutboundOrders = outboundOrders.filter((order: OutboundOrder) => 
+        order.referenceNo === orderId
+      )
+      
+      // 删除出库订单（会自动删除关联的 inventory_movements）
+      if (relatedOutboundOrders.length > 0) {
+        await Promise.all(relatedOutboundOrders.map((order: OutboundOrder) => 
+          deleteOutboundOrder(order.id)
+        ))
+        console.log('✅ [Orders] Deleted', relatedOutboundOrders.length, 'outbound orders')
       }
     } catch (error) {
       console.error('❌ [Orders] Error deleting inventory records:', error)

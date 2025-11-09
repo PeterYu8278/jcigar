@@ -16,8 +16,12 @@ export const GLOBAL_COLLECTIONS = {
   EVENTS: 'events',
   /** 会员集合 */
   MEMBERS: 'members',
-  /** 库存操作记录集合 */
-  INVENTORY_LOGS: 'inventory_logs',
+  /** 入库订单集合 */
+  INBOUND_ORDERS: 'inbound_orders',
+  /** 出库订单集合 */
+  OUTBOUND_ORDERS: 'outbound_orders',
+  /** 库存变动索引集合 */
+  INVENTORY_MOVEMENTS: 'inventory_movements',
   /** 通知集合 */
   NOTIFICATIONS: 'notifications',
   /** 系统配置集合 */
