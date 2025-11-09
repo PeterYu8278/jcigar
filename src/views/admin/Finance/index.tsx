@@ -190,8 +190,8 @@ const AdminFinance: React.FC = () => {
       });
   }, [inboundOrders]);
 
-  // 获取关联的库存记录
-  const relatedInventoryLogs = useMemo(() => {
+  // 获取关联的库存变动记录
+  const relatedInventoryMovements = useMemo(() => {
     const orderIds = watchedRelatedOrders
       .map((ro: any) => ro?.orderId)
       .filter(Boolean)
@@ -1379,7 +1379,7 @@ const AdminFinance: React.FC = () => {
                       })()}
                       
                       {/* 关联的库存记录 */}
-                      {relatedInventoryLogs.length > 0 && (
+                      {relatedInventoryMovements.length > 0 && (
                         <div style={{
                           marginTop: 16,
                           padding: 12,
@@ -1400,7 +1400,7 @@ const AdminFinance: React.FC = () => {
                           </div>
                           
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            {relatedInventoryLogs.map((log: any) => {
+                            {relatedInventoryMovements.map((log: any) => {
                               const cigar = cigars.find(c => c.id === log.cigarId)
                               const cigarName = log.cigarName || cigar?.name || log.cigarId
                               const matchedOrder = watchedRelatedOrders.find((ro: any) => ro?.orderId === log.referenceNo)
@@ -1486,7 +1486,7 @@ const AdminFinance: React.FC = () => {
                                 {isExpenseTransaction ? t('financeAdmin.totalInboundItems') : t('financeAdmin.totalOutboundItems')}
                               </div>
                               <div style={{ fontWeight: 600, color: isExpenseTransaction ? '#52c41a' : '#ff4d4f' }}>
-                                {isExpenseTransaction ? '+' : '-'}{relatedInventoryLogs.reduce((sum: number, log: any) => sum + Number(log.quantity || 0), 0)} {t('inventory.sticks')}
+                                {isExpenseTransaction ? '+' : '-'}{relatedInventoryMovements.reduce((sum: number, log: any) => sum + Number(log.quantity || 0), 0)} {t('inventory.sticks')}
                               </div>
                             </div>
                             <div style={{ 
@@ -1497,7 +1497,7 @@ const AdminFinance: React.FC = () => {
                               color: 'rgba(255,255,255,0.6)'
                             }}>
                               <div>{t('financeAdmin.productTypes')}</div>
-                              <div>{relatedInventoryLogs.length} {t('inventory.types')}</div>
+                              <div>{relatedInventoryMovements.length} {t('inventory.types')}</div>
                             </div>
                           </div>
                         </div>

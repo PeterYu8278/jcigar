@@ -174,27 +174,6 @@ export interface Transaction {
   createdAt: Date;
 }
 
-// 库存变动记录类型（旧架构，保留用于向后兼容）
-export interface InventoryLog {
-  id: string;
-  cigarId: string;
-  cigarName?: string;     // 雪茄名称（冗余字段，避免雪茄删除后无法显示历史记录）
-  itemType?: 'cigar' | 'activity' | 'gift' | 'service' | 'other'; // 项目类型（未指定时默认为雪茄）
-  type: 'in' | 'out' | 'adjustment';
-  quantity: number;
-  reason: string;
-  referenceNo?: string;
-  operatorId: string;
-  userId?: string;        // 关联的顾客ID（出库时）
-  userName?: string;      // 关联的顾客名称（冗余字段）
-  attachments?: Array<{   // 附件（订单PDF或图片）
-    url: string;          // Cloudinary URL
-    type: 'pdf' | 'image'; // 文件类型
-    filename: string;      // 原始文件名
-    uploadedAt: Date;      // 上传时间
-  }>;
-  createdAt: Date;
-}
 
 // 入库订单类型（新架构 - 订单维度）
 export interface InboundOrder {
