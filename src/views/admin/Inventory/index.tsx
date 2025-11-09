@@ -419,46 +419,66 @@ const AdminInventory: React.FC = () => {
         const { totalIn, totalOut } = getTotals((record as any)?.id)
         
         return (
-        <div>
-          {/* 第一行：总入库 | 当前库存 */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 13 }}>
-            <span style={{ color: '#52c41a' }}>
-              {t('inventory.totalIn')}: {totalIn}
-            </span>
-            <span style={{ 
-              color: isNegative ? '#ff4d4f' : '#1890ff',
-              fontWeight: 600
+        <div style={{ display: 'flex', gap: 12 }}>
+          {/* 左侧：总入库和总出库 */}
+          <div style={{ flex: 1 }}>
+            <div style={{ marginBottom: 4, fontSize: 13 }}>
+              <span style={{ color: '#52c41a' }}>
+                {t('inventory.totalIn')}: {totalIn}
+              </span>
+            </div>
+            
+            {/* 分隔线 */}
+            <div style={{ borderTop: '1px solid #e8e8e8', margin: '4px 0' }} />
+            
+            <div style={{ marginTop: 4 }}>
+              <span style={{ color: '#ff4d4f', fontSize: 13 }}>
+                {t('inventory.totalOut')}: {totalOut}
+              </span>
+            </div>
+          </div>
+          
+          {/* 右侧：当前库存（大字体，跨越两行） */}
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            minWidth: 80,
+            borderLeft: '2px solid #e8e8e8',
+            paddingLeft: 12
+          }}>
+            <div style={{ 
+              fontSize: 11, 
+              color: '#999',
+              marginBottom: 2
             }}>
-              {isNegative && <WarningOutlined style={{ marginRight: 4 }} />}
-              {t('inventory.currentStock')}: {currentStock}
-            </span>
-          </div>
-          
-          {/* 分隔线 */}
-          <div style={{ borderTop: '1px solid #e8e8e8', margin: '4px 0' }} />
-          
-          {/* 第二行：总出库 */}
-          <div style={{ marginTop: 4, marginBottom: 6 }}>
-            <span style={{ color: '#ff4d4f', fontSize: 13 }}>
-              {t('inventory.totalOut')}: {totalOut}
-            </span>
-          </div>
-          
-          {/* 第三行：状态标签 */}
-          <div>
-            <Tag color={getStatusColor(
-              currentStock < 0 ? 'negative' : 
-              currentStock <= ((record as any)?.inventory?.minStock ?? 0) ? 'critical' : 
-              currentStock <= (((record as any)?.inventory?.minStock ?? 0) * 1.5) ? 'low' : 
-              'normal'
-            )}>
-              {getStatusText(
+              {t('inventory.currentStock')}
+            </div>
+            <div style={{ 
+              fontSize: 24,
+              fontWeight: 700,
+              color: isNegative ? '#ff4d4f' : '#1890ff',
+              lineHeight: 1
+            }}>
+              {isNegative && <WarningOutlined style={{ marginRight: 4, fontSize: 16 }} />}
+              {currentStock}
+            </div>
+            <div style={{ marginTop: 6 }}>
+              <Tag color={getStatusColor(
                 currentStock < 0 ? 'negative' : 
                 currentStock <= ((record as any)?.inventory?.minStock ?? 0) ? 'critical' : 
                 currentStock <= (((record as any)?.inventory?.minStock ?? 0) * 1.5) ? 'low' : 
                 'normal'
-              )}
-            </Tag>
+              )} style={{ fontSize: 11 }}>
+                {getStatusText(
+                  currentStock < 0 ? 'negative' : 
+                  currentStock <= ((record as any)?.inventory?.minStock ?? 0) ? 'critical' : 
+                  currentStock <= (((record as any)?.inventory?.minStock ?? 0) * 1.5) ? 'low' : 
+                  'normal'
+                )}
+              </Tag>
+            </div>
           </div>
         </div>
         )
