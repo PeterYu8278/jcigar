@@ -558,94 +558,117 @@ const AdminUsers: React.FC = () => {
 
       {/* 移动端：列表视图 */}
       {isMobile && (
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          flex: 1,
-          overflow: 'hidden'
-        }}>
-          {/* 固定顶部区域 - 不滚动 */}
-          <div style={{ flexShrink: 0 }}>
-            {/* 标题栏 */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0px' }}>
+        <div 
+          className="users-scroll-area"
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            paddingBottom: '100px',
+            position: 'relative'
+          }}
+        >
+          {/* 标题栏 - 粘性定位 */}
+          <div style={{ 
+            position: 'sticky', 
+            top: 0, 
+            zIndex: 10,
+            background: 'rgba(18, 22, 17, 0.95)',
+            backdropFilter: 'blur(8px)',
+            padding: '12px 0px',
+            borderBottom: '1px solid rgba(255, 215, 0, 0.1)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', margin: 0 }}>{t('navigation.users')}</h1>
               <div style={{ width: 32 }} />
             </div>
-            
-            {/* 搜索框 */}
-            <div style={{ position: 'relative', marginBottom: 12 }}>
-              <Search
-                placeholder={t('usersAdmin.searchByNameOrEmail')}
-                allowClear
-                value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
-                style={{ width: '100%' }}
-                prefix={<SearchOutlined />}
-              />
-            </div>
-            
-            {/* 筛选与添加 */}
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', overflowX: 'auto', padding: '0 0px 12px 0px', borderBottom: '2px solid rgba(255, 215, 0, 0.2)' }}>
-              <Dropdown
-                menu={{
-                  items: [
-                    { key: 'all', label: t('common.all') },
-                    { key: 'admin', label: t('common.admin') },
-                    { key: 'member', label: t('common.member') },
-                    { key: 'guest', label: t('common.guest') },
-                  ],
-                  onClick: ({ key }) => setRoleFilter(key === 'all' ? undefined : (key as string)),
-                }}
-              >
-                <Button shape="round" size="small">
-                  {t('usersAdmin.role')}{roleFilter ? `: ${getRoleText(roleFilter)}` : ''}
-                </Button>
-              </Dropdown>
-              <Dropdown
-                menu={{
-                  items: [
-                    { key: 'all', label: t('common.all') },
-                    { key: 'bronze', label: t('usersAdmin.bronzeMember') },
-                    { key: 'silver', label: t('usersAdmin.silverMember') },
-                    { key: 'gold', label: t('usersAdmin.goldMember') },
-                    { key: 'platinum', label: t('usersAdmin.platinumMember') },
-                  ],
-                  onClick: ({ key }) => setLevelFilter(key === 'all' ? undefined : (key as string)),
-                }}
-              >
-                <Button shape="round" size="small">
-                  {t('usersAdmin.level')}{levelFilter ? `：${getMembershipText(levelFilter)}` : ''}
-                </Button>
-              </Dropdown>
-              <Dropdown
-                menu={{
-                  items: [
-                    { key: 'all', label: t('common.all') },
-                    { key: 'active', label: t('usersAdmin.active') },
-                    { key: 'inactive', label: t('usersAdmin.inactive') },
-                  ],
-                  onClick: ({ key }) => setStatusFilter(key === 'all' ? undefined : (key as string)),
-                }}
-              >
-                <Button shape="round" size="small">
-                  {t('usersAdmin.status')}{statusFilter ? `: ${getStatusText(statusFilter)}` : ''}
-                </Button>
-              </Dropdown>
-              <div style={{ flex: 1 }} />
-              <button onClick={() => { setCreating(true); form.resetFields() }} style={{ display: 'flex', alignItems: 'center', gap: 6, borderRadius: 8, padding: '6px 12px', background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, cursor: 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>{t('usersAdmin.addUser')}</button>
-            </div>
+          </div>
+          
+          {/* 搜索框 - 粘性定位 */}
+          <div style={{ 
+            position: 'sticky', 
+            top: 60, 
+            zIndex: 9,
+            background: 'rgba(18, 22, 17, 0.95)',
+            backdropFilter: 'blur(8px)',
+            padding: '12px 0px',
+            marginBottom: 0
+          }}>
+            <Search
+              placeholder={t('usersAdmin.searchByNameOrEmail')}
+              allowClear
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              style={{ width: '100%' }}
+              prefix={<SearchOutlined />}
+            />
+          </div>
+          
+          {/* 筛选与添加 - 粘性定位 */}
+          <div style={{ 
+            position: 'sticky', 
+            top: 124, 
+            zIndex: 8,
+            background: 'rgba(18, 22, 17, 0.95)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex', 
+            gap: 8, 
+            alignItems: 'center', 
+            overflowX: 'auto', 
+            padding: '12px 0px',
+            borderBottom: '2px solid rgba(255, 215, 0, 0.2)'
+          }}>
+            <Dropdown
+              menu={{
+                items: [
+                  { key: 'all', label: t('common.all') },
+                  { key: 'admin', label: t('common.admin') },
+                  { key: 'member', label: t('common.member') },
+                  { key: 'guest', label: t('common.guest') },
+                ],
+                onClick: ({ key }) => setRoleFilter(key === 'all' ? undefined : (key as string)),
+              }}
+            >
+              <Button shape="round" size="small">
+                {t('usersAdmin.role')}{roleFilter ? `: ${getRoleText(roleFilter)}` : ''}
+              </Button>
+            </Dropdown>
+            <Dropdown
+              menu={{
+                items: [
+                  { key: 'all', label: t('common.all') },
+                  { key: 'bronze', label: t('usersAdmin.bronzeMember') },
+                  { key: 'silver', label: t('usersAdmin.silverMember') },
+                  { key: 'gold', label: t('usersAdmin.goldMember') },
+                  { key: 'platinum', label: t('usersAdmin.platinumMember') },
+                ],
+                onClick: ({ key }) => setLevelFilter(key === 'all' ? undefined : (key as string)),
+              }}
+            >
+              <Button shape="round" size="small">
+                {t('usersAdmin.level')}{levelFilter ? `：${getMembershipText(levelFilter)}` : ''}
+              </Button>
+            </Dropdown>
+            <Dropdown
+              menu={{
+                items: [
+                  { key: 'all', label: t('common.all') },
+                  { key: 'active', label: t('usersAdmin.active') },
+                  { key: 'inactive', label: t('usersAdmin.inactive') },
+                ],
+                onClick: ({ key }) => setStatusFilter(key === 'all' ? undefined : (key as string)),
+              }}
+            >
+              <Button shape="round" size="small">
+                {t('usersAdmin.status')}{statusFilter ? `: ${getStatusText(statusFilter)}` : ''}
+              </Button>
+            </Dropdown>
+            <div style={{ flex: 1 }} />
+            <button onClick={() => { setCreating(true); form.resetFields() }} style={{ display: 'flex', alignItems: 'center', gap: 6, borderRadius: 8, padding: '6px 12px', background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, cursor: 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>{t('usersAdmin.addUser')}</button>
           </div>
 
-          {/* 可滚动内容区域 - 独立滚动 */}
-          <div 
-            className="users-scroll-area"
-            style={{
-              flex: 1,
-              overflowY: 'auto',
-              overflowX: 'hidden',
-              paddingBottom: '100px'
-            }}
-          >
+          {/* 用户卡片列表 - 独立滚动区域 */}
+          <div style={{ padding: '16px 0px' }}>
             {loading ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
                 <Spin />
@@ -654,7 +677,20 @@ const AdminUsers: React.FC = () => {
               <>
                 {groupedByInitial.map(group => (
                 <div key={group.key} id={`group-${group.key}`} style={{ marginBottom: 12 }}>
-                  <div style={{ color: '#f4af25', fontWeight: 600, marginBottom: 8 }}>{group.key}</div>
+                  {/* 字母标题 - 粘性定位 */}
+                  <div style={{ 
+                    position: 'sticky', 
+                    top: 188, 
+                    zIndex: 7,
+                    background: 'rgba(244, 175, 37, 0.95)',
+                    backdropFilter: 'blur(8px)',
+                    color: '#000', 
+                    fontWeight: 700, 
+                    padding: '8px 12px',
+                    marginBottom: 8,
+                    borderRadius: '8px',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+                  }}>{group.key}</div>
                   {group.items.map((u) => {
                     const status = statusMap[u.id] || (u as any).status || 'active'
                     const level = u.membership?.level || 'bronze'
