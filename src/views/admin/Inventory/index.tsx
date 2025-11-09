@@ -416,39 +416,46 @@ const AdminInventory: React.FC = () => {
         const currentStock = getComputedStock((record as any)?.id)
         const isNegative = currentStock < 0
         
+        const { totalIn, totalOut } = getTotals((record as any)?.id)
+        
         return (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+          {/* 第一行：总入库 | 当前库存 */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 13 }}>
+            <span style={{ color: '#52c41a' }}>
+              {t('inventory.totalIn')}: {totalIn}
+            </span>
             <span style={{ 
-              color: isNegative ? '#ff4d4f' : 'inherit',
-              fontWeight: isNegative ? 'bold' : 'normal'
+              color: isNegative ? '#ff4d4f' : '#1890ff',
+              fontWeight: 600
             }}>
               {isNegative && <WarningOutlined style={{ marginRight: 4 }} />}
               {t('inventory.currentStock')}: {currentStock}
             </span>
-            <span>{t('inventory.reserved')}: {(record as any)?.inventory?.reserved ?? 0}</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 12, color: '#666' }}>
-            {(() => { const { totalIn, totalOut } = getTotals((record as any)?.id); return (
-              <>
-                <span>{t('inventory.totalIn')}: {totalIn}</span>
-                <span>{t('inventory.totalOut')}: {totalOut}</span>
-              </>
-            ) })()}
-          </div>
-          <Tag color={getStatusColor(
-            currentStock < 0 ? 'negative' : 
-            currentStock <= ((record as any)?.inventory?.minStock ?? 0) ? 'critical' : 
-            currentStock <= (((record as any)?.inventory?.minStock ?? 0) * 1.5) ? 'low' : 
-            'normal'
-          )} style={{ marginTop: 4 }}>
-            {getStatusText(
+          
+          {/* 分隔线 */}
+          <div style={{ borderTop: '1px solid #e8e8e8', margin: '4px 0' }} />
+          
+          {/* 第二行：总出库 | 状态标签 */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+            <span style={{ color: '#ff4d4f', fontSize: 13 }}>
+              {t('inventory.totalOut')}: {totalOut}
+            </span>
+            <Tag color={getStatusColor(
               currentStock < 0 ? 'negative' : 
               currentStock <= ((record as any)?.inventory?.minStock ?? 0) ? 'critical' : 
               currentStock <= (((record as any)?.inventory?.minStock ?? 0) * 1.5) ? 'low' : 
               'normal'
-            )}
-          </Tag>
+            )}>
+              {getStatusText(
+                currentStock < 0 ? 'negative' : 
+                currentStock <= ((record as any)?.inventory?.minStock ?? 0) ? 'critical' : 
+                currentStock <= (((record as any)?.inventory?.minStock ?? 0) * 1.5) ? 'low' : 
+                'normal'
+              )}
+            </Tag>
+          </div>
         </div>
         )
       },
