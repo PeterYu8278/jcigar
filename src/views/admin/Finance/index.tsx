@@ -1053,6 +1053,7 @@ const AdminFinance: React.FC = () => {
                 const expense = Number(values.expenseAmount || 0)
                 if (income <= 0 && expense <= 0) {
                   message.error(t('financeAdmin.enterIncomeOrExpense'))
+                  setLoading(false)
                   return
                 }
                 const amount = income - expense
@@ -1064,6 +1065,7 @@ const AdminFinance: React.FC = () => {
                 const absTxCents = Math.round(absTx * 100)
                 if (roSumCents > absTxCents) {
                   message.error(t('financeAdmin.relatedOrdersExceed'))
+                  setLoading(false)
                   return
                 }
                 const updated = {
@@ -1076,7 +1078,10 @@ const AdminFinance: React.FC = () => {
                 await updateDocument(COLLECTIONS.TRANSACTIONS, viewing.id, updated as any)
                 message.success(t('financeAdmin.updated'))
                 setIsEditing(false)
-                loadTransactions()
+                setViewing(null)
+                await loadTransactions()
+              } catch (error) {
+                message.error(t('common.updateFailed'))
               } finally {
                 setLoading(false)
               }
