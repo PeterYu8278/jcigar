@@ -427,8 +427,7 @@ const AdminUsers: React.FC = () => {
       display: 'flex',
       flexDirection: 'column',
       overflow: isMobile ? 'hidden' : 'visible',
-      margin: 0,
-      padding: 0
+      paddingRight: isMobile ? '32px' : '0'  // 为右侧索引栏预留空间
     }}>
       {!isMobile && (
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -643,7 +642,7 @@ const AdminUsers: React.FC = () => {
             overflowY: 'auto',
             overflowX: 'hidden',
             padding: '16px',
-            paddingBottom: '80px'
+            paddingBottom: '100px'
           }}>
             {loading ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
