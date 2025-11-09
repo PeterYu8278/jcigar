@@ -642,7 +642,18 @@
     "paymentStatus": "付款状态",
     "fullyPaid": "已全额支付",
     "partiallyPaid": "部分支付",
-    "unpaid": "未支付"
+    "unpaid": "未支付",
+    "itemType": "项目类型",
+    "itemTypeCigar": "雪茄产品",
+    "itemTypeActivity": "活动物料",
+    "itemTypeGift": "活动礼品",
+    "itemTypeService": "服务费用",
+    "itemTypeOther": "其他",
+    "selectItemType": "选择项目类型",
+    "customItemName": "项目名称",
+    "pleaseInputItemName": "请输入项目名称",
+    "itemNameRequired": "项目名称不能为空",
+    "itemNamePlaceholder": "例如：会员活动横幅"
   },
   "financeAdmin": {
     "title": "财务管理",

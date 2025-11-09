@@ -644,7 +644,18 @@
     "paymentStatus": "Payment Status",
     "fullyPaid": "Fully Paid",
     "partiallyPaid": "Partially Paid",
-    "unpaid": "Unpaid"
+    "unpaid": "Unpaid",
+    "itemType": "Item Type",
+    "itemTypeCigar": "Cigar Product",
+    "itemTypeActivity": "Activity Material",
+    "itemTypeGift": "Activity Gift",
+    "itemTypeService": "Service Fee",
+    "itemTypeOther": "Other",
+    "selectItemType": "Select Item Type",
+    "customItemName": "Item Name",
+    "pleaseInputItemName": "Please enter item name",
+    "itemNameRequired": "Item name is required",
+    "itemNamePlaceholder": "e.g., Event Banner"
   },
   "financeAdmin": {
     "title": "Financial Management",

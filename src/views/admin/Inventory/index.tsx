@@ -178,13 +178,18 @@ const AdminInventory: React.FC = () => {
     return inventoryLogs.some((log: any) => log?.cigarId === cigarId)
   }
 
-  // 基于入库/出库日志的实时库存计算
+  // 基于入库/出库日志的实时库存计算（只统计雪茄产品，不统计活动物料等）
   const stockByCigarId = useMemo(() => {
     // 精确计算：sum(IN) - sum(OUT)，不在逐步相减时夹0，避免顺序依赖
     const map = new Map<string, number>()
     for (const log of inventoryLogs) {
       const id = (log as any)?.cigarId
       if (!id) continue
+      
+      // 只统计雪茄产品（itemType === 'cigar' 或未指定itemType的历史记录）
+      const itemType = (log as any)?.itemType
+      if (itemType && itemType !== 'cigar') continue
+      
       const type = (log as any)?.type
       const qtyRaw = (log as any)?.quantity ?? 0
       const qty = Number.isFinite(qtyRaw) ? Math.max(0, Math.floor(qtyRaw)) : 0
@@ -205,12 +210,17 @@ const AdminInventory: React.FC = () => {
     return net
   }
 
-  // 每个商品的总入库/总出库数量
+  // 每个商品的总入库/总出库数量（只统计雪茄产品）
   const totalsByCigarId = useMemo(() => {
     const map = new Map<string, { totalIn: number; totalOut: number }>()
     for (const log of inventoryLogs) {
       const id = (log as any)?.cigarId
       if (!id) continue
+      
+      // 只统计雪茄产品
+      const itemType = (log as any)?.itemType
+      if (itemType && itemType !== 'cigar') continue
+      
       const type = (log as any)?.type
       const qtyRaw = (log as any)?.quantity ?? 0
       const qty = Number.isFinite(qtyRaw) ? Math.max(0, Math.floor(qtyRaw)) : 0
@@ -1526,26 +1536,56 @@ const AdminInventory: React.FC = () => {
                 footer={null}
                 {...getResponsiveModalConfig(isMobile, true, 720)}
               >
-              <Form form={inForm} layout="vertical" className="dark-theme-form" onFinish={async (values: { referenceNo?: string; reason?: string; items: { cigarId: string; quantity: number; unitPrice?: number }[] }) => {
-                const lines = (values.items || []).filter(it => it?.cigarId && it?.quantity > 0)
+              <Form form={inForm} layout="vertical" className="dark-theme-form" onFinish={async (values: { referenceNo?: string; reason?: string; items: { itemType?: string; cigarId?: string; customName?: string; quantity: number; unitPrice?: number }[] }) => {
+                const lines = (values.items || []).filter(it => it?.quantity > 0 && (it?.cigarId || it?.customName))
                 if (lines.length === 0) { message.warning(t('inventory.pleaseAddAtLeastOneInStockDetail')); return }
                 setLoading(true)
                 try {
                   for (const line of lines) {
-                    const target = items.find(i => i.id === line.cigarId) as any
-                    if (!target) continue
+                    const lineItemType = line.itemType || 'cigar'
                     const qty = Math.max(1, Math.floor(line.quantity || 1))
-                    await createDocument(COLLECTIONS.INVENTORY_LOGS, {
-                      cigarId: target.id,
-                      cigarName: target.name,
-                      type: 'in',
-                      quantity: qty,
-                      reason: values.reason || t('inventory.inStock'),
-                      referenceNo: values.referenceNo,
-                      unitPrice: (line.unitPrice != null ? Number(line.unitPrice) : undefined),
-                      operatorId: 'system',
-                      createdAt: new Date(),
-                    } as any)
+                    
+                    if (lineItemType === 'cigar') {
+                      // 雪茄产品：使用现有逻辑
+                      const target = items.find(i => i.id === line.cigarId) as any
+                      if (!target) continue
+                      await createDocument(COLLECTIONS.INVENTORY_LOGS, {
+                        cigarId: target.id,
+                        cigarName: target.name,
+                        itemType: 'cigar',
+                        type: 'in',
+                        quantity: qty,
+                        reason: values.reason || t('inventory.inStock'),
+                        referenceNo: values.referenceNo,
+                        unitPrice: (line.unitPrice != null ? Number(line.unitPrice) : undefined),
+                        operatorId: 'system',
+                        createdAt: new Date(),
+                      } as any)
+                    } else {
+                      // 非雪茄项目：使用自定义名称
+                      if (!line.customName || !line.customName.trim()) continue
+                      const prefixMap: { [key: string]: string } = {
+                        'activity': 'ACTIVITY:',
+                        'gift': 'GIFT:',
+                        'service': 'SERVICE:',
+                        'other': 'OTHER:'
+                      }
+                      const prefix = prefixMap[lineItemType] || 'OTHER:'
+                      const uniqueId = `${prefix}${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                      
+                      await createDocument(COLLECTIONS.INVENTORY_LOGS, {
+                        cigarId: uniqueId,
+                        cigarName: line.customName.trim(),
+                        itemType: lineItemType as any,
+                        type: 'in',
+                        quantity: qty,
+                        reason: values.reason || t('inventory.inStock'),
+                        referenceNo: values.referenceNo,
+                        unitPrice: (line.unitPrice != null ? Number(line.unitPrice) : undefined),
+                        operatorId: 'system',
+                        createdAt: new Date(),
+                      } as any)
+                    }
                   }
                   message.success(t('inventory.inStockSuccess'))
                   inForm.resetFields()
@@ -1556,57 +1596,118 @@ const AdminInventory: React.FC = () => {
                   setLoading(false)
                 }
               }}>
-                <Form.List name="items" initialValue={[{ cigarId: undefined, quantity: 1 }]}> 
+                <Form.List name="items" initialValue={[{ itemType: 'cigar', cigarId: undefined, quantity: 1 }]}> 
                   {(fields, { add, remove }) => (
                     <div>
                       {fields.map(({ key, name, ...restField }) => (
-                        <Space key={key} align="baseline" style={{ display: 'flex', marginBottom: 8 }}>
-                          <Form.Item
-                            {...restField}
-                            name={[name, 'cigarId']}
-                            rules={[{ required: true, message: t('inventory.pleaseSelectProduct') }]}
-                            style={{ minWidth: 320 }}
-                          >
-                            <Select
-                              placeholder={t('inventory.pleaseSelectProduct')}
-                              showSearch
-                              optionFilterProp="children"
-                              filterOption={(input, option) => {
-                                const kw = (input || '').toLowerCase()
-                                const text = String((option?.children as any) || '').toLowerCase()
-                                return text.includes(kw)
-                              }}
+                        <div key={key} style={{ 
+                          marginBottom: 16, 
+                          padding: 12, 
+                          border: '1px solid rgba(255, 255, 255, 0.1)', 
+                          borderRadius: 8,
+                          background: 'rgba(0, 0, 0, 0.2)'
+                        }}>
+                          <Space align="baseline" style={{ display: 'flex', marginBottom: 8, flexWrap: 'wrap' }}>
+                            <Form.Item
+                              {...restField}
+                              name={[name, 'itemType']}
+                              initialValue="cigar"
+                              style={{ minWidth: 140 }}
                             >
-                              {groupedCigars.map(group => (
-                                <Select.OptGroup key={group.brand} label={group.brand}>
-                                  {group.list.map(i => (
-                                    <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（{t('inventory.stock')}：{getComputedStock(i.id)}）</Option>
-                                  ))}
-                                </Select.OptGroup>
-                              ))}
-                            </Select>
-                          </Form.Item>
-                          <Form.Item
-                            {...restField}
-                            name={[name, 'quantity']}
-                            rules={[{ required: true, message: t('inventory.pleaseInputQuantity') }]}
-                          >
-                            <InputNumber min={1} placeholder={t('inventory.quantity')} />
-                          </Form.Item>
-                          <Form.Item
-                            {...restField}
-                            name={[name, 'unitPrice']}
-                            rules={[]}
-                          >
-                            <InputNumber min={0} step={0.01} placeholder={t('inventory.price')} />
-                          </Form.Item>
-                          {fields.length > 1 && (
-                            <MinusCircleOutlined onClick={() => remove(name)} />
-                          )}
-                        </Space>
+                              <Select 
+                                placeholder={t('inventory.selectItemType')}
+                                onChange={() => {
+                                  // 清除之前的选择
+                                  const currentValues = inForm.getFieldValue('items')
+                                  if (currentValues && currentValues[name]) {
+                                    currentValues[name].cigarId = undefined
+                                    currentValues[name].customName = undefined
+                                    inForm.setFieldsValue({ items: currentValues })
+                                  }
+                                }}
+                              >
+                                <Option value="cigar">🎯 {t('inventory.itemTypeCigar')}</Option>
+                                <Option value="activity">🎪 {t('inventory.itemTypeActivity')}</Option>
+                                <Option value="gift">🎁 {t('inventory.itemTypeGift')}</Option>
+                                <Option value="service">💼 {t('inventory.itemTypeService')}</Option>
+                                <Option value="other">📦 {t('inventory.itemTypeOther')}</Option>
+                              </Select>
+                            </Form.Item>
+                            
+                            <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => {
+                              const prev = prevValues.items?.[name]?.itemType
+                              const curr = currentValues.items?.[name]?.itemType
+                              return prev !== curr
+                            }}>
+                              {({ getFieldValue }) => {
+                                const itemType = getFieldValue(['items', name, 'itemType']) || 'cigar'
+                                
+                                return itemType === 'cigar' ? (
+                                  <Form.Item
+                                    {...restField}
+                                    name={[name, 'cigarId']}
+                                    rules={[{ required: true, message: t('inventory.pleaseSelectProduct') }]}
+                                    style={{ minWidth: 280 }}
+                                  >
+                                    <Select
+                                      placeholder={t('inventory.pleaseSelectProduct')}
+                                      showSearch
+                                      optionFilterProp="children"
+                                      filterOption={(input, option) => {
+                                        const kw = (input || '').toLowerCase()
+                                        const text = String((option?.children as any) || '').toLowerCase()
+                                        return text.includes(kw)
+                                      }}
+                                    >
+                                      {groupedCigars.map(group => (
+                                        <Select.OptGroup key={group.brand} label={group.brand}>
+                                          {group.list.map(i => (
+                                            <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（{t('inventory.stock')}：{getComputedStock(i.id)}）</Option>
+                                          ))}
+                                        </Select.OptGroup>
+                                      ))}
+                                    </Select>
+                                  </Form.Item>
+                                ) : (
+                                  <Form.Item
+                                    {...restField}
+                                    name={[name, 'customName']}
+                                    rules={[{ required: true, message: t('inventory.itemNameRequired') }]}
+                                    style={{ minWidth: 280 }}
+                                  >
+                                    <Input placeholder={t('inventory.itemNamePlaceholder')} />
+                                  </Form.Item>
+                                )
+                              }}
+                            </Form.Item>
+                            
+                            <Form.Item
+                              {...restField}
+                              name={[name, 'quantity']}
+                              rules={[{ required: true, message: t('inventory.pleaseInputQuantity') }]}
+                            >
+                              <InputNumber min={1} placeholder={t('inventory.quantity')} style={{ width: 100 }} />
+                            </Form.Item>
+                            <Form.Item
+                              {...restField}
+                              name={[name, 'unitPrice']}
+                              rules={[]}
+                            >
+                              <InputNumber min={0} step={0.01} placeholder={t('inventory.price')} style={{ width: 120 }} />
+                            </Form.Item>
+                            {fields.length > 1 && (
+                              <MinusCircleOutlined 
+                                onClick={() => remove(name)} 
+                                style={{ color: '#ff4d4f', fontSize: 18, cursor: 'pointer' }}
+                              />
+                            )}
+                          </Space>
+                        </div>
                       ))}
                       <Form.Item>
-                        <Button type="dashed" onClick={() => add({ quantity: 1 })} icon={<PlusOutlined />}>新增明细</Button>
+                        <Button type="dashed" onClick={() => add({ itemType: 'cigar', quantity: 1 })} icon={<PlusOutlined />} style={{ width: '100%' }}>
+                          {t('inventory.addDetail')}
+                        </Button>
                       </Form.Item>
                     </div>
                   )}
@@ -1660,7 +1761,33 @@ const AdminInventory: React.FC = () => {
                             key: 'cigarId', 
                             render: (id: string, rec: any) => {
                               const cigar = items.find(i => i.id === id)
-                              return rec.cigarName || cigar?.name || id
+                              const itemType = rec.itemType || 'cigar'
+                              const itemTypeIcons: { [key: string]: string } = {
+                                'cigar': '🎯',
+                                'activity': '🎪',
+                                'gift': '🎁',
+                                'service': '💼',
+                                'other': '📦'
+                              }
+                              const itemTypeColors: { [key: string]: string } = {
+                                'cigar': '#52c41a',
+                                'activity': '#722ed1',
+                                'gift': '#faad14',
+                                'service': '#1890ff',
+                                'other': '#8c8c8c'
+                              }
+                              const icon = itemTypeIcons[itemType] || '🎯'
+                              const color = itemTypeColors[itemType] || '#52c41a'
+                              const displayName = rec.cigarName || cigar?.name || id
+                              
+                              return (
+                                <span>
+                                  <span style={{ marginRight: 8 }}>{icon}</span>
+                                  <span style={{ color: itemType !== 'cigar' ? color : undefined }}>
+                                    {displayName}
+                                  </span>
+                                </span>
+                              )
                             }
                           },
                           { 
@@ -2103,7 +2230,33 @@ const AdminInventory: React.FC = () => {
                                       whiteSpace: 'nowrap',
                                       marginRight: 8
                                     }}>
-                                      {log.cigarName || cigar?.name || log.cigarId}
+                                      {(() => {
+                                        const itemType = log.itemType || 'cigar'
+                                        const itemTypeIcons: { [key: string]: string } = {
+                                          'cigar': '🎯',
+                                          'activity': '🎪',
+                                          'gift': '🎁',
+                                          'service': '💼',
+                                          'other': '📦'
+                                        }
+                                        const itemTypeColors: { [key: string]: string } = {
+                                          'cigar': '#fff',
+                                          'activity': '#9254de',
+                                          'gift': '#fadb14',
+                                          'service': '#40a9ff',
+                                          'other': '#bfbfbf'
+                                        }
+                                        const icon = itemTypeIcons[itemType] || '🎯'
+                                        const color = itemTypeColors[itemType] || '#fff'
+                                        const displayName = log.cigarName || cigar?.name || log.cigarId
+                                        
+                                        return (
+                                          <>
+                                            <span style={{ marginRight: 6 }}>{icon}</span>
+                                            <span style={{ color }}>{displayName}</span>
+                                          </>
+                                        )
+                                      })()}
                                     </div>
                                     <div style={{ 
                                       fontSize: 16, 

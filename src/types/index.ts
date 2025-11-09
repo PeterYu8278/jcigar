@@ -179,6 +179,7 @@ export interface InventoryLog {
   id: string;
   cigarId: string;
   cigarName?: string;     // 雪茄名称（冗余字段，避免雪茄删除后无法显示历史记录）
+  itemType?: 'cigar' | 'activity' | 'gift' | 'service' | 'other'; // 项目类型（未指定时默认为雪茄）
   type: 'in' | 'out' | 'adjustment';
   quantity: number;
   reason: string;

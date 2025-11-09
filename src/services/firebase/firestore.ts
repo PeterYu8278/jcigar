@@ -533,6 +533,7 @@ export const createOrdersFromEventAllocations = async (eventId: string): Promise
               await createDocument(COLLECTIONS.INVENTORY_LOGS, {
                 cigarId: it.cigarId,
                 cigarName: cigar.name,
+                itemType: 'cigar',
                 type: 'out',
                 quantity: it.quantity,
                 reason: String((event as any)?.title || '活动订单出库'),
@@ -648,6 +649,7 @@ export const createDirectSaleOrder = async (params: { userId: string; items: { c
         await createDocument(COLLECTIONS.INVENTORY_LOGS, {
           cigarId: item.cigarId,
           cigarName: cigar.name,
+          itemType: 'cigar',
           type: 'out',
           quantity: item.quantity,
           reason: '直接销售出库',
