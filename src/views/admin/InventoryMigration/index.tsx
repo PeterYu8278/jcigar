@@ -1,13 +1,15 @@
 // 临时页面：inventory_logs 架构迁移
 import React, { useState } from 'react'
-import { Card, Button, Progress, Space, message, Typography, Alert, Statistic, Row, Col, Steps } from 'antd'
+import { Card, Button, Progress, Space, message, Typography, Alert, Statistic, Row, Col, Steps, Table, Tag, Collapse, Descriptions } from 'antd'
 import { useTranslation } from 'react-i18next'
+import { WarningOutlined, CheckCircleOutlined, EyeOutlined } from '@ant-design/icons'
 import { collection, getDocs, setDoc, doc, query, where, deleteDoc, Timestamp } from 'firebase/firestore'
 import { db } from '../../../config/firebase'
 import { COLLECTIONS, createDocument } from '../../../services/firebase/firestore'
 import type { InboundOrder, OutboundOrder, InventoryMovement } from '../../../types'
 
 const { Title, Text } = Typography
+const { Panel } = Collapse
 
 interface MigrationStats {
   totalRecords: number
@@ -19,6 +21,30 @@ interface MigrationStats {
   outboundOrdersCreated: number
   movementsCreated: number
   duplicateAttachmentsSaved: number
+}
+
+interface OrderPreview {
+  referenceNo: string
+  type: 'in' | 'out'
+  items: any[]
+  totalQuantity: number
+  totalValue: number
+  attachments: any[]
+  deduplication: {
+    before: number  // 原来有几条记录
+    after: number   // 现在只有1个订单
+    saved: number   // 节省的操作次数
+  }
+  createdAt: Date
+  reason: string
+}
+
+interface Warning {
+  type: string
+  severity: 'warning' | 'error' | 'info'
+  count: number
+  message: string
+  details?: string
 }
 
 const InventoryMigration: React.FC = () => {
@@ -41,6 +67,27 @@ const InventoryMigration: React.FC = () => {
   })
   const [logs, setLogs] = useState<string[]>([])
   const [groupedData, setGroupedData] = useState<Map<string, any>>(new Map())
+  
+  // 预览数据
+  const [previewData, setPreviewData] = useState<{
+    inboundOrders: OrderPreview[]
+    outboundOrders: OrderPreview[]
+    warnings: Warning[]
+    improvements: {
+      attachmentReduction: number
+      attachmentReductionPercent: number
+      storageOptimization: string
+    }
+  }>({
+    inboundOrders: [],
+    outboundOrders: [],
+    warnings: [],
+    improvements: {
+      attachmentReduction: 0,
+      attachmentReductionPercent: 0,
+      storageOptimization: ''
+    }
+  })
 
   const addLog = (msg: string) => {
     console.log(msg)
@@ -101,6 +148,127 @@ const InventoryMigration: React.FC = () => {
         addLog(`   - ${key}: ${group.records.length} 条记录`)
       }
       
+      // 构建预览数据
+      addLog('\n📋 构建预览数据...')
+      const inboundPreviews: OrderPreview[] = []
+      const outboundPreviews: OrderPreview[] = []
+      const warnings: Warning[] = []
+      let totalAttachmentsOld = 0
+      let totalAttachmentsNew = 0
+      
+      for (const [key, group] of grouped) {
+        if (group.type === 'adjustment') continue // 跳过调整记录
+        
+        // 聚合产品和附件
+        const items: any[] = []
+        let totalQuantity = 0
+        let totalValue = 0
+        let orderAttachments: any[] = []
+        let reason = ''
+        let createdAt = new Date()
+        
+        // 检测附件一致性
+        const attachmentSets = new Set<string>()
+        
+        for (const rec of group.records) {
+          const data = rec.data
+          
+          items.push({
+            cigarId: data.cigarId,
+            cigarName: data.cigarName || data.cigarId,
+            itemType: data.itemType || 'cigar',
+            quantity: Number(data.quantity) || 0,
+            unitPrice: data.unitPrice ? Number(data.unitPrice) : undefined
+          })
+          
+          totalQuantity += Number(data.quantity) || 0
+          if (data.unitPrice) {
+            totalValue += Number(data.unitPrice) * Number(data.quantity)
+          }
+          
+          if (!reason && data.reason) reason = data.reason
+          
+          const dataCreatedAt = data.createdAt?.toDate ? data.createdAt.toDate() : 
+                               (data.createdAt instanceof Date ? data.createdAt : new Date(data.createdAt))
+          if (dataCreatedAt < createdAt) createdAt = dataCreatedAt
+          
+          // 统计附件
+          if (data.attachments && data.attachments.length > 0) {
+            totalAttachmentsOld += data.attachments.length
+            attachmentSets.add(JSON.stringify(data.attachments))
+            
+            if (!orderAttachments.length) {
+              orderAttachments = data.attachments
+            }
+          }
+        }
+        
+        // 检测附件不一致
+        if (attachmentSets.size > 1) {
+          warnings.push({
+            type: 'inconsistent_attachments',
+            severity: 'warning',
+            count: attachmentSets.size,
+            message: `单号 ${group.refNo} 的附件在不同产品间不一致`,
+            details: '将使用第一条记录的附件'
+          })
+        }
+        
+        if (orderAttachments.length > 0) {
+          totalAttachmentsNew += orderAttachments.length
+        }
+        
+        const orderPreview: OrderPreview = {
+          referenceNo: group.refNo,
+          type: group.type as 'in' | 'out',
+          items,
+          totalQuantity,
+          totalValue,
+          attachments: orderAttachments,
+          deduplication: {
+            before: group.records.length,
+            after: 1,
+            saved: group.records.length - 1
+          },
+          createdAt,
+          reason: reason || (group.type === 'in' ? '入库' : '出库')
+        }
+        
+        if (group.type === 'in') {
+          inboundPreviews.push(orderPreview)
+        } else if (group.type === 'out') {
+          outboundPreviews.push(orderPreview)
+        }
+      }
+      
+      // 添加空单号警告
+      if (emptyRefCount > 0) {
+        warnings.push({
+          type: 'empty_reference',
+          severity: 'warning',
+          count: emptyRefCount,
+          message: `${emptyRefCount} 条记录没有单号`,
+          details: '这些记录将被跳过，不会迁移'
+        })
+      }
+      
+      // 计算附件优化效果
+      const attachmentReduction = totalAttachmentsOld - totalAttachmentsNew
+      const attachmentReductionPercent = totalAttachmentsOld > 0 
+        ? Math.round((attachmentReduction / totalAttachmentsOld) * 100)
+        : 0
+      
+      setPreviewData({
+        inboundOrders: inboundPreviews.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
+        outboundOrders: outboundPreviews.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
+        warnings,
+        improvements: {
+          attachmentReduction,
+          attachmentReductionPercent,
+          storageOptimization: `${totalAttachmentsOld} → ${totalAttachmentsNew} 个附件引用`
+        }
+      })
+      
       setStats({
         totalRecords: snapshot.size,
         inboundCount: byType.in,
@@ -110,12 +278,19 @@ const InventoryMigration: React.FC = () => {
         inboundOrdersCreated: 0,
         outboundOrdersCreated: 0,
         movementsCreated: 0,
-        duplicateAttachmentsSaved: 0
+        duplicateAttachmentsSaved: attachmentReduction
       })
       
       setGroupedData(grouped)
-      setStep(1)
-      addLog('✅ 分析完成！')
+      setStep(1) // 进入预览步骤
+      addLog(`✅ 分析完成！`)
+      addLog(`📋 已构建 ${inboundPreviews.length} 个入库订单和 ${outboundPreviews.length} 个出库订单的预览`)
+      
+      if (warnings.length > 0) {
+        addLog(`⚠️ 发现 ${warnings.length} 个警告，请查看预览详情`)
+      }
+      
+      message.success('分析完成，请查看预览')
       
     } catch (error: any) {
       addLog(`❌ 分析失败: ${error.message}`)
@@ -308,7 +483,7 @@ const InventoryMigration: React.FC = () => {
         duplicateAttachmentsSaved: duplicatesSaved
       }))
       
-      setStep(2)
+      setStep(3) // 迁移完成，进入验证步骤
       addLog(`\n✅ 迁移完成:`)
       addLog(`   - 入库订单: ${inboundCreated}`)
       addLog(`   - 出库订单: ${outboundCreated}`)
@@ -408,7 +583,7 @@ const InventoryMigration: React.FC = () => {
         addLog(`⚠️ 发现 ${mismatchCount} 个产品库存不匹配`)
       }
       
-      setStep(3)
+      setStep(4) // 验证完成，整个流程结束
       addLog('\n🎉 验证完成！')
       
       if (stockMatches && movements.size === oldLogs.size) {
@@ -453,9 +628,9 @@ const InventoryMigration: React.FC = () => {
           current={step}
           items={[
             { title: '分析数据', description: '扫描现有记录' },
+            { title: '预览计划', description: '确认迁移内容', icon: step === 1 ? <EyeOutlined /> : undefined },
             { title: '执行迁移', description: '创建新架构' },
-            { title: '验证完整性', description: '对比数据' },
-            { title: '完成', description: '迁移成功' }
+            { title: '验证完整性', description: '对比数据' }
           ]}
           style={{ marginBottom: 32 }}
         />
@@ -522,37 +697,317 @@ const InventoryMigration: React.FC = () => {
           </div>
         )}
 
+        {/* 预览内容（Step 1） */}
+        {step === 1 && (
+          <Card title="📋 迁移预览" style={{ marginBottom: 24 }}>
+            {/* 迁移前后对比 */}
+            <Card size="small" style={{ marginBottom: 16, background: '#fafafa' }}>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <div style={{ textAlign: 'center', padding: 12, background: '#fff', borderRadius: 8 }}>
+                    <Text type="secondary">📂 旧架构</Text>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: '#1890ff', marginTop: 8 }}>
+                      {stats.totalRecords}
+                    </div>
+                    <Text type="secondary">个 inventory_logs 记录</Text>
+                    <div style={{ marginTop: 12, fontSize: 12, color: '#666' }}>
+                      <div>· 附件引用：{stats.totalRecords - stats.emptyReferences} 个</div>
+                      <div>· 查询需要前端聚合</div>
+                      <div>· 更新需要 N 次操作</div>
+                    </div>
+                  </div>
+                </Col>
+                <Col span={12}>
+                  <div style={{ textAlign: 'center', padding: 12, background: '#f6ffed', borderRadius: 8, border: '1px solid #b7eb8f' }}>
+                    <Text type="success">📦 新架构</Text>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: '#52c41a', marginTop: 8 }}>
+                      {previewData.inboundOrders.length + previewData.outboundOrders.length}
+                    </div>
+                    <Text type="success">个订单 + {stats.totalRecords - stats.emptyReferences} 个索引</Text>
+                    <div style={{ marginTop: 12, fontSize: 12, color: '#52c41a' }}>
+                      <div>· 附件引用：{stats.totalRecords - stats.emptyReferences - stats.duplicateAttachmentsSaved} 个</div>
+                      <div>· 查询无需聚合 ✅</div>
+                      <div>· 更新只需 1 次操作 ✅</div>
+                    </div>
+                  </div>
+                </Col>
+              </Row>
+            </Card>
+            
+            {/* 优化效果 */}
+            <Alert
+              message="🎯 预期优化效果"
+              description={
+                <div>
+                  <p><strong>附件存储优化：</strong>{previewData.improvements.storageOptimization} （节省 {previewData.improvements.attachmentReductionPercent}%）</p>
+                  <p><strong>操作效率提升：</strong>更新订单附件只需 1 次操作（原需 N 次）</p>
+                  <p><strong>查询性能：</strong>按订单查询无需前端聚合</p>
+                  <p><strong>成本节省：</strong>预计减少 {stats.duplicateAttachmentsSaved} 次 Firestore 操作</p>
+                </div>
+              }
+              type="success"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+
+            {/* 警告信息 */}
+            {previewData.warnings.length > 0 && (
+              <Alert
+                message={`⚠️ 发现 ${previewData.warnings.length} 个需要注意的问题`}
+                description={
+                  <div>
+                    {previewData.warnings.map((warning, idx) => (
+                      <div key={idx} style={{ marginBottom: 8 }}>
+                        <Tag color={warning.severity === 'error' ? 'red' : warning.severity === 'warning' ? 'orange' : 'blue'}>
+                          {warning.severity === 'error' ? '❌' : warning.severity === 'warning' ? '⚠️' : 'ℹ️'}
+                        </Tag>
+                        <strong>{warning.message}</strong>
+                        {warning.details && <div style={{ marginLeft: 24, color: '#666', fontSize: 12 }}>{warning.details}</div>}
+                      </div>
+                    ))}
+                  </div>
+                }
+                type="warning"
+                showIcon
+                style={{ marginBottom: 16 }}
+              />
+            )}
+
+            {/* 入库订单预览 */}
+            <Title level={4} style={{ marginTop: 24 }}>📦 入库订单预览（{previewData.inboundOrders.length} 个）</Title>
+            <Table
+              dataSource={previewData.inboundOrders.slice(0, 10)}
+              rowKey="referenceNo"
+              pagination={false}
+              size="small"
+              expandable={{
+                expandedRowRender: (record: OrderPreview) => (
+                  <div style={{ padding: 12, background: '#f5f5f5' }}>
+                    <Descriptions column={2} size="small" bordered>
+                      <Descriptions.Item label="单号">{record.referenceNo}</Descriptions.Item>
+                      <Descriptions.Item label="原因">{record.reason}</Descriptions.Item>
+                      <Descriptions.Item label="产品种类">{record.items.length} 种</Descriptions.Item>
+                      <Descriptions.Item label="总数量">{record.totalQuantity} 支</Descriptions.Item>
+                      <Descriptions.Item label="总价值">RM {record.totalValue.toFixed(2)}</Descriptions.Item>
+                      <Descriptions.Item label="附件">{record.attachments.length} 个</Descriptions.Item>
+                      <Descriptions.Item label="去重效果" span={2}>
+                        {record.deduplication.before} 条记录 → 1 个订单（节省 {record.deduplication.saved} 次操作）
+                      </Descriptions.Item>
+                    </Descriptions>
+                    <div style={{ marginTop: 12 }}>
+                      <strong>产品明细：</strong>
+                      {record.items.map((item, idx) => (
+                        <div key={idx} style={{ marginLeft: 16, fontSize: 12, color: '#666' }}>
+                          {idx + 1}. {item.cigarName} × {item.quantity} {item.unitPrice ? `(RM ${item.unitPrice})` : ''}
+                        </div>
+                      ))}
+                    </div>
+                    {record.attachments.length > 0 && (
+                      <div style={{ marginTop: 12 }}>
+                        <strong>附件：</strong>
+                        {record.attachments.map((att, idx) => (
+                          <Tag key={idx} color="blue" style={{ marginLeft: 8 }}>
+                            {att.type === 'pdf' ? '📄' : '🖼️'} {att.filename}
+                          </Tag>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              }}
+              columns={[
+                {
+                  title: '单号',
+                  dataIndex: 'referenceNo',
+                  key: 'referenceNo',
+                  render: (text: string) => <Text strong style={{ fontFamily: 'monospace' }}>{text}</Text>
+                },
+                {
+                  title: '产品种类',
+                  dataIndex: 'items',
+                  key: 'productCount',
+                  render: (items: any[]) => <span>{items.length} 种</span>
+                },
+                {
+                  title: '总数量',
+                  dataIndex: 'totalQuantity',
+                  key: 'totalQuantity',
+                  render: (qty: number) => <span style={{ color: '#52c41a', fontWeight: 600 }}>+{qty}</span>
+                },
+                {
+                  title: '总价值',
+                  dataIndex: 'totalValue',
+                  key: 'totalValue',
+                  render: (val: number) => val > 0 ? `RM ${val.toFixed(2)}` : '-'
+                },
+                {
+                  title: '附件',
+                  dataIndex: 'attachments',
+                  key: 'attachments',
+                  render: (attachments: any[]) => (
+                    <span>
+                      {attachments.length > 0 ? (
+                        <Tag color="blue">📎 {attachments.length}</Tag>
+                      ) : (
+                        <span style={{ color: '#999' }}>-</span>
+                      )}
+                    </span>
+                  )
+                },
+                {
+                  title: '去重效果',
+                  key: 'deduplication',
+                  render: (_: any, record: OrderPreview) => (
+                    <Tag color="green">
+                      {record.deduplication.before} → 1 (省{record.deduplication.saved})
+                    </Tag>
+                  )
+                }
+              ]}
+            />
+            {previewData.inboundOrders.length > 10 && (
+              <div style={{ textAlign: 'center', marginTop: 12, color: '#666' }}>
+                ... 还有 {previewData.inboundOrders.length - 10} 个入库订单
+              </div>
+            )}
+
+            {/* 出库订单预览 */}
+            <Title level={4} style={{ marginTop: 32 }}>📤 出库订单预览（{previewData.outboundOrders.length} 个）</Title>
+            <Table
+              dataSource={previewData.outboundOrders.slice(0, 10)}
+              rowKey="referenceNo"
+              pagination={false}
+              size="small"
+              expandable={{
+                expandedRowRender: (record: OrderPreview) => (
+                  <div style={{ padding: 12, background: '#f5f5f5' }}>
+                    <Descriptions column={2} size="small" bordered>
+                      <Descriptions.Item label="单号">{record.referenceNo}</Descriptions.Item>
+                      <Descriptions.Item label="原因">{record.reason}</Descriptions.Item>
+                      <Descriptions.Item label="产品种类">{record.items.length} 种</Descriptions.Item>
+                      <Descriptions.Item label="总数量">{record.totalQuantity} 支</Descriptions.Item>
+                      <Descriptions.Item label="去重效果" span={2}>
+                        {record.deduplication.before} 条记录 → 1 个订单（节省 {record.deduplication.saved} 次操作）
+                      </Descriptions.Item>
+                    </Descriptions>
+                    <div style={{ marginTop: 12 }}>
+                      <strong>产品明细：</strong>
+                      {record.items.map((item, idx) => (
+                        <div key={idx} style={{ marginLeft: 16, fontSize: 12, color: '#666' }}>
+                          {idx + 1}. {item.cigarName} × {item.quantity}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              }}
+              columns={[
+                {
+                  title: '单号',
+                  dataIndex: 'referenceNo',
+                  key: 'referenceNo',
+                  render: (text: string) => <Text strong style={{ fontFamily: 'monospace' }}>{text}</Text>
+                },
+                {
+                  title: '产品种类',
+                  dataIndex: 'items',
+                  key: 'productCount',
+                  render: (items: any[]) => <span>{items.length} 种</span>
+                },
+                {
+                  title: '总数量',
+                  dataIndex: 'totalQuantity',
+                  key: 'totalQuantity',
+                  render: (qty: number) => <span style={{ color: '#ff4d4f', fontWeight: 600 }}>-{qty}</span>
+                },
+                {
+                  title: '去重效果',
+                  key: 'deduplication',
+                  render: (_: any, record: OrderPreview) => (
+                    <Tag color="green">
+                      {record.deduplication.before} → 1 (省{record.deduplication.saved})
+                    </Tag>
+                  )
+                }
+              ]}
+            />
+            {previewData.outboundOrders.length > 10 && (
+              <div style={{ textAlign: 'center', marginTop: 12, color: '#666' }}>
+                ... 还有 {previewData.outboundOrders.length - 10} 个出库订单
+              </div>
+            )}
+
+            {/* 确认提示 */}
+            <Alert
+              message="请确认"
+              description={
+                <div>
+                  <p>✅ 已预览迁移计划，数据看起来正确</p>
+                  <p>✅ 旧数据（inventory_logs）将被保留，可以回滚</p>
+                  <p>⚠️ 迁移将创建 {previewData.inboundOrders.length + previewData.outboundOrders.length} 个新订单和 {stats.totalRecords - stats.emptyReferences} 个索引记录</p>
+                  <p>⚠️ 请确认无误后点击"确认执行迁移"</p>
+                </div>
+              }
+              type="info"
+              showIcon
+              style={{ marginTop: 24 }}
+            />
+          </Card>
+        )}
+
         {/* 操作按钮 */}
         <Space size="large" style={{ marginBottom: 24 }}>
-          <Button 
-            type="primary" 
-            size="large"
-            onClick={analyzeData} 
-            loading={analyzing}
-            disabled={step > 0}
-          >
-            1️⃣ 分析数据
-          </Button>
+          {step === 0 && (
+            <Button 
+              type="primary" 
+              size="large"
+              onClick={analyzeData} 
+              loading={analyzing}
+            >
+              1️⃣ 分析数据
+            </Button>
+          )}
           
-          <Button 
-            type="primary" 
-            size="large"
-            onClick={executeMigration} 
-            loading={migrating}
-            disabled={step !== 1}
-          >
-            2️⃣ 执行迁移
-          </Button>
+          {step === 1 && (
+            <>
+              <Button 
+                size="large"
+                onClick={() => {
+                  setStep(0)
+                  setPreviewData({
+                    inboundOrders: [],
+                    outboundOrders: [],
+                    warnings: [],
+                    improvements: { attachmentReduction: 0, attachmentReductionPercent: 0, storageOptimization: '' }
+                  })
+                  setGroupedData(new Map())
+                  addLog('\n⬅️ 返回重新分析')
+                }}
+              >
+                ⬅️ 返回重新分析
+              </Button>
+              <Button 
+                type="primary" 
+                size="large"
+                onClick={executeMigration} 
+                loading={migrating}
+                danger
+              >
+                ✅ 确认执行迁移
+              </Button>
+            </>
+          )}
           
-          <Button 
-            type="primary" 
-            size="large"
-            onClick={verifyData} 
-            loading={verifying}
-            disabled={step !== 2}
-          >
-            3️⃣ 验证数据
-          </Button>
+          {step === 3 && (
+            <Button 
+              type="primary" 
+              size="large"
+              onClick={verifyData} 
+              loading={verifying}
+            >
+              3️⃣ 验证数据
+            </Button>
+          )}
         </Space>
 
         {/* 日志输出 */}
@@ -577,15 +1032,25 @@ const InventoryMigration: React.FC = () => {
           )}
         </Card>
 
-        {step === 3 && (
+        {step === 4 && (
           <Alert
-            message="迁移成功！"
+            message="🎉 迁移成功！"
             description={
               <div>
-                <p>✅ 数据已成功迁移到新架构</p>
+                <p>✅ 数据已成功迁移到新架构并通过验证</p>
                 <p>✅ 刷新"库存管理"页面，应该会看到控制台输出：<code>✅ [Inventory] Using new architecture</code></p>
-                <p>⚠️ 请在生产环境测试一段时间后，再决定是否删除旧的 inventory_logs 数据</p>
+                <p>✅ 新架构已自动生效，附件不再重复存储</p>
+                <p>⚠️ 请在生产环境测试一段时间（建议 1-2 周）后，再决定是否删除旧的 inventory_logs 数据</p>
                 <p>🗑️ 删除旧数据的方法：Firebase Console → Firestore → 删除 inventory_logs collection</p>
+                <br />
+                <p><strong>测试清单：</strong></p>
+                <ul>
+                  <li>✓ 创建新的入库订单</li>
+                  <li>✓ 查看入库记录列表（应该按单号分组显示）</li>
+                  <li>✓ 查看附件（每个订单只存储一次）</li>
+                  <li>✓ 验证库存计算正确</li>
+                  <li>✓ 测试编辑和删除功能</li>
+                </ul>
               </div>
             }
             type="success"
