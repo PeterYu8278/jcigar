@@ -427,7 +427,7 @@ const AdminUsers: React.FC = () => {
       display: 'flex',
       flexDirection: 'column',
       overflow: isMobile ? 'hidden' : 'visible',
-      paddingRight: isMobile ? '32px' : '0'  // 为右侧索引栏预留空间
+      paddingRight:  '0'  // 为右侧索引栏预留空间
     }}>
       {!isMobile && (
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -637,13 +637,16 @@ const AdminUsers: React.FC = () => {
           </div>
 
           {/* 可滚动内容区域 - 独立滚动 */}
-          <div style={{
-            flex: 1,
-            overflowY: 'auto',
-            overflowX: 'hidden',
-            padding: '16px',
-            paddingBottom: '100px'
-          }}>
+          <div 
+            className="users-scroll-area"
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              padding: '16px',
+              paddingBottom: '100px'
+            }}
+          >
             {loading ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
                 <Spin />
@@ -801,7 +804,7 @@ const AdminUsers: React.FC = () => {
         </div>
       )}
 
-      {/* 字母气泡动画 */}
+      {/* 字母气泡动画 + 隐藏滚动条 */}
       <style>{`
         @keyframes bubblePop {
           0% {
@@ -815,6 +818,15 @@ const AdminUsers: React.FC = () => {
             transform: translate(-50%, -50%) scale(1);
             opacity: 1;
           }
+        }
+        
+        /* 隐藏滚动条但保持滚动功能 */
+        .users-scroll-area::-webkit-scrollbar {
+          display: none;
+        }
+        .users-scroll-area {
+          -ms-overflow-style: none;  /* IE and Edge */
+          scrollbar-width: none;  /* Firefox */
         }
       `}</style>
 
