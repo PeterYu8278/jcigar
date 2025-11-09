@@ -1017,8 +1017,9 @@ const AdminInventory: React.FC = () => {
                                   fontSize: 12, 
                                   cursor: 'pointer', 
                                   transition: 'all 0.2s ease',
-                                  border: 'none',
-                                  whiteSpace: 'nowrap'
+                                  border: '1px solid transparent',
+                                  whiteSpace: 'nowrap',
+                                  width: '100%'
                                 }} 
                                 onClick={() => {
                                   setEditing(record)
@@ -1048,7 +1049,8 @@ const AdminInventory: React.FC = () => {
                                   cursor: 'pointer', 
                                   transition: 'all 0.2s ease',
                                   border: '1px solid rgba(255,255,255,0.2)',
-                                  whiteSpace: 'nowrap'
+                                  whiteSpace: 'nowrap',
+                                  width: '100%'
                                 }} 
                                 onClick={() => {
                                   setViewingProductLogs((record as any)?.id)
