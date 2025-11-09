@@ -88,7 +88,7 @@ const AdminOrders: React.FC = () => {
   }
 
   // 删除订单相关的出库记录
-  const deleteOrderInventoryLogs = async (orderId: string) => {
+  const deleteOrderOutboundRecords = async (orderId: string) => {
     try {
       const outboundOrders = await getAllOutboundOrders()
       
@@ -105,7 +105,7 @@ const AdminOrders: React.FC = () => {
         console.log('✅ [Orders] Deleted', relatedOutboundOrders.length, 'outbound orders')
       }
     } catch (error) {
-      console.error('❌ [Orders] Error deleting inventory records:', error)
+      console.error('❌ [Orders] Error deleting outbound records:', error)
       // 静默处理错误，不影响订单删除
     }
   }
@@ -251,7 +251,7 @@ const AdminOrders: React.FC = () => {
       // 删除参与者分配记录中的订单资料
       await deleteOrderFromEventAllocations(id)
       // 删除订单相关的出库记录
-      await deleteOrderInventoryLogs(id)
+      await deleteOrderOutboundRecords(id)
       // 删除订单
       return await deleteDocument(COLLECTIONS.ORDERS, id)
     },
@@ -518,7 +518,7 @@ const AdminOrders: React.FC = () => {
                 // 先批量清理活动分配记录中的订单资料（单次更新/每个活动，避免覆盖）
                 await deleteOrdersFromEventAllocations(ids.map(String))
                 // 再删除相关的出库记录
-                await Promise.all(ids.map(id => deleteOrderInventoryLogs(id)))
+                await Promise.all(ids.map(id => deleteOrderOutboundRecords(id)))
                 // 最后删除订单
                 await Promise.all(ids.map(id => deleteDocument(COLLECTIONS.ORDERS, id)))
                 return { success: true }
