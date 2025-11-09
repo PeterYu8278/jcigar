@@ -389,6 +389,21 @@ const AdminFinance: React.FC = () => {
       title: t('financeAdmin.description'),
       dataIndex: 'description',
       key: 'description',
+      render: (description: string, record: Transaction) => {
+        const relatedOrders = (record as any)?.relatedOrders || []
+        if (relatedOrders.length === 0) {
+          return description
+        }
+        const orderNos = relatedOrders.map((ro: any) => ro.orderId).join(', ')
+        return (
+          <div>
+            <div>{description}</div>
+            <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 2 }}>
+              {t('financeAdmin.relatedOrders')}: {orderNos}
+            </div>
+          </div>
+        )
+      }
     },
     // 移除类别与原始金额列，仅显示收入/支出与余额
     {
