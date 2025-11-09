@@ -1056,7 +1056,7 @@ const AdminInventory: React.FC = () => {
                                   setViewingProductLogs((record as any)?.id)
                                 }}
                               >
-                                {t('inventory.viewLogs')}
+                                {t('inventory.view')}
                               </button>
                             </div>
                           </div>
@@ -2140,117 +2140,300 @@ const AdminInventory: React.FC = () => {
         open={!!viewingProductLogs}
         onCancel={() => setViewingProductLogs(null)}
         footer={null}
-        width={900}
+        width={isMobile ? '100%' : 900}
+        style={isMobile ? { top: 0, paddingBottom: 0, maxHeight: '100vh' } : {}}
+        bodyStyle={isMobile ? { padding: '12px', maxHeight: 'calc(100vh - 55px)', overflow: 'auto' } : {}}
       >
-        <Table
-          columns={[
-            { 
-              title: t('inventory.time'), 
-              dataIndex: 'createdAt', 
-              key: 'createdAt', 
-              render: (v: any) => { 
-                const d = toDateSafe(v); 
-                return d ? d.toLocaleString() : '-' 
-              },
-              sorter: (a: any, b: any) => {
-                const da = toDateSafe(a.createdAt)?.getTime() || 0
-                const db = toDateSafe(b.createdAt)?.getTime() || 0
-                return da - db
-              }
-            },
-            { 
-              title: t('inventory.type'), 
-              dataIndex: 'type', 
-              key: 'type', 
-              render: (type: string) => {
-                const color = type === 'in' ? 'green' : type === 'out' ? 'red' : 'blue'
-                const text = type === 'in' ? t('inventory.stockIn') : type === 'out' ? t('inventory.stockOut') : t('inventory.adjustment')
-                return <Tag color={color}>{text}</Tag>
-              },
-              filters: [
-                { text: t('inventory.stockIn'), value: 'in' },
-                { text: t('inventory.stockOut'), value: 'out' },
-                { text: t('inventory.adjustment'), value: 'adjustment' }
-              ],
-              onFilter: (value: any, record: any) => record.type === value
-            },
-            { 
-              title: t('inventory.quantity'), 
-              dataIndex: 'quantity', 
-              key: 'quantity',
-              render: (quantity: number, record: any) => {
-                const color = record.type === 'in' ? 'green' : record.type === 'out' ? 'red' : 'blue'
-                const prefix = record.type === 'in' ? '+' : record.type === 'out' ? '-' : ''
-                return <span style={{ color: color === 'green' ? '#52c41a' : color === 'red' ? '#ff4d4f' : '#1890ff' }}>
-                  {prefix}{quantity}
-                </span>
-              },
-              sorter: (a: any, b: any) => a.quantity - b.quantity
-            },
-            { 
-              title: t('inventory.referenceNo'), 
-              dataIndex: 'referenceNo', 
-              key: 'referenceNo', 
-              render: (v: any) => v || '-'
-            },
-            { 
-              title: t('inventory.reason'), 
-              dataIndex: 'reason', 
-              key: 'reason', 
-              render: (v: any) => v || '-'
-            },
-            { 
-              title: t('inventory.customer'), 
-              dataIndex: 'userId', 
-              key: 'userId', 
-              render: (userId: string, record: any) => {
-                // 1. 优先使用记录中直接保存的 userName
-                if (record.userName) return record.userName;
+        {!isMobile ? (
+          // 电脑端 - 使用表格
+          <>
+            <Table
+              columns={[
+                { 
+                  title: t('inventory.time'), 
+                  dataIndex: 'createdAt', 
+                  key: 'createdAt', 
+                  render: (v: any) => { 
+                    const d = toDateSafe(v); 
+                    return d ? d.toLocaleString() : '-' 
+                  },
+                  sorter: (a: any, b: any) => {
+                    const da = toDateSafe(a.createdAt)?.getTime() || 0
+                    const db = toDateSafe(b.createdAt)?.getTime() || 0
+                    return da - db
+                  }
+                },
+                { 
+                  title: t('inventory.type'), 
+                  dataIndex: 'type', 
+                  key: 'type', 
+                  render: (type: string) => {
+                    const color = type === 'in' ? 'green' : type === 'out' ? 'red' : 'blue'
+                    const text = type === 'in' ? t('inventory.stockIn') : type === 'out' ? t('inventory.stockOut') : t('inventory.adjustment')
+                    return <Tag color={color}>{text}</Tag>
+                  },
+                  filters: [
+                    { text: t('inventory.stockIn'), value: 'in' },
+                    { text: t('inventory.stockOut'), value: 'out' },
+                    { text: t('inventory.adjustment'), value: 'adjustment' }
+                  ],
+                  onFilter: (value: any, record: any) => record.type === value
+                },
+                { 
+                  title: t('inventory.quantity'), 
+                  dataIndex: 'quantity', 
+                  key: 'quantity',
+                  render: (quantity: number, record: any) => {
+                    const color = record.type === 'in' ? 'green' : record.type === 'out' ? 'red' : 'blue'
+                    const prefix = record.type === 'in' ? '+' : record.type === 'out' ? '-' : ''
+                    return <span style={{ color: color === 'green' ? '#52c41a' : color === 'red' ? '#ff4d4f' : '#1890ff' }}>
+                      {prefix}{quantity}
+                    </span>
+                  },
+                  sorter: (a: any, b: any) => a.quantity - b.quantity
+                },
+                { 
+                  title: t('inventory.referenceNo'), 
+                  dataIndex: 'referenceNo', 
+                  key: 'referenceNo', 
+                  render: (v: any) => v || '-'
+                },
+                { 
+                  title: t('inventory.reason'), 
+                  dataIndex: 'reason', 
+                  key: 'reason', 
+                  render: (v: any) => v || '-'
+                },
+                { 
+                  title: t('inventory.customer'), 
+                  dataIndex: 'userId', 
+                  key: 'userId', 
+                  render: (userId: string, record: any) => {
+                    // 1. 优先使用记录中直接保存的 userName
+                    if (record.userName) return record.userName;
+                    
+                    // 2. 如果有 userId，从 users 列表查找
+                    if (userId) {
+                      const user = users.find(u => u.id === userId);
+                      if (user?.displayName) return user.displayName;
+                    }
+                    
+                    // 3. 尝试从 referenceNo 查找订单关联的用户
+                    if (record.referenceNo) {
+                      const order = orders.find(o => o.id === record.referenceNo);
+                      if (order?.userId) {
+                        const user = users.find(u => u.id === order.userId);
+                        if (user?.displayName) return user.displayName;
+                        return order.userId;
+                      }
+                    }
+                    
+                    // 4. 都没有则显示 -
+                    return '-';
+                  }
+                },
+                { 
+                  title: t('inventory.operator'), 
+                  dataIndex: 'operatorId', 
+                  key: 'operatorId', 
+                  render: (v: any) => v || '-'
+                },
+              ]}
+              dataSource={currentProductLogs}
+              rowKey="id"
+              pagination={{
+                pageSize: 10,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total })
+              }}
+              size="small"
+            />
+            <div style={{ marginTop: 16, padding: 12, background: '#f5f5f5', borderRadius: 6 }}>
+              <div style={{ fontWeight: 'bold', marginBottom: 8 }}>{t('inventory.summary')}</div>
+              <div>{t('inventory.totalRecords')}：{currentProductLogs.length} {t('inventory.records')}</div>
+              <div>{t('inventory.totalInStock')}：{currentProductLogs.filter(log => log.type === 'in').reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
+              <div>{t('inventory.totalOutStock')}：{currentProductLogs.filter(log => log.type === 'out').reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
+              <div>{t('inventory.currentStock')}：{getComputedStock(viewingProductLogs || '')} {t('inventory.sticks')}</div>
+            </div>
+          </>
+        ) : (
+          // 手机端 - 使用卡片式布局
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* 统计摘要 */}
+            <div style={{ 
+              padding: 16, 
+              background: 'linear-gradient(135deg, rgba(244,175,37,0.1) 0%, rgba(244,175,37,0.05) 100%)', 
+              borderRadius: 12,
+              border: '1px solid rgba(244,175,37,0.2)'
+            }}>
+              <div style={{ 
+                fontSize: 14, 
+                fontWeight: 700, 
+                color: '#f4af25', 
+                marginBottom: 12,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6
+              }}>
+                📊 {t('inventory.summary')}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 12 }}>
+                <div>
+                  <div style={{ color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>{t('inventory.totalRecords')}</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>{currentProductLogs.length}</div>
+                </div>
+                <div>
+                  <div style={{ color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>{t('inventory.currentStock')}</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#f4af25' }}>{getComputedStock(viewingProductLogs || '')}</div>
+                </div>
+                <div>
+                  <div style={{ color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>✅ {t('inventory.totalInStock')}</div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: '#52c41a' }}>
+                    +{currentProductLogs.filter(log => log.type === 'in').reduce((sum, log) => sum + (log.quantity || 0), 0)}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>❌ {t('inventory.totalOutStock')}</div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: '#ff4d4f' }}>
+                    -{currentProductLogs.filter(log => log.type === 'out').reduce((sum, log) => sum + (log.quantity || 0), 0)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 记录列表 */}
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 4 }}>
+              {t('inventory.recentRecords')} ({currentProductLogs.length})
+            </div>
+            
+            {currentProductLogs.length === 0 ? (
+              <div style={{ 
+                padding: 40, 
+                textAlign: 'center', 
+                color: 'rgba(255,255,255,0.4)',
+                fontSize: 14
+              }}>
+                {t('common.noData')}
+              </div>
+            ) : (
+              currentProductLogs.map((log: any) => {
+                const isIn = log.type === 'in'
+                const isOut = log.type === 'out'
+                const typeColor = isIn ? '#52c41a' : isOut ? '#ff4d4f' : '#1890ff'
+                const typeText = isIn ? t('inventory.stockIn') : isOut ? t('inventory.stockOut') : t('inventory.adjustment')
+                const d = toDateSafe(log.createdAt)
                 
-                // 2. 如果有 userId，从 users 列表查找
-                if (userId) {
-                  const user = users.find(u => u.id === userId);
-                  if (user?.displayName) return user.displayName;
-                }
-                
-                // 3. 尝试从 referenceNo 查找订单关联的用户
-                if (record.referenceNo) {
-                  const order = orders.find(o => o.id === record.referenceNo);
+                // 获取客户名称
+                let customerName = '-'
+                if (log.userName) {
+                  customerName = log.userName
+                } else if (log.userId) {
+                  const user = users.find(u => u.id === log.userId)
+                  if (user?.displayName) customerName = user.displayName
+                } else if (log.referenceNo) {
+                  const order = orders.find(o => o.id === log.referenceNo)
                   if (order?.userId) {
-                    const user = users.find(u => u.id === order.userId);
-                    if (user?.displayName) return user.displayName;
-                    return order.userId;
+                    const user = users.find(u => u.id === order.userId)
+                    if (user?.displayName) customerName = user.displayName
                   }
                 }
                 
-                // 4. 都没有则显示 -
-                return '-';
-              }
-            },
-            { 
-              title: t('inventory.operator'), 
-              dataIndex: 'operatorId', 
-              key: 'operatorId', 
-              render: (v: any) => v || '-'
-            },
-          ]}
-          dataSource={currentProductLogs}
-          rowKey="id"
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total })
-          }}
-          size="small"
-        />
-        <div style={{ marginTop: 16, padding: 12, background: '#f5f5f5', borderRadius: 6 }}>
-          <div style={{ fontWeight: 'bold', marginBottom: 8 }}>{t('inventory.summary')}</div>
-          <div>{t('inventory.totalRecords')}：{currentProductLogs.length} {t('inventory.records')}</div>
-          <div>{t('inventory.totalInStock')}：{currentProductLogs.filter(log => log.type === 'in').reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
-          <div>{t('inventory.totalOutStock')}：{currentProductLogs.filter(log => log.type === 'out').reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
-          <div>{t('inventory.currentStock')}：{getComputedStock(viewingProductLogs || '')} {t('inventory.sticks')}</div>
-        </div>
+                return (
+                  <div 
+                    key={log.id} 
+                    style={{ 
+                      padding: 12,
+                      background: 'rgba(255,255,255,0.05)',
+                      borderRadius: 10,
+                      border: `1px solid ${typeColor}33`,
+                      position: 'relative'
+                    }}
+                  >
+                    {/* 类型标签 */}
+                    <div style={{ 
+                      position: 'absolute',
+                      top: -8,
+                      right: 12,
+                      padding: '2px 8px',
+                      background: typeColor,
+                      color: '#fff',
+                      fontSize: 11,
+                      fontWeight: 600,
+                      borderRadius: 4,
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                    }}>
+                      {typeText}
+                    </div>
+                    
+                    {/* 数量 - 突出显示 */}
+                    <div style={{ 
+                      fontSize: 24, 
+                      fontWeight: 700, 
+                      color: typeColor,
+                      marginBottom: 8,
+                      marginTop: 4
+                    }}>
+                      {isIn ? '+' : isOut ? '-' : ''}{log.quantity}
+                    </div>
+                    
+                    {/* 信息网格 */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.5)' }}>⏰ {t('inventory.time')}</span>
+                        <span style={{ color: '#fff', fontWeight: 500 }}>
+                          {d ? d.toLocaleString('zh-CN', { 
+                            month: '2-digit', 
+                            day: '2-digit', 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          }) : '-'}
+                        </span>
+                      </div>
+                      
+                      {log.reason && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ color: 'rgba(255,255,255,0.5)' }}>📝 {t('inventory.reason')}</span>
+                          <span style={{ color: '#fff', fontWeight: 500, textAlign: 'right', flex: 1, marginLeft: 8 }}>
+                            {log.reason}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {log.referenceNo && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ color: 'rgba(255,255,255,0.5)' }}>🔖 {t('inventory.referenceNo')}</span>
+                          <span style={{ 
+                            color: '#f4af25', 
+                            fontWeight: 500,
+                            fontSize: 11,
+                            fontFamily: 'monospace'
+                          }}>
+                            {log.referenceNo}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {customerName !== '-' && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ color: 'rgba(255,255,255,0.5)' }}>👤 {t('inventory.customer')}</span>
+                          <span style={{ color: '#fff', fontWeight: 500 }}>{customerName}</span>
+                        </div>
+                      )}
+                      
+                      {log.operatorId && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ color: 'rgba(255,255,255,0.5)' }}>👨‍💼 {t('inventory.operator')}</span>
+                          <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }}>{log.operatorId}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        )}
       </Modal>
 
       {/* 品牌管理 - 添加/编辑品牌 */}
