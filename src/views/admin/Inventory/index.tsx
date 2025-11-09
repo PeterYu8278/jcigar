@@ -4710,18 +4710,6 @@ const AdminInventory: React.FC = () => {
                       background: '#fafafa'
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                      <h5 style={{ margin: 0 }}>产品 {index + 1}</h5>
-                      <Button
-                        type="link"
-                        danger
-                        size="small"
-                        onClick={() => remove(field.name)}
-                      >
-                        删除
-                      </Button>
-                    </div>
-                    
                     <Form.Item
                       {...field}
                       name={[field.name, 'cigarName']}
@@ -4739,14 +4727,17 @@ const AdminInventory: React.FC = () => {
                       <Input />
                     </Form.Item>
                     
-                    {/* 产品、数量、单价同行显示 */}
-                    <Row gutter={12}>
-                      <Col span={12}>
+                    {/* 产品标题、产品选择、数量、单价、删除按钮 - 全部同行显示 */}
+                    <Row gutter={12} align="middle">
+                      <Col flex="80px">
+                        <span style={{ fontWeight: 600, color: '#666' }}>产品 {index + 1}</span>
+                      </Col>
+                      <Col flex="auto">
                         <Form.Item
                           {...field}
                           name={[field.name, 'cigarId']}
-                          label="产品"
                           rules={[{ required: true, message: '请选择产品' }]}
+                          style={{ marginBottom: 0 }}
                         >
                           <Select
                             showSearch
@@ -4774,12 +4765,12 @@ const AdminInventory: React.FC = () => {
                           </Select>
                         </Form.Item>
                       </Col>
-                      <Col span={6}>
+                      <Col flex="100px">
                         <Form.Item
                           {...field}
                           name={[field.name, 'quantity']}
-                          label="数量"
                           rules={[{ required: true, message: '请输入数量' }]}
+                          style={{ marginBottom: 0 }}
                         >
                           <InputNumber
                             placeholder="数量"
@@ -4788,11 +4779,11 @@ const AdminInventory: React.FC = () => {
                           />
                         </Form.Item>
                       </Col>
-                      <Col span={6}>
+                      <Col flex="100px">
                         <Form.Item
                           {...field}
                           name={[field.name, 'unitPrice']}
-                          label="单价 (RM)"
+                          style={{ marginBottom: 0 }}
                         >
                           <InputNumber
                             placeholder="单价"
@@ -4801,6 +4792,17 @@ const AdminInventory: React.FC = () => {
                             style={{ width: '100%' }}
                           />
                         </Form.Item>
+                      </Col>
+                      <Col flex="60px">
+                        <Button
+                          type="link"
+                          danger
+                          size="small"
+                          onClick={() => remove(field.name)}
+                          style={{ padding: 0 }}
+                        >
+                          删除
+                        </Button>
                       </Col>
                     </Row>
                   </div>
