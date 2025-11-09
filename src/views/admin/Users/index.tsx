@@ -565,7 +565,7 @@ const AdminUsers: React.FC = () => {
           overflow: 'hidden'
         }}>
           {/* 固定顶部区域 - 不滚动 */}
-          <div style={{ flexShrink: 0, padding: '0 12px' }}>
+          <div style={{ flexShrink: 0 }}>
             {/* 标题栏 */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0px' }}>
               <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', margin: 0 }}>{t('navigation.users')}</h1>
@@ -657,7 +657,6 @@ const AdminUsers: React.FC = () => {
               flex: 1,
               overflowY: 'auto',
               overflowX: 'hidden',
-              padding: '0 12px',
               paddingBottom: '100px',
               position: 'relative',
               zIndex: 1
@@ -720,9 +719,8 @@ const AdminUsers: React.FC = () => {
           style={{
             position: 'fixed',
             right: 3,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            maxHeight: '90vh',
+            top: '1%',
+            maxHeight: '100vh',
             padding: 6,
             zIndex: 1000,
             background: 'rgba(0,0,0,0.35)',
