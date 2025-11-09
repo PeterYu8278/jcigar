@@ -719,8 +719,8 @@ const AdminUsers: React.FC = () => {
           style={{
             position: 'fixed',
             right: 3,
-            top: '1%',
-            maxHeight: '100vh',
+            top: '5vh',
+            maxHeight: '90vh',
             padding: 6,
             zIndex: 1000,
             background: 'rgba(0,0,0,0.35)',
