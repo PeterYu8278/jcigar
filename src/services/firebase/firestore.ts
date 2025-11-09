@@ -518,31 +518,44 @@ export const createOrdersFromEventAllocations = async (eventId: string): Promise
 
           // 如果是新订单，创建出库记录（仅对真实雪茄行生成，不含费用行）
           if (isNewOrder) {
+            const outboundItems = []
+            let outboundTotalQty = 0
+            let outboundTotalValue = 0
+            
             for (const it of orderItems) {
-              // 仅对真实存在的雪茄生成库存日志（费用行不会匹配到实体雪茄）
+              // 仅对真实存在的雪茄生成出库记录（费用行不会匹配到实体雪茄）
               const cigar = await getCigarById(it.cigarId)
               if (!cigar) continue
-              const ref = orderId
-              // 去重：如果同一订单、同一雪茄的出库记录已存在，则跳过
-              const dupQ = query(
-                collection(db, COLLECTIONS.INVENTORY_LOGS),
-                where('referenceNo', '==', ref),
-                where('cigarId', '==', it.cigarId),
-                where('type', '==', 'out')
-              )
-              const dupSnap = await getDocs(dupQ)
-              if (!dupSnap.empty) continue
-              await createDocument(COLLECTIONS.INVENTORY_LOGS, {
+              
+              const outboundItem = {
                 cigarId: it.cigarId,
                 cigarName: cigar.name,
-                itemType: 'cigar',
-                type: 'out',
+                itemType: 'cigar' as const,
                 quantity: it.quantity,
+                unitPrice: it.price,
+                subtotal: it.quantity * it.price
+              }
+              
+              outboundItems.push(outboundItem)
+              outboundTotalQty += it.quantity
+              outboundTotalValue += outboundItem.subtotal
+            }
+            
+            // 创建出库订单
+            if (outboundItems.length > 0) {
+              const outboundOrderData: Omit<OutboundOrder, 'id' | 'updatedAt'> = {
+                referenceNo: orderId,
+                type: 'event',
                 reason: String((event as any)?.title || '活动订单出库'),
-                referenceNo: ref,
+                items: outboundItems,
+                totalQuantity: outboundTotalQty,
+                totalValue: outboundTotalValue,
+                status: 'completed',
                 operatorId: 'system',
-                createdAt: new Date(),
-              } as any)
+                createdAt: new Date()
+              }
+              
+              await createOutboundOrder(outboundOrderData)
             }
           }
 
@@ -635,30 +648,43 @@ export const createDirectSaleOrder = async (params: { userId: string; items: { c
     
     // 如果订单创建成功，创建对应的出库记录
     if (result.success) {
+      const outboundItems = []
+      let outboundTotalQty = 0
+      let outboundTotalValue = 0
+      
       for (const item of itemsDetailed) {
         const cigar = await getCigarById(item.cigarId)
         if (!cigar) continue
-        const ref = result.id
-        // 去重：如果同一订单、同一雪茄的出库记录已存在，则跳过
-        const dupQ = query(
-          collection(db, COLLECTIONS.INVENTORY_LOGS),
-          where('referenceNo', '==', ref),
-          where('cigarId', '==', item.cigarId),
-          where('type', '==', 'out')
-        )
-        const dupSnap = await getDocs(dupQ)
-        if (!dupSnap.empty) continue
-        await createDocument(COLLECTIONS.INVENTORY_LOGS, {
+        
+        const outboundItem = {
           cigarId: item.cigarId,
           cigarName: cigar.name,
-          itemType: 'cigar',
-          type: 'out',
+          itemType: 'cigar' as const,
           quantity: item.quantity,
+          unitPrice: item.price,
+          subtotal: item.quantity * item.price
+        }
+        
+        outboundItems.push(outboundItem)
+        outboundTotalQty += item.quantity
+        outboundTotalValue += outboundItem.subtotal
+      }
+      
+      // 创建出库订单
+      if (outboundItems.length > 0) {
+        const outboundOrderData: Omit<OutboundOrder, 'id' | 'updatedAt'> = {
+          referenceNo: result.id,
+          type: 'sale',
           reason: '直接销售出库',
-          referenceNo: ref,
+          items: outboundItems,
+          totalQuantity: outboundTotalQty,
+          totalValue: outboundTotalValue,
+          status: 'completed',
           operatorId: 'system',
-          createdAt: new Date(),
-        } as any)
+          createdAt: new Date()
+        }
+        
+        await createOutboundOrder(outboundOrderData)
       }
     }
     
