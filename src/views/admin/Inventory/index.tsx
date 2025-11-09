@@ -290,24 +290,57 @@ const AdminInventory: React.FC = () => {
   // 每个商品的总入库/总出库数量（只统计雪茄产品）
   const totalsByCigarId = useMemo(() => {
     const map = new Map<string, { totalIn: number; totalOut: number }>()
-    for (const log of inventoryLogs) {
-      const id = (log as any)?.cigarId
-      if (!id) continue
-      
-      // 只统计雪茄产品
-      const itemType = (log as any)?.itemType
-      if (itemType && itemType !== 'cigar') continue
-      
-      const type = (log as any)?.type
-      const qtyRaw = (log as any)?.quantity ?? 0
-      const qty = Number.isFinite(qtyRaw) ? Math.max(0, Math.floor(qtyRaw)) : 0
-      const prev = map.get(id) || { totalIn: 0, totalOut: 0 }
-      if (type === 'in') prev.totalIn += qty
-      else if (type === 'out') prev.totalOut += qty
-      map.set(id, prev)
+    
+    if (useNewArchitecture) {
+      // 新架构：使用 inventoryMovements，过滤已取消订单
+      for (const movement of inventoryMovements) {
+        const id = movement.cigarId
+        if (!id) continue
+        
+        // 只统计雪茄产品
+        const itemType = movement.itemType
+        if (itemType && itemType !== 'cigar') continue
+        
+        // 过滤已取消订单
+        if (movement.inboundOrderId) {
+          const order = inboundOrders.find(o => o.id === movement.inboundOrderId)
+          if (order && order.status === 'cancelled') continue
+        }
+        if (movement.outboundOrderId) {
+          const order = outboundOrders.find(o => o.id === movement.outboundOrderId)
+          if (order && order.status === 'cancelled') continue
+        }
+        
+        const type = movement.type
+        const qtyRaw = movement.quantity ?? 0
+        const qty = Number.isFinite(qtyRaw) ? Math.max(0, Math.floor(Math.abs(qtyRaw))) : 0  // 取绝对值
+        const prev = map.get(id) || { totalIn: 0, totalOut: 0 }
+        if (type === 'in') prev.totalIn += qty
+        else if (type === 'out') prev.totalOut += qty
+        map.set(id, prev)
+      }
+    } else {
+      // 旧架构：使用 inventoryLogs
+      for (const log of inventoryLogs) {
+        const id = (log as any)?.cigarId
+        if (!id) continue
+        
+        // 只统计雪茄产品
+        const itemType = (log as any)?.itemType
+        if (itemType && itemType !== 'cigar') continue
+        
+        const type = (log as any)?.type
+        const qtyRaw = (log as any)?.quantity ?? 0
+        const qty = Number.isFinite(qtyRaw) ? Math.max(0, Math.floor(qtyRaw)) : 0
+        const prev = map.get(id) || { totalIn: 0, totalOut: 0 }
+        if (type === 'in') prev.totalIn += qty
+        else if (type === 'out') prev.totalOut += qty
+        map.set(id, prev)
+      }
     }
+    
     return map
-  }, [inventoryLogs])
+  }, [useNewArchitecture, inventoryLogs, inventoryMovements, inboundOrders, outboundOrders])
 
   const getTotals = (cigarId?: string) => {
     if (!cigarId) return { totalIn: 0, totalOut: 0 }
@@ -834,22 +867,34 @@ const AdminInventory: React.FC = () => {
       // 新架构：从 inventoryMovements 获取并转换为统一格式
       return inventoryMovements
         .filter((movement: InventoryMovement) => movement.cigarId === viewingProductLogs)
-        .map((movement: InventoryMovement) => ({
-          id: movement.id,
-          cigarId: movement.cigarId,
-          cigarName: movement.cigarName,
-          itemType: movement.itemType,
-          type: movement.type,
-          quantity: movement.quantity,
-          unitPrice: movement.unitPrice,
-          referenceNo: movement.referenceNo,
-          reason: movement.reason,
-          operatorId: movement.operatorId,
-          createdAt: movement.createdAt,
-          // 额外信息
-          inboundOrderId: movement.inboundOrderId,
-          outboundOrderId: movement.outboundOrderId
-        }))
+        .map((movement: InventoryMovement) => {
+          // 获取操作人信息（从关联的订单中获取）
+          let operatorId = 'system'
+          if (movement.inboundOrderId) {
+            const order = inboundOrders.find(o => o.id === movement.inboundOrderId)
+            if (order) operatorId = order.operatorId
+          } else if (movement.outboundOrderId) {
+            const order = outboundOrders.find(o => o.id === movement.outboundOrderId)
+            if (order) operatorId = order.operatorId
+          }
+          
+          return {
+            id: movement.id,
+            cigarId: movement.cigarId,
+            cigarName: movement.cigarName,
+            itemType: movement.itemType,
+            type: movement.type,
+            quantity: movement.quantity,
+            unitPrice: movement.unitPrice,
+            referenceNo: movement.referenceNo,
+            reason: movement.reason,
+            operatorId: operatorId,
+            createdAt: movement.createdAt,
+            // 额外信息
+            inboundOrderId: movement.inboundOrderId,
+            outboundOrderId: movement.outboundOrderId
+          }
+        })
         .sort((a, b) => {
           const dateA = a.createdAt?.getTime?.() || 0
           const dateB = b.createdAt?.getTime?.() || 0
