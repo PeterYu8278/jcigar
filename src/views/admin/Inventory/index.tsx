@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Table, Button, Tag, Space, Typography, Input, Select, Progress, Modal, Form, InputNumber, message, Dropdown, Checkbox, Card, Upload } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, WarningOutlined, UploadOutlined, DownloadOutlined, MinusCircleOutlined, EyeOutlined } from '@ant-design/icons'
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, WarningOutlined, UploadOutlined, DownloadOutlined, MinusCircleOutlined } from '@ant-design/icons'
 import type { Cigar, InventoryLog, Brand } from '../../../types'
 import { getCigars, createDocument, updateDocument, deleteDocument, COLLECTIONS, getAllInventoryLogs, getAllOrders, getUsers, getBrands, getBrandById } from '../../../services/firebase/firestore'
 import ImageUpload from '../../../components/common/ImageUpload'
@@ -350,7 +350,7 @@ const AdminInventory: React.FC = () => {
       width: 100,
       render: (_: any, record: any) => (
         <Space size="small" style={{ justifyContent: 'center', width: '100%' }}>
-          <Button type="link" icon={<EyeOutlined />} size="small" onClick={() => {
+          <Button type="link" icon={<EditOutlined />} size="small" onClick={() => {
             setEditing(record)
             form.setFieldsValue({
               name: record.name,
@@ -1006,22 +1006,57 @@ const AdminInventory: React.FC = () => {
                                 ) })()}
                               </div>
                             </div>
-                            <button style={{ padding: '4px 8px', borderRadius: 6, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => {
-                              setEditing(record)
-                              form.setFieldsValue({
-                                name: (record as any).name,
-                                brand: (record as any).brand,
-                                origin: (record as any).origin,
-                                size: (record as any).size,
-                                strength: (record as any).strength,
-                                price: (record as any).price,
-                                stock: getComputedStock((record as any)?.id) ?? 0,
-                                minStock: (record as any)?.inventory?.minStock ?? 0,
-                                reserved: (record as any)?.inventory?.reserved ?? 0,
-                              })
-                            }}>
-                              {t('common.edit')}
-                            </button>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              <button 
+                                style={{ 
+                                  padding: '4px 8px', 
+                                  borderRadius: 6, 
+                                  background: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
+                                  color: '#111', 
+                                  fontWeight: 600, 
+                                  fontSize: 12, 
+                                  cursor: 'pointer', 
+                                  transition: 'all 0.2s ease',
+                                  border: 'none',
+                                  whiteSpace: 'nowrap'
+                                }} 
+                                onClick={() => {
+                                  setEditing(record)
+                                  form.setFieldsValue({
+                                    name: (record as any).name,
+                                    brand: (record as any).brand,
+                                    origin: (record as any).origin,
+                                    size: (record as any).size,
+                                    strength: (record as any).strength,
+                                    price: (record as any).price,
+                                    stock: getComputedStock((record as any)?.id) ?? 0,
+                                    minStock: (record as any)?.inventory?.minStock ?? 0,
+                                    reserved: (record as any)?.inventory?.reserved ?? 0,
+                                  })
+                                }}
+                              >
+                                {t('common.edit')}
+                              </button>
+                              <button 
+                                style={{ 
+                                  padding: '4px 8px', 
+                                  borderRadius: 6, 
+                                  background: 'rgba(255,255,255,0.1)', 
+                                  color: '#fff', 
+                                  fontWeight: 600, 
+                                  fontSize: 12, 
+                                  cursor: 'pointer', 
+                                  transition: 'all 0.2s ease',
+                                  border: '1px solid rgba(255,255,255,0.2)',
+                                  whiteSpace: 'nowrap'
+                                }} 
+                                onClick={() => {
+                                  setViewingProductLogs((record as any)?.id)
+                                }}
+                              >
+                                {t('inventory.viewLogs')}
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
