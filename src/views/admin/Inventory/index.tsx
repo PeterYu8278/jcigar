@@ -4703,11 +4703,7 @@ const AdminInventory: React.FC = () => {
                   <div
                     key={field.key}
                     style={{
-                      padding: 12,
-                      border: '1px solid #d9d9d9',
-                      borderRadius: 8,
-                      marginBottom: 12,
-                      background: '#fafafa'
+                      marginBottom: 8
                     }}
                   >
                     <Form.Item
