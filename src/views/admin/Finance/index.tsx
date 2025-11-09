@@ -18,6 +18,7 @@ const AdminFinance: React.FC = () => {
   const [orders, setOrders] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
   const [cigars, setCigars] = useState<any[]>([])
+  const [inventoryLogs, setInventoryLogs] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [creating, setCreating] = useState(false)
   const [viewing, setViewing] = useState<Transaction | null>(null)
@@ -161,6 +162,19 @@ const AdminFinance: React.FC = () => {
   const totalMatchedAmount = watchedRelatedOrders.reduce((sum: number, item: any) => sum + Number(item?.amount || 0), 0)
   const remainingAmount = transactionAmount - totalMatchedAmount
 
+  // 获取关联订单的入库记录
+  const relatedInventoryLogs = useMemo(() => {
+    const orderIds = watchedRelatedOrders
+      .map((ro: any) => ro?.orderId)
+      .filter(Boolean)
+    
+    if (orderIds.length === 0) return []
+    
+    return inventoryLogs.filter((log: any) => 
+      orderIds.includes(log.referenceNo) && log.type === 'out'
+    )
+  }, [watchedRelatedOrders, inventoryLogs])
+
   // 计算订单匹配状态
   const getOrderMatchStatus = (orderId: string) => {
     const order = orders.find(o => o.id === orderId)
@@ -210,14 +224,16 @@ const AdminFinance: React.FC = () => {
   useEffect(() => {
     loadTransactions()
     ;(async () => {
-      const [orderList, userList, cigarList] = await Promise.all([
+      const [orderList, userList, cigarList, logList] = await Promise.all([
         getAllOrders(),
         getAllUsers(),
-        getCigars()
+        getCigars(),
+        getAllInventoryLogs()
       ])
       setOrders(orderList || [])
       setUsers(userList || [])
       setCigars(cigarList || [])
+      setInventoryLogs(logList || [])
     })()
   }, [])
 
@@ -1250,6 +1266,128 @@ const AdminFinance: React.FC = () => {
                           </div>
                         )
                       })()}
+                      
+                      {/* 关联的入库记录 */}
+                      {relatedInventoryLogs.length > 0 && (
+                        <div style={{
+                          marginTop: 16,
+                          padding: 12,
+                          background: 'rgba(82, 196, 26, 0.08)',
+                          borderRadius: 8,
+                          border: '1px solid rgba(82, 196, 26, 0.3)'
+                        }}>
+                          <div style={{ 
+                            fontSize: 14, 
+                            fontWeight: 600, 
+                            color: '#fff',
+                            marginBottom: 12,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6
+                          }}>
+                            📦 {t('financeAdmin.relatedInventoryLogs')}
+                          </div>
+                          
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {relatedInventoryLogs.map((log: any) => {
+                              const cigar = cigars.find(c => c.id === log.cigarId)
+                              const cigarName = log.cigarName || cigar?.name || log.cigarId
+                              const order = orders.find(o => o.id === log.referenceNo)
+                              const matchedOrder = watchedRelatedOrders.find((ro: any) => ro?.orderId === log.referenceNo)
+                              
+                              return (
+                                <div 
+                                  key={log.id}
+                                  style={{
+                                    padding: 10,
+                                    background: 'rgba(255,255,255,0.05)',
+                                    borderRadius: 6,
+                                    border: matchedOrder ? '1px solid rgba(82, 196, 26, 0.4)' : '1px solid rgba(255,255,255,0.1)'
+                                  }}
+                                >
+                                  <div style={{ 
+                                    display: 'flex', 
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginBottom: 6
+                                  }}>
+                                    <div style={{ 
+                                      fontSize: 13, 
+                                      fontWeight: 600, 
+                                      color: '#fff',
+                                      flex: 1
+                                    }}>
+                                      {cigarName}
+                                    </div>
+                                    <div style={{ 
+                                      fontSize: 14, 
+                                      fontWeight: 700, 
+                                      color: '#ff4d4f',
+                                      whiteSpace: 'nowrap',
+                                      marginLeft: 8
+                                    }}>
+                                      -{log.quantity}
+                                    </div>
+                                  </div>
+                                  
+                                  <div style={{ 
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    fontSize: 11,
+                                    color: 'rgba(255,255,255,0.6)'
+                                  }}>
+                                    <div>
+                                      🔖 {log.referenceNo}
+                                    </div>
+                                    {matchedOrder && (
+                                      <div style={{ color: '#52c41a' }}>
+                                        ✓ RM {matchedOrder.amount.toFixed(2)}
+                                      </div>
+                                    )}
+                                  </div>
+                                  
+                                  {log.reason && log.reason !== '-' && (
+                                    <div style={{ 
+                                      marginTop: 4,
+                                      fontSize: 11, 
+                                      color: 'rgba(255,255,255,0.5)' 
+                                    }}>
+                                      📝 {log.reason}
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                          
+                          {/* 库存汇总 */}
+                          <div style={{
+                            marginTop: 12,
+                            padding: 8,
+                            background: 'rgba(82, 196, 26, 0.1)',
+                            borderRadius: 6,
+                            fontSize: 12,
+                            color: '#fff'
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <div>{t('financeAdmin.totalOutboundItems')}</div>
+                              <div style={{ fontWeight: 600, color: '#ff4d4f' }}>
+                                -{relatedInventoryLogs.reduce((sum: number, log: any) => sum + Number(log.quantity || 0), 0)} {t('inventory.sticks')}
+                              </div>
+                            </div>
+                            <div style={{ 
+                              display: 'flex', 
+                              justifyContent: 'space-between',
+                              marginTop: 4,
+                              fontSize: 11,
+                              color: 'rgba(255,255,255,0.6)'
+                            }}>
+                              <div>{t('financeAdmin.productTypes')}</div>
+                              <div>{relatedInventoryLogs.length} {t('inventory.types')}</div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </Form.List>
