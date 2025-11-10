@@ -629,7 +629,7 @@ const AdminEvents: React.FC = () => {
           )}
           
           <CreateButton
-            onCreate={() => { 
+            onCreate={() => {
               console.log('🔵 [Events] CreateButton clicked')
               console.log('🔵 [Events] Opening create modal')
               setCreating(true)
