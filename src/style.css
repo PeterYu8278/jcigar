@@ -220,6 +220,11 @@ button + button { margin-left: 8px; }
   padding: 0 !important;
 }
 
+/* Form Item 间距调整 */
+.ant-form-item {
+  margin-bottom: 1px !important;
+}
+
 /* 暗色主题弹窗表单样式 */
 .dark-theme-form {
   color: #FFFFFF !important;
