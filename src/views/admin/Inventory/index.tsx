@@ -2427,43 +2427,38 @@ const AdminInventory: React.FC = () => {
                 />
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <div style={{ fontWeight: 600, marginBottom: 4, color: '#fff' }}>{t('inventory.inStockRecord')}</div>
                   {inLogsGroupedByReference.map((group: any) => {
                     const isExpanded = inLogsExpandedKeys.includes(group.referenceNo || 'no-ref')
                     return (
                       <div 
                         key={group.referenceNo || 'no-ref'} 
                         style={{
-                          borderRadius: 12,
-                          background: 'rgba(82, 196, 26, 0.08)',
-                          border: '1px solid rgba(82, 196, 26, 0.3)',
-                          overflow: 'hidden'
+                          borderRadius: 16,
+                          background: 'rgba(0, 0, 0, 0.2)',
+                          border: '1px solid rgba(244, 175, 37, 0.2)',
+                          overflow: 'hidden',
+                          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.25)'
                         }}
                       >
                         {/* 单号头部 */}
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'stretch'
-                        }}>
-                          <div 
-                            onClick={() => {
-                              const key = group.referenceNo || 'no-ref'
-                              if (isExpanded) {
-                                setInLogsExpandedKeys(prev => prev.filter(k => k !== key))
-                              } else {
-                                setInLogsExpandedKeys(prev => [...prev, key])
-                              }
-                            }}
-                            style={{
-                              flex: 1,
-                              padding: 12,
-                              background: 'rgba(82, 196, 26, 0.15)',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center'
-                            }}
-                          >
+                        <div 
+                          onClick={() => {
+                            const key = group.referenceNo || 'no-ref'
+                            if (isExpanded) {
+                              setInLogsExpandedKeys(prev => prev.filter(k => k !== key))
+                            } else {
+                              setInLogsExpandedKeys(prev => [...prev, key])
+                            }
+                          }}
+                          style={{
+                            padding: 12,
+                            background: 'rgba(0, 0, 0, 0.3)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }}
+                        >
                             <div style={{ flex: 1 }}>
                               <div style={{ 
                                 display: 'flex',
@@ -2473,12 +2468,12 @@ const AdminInventory: React.FC = () => {
                                 flexWrap: 'wrap'
                               }}>
                                 <div style={{ 
-                                  fontSize: 14, 
+                                  fontSize: 16, 
                                   fontWeight: 700, 
                                   color: '#fff',
                                   fontFamily: 'monospace'
                                 }}>
-                                  📦 {group.referenceNo}
+                                  {group.referenceNo}
                                 </div>
                                 {(() => {
                                   const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
@@ -2563,31 +2558,42 @@ const AdminInventory: React.FC = () => {
                                   return null
                                 })()}
                               </div>
-                              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>
-                                {formatYMD(group.date)} · {group.productCount} {t('inventory.types')} · {group.totalQuantity} {t('inventory.sticks')}
+                              <div style={{ 
+                                fontSize: 12, 
+                                color: 'rgba(255,255,255,0.7)',
+                                marginTop: 4
+                              }}>
+                                {formatYMD(group.date)} · {group.productCount} {t('inventory.types')} · <span style={{ color: '#52c41a', fontWeight: 600 }}>+{group.totalQuantity}</span> {t('inventory.sticks')}
                                 {(() => {
                                   const status = getInboundReferenceMatchStatus(group.referenceNo)
                                   if (status.total > 0) {
-                                    return ` · RM ${status.total.toFixed(2)}`
+                                    return (
+                                      <span style={{ color: '#f4af25', fontWeight: 700 }}>
+                                        {' · RM '}{status.total.toFixed(2)}
+                                      </span>
+                                    )
                                   }
                                   return ''
                                 })()}
                               </div>
                             </div>
                             <div style={{ 
-                              fontSize: 18, 
+                              fontSize: 20, 
                               fontWeight: 700, 
-                              color: '#52c41a',
-                              marginRight: 8
+                              color: '#f4af25',
+                              marginLeft: 8
                             }}>
                               {isExpanded ? '▲' : '▼'}
                             </div>
                           </div>
-                          
-                          {/* 操作按钮组 */}
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                            {/* 编辑订单按钮 */}
-                            <button
+                        
+                        {/* 展开的产品列表 */}
+                        {isExpanded && (
+                          <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {/* 操作按钮组 */}
+                            <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                              {/* 编辑订单按钮 */}
+                              <button
                               onClick={(e) => {
                                 e.stopPropagation()
                                 const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
@@ -2603,17 +2609,18 @@ const AdminInventory: React.FC = () => {
                                 }
                               }}
                               style={{
-                                padding: '3px 6px',
-                                border: '1px solid rgba(24, 144, 255, 0.5)',
-                                borderRadius: 4,
-                                background: 'rgba(24, 144, 255, 0.1)',
-                                color: '#1890ff',
-                                fontSize: 10,
-                                fontWeight: 600,
-                                cursor: 'pointer'
+                                flex: 1,
+                                padding: '8px 12px',
+                                borderRadius: 8,
+                                background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                                color: '#111',
+                                fontSize: 12,
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                border: 'none'
                               }}
                             >
-                              ✏️
+                              ✏️ 编辑
                             </button>
                             
                             {/* 取消订单按钮 */}
@@ -2651,17 +2658,18 @@ const AdminInventory: React.FC = () => {
                                 })
                               }}
                               style={{
-                                padding: '3px 6px',
-                                border: '1px solid rgba(250, 173, 20, 0.5)',
-                                borderRadius: 4,
-                                background: 'rgba(250, 173, 20, 0.1)',
+                                flex: 1,
+                                padding: '8px 12px',
+                                borderRadius: 8,
+                                background: 'rgba(255, 255, 255, 0.1)',
                                 color: '#faad14',
-                                fontSize: 10,
+                                fontSize: 12,
                                 fontWeight: 600,
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                border: '1px solid rgba(255, 255, 255, 0.2)'
                               }}
                             >
-                              ⚠️
+                              ⚠️ 取消
                             </button>
                             
                             {/* 退货按钮 */}
@@ -2717,14 +2725,15 @@ const AdminInventory: React.FC = () => {
                                 })
                               }}
                               style={{
-                                padding: '6px 8px',
-                                border: '1px solid rgba(255, 122, 69, 0.5)',
-                                borderRadius: 6,
-                                background: 'rgba(255, 122, 69, 0.1)',
+                                flex: 1,
+                                padding: '8px 12px',
+                                borderRadius: 8,
+                                background: 'rgba(255, 255, 255, 0.1)',
                                 color: '#ff7a45',
-                                fontSize: 11,
+                                fontSize: 12,
                                 fontWeight: 600,
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                border: '1px solid rgba(255, 255, 255, 0.2)'
                               }}
                             >
                               🔄 退货
@@ -2764,24 +2773,20 @@ const AdminInventory: React.FC = () => {
                                 })
                               }}
                               style={{
-                                padding: '4px 6px',
-                                border: '1px solid rgba(255, 77, 79, 0.5)',
-                                borderRadius: 4,
-                                background: 'rgba(255, 77, 79, 0.1)',
+                                flex: 1,
+                                padding: '8px 12px',
+                                borderRadius: 8,
+                                background: 'rgba(255, 255, 255, 0.1)',
                                 color: '#ff4d4f',
-                                fontSize: 10,
+                                fontSize: 12,
                                 fontWeight: 600,
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                border: '1px solid rgba(255, 255, 255, 0.2)'
                               }}
                             >
-                              🗑️
+                              🗑️ 删除
                             </button>
-                          </div>
-                        </div>
-                        
-                        {/* 展开的产品列表 */}
-                        {isExpanded && (
-                          <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            </div>
                             {group.logs.map((log: any) => {
                     const cigar = items.find(i => i.id === log.cigarId)
                               const itemValue = Number(log.quantity || 0) * Number(log.unitPrice || 0)
@@ -2789,118 +2794,78 @@ const AdminInventory: React.FC = () => {
                                 <div 
                                   key={log.id}
                                   style={{
-                                    padding: 10,
-                                    background: 'rgba(255,255,255,0.05)',
-                                    borderRadius: 8,
-                                    border: '1px solid rgba(82, 196, 26, 0.2)'
+                                    display: 'flex',
+                                    alignItems: 'flex-start',
+                                    gap: 12,
+                                    padding: 12,
+                                    background: 'rgba(255,255,255,0.03)',
+                                    borderRadius: 12,
+                                    border: '1px solid rgba(255, 255, 255, 0.1)'
                                   }}
                                 >
-                                  <div style={{ 
-                        display: 'flex',
-                                    justifyContent: 'space-between',
-                        alignItems: 'center',
-                                    marginBottom: 6
+                                  {/* 左侧图片占位 */}
+                                  <div style={{
+                                    width: 80,
+                                    height: 80,
+                                    borderRadius: 10,
+                                    overflow: 'hidden',
+                                    background: 'rgba(255, 255, 255, 0.08)',
+                                    flexShrink: 0
                                   }}>
-                                    <div style={{ 
-                                      fontSize: 13, 
-                                      fontWeight: 600, 
-                                      color: '#fff',
-                                      flex: 1,
-                                      overflow: 'hidden',
-                                      textOverflow: 'ellipsis',
-                                      whiteSpace: 'nowrap',
-                                      marginRight: 8
-                                    }}>
-                                      {(() => {
-                                        const itemType = log.itemType || 'cigar'
-                                        const itemTypeIcons: { [key: string]: string } = {
-                                          'cigar': '🎯',
-                                          'activity': '🎪',
-                                          'gift': '🎁',
-                                          'service': '💼',
-                                          'other': '📦'
-                                        }
-                                        const itemTypeColors: { [key: string]: string } = {
-                                          'cigar': '#fff',
-                                          'activity': '#9254de',
-                                          'gift': '#fadb14',
-                                          'service': '#40a9ff',
-                                          'other': '#bfbfbf'
-                                        }
-                                        const icon = itemTypeIcons[itemType] || '🎯'
-                                        const color = itemTypeColors[itemType] || '#fff'
-                                        const displayName = log.cigarName || cigar?.name || log.cigarId
-                                        
-                                        return (
-                                          <>
-                                            <span style={{ marginRight: 6 }}>{icon}</span>
-                                            <span style={{ color }}>{displayName}</span>
-                                          </>
-                                        )
-                                      })()}
-                          </div>
-                                    <div style={{ 
-                                      fontSize: 16, 
-                                      fontWeight: 700, 
-                                      color: '#52c41a',
-                                      whiteSpace: 'nowrap'
-                                    }}>
-                                      +{log.quantity}
-                          </div>
-                        </div>
-                                  <div style={{ 
-                                    display: 'flex', 
-                                    justifyContent: 'space-between',
-                                    fontSize: 11,
-                                    color: 'rgba(255,255,255,0.6)',
-                                    marginBottom: 6
-                                  }}>
-                                    <div>
-                                      {log.unitPrice ? `${t('inventory.unitPrice')}: RM ${log.unitPrice.toFixed(2)}` : ''}
-                      </div>
-                                    <div>
-                                      {itemValue > 0 ? `${t('inventory.totalValue')}: RM ${itemValue.toFixed(2)}` : ''}
-                                    </div>
+                                    <div style={{
+                                      width: '100%',
+                                      height: '100%',
+                                      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02))'
+                                    }} />
                                   </div>
                                   
-                                  {/* 附件显示 */}
-                                  {log.attachments && log.attachments.length > 0 && (
+                                  {/* 右侧信息 */}
+                                  <div style={{ flex: 1 }}>
+                                    {/* 产品名称 */}
                                     <div style={{
-                                      marginTop: 8,
-                                      marginBottom: 8,
-                                      display: 'flex',
-                                      flexWrap: 'wrap',
-                                      gap: 6
+                                      fontSize: 15,
+                                      fontWeight: 700,
+                                      color: '#fff',
+                                      marginBottom: 4
                                     }}>
-                                      {log.attachments.map((att: any, idx: number) => {
-                                        const isPDF = att.type === 'pdf'
-                                        return (
-                                          <button
-                                            key={idx}
-                                            onClick={() => window.open(att.url, '_blank')}
-                                            style={{
-                                              padding: '4px 8px',
-                                              fontSize: 10,
-                                              background: 'rgba(24, 144, 255, 0.1)',
-                                              border: '1px solid rgba(24, 144, 255, 0.3)',
-                                              borderRadius: 4,
-                                              color: '#1890ff',
-                                              cursor: 'pointer',
-                                              fontWeight: 500,
-                                              display: 'flex',
-                                              alignItems: 'center',
-                                              gap: 4
-                                            }}
-                                          >
-                                            {isPDF ? '📄' : '🖼️'} {att.filename.substring(0, 15)}{att.filename.length > 15 ? '...' : ''}
-                                          </button>
-                                        )
-                                      })}
+                                      {log.cigarName || cigar?.name || log.cigarId}
                                     </div>
-                                  )}
-                                  
-                                  {/* ✅ 新架构：移除产品级别的编辑/删除 */}
-                                  {/* 如需修改，请使用订单级别的"退货"或"删除订单"功能 */}
+                                    
+                                    {/* SKU */}
+                                    <div style={{
+                                      fontSize: 12,
+                                      color: 'rgba(224, 214, 196, 0.6)',
+                                      marginBottom: 6
+                                    }}>
+                                      {cigar?.size || ''} {cigar?.size ? '|' : ''} SKU: {log.cigarId}
+                                    </div>
+                                    
+                                    {/* 单价 */}
+                                    <div style={{
+                                      fontSize: 14,
+                                      fontWeight: 700,
+                                      color: '#f4af25',
+                                      marginBottom: 6
+                                    }}>
+                                      RM {log.unitPrice?.toFixed(2) || '0.00'}
+                                    </div>
+                                    
+                                    {/* 数量和小计 */}
+                                    <div style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: 12,
+                                      fontSize: 12
+                                    }}>
+                                      <span style={{ color: '#52c41a', fontWeight: 600 }}>
+                                        +{log.quantity} {t('inventory.sticks')}
+                                      </span>
+                                      <span style={{ color: 'rgba(224, 214, 196, 0.6)' }}>·</span>
+                                      <span style={{ color: 'rgba(224, 214, 196, 0.8)' }}>
+                                        {t('inventory.subtotal')}: <span style={{ color: '#fff', fontWeight: 600 }}>RM {itemValue.toFixed(2)}</span>
+                                      </span>
+                                    </div>
+                                  </div>
                                 </div>
                               )
                             })}
