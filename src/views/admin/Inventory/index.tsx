@@ -1896,101 +1896,120 @@ const AdminInventory: React.FC = () => {
                           borderRadius: 8,
                           background: 'rgba(0, 0, 0, 0.2)'
                         }}>
-                          <Space align="baseline" style={{ display: 'flex', marginBottom: 8, flexWrap: 'wrap' }}>
-                            <Form.Item
-                              {...restField}
-                              name={[name, 'itemType']}
-                              initialValue="cigar"
-                              style={{ minWidth: 140 }}
-                            >
-                              <Select 
-                                placeholder={t('inventory.selectItemType')}
-                                onChange={() => {
-                                  // 清除之前的选择
-                                  const currentValues = inForm.getFieldValue('items')
-                                  if (currentValues && currentValues[name]) {
-                                    currentValues[name].cigarId = undefined
-                                    currentValues[name].customName = undefined
-                                    inForm.setFieldsValue({ items: currentValues })
-                                  }
-                                }}
+                          {/* 第一行：类型 + 产品选择 */}
+                          <Row gutter={12} style={{ marginBottom: 8 }}>
+                            <Col flex="140px">
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'itemType']}
+                                initialValue="cigar"
+                                style={{ marginBottom: 0 }}
                               >
-                                <Option value="cigar">🎯 {t('inventory.itemTypeCigar')}</Option>
-                                <Option value="activity">🎪 {t('inventory.itemTypeActivity')}</Option>
-                                <Option value="gift">🎁 {t('inventory.itemTypeGift')}</Option>
-                                <Option value="service">💼 {t('inventory.itemTypeService')}</Option>
-                                <Option value="other">📦 {t('inventory.itemTypeOther')}</Option>
-                              </Select>
-                            </Form.Item>
+                                <Select 
+                                  placeholder={t('inventory.selectItemType')}
+                                  onChange={() => {
+                                    const currentValues = inForm.getFieldValue('items')
+                                    if (currentValues && currentValues[name]) {
+                                      currentValues[name].cigarId = undefined
+                                      currentValues[name].customName = undefined
+                                      inForm.setFieldsValue({ items: currentValues })
+                                    }
+                                  }}
+                                >
+                                  <Option value="cigar">🎯 {t('inventory.itemTypeCigar')}</Option>
+                                  <Option value="activity">🎪 {t('inventory.itemTypeActivity')}</Option>
+                                  <Option value="gift">🎁 {t('inventory.itemTypeGift')}</Option>
+                                  <Option value="service">💼 {t('inventory.itemTypeService')}</Option>
+                                  <Option value="other">📦 {t('inventory.itemTypeOther')}</Option>
+                                </Select>
+                              </Form.Item>
+                            </Col>
                             
-                            <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => {
-                              const prev = prevValues.items?.[name]?.itemType
-                              const curr = currentValues.items?.[name]?.itemType
-                              return prev !== curr
-                            }}>
-                              {({ getFieldValue }) => {
-                                const itemType = getFieldValue(['items', name, 'itemType']) || 'cigar'
-                                
-                                return itemType === 'cigar' ? (
-                          <Form.Item
-                            {...restField}
-                            name={[name, 'cigarId']}
-                            rules={[{ required: true, message: t('inventory.pleaseSelectProduct') }]}
-                                    style={{ minWidth: 280 }}
-                          >
-                            <Select
-                              placeholder={t('inventory.pleaseSelectProduct')}
-                              showSearch
-                              optionFilterProp="children"
-                              filterOption={(input, option) => {
-                                const kw = (input || '').toLowerCase()
-                                const text = String((option?.children as any) || '').toLowerCase()
-                                return text.includes(kw)
-                              }}
-                            >
-                              {groupedCigars.map(group => (
-                                <Select.OptGroup key={group.brand} label={group.brand}>
-                                  {group.list.map(i => (
-                                    <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（{t('inventory.stock')}：{getComputedStock(i.id)}）</Option>
-                                  ))}
-                                </Select.OptGroup>
-                              ))}
-                            </Select>
-                          </Form.Item>
-                                ) : (
-                                  <Form.Item
-                                    {...restField}
-                                    name={[name, 'customName']}
-                                    rules={[{ required: true, message: t('inventory.itemNameRequired') }]}
-                                    style={{ minWidth: 280 }}
-                                  >
-                                    <Input placeholder={t('inventory.itemNamePlaceholder')} />
-                                  </Form.Item>
-                                )
-                              }}
-                            </Form.Item>
-                            
-                          <Form.Item
-                            {...restField}
-                            name={[name, 'quantity']}
-                            rules={[{ required: true, message: t('inventory.pleaseInputQuantity') }]}
-                          >
-                              <InputNumber min={1} placeholder={t('inventory.quantity')} style={{ width: 100 }} />
-                          </Form.Item>
-                          <Form.Item
-                            {...restField}
-                            name={[name, 'unitPrice']}
-                            rules={[]}
-                          >
-                              <InputNumber min={0} step={0.01} placeholder={t('inventory.price')} style={{ width: 120 }} />
-                          </Form.Item>
-                          {fields.length > 1 && (
-                              <MinusCircleOutlined 
-                                onClick={() => remove(name)} 
-                                style={{ color: '#ff4d4f', fontSize: 18, cursor: 'pointer' }}
-                              />
-                          )}
-                        </Space>
+                            <Col flex="auto">
+                              <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => {
+                                const prev = prevValues.items?.[name]?.itemType
+                                const curr = currentValues.items?.[name]?.itemType
+                                return prev !== curr
+                              }}>
+                                {({ getFieldValue }) => {
+                                  const itemType = getFieldValue(['items', name, 'itemType']) || 'cigar'
+                                  
+                                  return itemType === 'cigar' ? (
+                                    <Form.Item
+                                      {...restField}
+                                      name={[name, 'cigarId']}
+                                      rules={[{ required: true, message: t('inventory.pleaseSelectProduct') }]}
+                                      style={{ marginBottom: 0 }}
+                                    >
+                                      <Select
+                                        placeholder={t('inventory.pleaseSelectProduct')}
+                                        showSearch
+                                        optionFilterProp="children"
+                                        filterOption={(input, option) => {
+                                          const kw = (input || '').toLowerCase()
+                                          const text = String((option?.children as any) || '').toLowerCase()
+                                          return text.includes(kw)
+                                        }}
+                                      >
+                                        {groupedCigars.map(group => (
+                                          <Select.OptGroup key={group.brand} label={group.brand}>
+                                            {group.list.map(i => (
+                                              <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（{t('inventory.stock')}：{getComputedStock(i.id)}）</Option>
+                                            ))}
+                                          </Select.OptGroup>
+                                        ))}
+                                      </Select>
+                                    </Form.Item>
+                                  ) : (
+                                    <Form.Item
+                                      {...restField}
+                                      name={[name, 'customName']}
+                                      rules={[{ required: true, message: t('inventory.itemNameRequired') }]}
+                                      style={{ marginBottom: 0 }}
+                                    >
+                                      <Input placeholder={t('inventory.itemNamePlaceholder')} />
+                                    </Form.Item>
+                                  )
+                                }}
+                              </Form.Item>
+                            </Col>
+                          </Row>
+                          
+                          {/* 第二行：数量 + 单价 + 删除 */}
+                          <Row gutter={12} align="middle">
+                            <Col flex="100px">
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'quantity']}
+                                rules={[{ required: true, message: t('inventory.pleaseInputQuantity') }]}
+                                style={{ marginBottom: 0 }}
+                              >
+                                <InputNumber min={1} placeholder={t('inventory.quantity')} style={{ width: '100%' }} />
+                              </Form.Item>
+                            </Col>
+                            <Col flex="120px">
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'unitPrice']}
+                                style={{ marginBottom: 0 }}
+                              >
+                                <InputNumber min={0} step={0.01} placeholder={t('inventory.price')} style={{ width: '100%' }} />
+                              </Form.Item>
+                            </Col>
+                            <Col flex="auto">
+                              {fields.length > 1 && (
+                                <Button
+                                  type="link"
+                                  danger
+                                  size="small"
+                                  icon={<MinusCircleOutlined />}
+                                  onClick={() => remove(name)}
+                                >
+                                  删除
+                                </Button>
+                              )}
+                            </Col>
+                          </Row>
                         </div>
                       ))}
                       <Form.Item>
