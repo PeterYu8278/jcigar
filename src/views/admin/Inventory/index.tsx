@@ -65,6 +65,15 @@ const AdminInventory: React.FC = () => {
     uploadedAt: Date
   }>>([])
   
+  // 编辑订单的附件状态
+  const [editAttachmentFileList, setEditAttachmentFileList] = useState<UploadFile[]>([])
+  const [editUploadedAttachments, setEditUploadedAttachments] = useState<Array<{
+    url: string
+    type: 'pdf' | 'image'
+    filename: string
+    uploadedAt: Date
+  }>>([])
+  
   const toDateSafe = (val: any): Date | null => {
     if (!val) return null
     let v: any = val
@@ -4348,9 +4357,26 @@ const AdminInventory: React.FC = () => {
         onCancel={() => {
           setEditingOrder(null)
           orderEditForm.resetFields()
+          setEditAttachmentFileList([])
+          setEditUploadedAttachments([])
         }}
         width={800}
         footer={null}
+        afterOpenChange={(open) => {
+          if (open && editingOrder) {
+            // 初始化附件列表
+            const existingAttachments = editingOrder.attachments || []
+            setEditUploadedAttachments(existingAttachments)
+            setEditAttachmentFileList(
+              existingAttachments.map((att, idx) => ({
+                uid: `existing-${idx}`,
+                name: att.filename,
+                status: 'done' as const,
+                url: att.url
+              }))
+            )
+          }
+        }}
       >
         <Form
           form={orderEditForm}
@@ -4386,7 +4412,8 @@ const AdminInventory: React.FC = () => {
                   })
                 })),
                 totalQuantity,
-                totalValue
+                totalValue,
+                attachments: editUploadedAttachments.length > 0 ? editUploadedAttachments : undefined
               })
               
               // 同步更新 inventory_movements
@@ -4419,6 +4446,8 @@ const AdminInventory: React.FC = () => {
               message.success('✅ 订单已更新')
               setEditingOrder(null)
               orderEditForm.resetFields()
+              setEditAttachmentFileList([])
+              setEditUploadedAttachments([])
               setInboundOrders(await getAllInboundOrders())
               setInventoryMovements(await getAllInventoryMovements())
             } catch (error: any) {
@@ -4566,6 +4595,80 @@ const AdminInventory: React.FC = () => {
             )}
           </Form.List>
           
+          <Form.Item label={t('inventory.attachments')}>
+            <Upload
+              accept=".pdf,.jpg,.jpeg,.png"
+              fileList={editAttachmentFileList}
+              beforeUpload={(file) => {
+                const isPDF = file.type === 'application/pdf'
+                const isImage = file.type.startsWith('image/')
+                if (!isPDF && !isImage) {
+                  message.error(t('inventory.supportedFormats'))
+                  return Upload.LIST_IGNORE
+                }
+                const isLt10M = file.size / 1024 / 1024 < 10
+                if (!isLt10M) {
+                  message.error(t('inventory.maxFileSize'))
+                  return Upload.LIST_IGNORE
+                }
+                return false // 阻止自动上传，手动控制
+              }}
+              onChange={async (info) => {
+                setEditAttachmentFileList(info.fileList)
+                
+                // 处理新上传的文件
+                const file = info.file
+                if (file.originFileObj && file.status === undefined) {
+                  try {
+                    const uploadResult = await cloudinaryUpload(file.originFileObj, {
+                      folder: 'inventory_documents'
+                    })
+                    
+                    const isPDF = file.type === 'application/pdf'
+                    const newAttachment = {
+                      url: uploadResult.secure_url,
+                      type: (isPDF ? 'pdf' : 'image') as 'pdf' | 'image',
+                      filename: file.name,
+                      uploadedAt: new Date()
+                    }
+                    
+                    setEditUploadedAttachments(prev => [...prev, newAttachment])
+                    
+                    // 更新文件列表状态
+                    setEditAttachmentFileList(prev => 
+                      prev.map(f => 
+                        f.uid === file.uid 
+                          ? { ...f, status: 'done', url: uploadResult.secure_url }
+                          : f
+                      )
+                    )
+                    
+                    message.success(t('inventory.uploadSuccess'))
+                  } catch (error) {
+                    message.error(t('inventory.uploadFailed'))
+                    // 移除失败的文件
+                    setEditAttachmentFileList(prev => prev.filter(f => f.uid !== file.uid))
+                  }
+                }
+              }}
+              onRemove={(file) => {
+                const fileUrl = file.url
+                if (fileUrl) {
+                  setEditUploadedAttachments(prev => prev.filter(att => att.url !== fileUrl))
+                }
+              }}
+              listType="picture"
+              maxCount={5}
+            >
+              <Button icon={<UploadOutlined />} loading={uploadingFile}>
+                {t('inventory.uploadOrderDocument')}
+              </Button>
+            </Upload>
+            <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 4 }}>
+              {t('inventory.supportedFormats')} · {t('inventory.maxFileSize')}
+            </div>
+          </Form.Item>
+          
           <Form.Item style={{ marginTop: 24, marginBottom: 0 }}>
             <Space>
               <Button type="primary" htmlType="submit" loading={loading}>
@@ -4574,6 +4677,8 @@ const AdminInventory: React.FC = () => {
               <Button onClick={() => {
                 setEditingOrder(null)
                 orderEditForm.resetFields()
+                setEditAttachmentFileList([])
+                setEditUploadedAttachments([])
               }}>
                 取消
               </Button>
