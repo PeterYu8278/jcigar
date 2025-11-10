@@ -4457,20 +4457,100 @@ const AdminInventory: React.FC = () => {
             }
           }}
         >
-          <Form.Item
-            label="单号"
-            name="referenceNo"
-            rules={[{ required: true, message: '请输入单号' }]}
-          >
-            <Input placeholder="例如: YI-001" />
-          </Form.Item>
-          
-          <Form.Item
-            label="原因"
-            name="reason"
-          >
-            <Input placeholder="例如: 入库" />
-          </Form.Item>
+          {/* 左右分栏布局 */}
+          <Row gutter={24}>
+            {/* 左侧：单号和原因 */}
+            <Col span={12}>
+              <Form.Item
+                label="单号"
+                name="referenceNo"
+                rules={[{ required: true, message: '请输入单号' }]}
+              >
+                <Input placeholder="例如: YI-001" />
+              </Form.Item>
+              
+              <Form.Item
+                label="原因"
+                name="reason"
+              >
+                <Input placeholder="例如: 入库" />
+              </Form.Item>
+            </Col>
+            
+            {/* 右侧：附件上传 */}
+            <Col span={12}>
+              <Form.Item label={t('inventory.attachments')}>
+                <Upload
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  fileList={editAttachmentFileList}
+                  beforeUpload={(file) => {
+                    const isPDF = file.type === 'application/pdf'
+                    const isImage = file.type.startsWith('image/')
+                    if (!isPDF && !isImage) {
+                      message.error(t('inventory.supportedFormats'))
+                      return Upload.LIST_IGNORE
+                    }
+                    const isLt10M = file.size / 1024 / 1024 < 10
+                    if (!isLt10M) {
+                      message.error(t('inventory.maxFileSize'))
+                      return Upload.LIST_IGNORE
+                    }
+                    return false
+                  }}
+                  onChange={async (info) => {
+                    setEditAttachmentFileList(info.fileList)
+                    
+                    const file = info.file
+                    if (file.originFileObj && file.status === undefined) {
+                      try {
+                        const uploadResult = await cloudinaryUpload(file.originFileObj, {
+                          folder: 'inventory_documents'
+                        })
+                        
+                        const isPDF = file.type === 'application/pdf'
+                        const newAttachment = {
+                          url: uploadResult.secure_url,
+                          type: (isPDF ? 'pdf' : 'image') as 'pdf' | 'image',
+                          filename: file.name,
+                          uploadedAt: new Date()
+                        }
+                        
+                        setEditUploadedAttachments(prev => [...prev, newAttachment])
+                        
+                        setEditAttachmentFileList(prev => 
+                          prev.map(f => 
+                            f.uid === file.uid 
+                              ? { ...f, status: 'done', url: uploadResult.secure_url }
+                              : f
+                          )
+                        )
+                        
+                        message.success(t('inventory.uploadSuccess'))
+                      } catch (error) {
+                        message.error(t('inventory.uploadFailed'))
+                        setEditAttachmentFileList(prev => prev.filter(f => f.uid !== file.uid))
+                      }
+                    }
+                  }}
+                  onRemove={(file) => {
+                    const fileUrl = file.url
+                    if (fileUrl) {
+                      setEditUploadedAttachments(prev => prev.filter(att => att.url !== fileUrl))
+                    }
+                  }}
+                  listType="picture"
+                  maxCount={5}
+                >
+                  <Button icon={<UploadOutlined />} loading={uploadingFile}>
+                    {t('inventory.uploadOrderDocument')}
+                  </Button>
+                </Upload>
+                <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 4 }}>
+                  {t('inventory.supportedFormats')} · {t('inventory.maxFileSize')}
+                </div>
+              </Form.Item>
+            </Col>
+          </Row>
           
           <Form.List name="items">
             {(fields, { add, remove }) => (
@@ -4594,80 +4674,6 @@ const AdminInventory: React.FC = () => {
               </>
             )}
           </Form.List>
-          
-          <Form.Item label={t('inventory.attachments')}>
-            <Upload
-              accept=".pdf,.jpg,.jpeg,.png"
-              fileList={editAttachmentFileList}
-              beforeUpload={(file) => {
-                const isPDF = file.type === 'application/pdf'
-                const isImage = file.type.startsWith('image/')
-                if (!isPDF && !isImage) {
-                  message.error(t('inventory.supportedFormats'))
-                  return Upload.LIST_IGNORE
-                }
-                const isLt10M = file.size / 1024 / 1024 < 10
-                if (!isLt10M) {
-                  message.error(t('inventory.maxFileSize'))
-                  return Upload.LIST_IGNORE
-                }
-                return false // 阻止自动上传，手动控制
-              }}
-              onChange={async (info) => {
-                setEditAttachmentFileList(info.fileList)
-                
-                // 处理新上传的文件
-                const file = info.file
-                if (file.originFileObj && file.status === undefined) {
-                  try {
-                    const uploadResult = await cloudinaryUpload(file.originFileObj, {
-                      folder: 'inventory_documents'
-                    })
-                    
-                    const isPDF = file.type === 'application/pdf'
-                    const newAttachment = {
-                      url: uploadResult.secure_url,
-                      type: (isPDF ? 'pdf' : 'image') as 'pdf' | 'image',
-                      filename: file.name,
-                      uploadedAt: new Date()
-                    }
-                    
-                    setEditUploadedAttachments(prev => [...prev, newAttachment])
-                    
-                    // 更新文件列表状态
-                    setEditAttachmentFileList(prev => 
-                      prev.map(f => 
-                        f.uid === file.uid 
-                          ? { ...f, status: 'done', url: uploadResult.secure_url }
-                          : f
-                      )
-                    )
-                    
-                    message.success(t('inventory.uploadSuccess'))
-                  } catch (error) {
-                    message.error(t('inventory.uploadFailed'))
-                    // 移除失败的文件
-                    setEditAttachmentFileList(prev => prev.filter(f => f.uid !== file.uid))
-                  }
-                }
-              }}
-              onRemove={(file) => {
-                const fileUrl = file.url
-                if (fileUrl) {
-                  setEditUploadedAttachments(prev => prev.filter(att => att.url !== fileUrl))
-                }
-              }}
-              listType="picture"
-              maxCount={5}
-            >
-              <Button icon={<UploadOutlined />} loading={uploadingFile}>
-                {t('inventory.uploadOrderDocument')}
-              </Button>
-            </Upload>
-            <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 4 }}>
-              {t('inventory.supportedFormats')} · {t('inventory.maxFileSize')}
-            </div>
-          </Form.Item>
           
           <Form.Item style={{ marginTop: 24, marginBottom: 0 }}>
             <Space>
