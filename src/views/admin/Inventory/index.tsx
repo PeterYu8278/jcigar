@@ -1662,7 +1662,7 @@ const AdminInventory: React.FC = () => {
             <div>
               {/* 搜索和筛选 - 两行布局 */}
               <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {/* 第一行：搜索框 + 入库统计 */}
+                {/* 第一行：搜索框 */}
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                   <Search
                     placeholder={t('inventory.searchInLogs')}
@@ -1671,6 +1671,21 @@ const AdminInventory: React.FC = () => {
                     style={{ flex: 1 }}
                     allowClear
                   />
+                </div>
+                
+                {/* 第二行：品牌筛选 + 入库统计 + 创建入库 */}
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                  <Select
+                    placeholder={t('inventory.filterByBrand')}
+                    value={inBrandFilter}
+                    onChange={setInBrandFilter}
+                    style={{ flex: 1 }}
+                    allowClear
+                  >
+                    {Array.from(new Set(items.map(i => i.brand))).sort().map(brand => (
+                      <Option key={brand} value={brand}>{brand}</Option>
+                    ))}
+                  </Select>
                   <button 
                     onClick={() => setInStatsOpen(true)}
                     style={{
@@ -1687,21 +1702,6 @@ const AdminInventory: React.FC = () => {
                   >
                     {t('inventory.inStats')}
                   </button>
-                </div>
-                
-                {/* 第二行：品牌筛选 + 创建入库 */}
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <Select
-                    placeholder={t('inventory.filterByBrand')}
-                    value={inBrandFilter}
-                    onChange={setInBrandFilter}
-                    style={{ flex: 1 }}
-                    allowClear
-                  >
-                    {Array.from(new Set(items.map(i => i.brand))).sort().map(brand => (
-                      <Option key={brand} value={brand}>{brand}</Option>
-                    ))}
-                  </Select>
                   <button
                     onClick={() => setInModalOpen(true)}
                     className="cigar-btn-gradient"
