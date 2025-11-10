@@ -200,7 +200,7 @@ button + button { margin-left: 8px; }
 /* 暗色主题弹窗样式 */
 .ant-modal-content {
   margin: 0 !important;
-  padding: 0 !important;
+  padding: 12px !important;
 }
 
 .ant-modal-title {
@@ -212,6 +212,11 @@ button + button { margin-left: 8px; }
 .ant-modal-header {
   background: transparent !important;
   border-bottom: 1px solid rgba(244, 175, 37, 0.2) !important;
+}
+
+/* Space 组件间距调整 */
+.ant-space-item {
+  margin: 0 !important;
 }
 
 /* 暗色主题弹窗表单样式 */
