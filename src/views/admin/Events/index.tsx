@@ -1070,7 +1070,7 @@ const AdminEvents: React.FC = () => {
         onCancel={() => { setCreating(false); form.resetFields() }}
         onOk={() => form.submit()}
         confirmLoading={loading}
-        {...getResponsiveModalConfig(isMobile, true, 600)}
+        {...getResponsiveModalConfig(isMobile, true, 720)}
         footer={isMobile ? (
           <div style={{ padding: '8px 0' }}>
             <button 
@@ -1097,7 +1097,7 @@ const AdminEvents: React.FC = () => {
         <Form form={form} layout="vertical" onFinish={async (values: any) => {
           setLoading(true)
           try {
-            // 创建活动的基本信息
+            // 创建活动 - 只包含基本信息
             const payload: Partial<Event> = {
               title: values.title,
               description: values.description || '',
@@ -1144,13 +1144,19 @@ const AdminEvents: React.FC = () => {
           }
         }}>
           <Form.Item label={t('common.eventName')} name="title" rules={[{ required: true, message: t('common.pleaseInputEventName') }]}>
-            <Input placeholder="请输入活动名称" />
+            <Input />
           </Form.Item>
           <Form.Item label={t('common.description')} name="description">
-            <Input.TextArea rows={3} placeholder="请输入活动描述（可选）" />
+            <Input.TextArea rows={3} />
+          </Form.Item>
+          <Form.Item label={t('common.eventImage')} name="image">
+            <ImageUpload
+              folder="events"
+              showPreview={true}
+            />
           </Form.Item>
           <Form.Item label={t('common.locationName')} name="locationName" rules={[{ required: true, message: t('common.pleaseInputLocationName') }]}>
-            <Input placeholder="请输入活动地点" />
+            <Input />
           </Form.Item>
           <Form.Item 
             label={t('common.startDate')} 
