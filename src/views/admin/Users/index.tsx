@@ -718,7 +718,7 @@ const AdminUsers: React.FC = () => {
         <div
           style={{
             position: 'fixed',
-            right: 15,
+            right: 7,
             top: '50%',
             transform: 'translateY(-50%)',
             maxHeight: '90vh',
@@ -735,7 +735,7 @@ const AdminUsers: React.FC = () => {
             justifyContent: 'center'
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, fontSize: 10, fontWeight: 600 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, fontSize: 10, fontWeight: 600 }}>
             {alphaIndex.map(letter => {
               const enabled = groupedByInitial.some(g => g.key === letter)
               const isActive = letter === activeIndex
