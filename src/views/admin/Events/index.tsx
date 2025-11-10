@@ -630,47 +630,10 @@ const AdminEvents: React.FC = () => {
           
           <CreateButton
             onCreate={() => { 
-              const newEvent: Event = {
-                id: 'new',
-                title: '',
-                description: '',
-                organizerId: '',
-                status: 'draft',
-                schedule: {
-                  startDate: new Date(),
-                  endDate: new Date(),
-                  registrationDeadline: new Date()
-                },
-                location: {
-                  name: '',
-                  address: ''
-                },
-                participants: {
-                  fee: 0,
-                  maxParticipants: 50,
-                  registered: []
-                },
-                cigars: {
-                  featured: [],
-                  tasting: []
-                },
-                image: '',
-                createdAt: new Date(),
-                updatedAt: new Date()
-              }
-              setViewing(newEvent)
-              setIsEditingDetails(true)
-              setEditForm({
-                title: '',
-                description: '',
-                image: '',
-                status: 'draft',
-                startDate: dayjs(),
-                endDate: dayjs(),
-                locationName: '',
-                fee: 0,
-                maxParticipants: 0
-              })
+              console.log('🔵 [Events] CreateButton clicked')
+              console.log('🔵 [Events] Opening create modal')
+              setCreating(true)
+              form.resetFields()
             }}
             buttonText={t('dashboard.createEvent')}
             style={{ 
@@ -1068,14 +1031,22 @@ const AdminEvents: React.FC = () => {
         title={t('common.add')}
         open={creating}
         onCancel={() => { setCreating(false); form.resetFields() }}
-        onOk={() => form.submit()}
+        onOk={() => {
+          console.log('🔵 [Events] Modal onOk clicked (desktop)')
+          console.log('🔵 [Events] Current loading state:', loading)
+          form.submit()
+        }}
         confirmLoading={loading}
         {...getResponsiveModalConfig(isMobile, true, 720)}
         footer={isMobile ? (
           <div style={{ padding: '8px 0' }}>
             <button 
               disabled={loading} 
-              onClick={() => form.submit()} 
+              onClick={() => {
+                console.log('🔵 [Events] Mobile footer button clicked')
+                console.log('🔵 [Events] Current loading state:', loading)
+                form.submit()
+              }} 
               style={{ 
                 width: '100%', 
                 padding: '12px', 
@@ -1095,7 +1066,19 @@ const AdminEvents: React.FC = () => {
         ) : undefined}
       >
         <Form form={form} layout="vertical" onFinish={async (values: any) => {
+          console.log('🔵 [Events] Form onFinish triggered')
+          console.log('🔵 [Events] Form values:', values)
+          console.log('🔵 [Events] Loading state:', loading)
+          
+          // 防止重复提交
+          if (loading) {
+            console.log('⚠️ [Events] Already loading, preventing duplicate submission')
+            return
+          }
+          
           setLoading(true)
+          console.log('🔵 [Events] setLoading(true) called')
+          
           try {
             // 创建活动 - 只包含基本信息
             const payload: Partial<Event> = {
@@ -1117,13 +1100,24 @@ const AdminEvents: React.FC = () => {
               updatedAt: new Date(),
             } as any
             
+            console.log('🔵 [Events] Creating event with payload:', payload)
+            console.log('🔵 [Events] Collection:', COLLECTIONS.EVENTS)
+            console.log('🔵 [Events] Timestamp:', new Date().toISOString())
+            
             const result = await createDocument<Event>(COLLECTIONS.EVENTS, { ...payload, createdAt: new Date() } as any)
             
+            console.log('🔵 [Events] Create result:', result)
+            console.log('🔵 [Events] Result success:', result.success)
+            console.log('🔵 [Events] Result ID:', result.id)
+            
             if (result.success && result.id) {
+              console.log('✅ [Events] Event created successfully, ID:', result.id)
               message.success(t('common.created'))
               
               // 刷新列表
+              console.log('🔵 [Events] Fetching updated events list')
               const list = await getEvents()
+              console.log('🔵 [Events] Events count:', list.length)
               setEvents(list)
               
               // 关闭创建弹窗
@@ -1133,13 +1127,19 @@ const AdminEvents: React.FC = () => {
               // 打开详情弹窗进行进一步编辑
               const newEvent = list.find(e => e.id === result.id)
               if (newEvent) {
+                console.log('🔵 [Events] Opening detail view for new event')
                 setViewing(newEvent)
                 setActiveViewTab('overview')
               }
             } else {
+              console.log('❌ [Events] Create failed:', result)
               message.error(t('common.createFailed'))
             }
+          } catch (error) {
+            console.error('❌ [Events] Error in onFinish:', error)
+            message.error(t('common.createFailed'))
           } finally {
+            console.log('🔵 [Events] setLoading(false) called')
             setLoading(false)
           }
         }}>
