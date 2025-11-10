@@ -718,8 +718,9 @@ const AdminUsers: React.FC = () => {
         <div
           style={{
             position: 'fixed',
-            right: 3,
-            top: '5vh',
+            right: 15,
+            top: '50%',
+            transform: 'translateY(-50%)',
             maxHeight: '90vh',
             padding: 6,
             zIndex: 1000,
@@ -892,7 +893,7 @@ const AdminUsers: React.FC = () => {
             </div>
 
             {/* ProfileView Component */}
-            <div style={{ padding: '0 16px' }}>
+            <div>
               <ProfileView
                 user={editing}
                 readOnly={false}
