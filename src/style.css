@@ -197,7 +197,12 @@ a:hover {
 .ant-modal-footer > * + * { margin-left: 8px; }
 button + button { margin-left: 8px; }
 
-/* 暗色主题弹窗标题样式 */
+/* 暗色主题弹窗样式 */
+.ant-modal-content {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
 .ant-modal-title {
   color: #FFFFFF !important;
   font-size: 18px !important;
