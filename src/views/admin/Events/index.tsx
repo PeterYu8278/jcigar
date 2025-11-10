@@ -369,8 +369,8 @@ const AdminEvents: React.FC = () => {
         newStatus = 'ongoing'
       }
     } else if (now > endDate) {
-      // 活动已结束
-      if (event.status === 'published' || event.status === 'ongoing') {
+      // 活动已结束 - 自动将任何非终止状态的活动设置为已结束
+      if (event.status !== 'completed' && event.status !== 'cancelled') {
         newStatus = 'completed'
         // 自动创建订单
         try {
@@ -387,6 +387,7 @@ const AdminEvents: React.FC = () => {
           }
         } catch (error) {
           // 静默处理错误
+          console.warn('Auto-create orders failed:', error);
         }
       }
     }
