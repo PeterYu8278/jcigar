@@ -3195,41 +3195,48 @@ const AdminInventory: React.FC = () => {
                   }}
                 />
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div style={{ fontWeight: 600, marginBottom: 4 }}>{t('inventory.outStockRecord')}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {unifiedOutRows.map((log: any) => {
                     const cigar = items.find(i => i.id === log.cigarId)
                     const user = users.find((u: any) => u.id === log.userId)
                     const userName = user?.displayName || user?.email || log.userId || '-'
                     return (
                       <div key={log.id} style={{
-                        display: 'flex',
-                        alignItems: 'center',
+                        borderRadius: 12,
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        background: 'rgba(255,255,255,0.05)',
                         padding: 12,
-                        borderRadius: 10,
-                        background: 'rgba(255,255,255,0.7)',
-                        border: '1px solid rgba(0,0,0,0.06)'
+                        backdropFilter: 'blur(6px)'
                       }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                            <div style={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cigar?.name || log.cigarId}</div>
-                            <div style={{ color: '#999', fontSize: 12 }}>{formatYMD(toDateSafe(log.createdAt))}</div>
-                          </div>
-                          <div style={{ marginTop: 6, display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12 }}>
-                            <div style={{ color: '#666' }}>{t('inventory.referenceNo')}: {log.referenceNo || '-'}</div>
-                            <div style={{ color: '#666' }}>{t('inventory.quantity')}: {log.quantity}</div>
-                          </div>
-                          <div style={{ marginTop: 6, color: '#888', fontSize: 12 }}>
-                            {log.source === 'order' ? (
-                              <span>{t('inventory.activityOrderOutbound')}: {userName}</span>
-                            ) : (
-                              <span>{t('inventory.reason')}: {log.reason || '-'}</span>
-                            )}
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <div style={{ fontWeight: 700, color: '#f0f0f0' }}>{cigar?.name || log.cigarId}</div>
+                              <span style={{ borderRadius: 999, background: 'rgba(255, 77, 79, 0.2)', padding: '2px 8px', fontSize: 12, color: '#ff4d4f' }}>
+                                -{log.quantity}
+                              </span>
+                            </div>
+                            <div style={{ marginTop: 4, fontSize: 12, color: '#aaa' }}>
+                              {t('inventory.referenceNo')}: {log.referenceNo || '-'}
+                            </div>
+                            <div style={{ marginTop: 4, fontSize: 12, color: '#aaa' }}>
+                              {log.source === 'order' ? (
+                                <span>{t('inventory.activityOrderOutbound')}: {userName}</span>
+                              ) : (
+                                <span>{t('inventory.reason')}: {log.reason || '-'}</span>
+                              )}
+                            </div>
+                            <div style={{ marginTop: 6, fontSize: 11, color: '#888' }}>
+                              {formatYMD(toDateSafe(log.createdAt))}
+                            </div>
                           </div>
                         </div>
                       </div>
                     )
                   })}
+                  {unifiedOutRows.length === 0 && (
+                    <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
+                  )}
                 </div>
               )}
             </div>
