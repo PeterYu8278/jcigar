@@ -1,7 +1,7 @@
 // 库存管理页面
 import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Table, Button, Tag, Space, Typography, Input, Select, Modal, Form, InputNumber, message, Dropdown, Checkbox, Card, Upload, Row, Col } from 'antd'
+import { Table, Button, Tag, Space, Typography, Input, Select, Modal, Form, InputNumber, message, Dropdown, Checkbox, Upload, Row, Col } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, WarningOutlined, UploadOutlined, DownloadOutlined, MinusCircleOutlined, FilePdfOutlined, FileImageOutlined, EyeOutlined } from '@ant-design/icons'
 import type { Cigar, Brand, InboundOrder, OutboundOrder, InventoryMovement } from '../../../types'
 import type { UploadFile } from 'antd'
@@ -1695,7 +1695,7 @@ const AdminInventory: React.FC = () => {
                   {t('inventory.inStock')}
                 </button>
               </div>
-            <Card>
+              
               <Modal
                 title={t('inventory.inStockRecord')}
                 open={inModalOpen}
@@ -2918,7 +2918,6 @@ const AdminInventory: React.FC = () => {
                   )}
                 </div>
               )}
-            </Card>
             </div>
           )}
           {activeTab === 'out' && (
@@ -3096,7 +3095,7 @@ const AdminInventory: React.FC = () => {
                   </Form.Item>
                 </Form>
               </Modal>
-            <Card>
+              
               {!isMobile ? (
               <Table
                   title={() => t('inventory.outStockRecord')}
@@ -3153,7 +3152,6 @@ const AdminInventory: React.FC = () => {
                   })}
                 </div>
               )}
-            </Card>
             </div>
           )}
         </div>
