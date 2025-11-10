@@ -1660,49 +1660,56 @@ const AdminInventory: React.FC = () => {
           )}
           {activeTab === 'in' && (
             <div>
-              {/* 搜索和筛选 */}
-              <div style={{ marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-                <Search
-                  placeholder={t('inventory.searchInLogs')}
-                  value={inSearchKeyword}
-                  onChange={(e) => setInSearchKeyword(e.target.value)}
-                  style={{ width: 300 }}
-                  allowClear
-                />
-                <Select
-                  placeholder={t('inventory.filterByBrand')}
-                  value={inBrandFilter}
-                  onChange={setInBrandFilter}
-                  style={{ width: 200 }}
-                  allowClear
-                >
-                  {Array.from(new Set(items.map(i => i.brand))).sort().map(brand => (
-                    <Option key={brand} value={brand}>{brand}</Option>
-                  ))}
-                </Select>
-                <div style={{ flex: 1 }} />
-                <button 
-                  onClick={() => setInStatsOpen(true)}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: 8,
-                    border: '1px solid rgba(244, 175, 37, 0.5)',
-                    background: 'rgba(244, 175, 37, 0.1)',
-                    color: '#f4af25',
-                    cursor: 'pointer',
-                    fontSize: 14,
-                    fontWeight: 600
-                  }}
-                >
-                  {t('inventory.inStats')}
-                </button>
-                <button
-                  onClick={() => setInModalOpen(true)}
-                  className="cigar-btn-gradient"
-                  style={{ padding: '6px 14px', borderRadius: 8 }}
-                >
-                  {t('inventory.inStock')}
-                </button>
+              {/* 搜索和筛选 - 两行布局 */}
+              <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {/* 第一行：搜索框 + 入库统计 */}
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                  <Search
+                    placeholder={t('inventory.searchInLogs')}
+                    value={inSearchKeyword}
+                    onChange={(e) => setInSearchKeyword(e.target.value)}
+                    style={{ flex: 1 }}
+                    allowClear
+                  />
+                  <button 
+                    onClick={() => setInStatsOpen(true)}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: 8,
+                      border: '1px solid rgba(244, 175, 37, 0.5)',
+                      background: 'rgba(244, 175, 37, 0.1)',
+                      color: '#f4af25',
+                      cursor: 'pointer',
+                      fontSize: 14,
+                      fontWeight: 600,
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {t('inventory.inStats')}
+                  </button>
+                </div>
+                
+                {/* 第二行：品牌筛选 + 创建入库 */}
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                  <Select
+                    placeholder={t('inventory.filterByBrand')}
+                    value={inBrandFilter}
+                    onChange={setInBrandFilter}
+                    style={{ flex: 1 }}
+                    allowClear
+                  >
+                    {Array.from(new Set(items.map(i => i.brand))).sort().map(brand => (
+                      <Option key={brand} value={brand}>{brand}</Option>
+                    ))}
+                  </Select>
+                  <button
+                    onClick={() => setInModalOpen(true)}
+                    className="cigar-btn-gradient"
+                    style={{ padding: '6px 14px', borderRadius: 8, whiteSpace: 'nowrap' }}
+                  >
+                    {t('inventory.inStock')}
+                  </button>
+                </div>
               </div>
               
               <Modal
