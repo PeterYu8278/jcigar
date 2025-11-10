@@ -17,6 +17,7 @@ import EventDetailsView from '../../../components/admin/EventDetailsView'
 import EventParticipantsManager from '../../../components/admin/EventParticipantsManager'
 import StatusFilterDropdown from '../../../components/admin/StatusFilterDropdown'
 import { useTranslation } from 'react-i18next'
+import { getResponsiveModalConfig } from '../../../config/modalTheme'
 
 const { Title } = Typography
 const { Search } = Input
@@ -1066,11 +1067,60 @@ const AdminEvents: React.FC = () => {
       <Modal
         title={editing ? t('common.edit') : t('common.add')}
         open={creating || !!editing}
-        onCancel={() => { setCreating(false); setEditing(null) }}
-        onOk={() => form.submit()}
-        confirmLoading={loading}
+        onCancel={() => { 
+          setCreating(false); 
+          setEditing(null);
+          form.resetFields();
+        }}
+        {...getResponsiveModalConfig(isMobile, true, 720)}
+        footer={[
+          <button 
+            key="cancel" 
+            type="button" 
+            onClick={() => { 
+              setCreating(false); 
+              setEditing(null);
+              form.resetFields();
+            }} 
+            style={{ 
+              padding: '6px 14px', 
+              borderRadius: 8, 
+              border: '1px solid rgba(244, 175, 37, 0.3)', 
+              background: 'rgba(0, 0, 0, 0.2)', 
+              color: '#d9d9d9',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            {t('common.cancel')}
+          </button>,
+          <button 
+            key="submit" 
+            type="button" 
+            className="cigar-btn-gradient" 
+            onClick={() => form.submit()} 
+            disabled={loading}
+            style={{ 
+              padding: '6px 14px', 
+              borderRadius: 8, 
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.6 : 1,
+              transition: 'all 0.2s ease'
+            }}
+          >
+            {loading ? t('common.saving') : (editing ? t('common.save') : t('common.create'))}
+          </button>
+        ]}
       >
-        <Form form={form} layout="vertical" onFinish={async (values: any) => {
+        <Form 
+          form={form} 
+          layout="horizontal"
+          labelAlign="left"
+          colon={false}
+          labelCol={{ flex: '120px' }}
+          wrapperCol={{ flex: 'auto' }}
+          className="dark-theme-form"
+          onFinish={async (values: any) => {
           setLoading(true)
           try {
             // ===== STATUS VALIDATION AND PROCESSING =====
