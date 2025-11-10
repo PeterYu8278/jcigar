@@ -1724,6 +1724,7 @@ const AdminInventory: React.FC = () => {
                 bodyStyle={{ 
                   maxHeight: 'calc(100vh - 180px)', 
                   overflowY: 'auto',
+                  overflowX: 'hidden',
                   paddingBottom: 16
                 }}
                 afterOpenChange={(open) => {
@@ -1834,10 +1835,11 @@ const AdminInventory: React.FC = () => {
                   setLoading(false)
                 }
               }}>
-                {/* 左右分栏布局 */}
-                <Row gutter={16}>
-                  {/* 左侧：单号和原因 */}
-                  <Col span={12}>
+                <div style={{ width: '100%', overflow: 'hidden' }}>
+                  {/* 左右分栏布局 */}
+                  <Row gutter={16}>
+                    {/* 左侧：单号和原因 */}
+                    <Col span={12}>
                     <Form.Item label={t('inventory.referenceNo')} name="referenceNo" style={{ marginBottom: 12 }}>
                       <Input placeholder={t('inventory.pleaseInputReferenceNo')} />
                     </Form.Item>
@@ -2071,6 +2073,7 @@ const AdminInventory: React.FC = () => {
                     </Button>
                   </Space>
                 </Form.Item>
+                </div>
               </Form>
               </Modal>
               {!isMobile ? (
