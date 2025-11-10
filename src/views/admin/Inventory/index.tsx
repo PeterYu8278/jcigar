@@ -3053,7 +3053,11 @@ const AdminInventory: React.FC = () => {
                 open={outModalOpen}
                 onCancel={() => setOutModalOpen(false)}
                 footer={null}
-                {...getResponsiveModalConfig(isMobile, true, 680)}
+                {...getResponsiveModalConfig(isMobile, true, 720)}
+                bodyStyle={{ 
+                  overflowX: 'hidden',
+                  paddingBottom: 16
+                }}
               >
                 <Form form={outForm} layout="vertical" className="dark-theme-form" onFinish={async (values: { referenceNo?: string; reason?: string; items: { cigarId: string; quantity: number }[] }) => {
                   const lines = (values.items || []).filter(it => it?.cigarId && it?.quantity > 0)
@@ -3113,66 +3117,113 @@ const AdminInventory: React.FC = () => {
                     setLoading(false)
                   }
                 }}>
-                  <Form.List name="items" initialValue={[{ cigarId: undefined, quantity: 1 }]}> 
-                    {(fields, { add, remove }) => (
-                      <div>
-                        {fields.map(({ key, name, ...restField }) => (
-                          <Space key={key} align="baseline" style={{ display: 'flex', marginBottom: 8 }}>
-                            <Form.Item
-                              {...restField}
-                              name={[name, 'cigarId']}
-                              rules={[{ required: true, message: t('inventory.pleaseSelectProduct') }]}
-                              style={{ minWidth: 320 }}
-                            >
-                              <Select 
-                                placeholder={t('inventory.pleaseSelectProduct')}
-                                showSearch
-                                optionFilterProp="children"
-                                filterOption={(input, option) => {
-                                  const kw = (input || '').toLowerCase()
-                                  const text = String((option?.children as any) || '').toLowerCase()
-                                  return text.includes(kw)
-                                }}
-                              >
-                                {groupedCigars.map(group => (
-                                  <Select.OptGroup key={group.brand} label={group.brand}>
-                                    {group.list.map(i => (
-                                      <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（{t('inventory.stock')}：{getComputedStock(i.id)}）</Option>
-                                    ))}
-                                  </Select.OptGroup>
-                                ))}
-                              </Select>
-                            </Form.Item>
-                            <Form.Item
-                              {...restField}
-                              name={[name, 'quantity']}
-                              rules={[{ required: true, message: t('inventory.pleaseInputQuantity') }]}
-                            >
-                              <InputNumber min={1} placeholder={t('inventory.quantity')} />
-                            </Form.Item>
-                            {fields.length > 1 && (
-                              <MinusCircleOutlined onClick={() => remove(name)} />
-                            )}
-                          </Space>
-                        ))}
-                        <Form.Item>
-                          <Button type="dashed" onClick={() => add({ quantity: 1 })} icon={<PlusOutlined />}>{t('inventory.addDetail')}</Button>
+                  <div style={{ width: '100%', overflow: 'hidden' }}>
+                    {/* 单号和原因 */}
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <Form.Item label={t('inventory.referenceNo')} name="referenceNo" style={{ marginBottom: 12 }}>
+                          <Input placeholder={t('inventory.pleaseInputReferenceNo')} />
                         </Form.Item>
-                      </div>
-                    )}
-                  </Form.List>
-                  <Form.Item label={t('inventory.referenceNo')} name="referenceNo">
-                    <Input placeholder={t('inventory.pleaseInputReferenceNo')} />
-                  </Form.Item>
-                  <Form.Item label={t('inventory.reason')} name="reason">
-                    <Input placeholder={t('inventory.forExample') + t('inventory.salesOutStock')} />
-                  </Form.Item>
-                  <Form.Item>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                      <button onClick={() => setOutModalOpen(false)} style={{ padding: '8px 16px', borderRadius: 8 }}>{t('common.cancel')}</button>
-                      <button type="submit" disabled={loading} className="cigar-btn-gradient" style={{ padding: '8px 16px', borderRadius: 8, opacity: loading ? 0.6 : 1 }}>{t('inventory.confirmOutStock')}</button>
-                    </div>
-                  </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item label={t('inventory.reason')} name="reason" style={{ marginBottom: 12 }}>
+                          <Input placeholder={t('inventory.forExample') + t('inventory.salesOutStock')} />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    
+                    {/* 产品列表 */}
+                    <Form.List name="items" initialValue={[{ cigarId: undefined, quantity: 1 }]}> 
+                      {(fields, { add, remove }) => (
+                        <div>
+                          {fields.map(({ key, name, ...restField }) => (
+                            <div key={key} style={{ 
+                              marginBottom: 12, 
+                              padding: 10, 
+                              border: '1px solid rgba(255, 255, 255, 0.1)', 
+                              borderRadius: 8,
+                              background: 'rgba(0, 0, 0, 0.2)'
+                            }}>
+                              {/* 第一行：产品选择 */}
+                              <Row gutter={12} style={{ marginBottom: 8 }}>
+                                <Col flex="auto">
+                                  <Form.Item
+                                    {...restField}
+                                    name={[name, 'cigarId']}
+                                    rules={[{ required: true, message: t('inventory.pleaseSelectProduct') }]}
+                                    style={{ marginBottom: 0 }}
+                                  >
+                                    <Select 
+                                      placeholder={t('inventory.pleaseSelectProduct')}
+                                      showSearch
+                                      optionFilterProp="children"
+                                      filterOption={(input, option) => {
+                                        const kw = (input || '').toLowerCase()
+                                        const text = String((option?.children as any) || '').toLowerCase()
+                                        return text.includes(kw)
+                                      }}
+                                    >
+                                      {groupedCigars.map(group => (
+                                        <Select.OptGroup key={group.brand} label={group.brand}>
+                                          {group.list.map(i => (
+                                            <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（{t('inventory.stock')}：{getComputedStock(i.id)}）</Option>
+                                          ))}
+                                        </Select.OptGroup>
+                                      ))}
+                                    </Select>
+                                  </Form.Item>
+                                </Col>
+                              </Row>
+                              
+                              {/* 第二行：数量 + 删除 */}
+                              <Row gutter={12} align="middle">
+                                <Col flex="120px">
+                                  <Form.Item
+                                    {...restField}
+                                    name={[name, 'quantity']}
+                                    rules={[{ required: true, message: t('inventory.pleaseInputQuantity') }]}
+                                    style={{ marginBottom: 0 }}
+                                  >
+                                    <InputNumber min={1} placeholder={t('inventory.quantity')} style={{ width: '100%' }} />
+                                  </Form.Item>
+                                </Col>
+                                <Col flex="auto">
+                                  {fields.length > 1 && (
+                                    <Button
+                                      type="link"
+                                      danger
+                                      size="small"
+                                      icon={<MinusCircleOutlined />}
+                                      onClick={() => remove(name)}
+                                    >
+                                      删除
+                                    </Button>
+                                  )}
+                                </Col>
+                              </Row>
+                            </div>
+                          ))}
+                          <Form.Item style={{ marginBottom: 0 }}>
+                            <Button type="dashed" onClick={() => add({ quantity: 1 })} icon={<PlusOutlined />} style={{ width: '100%' }}>
+                              {t('inventory.addDetail')}
+                            </Button>
+                          </Form.Item>
+                        </div>
+                      )}
+                    </Form.List>
+                    
+                    <Form.Item style={{ marginTop: 16, marginBottom: 0 }}>
+                      <Space>
+                        <Button onClick={() => {
+                          setOutModalOpen(false)
+                          outForm.resetFields()
+                        }}>{t('common.cancel')}</Button>
+                        <Button type="primary" htmlType="submit" loading={loading}>
+                          {t('inventory.confirmOutStock')}
+                        </Button>
+                      </Space>
+                    </Form.Item>
+                  </div>
                 </Form>
               </Modal>
               
