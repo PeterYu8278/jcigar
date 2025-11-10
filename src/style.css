@@ -222,7 +222,7 @@ button + button { margin-left: 8px; }
 
 /* Form Item 间距调整 */
 .ant-form-item {
-  margin-bottom: 1px !important;
+  margin-bottom: 8px !important;
 }
 
 /* 暗色主题弹窗表单样式 */
