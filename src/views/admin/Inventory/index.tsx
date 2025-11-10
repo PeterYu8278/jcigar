@@ -1706,11 +1706,47 @@ const AdminInventory: React.FC = () => {
               </div>
               
               <Modal
-                title={t('inventory.inStockRecord')}
-                open={inModalOpen}
-                onCancel={() => setInModalOpen(false)}
+                title={editingOrder ? "📝 编辑入库订单" : t('inventory.inStockRecord')}
+                open={inModalOpen || !!editingOrder}
+                onCancel={() => {
+                  setInModalOpen(false)
+                  setEditingOrder(null)
+                  inForm.resetFields()
+                  orderEditForm.resetFields()
+                  setAttachmentFileList([])
+                  setUploadedAttachments([])
+                  setEditAttachmentFileList([])
+                  setEditUploadedAttachments([])
+                }}
                 footer={null}
-                {...getResponsiveModalConfig(isMobile, true, 720)}
+                {...getResponsiveModalConfig(isMobile, true, 900)}
+                style={{ top: 20 }}
+                bodyStyle={{ 
+                  maxHeight: 'calc(100vh - 180px)', 
+                  overflowY: 'auto',
+                  paddingBottom: 16
+                }}
+                afterOpenChange={(open) => {
+                  if (open && editingOrder) {
+                    // 编辑模式：初始化表单和附件
+                    inForm.setFieldsValue({
+                      referenceNo: editingOrder.referenceNo,
+                      reason: editingOrder.reason,
+                      items: editingOrder.items
+                    })
+                    
+                    const existingAttachments = editingOrder.attachments || []
+                    setUploadedAttachments(existingAttachments)
+                    setAttachmentFileList(
+                      existingAttachments.map((att, idx) => ({
+                        uid: `existing-${idx}`,
+                        name: att.filename,
+                        status: 'done' as const,
+                        url: att.url
+                      }))
+                    )
+                  }
+                }}
               >
               <Form form={inForm} layout="vertical" className="dark-theme-form" onFinish={async (values: { referenceNo?: string; reason?: string; items: { itemType?: string; cigarId?: string; customName?: string; quantity: number; unitPrice?: number }[] }) => {
                 const lines = (values.items || []).filter(it => it?.quantity > 0 && (it?.cigarId || it?.customName))
@@ -1799,20 +1835,20 @@ const AdminInventory: React.FC = () => {
                 }
               }}>
                 {/* 左右分栏布局 */}
-                <Row gutter={24}>
+                <Row gutter={16}>
                   {/* 左侧：单号和原因 */}
                   <Col span={12}>
-                    <Form.Item label={t('inventory.referenceNo')} name="referenceNo">
+                    <Form.Item label={t('inventory.referenceNo')} name="referenceNo" style={{ marginBottom: 12 }}>
                       <Input placeholder={t('inventory.pleaseInputReferenceNo')} />
                     </Form.Item>
-                    <Form.Item label={t('inventory.reason')} name="reason">
+                    <Form.Item label={t('inventory.reason')} name="reason" style={{ marginBottom: 12 }}>
                       <Input placeholder={t('inventory.forExample') + t('inventory.purchaseInStock')} />
                     </Form.Item>
                   </Col>
                   
                   {/* 右侧：附件上传 */}
                   <Col span={12}>
-                    <Form.Item label={t('inventory.attachments')}>
+                    <Form.Item label={t('inventory.attachments')} style={{ marginBottom: 12 }}>
                       <Upload
                         accept=".pdf,.jpg,.jpeg,.png"
                         fileList={attachmentFileList}
@@ -1890,8 +1926,8 @@ const AdminInventory: React.FC = () => {
                     <div>
                       {fields.map(({ key, name, ...restField }) => (
                         <div key={key} style={{ 
-                          marginBottom: 16, 
-                          padding: 12, 
+                          marginBottom: 12, 
+                          padding: 10, 
                           border: '1px solid rgba(255, 255, 255, 0.1)', 
                           borderRadius: 8,
                           background: 'rgba(0, 0, 0, 0.2)'
@@ -2012,7 +2048,7 @@ const AdminInventory: React.FC = () => {
                           </Row>
                         </div>
                       ))}
-                      <Form.Item>
+                      <Form.Item style={{ marginBottom: 0 }}>
                         <Button type="dashed" onClick={() => add({ itemType: 'cigar', quantity: 1 })} icon={<PlusOutlined />} style={{ width: '100%' }}>
                           {t('inventory.addDetail')}
                         </Button>
@@ -2021,14 +2057,18 @@ const AdminInventory: React.FC = () => {
                   )}
                 </Form.List>
                 
-                <Form.Item>
+                <Form.Item style={{ marginTop: 16, marginBottom: 0 }}>
                   <Space>
                     <Button onClick={() => {
                       setInModalOpen(false)
+                      setEditingOrder(null)
+                      inForm.resetFields()
                       setAttachmentFileList([])
                       setUploadedAttachments([])
                     }}>{t('common.cancel')}</Button>
-                    <Button type="primary" htmlType="submit" loading={loading}>{t('inventory.confirmInStock')}</Button>
+                    <Button type="primary" htmlType="submit" loading={loading}>
+                      {editingOrder ? "保存修改" : t('inventory.confirmInStock')}
+                    </Button>
                   </Space>
                 </Form.Item>
               </Form>
