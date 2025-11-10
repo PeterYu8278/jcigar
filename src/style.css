@@ -217,6 +217,7 @@ button + button { margin-left: 8px; }
 /* Space 组件间距调整 */
 .ant-space-item {
   margin: 0 !important;
+  padding: 0 !important;
 }
 
 /* 暗色主题弹窗表单样式 */
