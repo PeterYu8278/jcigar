@@ -1067,60 +1067,34 @@ const AdminEvents: React.FC = () => {
       <Modal
         title={editing ? t('common.edit') : t('common.add')}
         open={creating || !!editing}
-        onCancel={() => { 
-          setCreating(false); 
-          setEditing(null);
-          form.resetFields();
-        }}
+        onCancel={() => { setCreating(false); setEditing(null) }}
+        onOk={() => form.submit()}
+        confirmLoading={loading}
         {...getResponsiveModalConfig(isMobile, true, 720)}
-        footer={[
-          <button 
-            key="cancel" 
-            type="button" 
-            onClick={() => { 
-              setCreating(false); 
-              setEditing(null);
-              form.resetFields();
-            }} 
-            style={{ 
-              padding: '6px 14px', 
-              borderRadius: 8, 
-              border: '1px solid rgba(244, 175, 37, 0.3)', 
-              background: 'rgba(0, 0, 0, 0.2)', 
-              color: '#d9d9d9',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            {t('common.cancel')}
-          </button>,
-          <button 
-            key="submit" 
-            type="button" 
-            className="cigar-btn-gradient" 
-            onClick={() => form.submit()} 
-            disabled={loading}
-            style={{ 
-              padding: '6px 14px', 
-              borderRadius: 8, 
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.6 : 1,
-              transition: 'all 0.2s ease'
-            }}
-          >
-            {loading ? t('common.saving') : (editing ? t('common.save') : t('common.create'))}
-          </button>
-        ]}
+        footer={isMobile ? (
+          <div style={{ padding: '8px 0' }}>
+            <button 
+              disabled={loading} 
+              onClick={() => form.submit()} 
+              style={{ 
+                width: '100%', 
+                padding: '12px', 
+                borderRadius: 8, 
+                background: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
+                color: '#111', 
+                fontWeight: 600, 
+                cursor: 'pointer', 
+                transition: 'all 0.2s ease', 
+                opacity: loading ? 0.6 : 1, 
+                boxShadow: '0 4px 15px -5px rgba(244,175,37,0.5)' 
+              }}
+            >
+              {loading ? t('common.saving') : (editing ? t('common.save') : t('common.create'))}
+            </button>
+          </div>
+        ) : undefined}
       >
-        <Form 
-          form={form} 
-          layout="horizontal"
-          labelAlign="left"
-          colon={false}
-          labelCol={{ flex: '120px' }}
-          wrapperCol={{ flex: 'auto' }}
-          className="dark-theme-form"
-          onFinish={async (values: any) => {
+        <Form form={form} layout="vertical" onFinish={async (values: any) => {
           setLoading(true)
           try {
             // ===== STATUS VALIDATION AND PROCESSING =====
