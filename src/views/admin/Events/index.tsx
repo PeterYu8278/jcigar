@@ -1,7 +1,7 @@
 // 活动管理页面
 import React, { useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
-import { Table, Button, Tag, Space, Typography, Input, Select, DatePicker, message, Modal, Form, InputNumber, Switch, Dropdown, Checkbox, Upload, Spin, Descriptions, Progress, Tabs } from 'antd'
+import { Table, Button, Tag, Space, Typography, Input, Select, DatePicker, message, Modal, Form, InputNumber, Switch, Dropdown, Checkbox, Upload, Spin, Descriptions, Progress, Tabs, Row, Col } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, EyeOutlined, DownloadOutlined, UploadOutlined, UserOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import type { Event, User, Cigar } from '../../../types'
 import { getEvents, createDocument, updateDocument, deleteDocument, COLLECTIONS, getUsers, registerForEvent, unregisterFromEvent, getCigars, createOrdersFromEventAllocations, getAllOrders, getUsersByIds, getEventById } from '../../../services/firebase/firestore'
@@ -1152,7 +1152,10 @@ const AdminEvents: React.FC = () => {
           maxHeight: 'calc(100vh - 120px)', 
           overflowY: 'auto',
           overflowX: 'hidden',
-          paddingBottom: 16
+          paddingTop: 24,
+          paddingRight: 24,
+          paddingBottom: 16,
+          paddingLeft: 24
         }}
       >
         <Form form={form} layout="vertical" onFinish={async (values: any) => {
