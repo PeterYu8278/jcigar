@@ -1143,18 +1143,17 @@ const AdminEvents: React.FC = () => {
           console.log('🔴 Modal onCancel - Closing modal')
           setCreating(false)
           setEditing(null)
+          form.resetFields()
         }}
-        onOk={() => {
-          console.log('🟡 ========== MODAL OK CLICKED ==========')
-          console.log('🟡 Timestamp:', new Date().toISOString())
-          console.log('🟡 editing:', editing)
-          console.log('🟡 creating:', creating)
-          console.log('🟡 Calling form.submit()...')
-          form.submit()
-          console.log('🟡 form.submit() called')
-          console.log('🟡 ========================================')
+        footer={null}
+        width={isMobile ? '100%' : 720}
+        style={{ top: isMobile ? 0 : 20 }}
+        bodyStyle={{ 
+          maxHeight: 'calc(100vh - 120px)', 
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          paddingBottom: 16
         }}
-        confirmLoading={loading}
       >
         <Form form={form} layout="vertical" onFinish={async (values: any) => {
           console.log('🔵 ========== FORM SUBMIT START ==========')
@@ -1268,96 +1267,259 @@ const AdminEvents: React.FC = () => {
             setLoading(false)
           }
         }}>
-          <Form.Item label={t('common.eventName')} name="title" rules={[{ required: true, message: t('common.pleaseInputEventName') }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item label={t('common.description')} name="description">
-            <Input.TextArea rows={3} />
-          </Form.Item>
-          <Form.Item label={t('common.eventImage')} name="image">
-            <ImageUpload
-              folder="events"
-              showPreview={true}
-              onChange={(url) => {
-                console.log('📸 ImageUpload onChange triggered, url:', url)
-              }}
-            />
-          </Form.Item>
-          <Form.Item label={t('common.locationName')} name="locationName" rules={[{ required: true, message: t('common.pleaseInputLocationName') }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item 
-            label={t('common.startDate')} 
-            name="startDate" 
-            rules={[
-              { required: true, message: t('common.pleaseSelectStartDate') },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  const endDate = getFieldValue('endDate')
-                  if (value && endDate && dayjs(value).isAfter(dayjs(endDate))) {
-                    return Promise.reject(new Error(t('common.startDateCannotBeAfterEndDate')))
-                  }
-                  return Promise.resolve()
-                }
-              })
-            ]}
-          >
-            <DatePicker 
-              style={{ width: '100%' }} 
-              disabledDate={(current) => current && current < dayjs().startOf('day')}
-              showTime={{ format: 'HH:mm' }}
-              format="YYYY-MM-DD HH:mm"
-              placeholder={t('common.pleaseSelectStartDate')}
-            />
-          </Form.Item>
-          <Form.Item 
-            label={t('common.endDate')} 
-            name="endDate" 
-            rules={[
-              { required: true, message: t('common.pleaseSelectEndDate') },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  const startDate = getFieldValue('startDate')
-                  if (value && startDate && dayjs(value).isBefore(dayjs(startDate))) {
-                    return Promise.reject(new Error(t('common.endDateCannotBeBeforeStartDate')))
-                  }
-                  return Promise.resolve()
-                }
-              })
-            ]}
-          >
-            <DatePicker 
-              style={{ width: '100%' }} 
-              disabledDate={(current) => current && current < dayjs().startOf('day')}
-              showTime={{ format: 'HH:mm' }}
-              format="YYYY-MM-DD HH:mm"
-              placeholder={t('common.pleaseSelectEndDate')}
-            />
-          </Form.Item>
-          <Form.Item label={t('common.fee')} name="fee">
-            <InputNumber min={0} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item label={t('common.maxParticipants')} name="maxParticipants">
-            <InputNumber min={0} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item label={t('common.privateEvent')} name="isPrivate" valuePropName="checked" initialValue={false}>
-            <Switch />
-          </Form.Item>
-          <Form.Item label={t('common.status')} name="status" initialValue={DEFAULT_STATUS}>
-            <Select>
-              {(() => {
-                const currentStatus = editing?.status || DEFAULT_STATUS
-                const availableStatuses = editing ? getAvailableStatusOptions(currentStatus) : Object.values(EVENT_STATUSES)
+          <div style={{ width: '100%', overflow: 'hidden' }}>
+            {/* 基本信息卡片 */}
+            <div style={{
+              padding: isMobile ? 12 : 16,
+              marginBottom: 16,
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: 12,
+              background: 'rgba(0, 0, 0, 0.2)',
+              backdropFilter: 'blur(6px)'
+            }}>
+              <div style={{ 
+                fontSize: 14, 
+                fontWeight: 600, 
+                color: '#f4af25', 
+                marginBottom: 12 
+              }}>
+                📋 基本信息
+              </div>
+              
+              <Form.Item 
+                label={t('common.eventName')} 
+                name="title" 
+                rules={[{ required: true, message: t('common.pleaseInputEventName') }]}
+                style={{ marginBottom: 12 }}
+              >
+                <Input placeholder="请输入活动名称" />
+              </Form.Item>
+              
+              <Form.Item 
+                label={t('common.description')} 
+                name="description"
+                style={{ marginBottom: 12 }}
+              >
+                <Input.TextArea rows={2} placeholder="请输入活动描述" />
+              </Form.Item>
+              
+              <Form.Item 
+                label={t('common.locationName')} 
+                name="locationName" 
+                rules={[{ required: true, message: t('common.pleaseInputLocationName') }]}
+                style={{ marginBottom: 0 }}
+              >
+                <Input placeholder="请输入活动地点" />
+              </Form.Item>
+            </div>
+            
+            {/* 时间设置卡片 */}
+            <div style={{
+              padding: isMobile ? 12 : 16,
+              marginBottom: 16,
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: 12,
+              background: 'rgba(0, 0, 0, 0.2)',
+              backdropFilter: 'blur(6px)'
+            }}>
+              <div style={{ 
+                fontSize: 14, 
+                fontWeight: 600, 
+                color: '#f4af25', 
+                marginBottom: 12 
+              }}>
+                📅 时间设置
+              </div>
+              
+              <Form.Item 
+                label={t('common.startDate')} 
+                name="startDate" 
+                rules={[
+                  { required: true, message: t('common.pleaseSelectStartDate') },
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      const endDate = getFieldValue('endDate')
+                      if (value && endDate && dayjs(value).isAfter(dayjs(endDate))) {
+                        return Promise.reject(new Error(t('common.startDateCannotBeAfterEndDate')))
+                      }
+                      return Promise.resolve()
+                    }
+                  })
+                ]}
+                style={{ marginBottom: 12 }}
+              >
+                <DatePicker 
+                  style={{ width: '100%' }} 
+                  disabledDate={(current) => current && current < dayjs().startOf('day')}
+                  showTime={{ format: 'HH:mm' }}
+                  format="YYYY-MM-DD HH:mm"
+                  placeholder={t('common.pleaseSelectStartDate')}
+                />
+              </Form.Item>
+              
+              <Form.Item 
+                label={t('common.endDate')} 
+                name="endDate" 
+                rules={[
+                  { required: true, message: t('common.pleaseSelectEndDate') },
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      const startDate = getFieldValue('startDate')
+                      if (value && startDate && dayjs(value).isBefore(dayjs(startDate))) {
+                        return Promise.reject(new Error(t('common.endDateCannotBeBeforeStartDate')))
+                      }
+                      return Promise.resolve()
+                    }
+                  })
+                ]}
+                style={{ marginBottom: 0 }}
+              >
+                <DatePicker 
+                  style={{ width: '100%' }} 
+                  disabledDate={(current) => current && current < dayjs().startOf('day')}
+                  showTime={{ format: 'HH:mm' }}
+                  format="YYYY-MM-DD HH:mm"
+                  placeholder={t('common.pleaseSelectEndDate')}
+                />
+              </Form.Item>
+            </div>
+            
+            {/* 参与设置卡片 */}
+            <div style={{
+              padding: isMobile ? 12 : 16,
+              marginBottom: 16,
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: 12,
+              background: 'rgba(0, 0, 0, 0.2)',
+              backdropFilter: 'blur(6px)'
+            }}>
+              <div style={{ 
+                fontSize: 14, 
+                fontWeight: 600, 
+                color: '#f4af25', 
+                marginBottom: 12 
+              }}>
+                👥 参与设置
+              </div>
+              
+              <Row gutter={12}>
+                <Col span={12}>
+                  <Form.Item 
+                    label={t('common.fee')} 
+                    name="fee"
+                    style={{ marginBottom: 12 }}
+                  >
+                    <InputNumber min={0} style={{ width: '100%' }} placeholder="费用" />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item 
+                    label={t('common.maxParticipants')} 
+                    name="maxParticipants"
+                    style={{ marginBottom: 12 }}
+                  >
+                    <InputNumber min={0} style={{ width: '100%' }} placeholder="人数上限" />
+                  </Form.Item>
+                </Col>
+              </Row>
+              
+              <Row gutter={12}>
+                <Col span={12}>
+                  <Form.Item 
+                    label={t('common.privateEvent')} 
+                    name="isPrivate" 
+                    valuePropName="checked" 
+                    initialValue={false}
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Switch />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item 
+                    label={t('common.status')} 
+                    name="status" 
+                    initialValue={DEFAULT_STATUS}
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Select>
+                      {(() => {
+                        const currentStatus = editing?.status || DEFAULT_STATUS
+                        const availableStatuses = editing ? getAvailableStatusOptions(currentStatus) : Object.values(EVENT_STATUSES)
+                        
+                        return availableStatuses.map(status => (
+                          <Option key={status} value={status}>
+                            {t(`common.${status}`)}
+                            {status === currentStatus && ` (${t('common.current')})`}
+                          </Option>
+                        ))
+                      })()}
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
+            </div>
+            
+            {/* 图片上传卡片 */}
+            {!isMobile && (
+              <div style={{
+                padding: 16,
+                marginBottom: 16,
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: 12,
+                background: 'rgba(0, 0, 0, 0.2)',
+                backdropFilter: 'blur(6px)'
+              }}>
+                <div style={{ 
+                  fontSize: 14, 
+                  fontWeight: 600, 
+                  color: '#f4af25', 
+                  marginBottom: 12 
+                }}>
+                  🖼️ 活动图片
+                </div>
                 
-                return availableStatuses.map(status => (
-                  <Option key={status} value={status}>
-                    {t(`common.${status}`)}
-                    {status === currentStatus && ` (${t('common.current')})`}
-                  </Option>
-                ))
-              })()}
-            </Select>
-          </Form.Item>
+                <Form.Item 
+                  name="image"
+                  style={{ marginBottom: 0 }}
+                >
+                  <ImageUpload
+                    folder="events"
+                    showPreview={true}
+                    onChange={(url) => {
+                      console.log('📸 ImageUpload onChange triggered, url:', url)
+                    }}
+                  />
+                </Form.Item>
+              </div>
+            )}
+            
+            {/* 提交按钮 */}
+            <Form.Item style={{ marginBottom: 0 }}>
+              <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+                <Button onClick={() => {
+                  setCreating(false)
+                  setEditing(null)
+                  form.resetFields()
+                }}>
+                  {t('common.cancel')}
+                </Button>
+                <Button 
+                  type="primary" 
+                  htmlType="submit" 
+                  loading={loading}
+                  onClick={() => {
+                    console.log('🟡 ========== SUBMIT BUTTON CLICKED ==========')
+                    console.log('🟡 Timestamp:', new Date().toISOString())
+                    console.log('🟡 editing:', editing)
+                    console.log('🟡 creating:', creating)
+                  }}
+                >
+                  {editing ? t('common.save') : t('common.create')}
+                </Button>
+              </Space>
+            </Form.Item>
+          </div>
         </Form>
       </Modal>
 
