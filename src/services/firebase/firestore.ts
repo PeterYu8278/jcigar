@@ -69,15 +69,29 @@ export const COLLECTIONS = {
 
 // 通用CRUD操作
 export const createDocument = async <T>(collectionName: string, data: Omit<T, 'id'>) => {
+  console.log('🔷 ========== createDocument CALLED ==========')
+  console.log('🔷 Timestamp:', new Date().toISOString())
+  console.log('🔷 Collection:', collectionName)
+  console.log('🔷 Data received:', JSON.stringify(data, null, 2))
+  console.log('🔷 Call stack:', new Error().stack)
+  
   try {
     const sanitized = sanitizeForFirestore(data);
+    console.log('🔷 Data after sanitization:', JSON.stringify(sanitized, null, 2))
+    
     const docRef = await addDoc(collection(db, collectionName), {
       ...sanitized,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+    
+    console.log('🔷 Document created successfully, ID:', docRef.id)
+    console.log('🔷 ========================================')
+    
     return { success: true, id: docRef.id };
   } catch (error) {
+    console.error('🔷 ❌ createDocument ERROR:', error)
+    console.log('🔷 ========================================')
     return { success: false, error: error as Error };
   }
 };

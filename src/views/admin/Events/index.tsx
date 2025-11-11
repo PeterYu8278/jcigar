@@ -627,11 +627,9 @@ const AdminEvents: React.FC = () => {
             </>
           )}
           
-            <CreateButton
-             onCreate={() => {
-               console.log('🟣 [Events] CreateButton onClick triggered')
-               console.log('🟣 [Events] Current timestamp:', new Date().toISOString())
-               const newEvent: Event = {
+          <CreateButton
+            onCreate={() => { 
+              const newEvent: Event = {
                 id: 'new',
                 title: '',
                 description: '',
@@ -670,11 +668,10 @@ const AdminEvents: React.FC = () => {
                 endDate: dayjs(),
                 locationName: '',
                 fee: 0,
-                 maxParticipants: 0
-               })
-               console.log('🟣 [Events] CreateButton setup complete, viewing set to newEvent')
-             }}
-             buttonText={t('dashboard.createEvent')}
+                maxParticipants: 0
+              })
+            }}
+            buttonText={t('dashboard.createEvent')}
             style={{ 
               display: 'flex', 
               alignItems: 'center', 
@@ -1065,39 +1062,42 @@ const AdminEvents: React.FC = () => {
         />
       </Modal>
 
-       {/* 创建/编辑 弹窗 */}
-       <Modal
-         title={editing ? t('common.edit') : t('common.add')}
-         open={creating || !!editing}
-         onCancel={() => { 
-           console.log('🔴 [Events] Modal onCancel triggered')
-           console.log('🔴 [Events] creating:', creating, 'editing:', editing)
-           setCreating(false)
-           setEditing(null)
-         }}
-         onOk={() => {
-           console.log('🟡 [Events] Modal onOk triggered')
-           console.log('🟡 [Events] creating:', creating, 'editing:', editing)
-           console.log('🟡 [Events] Submitting form...')
-           form.submit()
-         }}
-         confirmLoading={loading}
-        >
-          <Form form={form} layout="vertical" onFinish={async (values: any) => {
-           console.log('🔵 [Events] Form onFinish triggered')
-           console.log('🔵 [Events] Form values:', values)
-           console.log('🔵 [Events] editing state:', editing)
-           console.log('🔵 [Events] creating state:', creating)
-           console.log('🔵 [Events] Current timestamp:', new Date().toISOString())
-           
-           setLoading(true)
-           try {
-             // ===== STATUS VALIDATION AND PROCESSING =====
-             const currentStatus = editing?.status || DEFAULT_STATUS
-             const newStatus = values.status || DEFAULT_STATUS
-             
-             console.log('🔵 [Events] currentStatus:', currentStatus)
-             console.log('🔵 [Events] newStatus:', newStatus)
+      {/* 创建/编辑 弹窗 */}
+      <Modal
+        title={editing ? t('common.edit') : t('common.add')}
+        open={creating || !!editing}
+        onCancel={() => { 
+          console.log('🔴 Modal onCancel - Closing modal')
+          setCreating(false)
+          setEditing(null)
+        }}
+        onOk={() => {
+          console.log('🟡 ========== MODAL OK CLICKED ==========')
+          console.log('🟡 Timestamp:', new Date().toISOString())
+          console.log('🟡 editing:', editing)
+          console.log('🟡 creating:', creating)
+          console.log('🟡 Calling form.submit()...')
+          form.submit()
+          console.log('🟡 form.submit() called')
+          console.log('🟡 ========================================')
+        }}
+        confirmLoading={loading}
+      >
+        <Form form={form} layout="vertical" onFinish={async (values: any) => {
+          console.log('🔵 ========== FORM SUBMIT START ==========')
+          console.log('🔵 Timestamp:', new Date().toISOString())
+          console.log('🔵 Form values:', JSON.stringify(values, null, 2))
+          console.log('🔵 editing state:', editing)
+          console.log('🔵 creating state:', creating)
+          console.log('🔵 ========================================')
+          
+          setLoading(true)
+          try {
+            // ===== STATUS VALIDATION AND PROCESSING =====
+            const currentStatus = editing?.status || DEFAULT_STATUS
+            const newStatus = values.status || DEFAULT_STATUS
+            
+            console.log('🟡 Status check - current:', currentStatus, 'new:', newStatus)
             
             // Validate status transition
             if (editing && !isValidStatusTransition(currentStatus, newStatus)) {
@@ -1131,7 +1131,11 @@ const AdminEvents: React.FC = () => {
               status: finalStatus,
               updatedAt: new Date(),
             } as any
+            
+            console.log('🟢 Payload prepared:', JSON.stringify(payload, null, 2))
+            
             if (editing) {
+              console.log('🟠 EDITING MODE - Event ID:', editing.id)
               const res = await updateDocument<Event>(COLLECTIONS.EVENTS, editing.id, payload)
               if (res.success) {
                 // Auto-create orders when status is set to "completed"
@@ -1160,30 +1164,35 @@ const AdminEvents: React.FC = () => {
                   message.success(t('common.saved'))
                 }
               }
-             } else {
-               console.log('🟢 [Events] Creating NEW event')
-               console.log('🟢 [Events] Payload:', payload)
-               console.log('🟢 [Events] Collection:', COLLECTIONS.EVENTS)
-               console.log('🟢 [Events] Timestamp:', new Date().toISOString())
-               
-               const result = await createDocument<Event>(COLLECTIONS.EVENTS, { ...payload, createdAt: new Date() } as any)
-               
-               console.log('🟢 [Events] Create result:', result)
-               console.log('🟢 [Events] Result success:', result.success)
-               console.log('🟢 [Events] Result ID:', result.id)
-               
-               message.success(t('common.created'))
-             }
-            console.log('🔵 [Events] Fetching updated events list')
+            } else {
+              console.log('🟢 ========== CREATE MODE START ==========')
+              console.log('🟢 Creating NEW event')
+              console.log('🟢 Collection:', COLLECTIONS.EVENTS)
+              console.log('🟢 Payload with createdAt:', JSON.stringify({ ...payload, createdAt: new Date() }, null, 2))
+              console.log('🟢 Calling createDocument...')
+              
+              const result = await createDocument<Event>(COLLECTIONS.EVENTS, { ...payload, createdAt: new Date() } as any)
+              
+              console.log('🟢 createDocument result:', result)
+              console.log('🟢 Result success:', result.success)
+              console.log('🟢 Result ID:', result.id)
+              console.log('🟢 ========== CREATE MODE END ==========')
+              
+              message.success(t('common.created'))
+            }
+            
+            console.log('🔵 Fetching updated events list...')
             const list = await getEvents()
-            console.log('🔵 [Events] Events count after fetch:', list.length)
+            console.log('🔵 Events count after fetch:', list.length)
+            console.log('🔵 Event IDs:', list.map(e => e.id))
+            
             setEvents(list)
             setCreating(false)
             setEditing(null)
-            console.log('🔵 [Events] Modal closed, states reset')
+            
+            console.log('🔵 ========== FORM SUBMIT END ==========')
           } finally {
             setLoading(false)
-            console.log('🔵 [Events] Loading set to false')
           }
         }}>
           <Form.Item label={t('common.eventName')} name="title" rules={[{ required: true, message: t('common.pleaseInputEventName') }]}>
@@ -1196,6 +1205,9 @@ const AdminEvents: React.FC = () => {
             <ImageUpload
               folder="events"
               showPreview={true}
+              onChange={(url) => {
+                console.log('📸 ImageUpload onChange triggered, url:', url)
+              }}
             />
           </Form.Item>
           <Form.Item label={t('common.locationName')} name="locationName" rules={[{ required: true, message: t('common.pleaseInputLocationName') }]}>
