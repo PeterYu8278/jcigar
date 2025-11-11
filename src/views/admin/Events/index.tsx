@@ -813,8 +813,8 @@ const AdminEvents: React.FC = () => {
         title={viewing?.id === 'new' ? t('dashboard.createEvent') : t('events.eventDetails')}
         open={!!viewing}
         onCancel={() => { setViewing(null); setIsEditingDetails(false) }}
+        {...getResponsiveModalConfig(isMobile, true, 1000)}
         footer={null}
-        width={1000}
       >
         {viewing && (
           <Tabs
