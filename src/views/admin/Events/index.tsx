@@ -17,6 +17,7 @@ import EventDetailsView from '../../../components/admin/EventDetailsView'
 import EventParticipantsManager from '../../../components/admin/EventParticipantsManager'
 import StatusFilterDropdown from '../../../components/admin/StatusFilterDropdown'
 import { useTranslation } from 'react-i18next'
+import { getResponsiveModalConfig, getModalTheme } from '../../../config/modalTheme'
 
 const { Title } = Typography
 const { Search } = Input
@@ -416,6 +417,7 @@ const AdminEvents: React.FC = () => {
   }, [orders])
 
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
+  const theme = getModalTheme()
 
   // 自动调整活动状态根据日期
   const autoAdjustEventStatus = async (event: Event) => {
@@ -1145,18 +1147,47 @@ const AdminEvents: React.FC = () => {
           setEditing(null)
           form.resetFields()
         }}
-        footer={null}
-        width={isMobile ? '100%' : 720}
-        style={{ top: isMobile ? 0 : 20 }}
-        bodyStyle={{ 
-          maxHeight: 'calc(100vh - 120px)', 
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          paddingTop: 24,
-          paddingRight: 24,
-          paddingBottom: 16,
-          paddingLeft: 24
-        }}
+        {...getResponsiveModalConfig(isMobile, true, 720)}
+        footer={[
+          <button 
+            key="cancel" 
+            type="button" 
+            onClick={() => {
+              setCreating(false)
+              setEditing(null)
+              form.resetFields()
+            }} 
+            style={{ 
+              padding: '6px 14px', 
+              borderRadius: 8, 
+              border: '1px solid rgba(255, 255, 255, 0.2)', 
+              background: 'rgba(255, 255, 255, 0.05)', 
+              color: '#fff',
+              cursor: 'pointer' 
+            }}
+          >
+            {t('common.cancel')}
+          </button>,
+          <button 
+            key="submit" 
+            type="button" 
+            className="cigar-btn-gradient" 
+            onClick={() => {
+              console.log('🟡 ========== SUBMIT BUTTON CLICKED ==========')
+              console.log('🟡 Timestamp:', new Date().toISOString())
+              console.log('🟡 editing:', editing)
+              console.log('🟡 creating:', creating)
+              form.submit()
+            }} 
+            style={{ 
+              padding: '6px 14px', 
+              borderRadius: 8, 
+              cursor: 'pointer' 
+            }}
+          >
+            {editing ? t('common.save') : t('common.create')}
+          </button>
+        ]}
       >
         <Form form={form} layout="vertical" onFinish={async (values: any) => {
           console.log('🔵 ========== FORM SUBMIT START ==========')
@@ -1272,20 +1303,8 @@ const AdminEvents: React.FC = () => {
         }}>
           <div style={{ width: '100%', overflow: 'hidden' }}>
             {/* 基本信息卡片 */}
-            <div style={{
-              padding: isMobile ? 12 : 16,
-              marginBottom: 16,
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: 12,
-              background: 'rgba(0, 0, 0, 0.2)',
-              backdropFilter: 'blur(6px)'
-            }}>
-              <div style={{ 
-                fontSize: 14, 
-                fontWeight: 600, 
-                color: '#f4af25', 
-                marginBottom: 12 
-              }}>
+            <div style={theme.card.elevated}>
+              <div style={theme.text.subtitle}>
                 📋 基本信息
               </div>
               
@@ -1317,20 +1336,8 @@ const AdminEvents: React.FC = () => {
             </div>
             
             {/* 时间设置卡片 */}
-            <div style={{
-              padding: isMobile ? 12 : 16,
-              marginBottom: 16,
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: 12,
-              background: 'rgba(0, 0, 0, 0.2)',
-              backdropFilter: 'blur(6px)'
-            }}>
-              <div style={{ 
-                fontSize: 14, 
-                fontWeight: 600, 
-                color: '#f4af25', 
-                marginBottom: 12 
-              }}>
+            <div style={theme.card.elevated}>
+              <div style={theme.text.subtitle}>
                 📅 时间设置
               </div>
               
@@ -1388,20 +1395,8 @@ const AdminEvents: React.FC = () => {
             </div>
             
             {/* 参与设置卡片 */}
-            <div style={{
-              padding: isMobile ? 12 : 16,
-              marginBottom: 16,
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: 12,
-              background: 'rgba(0, 0, 0, 0.2)',
-              backdropFilter: 'blur(6px)'
-            }}>
-              <div style={{ 
-                fontSize: 14, 
-                fontWeight: 600, 
-                color: '#f4af25', 
-                marginBottom: 12 
-              }}>
+            <div style={theme.card.elevated}>
+              <div style={theme.text.subtitle}>
                 👥 参与设置
               </div>
               
@@ -1465,20 +1460,8 @@ const AdminEvents: React.FC = () => {
             
             {/* 图片上传卡片 */}
             {!isMobile && (
-              <div style={{
-                padding: 16,
-                marginBottom: 16,
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: 12,
-                background: 'rgba(0, 0, 0, 0.2)',
-                backdropFilter: 'blur(6px)'
-              }}>
-                <div style={{ 
-                  fontSize: 14, 
-                  fontWeight: 600, 
-                  color: '#f4af25', 
-                  marginBottom: 12 
-                }}>
+              <div style={theme.card.elevated}>
+                <div style={theme.text.subtitle}>
                   🖼️ 活动图片
                 </div>
                 
@@ -1496,32 +1479,6 @@ const AdminEvents: React.FC = () => {
                 </Form.Item>
               </div>
             )}
-            
-            {/* 提交按钮 */}
-            <Form.Item style={{ marginBottom: 0 }}>
-              <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-                <Button onClick={() => {
-                  setCreating(false)
-                  setEditing(null)
-                  form.resetFields()
-                }}>
-                  {t('common.cancel')}
-                </Button>
-                <Button 
-                  type="primary" 
-                  htmlType="submit" 
-                  loading={loading}
-                  onClick={() => {
-                    console.log('🟡 ========== SUBMIT BUTTON CLICKED ==========')
-                    console.log('🟡 Timestamp:', new Date().toISOString())
-                    console.log('🟡 editing:', editing)
-                    console.log('🟡 creating:', creating)
-                  }}
-                >
-                  {editing ? t('common.save') : t('common.create')}
-                </Button>
-              </Space>
-            </Form.Item>
           </div>
         </Form>
       </Modal>
