@@ -144,6 +144,120 @@ const AdminEvents: React.FC = () => {
   const handleSaveField = async (fieldName: string) => {
     if (!viewing) return
     
+    console.log('💾 handleSaveField called - fieldName:', fieldName, 'viewing.id:', viewing.id)
+    
+    // 🔥 关键修复：创建模式下的特殊处理
+    if (viewing.id === 'new') {
+      // 特殊标识：一次性创建所有字段
+      if (fieldName === '__CREATE_ALL__') {
+        console.log('🟢 CREATE MODE: Creating complete event with all fields')
+        
+        try {
+          const newEventData: Partial<Event> = {
+            title: editForm.title || '',
+            description: editForm.description || '',
+            image: editForm.image || '',
+            status: editForm.status || 'draft',
+            organizerId: '',
+            schedule: {
+              startDate: toDateOrNull(editForm.startDate) || new Date(),
+              endDate: toDateOrNull(editForm.endDate) || new Date(),
+              registrationDeadline: toDateOrNull(editForm.endDate) || new Date()
+            },
+            location: {
+              name: editForm.locationName || '',
+              address: ''
+            },
+            participants: {
+              fee: editForm.fee !== undefined ? Number(editForm.fee) : 0,
+              maxParticipants: editForm.maxParticipants !== undefined ? editForm.maxParticipants : 50,
+              registered: []
+            },
+            cigars: {
+              featured: [],
+              tasting: []
+            },
+            isPrivate: !!editForm.isPrivate,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+          
+          console.log('🟢 Creating event with data:', newEventData)
+          
+          const res = await createDocument<Event>(COLLECTIONS.EVENTS, newEventData as any)
+          if (res.success) {
+            message.success(t('common.created'))
+            const list = await getEvents()
+            setEvents(list)
+            const newEvent = list.find(e => e.id === res.id)
+            if (newEvent) {
+              setViewing(newEvent)
+            }
+          } else {
+            message.error(t('common.createFailed'))
+          }
+        } catch (error) {
+          console.error('🟢 CREATE MODE error:', error)
+          message.error(t('common.createFailed'))
+        }
+        return
+      }
+      
+      // 单字段保存：只更新本地状态，不创建文档
+      console.warn('⚠️ CREATE MODE: Single field save blocked, only updating local state')
+      
+      const updatedViewing = { ...viewing }
+      
+      switch (fieldName) {
+        case 'title':
+          updatedViewing.title = editForm.title
+          break
+        case 'description':
+          updatedViewing.description = editForm.description
+          break
+        case 'image':
+          updatedViewing.image = editForm.image
+          break
+        case 'status':
+          updatedViewing.status = editForm.status
+          break
+        case 'startDate':
+          updatedViewing.schedule = {
+            ...(viewing as any).schedule,
+            startDate: toDateOrNull(editForm.startDate)
+          }
+          break
+        case 'endDate':
+          updatedViewing.schedule = {
+            ...(viewing as any).schedule,
+            endDate: toDateOrNull(editForm.endDate)
+          }
+          break
+        case 'locationName':
+          updatedViewing.location = {
+            ...(viewing as any).location,
+            name: editForm.locationName
+          }
+          break
+        case 'fee':
+        case 'maxParticipants':
+          updatedViewing.participants = {
+            ...(viewing as any).participants,
+            ...(editForm.fee !== undefined ? { fee: Number(editForm.fee) } : {}),
+            ...(editForm.maxParticipants !== undefined ? { maxParticipants: editForm.maxParticipants } : {})
+          }
+          break
+        case 'isPrivate':
+          updatedViewing.isPrivate = editForm.isPrivate
+          break
+      }
+      
+      setViewing(updatedViewing)
+      // 不显示提示，避免干扰用户
+      return
+    }
+    
+    // 编辑模式：正常保存到数据库
     try {
       let updateData: any = {}
       
@@ -164,7 +278,6 @@ const AdminEvents: React.FC = () => {
           updateData.schedule = {
             ...(viewing as any).schedule,
             startDate: toDateOrNull(editForm.startDate),
-            // 如果 endDate 也在 editForm 中，一起保存
             endDate: editForm.endDate !== undefined ? toDateOrNull(editForm.endDate) : (viewing as any).schedule?.endDate
           }
           break
@@ -172,7 +285,6 @@ const AdminEvents: React.FC = () => {
           updateData.schedule = {
             ...(viewing as any).schedule,
             endDate: toDateOrNull(editForm.endDate),
-            // 确保不覆盖已保存的 startDate
             startDate: updateData.schedule?.startDate || (viewing as any).schedule?.startDate
           }
           break
@@ -193,7 +305,7 @@ const AdminEvents: React.FC = () => {
             ...(nextMax !== undefined ? { maxParticipants: nextMax } : {}),
           }
           break
-          }
+        }
         case 'isPrivate':
           updateData.isPrivate = editForm.isPrivate
           break
@@ -201,47 +313,8 @@ const AdminEvents: React.FC = () => {
 
       updateData.updatedAt = new Date()
 
-      // 如果是新活动，先创建
-      if (viewing.id === 'new') {
-        const newEventData = {
-          ...updateData,
-          organizerId: '', // 需要设置当前用户ID
-          createdAt: new Date(),
-          schedule: updateData.schedule || {
-            startDate: new Date(),
-            endDate: new Date(),
-            registrationDeadline: new Date()
-          },
-          location: updateData.location || {
-            name: '',
-            address: ''
-          },
-          participants: updateData.participants || {
-            fee: 0,
-            maxParticipants: 50,
-            registered: []
-          },
-          cigars: {
-            featured: [],
-            tasting: []
-          },
-          image: ''
-        }
-        
-        const res = await createDocument<Event>(COLLECTIONS.EVENTS, newEventData as any)
-        if (res.success) {
-          message.success(t('common.created'))
-          const list = await getEvents()
-          setEvents(list)
-          const newEvent = list.find(e => e.id === res.id)
-          if (newEvent) {
-            setViewing(newEvent)
-          }
-        } else {
-          message.error(t('common.createFailed'))
-        }
-      } else {
-        // 更新现有活动
+      console.log('💾 EDIT MODE: Updating document', viewing.id, 'with data:', updateData)
+      
       const res = await updateDocument(COLLECTIONS.EVENTS, viewing.id, updateData)
       if (res.success) {
         message.success(t('common.saved'))
@@ -253,9 +326,9 @@ const AdminEvents: React.FC = () => {
         }
       } else {
         message.error(t('common.saveFailed'))
-        }
       }
     } catch (error) {
+      console.error('💾 handleSaveField error:', error)
       message.error(t('common.saveFailed'))
     }
   }
