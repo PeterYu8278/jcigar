@@ -17,7 +17,6 @@ import EventDetailsView from '../../../components/admin/EventDetailsView'
 import EventParticipantsManager from '../../../components/admin/EventParticipantsManager'
 import StatusFilterDropdown from '../../../components/admin/StatusFilterDropdown'
 import { useTranslation } from 'react-i18next'
-import { getResponsiveModalConfig } from '../../../config/modalTheme'
 
 const { Title } = Typography
 const { Search } = Input
@@ -628,14 +627,54 @@ const AdminEvents: React.FC = () => {
             </>
           )}
           
-          <CreateButton
-            onCreate={() => {
-              console.log('🔵 [Events] CreateButton clicked')
-              console.log('🔵 [Events] Opening create modal')
-              setCreating(true)
-              form.resetFields()
-            }}
-            buttonText={t('dashboard.createEvent')}
+            <CreateButton
+             onCreate={() => {
+               console.log('🟣 [Events] CreateButton onClick triggered')
+               console.log('🟣 [Events] Current timestamp:', new Date().toISOString())
+               const newEvent: Event = {
+                id: 'new',
+                title: '',
+                description: '',
+                organizerId: '',
+                status: 'draft',
+                schedule: {
+                  startDate: new Date(),
+                  endDate: new Date(),
+                  registrationDeadline: new Date()
+                },
+                location: {
+                  name: '',
+                  address: ''
+                },
+                participants: {
+                  fee: 0,
+                  maxParticipants: 50,
+                  registered: []
+                },
+                cigars: {
+                  featured: [],
+                  tasting: []
+                },
+                image: '',
+                createdAt: new Date(),
+                updatedAt: new Date()
+              }
+              setViewing(newEvent)
+              setIsEditingDetails(true)
+              setEditForm({
+                title: '',
+                description: '',
+                image: '',
+                status: 'draft',
+                startDate: dayjs(),
+                endDate: dayjs(),
+                locationName: '',
+                fee: 0,
+                 maxParticipants: 0
+               })
+               console.log('🟣 [Events] CreateButton setup complete, viewing set to newEvent')
+             }}
+             buttonText={t('dashboard.createEvent')}
             style={{ 
               display: 'flex', 
               alignItems: 'center', 
@@ -1026,121 +1065,125 @@ const AdminEvents: React.FC = () => {
         />
       </Modal>
 
-      {/* 创建活动弹窗 - 仅基本信息 */}
-      <Modal
-        title={t('common.add')}
-        open={creating}
-        onCancel={() => { setCreating(false); form.resetFields() }}
-        onOk={() => {
-          console.log('🔵 [Events] Modal onOk clicked (desktop)')
-          console.log('🔵 [Events] Current loading state:', loading)
-          form.submit()
-        }}
-        confirmLoading={loading}
-        {...getResponsiveModalConfig(isMobile, true, 720)}
-        footer={isMobile ? (
-          <div style={{ padding: '8px 0' }}>
-            <button 
-              disabled={loading} 
-              onClick={() => {
-                console.log('🔵 [Events] Mobile footer button clicked')
-                console.log('🔵 [Events] Current loading state:', loading)
-                form.submit()
-              }} 
-              style={{ 
-                width: '100%', 
-                padding: '12px', 
-                borderRadius: 8, 
-                background: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
-                color: '#111', 
-                fontWeight: 600, 
-                cursor: 'pointer', 
-                transition: 'all 0.2s ease', 
-                opacity: loading ? 0.6 : 1, 
-                boxShadow: '0 4px 15px -5px rgba(244,175,37,0.5)' 
-              }}
-            >
-              {loading ? t('common.saving') : t('common.create')}
-            </button>
-          </div>
-        ) : undefined}
-      >
-        <Form form={form} layout="vertical" onFinish={async (values: any) => {
-          console.log('🔵 [Events] Form onFinish triggered')
-          console.log('🔵 [Events] Form values:', values)
-          console.log('🔵 [Events] Loading state:', loading)
-          
-          // 防止重复提交
-          if (loading) {
-            console.log('⚠️ [Events] Already loading, preventing duplicate submission')
-            return
-          }
-          
-          setLoading(true)
-          console.log('🔵 [Events] setLoading(true) called')
-          
-          try {
-            // 创建活动 - 只包含基本信息
+       {/* 创建/编辑 弹窗 */}
+       <Modal
+         title={editing ? t('common.edit') : t('common.add')}
+         open={creating || !!editing}
+         onCancel={() => { 
+           console.log('🔴 [Events] Modal onCancel triggered')
+           console.log('🔴 [Events] creating:', creating, 'editing:', editing)
+           setCreating(false)
+           setEditing(null)
+         }}
+         onOk={() => {
+           console.log('🟡 [Events] Modal onOk triggered')
+           console.log('🟡 [Events] creating:', creating, 'editing:', editing)
+           console.log('🟡 [Events] Submitting form...')
+           form.submit()
+         }}
+         confirmLoading={loading}
+        >
+          <Form form={form} layout="vertical" onFinish={async (values: any) => {
+           console.log('🔵 [Events] Form onFinish triggered')
+           console.log('🔵 [Events] Form values:', values)
+           console.log('🔵 [Events] editing state:', editing)
+           console.log('🔵 [Events] creating state:', creating)
+           console.log('🔵 [Events] Current timestamp:', new Date().toISOString())
+           
+           setLoading(true)
+           try {
+             // ===== STATUS VALIDATION AND PROCESSING =====
+             const currentStatus = editing?.status || DEFAULT_STATUS
+             const newStatus = values.status || DEFAULT_STATUS
+             
+             console.log('🔵 [Events] currentStatus:', currentStatus)
+             console.log('🔵 [Events] newStatus:', newStatus)
+            
+            // Validate status transition
+            if (editing && !isValidStatusTransition(currentStatus, newStatus)) {
+              message.error(t('common.invalidStatusTransition'))
+              return
+            }
+            
+            // Calculate auto-status based on dates if not manually set
+            const finalStatus = newStatus === DEFAULT_STATUS ? 
+              calculateEventStatus({ ...editing, schedule: { 
+                startDate: toDateOrNull(values.startDate), 
+                endDate: toDateOrNull(values.endDate),
+                registrationDeadline: toDateOrNull(values.endDate)
+              } } as Event) : newStatus
+
             const payload: Partial<Event> = {
               title: values.title,
-              description: values.description || '',
-              location: { name: values.locationName || '', address: '' },
+              description: values.description,
+              location: { name: values.locationName, address: '' },
               schedule: { 
                 startDate: toDateOrNull(values.startDate), 
                 endDate: toDateOrNull(values.endDate), 
                 registrationDeadline: toDateOrNull(values.endDate) 
               },
               participants: { 
-                fee: DEFAULT_FEE, 
-                maxParticipants: DEFAULT_MAX_PARTICIPANTS, 
-                registered: [] 
+                fee: values.fee ?? DEFAULT_FEE, 
+                maxParticipants: values.maxParticipants ?? DEFAULT_MAX_PARTICIPANTS, 
+                registered: (editing as any)?.participants?.registered || [] 
               },
-              isPrivate: false,
-              status: DEFAULT_STATUS,
+              isPrivate: !!values.isPrivate,
+              status: finalStatus,
               updatedAt: new Date(),
             } as any
-            
-            console.log('🔵 [Events] Creating event with payload:', payload)
-            console.log('🔵 [Events] Collection:', COLLECTIONS.EVENTS)
-            console.log('🔵 [Events] Timestamp:', new Date().toISOString())
-            
-            const result = await createDocument<Event>(COLLECTIONS.EVENTS, { ...payload, createdAt: new Date() } as any)
-            
-            console.log('🔵 [Events] Create result:', result)
-            console.log('🔵 [Events] Result success:', result.success)
-            console.log('🔵 [Events] Result ID:', result.id)
-            
-            if (result.success && result.id) {
-              console.log('✅ [Events] Event created successfully, ID:', result.id)
-              message.success(t('common.created'))
-              
-              // 刷新列表
-              console.log('🔵 [Events] Fetching updated events list')
-              const list = await getEvents()
-              console.log('🔵 [Events] Events count:', list.length)
-              setEvents(list)
-              
-              // 关闭创建弹窗
-              setCreating(false)
-              form.resetFields()
-              
-              // 打开详情弹窗进行进一步编辑
-              const newEvent = list.find(e => e.id === result.id)
-              if (newEvent) {
-                console.log('🔵 [Events] Opening detail view for new event')
-                setViewing(newEvent)
-                setActiveViewTab('overview')
+            if (editing) {
+              const res = await updateDocument<Event>(COLLECTIONS.EVENTS, editing.id, payload)
+              if (res.success) {
+                // Auto-create orders when status is set to "completed"
+                if (finalStatus === EVENT_STATUSES.COMPLETED && editing.status !== EVENT_STATUSES.COMPLETED) {
+                  setOrderSyncing(true)
+                  const orderResult = await createOrdersFromEventAllocations(editing.id);
+                  if (orderResult.success) {
+                    const totalOrders = orderResult.createdOrders + orderResult.updatedOrders;
+                    if (totalOrders > 0) {
+                      let messageText = t('common.eventSavedAndEnded');
+                    if (orderResult.createdOrders > 0) {
+                        messageText += ` ${orderResult.createdOrders} ${t('common.ordersCreated')}`;
+                      }
+                      if (orderResult.updatedOrders > 0) {
+                        messageText += ` ${orderResult.updatedOrders} ${t('common.ordersUpdated')}`;
+                      }
+                      message.success(messageText);
+                    } else {
+                      message.success(t('common.eventSavedAndEnded'));
+                    }
+                  } else {
+                    message.warning(t('common.eventSavedAndEnded') + ' ' + (orderResult.error?.message || t('common.unknownError')));
+                  }
+                  setOrderSyncing(false)
+                } else {
+                  message.success(t('common.saved'))
+                }
               }
-            } else {
-              console.log('❌ [Events] Create failed:', result)
-              message.error(t('common.createFailed'))
-            }
-          } catch (error) {
-            console.error('❌ [Events] Error in onFinish:', error)
-            message.error(t('common.createFailed'))
+             } else {
+               console.log('🟢 [Events] Creating NEW event')
+               console.log('🟢 [Events] Payload:', payload)
+               console.log('🟢 [Events] Collection:', COLLECTIONS.EVENTS)
+               console.log('🟢 [Events] Timestamp:', new Date().toISOString())
+               
+               const result = await createDocument<Event>(COLLECTIONS.EVENTS, { ...payload, createdAt: new Date() } as any)
+               
+               console.log('🟢 [Events] Create result:', result)
+               console.log('🟢 [Events] Result success:', result.success)
+               console.log('🟢 [Events] Result ID:', result.id)
+               
+               message.success(t('common.created'))
+             }
+            console.log('🔵 [Events] Fetching updated events list')
+            const list = await getEvents()
+            console.log('🔵 [Events] Events count after fetch:', list.length)
+            setEvents(list)
+            setCreating(false)
+            setEditing(null)
+            console.log('🔵 [Events] Modal closed, states reset')
           } finally {
-            console.log('🔵 [Events] setLoading(false) called')
             setLoading(false)
+            console.log('🔵 [Events] Loading set to false')
           }
         }}>
           <Form.Item label={t('common.eventName')} name="title" rules={[{ required: true, message: t('common.pleaseInputEventName') }]}>
@@ -1206,16 +1249,30 @@ const AdminEvents: React.FC = () => {
               placeholder={t('common.pleaseSelectEndDate')}
             />
           </Form.Item>
-          <div style={{ 
-            padding: '12px', 
-            background: 'rgba(244, 175, 37, 0.1)', 
-            border: '1px solid rgba(244, 175, 37, 0.3)',
-            borderRadius: 8,
-            fontSize: 13,
-            color: '#f4af25'
-          }}>
-            💡 {t('common.createEventTip') || '创建后可在活动详情中编辑更多信息（费用、人数限制、私密性等）并管理参与者'}
-          </div>
+          <Form.Item label={t('common.fee')} name="fee">
+            <InputNumber min={0} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item label={t('common.maxParticipants')} name="maxParticipants">
+            <InputNumber min={0} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item label={t('common.privateEvent')} name="isPrivate" valuePropName="checked" initialValue={false}>
+            <Switch />
+          </Form.Item>
+          <Form.Item label={t('common.status')} name="status" initialValue={DEFAULT_STATUS}>
+            <Select>
+              {(() => {
+                const currentStatus = editing?.status || DEFAULT_STATUS
+                const availableStatuses = editing ? getAvailableStatusOptions(currentStatus) : Object.values(EVENT_STATUSES)
+                
+                return availableStatuses.map(status => (
+                  <Option key={status} value={status}>
+                    {t(`common.${status}`)}
+                    {status === currentStatus && ` (${t('common.current')})`}
+                  </Option>
+                ))
+              })()}
+            </Select>
+          </Form.Item>
         </Form>
       </Modal>
 
