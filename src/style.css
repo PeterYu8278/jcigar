@@ -247,7 +247,7 @@ button + button { margin-left: 8px; }
 }
 
 .dark-theme-form .ant-select-item-option-content {
-  color: #333 !important;
+  color: #FFFFFF !important;
 }
 
 .dark-theme-form .ant-input,
