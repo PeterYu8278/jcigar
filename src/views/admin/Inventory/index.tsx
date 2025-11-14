@@ -641,6 +641,7 @@ const AdminInventory: React.FC = () => {
         return true
       })
       .map(order => ({
+        id: order.id, // 添加唯一ID用于key
         referenceNo: order.referenceNo,
         date: toDateSafe(order.createdAt),
         reason: order.reason,
@@ -1790,11 +1791,13 @@ const AdminInventory: React.FC = () => {
                 footer={null}
                 {...getResponsiveModalConfig(isMobile, true, 900)}
                 style={{ top: 20 }}
-                bodyStyle={{ 
-                  maxHeight: 'calc(100vh - 180px)', 
-                  overflowY: 'auto',
-                  overflowX: 'hidden',
-                  paddingBottom: 16
+                styles={{ 
+                  body: {
+                    maxHeight: 'calc(100vh - 180px)', 
+                    overflowY: 'auto',
+                    overflowX: 'hidden',
+                    paddingBottom: 16
+                  }
                 }}
                 afterOpenChange={(open) => {
                   if (open && editingOrder) {
@@ -2150,7 +2153,7 @@ const AdminInventory: React.FC = () => {
                   style={{ marginTop: 1 }}
                 title={() => t('inventory.inStockRecord')}
                   dataSource={inLogsGroupedByReference}
-                  rowKey={(record) => record.referenceNo || 'no-ref'}
+                  rowKey={(record) => record.id || `ref-${record.referenceNo}` || 'no-ref'}
                   pagination={{ 
                     pageSize: inPageSize,
                     showSizeChanger: true,
@@ -2288,7 +2291,7 @@ const AdminInventory: React.FC = () => {
                             if (inLogsExpandedKeys.length > 0) {
                               setInLogsExpandedKeys([])
                             } else {
-                              setInLogsExpandedKeys(inLogsGroupedByReference.map(g => g.referenceNo || 'no-ref'))
+                              setInLogsExpandedKeys(inLogsGroupedByReference.map(g => g.id || `ref-${g.referenceNo}` || 'no-ref'))
                             }
                           }}
                           style={{
@@ -2577,10 +2580,10 @@ const AdminInventory: React.FC = () => {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {inLogsGroupedByReference.map((group: any) => {
-                    const isExpanded = inLogsExpandedKeys.includes(group.referenceNo || 'no-ref')
+                    const isExpanded = inLogsExpandedKeys.includes(group.id || `ref-${group.referenceNo}` || 'no-ref')
                     return (
                       <div 
-                        key={group.referenceNo || 'no-ref'} 
+                        key={group.id || `ref-${group.referenceNo}` || 'no-ref'} 
                         style={{
                           borderRadius: 16,
                           background: 'rgba(0, 0, 0, 0.2)',
@@ -2592,7 +2595,7 @@ const AdminInventory: React.FC = () => {
                         {/* 单号头部 */}
                         <div 
                           onClick={() => {
-                            const key = group.referenceNo || 'no-ref'
+                            const key = group.id || `ref-${group.referenceNo}` || 'no-ref'
                             if (isExpanded) {
                               setInLogsExpandedKeys(prev => prev.filter(k => k !== key))
                             } else {
