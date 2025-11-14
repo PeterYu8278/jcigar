@@ -1881,26 +1881,74 @@ const AdminInventory: React.FC = () => {
                     }
                   }
                   
-                  const inboundOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
-                    referenceNo: values.referenceNo.trim(),
-                    type: 'purchase',
+                  // 检查是否是编辑模式
+                  if (editingOrder) {
+                    // 编辑模式：更新现有订单
+                    const updateData = {
+                      referenceNo: values.referenceNo.trim(),
                       reason: values.reason || t('inventory.inStock'),
-                    items: orderItems,
-                    totalQuantity,
-                    totalValue,
-                    attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
-                    status: 'completed',
+                      items: orderItems,
+                      totalQuantity,
+                      totalValue,
+                      attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
+                      // 保留原有状态，除非需要更改
+                      status: editingOrder.status,
+                      // 保留原有类型和操作员
+                      type: editingOrder.type,
+                      operatorId: editingOrder.operatorId
+                    }
+                    
+                    // 更新订单
+                    await updateInboundOrder(editingOrder.id, updateData)
+                    
+                    // 删除旧的 inventory_movements
+                    const oldMovements = inventoryMovements.filter(m => m.inboundOrderId === editingOrder.id)
+                    await Promise.all(oldMovements.map(m => deleteDocument(COLLECTIONS.INVENTORY_MOVEMENTS, m.id)))
+                    
+                    // 创建新的 inventory_movements 以匹配更新后的订单
+                    const createdAt = editingOrder.createdAt instanceof Date ? editingOrder.createdAt : (editingOrder.createdAt ? new Date(editingOrder.createdAt) : new Date())
+                    for (const item of orderItems) {
+                      await createDocument(COLLECTIONS.INVENTORY_MOVEMENTS, {
+                        cigarId: item.cigarId,
+                        cigarName: item.cigarName,
+                        itemType: item.itemType,
+                        type: 'in' as const,
+                        quantity: item.quantity,
+                        referenceNo: values.referenceNo.trim(),
+                        orderType: 'inbound' as const,
+                        inboundOrderId: editingOrder.id,
+                        reason: values.reason || t('inventory.inStock'),
+                        unitPrice: item.unitPrice,
+                        createdAt: createdAt
+                      })
+                    }
+                    
+                    message.success('✅ 订单已更新')
+                  } else {
+                    // 创建模式：创建新订单
+                    const inboundOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
+                      referenceNo: values.referenceNo.trim(),
+                      type: 'purchase',
+                      reason: values.reason || t('inventory.inStock'),
+                      items: orderItems,
+                      totalQuantity,
+                      totalValue,
+                      attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
+                      status: 'completed',
                       operatorId: 'system',
-                    createdAt: new Date()
+                      createdAt: new Date()
+                    }
+                    
+                    await createInboundOrder(inboundOrderData)
+                    message.success(t('inventory.inStockSuccess'))
                   }
                   
-                  await createInboundOrder(inboundOrderData)
-                  message.success(t('inventory.inStockSuccess'))
                   inForm.resetFields()
                   setItems(await getCigars())
                   setInboundOrders(await getAllInboundOrders())
                   setInventoryMovements(await getAllInventoryMovements())
                   setInModalOpen(false)
+                  setEditingOrder(null)
                   setAttachmentFileList([])
                   setUploadedAttachments([])
                 } finally {
