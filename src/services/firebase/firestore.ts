@@ -923,18 +923,37 @@ export const updateInboundOrder = async (id: string, updates: Partial<InboundOrd
  */
 export const deleteInboundOrder = async (id: string): Promise<void> => {
   try {
+    console.log('deleteInboundOrder - 开始删除，订单ID:', id);
+    
+    if (!id || typeof id !== 'string') {
+      throw new Error(`无效的订单ID: ${id}`);
+    }
+    
     // 1. 删除关联的 movements（通过 inboundOrderId）
+    console.log('deleteInboundOrder - 查找关联的 movements');
     const q = query(
       collection(db, COLLECTIONS.INVENTORY_MOVEMENTS),
       where('inboundOrderId', '==', id)
     );
     const snapshot = await getDocs(q);
-    await Promise.all(snapshot.docs.map(doc => deleteDoc(doc.ref)));
+    console.log('deleteInboundOrder - 找到', snapshot.docs.length, '个关联的 movements');
+    await Promise.all(snapshot.docs.map(doc => {
+      console.log('deleteInboundOrder - 删除 movement:', doc.id);
+      return deleteDoc(doc.ref);
+    }));
     
     // 2. 删除订单
+    console.log('deleteInboundOrder - 删除订单文档:', id);
     await deleteDoc(doc(db, COLLECTIONS.INBOUND_ORDERS, id));
+    console.log('deleteInboundOrder - 删除成功');
   } catch (error) {
     console.error('Error deleting inbound order:', error);
+    console.error('Error details:', {
+      id,
+      message: (error as any)?.message,
+      code: (error as any)?.code,
+      stack: (error as any)?.stack
+    });
     throw error;
   }
 };

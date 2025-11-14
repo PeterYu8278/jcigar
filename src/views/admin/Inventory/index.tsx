@@ -2607,18 +2607,30 @@ const AdminInventory: React.FC = () => {
                                   try {
                                     // 使用 group.id 直接查找订单，而不是通过 referenceNo
                                     // 因为可能有多个订单共享同一个 referenceNo
+                                    console.log('删除订单 - group.id:', group.id, 'group.referenceNo:', group.referenceNo)
                                     const order = inboundOrders.find(o => o.id === group.id)
-                                    if (order) {
+                                    console.log('删除订单 - 找到的订单:', order ? { id: order.id, referenceNo: order.referenceNo } : '未找到')
+                                    
+                                    if (order && order.id) {
+                                      console.log('删除订单 - 开始删除，订单ID:', order.id)
                                       await deleteInboundOrder(order.id)
+                                      console.log('删除订单 - 删除成功')
                                       message.success(t('inventory.deleteSuccess'))
+                                      // 刷新数据
                                       setInboundOrders(await getAllInboundOrders())
                                       setInventoryMovements(await getAllInventoryMovements())
                                     } else {
-                                      message.error('订单未找到')
+                                      console.error('删除订单 - 订单未找到或ID为空', { groupId: group.id, order })
+                                      message.error('订单未找到，无法删除')
                                     }
                                   } catch (error: any) {
                                     console.error('删除入库订单失败:', error)
-                                    message.error(t('common.deleteFailed') + ': ' + (error.message || error))
+                                    console.error('删除入库订单失败 - 错误详情:', {
+                                      message: error.message,
+                                      stack: error.stack,
+                                      error: error
+                                    })
+                                    message.error(t('common.deleteFailed') + ': ' + (error.message || String(error)))
                                   } finally {
                                     setLoading(false)
                                   }
@@ -2965,17 +2977,30 @@ const AdminInventory: React.FC = () => {
                                     setLoading(true)
                                     try {
                                       // 使用 group.id 直接查找订单，而不是通过 referenceNo
+                                      console.log('删除订单（移动端） - group.id:', group.id, 'group.referenceNo:', group.referenceNo)
                                       const order = inboundOrders.find(o => o.id === group.id)
-                                      if (order) {
+                                      console.log('删除订单（移动端） - 找到的订单:', order ? { id: order.id, referenceNo: order.referenceNo } : '未找到')
+                                      
+                                      if (order && order.id) {
+                                        console.log('删除订单（移动端） - 开始删除，订单ID:', order.id)
                                         await deleteInboundOrder(order.id)
+                                        console.log('删除订单（移动端） - 删除成功')
                                         message.success(t('inventory.deleteSuccess'))
+                                        // 刷新数据
                                         setInboundOrders(await getAllInboundOrders())
                                         setInventoryMovements(await getAllInventoryMovements())
                                       } else {
-                                        message.error('订单未找到')
+                                        console.error('删除订单（移动端） - 订单未找到或ID为空', { groupId: group.id, order })
+                                        message.error('订单未找到，无法删除')
                                       }
-                                    } catch (error) {
-                                      message.error(t('common.deleteFailed'))
+                                    } catch (error: any) {
+                                      console.error('删除入库订单失败（移动端）:', error)
+                                      console.error('删除入库订单失败（移动端） - 错误详情:', {
+                                        message: error.message,
+                                        stack: error.stack,
+                                        error: error
+                                      })
+                                      message.error(t('common.deleteFailed') + ': ' + (error.message || String(error)))
                                     } finally {
                                       setLoading(false)
                                     }
