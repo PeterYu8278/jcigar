@@ -43,13 +43,13 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
   // 创建模式：使用卡片布局
   if (event.id === 'new' && isEditing) {
     return (
-      <div className="dark-theme-form" style={{ width: '100%', overflow: 'hidden', color: '#FFFFFF' }}>
+      <div style={{ width: '100%', overflow: 'hidden' }}>
         {/* 基本信息卡片 */}
         <div style={theme.card.elevated}>
           <div style={theme.text.subtitle}>📋 基本信息</div>
           
           <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)', marginBottom: 4 }}>{t('events.eventName')}</div>
+            <div style={{ fontSize: 12, color: '#aaa', marginBottom: 4 }}>{t('events.eventName')}</div>
             <Input
               value={editForm.title}
               onChange={(e) => onEditFormChange({...editForm, title: e.target.value})}
@@ -58,7 +58,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
           </div>
           
           <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)', marginBottom: 4 }}>{t('events.description')}</div>
+            <div style={{ fontSize: 12, color: '#aaa', marginBottom: 4 }}>{t('events.description')}</div>
             <Input.TextArea
               value={editForm.description}
               onChange={(e) => onEditFormChange({...editForm, description: e.target.value})}
@@ -68,7 +68,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
           </div>
           
           <div>
-            <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)', marginBottom: 4 }}>{t('events.location')}</div>
+            <div style={{ fontSize: 12, color: '#aaa', marginBottom: 4 }}>{t('events.location')}</div>
             <Input
               value={editForm.locationName}
               onChange={(e) => onEditFormChange({...editForm, locationName: e.target.value})}
@@ -82,7 +82,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
           <div style={theme.text.subtitle}>📅 时间设置</div>
           
           <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)', marginBottom: 4 }}>{t('common.startDate')}</div>
+            <div style={{ fontSize: 12, color: '#aaa', marginBottom: 4 }}>{t('common.startDate')}</div>
             <DatePicker
               value={editForm.startDate}
               onChange={(date) => onEditFormChange({...editForm, startDate: date})}
@@ -94,7 +94,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
           </div>
           
           <div>
-            <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)', marginBottom: 4 }}>{t('common.endDate')}</div>
+            <div style={{ fontSize: 12, color: '#aaa', marginBottom: 4 }}>{t('common.endDate')}</div>
             <DatePicker
               value={editForm.endDate}
               onChange={(date) => onEditFormChange({...editForm, endDate: date})}
@@ -112,7 +112,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
           
           <Row gutter={12} style={{ marginBottom: 12 }}>
             <Col span={12}>
-              <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)', marginBottom: 4 }}>{t('common.fee')}</div>
+              <div style={{ fontSize: 12, color: '#aaa', marginBottom: 4 }}>{t('common.fee')}</div>
               <InputNumber
                 value={editForm.fee}
                 onChange={(val) => onEditFormChange({...editForm, fee: val})}
@@ -122,7 +122,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
               />
             </Col>
             <Col span={12}>
-              <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)', marginBottom: 4 }}>{t('common.maxParticipants')}</div>
+              <div style={{ fontSize: 12, color: '#aaa', marginBottom: 4 }}>{t('common.maxParticipants')}</div>
               <InputNumber
                 value={editForm.maxParticipants}
                 onChange={(val) => onEditFormChange({...editForm, maxParticipants: val})}
@@ -135,14 +135,14 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
           
           <Row gutter={12}>
             <Col span={12}>
-              <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)', marginBottom: 4 }}>{t('common.privateEvent')}</div>
+              <div style={{ fontSize: 12, color: '#aaa', marginBottom: 4 }}>{t('common.privateEvent')}</div>
               <Switch
                 checked={editForm.isPrivate}
                 onChange={(checked) => onEditFormChange({...editForm, isPrivate: checked})}
               />
             </Col>
             <Col span={12}>
-              <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)', marginBottom: 4 }}>{t('common.status')}</div>
+              <div style={{ fontSize: 12, color: '#aaa', marginBottom: 4 }}>{t('common.status')}</div>
               <Select
                 value={editForm.status}
                 onChange={(val) => onEditFormChange({...editForm, status: val})}
@@ -221,12 +221,25 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
 
   // 查看/编辑模式：使用原有的 Descriptions 布局
   return (
-    <div>
+    <div style={{ color: '#FFFFFF' }}>
       {/* 活动基本信息 - 左右布局 */}
       <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
         {/* 左侧：活动名称和描述 */}
         <div style={{ flex: 1 }}>
-          <Descriptions bordered column={1} size="small">
+          <Descriptions 
+            bordered 
+            column={1} 
+            size="small"
+            style={{ 
+              color: '#FFFFFF'
+            }}
+            labelStyle={{
+              color: 'rgba(255, 255, 255, 0.7)'
+            }}
+            contentStyle={{
+              color: '#FFFFFF'
+            }}
+          >
             <Descriptions.Item label={t('events.eventName')}>
               {isEditing ? (
                 <Input
@@ -235,7 +248,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
                   autoFocus
                 />
               ) : (
-                <span style={{ fontWeight: 'bold', fontSize: '16px' }}>
+                <span style={{ fontWeight: 'bold', fontSize: '16px', color: '#FFFFFF' }}>
                   {event.title}
                 </span>
               )}
@@ -249,7 +262,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
                   rows={3}
                 />
               ) : (
-                <div style={{ maxHeight: '100px', overflow: 'auto' }}>
+                <div style={{ maxHeight: '100px', overflow: 'auto', color: '#FFFFFF' }}>
                   {(event as any).description || t('common.noDescription')}
                 </div>
               )}
@@ -262,10 +275,10 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
                   autoFocus
                 />
               ) : (
-                <div>
+                <div style={{ color: '#FFFFFF' }}>
                   {(event as any)?.location?.name || '-'}
                   {(event as any)?.location?.address && (
-                    <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                    <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '4px' }}>
                       {(event as any).location.address}
                     </div>
                   )}
@@ -280,15 +293,16 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
         <div style={{ width: '150px', flexShrink: 0 }}>
           <div style={{ 
             padding: '16px', 
-            border: '1px solid #d9d9d9', 
+            border: '1px solid rgba(244, 175, 37, 0.3)', 
             borderRadius: '6px',
-            background: '#fafafa'
+            background: 'rgba(39, 35, 27, 0.5)',
+            backdropFilter: 'blur(10px)'
           }}>
             <div style={{ 
               fontSize: '14px', 
               fontWeight: '600', 
               marginBottom: '8px',
-              color: '#262626'
+              color: '#FFFFFF'
             }}>
               {t('common.eventImage')}
             </div>
@@ -309,7 +323,20 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
       </div>
       
       {/* 其他活动信息 */}
-      <Descriptions bordered column={2} size="small">
+      <Descriptions 
+        bordered 
+        column={2} 
+        size="small"
+        style={{ 
+          color: '#FFFFFF'
+        }}
+        labelStyle={{
+          color: 'rgba(255, 255, 255, 0.7)'
+        }}
+        contentStyle={{
+          color: '#FFFFFF'
+        }}
+      >
         <Descriptions.Item label={t('events.status')}>
           {isEditing ? (
              <Select
@@ -364,7 +391,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
                 format="YYYY-MM-DD HH:mm"
               />
           ) : (
-            <span>
+            <span style={{ color: '#FFFFFF' }}>
               {(() => {
                 const s = (event as any)?.schedule?.startDate
                 const sd = (s as any)?.toDate ? (s as any).toDate() : s
@@ -384,7 +411,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
                 format="YYYY-MM-DD HH:mm"
               />
           ) : (
-            <span>
+            <span style={{ color: '#FFFFFF' }}>
               {(() => {
                 const e = (event as any)?.schedule?.endDate
                 const ed = (e as any)?.toDate ? (e as any).toDate() : e
@@ -404,7 +431,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
               addonBefore="RM"
             />
           ) : (
-            <span style={{ color: '#f5222d', fontWeight: 'bold' }}>
+            <span style={{ color: '#ff7875', fontWeight: 'bold' }}>
               RM{(event as any)?.participants?.fee ?? 0}
             </span>
           )}
@@ -420,7 +447,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
               addonAfter={t('events.people')}
             />
           ) : (
-            <span>
+            <span style={{ color: '#FFFFFF' }}>
               {(() => {
                 const maxP = (event as any)?.participants?.maxParticipants ?? 0
                 return maxP === 0 ? t('events.noLimit') : `${maxP} ${t('events.people')}`
@@ -429,7 +456,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
           )}
         </Descriptions.Item>
         <Descriptions.Item label={t('events.currentParticipants')}>
-          <span style={{ color: '#52c41a', fontWeight: 'bold' }}>
+          <span style={{ color: '#95de64', fontWeight: 'bold' }}>
             {((event as any)?.participants?.registered || []).length} {t('events.people')}
           </span>
         </Descriptions.Item>
@@ -448,15 +475,19 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
           })()}
         </Descriptions.Item>
         <Descriptions.Item label={t('events.createdAt')}>
-          {(event as any)?.createdAt ? new Date((event as any).createdAt).toLocaleString() : '-'}
+          <span style={{ color: '#FFFFFF' }}>
+            {(event as any)?.createdAt ? new Date((event as any).createdAt).toLocaleString() : '-'}
+          </span>
         </Descriptions.Item>
         <Descriptions.Item label={t('events.updatedAt')}>
-          {(event as any)?.updatedAt ? new Date((event as any).updatedAt).toLocaleString() : '-'}
+          <span style={{ color: '#FFFFFF' }}>
+            {(event as any)?.updatedAt ? new Date((event as any).updatedAt).toLocaleString() : '-'}
+          </span>
         </Descriptions.Item>
       </Descriptions>
       
       {/* 操作按钮区域 */}
-      <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #f0f0f0' }}>
+      <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid rgba(244, 175, 37, 0.2)' }}>
         <Space wrap>
           <button 
             style={{ 

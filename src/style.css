@@ -247,7 +247,7 @@ button + button { margin-left: 8px; }
 }
 
 .dark-theme-form .ant-select-item-option-content {
-  color: #FFFFFF !important;
+  color: #333 !important;
 }
 
 .dark-theme-form .ant-input,
@@ -663,4 +663,26 @@ button + button { margin-left: 8px; }
 .ant-pagination .ant-pagination-options .ant-pagination-options-quick-jumper input:focus {
   border-color: #ffd700 !important;
   box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.2) !important;
+}
+
+/* Descriptions 组件深色主题样式 */
+.ant-descriptions {
+  color: #FFFFFF !important;
+}
+
+.ant-descriptions .ant-descriptions-item-label {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.ant-descriptions .ant-descriptions-item-content {
+  color: #FFFFFF !important;
+}
+
+.ant-descriptions .ant-descriptions-view {
+  border-color: rgba(244, 175, 37, 0.3) !important;
+}
+
+.ant-descriptions .ant-descriptions-row > th,
+.ant-descriptions .ant-descriptions-row > td {
+  border-color: rgba(244, 175, 37, 0.2) !important;
 }
