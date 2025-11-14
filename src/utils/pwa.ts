@@ -64,11 +64,33 @@ export const initializePWA = async (): Promise<void> => {
     }
     
     // Listen for beforeinstallprompt event
+    // 只在生产环境且应用未安装时才阻止默认提示，以便使用自定义安装提示
+    // 在开发环境中，允许浏览器显示默认提示，避免警告
     window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e as BeforeInstallPromptEvent;
-      installState.isInstallable = true;
-      installState.canInstall = true;
+      // 在开发环境中，不阻止默认提示，允许浏览器显示默认的安装提示
+      if (import.meta.env.DEV) {
+        // 开发环境：只保存状态，不阻止默认提示
+        deferredPrompt = e as BeforeInstallPromptEvent;
+        installState.isInstallable = true;
+        installState.canInstall = true;
+        // 不调用 preventDefault()，允许浏览器显示默认提示
+        return;
+      }
+      
+      // 生产环境：检查应用是否已在 standalone 模式下运行
+      const alreadyInstalled = isStandalone() || isInstalled();
+      
+      if (!alreadyInstalled) {
+        // 应用未安装，阻止默认提示以便使用自定义提示
+        e.preventDefault();
+        deferredPrompt = e as BeforeInstallPromptEvent;
+        installState.isInstallable = true;
+        installState.canInstall = true;
+      } else {
+        // 应用已安装，不需要阻止默认提示
+        installState.isInstalled = true;
+        installState.canInstall = false;
+      }
     });
     
     // Listen for appinstalled event
