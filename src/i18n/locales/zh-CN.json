@@ -634,6 +634,8 @@
     "deleteInLogConfirm": "确认删除这条入库记录？此操作不可恢复。",
     "deleteReferenceGroup": "删除整组记录",
     "deleteReferenceGroupConfirm": "确认删除单号 {{referenceNo}} 的所有 {{count}} 条记录？此操作不可恢复。",
+    "deleteOutboundRecord": "删除出库记录",
+    "deleteOutboundRecordConfirm": "确认删除单号 {{referenceNo}} 的出库记录（产品：{{product}}，数量：{{quantity}}）吗？此操作不可恢复。",
     "updateSuccess": "更新成功",
     "deleteSuccess": "删除成功",
     "quantityMinOne": "数量至少为1",

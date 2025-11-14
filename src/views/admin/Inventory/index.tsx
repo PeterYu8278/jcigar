@@ -5,7 +5,7 @@ import { Table, Button, Tag, Space, Typography, Input, Select, Modal, Form, Inpu
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, WarningOutlined, UploadOutlined, DownloadOutlined, MinusCircleOutlined, FilePdfOutlined, FileImageOutlined, EyeOutlined } from '@ant-design/icons'
 import type { Cigar, Brand, InboundOrder, OutboundOrder, InventoryMovement } from '../../../types'
 import type { UploadFile } from 'antd'
-import { getCigars, createDocument, updateDocument, deleteDocument, COLLECTIONS, getAllOrders, getUsers, getBrands, getBrandById, getAllTransactions, getAllInboundOrders, getAllOutboundOrders, getAllInventoryMovements, createInboundOrder, deleteInboundOrder, updateInboundOrder, getInboundOrdersByReferenceNo, createOutboundOrder } from '../../../services/firebase/firestore'
+import { getCigars, createDocument, updateDocument, deleteDocument, COLLECTIONS, getAllOrders, getUsers, getBrands, getBrandById, getAllTransactions, getAllInboundOrders, getAllOutboundOrders, getAllInventoryMovements, createInboundOrder, deleteInboundOrder, updateInboundOrder, getInboundOrdersByReferenceNo, createOutboundOrder, deleteOutboundOrder } from '../../../services/firebase/firestore'
 import ImageUpload from '../../../components/common/ImageUpload'
 import { getModalTheme, getResponsiveModalConfig, getModalThemeStyles } from '../../../config/modalTheme'
 import { useCloudinary } from '../../../hooks/useCloudinary'
@@ -923,11 +923,14 @@ const AdminInventory: React.FC = () => {
           }
         }
         
+        // 查找对应的出库订单（通过订单ID匹配出库订单的referenceNo）
+        const outboundOrder = outboundOrders.find((outOrder: any) => outOrder.referenceNo === o.id)
         rows.push({
           id: `order_${o.id}_${it.cigarId}`,
           createdAt,
           orderId: o.id,
           referenceNo: undefined,
+          outboundOrderId: outboundOrder?.id, // 添加出库订单ID
           user: user ? `${user.displayName} ${(user as any)?.profile?.phone || user.email}` : o.userId,
           cigarName: cigar ? cigar.name : it.cigarId,
           quantity: it.quantity,
@@ -941,11 +944,20 @@ const AdminInventory: React.FC = () => {
       // 避免重复：订单出库已由 orders 渲染一遍，过滤掉 referenceNo 匹配订单ID的日志
       if (orders.some(o => o.id === ref)) continue
       const cigar = cigarMap.get((log as any).cigarId)
+      // 查找对应的出库订单（通过referenceNo匹配或通过inventoryMovements的outboundOrderId）
+      const movement = inventoryMovements.find(m => m.id === (log as any).id && m.type === 'out')
+      let outboundOrderId = movement?.outboundOrderId
+      // 如果没有通过movement找到，尝试通过referenceNo匹配
+      if (!outboundOrderId) {
+        const outboundOrder = outboundOrders.find((outOrder: any) => outOrder.referenceNo === (log as any).referenceNo)
+        outboundOrderId = outboundOrder?.id
+      }
       rows.push({
         id: `manual_${(log as any).id || ((log as any).referenceNo || '')}_${(log as any).cigarId}`,
         createdAt: (log as any).createdAt,
         orderId: '-',
         referenceNo: (log as any).referenceNo,
+        outboundOrderId: outboundOrderId, // 添加出库订单ID
         user: (log as any).operatorId || '-',
         cigarName: cigar ? cigar.name : (log as any).cigarId,
         quantity: (log as any).quantity,
@@ -958,7 +970,7 @@ const AdminInventory: React.FC = () => {
       const db = toDateSafe(b.createdAt)?.getTime() || 0
       return db - da
     })
-  }, [orders, users, items, filteredOutLogs, outSearchKeyword, outBrandFilter])
+  }, [orders, users, items, filteredOutLogs, outSearchKeyword, outBrandFilter, outboundOrders, inventoryMovements])
 
   const unifiedOutColumns = [
     { title: t('inventory.time'), dataIndex: 'createdAt', key: 'createdAt', width: 160, render: (v: any) => formatYMD(toDateSafe(v)) },
@@ -968,6 +980,56 @@ const AdminInventory: React.FC = () => {
     { title: t('inventory.product'), dataIndex: 'cigarName', key: 'cigarName', width: 220 },
     { title: t('inventory.quantity'), dataIndex: 'quantity', key: 'quantity', width: 100 },
     { title: t('inventory.source'), dataIndex: 'source', key: 'source', width: 120, render: (s: string) => s === 'event' ? t('inventory.event') : s === 'direct' ? t('inventory.directSale') : t('inventory.manual') },
+    {
+      title: t('inventory.actions'),
+      key: 'actions',
+      width: 100,
+      fixed: 'right' as const,
+      render: (_: any, record: any) => (
+        <Space size="small">
+          {record.outboundOrderId && (
+            <Button
+              type="link"
+              icon={<DeleteOutlined />}
+              size="small"
+              danger
+              onClick={async () => {
+                Modal.confirm({
+                  title: t('inventory.deleteOutboundRecord'),
+                  content: t('inventory.deleteOutboundRecordConfirm', {
+                    referenceNo: record.referenceNo || record.orderId || '-',
+                    product: record.cigarName,
+                    quantity: record.quantity
+                  }),
+                  okText: t('common.confirm'),
+                  cancelText: t('common.cancel'),
+                  okType: 'danger',
+                  onOk: async () => {
+                    setLoading(true)
+                    try {
+                      await deleteOutboundOrder(record.outboundOrderId)
+                      message.success(t('inventory.deleteSuccess'))
+                      setOutboundOrders(await getAllOutboundOrders())
+                      setInventoryMovements(await getAllInventoryMovements())
+                      // 如果是订单出库，也需要重新加载订单
+                      if (record.orderId && record.orderId !== '-') {
+                        setOrders(await getAllOrders())
+                      }
+                    } catch (error: any) {
+                      message.error(t('common.deleteFailed') + ': ' + error.message)
+                    } finally {
+                      setLoading(false)
+                    }
+                  }
+                })
+              }}
+            >
+              {t('common.delete')}
+            </Button>
+          )}
+        </Space>
+      )
+    },
   ]
 
   // 产品下拉：按品牌分组，并按品牌与产品名称字母排序（用于入库/出库下拉）
