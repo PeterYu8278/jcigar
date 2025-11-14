@@ -2419,7 +2419,8 @@ const AdminInventory: React.FC = () => {
                             icon={<EditOutlined />}
                             size="small"
                             onClick={() => {
-                              const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                              // 使用 group.id 直接查找订单，而不是通过 referenceNo
+                              const order = inboundOrders.find(o => o.id === group.id)
                               if (order) {
                                 setEditingOrder(order)
                                 orderEditForm.setFieldsValue({
@@ -2456,7 +2457,8 @@ const AdminInventory: React.FC = () => {
                                 onOk: async () => {
                                   setLoading(true)
                                   try {
-                                    const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                                    // 使用 group.id 直接查找订单，而不是通过 referenceNo
+                                    const order = inboundOrders.find(o => o.id === group.id)
                                     if (order) {
                                       await updateInboundOrder(order.id, { status: 'cancelled' })
                                       message.success('✅ 订单已取消')
@@ -2497,7 +2499,8 @@ const AdminInventory: React.FC = () => {
                                 onOk: async () => {
                                   setLoading(true)
                                   try {
-                                    const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                                    // 使用 group.id 直接查找订单，而不是通过 referenceNo
+                                    const order = inboundOrders.find(o => o.id === group.id)
                                     if (!order) {
                                       message.error('原订单未找到')
                                       return
@@ -2554,7 +2557,9 @@ const AdminInventory: React.FC = () => {
                                 onOk: async () => {
                                   setLoading(true)
                                   try {
-                                    const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                                    // 使用 group.id 直接查找订单，而不是通过 referenceNo
+                                    // 因为可能有多个订单共享同一个 referenceNo
+                                    const order = inboundOrders.find(o => o.id === group.id)
                                     if (order) {
                                       await deleteInboundOrder(order.id)
                                       message.success(t('inventory.deleteSuccess'))
@@ -2563,8 +2568,9 @@ const AdminInventory: React.FC = () => {
                                     } else {
                                       message.error('订单未找到')
                                     }
-                                  } catch (error) {
-                                    message.error(t('common.deleteFailed'))
+                                  } catch (error: any) {
+                                    console.error('删除入库订单失败:', error)
+                                    message.error(t('common.deleteFailed') + ': ' + (error.message || error))
                                   } finally {
                                     setLoading(false)
                                   }
@@ -2748,7 +2754,8 @@ const AdminInventory: React.FC = () => {
                               <button
                               onClick={(e) => {
                                 e.stopPropagation()
-                                const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                                // 使用 group.id 直接查找订单，而不是通过 referenceNo
+                                const order = inboundOrders.find(o => o.id === group.id)
                                 if (order) {
                                   setEditingOrder(order)
                                   orderEditForm.setFieldsValue({
@@ -2793,7 +2800,8 @@ const AdminInventory: React.FC = () => {
                                   onOk: async () => {
                                     setLoading(true)
                                     try {
-                                      const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                                      // 使用 group.id 直接查找订单，而不是通过 referenceNo
+                                      const order = inboundOrders.find(o => o.id === group.id)
                                       if (order) {
                                         await updateInboundOrder(order.id, { status: 'cancelled' })
                                         message.success('✅ 订单已取消')
@@ -2843,7 +2851,8 @@ const AdminInventory: React.FC = () => {
                                   onOk: async () => {
                                     setLoading(true)
                                     try {
-                                      const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                                      // 使用 group.id 直接查找订单，而不是通过 referenceNo
+                                      const order = inboundOrders.find(o => o.id === group.id)
                                       if (!order) {
                                         message.error('原订单未找到')
                                         return
@@ -2907,7 +2916,8 @@ const AdminInventory: React.FC = () => {
                                   onOk: async () => {
                                     setLoading(true)
                                     try {
-                                      const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                                      // 使用 group.id 直接查找订单，而不是通过 referenceNo
+                                      const order = inboundOrders.find(o => o.id === group.id)
                                       if (order) {
                                         await deleteInboundOrder(order.id)
                                         message.success(t('inventory.deleteSuccess'))
