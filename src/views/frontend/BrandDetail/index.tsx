@@ -171,7 +171,7 @@ const BrandDetail: React.FC = () => {
       </div>
 
       {/* 主要内容 */}
-      <div style={{ padding: '16px', paddingBottom: '24px' }}>
+      <div style={{ paddingTop: '16px', paddingRight: '16px', paddingBottom: '24px', paddingLeft: '16px' }}>
         {/* 品牌横幅 */}
         <div style={{
           position: 'relative',

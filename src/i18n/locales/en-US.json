@@ -145,7 +145,8 @@
     "noNotifications": "No notifications",
     "currentNoData": "No data available",
     "exportReport": "Export Report",
-    "clearData": "Clear Data"
+    "clearData": "Clear Data",
+    "public": "Public"
   },
   "container": {
     "loadFailed": "Load failed",
@@ -800,7 +801,11 @@
     "participants": "participants",
     "totalAmount": "Total Amount",
     "productsSubtotal": "Products Subtotal",
-    "participantsCount": "{{count}} participants"
+    "participantsCount": "{{count}} participants",
+    "orderPending": "Order Pending",
+    "orderCreated": "Order Created",
+    "productRevenue": "Product Revenue",
+    "eventFee": "Event Fee"
   },
   "upload": {
     "fileTooLarge": "File size cannot exceed {{size}}MB",

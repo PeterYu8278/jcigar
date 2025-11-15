@@ -1,11 +1,11 @@
 // 库存管理页面
 import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Table, Button, Tag, Space, Typography, Input, Select, Modal, Form, InputNumber, message, Dropdown, Checkbox, Upload, Row, Col } from 'antd'
+import { Table, Button, Tag, Space, Typography, Input, Select, Modal, Form, InputNumber, message, Dropdown, Checkbox, Upload, Row, Col, App } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, WarningOutlined, UploadOutlined, DownloadOutlined, MinusCircleOutlined, FilePdfOutlined, FileImageOutlined, EyeOutlined } from '@ant-design/icons'
-import type { Cigar, Brand, InboundOrder, OutboundOrder, InventoryMovement } from '../../../types'
+import type { Cigar, Brand, InboundOrder, OutboundOrder, InventoryMovement, Event } from '../../../types'
 import type { UploadFile } from 'antd'
-import { getCigars, createDocument, updateDocument, deleteDocument, COLLECTIONS, getAllOrders, getUsers, getBrands, getBrandById, getAllTransactions, getAllInboundOrders, getAllOutboundOrders, getAllInventoryMovements, createInboundOrder, deleteInboundOrder, updateInboundOrder, getInboundOrdersByReferenceNo, createOutboundOrder, deleteOutboundOrder } from '../../../services/firebase/firestore'
+import { getCigars, createDocument, updateDocument, deleteDocument, COLLECTIONS, getAllOrders, getUsers, getBrands, getBrandById, getAllTransactions, getAllInboundOrders, getAllOutboundOrders, getAllInventoryMovements, createInboundOrder, deleteInboundOrder, updateInboundOrder, getInboundOrdersByReferenceNo, createOutboundOrder, deleteOutboundOrder, getEvents } from '../../../services/firebase/firestore'
 import ImageUpload from '../../../components/common/ImageUpload'
 import { getModalTheme, getResponsiveModalConfig, getModalThemeStyles } from '../../../config/modalTheme'
 import { useCloudinary } from '../../../hooks/useCloudinary'
@@ -16,6 +16,7 @@ const { Option } = Select
 
 const AdminInventory: React.FC = () => {
   const { t } = useTranslation()
+  const { modal } = App.useApp() // 使用 App.useApp() 获取 modal 实例以支持 React 19
   const [items, setItems] = useState<Cigar[]>([])
   const [loading, setLoading] = useState(false)
   const [creating, setCreating] = useState(false)
@@ -32,6 +33,7 @@ const AdminInventory: React.FC = () => {
   const [orders, setOrders] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
   const [transactions, setTransactions] = useState<any[]>([])
+  const [events, setEvents] = useState<Event[]>([])
   
   // 新架构数据
   const [inboundOrders, setInboundOrders] = useState<InboundOrder[]>([])
@@ -54,6 +56,8 @@ const AdminInventory: React.FC = () => {
   const [inBrandFilter, setInBrandFilter] = useState<string | undefined>()
   const [outSearchKeyword, setOutSearchKeyword] = useState('')
   const [outBrandFilter, setOutBrandFilter] = useState<string | undefined>()
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [deleteTargetOrder, setDeleteTargetOrder] = useState<{ id: string; referenceNo: string; productCount: number } | null>(null)
   
   // 文件上传相关
   const { upload: cloudinaryUpload, uploading: uploadingFile } = useCloudinary()
@@ -128,14 +132,15 @@ const AdminInventory: React.FC = () => {
         setItems(list)
         
         // 加载新架构数据
-        const [inOrders, outOrders, movements, os, us, bs, txs] = await Promise.all([
+        const [inOrders, outOrders, movements, os, us, bs, txs, evts] = await Promise.all([
           getAllInboundOrders(),
           getAllOutboundOrders(),
           getAllInventoryMovements(),
           getAllOrders(),
           getUsers(),
           getBrands(),
-          getAllTransactions()
+          getAllTransactions(),
+          getEvents()
         ])
         
         setInboundOrders(inOrders)
@@ -145,6 +150,7 @@ const AdminInventory: React.FC = () => {
         setUsers(us)
         setBrandList(bs)
         setTransactions(txs)
+        setEvents(evts)
         
         // 初始化分页（本地持久化）
         try {
@@ -926,6 +932,7 @@ const AdminInventory: React.FC = () => {
         
         // 查找对应的出库订单（通过订单ID匹配出库订单的referenceNo）
         const outboundOrder = outboundOrders.find((outOrder: any) => outOrder.referenceNo === o.id)
+        const eventId = (o as any).source?.eventId
         rows.push({
           id: `order_${o.id}_${it.cigarId}`,
           createdAt,
@@ -936,6 +943,7 @@ const AdminInventory: React.FC = () => {
           cigarName: cigar ? cigar.name : it.cigarId,
           quantity: it.quantity,
           source,
+          eventId, // 保存活动ID
         })
       }
     }
@@ -973,6 +981,15 @@ const AdminInventory: React.FC = () => {
     })
   }, [orders, users, items, filteredOutLogs, outSearchKeyword, outBrandFilter, outboundOrders, inventoryMovements])
 
+  // 活动映射表（用于快速查找活动名称）
+  const eventMap = useMemo(() => {
+    const map = new Map<string, Event>()
+    events.forEach(event => {
+      map.set(event.id, event)
+    })
+    return map
+  }, [events])
+
   const unifiedOutColumns = [
     { title: t('inventory.time'), dataIndex: 'createdAt', key: 'createdAt', width: 160, render: (v: any) => formatYMD(toDateSafe(v)) },
     { title: t('inventory.orderId'), dataIndex: 'orderId', key: 'orderId', width: 140 },
@@ -980,7 +997,19 @@ const AdminInventory: React.FC = () => {
     { title: t('inventory.user'), dataIndex: 'user', key: 'user', width: 220 },
     { title: t('inventory.product'), dataIndex: 'cigarName', key: 'cigarName', width: 220 },
     { title: t('inventory.quantity'), dataIndex: 'quantity', key: 'quantity', width: 100 },
-    { title: t('inventory.source'), dataIndex: 'source', key: 'source', width: 120, render: (s: string) => s === 'event' ? t('inventory.event') : s === 'direct' ? t('inventory.directSale') : t('inventory.manual') },
+    { 
+      title: t('inventory.source'), 
+      dataIndex: 'source', 
+      key: 'source', 
+      width: 120, 
+      render: (s: string, record: any) => {
+        if (s === 'event' && record.eventId) {
+          const event = eventMap.get(record.eventId)
+          return event ? event.title : t('inventory.event')
+        }
+        return s === 'event' ? t('inventory.event') : s === 'direct' ? t('inventory.directSale') : t('inventory.manual')
+      }
+    },
     {
       title: t('inventory.actions'),
       key: 'actions',
@@ -1182,22 +1211,9 @@ const AdminInventory: React.FC = () => {
                     onChange={(e) => setKeyword(e.target.value)}
                   />
                    <Select placeholder={t('inventory.brand')} style={{ width: 140 }} allowClear value={brandFilter} onChange={setBrandFilter}>
-                    {brandList
-                      .filter(brand => brand.status === 'active')
-                      .map(brand => (
-                        <Option key={brand.id} value={brand.name}>
-                          <Space>
-                            {brand.logo && (
-                              <img 
-                                src={brand.logo} 
-                                alt={brand.name} 
-                                style={{ width: 16, height: 16, borderRadius: 2 }}
-                              />
-                            )}
-                            <span>{brand.name}</span>
-                          </Space>
-                        </Option>
-                      ))}
+                    {Array.from(new Set(items.map(i => i.brand))).sort().map(brand => (
+                      <Option key={brand} value={brand}>{brand}</Option>
+                    ))}
                   </Select>
                    <Select placeholder={t('inventory.origin')} style={{ width: 140 }} allowClear value={originFilter} onChange={setOriginFilter}>
                     {[...new Set(items.map(i => i.origin).filter(Boolean))].map(org => (
@@ -1226,30 +1242,50 @@ const AdminInventory: React.FC = () => {
               {/* Mobile search + pills */}
               {isMobile && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {/* 第一行：搜索栏 + 添加产品 */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', boxSizing: 'border-box' }}>
                     <Search
                       placeholder= {t('inventory.search')}
                       allowClear
-                      style={{ flex: 1 }}
+                      style={{ flex: 1, minWidth: 0 }}
                       prefix={<SearchOutlined style={{ color: '#f4af25' }} />}
                       value={keyword}
                       onChange={(e) => setKeyword(e.target.value)}
                     />
-                    <button onClick={() => { setCreating(true); form.resetFields() }} style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 8, padding: '8px 16px', background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, cursor: 'pointer' }}>
+                    <button 
+                      onClick={() => { setCreating(true); form.resetFields() }} 
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        gap: 8, 
+                        borderRadius: 8, 
+                        padding: '8px 16px', 
+                        background: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
+                        color: '#111', 
+                        fontWeight: 700, 
+                        cursor: 'pointer',
+                        flex: '0 0 calc(33.333% - 6px)',
+                        border: 'none',
+                        whiteSpace: 'nowrap',
+                        boxSizing: 'border-box'
+                      }}
+                    >
                       <PlusOutlined />
                       {t('inventory.addProduct')}
                     </button>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  {/* 第二行：品牌筛选 + 库存状态 + 重置筛选（三个元素同宽） */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', boxSizing: 'border-box' }}>
                     <Select
                       placeholder={t('inventory.allBrands')}
                       allowClear
-                      value={originFilter as any}
-                      onChange={setOriginFilter}
-                      style={{ flex: 1 }}
+                      value={brandFilter as any}
+                      onChange={setBrandFilter}
+                      style={{ flex: 1, minWidth: 0 }}
                     >
-                      {[...new Set(items.map(i => i.origin).filter(Boolean))].map(org => (
-                        <Option key={org} value={org}>{org}</Option>
+                      {Array.from(new Set(items.map(i => i.brand))).sort().map(brand => (
+                        <Option key={brand} value={brand}>{brand}</Option>
                       ))}
                     </Select>
                     <Select
@@ -1257,13 +1293,20 @@ const AdminInventory: React.FC = () => {
                       allowClear
                       value={statusFilter as any}
                       onChange={setStatusFilter}
-                      style={{ flex: 1 }}
+                      style={{ flex: 1, minWidth: 0 }}
                     >
                       <Option value="normal">{t('inventory.stockNormal')}</Option>
                       <Option value="low">{t('inventory.stockLow')}</Option>
                       <Option value="critical">{t('inventory.stockCritical')}</Option>
                     </Select>
-                    <Button onClick={() => { setKeyword(''); setOriginFilter(undefined); setStrengthFilter(undefined); setStatusFilter(undefined); setSelectedRowKeys([]) }} style={{ color: '#000000' }}>
+                    <Button 
+                      onClick={() => { setKeyword(''); setBrandFilter(undefined); setStrengthFilter(undefined); setStatusFilter(undefined); setSelectedRowKeys([]) }} 
+                      style={{ 
+                        color: '#000000',
+                        flex: '0 0 calc(33.333% - 6px)',
+                        boxSizing: 'border-box'
+                      }}
+                    >
                       {t('common.resetFilters')}
                     </Button>
                   </div>
@@ -1304,93 +1347,103 @@ const AdminInventory: React.FC = () => {
                       </div>
                       <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
                         {group.items.map(record => (
-                          <div key={record.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                            <div style={{ width: 80, height: 80, borderRadius: 10, overflow: 'hidden', background: 'rgba(255,255,255,0.08)', flexShrink: 0 }}>
-                              {/* 占位图，可接入真实图片字段 */}
-                              <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))' }} />
-                            </div>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontWeight: 700, color: '#fff' }}>{record.name}</div>
-                              <div style={{ fontSize: 12, color: 'rgba(224,214,196,0.6)' }}>{record.size || ''} {record.size ? '|' : ''} SKU: {(record as any)?.sku || record.id}</div>
-                              <div style={{ fontWeight: 700, color: '#f4af25', marginTop: 2 }}>RM{record.price?.toLocaleString?.() || record.price}</div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, marginTop: 4 }}>
-                                {(() => {
-                                  const computed = getComputedStock((record as any)?.id)
-                                  const min = ((record as any)?.inventory?.minStock ?? 0)
-                                  const st = (computed <= min) ? 'critical' : (computed <= (min * 1.5)) ? 'low' : 'normal'
-                                  const color = st === 'normal' ? '#16a34a' : st === 'low' ? '#f59e0b' : '#ef4444'
-                                  const text = st === 'normal' ? t('inventory.stockNormal') : st === 'low' ? t('inventory.stockLow') : t('inventory.stockCritical')
-                                  return (
+                          <div key={record.id} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {/* 产品名称（顶部，全宽） */}
+                            <div style={{ fontWeight: 700, color: '#fff', fontSize: 16, marginBottom: 4 }}>{record.name}</div>
+                            
+                            {/* 图片、信息和按钮（水平布局） */}
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                              <div style={{ width: 80, height: 80, borderRadius: 10, overflow: 'hidden', background: 'rgba(255,255,255,0.08)', flexShrink: 0 }}>
+                                {/* 占位图，可接入真实图片字段 */}
+                                <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))' }} />
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 12, color: 'rgba(224,214,196,0.6)' }}>{record.size || ''} {record.size ? '|' : ''} SKU: {(record as any)?.sku || record.id}</div>
+                                <div style={{ fontWeight: 700, color: '#f4af25', marginTop: 2 }}>RM{record.price?.toLocaleString?.() || record.price}</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, marginTop: 4 }}>
+                                  {(() => { const { totalIn, totalOut } = getTotals((record as any)?.id); return (
                                     <>
-                                      <span style={{ width: 8, height: 8, borderRadius: 9999, background: color, display: 'inline-block' }} />
-                                      <span style={{ color }}>{text}</span>
-                                      <span style={{ color: 'rgba(224,214,196,0.6)' }}>|</span>
-                                      <span style={{ color: '#fff' }}>{computed} 件</span>
+                                      <span style={{ color: 'rgba(224,214,196,0.8)' }}>{t('inventory.totalIn')}: <span style={{ color: '#fff' }}>{totalIn}</span></span>
+                                      <span style={{ color: 'rgba(224,214,196,0.8)' }}>{t('inventory.totalOut')}: <span style={{ color: '#fff' }}>{totalOut}</span></span>
                                     </>
-                                  )
-                                })()}
+                                  ) })()}
+                                </div>
                               </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, marginTop: 4 }}>
-                                {(() => { const { totalIn, totalOut } = getTotals((record as any)?.id); return (
-                                  <>
-                                    <span style={{ color: 'rgba(224,214,196,0.8)' }}>{t('inventory.totalIn')}: <span style={{ color: '#fff' }}>{totalIn}</span></span>
-                                    <span style={{ color: 'rgba(224,214,196,0.8)' }}>{t('inventory.totalOut')}: <span style={{ color: '#fff' }}>{totalOut}</span></span>
-                                  </>
-                                ) })()}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+                                {/* 按钮区域（水平排列） */}
+                                <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+                                  <button 
+                                    style={{ 
+                                      padding: '4px 8px', 
+                                      borderRadius: 6, 
+                                      background: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
+                                      color: '#111', 
+                                      fontWeight: 600, 
+                                      fontSize: 12, 
+                                      cursor: 'pointer', 
+                                      transition: 'all 0.2s ease',
+                                      border: '1px solid transparent',
+                                      whiteSpace: 'nowrap',
+                                      flexShrink: 0
+                                    }} 
+                                    onClick={() => {
+                                  setEditing(record)
+                                  form.setFieldsValue({
+                                    name: (record as any).name,
+                                    brand: (record as any).brand,
+                                    origin: (record as any).origin,
+                                    size: (record as any).size,
+                                    strength: (record as any).strength,
+                                    price: (record as any).price,
+                                    stock: getComputedStock((record as any)?.id) ?? 0,
+                                    minStock: (record as any)?.inventory?.minStock ?? 0,
+                                    reserved: (record as any)?.inventory?.reserved ?? 0,
+                                  })
+                                    }}
+                                  >
+                                  {t('common.edit')}
+                                </button>
+                                  <button 
+                                    style={{ 
+                                      padding: '4px 8px', 
+                                      borderRadius: 6, 
+                                      background: 'rgba(255,255,255,0.1)', 
+                                      color: '#fff', 
+                                      fontWeight: 600, 
+                                      fontSize: 12, 
+                                      cursor: 'pointer', 
+                                      transition: 'all 0.2s ease',
+                                      border: '1px solid rgba(255,255,255,0.2)',
+                                      whiteSpace: 'nowrap',
+                                      flexShrink: 0
+                                    }} 
+                                    onClick={() => {
+                                      setViewingProductLogs((record as any)?.id)
+                                    }}
+                                  >
+                                    {t('inventory.view')}
+                                  </button>
+                                </div>
+                                {/* 库存数量（移到按钮下方，仅显示数量，用颜色表示状态，字体高度与价格+总入库/出库的总高度一致） */}
+                                <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', minHeight: 40 }}>
+                                  {(() => {
+                                    const computed = getComputedStock((record as any)?.id)
+                                    const min = ((record as any)?.inventory?.minStock ?? 0)
+                                    const st = (computed <= min) ? 'critical' : (computed <= (min * 1.5)) ? 'low' : 'normal'
+                                    const color = st === 'normal' ? '#16a34a' : st === 'low' ? '#f59e0b' : '#ef4444'
+                                    return (
+                                      <span style={{ 
+                                        color, 
+                                        fontSize: 38, 
+                                        fontWeight: 700,
+                                        lineHeight: 1
+                                      }}>
+                                        {computed}
+                                      </span>
+                                    )
+                                  })()}
+                                </div>
                               </div>
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                              <button 
-                                style={{ 
-                                  padding: '4px 8px', 
-                                  borderRadius: 6, 
-                                  background: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
-                                  color: '#111', 
-                                  fontWeight: 600, 
-                                  fontSize: 12, 
-                                  cursor: 'pointer', 
-                                  transition: 'all 0.2s ease',
-                                  border: '1px solid transparent',
-                                  whiteSpace: 'nowrap',
-                                  width: '100%'
-                                }} 
-                                onClick={() => {
-                              setEditing(record)
-                              form.setFieldsValue({
-                                name: (record as any).name,
-                                brand: (record as any).brand,
-                                origin: (record as any).origin,
-                                size: (record as any).size,
-                                strength: (record as any).strength,
-                                price: (record as any).price,
-                                stock: getComputedStock((record as any)?.id) ?? 0,
-                                minStock: (record as any)?.inventory?.minStock ?? 0,
-                                reserved: (record as any)?.inventory?.reserved ?? 0,
-                              })
-                                }}
-                              >
-                              {t('common.edit')}
-                            </button>
-                              <button 
-                                style={{ 
-                                  padding: '4px 8px', 
-                                  borderRadius: 6, 
-                                  background: 'rgba(255,255,255,0.1)', 
-                                  color: '#fff', 
-                                  fontWeight: 600, 
-                                  fontSize: 12, 
-                                  cursor: 'pointer', 
-                                  transition: 'all 0.2s ease',
-                                  border: '1px solid rgba(255,255,255,0.2)',
-                                  whiteSpace: 'nowrap',
-                                  width: '100%'
-                                }} 
-                                onClick={() => {
-                                  setViewingProductLogs((record as any)?.id)
-                                }}
-                              >
-                                {t('inventory.view')}
-                            </button>
                             </div>
                           </div>
                         ))}
@@ -1727,52 +1780,52 @@ const AdminInventory: React.FC = () => {
               <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {/* 第一行：搜索框 */}
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <Search
-                    placeholder={t('inventory.searchInLogs')}
-                    value={inSearchKeyword}
-                    onChange={(e) => setInSearchKeyword(e.target.value)}
+                <Search
+                  placeholder={t('inventory.searchInLogs')}
+                  value={inSearchKeyword}
+                  onChange={(e) => setInSearchKeyword(e.target.value)}
                     style={{ flex: 1 }}
-                    allowClear
-                  />
+                  allowClear
+                />
                 </div>
                 
                 {/* 第二行：品牌筛选 + 入库统计 + 创建入库 */}
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <Select
-                    placeholder={t('inventory.filterByBrand')}
-                    value={inBrandFilter}
-                    onChange={setInBrandFilter}
+                <Select
+                  placeholder={t('inventory.filterByBrand')}
+                  value={inBrandFilter}
+                  onChange={setInBrandFilter}
                     style={{ flex: 1 }}
-                    allowClear
-                  >
-                    {Array.from(new Set(items.map(i => i.brand))).sort().map(brand => (
-                      <Option key={brand} value={brand}>{brand}</Option>
-                    ))}
-                  </Select>
-                  <button 
-                    onClick={() => setInStatsOpen(true)}
-                    style={{
-                      padding: '6px 14px',
-                      borderRadius: 8,
-                      border: '1px solid rgba(244, 175, 37, 0.5)',
-                      background: 'rgba(244, 175, 37, 0.1)',
-                      color: '#f4af25',
-                      cursor: 'pointer',
-                      fontSize: 14,
+                  allowClear
+                >
+                  {Array.from(new Set(items.map(i => i.brand))).sort().map(brand => (
+                    <Option key={brand} value={brand}>{brand}</Option>
+                  ))}
+                </Select>
+                <button 
+                  onClick={() => setInStatsOpen(true)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: 8,
+                    border: '1px solid rgba(244, 175, 37, 0.5)',
+                    background: 'rgba(244, 175, 37, 0.1)',
+                    color: '#f4af25',
+                    cursor: 'pointer',
+                    fontSize: 14,
                       fontWeight: 600,
                       whiteSpace: 'nowrap'
-                    }}
-                  >
-                    {t('inventory.inStats')}
-                  </button>
-                  <button
-                    onClick={() => setInModalOpen(true)}
-                    className="cigar-btn-gradient"
+                  }}
+                >
+                  {t('inventory.inStats')}
+                </button>
+                <button
+                  onClick={() => setInModalOpen(true)}
+                  className="cigar-btn-gradient"
                     style={{ padding: '6px 14px', borderRadius: 8, whiteSpace: 'nowrap' }}
-                  >
-                    {t('inventory.inStock')}
-                  </button>
-                </div>
+                >
+                  {t('inventory.inStock')}
+                </button>
+              </div>
               </div>
               
               <Modal
@@ -1792,7 +1845,9 @@ const AdminInventory: React.FC = () => {
                 {...getResponsiveModalConfig(isMobile, true, 900)}
                 style={{ top: 20 }}
                 styles={{ 
+                  ...getModalThemeStyles(isMobile, true),
                   body: {
+                    background: 'rgba(24, 22, 17, 0.95)',
                     maxHeight: 'calc(100vh - 180px)', 
                     overflowY: 'auto',
                     overflowX: 'hidden',
@@ -1937,10 +1992,10 @@ const AdminInventory: React.FC = () => {
                       status: 'completed',
                       operatorId: 'system',
                       createdAt: new Date()
-                    }
+                  }
                     
                     await createInboundOrder(inboundOrderData)
-                    message.success(t('inventory.inStockSuccess'))
+                  message.success(t('inventory.inStockSuccess'))
                   }
                   
                   inForm.resetFields()
@@ -2046,7 +2101,9 @@ const AdminInventory: React.FC = () => {
                 <Form.List name="items" initialValue={[{ itemType: 'cigar', cigarId: undefined, quantity: 1 }]}> 
                   {(fields, { add, remove }) => (
                     <div>
-                      {fields.map(({ key, name, ...restField }) => (
+                      {fields.map((field) => {
+                        const { key, name, fieldKey, ...restField } = field
+                        return (
                         <div key={key} style={{ 
                           marginBottom: 12, 
                           padding: 10, 
@@ -2054,122 +2111,251 @@ const AdminInventory: React.FC = () => {
                           borderRadius: 8,
                           background: 'rgba(0, 0, 0, 0.2)'
                         }}>
-                          {/* 第一行：类型 + 产品选择 */}
-                          <Row gutter={12} style={{ marginBottom: 8 }}>
-                            <Col flex="140px">
-                              <Form.Item
-                                {...restField}
-                                name={[name, 'itemType']}
-                                initialValue="cigar"
-                                style={{ marginBottom: 0 }}
-                              >
-                                <Select 
-                                  placeholder={t('inventory.selectItemType')}
-                                  onChange={() => {
-                                    const currentValues = inForm.getFieldValue('items')
-                                    if (currentValues && currentValues[name]) {
-                                      currentValues[name].cigarId = undefined
-                                      currentValues[name].customName = undefined
-                                      inForm.setFieldsValue({ items: currentValues })
-                                    }
-                                  }}
+                          {/* 电脑端：一行显示所有字段 */}
+                          {!isMobile ? (
+                            <Row gutter={12} align="middle">
+                              <Col flex="100px">
+                                <Form.Item
+                                  {...restField}
+                                  name={[name, 'itemType']}
+                                  fieldKey={fieldKey}
+                                  initialValue="cigar"
+                                  style={{ marginBottom: 0 }}
                                 >
-                                  <Option value="cigar">🎯 {t('inventory.itemTypeCigar')}</Option>
-                                  <Option value="activity">🎪 {t('inventory.itemTypeActivity')}</Option>
-                                  <Option value="gift">🎁 {t('inventory.itemTypeGift')}</Option>
-                                  <Option value="service">💼 {t('inventory.itemTypeService')}</Option>
-                                  <Option value="other">📦 {t('inventory.itemTypeOther')}</Option>
-                                </Select>
-                              </Form.Item>
-                            </Col>
-                            
-                            <Col flex="auto">
-                              <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => {
-                                const prev = prevValues.items?.[name]?.itemType
-                                const curr = currentValues.items?.[name]?.itemType
-                                return prev !== curr
-                              }}>
-                                {({ getFieldValue }) => {
-                                  const itemType = getFieldValue(['items', name, 'itemType']) || 'cigar'
-                                  
-                                  return itemType === 'cigar' ? (
-                                    <Form.Item
-                                      {...restField}
-                                      name={[name, 'cigarId']}
-                                      rules={[{ required: true, message: t('inventory.pleaseSelectProduct') }]}
-                                      style={{ marginBottom: 0 }}
-                                    >
-                                      <Select
-                                        placeholder={t('inventory.pleaseSelectProduct')}
-                                        showSearch
-                                        optionFilterProp="children"
-                                        filterOption={(input, option) => {
-                                          const kw = (input || '').toLowerCase()
-                                          const text = String((option?.children as any) || '').toLowerCase()
-                                          return text.includes(kw)
-                                        }}
+                                  <Select 
+                                    placeholder={t('inventory.selectItemType')}
+                                    onChange={() => {
+                                      const currentValues = inForm.getFieldValue('items')
+                                      if (currentValues && currentValues[name]) {
+                                        currentValues[name].cigarId = undefined
+                                        currentValues[name].customName = undefined
+                                        inForm.setFieldsValue({ items: currentValues })
+                                      }
+                                    }}
+                                  >
+                                    <Option value="cigar">🎯 {t('inventory.itemTypeCigar')}</Option>
+                                    <Option value="activity">🎪 {t('inventory.itemTypeActivity')}</Option>
+                                    <Option value="gift">🎁 {t('inventory.itemTypeGift')}</Option>
+                                    <Option value="service">💼 {t('inventory.itemTypeService')}</Option>
+                                    <Option value="other">📦 {t('inventory.itemTypeOther')}</Option>
+                                  </Select>
+                                </Form.Item>
+                              </Col>
+                              
+                              <Col flex="200px">
+                                <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => {
+                                  const prev = prevValues.items?.[name]?.itemType
+                                  const curr = currentValues.items?.[name]?.itemType
+                                  return prev !== curr
+                                }}>
+                                  {({ getFieldValue }) => {
+                                    const itemType = getFieldValue(['items', name, 'itemType']) || 'cigar'
+                                    
+                                    return itemType === 'cigar' ? (
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'cigarId']}
+                                        fieldKey={fieldKey}
+                            rules={[{ required: true, message: t('inventory.pleaseSelectProduct') }]}
+                                        style={{ marginBottom: 0 }}
+                          >
+                            <Select
+                              placeholder={t('inventory.pleaseSelectProduct')}
+                              showSearch
+                              optionFilterProp="children"
+                              filterOption={(input, option) => {
+                                const kw = (input || '').toLowerCase()
+                                const text = String((option?.children as any) || '').toLowerCase()
+                                return text.includes(kw)
+                              }}
+                            >
+                              {groupedCigars.map(group => (
+                                <Select.OptGroup key={group.brand} label={group.brand}>
+                                  {group.list.map(i => (
+                                    <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（{t('inventory.stock')}：{getComputedStock(i.id)}）</Option>
+                                  ))}
+                                </Select.OptGroup>
+                              ))}
+                            </Select>
+                          </Form.Item>
+                                    ) : (
+                                      <Form.Item
+                                        {...restField}
+                                        name={[name, 'customName']}
+                                        fieldKey={fieldKey}
+                                        rules={[{ required: true, message: t('inventory.itemNameRequired') }]}
+                                        style={{ marginBottom: 0 }}
                                       >
-                                        {groupedCigars.map(group => (
-                                          <Select.OptGroup key={group.brand} label={group.brand}>
-                                            {group.list.map(i => (
-                                              <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（{t('inventory.stock')}：{getComputedStock(i.id)}）</Option>
-                                            ))}
-                                          </Select.OptGroup>
-                                        ))}
-                                      </Select>
-                                    </Form.Item>
-                                  ) : (
-                                    <Form.Item
-                                      {...restField}
-                                      name={[name, 'customName']}
-                                      rules={[{ required: true, message: t('inventory.itemNameRequired') }]}
-                                      style={{ marginBottom: 0 }}
+                                        <Input placeholder={t('inventory.itemNamePlaceholder')} />
+                                      </Form.Item>
+                                    )
+                                  }}
+                                </Form.Item>
+                              </Col>
+                              
+                              <Col flex="80px">
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'quantity']}
+                                  fieldKey={fieldKey}
+                            rules={[{ required: true, message: t('inventory.pleaseInputQuantity') }]}
+                                  style={{ marginBottom: 0 }}
+                          >
+                                  <InputNumber min={1} placeholder={t('inventory.quantity')} style={{ width: '100%' }} />
+                          </Form.Item>
+                              </Col>
+                              
+                              <Col flex="100px">
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'unitPrice']}
+                                  fieldKey={fieldKey}
+                                  style={{ marginBottom: 0 }}
+                          >
+                                  <InputNumber min={0} step={0.01} placeholder={t('inventory.price')} style={{ width: '100%' }} />
+                          </Form.Item>
+                              </Col>
+                              
+                              <Col flex="60px">
+                          {fields.length > 1 && (
+                                  <Button
+                                    type="link"
+                                    danger
+                                    size="small"
+                                    icon={<MinusCircleOutlined />}
+                                    onClick={() => remove(name)}
+                                    style={{ padding: 0 }}
+                                  >
+                                    删除
+                                  </Button>
+                          )}
+                              </Col>
+                            </Row>
+                          ) : (
+                            <>
+                              {/* 移动端：保持两行布局 */}
+                              <Row gutter={12} style={{ marginBottom: 8 }}>
+                                <Col flex="140px">
+                                  <Form.Item
+                                    {...restField}
+                                    name={[name, 'itemType']}
+                                    fieldKey={fieldKey}
+                                    initialValue="cigar"
+                                    style={{ marginBottom: 0 }}
+                                  >
+                                    <Select 
+                                      placeholder={t('inventory.selectItemType')}
+                                      onChange={() => {
+                                        const currentValues = inForm.getFieldValue('items')
+                                        if (currentValues && currentValues[name]) {
+                                          currentValues[name].cigarId = undefined
+                                          currentValues[name].customName = undefined
+                                          inForm.setFieldsValue({ items: currentValues })
+                                        }
+                                      }}
                                     >
-                                      <Input placeholder={t('inventory.itemNamePlaceholder')} />
-                                    </Form.Item>
-                                  )
-                                }}
-                              </Form.Item>
-                            </Col>
-                          </Row>
-                          
-                          {/* 第二行：数量 + 单价 + 删除 */}
-                          <Row gutter={12} align="middle">
-                            <Col flex="100px">
-                              <Form.Item
-                                {...restField}
-                                name={[name, 'quantity']}
-                                rules={[{ required: true, message: t('inventory.pleaseInputQuantity') }]}
-                                style={{ marginBottom: 0 }}
-                              >
-                                <InputNumber min={1} placeholder={t('inventory.quantity')} style={{ width: '100%' }} />
-                              </Form.Item>
-                            </Col>
-                            <Col flex="120px">
-                              <Form.Item
-                                {...restField}
-                                name={[name, 'unitPrice']}
-                                style={{ marginBottom: 0 }}
-                              >
-                                <InputNumber min={0} step={0.01} placeholder={t('inventory.price')} style={{ width: '100%' }} />
-                              </Form.Item>
-                            </Col>
-                            <Col flex="auto">
-                              {fields.length > 1 && (
-                                <Button
-                                  type="link"
-                                  danger
-                                  size="small"
-                                  icon={<MinusCircleOutlined />}
-                                  onClick={() => remove(name)}
-                                >
-                                  删除
-                                </Button>
-                              )}
-                            </Col>
-                          </Row>
+                                      <Option value="cigar">🎯 {t('inventory.itemTypeCigar')}</Option>
+                                      <Option value="activity">🎪 {t('inventory.itemTypeActivity')}</Option>
+                                      <Option value="gift">🎁 {t('inventory.itemTypeGift')}</Option>
+                                      <Option value="service">💼 {t('inventory.itemTypeService')}</Option>
+                                      <Option value="other">📦 {t('inventory.itemTypeOther')}</Option>
+                                    </Select>
+                                  </Form.Item>
+                                </Col>
+                                
+                                <Col flex="auto">
+                                  <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => {
+                                    const prev = prevValues.items?.[name]?.itemType
+                                    const curr = currentValues.items?.[name]?.itemType
+                                    return prev !== curr
+                                  }}>
+                                    {({ getFieldValue }) => {
+                                      const itemType = getFieldValue(['items', name, 'itemType']) || 'cigar'
+                                      
+                                      return itemType === 'cigar' ? (
+                                        <Form.Item
+                                          {...restField}
+                                          name={[name, 'cigarId']}
+                                          fieldKey={fieldKey}
+                                          rules={[{ required: true, message: t('inventory.pleaseSelectProduct') }]}
+                                          style={{ marginBottom: 0 }}
+                                        >
+                                          <Select
+                                            placeholder={t('inventory.pleaseSelectProduct')}
+                                            showSearch
+                                            optionFilterProp="children"
+                                            filterOption={(input, option) => {
+                                              const kw = (input || '').toLowerCase()
+                                              const text = String((option?.children as any) || '').toLowerCase()
+                                              return text.includes(kw)
+                                            }}
+                                          >
+                                            {groupedCigars.map(group => (
+                                              <Select.OptGroup key={group.brand} label={group.brand}>
+                                                {group.list.map(i => (
+                                                  <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（{t('inventory.stock')}：{getComputedStock(i.id)}）</Option>
+                                                ))}
+                                              </Select.OptGroup>
+                                            ))}
+                                          </Select>
+                                        </Form.Item>
+                                      ) : (
+                                        <Form.Item
+                                          {...restField}
+                                          name={[name, 'customName']}
+                                          fieldKey={fieldKey}
+                                          rules={[{ required: true, message: t('inventory.itemNameRequired') }]}
+                                          style={{ marginBottom: 0 }}
+                                        >
+                                          <Input placeholder={t('inventory.itemNamePlaceholder')} />
+                                        </Form.Item>
+                                      )
+                                    }}
+                                  </Form.Item>
+                                </Col>
+                              </Row>
+                              
+                              <Row gutter={12} align="middle">
+                                <Col flex="100px">
+                                  <Form.Item
+                                    {...restField}
+                                    name={[name, 'quantity']}
+                                    fieldKey={fieldKey}
+                                    rules={[{ required: true, message: t('inventory.pleaseInputQuantity') }]}
+                                    style={{ marginBottom: 0 }}
+                                  >
+                                    <InputNumber min={1} placeholder={t('inventory.quantity')} style={{ width: '100%' }} />
+                                  </Form.Item>
+                                </Col>
+                                <Col flex="120px">
+                                  <Form.Item
+                                    {...restField}
+                                    name={[name, 'unitPrice']}
+                                    fieldKey={fieldKey}
+                                    style={{ marginBottom: 0 }}
+                                  >
+                                    <InputNumber min={0} step={0.01} placeholder={t('inventory.price')} style={{ width: '100%' }} />
+                                  </Form.Item>
+                                </Col>
+                                <Col flex="auto">
+                                  {fields.length > 1 && (
+                                    <Button
+                                      type="link"
+                                      danger
+                                      size="small"
+                                      icon={<MinusCircleOutlined />}
+                                      onClick={() => remove(name)}
+                                    >
+                                      删除
+                                    </Button>
+                                  )}
+                                </Col>
+                              </Row>
+                            </>
+                          )}
                         </div>
-                      ))}
+                        )
+                      })}
                       <Form.Item style={{ marginBottom: 0 }}>
                         <Button type="dashed" onClick={() => add({ itemType: 'cigar', quantity: 1 })} icon={<PlusOutlined />} style={{ width: '100%' }}>
                           {t('inventory.addDetail')}
@@ -2467,16 +2653,31 @@ const AdminInventory: React.FC = () => {
                             icon={<EditOutlined />}
                             size="small"
                             onClick={() => {
+                              console.log('✏️ [编辑按钮点击] - 开始编辑订单')
+                              console.log('  - group.id:', group.id)
+                              console.log('  - group.referenceNo:', group.referenceNo)
+                              console.log('  - inboundOrders总数:', inboundOrders.length)
+                              
                               // 使用 group.id 直接查找订单，而不是通过 referenceNo
                               const order = inboundOrders.find(o => o.id === group.id)
+                              console.log('  - 查找订单结果:', order ? { 
+                                id: order.id, 
+                                referenceNo: order.referenceNo,
+                                itemsCount: order.items.length,
+                                totalQuantity: order.totalQuantity
+                              } : '未找到')
+                              
                               if (order) {
+                                console.log('  - ✅ 设置编辑订单状态')
                                 setEditingOrder(order)
                                 orderEditForm.setFieldsValue({
                                   referenceNo: order.referenceNo,
                                   reason: order.reason,
                                   items: order.items
                                 })
+                                console.log('  - ✅ 表单字段已填充')
                               } else {
+                                console.error('  - ❌ 订单未找到')
                                 message.error('订单未找到')
                               }
                             }}
@@ -2490,6 +2691,10 @@ const AdminInventory: React.FC = () => {
                             size="small"
                             style={{ color: '#faad14' }}
                             onClick={() => {
+                              console.log('⚠️ [取消按钮点击] - 显示取消确认对话框')
+                              console.log('  - group.id:', group.id)
+                              console.log('  - group.referenceNo:', group.referenceNo)
+                              
                               Modal.confirm({
                                 title: '⚠️ 取消订单',
                                 content: (
@@ -2503,22 +2708,45 @@ const AdminInventory: React.FC = () => {
                                 okText: '确认取消',
                                 cancelText: '返回',
                                 onOk: async () => {
+                                  console.log('⚠️ [取消订单确认] - 开始取消订单')
+                                  console.log('  - group.id:', group.id)
+                                  console.log('  - group.referenceNo:', group.referenceNo)
+                                  
                                   setLoading(true)
                                   try {
                                     // 使用 group.id 直接查找订单，而不是通过 referenceNo
                                     const order = inboundOrders.find(o => o.id === group.id)
+                                    console.log('  - 查找订单结果:', order ? { 
+                                      id: order.id, 
+                                      referenceNo: order.referenceNo,
+                                      currentStatus: order.status
+                                    } : '未找到')
+                                    
                                     if (order) {
+                                      console.log('  - ✅ 开始更新订单状态为 cancelled')
                                       await updateInboundOrder(order.id, { status: 'cancelled' })
+                                      console.log('  - ✅ 订单状态更新成功')
                                       message.success('✅ 订单已取消')
+                                      console.log('  - ✅ 刷新订单列表')
                                       setInboundOrders(await getAllInboundOrders())
                                     } else {
+                                      console.error('  - ❌ 订单未找到')
                                       message.error('订单未找到')
                                     }
                                   } catch (error: any) {
+                                    console.error('  - ❌ 取消订单失败:', error)
+                                    console.error('  - 错误详情:', {
+                                      message: error.message,
+                                      stack: error.stack,
+                                      error: error
+                                    })
                                     message.error('操作失败: ' + error.message)
                                   } finally {
                                     setLoading(false)
                                   }
+                                },
+                                onCancel: () => {
+                                  console.log('⚠️ [取消订单确认] - 用户取消操作')
                                 }
                               })
                             }}
@@ -2532,6 +2760,11 @@ const AdminInventory: React.FC = () => {
                             size="small"
                             style={{ color: '#ff7a45' }}
                             onClick={() => {
+                              console.log('🔄 [退货按钮点击] - 显示创建反向订单确认对话框')
+                              console.log('  - group.id:', group.id)
+                              console.log('  - group.referenceNo:', group.referenceNo)
+                              console.log('  - group.totalQuantity:', group.totalQuantity)
+                              
                               Modal.confirm({
                                 title: '🔄 创建反向订单',
                                 content: (
@@ -2545,18 +2778,32 @@ const AdminInventory: React.FC = () => {
                                 okText: '确认创建',
                                 cancelText: '取消',
                                 onOk: async () => {
+                                  console.log('🔄 [创建反向订单确认] - 开始创建反向订单')
+                                  console.log('  - group.id:', group.id)
+                                  console.log('  - group.referenceNo:', group.referenceNo)
+                                  
                                   setLoading(true)
                                   try {
                                     // 使用 group.id 直接查找订单，而不是通过 referenceNo
                                     const order = inboundOrders.find(o => o.id === group.id)
+                                    console.log('  - 查找原订单结果:', order ? { 
+                                      id: order.id, 
+                                      referenceNo: order.referenceNo,
+                                      itemsCount: order.items.length,
+                                      totalQuantity: order.totalQuantity,
+                                      totalValue: order.totalValue
+                                    } : '未找到')
+                                    
                                     if (!order) {
+                                      console.error('  - ❌ 原订单未找到')
                                       message.error('原订单未找到')
                                       return
                                     }
                                     
                                     // 创建反向订单（退货）
+                                    const returnReferenceNo = `RETURN-${group.referenceNo}-${Date.now()}`
                                     const returnOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
-                                      referenceNo: `RETURN-${group.referenceNo}-${Date.now()}`,
+                                      referenceNo: returnReferenceNo,
                                       type: 'return',
                                       reason: `退货冲销: ${group.referenceNo}`,
                                       items: order.items.map(item => ({
@@ -2570,15 +2817,34 @@ const AdminInventory: React.FC = () => {
                                       createdAt: new Date()
                                     }
                                     
+                                    console.log('  - ✅ 准备创建反向订单:', {
+                                      referenceNo: returnReferenceNo,
+                                      type: returnOrderData.type,
+                                      itemsCount: returnOrderData.items.length,
+                                      totalQuantity: returnOrderData.totalQuantity,
+                                      totalValue: returnOrderData.totalValue
+                                    })
+                                    
                                     await createInboundOrder(returnOrderData)
+                                    console.log('  - ✅ 反向订单创建成功')
                                     message.success('✅ 反向订单已创建')
+                                    console.log('  - ✅ 刷新订单列表和库存变动')
                                     setInboundOrders(await getAllInboundOrders())
                                     setInventoryMovements(await getAllInventoryMovements())
                                   } catch (error: any) {
+                                    console.error('  - ❌ 创建反向订单失败:', error)
+                                    console.error('  - 错误详情:', {
+                                      message: error.message,
+                                      stack: error.stack,
+                                      error: error
+                                    })
                                     message.error('创建失败: ' + error.message)
                                   } finally {
                                     setLoading(false)
                                   }
+                                },
+                                onCancel: () => {
+                                  console.log('🔄 [创建反向订单确认] - 用户取消操作')
                                 }
                               })
                             }}
@@ -2593,49 +2859,37 @@ const AdminInventory: React.FC = () => {
                             size="small"
                             danger
                             onClick={() => {
-                              Modal.confirm({
-                                title: t('inventory.deleteReferenceGroup'),
-                                content: t('inventory.deleteReferenceGroupConfirm', { 
-                                  referenceNo: group.referenceNo, 
-                                  count: group.productCount 
-                                }),
-                                okText: t('common.confirm'),
-                                cancelText: t('common.cancel'),
-                                okType: 'danger',
-                                onOk: async () => {
-                                  setLoading(true)
-                                  try {
-                                    // 使用 group.id 直接查找订单，而不是通过 referenceNo
-                                    // 因为可能有多个订单共享同一个 referenceNo
-                                    console.log('删除订单 - group.id:', group.id, 'group.referenceNo:', group.referenceNo)
-                                    const order = inboundOrders.find(o => o.id === group.id)
-                                    console.log('删除订单 - 找到的订单:', order ? { id: order.id, referenceNo: order.referenceNo } : '未找到')
-                                    
-                                    if (order && order.id) {
-                                      console.log('删除订单 - 开始删除，订单ID:', order.id)
-                                      await deleteInboundOrder(order.id)
-                                      console.log('删除订单 - 删除成功')
-                                      message.success(t('inventory.deleteSuccess'))
-                                      // 刷新数据
-                                      setInboundOrders(await getAllInboundOrders())
-                                      setInventoryMovements(await getAllInventoryMovements())
-                                    } else {
-                                      console.error('删除订单 - 订单未找到或ID为空', { groupId: group.id, order })
-                                      message.error('订单未找到，无法删除')
-                                    }
-                                  } catch (error: any) {
-                                    console.error('删除入库订单失败:', error)
-                                    console.error('删除入库订单失败 - 错误详情:', {
-                                      message: error.message,
-                                      stack: error.stack,
-                                      error: error
-                                    })
-                                    message.error(t('common.deleteFailed') + ': ' + (error.message || String(error)))
-                                  } finally {
-                                    setLoading(false)
-                                  }
-                                }
+                              console.log('🗑️ [删除按钮点击] - 显示删除确认对话框')
+                              console.log('  - group.id:', group.id)
+                              console.log('  - group.referenceNo:', group.referenceNo)
+                              console.log('  - group.productCount:', group.productCount)
+                              
+                              // 准备翻译文本（仅用于日志）
+                              const title = t('inventory.deleteReferenceGroup')
+                              const content = t('inventory.deleteReferenceGroupConfirm', { 
+                                referenceNo: group.referenceNo, 
+                                count: group.productCount 
                               })
+                              const okText = t('common.confirm')
+                              const cancelText = t('common.cancel')
+                              
+                              console.log('  - 翻译文本准备完成:', {
+                                title,
+                                content: content.substring(0, 50) + '...',
+                                okText,
+                                cancelText
+                              })
+                              
+                              console.log('  - 准备显示删除确认对话框')
+                              console.log('  - 设置删除目标订单:', { id: group.id, referenceNo: group.referenceNo, productCount: group.productCount })
+                              
+                              // 使用受控的 Modal 替代 modal.confirm，以解决 React 19 兼容性问题
+                              setDeleteTargetOrder({
+                                id: group.id,
+                                referenceNo: group.referenceNo,
+                                productCount: group.productCount
+                              })
+                              setDeleteConfirmOpen(true)
                             }}
                           />
                         </Space>
@@ -2679,8 +2933,8 @@ const AdminInventory: React.FC = () => {
                         >
                             <div style={{ flex: 1 }}>
                               <div style={{ 
-                                display: 'flex',
-                                alignItems: 'center',
+                        display: 'flex',
+                        alignItems: 'center',
                                 gap: 6,
                                 marginBottom: 4,
                                 flexWrap: 'wrap'
@@ -2814,16 +3068,31 @@ const AdminInventory: React.FC = () => {
                               <button
                               onClick={(e) => {
                                 e.stopPropagation()
+                                console.log('✏️ [编辑按钮点击 - 移动端] - 开始编辑订单')
+                                console.log('  - group.id:', group.id)
+                                console.log('  - group.referenceNo:', group.referenceNo)
+                                console.log('  - inboundOrders总数:', inboundOrders.length)
+                                
                                 // 使用 group.id 直接查找订单，而不是通过 referenceNo
                                 const order = inboundOrders.find(o => o.id === group.id)
+                                console.log('  - 查找订单结果:', order ? { 
+                                  id: order.id, 
+                                  referenceNo: order.referenceNo,
+                                  itemsCount: order.items.length,
+                                  totalQuantity: order.totalQuantity
+                                } : '未找到')
+                                
                                 if (order) {
+                                  console.log('  - ✅ 设置编辑订单状态')
                                   setEditingOrder(order)
                                   orderEditForm.setFieldsValue({
                                     referenceNo: order.referenceNo,
                                     reason: order.reason,
                                     items: order.items
                                   })
+                                  console.log('  - ✅ 表单字段已填充')
                                 } else {
+                                  console.error('  - ❌ 订单未找到')
                                   message.error('订单未找到')
                                 }
                               }}
@@ -2846,6 +3115,10 @@ const AdminInventory: React.FC = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
+                                console.log('⚠️ [取消按钮点击 - 移动端] - 显示取消确认对话框')
+                                console.log('  - group.id:', group.id)
+                                console.log('  - group.referenceNo:', group.referenceNo)
+                                
                                 Modal.confirm({
                                   title: '⚠️ 取消订单',
                                   content: (
@@ -2858,22 +3131,45 @@ const AdminInventory: React.FC = () => {
                                   okText: '确认取消',
                                   cancelText: '返回',
                                   onOk: async () => {
+                                    console.log('⚠️ [取消订单确认 - 移动端] - 开始取消订单')
+                                    console.log('  - group.id:', group.id)
+                                    console.log('  - group.referenceNo:', group.referenceNo)
+                                    
                                     setLoading(true)
                                     try {
                                       // 使用 group.id 直接查找订单，而不是通过 referenceNo
                                       const order = inboundOrders.find(o => o.id === group.id)
+                                      console.log('  - 查找订单结果:', order ? { 
+                                        id: order.id, 
+                                        referenceNo: order.referenceNo,
+                                        currentStatus: order.status
+                                      } : '未找到')
+                                      
                                       if (order) {
+                                        console.log('  - ✅ 开始更新订单状态为 cancelled')
                                         await updateInboundOrder(order.id, { status: 'cancelled' })
+                                        console.log('  - ✅ 订单状态更新成功')
                                         message.success('✅ 订单已取消')
+                                        console.log('  - ✅ 刷新订单列表')
                                         setInboundOrders(await getAllInboundOrders())
                                       } else {
+                                        console.error('  - ❌ 订单未找到')
                                         message.error('订单未找到')
                                       }
                                     } catch (error: any) {
+                                      console.error('  - ❌ 取消订单失败:', error)
+                                      console.error('  - 错误详情:', {
+                                        message: error.message,
+                                        stack: error.stack,
+                                        error: error
+                                      })
                                       message.error('操作失败: ' + error.message)
                                     } finally {
                                       setLoading(false)
                                     }
+                                  },
+                                  onCancel: () => {
+                                    console.log('⚠️ [取消订单确认 - 移动端] - 用户取消操作')
                                   }
                                 })
                               }}
@@ -2896,6 +3192,11 @@ const AdminInventory: React.FC = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
+                                console.log('🔄 [退货按钮点击 - 移动端] - 显示创建反向订单确认对话框')
+                                console.log('  - group.id:', group.id)
+                                console.log('  - group.referenceNo:', group.referenceNo)
+                                console.log('  - group.totalQuantity:', group.totalQuantity)
+                                
                                 Modal.confirm({
                                   title: '🔄 创建反向订单',
                                   content: (
@@ -2909,17 +3210,31 @@ const AdminInventory: React.FC = () => {
                                   okText: '确认创建',
                                   cancelText: '取消',
                                   onOk: async () => {
+                                    console.log('🔄 [创建反向订单确认 - 移动端] - 开始创建反向订单')
+                                    console.log('  - group.id:', group.id)
+                                    console.log('  - group.referenceNo:', group.referenceNo)
+                                    
                                     setLoading(true)
                                     try {
                                       // 使用 group.id 直接查找订单，而不是通过 referenceNo
                                       const order = inboundOrders.find(o => o.id === group.id)
+                                      console.log('  - 查找原订单结果:', order ? { 
+                                        id: order.id, 
+                                        referenceNo: order.referenceNo,
+                                        itemsCount: order.items.length,
+                                        totalQuantity: order.totalQuantity,
+                                        totalValue: order.totalValue
+                                      } : '未找到')
+                                      
                                       if (!order) {
+                                        console.error('  - ❌ 原订单未找到')
                                         message.error('原订单未找到')
                                         return
                                       }
                                       
+                                      const returnReferenceNo = `RETURN-${group.referenceNo}-${Date.now()}`
                                       const returnOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
-                                        referenceNo: `RETURN-${group.referenceNo}-${Date.now()}`,
+                                        referenceNo: returnReferenceNo,
                                         type: 'return',
                                         reason: `退货冲销: ${group.referenceNo}`,
                                         items: order.items.map(item => ({
@@ -2933,15 +3248,34 @@ const AdminInventory: React.FC = () => {
                                         createdAt: new Date()
                                       }
                                       
+                                      console.log('  - ✅ 准备创建反向订单:', {
+                                        referenceNo: returnReferenceNo,
+                                        type: returnOrderData.type,
+                                        itemsCount: returnOrderData.items.length,
+                                        totalQuantity: returnOrderData.totalQuantity,
+                                        totalValue: returnOrderData.totalValue
+                                      })
+                                      
                                       await createInboundOrder(returnOrderData)
+                                      console.log('  - ✅ 反向订单创建成功')
                                       message.success('✅ 反向订单已创建')
+                                      console.log('  - ✅ 刷新订单列表和库存变动')
                                       setInboundOrders(await getAllInboundOrders())
                                       setInventoryMovements(await getAllInventoryMovements())
                                     } catch (error: any) {
+                                      console.error('  - ❌ 创建反向订单失败:', error)
+                                      console.error('  - 错误详情:', {
+                                        message: error.message,
+                                        stack: error.stack,
+                                        error: error
+                                      })
                                       message.error('创建失败: ' + error.message)
                                     } finally {
                                       setLoading(false)
                                     }
+                                  },
+                                  onCancel: () => {
+                                    console.log('🔄 [创建反向订单确认 - 移动端] - 用户取消操作')
                                   }
                                 })
                               }}
@@ -2964,48 +3298,37 @@ const AdminInventory: React.FC = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
-                                Modal.confirm({
-                                  title: t('inventory.deleteReferenceGroup'),
-                                  content: t('inventory.deleteReferenceGroupConfirm', { 
-                                    referenceNo: group.referenceNo, 
-                                    count: group.productCount 
-                                  }),
-                                  okText: t('common.confirm'),
-                                  cancelText: t('common.cancel'),
-                                  okType: 'danger',
-                                  onOk: async () => {
-                                    setLoading(true)
-                                    try {
-                                      // 使用 group.id 直接查找订单，而不是通过 referenceNo
-                                      console.log('删除订单（移动端） - group.id:', group.id, 'group.referenceNo:', group.referenceNo)
-                                      const order = inboundOrders.find(o => o.id === group.id)
-                                      console.log('删除订单（移动端） - 找到的订单:', order ? { id: order.id, referenceNo: order.referenceNo } : '未找到')
-                                      
-                                      if (order && order.id) {
-                                        console.log('删除订单（移动端） - 开始删除，订单ID:', order.id)
-                                        await deleteInboundOrder(order.id)
-                                        console.log('删除订单（移动端） - 删除成功')
-                                        message.success(t('inventory.deleteSuccess'))
-                                        // 刷新数据
-                                        setInboundOrders(await getAllInboundOrders())
-                                        setInventoryMovements(await getAllInventoryMovements())
-                                      } else {
-                                        console.error('删除订单（移动端） - 订单未找到或ID为空', { groupId: group.id, order })
-                                        message.error('订单未找到，无法删除')
-                                      }
-                                    } catch (error: any) {
-                                      console.error('删除入库订单失败（移动端）:', error)
-                                      console.error('删除入库订单失败（移动端） - 错误详情:', {
-                                        message: error.message,
-                                        stack: error.stack,
-                                        error: error
-                                      })
-                                      message.error(t('common.deleteFailed') + ': ' + (error.message || String(error)))
-                                    } finally {
-                                      setLoading(false)
-                                    }
-                                  }
+                                console.log('🗑️ [删除按钮点击 - 移动端] - 显示删除确认对话框')
+                                console.log('  - group.id:', group.id)
+                                console.log('  - group.referenceNo:', group.referenceNo)
+                                console.log('  - group.productCount:', group.productCount)
+                                
+                                // 准备翻译文本（仅用于日志）
+                                const title = t('inventory.deleteReferenceGroup')
+                                const content = t('inventory.deleteReferenceGroupConfirm', { 
+                                  referenceNo: group.referenceNo, 
+                                  count: group.productCount 
                                 })
+                                const okText = t('common.confirm')
+                                const cancelText = t('common.cancel')
+                                
+                                console.log('  - 翻译文本准备完成:', {
+                                  title,
+                                  content: content.substring(0, 50) + '...',
+                                  okText,
+                                  cancelText
+                                })
+                                
+                                console.log('  - 准备显示删除确认对话框（移动端）')
+                                console.log('  - 设置删除目标订单:', { id: group.id, referenceNo: group.referenceNo, productCount: group.productCount })
+                                
+                                // 使用受控的 Modal 替代 modal.confirm，以解决 React 19 兼容性问题
+                                setDeleteTargetOrder({
+                                  id: group.id,
+                                  referenceNo: group.referenceNo,
+                                  productCount: group.productCount
+                                })
+                                setDeleteConfirmOpen(true)
                               }}
                               style={{
                                 flex: 1,
@@ -3032,7 +3355,7 @@ const AdminInventory: React.FC = () => {
                                     display: 'flex',
                                     alignItems: 'flex-start',
                                     gap: 12,
-                                    padding: 12,
+                        padding: 12,
                                     background: 'rgba(255,255,255,0.03)',
                                     borderRadius: 12,
                                     border: '1px solid rgba(255, 255, 255, 0.1)'
@@ -3042,7 +3365,7 @@ const AdminInventory: React.FC = () => {
                                   <div style={{
                                     width: 80,
                                     height: 80,
-                                    borderRadius: 10,
+                        borderRadius: 10,
                                     overflow: 'hidden',
                                     background: 'rgba(255, 255, 255, 0.08)',
                                     flexShrink: 0
@@ -3052,7 +3375,7 @@ const AdminInventory: React.FC = () => {
                                       height: '100%',
                                       background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02))'
                                     }} />
-                                  </div>
+                          </div>
                                   
                                   {/* 右侧信息 */}
                                   <div style={{ flex: 1 }}>
@@ -3064,7 +3387,7 @@ const AdminInventory: React.FC = () => {
                                       marginBottom: 4
                                     }}>
                                       {log.cigarName || cigar?.name || log.cigarId}
-                                    </div>
+                          </div>
                                     
                                     {/* SKU */}
                                     <div style={{
@@ -3100,10 +3423,10 @@ const AdminInventory: React.FC = () => {
                                         {t('inventory.subtotal')}: <span style={{ color: '#fff', fontWeight: 600 }}>RM {itemValue.toFixed(2)}</span>
                                       </span>
                                     </div>
-                                  </div>
-                                </div>
-                              )
-                            })}
+                        </div>
+                      </div>
+                    )
+                  })}
                             
                             {/* 单号汇总 */}
                             <div style={{
@@ -3133,8 +3456,8 @@ const AdminInventory: React.FC = () => {
                                   color: 'rgba(255,255,255,0.6)' 
                                 }}>
                                   📝 {group.reason}
-                                </div>
-                              )}
+                </div>
+              )}
                             </div>
                           </div>
                         )}
@@ -3288,10 +3611,12 @@ const AdminInventory: React.FC = () => {
                     </Row>
                     
                     {/* 产品列表 */}
-                    <Form.List name="items" initialValue={[{ cigarId: undefined, quantity: 1 }]}> 
-                      {(fields, { add, remove }) => (
-                        <div>
-                          {fields.map(({ key, name, ...restField }) => (
+                  <Form.List name="items" initialValue={[{ cigarId: undefined, quantity: 1 }]}> 
+                    {(fields, { add, remove }) => (
+                      <div>
+                          {fields.map((field) => {
+                            const { key, name, fieldKey, ...restField } = field
+                            return (
                             <div key={key} style={{ 
                               marginBottom: 12, 
                               padding: 10, 
@@ -3302,48 +3627,49 @@ const AdminInventory: React.FC = () => {
                               {/* 第一行：产品选择 */}
                               <Row gutter={12} style={{ marginBottom: 8 }}>
                                 <Col flex="auto">
-                                  <Form.Item
-                                    {...restField}
-                                    name={[name, 'cigarId']}
-                                    rules={[{ required: true, message: t('inventory.pleaseSelectProduct') }]}
+                            <Form.Item
+                              {...restField}
+                              name={[name, 'cigarId']}
+                                    fieldKey={fieldKey}
+                              rules={[{ required: true, message: t('inventory.pleaseSelectProduct') }]}
                                     style={{ marginBottom: 0 }}
-                                  >
-                                    <Select 
-                                      placeholder={t('inventory.pleaseSelectProduct')}
-                                      showSearch
-                                      optionFilterProp="children"
-                                      filterOption={(input, option) => {
-                                        const kw = (input || '').toLowerCase()
-                                        const text = String((option?.children as any) || '').toLowerCase()
-                                        return text.includes(kw)
-                                      }}
-                                    >
-                                      {groupedCigars.map(group => (
-                                        <Select.OptGroup key={group.brand} label={group.brand}>
-                                          {group.list.map(i => (
-                                            <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（{t('inventory.stock')}：{getComputedStock(i.id)}）</Option>
-                                          ))}
-                                        </Select.OptGroup>
-                                      ))}
-                                    </Select>
-                                  </Form.Item>
+                            >
+                              <Select 
+                                placeholder={t('inventory.pleaseSelectProduct')}
+                                showSearch
+                                optionFilterProp="children"
+                                filterOption={(input, option) => {
+                                  const kw = (input || '').toLowerCase()
+                                  const text = String((option?.children as any) || '').toLowerCase()
+                                  return text.includes(kw)
+                                }}
+                              >
+                                {groupedCigars.map(group => (
+                                  <Select.OptGroup key={group.brand} label={group.brand}>
+                                    {group.list.map(i => (
+                                      <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（{t('inventory.stock')}：{getComputedStock(i.id)}）</Option>
+                                    ))}
+                                  </Select.OptGroup>
+                                ))}
+                              </Select>
+                            </Form.Item>
                                 </Col>
                               </Row>
                               
                               {/* 第二行：数量 + 删除 */}
                               <Row gutter={12} align="middle">
                                 <Col flex="120px">
-                                  <Form.Item
-                                    {...restField}
-                                    name={[name, 'quantity']}
-                                    rules={[{ required: true, message: t('inventory.pleaseInputQuantity') }]}
+                            <Form.Item
+                              {...restField}
+                              name={[name, 'quantity']}
+                              rules={[{ required: true, message: t('inventory.pleaseInputQuantity') }]}
                                     style={{ marginBottom: 0 }}
-                                  >
+                            >
                                     <InputNumber min={1} placeholder={t('inventory.quantity')} style={{ width: '100%' }} />
-                                  </Form.Item>
+                            </Form.Item>
                                 </Col>
                                 <Col flex="auto">
-                                  {fields.length > 1 && (
+                            {fields.length > 1 && (
                                     <Button
                                       type="link"
                                       danger
@@ -3353,19 +3679,20 @@ const AdminInventory: React.FC = () => {
                                     >
                                       删除
                                     </Button>
-                                  )}
+                            )}
                                 </Col>
                               </Row>
                             </div>
-                          ))}
+                            )
+                          })}
                           <Form.Item style={{ marginBottom: 0 }}>
                             <Button type="dashed" onClick={() => add({ quantity: 1 })} icon={<PlusOutlined />} style={{ width: '100%' }}>
                               {t('inventory.addDetail')}
                             </Button>
-                          </Form.Item>
-                        </div>
-                      )}
-                    </Form.List>
+                        </Form.Item>
+                      </div>
+                    )}
+                  </Form.List>
                     
                     <Form.Item style={{ marginTop: 16, marginBottom: 0 }}>
                       <Space>
@@ -3377,8 +3704,8 @@ const AdminInventory: React.FC = () => {
                           {t('inventory.confirmOutStock')}
                         </Button>
                       </Space>
-                    </Form.Item>
-                  </div>
+                  </Form.Item>
+                    </div>
                 </Form>
               </Modal>
               
@@ -3421,16 +3748,27 @@ const AdminInventory: React.FC = () => {
                               <span style={{ borderRadius: 999, background: 'rgba(255, 77, 79, 0.2)', padding: '2px 8px', fontSize: 12, color: '#ff4d4f' }}>
                                 -{log.quantity}
                               </span>
-                            </div>
+                          </div>
                             <div style={{ marginTop: 4, fontSize: 12, color: '#aaa' }}>
                               {t('inventory.referenceNo')}: {log.referenceNo || '-'}
-                            </div>
+                          </div>
                             <div style={{ marginTop: 4, fontSize: 12, color: '#aaa' }}>
-                              {log.source === 'order' ? (
-                                <span>{t('inventory.activityOrderOutbound')}: {userName}</span>
-                              ) : (
-                                <span>{t('inventory.reason')}: {log.reason || '-'}</span>
-                              )}
+                            {log.source === 'event' && log.eventId ? (
+                              (() => {
+                                const event = eventMap.get(log.eventId)
+                                return event ? (
+                                  <span>{t('inventory.source')}: {event.title}</span>
+                                ) : (
+                                  <span>{t('inventory.activityOrderOutbound')}: {userName}</span>
+                                )
+                              })()
+                            ) : log.source === 'direct' ? (
+                              <span>{t('inventory.source')}: {t('inventory.directSale')}</span>
+                            ) : log.source === 'manual' ? (
+                              <span>{t('inventory.source')}: {t('inventory.manual')}</span>
+                            ) : (
+                              <span>{t('inventory.reason')}: {log.reason || '-'}</span>
+                            )}
                             </div>
                             <div style={{ marginTop: 6, fontSize: 11, color: '#888' }}>
                               {formatYMD(toDateSafe(log.createdAt))}
@@ -4975,6 +5313,77 @@ const AdminInventory: React.FC = () => {
             </Space>
           </Form.Item>
         </Form>
+      </Modal>
+      
+      {/* 删除确认对话框 - 使用受控 Modal 替代 modal.confirm 以解决 React 19 兼容性问题 */}
+      <Modal
+        title={t('inventory.deleteReferenceGroup')}
+        open={deleteConfirmOpen}
+        onOk={async () => {
+          if (!deleteTargetOrder) return
+          
+          console.log('🗑️ [删除订单确认] - 开始删除订单')
+          console.log('  - deleteTargetOrder:', deleteTargetOrder)
+          console.log('  - inboundOrders总数:', inboundOrders.length)
+          
+          setLoading(true)
+          try {
+            // 使用 deleteTargetOrder.id 直接查找订单
+            const order = inboundOrders.find(o => o.id === deleteTargetOrder.id)
+            console.log('  - 查找订单结果:', order ? { 
+              id: order.id, 
+              referenceNo: order.referenceNo,
+              itemsCount: order.items.length,
+              totalQuantity: order.totalQuantity
+            } : '未找到')
+            
+            if (order && order.id) {
+              console.log('  - ✅ 开始删除订单，订单ID:', order.id)
+              await deleteInboundOrder(order.id)
+              console.log('  - ✅ 订单删除成功')
+              message.success(t('inventory.deleteSuccess'))
+              console.log('  - ✅ 刷新订单列表和库存变动')
+              // 刷新数据
+              setInboundOrders(await getAllInboundOrders())
+              setInventoryMovements(await getAllInventoryMovements())
+              setDeleteConfirmOpen(false)
+              setDeleteTargetOrder(null)
+            } else {
+              console.error('  - ❌ 订单未找到或ID为空', { targetOrderId: deleteTargetOrder.id, order })
+              message.error('订单未找到，无法删除')
+              setDeleteConfirmOpen(false)
+              setDeleteTargetOrder(null)
+            }
+          } catch (error: any) {
+            console.error('  - ❌ 删除入库订单失败:', error)
+            console.error('  - 错误详情:', {
+              message: error.message,
+              stack: error.stack,
+              error: error
+            })
+            message.error(t('common.deleteFailed') + ': ' + (error.message || String(error)))
+          } finally {
+            setLoading(false)
+          }
+        }}
+        onCancel={() => {
+          console.log('🗑️ [删除订单确认] - 用户取消操作')
+          setDeleteConfirmOpen(false)
+          setDeleteTargetOrder(null)
+        }}
+        okText={t('common.confirm')}
+        cancelText={t('common.cancel')}
+        okType="danger"
+        confirmLoading={loading}
+      >
+        {deleteTargetOrder && (
+          <div>
+            {t('inventory.deleteReferenceGroupConfirm', { 
+              referenceNo: deleteTargetOrder.referenceNo, 
+              count: deleteTargetOrder.productCount 
+            })}
+          </div>
+        )}
       </Modal>
     </div>
   )

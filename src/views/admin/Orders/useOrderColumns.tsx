@@ -82,8 +82,8 @@ export const useOrderColumns = ({
       key: 'items',
       render: (_: any, record: Order) => (
         <div>
-          {record.items.slice(0, 2).map((item) => (
-            <div key={`${record.id}_${item.cigarId}`} style={{ fontSize: '12px', marginBottom: 2 }}>
+          {record.items.slice(0, 2).map((item, index) => (
+            <div key={`${record.id}_${item.cigarId}_${index}`} style={{ fontSize: '12px', marginBottom: 2 }}>
               {getCigarInfo(item.cigarId, cigars)} × {item.quantity}
             </div>
           ))}

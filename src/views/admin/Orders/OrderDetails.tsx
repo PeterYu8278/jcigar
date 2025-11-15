@@ -32,6 +32,23 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
   const { t } = useTranslation()
   const theme = getModalTheme(true) // 使用暗色主题
 
+  // 安全日期转换函数
+  const toDateSafe = (val: any): Date | null => {
+    if (!val) return null
+    try {
+      let v: any = val
+      // Firestore Timestamp -> Date
+      if (v && typeof v.toDate === 'function') {
+        v = v.toDate()
+      }
+      // Date -> Date
+      const d = v instanceof Date ? v : new Date(v)
+      return isNaN(d.getTime()) ? null : d
+    } catch (error) {
+      return null
+    }
+  }
+
   const handleStatusUpdate = async (status: string) => {
     try {
       await updateDocument(COLLECTIONS.ORDERS, order.id, { status } as any)
@@ -176,7 +193,12 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
               </div>
               <div style={theme.content.row}>
                 <p style={{ ...theme.text.secondary, whiteSpace: 'nowrap' }}>{t('ordersAdmin.createdAt')}</p>
-                <p style={theme.text.body}>{dayjs(order.createdAt).format('YYYY-MM-DD')}</p>
+                <p style={theme.text.body}>
+                  {(() => {
+                    const date = toDateSafe(order.createdAt)
+                    return date ? dayjs(date).format('YYYY-MM-DD') : '-'
+                  })()}
+                </p>
               </div>
               <div style={theme.content.row}>
                 <p style={{ ...theme.text.secondary, whiteSpace: 'nowrap' }}>{t('ordersAdmin.payment.title')}</p>
@@ -188,7 +210,12 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
               </div>
               <div style={theme.content.row}>
                 <p style={{ ...theme.text.secondary, whiteSpace: 'nowrap' }}>{t('ordersAdmin.paidAt')}</p>
-                <p style={theme.text.body}>{dayjs(order.payment.paidAt).format('YYYY-MM-DD HH:mm')}</p>
+                <p style={theme.text.body}>
+                  {(() => {
+                    const date = toDateSafe(order.payment?.paidAt)
+                    return date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-'
+                  })()}
+                </p>
               </div>
               <div style={theme.content.row}>
                 <p style={{ ...theme.text.secondary, whiteSpace: 'nowrap' }}>{t('ordersAdmin.trackingNumber')}</p>

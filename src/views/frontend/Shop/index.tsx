@@ -897,7 +897,7 @@ const Shop: React.FC = () => {
         width={getModalWidth(isMobile)}
         style={{ top: isMobile ? 0 : 20 }}
         styles={getModalThemeStyles(isMobile, true)}
-        destroyOnClose
+        destroyOnHidden
         closable={false}
       >
         {/* 弹窗标题栏 */}

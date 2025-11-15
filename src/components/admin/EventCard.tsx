@@ -2,21 +2,86 @@ import React from 'react'
 import dayjs from 'dayjs'
 import type { Event } from '../../types'
 import { useTranslation } from 'react-i18next'
+import { useAuthStore } from '../../store/modules/auth'
 
 interface EventCardProps {
   event: Event
   onView: (event: Event) => void
   getStatusText: (status: string) => string
   getStatusColor: (status: string) => string
+  completedEvents?: Event[] // 已完成的活动列表，用于计算社交关系
 }
 
 const EventCard: React.FC<EventCardProps> = ({
   event,
   onView,
   getStatusText,
-  getStatusColor
+  getStatusColor,
+  completedEvents = []
 }) => {
   const { t } = useTranslation()
+  const { user } = useAuthStore()
+
+  // 计算参与者社交关系（基于当前登录用户）
+  const getSocialRelationTag = (): { color: string } | null => {
+    // 如果没有登录用户，不显示 tag
+    if (!user || !user.id) {
+      return null
+    }
+
+    const currentParticipants = (event?.participants?.registered || []) as string[]
+    
+    // 检查当前登录用户是否参与了当前活动
+    const isUserParticipating = currentParticipants.includes(user.id)
+    
+    // 如果用户没有参与当前活动，不显示 tag
+    if (!isUserParticipating) {
+      return null
+    }
+
+    // 找出当前登录用户参与过的所有已完成活动
+    const userCompletedEvents = completedEvents.filter(completedEvent => {
+      const completedParticipants = (completedEvent?.participants?.registered || []) as string[]
+      return completedParticipants.includes(user.id)
+    })
+
+    // 如果没有参与过任何已完成的活动，不显示 tag
+    if (userCompletedEvents.length === 0) {
+      return null
+    }
+
+    // 从用户参与过的已完成活动中，收集所有其他参与者（排除用户自己）
+    const familiarParticipants = new Set<string>()
+    for (const completedEvent of userCompletedEvents) {
+      const completedParticipants = (completedEvent?.participants?.registered || []) as string[]
+      for (const participantId of completedParticipants) {
+        // 排除用户自己
+        if (participantId !== user.id) {
+          familiarParticipants.add(participantId)
+        }
+      }
+    }
+
+    // 在当前活动的参与者中，找出这些"共同参与者"（排除用户自己）
+    const commonParticipants = currentParticipants.filter(id => 
+      id !== user.id && familiarParticipants.has(id)
+    )
+    const overlapCount = commonParticipants.length
+
+    // 如果没有找到任何共同参与者，不显示 tag
+    if (overlapCount === 0) {
+      return null
+    }
+
+    // 根据共同参与者人数返回不同颜色
+    // < 5 人：青色 (cyan) - 较弱的个人社交关系
+    // >= 5 人：橙色 (orange) - 较强的个人社交关系
+    const tagColor = overlapCount < 5 ? '#13c2c2' : '#ff7a00'
+
+    return { color: tagColor }
+  }
+
+  const socialTag = getSocialRelationTag()
 
   return (
     <div style={{ 
@@ -76,22 +141,35 @@ const EventCard: React.FC<EventCardProps> = ({
               }}>
                 {event.title}
               </div>
-              <span style={{ 
-                fontSize: 12, 
-                padding: '2px 8px', 
-                borderRadius: 9999, 
-                background: event.status === 'published' ? 'rgba(34,197,94,0.2)' : 
-                           event.status === 'ongoing' ? 'rgba(56,189,248,0.2)' : 
-                           event.status === 'completed' ? 'rgba(148,163,184,0.2)' : 
-                           'rgba(244,63,94,0.2)', 
-                color: event.status === 'published' ? '#34d399' : 
-                       event.status === 'ongoing' ? '#38bdf8' : 
-                       event.status === 'completed' ? '#94a3b8' : 
-                       '#f87171', 
-                flexShrink: 0 
-              }}>
-                {getStatusText(event.status)}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {/* 社交关系 tag */}
+                {socialTag && (
+                  <span style={{ 
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: socialTag.color,
+                    flexShrink: 0,
+                    display: 'inline-block'
+                  }} />
+                )}
+                <span style={{ 
+                  fontSize: 12, 
+                  padding: '2px 8px', 
+                  borderRadius: 9999, 
+                  background: event.status === 'published' ? 'rgba(34,197,94,0.2)' : 
+                             event.status === 'ongoing' ? 'rgba(56,189,248,0.2)' : 
+                             event.status === 'completed' ? 'rgba(148,163,184,0.2)' : 
+                             'rgba(244,63,94,0.2)', 
+                  color: event.status === 'published' ? '#34d399' : 
+                         event.status === 'ongoing' ? '#38bdf8' : 
+                         event.status === 'completed' ? '#94a3b8' : 
+                         '#f87171', 
+                  flexShrink: 0 
+                }}>
+                  {getStatusText(event.status)}
+                </span>
+              </div>
             </div>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }}>
               <div style={{ 

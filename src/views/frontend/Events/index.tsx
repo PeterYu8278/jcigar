@@ -26,9 +26,75 @@ const Events: React.FC = () => {
   useEffect(() => {
     ;(async () => {
       const list = await getEvents()
-      setEvents(list)
+      // 过滤掉私人活动
+      const publicEvents = list.filter(event => !event.isPrivate)
+      setEvents(publicEvents)
     })()
   }, [])
+
+  // 获取所有已完成的活动，用于计算社交关系
+  const completedEvents = useMemo(() => {
+    return events.filter(e => e.status === 'completed')
+  }, [events])
+
+  // 计算参与者社交关系（基于当前登录用户）
+  const getSocialRelationTag = (event: Event): { color: string } | null => {
+    // 如果没有登录用户，不显示 tag
+    if (!user || !user.id) {
+      return null
+    }
+
+    const currentParticipants = (event?.participants?.registered || []) as string[]
+    
+    // 检查当前登录用户是否参与了当前活动
+    const isUserParticipating = currentParticipants.includes(user.id)
+    
+    // 如果用户没有参与当前活动，不显示 tag
+    if (!isUserParticipating) {
+      return null
+    }
+
+    // 找出当前登录用户参与过的所有已完成活动
+    const userCompletedEvents = completedEvents.filter(completedEvent => {
+      const completedParticipants = (completedEvent?.participants?.registered || []) as string[]
+      return completedParticipants.includes(user.id)
+    })
+
+    // 如果没有参与过任何已完成的活动，不显示 tag
+    if (userCompletedEvents.length === 0) {
+      return null
+    }
+
+    // 从用户参与过的已完成活动中，收集所有其他参与者（排除用户自己）
+    const familiarParticipants = new Set<string>()
+    for (const completedEvent of userCompletedEvents) {
+      const completedParticipants = (completedEvent?.participants?.registered || []) as string[]
+      for (const participantId of completedParticipants) {
+        // 排除用户自己
+        if (participantId !== user.id) {
+          familiarParticipants.add(participantId)
+        }
+      }
+    }
+
+    // 在当前活动的参与者中，找出这些"共同参与者"（排除用户自己）
+    const commonParticipants = currentParticipants.filter(id => 
+      id !== user.id && familiarParticipants.has(id)
+    )
+    const overlapCount = commonParticipants.length
+
+    // 如果没有找到任何共同参与者，不显示 tag
+    if (overlapCount === 0) {
+      return null
+    }
+
+    // 根据共同参与者人数返回不同颜色
+    // < 5 人：青色 (cyan) - 较弱的个人社交关系
+    // >= 5 人：橙色 (orange) - 较强的个人社交关系
+    const tagColor = overlapCount < 5 ? '#13c2c2' : '#ff7a00'
+
+    return { color: tagColor }
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -77,7 +143,9 @@ const Events: React.FC = () => {
         flexDirection: 'column',
         gap: '24px'
       }}>
-        {events.map((event) => (
+        {events.map((event) => {
+          const socialTag = getSocialRelationTag(event)
+          return (
           <div 
             key={event.id}
             style={{
@@ -123,16 +191,34 @@ const Events: React.FC = () => {
               padding: '24px',
               height: '100%'
             }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                marginBottom: '4px'
+            }}>
               <h2 style={{
                 color: '#FFFFFF',
                 fontSize: '20px',
                 fontWeight: 'bold',
                 lineHeight: '1.2',
                 margin: 0,
-                marginBottom: '4px'
+                  flex: 1
               }}>
                 {event.title}
               </h2>
+                {/* 社交关系 tag */}
+                {socialTag && (
+                  <span style={{ 
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: socialTag.color,
+                    flexShrink: 0,
+                    display: 'inline-block'
+                  }} />
+                )}
+              </div>
               
               <p style={{
                 color: 'rgba(255, 255, 255, 0.8)',
@@ -198,7 +284,9 @@ const Events: React.FC = () => {
                     if (res.success) {
                       message.success(isRegistered ? t('events.unregistered') : t('events.registered'))
                       const updated = await getEvents()
-                      setEvents(updated)
+                      // 过滤掉私人活动
+                      const publicEvents = updated.filter(e => !e.isPrivate)
+                      setEvents(publicEvents)
                     } else {
                       message.error(t('messages.operationFailed'))
                     }
@@ -216,7 +304,8 @@ const Events: React.FC = () => {
               </button>
             </div>
                     </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

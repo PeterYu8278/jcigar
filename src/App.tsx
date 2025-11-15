@@ -137,7 +137,10 @@ const AppContent: React.FC = () => {
           }}>
             <Content
               style={{
-                padding: needsPadding ? 12 : 0,
+                paddingTop: needsPadding ? 12 : 0,
+                paddingRight: needsPadding ? 12 : 0,
+                paddingBottom: needsPadding ? 12 : 0,
+                paddingLeft: needsPadding ? 12 : 0,
                 margin: 0,
                 flex: needsPadding ? 'none' : 1,
                 background: 'radial-gradient(ellipse at top, #3c2f1a, #121212)' ,
@@ -145,7 +148,6 @@ const AppContent: React.FC = () => {
                 backdropFilter: 'blur(10px)',
                 position: 'relative',
                 overflow: needsPadding ? 'hidden' : 'hidden',
-                paddingBottom: !isAuthPage ? '0px' : '0px',
                 display: needsPadding ? 'block' : 'flex',
                 alignItems: needsPadding ? undefined : 'center',
                 justifyContent: needsPadding ? undefined : 'center'

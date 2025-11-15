@@ -681,8 +681,12 @@ const AdminFinance: React.FC = () => {
                 fontSize: isMobile ? 24 : 32, 
                 fontWeight: 700, 
                 letterSpacing: '-0.5px',
-                backgroundImage: isMobile ? 'linear-gradient(to right,#FDE08D,#C48D3A)' : 'none',
-                WebkitBackgroundClip: isMobile ? 'text' : 'initial'
+                ...(isMobile ? {
+                  backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                  WebkitBackgroundClip: 'text'
+                } : {
+                  background: 'none'
+                })
               }}>
                 RM{totalRevenue.toFixed(2)}
               </div>
@@ -710,8 +714,12 @@ const AdminFinance: React.FC = () => {
                 fontSize: isMobile ? 24 : 32, 
                 fontWeight: 700, 
                 letterSpacing: '-0.5px',
-                backgroundImage: isMobile ? 'linear-gradient(to right,#FDE08D,#C48D3A)' : 'none',
-                WebkitBackgroundClip: isMobile ? 'text' : 'initial'
+                ...(isMobile ? {
+                  backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                  WebkitBackgroundClip: 'text'
+                } : {
+                  background: 'none'
+                })
               }}>
                 RM{totalExpenses.toFixed(2)}
               </div>
@@ -739,8 +747,12 @@ const AdminFinance: React.FC = () => {
                 fontSize: isMobile ? 24 : 32, 
                 fontWeight: 700, 
                 letterSpacing: '-0.5px',
-                backgroundImage: isMobile ? 'linear-gradient(to right,#FDE08D,#C48D3A)' : 'none',
-                WebkitBackgroundClip: isMobile ? 'text' : 'initial'
+                ...(isMobile ? {
+                  backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                  WebkitBackgroundClip: 'text'
+                } : {
+                  background: 'none'
+                })
               }}>
                 RM{netProfit.toFixed(2)}
               </div>

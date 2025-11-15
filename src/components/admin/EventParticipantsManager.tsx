@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
-import { Space, Select, Button, Upload, message, Modal, Form, Input } from 'antd'
-import { CheckCircleOutlined, DownloadOutlined, UploadOutlined, PlusOutlined } from '@ant-design/icons'
+import React, { useState, useEffect } from 'react'
+import { Space, Select, Button, message, Modal, Form, Input } from 'antd'
+import { CheckCircleOutlined, DownloadOutlined, PlusOutlined } from '@ant-design/icons'
 import type { Event, User, Cigar } from '../../types'
 import ParticipantsList from './ParticipantsList'
 import ParticipantsSummary from './ParticipantsSummary'
@@ -33,6 +33,13 @@ const EventParticipantsManager: React.FC<EventParticipantsManagerProps> = ({
   const [showCreateUserModal, setShowCreateUserModal] = useState(false)
   const [createUserLoading, setCreateUserLoading] = useState(false)
   const [createUserForm] = Form.useForm()
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   const handleAddParticipant = async () => {
     if (!event) return
@@ -139,21 +146,6 @@ const EventParticipantsManager: React.FC<EventParticipantsManagerProps> = ({
     URL.revokeObjectURL(url)
   }
 
-  const handleImportParticipants = async (file: File) => {
-    if (!event) return false
-    const text = await file.text()
-    const lines = text.split(/\r?\n/).filter(Boolean)
-    const ids = lines.slice(1).map(l => l.split(',')[0].replace(/(^\"|\"$)/g,'')).filter(Boolean)
-    const uniq = Array.from(new Set(ids))
-    const merged = Array.from(new Set([...(event as any)?.participants?.registered || [], ...uniq]))
-    await updateDocument(COLLECTIONS.EVENTS, (event as any).id, { 'participants.registered': merged } as any)
-    message.success(`${t('common.imported')} ${uniq.length} ${t('common.items')}`)
-    const list = await getEvents()
-    const next = list.find((e: any) => e.id === (event as any).id) as any
-    onEventUpdate(next)
-    return false
-  }
-
   const handleCreateUser = async () => {
     try {
       const values = await createUserForm.validateFields()
@@ -162,11 +154,12 @@ const EventParticipantsManager: React.FC<EventParticipantsManagerProps> = ({
       // 标准化手机号
       let normalizedPhone: string | undefined = undefined
       if (values.phone) {
-        normalizedPhone = normalizePhoneNumber(values.phone)
-        if (!normalizedPhone) {
+        const normalized = normalizePhoneNumber(values.phone)
+        if (!normalized) {
           message.error(t('auth.phoneInvalid'))
           return
         }
+        normalizedPhone = normalized
       }
 
       // 创建用户
@@ -229,13 +222,19 @@ const EventParticipantsManager: React.FC<EventParticipantsManagerProps> = ({
         {t('common.registered')}: {((event as any)?.participants?.registered || []).length} / {(event as any)?.participants?.maxParticipants || 0}
       </div>
       
-      <div style={{ marginBottom: 16 }}>
-        <Space.Compact style={{ width: '100%' }}>
+      <div style={{ marginBottom: 16, width: '100%', boxSizing: 'border-box' }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 8, 
+          width: '100%',
+          boxSizing: 'border-box'
+        }}>
           <Select
             showSearch
             allowClear
             placeholder={t('common.pleaseInputNameEmailPhoneOrUserId')}
-            style={{ width: '100%' }}
+            style={{ flex: 1, minWidth: 0 }}
             value={manualAddValue || undefined}
             onSearch={(val) => setManualAddValue(val)}
             onChange={(val) => setManualAddValue(val || '')}
@@ -280,14 +279,17 @@ const EventParticipantsManager: React.FC<EventParticipantsManagerProps> = ({
               fontWeight: 600, 
               cursor: 'pointer', 
               transition: 'all 0.2s ease', 
-              opacity: manualAddLoading ? 0.6 : 1 
+              opacity: manualAddLoading ? 0.6 : 1,
+              border: 'none',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
             }}
             disabled={manualAddLoading}
             onClick={handleAddParticipant}
           >
             {manualAddLoading ? '...' : t('common.add')}
           </button>
-        </Space.Compact>
+        </div>
       </div>
 
       <div style={{ marginBottom: 16 }}>
@@ -327,36 +329,21 @@ const EventParticipantsManager: React.FC<EventParticipantsManagerProps> = ({
             <DownloadOutlined />
             {t('common.exportAllocations')}
           </button>
-          <Upload
-            accept=".csv"
-            beforeUpload={handleImportParticipants}
-            showUploadList={false}
-          >
-            <button style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: 8, 
-              padding: '8px 16px', 
-              borderRadius: 8, 
-              background: 'rgba(255,255,255,0.1)', 
-              color: '#ccc', 
-              cursor: 'pointer', 
-              transition: 'all 0.2s ease' 
-            }}>
-              <UploadOutlined />
-              {t('common.importParticipants')}
-            </button>
-          </Upload>
         </Space>
       </div>
 
-      {/* 左右并排布局 */}
-      <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-        {/* 左侧：参与者列表 */}
-        <div style={{ flex: 1 }}>
+      {/* 响应式布局：手机端上下排列，桌面端左右并排 */}
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: '16px', 
+        alignItems: 'flex-start' 
+      }}>
+        {/* 参与者列表 */}
+        <div style={{ flex: 1, width: isMobile ? '100%' : 'auto' }}>
           <div style={{ 
             maxHeight: 400, 
-            width: '600px',
+            width: isMobile ? '100%' : '600px',
             overflow: 'none', 
             border: '1px solid #f0f0f0', 
             borderRadius: 6,
@@ -375,8 +362,8 @@ const EventParticipantsManager: React.FC<EventParticipantsManagerProps> = ({
           </div>
         </div>
         
-        {/* 右侧：产品类别统计 */}
-        <div style={{ flex: 1 }}>
+        {/* 产品类别统计 */}
+        <div style={{ flex: 1, width: isMobile ? '100%' : 'auto' }}>
           <ParticipantsSummary
             event={event}
             getCigarPriceById={getCigarPriceById}

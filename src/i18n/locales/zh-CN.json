@@ -143,7 +143,8 @@
     "noNotifications": "暂无通知",
     "currentNoData": "当前没有任何数据",
     "exportReport": "导出报告",
-    "clearData": "清空数据"
+    "clearData": "清空数据",
+    "public": "公开"
   },
   "container": {
     "loadFailed": "加载失败",
@@ -793,7 +794,11 @@
     "participants": "人",
     "totalAmount": "总金额",
     "productsSubtotal": "产品小计",
-    "participantsCount": "共 {{count}} 位参与者"
+    "participantsCount": "共 {{count}} 位参与者",
+    "orderPending": "订单待创建",
+    "orderCreated": "订单已创建",
+    "productRevenue": "产品收入",
+    "eventFee": "活动费用"
   },
   "upload": {
     "fileTooLarge": "文件大小不能超过 {{size}}MB",

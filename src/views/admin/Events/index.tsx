@@ -306,7 +306,7 @@ const AdminEvents: React.FC = () => {
             ...(nextMax !== undefined ? { maxParticipants: nextMax } : {}),
           }
           break
-        }
+          }
         case 'isPrivate':
           updateData.isPrivate = editForm.isPrivate
           break
@@ -516,6 +516,11 @@ const AdminEvents: React.FC = () => {
       return passKw && passStatus
     })
   }, [events, keyword, statusFilter])
+
+  // 获取所有已完成的活动，用于计算社交关系
+  const completedEvents = useMemo(() => {
+    return events.filter(e => e.status === 'completed')
+  }, [events])
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -800,6 +805,7 @@ const AdminEvents: React.FC = () => {
               onView={setViewing}
               getStatusText={getStatusText}
               getStatusColor={getStatusColor}
+              completedEvents={completedEvents}
             />
           ))}
           {filtered.length === 0 && (
@@ -820,6 +826,10 @@ const AdminEvents: React.FC = () => {
           <Tabs
             activeKey={activeViewTab}
             onChange={(k) => setActiveViewTab(k)}
+            tabBarStyle={{
+              borderBottom: '1px solid rgba(244,175,37,0.2)',
+              marginBottom: 0
+            }}
             items={[
               {
                 key: 'overview',
@@ -1315,7 +1325,7 @@ const AdminEvents: React.FC = () => {
                 style={{ marginBottom: 12 }}
               >
                 <Input placeholder="请输入活动名称" />
-              </Form.Item>
+          </Form.Item>
               
               <Form.Item 
                 label={t('common.description')} 
@@ -1323,7 +1333,7 @@ const AdminEvents: React.FC = () => {
                 style={{ marginBottom: 12 }}
               >
                 <Input.TextArea rows={2} placeholder="请输入活动描述" />
-              </Form.Item>
+          </Form.Item>
               
               <Form.Item 
                 label={t('common.locationName')} 
@@ -1332,7 +1342,7 @@ const AdminEvents: React.FC = () => {
                 style={{ marginBottom: 0 }}
               >
                 <Input placeholder="请输入活动地点" />
-              </Form.Item>
+          </Form.Item>
             </div>
             
             {/* 时间设置卡片 */}
@@ -1341,57 +1351,57 @@ const AdminEvents: React.FC = () => {
                 📅 时间设置
               </div>
               
-              <Form.Item 
-                label={t('common.startDate')} 
-                name="startDate" 
-                rules={[
-                  { required: true, message: t('common.pleaseSelectStartDate') },
-                  ({ getFieldValue }) => ({
-                    validator(_, value) {
-                      const endDate = getFieldValue('endDate')
-                      if (value && endDate && dayjs(value).isAfter(dayjs(endDate))) {
-                        return Promise.reject(new Error(t('common.startDateCannotBeAfterEndDate')))
-                      }
-                      return Promise.resolve()
-                    }
-                  })
-                ]}
+          <Form.Item 
+            label={t('common.startDate')} 
+            name="startDate" 
+            rules={[
+              { required: true, message: t('common.pleaseSelectStartDate') },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  const endDate = getFieldValue('endDate')
+                  if (value && endDate && dayjs(value).isAfter(dayjs(endDate))) {
+                    return Promise.reject(new Error(t('common.startDateCannotBeAfterEndDate')))
+                  }
+                  return Promise.resolve()
+                }
+              })
+            ]}
                 style={{ marginBottom: 12 }}
-              >
-                <DatePicker 
-                  style={{ width: '100%' }} 
-                  disabledDate={(current) => current && current < dayjs().startOf('day')}
-                  showTime={{ format: 'HH:mm' }}
-                  format="YYYY-MM-DD HH:mm"
-                  placeholder={t('common.pleaseSelectStartDate')}
-                />
-              </Form.Item>
+          >
+            <DatePicker 
+              style={{ width: '100%' }} 
+              disabledDate={(current) => current && current < dayjs().startOf('day')}
+              showTime={{ format: 'HH:mm' }}
+              format="YYYY-MM-DD HH:mm"
+              placeholder={t('common.pleaseSelectStartDate')}
+            />
+          </Form.Item>
               
-              <Form.Item 
-                label={t('common.endDate')} 
-                name="endDate" 
-                rules={[
-                  { required: true, message: t('common.pleaseSelectEndDate') },
-                  ({ getFieldValue }) => ({
-                    validator(_, value) {
-                      const startDate = getFieldValue('startDate')
-                      if (value && startDate && dayjs(value).isBefore(dayjs(startDate))) {
-                        return Promise.reject(new Error(t('common.endDateCannotBeBeforeStartDate')))
-                      }
-                      return Promise.resolve()
-                    }
-                  })
-                ]}
+          <Form.Item 
+            label={t('common.endDate')} 
+            name="endDate" 
+            rules={[
+              { required: true, message: t('common.pleaseSelectEndDate') },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  const startDate = getFieldValue('startDate')
+                  if (value && startDate && dayjs(value).isBefore(dayjs(startDate))) {
+                    return Promise.reject(new Error(t('common.endDateCannotBeBeforeStartDate')))
+                  }
+                  return Promise.resolve()
+                }
+              })
+            ]}
                 style={{ marginBottom: 0 }}
-              >
-                <DatePicker 
-                  style={{ width: '100%' }} 
-                  disabledDate={(current) => current && current < dayjs().startOf('day')}
-                  showTime={{ format: 'HH:mm' }}
-                  format="YYYY-MM-DD HH:mm"
-                  placeholder={t('common.pleaseSelectEndDate')}
-                />
-              </Form.Item>
+          >
+            <DatePicker 
+              style={{ width: '100%' }} 
+              disabledDate={(current) => current && current < dayjs().startOf('day')}
+              showTime={{ format: 'HH:mm' }}
+              format="YYYY-MM-DD HH:mm"
+              placeholder={t('common.pleaseSelectEndDate')}
+            />
+          </Form.Item>
             </div>
             
             {/* 参与设置卡片 */}
@@ -1408,7 +1418,7 @@ const AdminEvents: React.FC = () => {
                     style={{ marginBottom: 12 }}
                   >
                     <InputNumber min={0} style={{ width: '100%' }} placeholder="费用" />
-                  </Form.Item>
+          </Form.Item>
                 </Col>
                 <Col span={12}>
                   <Form.Item 
@@ -1417,7 +1427,7 @@ const AdminEvents: React.FC = () => {
                     style={{ marginBottom: 12 }}
                   >
                     <InputNumber min={0} style={{ width: '100%' }} placeholder="人数上限" />
-                  </Form.Item>
+          </Form.Item>
                 </Col>
               </Row>
               
@@ -1430,8 +1440,8 @@ const AdminEvents: React.FC = () => {
                     initialValue={false}
                     style={{ marginBottom: 0 }}
                   >
-                    <Switch />
-                  </Form.Item>
+            <Switch />
+          </Form.Item>
                 </Col>
                 <Col span={12}>
                   <Form.Item 
@@ -1440,20 +1450,20 @@ const AdminEvents: React.FC = () => {
                     initialValue={DEFAULT_STATUS}
                     style={{ marginBottom: 0 }}
                   >
-                    <Select>
-                      {(() => {
-                        const currentStatus = editing?.status || DEFAULT_STATUS
-                        const availableStatuses = editing ? getAvailableStatusOptions(currentStatus) : Object.values(EVENT_STATUSES)
-                        
-                        return availableStatuses.map(status => (
-                          <Option key={status} value={status}>
-                            {t(`common.${status}`)}
-                            {status === currentStatus && ` (${t('common.current')})`}
-                          </Option>
-                        ))
-                      })()}
-                    </Select>
-                  </Form.Item>
+            <Select>
+              {(() => {
+                const currentStatus = editing?.status || DEFAULT_STATUS
+                const availableStatuses = editing ? getAvailableStatusOptions(currentStatus) : Object.values(EVENT_STATUSES)
+                
+                return availableStatuses.map(status => (
+                  <Option key={status} value={status}>
+                    {t(`common.${status}`)}
+                    {status === currentStatus && ` (${t('common.current')})`}
+                  </Option>
+                ))
+              })()}
+            </Select>
+          </Form.Item>
                 </Col>
               </Row>
             </div>

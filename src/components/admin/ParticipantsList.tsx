@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import { Spin, Select, InputNumber, Button, Modal, message, Tag } from 'antd'
 import { CheckCircleOutlined, UserOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { User, Cigar, Event } from '../../types'
@@ -27,6 +27,13 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
   getCigarPriceById
 }) => {
   const { t } = useTranslation()
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
   
   // 产品下拉：按品牌分组，并按品牌与产品名称字母排序
   const groupedCigars = useMemo(() => {
@@ -72,15 +79,20 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
     <div style={{ 
       maxHeight: '400px', 
       overflowY: 'auto',
+      overflowX: 'hidden',
       padding: '8px',
       border: '1px solid #f0f0f0',
       borderRadius: '8px',
-      background: '#fafafa'
+      background: '#fafafa',
+      width: '100%',
+      boxSizing: 'border-box'
     }}>
       <div style={{ 
         display: 'grid', 
         gap: '12px',
-        padding: '8px'
+        padding: '8px',
+        width: '100%',
+        boxSizing: 'border-box'
       }}>
       {registeredParticipants.map((uid: string, index: number) => {
         const user = participantsUsers.find(x => x.id === uid)
@@ -96,44 +108,61 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                 borderRadius: '8px',
               border: '1px solid #e8e8e8',
                 boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.2s ease',
+                width: '100%',
+                boxSizing: 'border-box',
+                overflow: 'hidden'
             }}
           >
-            {/* 第一行：序号 + 名字和电话号码 */}
+            {/* 第一行：序号 | 名字 电话号码 | 删除按键 */}
             <div style={{ 
               display: 'flex', 
               alignItems: 'center', 
               gap: 12, 
-              marginBottom: 12
+              marginBottom: 8,
+              width: '100%'
             }}>
+              {/* 序号 */}
               <div style={{ 
                 width: 32, 
                 height: 32,
                 textAlign: 'center', 
                 lineHeight: '32px',
                 color: '#111', 
-                fontSize: 12  
+                fontSize: 12,
+                flexShrink: 0
               }}>
                 # {index + 1}
               </div>
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontWeight: 600, color: '#111', fontSize: 13 }}>
+              {/* 名字和电话号码 */}
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 8,
+                flex: 1,
+                minWidth: 0
+              }}>
+                <span style={{ 
+                  fontWeight: 600, 
+                  color: '#111', 
+                  fontSize: 13,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}>
                   {user ? user.displayName : t('participants.unknownUser')}
                 </span>
-                <span style={{ fontSize: 11, color: '#999' }}>
+                <span style={{ 
+                  fontSize: 11, 
+                  color: '#999', 
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0
+                }}>
                   {user ? ((user as any)?.profile?.phone || user.email || uid) : uid}
                 </span>
-                {/* 订单状态标签 + 订单ID */}
-                {allocation?.orderId ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Tag color="green">{t('participants.orderCreated')}</Tag>
-                    <span style={{ fontSize: 11, color: '#666' }}>ID: {allocation.orderId}</span>
                   </div>
-                ) : (
-                  <Tag color="orange">{t('participants.orderPending')}</Tag>
-                )}
                 {/* 删除参与者按钮 */}
-                <div style={{ marginLeft: 'auto' }}>
+              <div style={{ flexShrink: 0 }}>
                   <Button
                     size="small"
                     danger
@@ -172,7 +201,41 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                   />
                 </div>
               </div>
+
+            {/* 第二行：订单号码 | 订单状态 */}
+            {allocation?.orderId && (
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                gap: 8,
+                marginBottom: 12,
+                paddingLeft: 44,
+                width: '100%',
+                boxSizing: 'border-box'
+              }}>
+                <span style={{ fontSize: 11, color: '#666', whiteSpace: 'nowrap' }}>
+                  ID: {allocation.orderId}
+                </span>
+                <div style={{ flexShrink: 0 }}>
+                  <Tag color="green" style={{ margin: 0 }}>{t('participants.orderCreated')}</Tag>
+                </div>
+              </div>
+            )}
+            {!allocation?.orderId && (
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'flex-end',
+                gap: 8,
+                marginBottom: 12,
+                paddingLeft: 44,
+                width: '100%',
+                boxSizing: 'border-box'
+              }}>
+                <Tag color="orange" style={{ margin: 0 }}>{t('participants.orderPending')}</Tag>
             </div>
+            )}
             {/* 第二行：活动费用（使用活动名称，可调整数量与费用，保存到 allocations） */}
             {(event as any)?.participants?.fee > 0 && (
               <div
@@ -183,16 +246,33 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                   border: '1px dashed #e8e8e8',
                   borderRadius: 6,
               display: 'flex', 
-              alignItems: 'center', 
-              gap: 8 
+              flexDirection: isMobile ? 'column' : 'row',
+              alignItems: isMobile ? 'stretch' : 'center', 
+              gap: 8,
+              width: '100%',
+              boxSizing: 'border-box'
                 }}
               >
                 {/* 名称：活动名称（与雪茄分配列宽一致） */}
-                <div style={{ width: 210, flexShrink: 0, color: '#666', fontSize: 12, fontWeight: 600 }}>
+                <div style={{ 
+                  width: isMobile ? '100%' : 210, 
+                  flexShrink: 0, 
+                  color: '#666', 
+                  fontSize: 12, 
+                  fontWeight: 600 
+                }}>
                   {(event as any)?.title || t('events.fee')}
                 </div>
+                {/* 数量和价钱同排显示 */}
+                <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                  flex: isMobile ? '0 0 100%' : '0 0 auto'
+                }}>
                 {/* 数量可调，默认 1 */}
-                <div style={{ width: 120, flexShrink: 0 }}>
+                  <div style={{ width: isMobile ? '50%' : 120, flexShrink: 0 }}>
                   <InputNumber
                     min={1}
                     max={99}
@@ -212,11 +292,12 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                       onAllocSavingChange(null)
                     }}
                     style={{ width: '100%' }}
+                      controls={false}
                     addonAfter={<span style={{ color: '#666', fontSize: 11 }}>{t('participants.pieces')}</span>}
                   />
                 </div>
                 {/* 费用可调，默认活动 fee */}
-                <div style={{ width: 130, flexShrink: 0 }}>
+                  <div style={{ width: isMobile ? '50%' : 130, flexShrink: 0 }}>
                   <InputNumber
                     min={0}
                     step={0.01}
@@ -238,12 +319,14 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                       onAllocSavingChange(null)
                     }}
                     style={{ width: '100%' }}
-                    addonBefore="RM"
+                      controls={false}
+                      addonBefore={<span style={{ color: '#666', fontSize: 11 }}>RM</span>}
                     placeholder="0.00"
                   />
+                  </div>
                 </div>
                 {/* 末尾占位，保持与删除按钮列对齐 */}
-                <div style={{ width: 36, flexShrink: 0 }} />
+                {!isMobile && <div style={{ width: 36, flexShrink: 0 }} />}
               </div>
             )}
 
@@ -269,8 +352,19 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
               }
 
               const renderRow = (row: any, idx: number) => (
-                <div key={`${uid}-${row?.cigarId || 'row'}-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <div style={{ width: 220, flexShrink: 0 }}>
+                <div 
+                  key={`${uid}-${row?.cigarId || 'row'}-${idx}`} 
+                  style={{ 
+                    display: 'flex', 
+                    flexDirection: isMobile ? 'column' : 'row',
+                    alignItems: isMobile ? 'stretch' : 'center', 
+                    gap: 8, 
+                    marginBottom: 8,
+                    width: '100%',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  <div style={{ width: isMobile ? '100%' : 220, flexShrink: 0 }}>
                 <Select
                   placeholder={t('participants.selectCigarModel')}
                   style={{ width: '100%' }}
@@ -306,7 +400,22 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                   ))}
                 </Select>
               </div>
-                  <div style={{ width: 120 , flexShrink: 0 }}>
+                  {/* 数量、金额和删除键同排显示，手机端总宽度与产品选择下拉框一致（100%） */}
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 8,
+                    flex: isMobile ? '0 0 100%' : '1 1 auto',
+                    minWidth: 0,
+                    width: isMobile ? '100%' : 'auto',
+                    boxSizing: 'border-box'
+                  }}>
+                    <div style={{ 
+                      width: isMobile ? 'calc((100% - 48px) / 2)' : 120, 
+                      flexShrink: 0,
+                      flexGrow: isMobile ? 0 : 0
+                    }}>
                 <InputNumber
                   min={1}
                   max={99}
@@ -326,10 +435,15 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                     onAllocSavingChange(null)
                   }}
                   style={{ width: '100%' }}
+                        controls={false}
                   addonAfter={<span style={{ color: '#666', fontSize: 11 }}>{t('participants.pieces')}</span>}
                 />
               </div>
-              <div style={{ width: 130, flexShrink: 0 }}>
+                    <div style={{ 
+                      width: isMobile ? 'calc((100% - 48px) / 2)' : 130, 
+                      flexShrink: 0,
+                      flexGrow: isMobile ? 0 : 0
+                    }}>
                 <InputNumber
                   min={0}
                   step={0.01}
@@ -353,16 +467,26 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                     onAllocSavingChange(null)
                   }}
                   style={{ width: '100%' }}
-                  addonBefore="RM"
+                        controls={false}
+                        addonBefore={<span style={{ color: '#666', fontSize: 11 }}>RM</span>}
                   placeholder="0.00"
                 />
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4, flexShrink: 0 }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'flex-end', 
+                      gap: 4, 
+                      flexShrink: 0,
+                      width: 32,
+                      minWidth: 32,
+                      flexGrow: 0
+                    }}>
                 <Button 
                   size="small" 
                   danger 
                   icon={<DeleteOutlined />}
-                  style={{ minWidth: 24, height: 24, padding: '0 4px' }}
+                        style={{ width: 32, height: 24, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   onClick={async () => {
                         const current = (event as any)?.allocations?.[uid] || {}
                         const nextItems = [...((current?.items as any[]) || [])]
@@ -374,6 +498,7 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                         onAllocSavingChange(null)
                   }}
                 />
+                    </div>
               </div>
             </div>
               )
