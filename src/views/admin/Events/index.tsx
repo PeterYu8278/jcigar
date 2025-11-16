@@ -669,7 +669,7 @@ const AdminEvents: React.FC = () => {
           <span>{t('common.processingOrders')}</span>
         </div>
       </Modal>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{t('navigation.events')}</h1>
       
         <Space>
@@ -767,52 +767,74 @@ const AdminEvents: React.FC = () => {
       </div>
 
       {/* 搜索和筛选 */}
-      <EventSearchBar
-        keyword={keyword}
-        onKeywordChange={setKeyword}
-        statusFilter={statusFilter}
-        onStatusFilterChange={setStatusFilter}
-        onReset={() => { setKeyword(''); setStatusFilter(undefined); setSelectedRowKeys([]) }}
-        isMobile={isMobile}
-      />
+      <div
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          borderBottom: '1px solid rgba(244,175,37,0.2)'
+        }}
+      >
+        <EventSearchBar
+          keyword={keyword}
+          onKeywordChange={setKeyword}
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
+          onReset={() => { setKeyword(''); setStatusFilter(undefined); setSelectedRowKeys([]) }}
+          isMobile={isMobile}
+        />
+      </div>
 
       {/** 过滤后的数据 */}
       {/* eslint-disable react-hooks/rules-of-hooks */}
       {(() => null)()}
       {/**/}
       
-      {!isMobile ? (
-      <Table
-        columns={columns}
-        dataSource={filtered}
-        rowKey="id"
-        loading={loading}
-        rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
-        pagination={{
-          total: events.length,
-          pageSize: 10,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
+      <div
+        style={{
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          // 预留顶部标题区 + 筛选区高度，确保仅列表区域滚动
+          maxHeight: isMobile ? 'calc(100vh - 170px)' : 'calc(100vh - 200px)',
+          paddingTop: 8,
+          paddingBottom: 16
         }}
-      />
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {filtered.map(ev => (
-            <EventCard
-              key={ev.id}
-              event={ev}
-              onView={setViewing}
-              getStatusText={getStatusText}
-              getStatusColor={getStatusColor}
-              completedEvents={completedEvents}
-            />
-          ))}
-          {filtered.length === 0 && (
-            <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
-          )}
-        </div>
-      )}
+      >
+        {!isMobile ? (
+          <Table
+            columns={columns}
+            dataSource={filtered}
+            rowKey="id"
+            loading={loading}
+            rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
+            pagination={{
+              total: events.length,
+              pageSize: 10,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
+            }}
+          />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {filtered.map(ev => (
+              <EventCard
+                key={ev.id}
+                event={ev}
+                onView={setViewing}
+                getStatusText={getStatusText}
+                getStatusColor={getStatusColor}
+                completedEvents={completedEvents}
+              />
+            ))}
+            {filtered.length === 0 && (
+              <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* 查看活动详情 */}
       <Modal

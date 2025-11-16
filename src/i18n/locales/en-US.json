@@ -154,6 +154,8 @@
   },
   "auth": {
     "login": "Login",
+    "security": "Security",
+    "emailPlaceholder": "Enter email",
     "logout": "Logout",
     "register": "Register",
     "email": "Email",
@@ -281,11 +283,6 @@
     "serverError": "Server error",
     "notFound": "Page not found",
     "accessDenied": "Access denied"
-  },
-  "language": {
-    "switch": "Switch Language",
-    "chinese": "中文",
-    "english": "English"
   },
   "home": {
     "welcomeTitle": "Welcome to Gentleman Club",
@@ -814,6 +811,8 @@
     "fail": "Image upload failed",
     "confirmDeleteImage": "Are you sure you want to delete this image?",
     "imageDeleted": "Image deleted",
+    "unableToDeleteFromCloudinary": "Unable to delete from Cloudinary, removed from form only",
+    "deleteFailed": "Delete failed",
     "uploading": "Uploading...",
     "clickToUpload": "Click to upload",
     "imagePreview": "Image Preview"
@@ -842,6 +841,11 @@
   "profile": {
     "title": "Profile",
     "editProfile": "Edit Profile",
+    "settings": "Settings",
+    "language": "Language",
+    "currentPasswordhint": "Required when changing email or password",
+    "confirmPassword": "Confirm Password",
+    "confirmPasswordPlaceholder": "Confirm new password",
     "avatar": "Avatar",
     "nameLabel": "Name",
     "nameRequired": "Please enter your name",
@@ -1009,5 +1013,12 @@
     "byJepVentures": "by JEP Ventures",
     "private": "Private",
     "public": "Public"
+  },
+  "language": {
+    "switch": "Switch Language",
+    "chinese": "中文",
+    "english": "English",
+    "zhCN": "简体中文",
+    "enUS": "English"
   }
 }

@@ -249,10 +249,12 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
               </div>
               <div style={{ display: 'flex', justifyContent: 'center' }}>
                 <ImageUpload
-                  value={(event as any).image || undefined}
-                  onChange={(url) => {
-                    if (!url) return
-                    onEditFormChange({...editForm, image: url})
+                  value={editForm.image || (event as any).image || undefined}
+                  onChange={async (url) => {
+                    // 更新 editForm
+                    onEditFormChange({...editForm, image: url || null})
+                    // 调用 onImageChange，让父组件决定是否保存
+                    await onImageChange(url)
                   }}
                   folder="events"
                   maxSize={2 * 1024 * 1024} // 2MB
@@ -351,10 +353,12 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
                 {t('common.eventImage')}
               </div>
               <ImageUpload
-                value={(event as any).image || undefined}
-                onChange={(url) => {
-                  if (!url) return
-                  onEditFormChange({...editForm, image: url})
+                value={editForm.image || (event as any).image || undefined}
+                onChange={async (url) => {
+                  // 更新 editForm
+                  onEditFormChange({...editForm, image: url || null})
+                  // 调用 onImageChange，让父组件决定是否保存
+                  await onImageChange(url)
                 }}
                 folder="events"
                 maxSize={2 * 1024 * 1024} // 2MB

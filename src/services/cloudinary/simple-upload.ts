@@ -28,7 +28,7 @@ export const uploadFile = async (
 ): Promise<UploadResult> => {
   try {
     const {
-      folder = 'cigar-app',
+      folder = 'jep-cigar',
       max_bytes = 10 * 1024 * 1024 // 10MB
     } = options
 
@@ -46,7 +46,18 @@ export const uploadFile = async (
     const formData = new FormData()
     formData.append('file', file)
     formData.append('upload_preset', UPLOAD_PRESET)
-    formData.append('folder', folder)
+    
+    // 生成唯一的文件名（基于时间戳和随机字符串）
+    // Cloudinary 会自动添加文件扩展名，所以 public_id 不需要包含扩展名
+    const timestamp = Date.now()
+    const randomStr = Math.random().toString(36).substring(2, 15)
+    const uniqueFileName = `${timestamp}_${randomStr}`
+    
+    // 使用 public_id 参数指定完整路径，这样可以覆盖 Asset folder 设置
+    // public_id 应该包含完整路径，如 'jep-cigar/brands/unique-id'（不包含扩展名）
+    // 这样即使 Asset folder 设置为 'jep-cigar'，文件也会存储在正确的子文件夹中
+    const publicId = `${folder}/${uniqueFileName}`
+    formData.append('public_id', publicId)
 
     // 上传到 Cloudinary
     const response = await fetch(

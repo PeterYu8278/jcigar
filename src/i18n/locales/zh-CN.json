@@ -152,6 +152,8 @@
   },
   "auth": {
     "login": "登录",
+    "security": "安全设置",
+    "emailPlaceholder": "请输入邮箱",
     "logout": "退出登录",
     "register": "注册",
     "email": "邮箱",
@@ -279,11 +281,6 @@
     "serverError": "服务器错误",
     "notFound": "页面不存在",
     "accessDenied": "访问被拒绝"
-  },
-  "language": {
-    "switch": "切换语言",
-    "chinese": "中文",
-    "english": "English"
   },
   "home": {
     "welcomeTitle": "欢迎来到Gentleman Club",
@@ -807,6 +804,8 @@
     "fail": "图片上传失败",
     "confirmDeleteImage": "确定要删除这张图片吗？",
     "imageDeleted": "图片已删除",
+    "unableToDeleteFromCloudinary": "无法从 Cloudinary 删除文件，仅从表单中移除",
+    "deleteFailed": "删除失败",
     "uploading": "上传中...",
     "clickToUpload": "点击上传",
     "imagePreview": "图片预览"
@@ -835,6 +834,8 @@
   "profile": {
     "title": "个人资料",
     "editProfile": "编辑资料",
+    "settings": "偏好设置",
+    "language": "语言",
     "avatar": "头像",
     "nameLabel": "姓名",
     "nameRequired": "请输入您的姓名",
@@ -894,7 +895,10 @@
     "passwordUpdateFailed": "密码更新失败",
     "phoneInvalidFormat": "手机号格式无效",
     "updateFailed": "更新失败，请重试",
-    "shareText": "加入 Gentleman Club，使用我的引荐码：{{code}}，注册可获得额外积分！"
+    "shareText": "加入 Gentleman Club，使用我的引荐码：{{code}}，注册可获得额外积分！",
+    "currentPasswordHint": "更新邮箱或密码时需要",
+    "confirmPassword": "确认密码",
+    "confirmPasswordPlaceholder": "请再次输入新密码"
   },
   "pointsConfig": {
     "title": "积分配置管理",
@@ -1002,5 +1006,12 @@
     "byJepVentures": "by JEP Ventures",
     "private": "私人",
     "public": "公开"
+  },
+  "language": {
+    "switch": "切换语言",
+    "chinese": "中文",
+    "english": "English",
+    "zhCN": "简体中文",
+    "enUS": "English"
   }
 }

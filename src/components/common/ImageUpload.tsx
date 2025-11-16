@@ -5,6 +5,7 @@ import { Button, message, Modal } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { useCloudinary } from '../../hooks/useCloudinary'
 import type { UploadResult } from '../../services/cloudinary'
+import { deleteResource, extractPublicIdFromUrl } from '../../services/cloudinary'
 import { getUploadConfig, getFullFolderPath, isValidFolderName } from '../../config/cloudinaryFolders'
 import { validateFileForFolder, type CloudinaryFolderName } from '../../types/cloudinary'
 import ImageCrop from './ImageCrop'
@@ -49,6 +50,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   const [previewVisible, setPreviewVisible] = useState(false)
   const [cropVisible, setCropVisible] = useState(false)
   const [tempImageUrl, setTempImageUrl] = useState<string>('')
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // 获取文件夹配置
@@ -108,17 +111,48 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   }
 
   const handleDelete = () => {
-    Modal.confirm({
-      title: t('common.confirmDelete'),
-      content: t('upload.confirmDeleteImage'),
-      okText: t('common.delete'),
-      okType: 'danger',
-      cancelText: t('common.cancel'),
-      onOk: () => {
-        onChange?.(null)
+    setDeleteConfirmVisible(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!value) {
+      setDeleteConfirmVisible(false)
+      return
+    }
+
+    setDeleting(true)
+    try {
+      // 从 URL 中提取 public_id
+      const publicId = extractPublicIdFromUrl(value)
+      
+      if (publicId) {
+        // 调用 Cloudinary API 删除文件
+        await deleteResource(publicId, {
+          resourceType: 'image',
+          invalidate: true // 同时从 CDN 缓存中删除
+        })
         message.success(t('upload.imageDeleted'))
+      } else {
+        // 如果无法提取 public_id，仅从表单中移除 URL
+        message.warning(t('upload.unableToDeleteFromCloudinary'))
       }
-    })
+
+      // 无论是否成功删除 Cloudinary 文件，都从表单中移除 URL
+      onChange?.(null)
+      setDeleteConfirmVisible(false)
+    } catch (error: any) {
+      console.error('删除 Cloudinary 文件失败:', error)
+      // 即使 Cloudinary 删除失败，也从表单中移除 URL
+      onChange?.(null)
+      message.warning(error?.message || t('upload.deleteFailed'))
+      setDeleteConfirmVisible(false)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const handleDeleteCancel = () => {
+    setDeleteConfirmVisible(false)
   }
 
   const handlePreview = () => {
@@ -227,6 +261,20 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             objectFit: 'contain'
           }}
         />
+      </Modal>
+
+      {/* 删除确认对话框 */}
+      <Modal
+        open={deleteConfirmVisible}
+        title={t('common.confirmDelete')}
+        onOk={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+        okText={t('common.delete')}
+        okButtonProps={{ danger: true, loading: deleting }}
+        cancelText={t('common.cancel')}
+        confirmLoading={deleting}
+      >
+        <p>{t('upload.confirmDeleteImage')}</p>
       </Modal>
     </div>
   )

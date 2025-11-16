@@ -1138,10 +1138,10 @@ const AdminInventory: React.FC = () => {
             )
           })}
       </div>
-        <div style={{ marginTop: 12 }}>
+        <div>
           {activeTab === 'list' && (
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Space>
                   {selectedRowKeys.length > 1 && (
                     <>
@@ -1200,7 +1200,20 @@ const AdminInventory: React.FC = () => {
               </div>
 
               {!isMobile && (
-              <div style={{ marginBottom: 16, padding: '16px', background: '#fafafa', borderRadius: '6px' }}>
+              <div
+                style={{
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 100,
+                  background: 'rgba(39,35,27,0.65)',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
+                  borderBottom: '1px solid rgba(244,175,37,0.2)',
+                  marginBottom: 8,
+                  padding: 12,
+                  borderRadius: 6
+                }}
+              >
                 <Space size="middle" wrap>
                   <Search
                placeholder={t('inventory.search')}
@@ -1213,7 +1226,7 @@ const AdminInventory: React.FC = () => {
                    <Select placeholder={t('inventory.brand')} style={{ width: 140 }} allowClear value={brandFilter} onChange={setBrandFilter}>
                     {Array.from(new Set(items.map(i => i.brand))).sort().map(brand => (
                       <Option key={brand} value={brand}>{brand}</Option>
-                    ))}
+                      ))}
                   </Select>
                    <Select placeholder={t('inventory.origin')} style={{ width: 140 }} allowClear value={originFilter} onChange={setOriginFilter}>
                     {[...new Set(items.map(i => i.origin).filter(Boolean))].map(org => (
@@ -1241,7 +1254,18 @@ const AdminInventory: React.FC = () => {
 
               {/* Mobile search + pills */}
               {isMobile && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
+                <div
+                  style={{
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 100,
+                    background: 'rgba(39,35,27,0.65)',
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
+                    borderBottom: '1px solid rgba(244,175,37,0.2)',
+                    display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 8, paddingTop: 8, paddingBottom: 8
+                  }}
+                >
                   {/* 第一行：搜索栏 + 添加产品 */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', boxSizing: 'border-box' }}>
                     <Search
@@ -1313,6 +1337,16 @@ const AdminInventory: React.FC = () => {
                 </div>
               )}
 
+              {/* 列表滚动容器：仅列表滚动 */}
+              <div
+                style={{
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  maxHeight: isMobile ? 'calc(100vh - 230px)' : 'calc(100vh - 260px)',
+                  paddingTop: 8,
+                  paddingBottom: 16
+                }}
+              >
               {!isMobile ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   {groupedByBrand.map(group => (
@@ -1353,22 +1387,22 @@ const AdminInventory: React.FC = () => {
                             
                             {/* 图片、信息和按钮（水平布局） */}
                             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                              <div style={{ width: 80, height: 80, borderRadius: 10, overflow: 'hidden', background: 'rgba(255,255,255,0.08)', flexShrink: 0 }}>
-                                {/* 占位图，可接入真实图片字段 */}
-                                <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))' }} />
+                            <div style={{ width: 80, height: 80, borderRadius: 10, overflow: 'hidden', background: 'rgba(255,255,255,0.08)', flexShrink: 0 }}>
+                              {/* 占位图，可接入真实图片字段 */}
+                              <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))' }} />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: 12, color: 'rgba(224,214,196,0.6)' }}>{record.size || ''} {record.size ? '|' : ''} SKU: {(record as any)?.sku || record.id}</div>
+                              <div style={{ fontWeight: 700, color: '#f4af25', marginTop: 2 }}>RM{record.price?.toLocaleString?.() || record.price}</div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, marginTop: 4 }}>
+                                {(() => { const { totalIn, totalOut } = getTotals((record as any)?.id); return (
+                                  <>
+                                    <span style={{ color: 'rgba(224,214,196,0.8)' }}>{t('inventory.totalIn')}: <span style={{ color: '#fff' }}>{totalIn}</span></span>
+                                    <span style={{ color: 'rgba(224,214,196,0.8)' }}>{t('inventory.totalOut')}: <span style={{ color: '#fff' }}>{totalOut}</span></span>
+                                  </>
+                                ) })()}
                               </div>
-                              <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: 12, color: 'rgba(224,214,196,0.6)' }}>{record.size || ''} {record.size ? '|' : ''} SKU: {(record as any)?.sku || record.id}</div>
-                                <div style={{ fontWeight: 700, color: '#f4af25', marginTop: 2 }}>RM{record.price?.toLocaleString?.() || record.price}</div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, marginTop: 4 }}>
-                                  {(() => { const { totalIn, totalOut } = getTotals((record as any)?.id); return (
-                                    <>
-                                      <span style={{ color: 'rgba(224,214,196,0.8)' }}>{t('inventory.totalIn')}: <span style={{ color: '#fff' }}>{totalIn}</span></span>
-                                      <span style={{ color: 'rgba(224,214,196,0.8)' }}>{t('inventory.totalOut')}: <span style={{ color: '#fff' }}>{totalOut}</span></span>
-                                    </>
-                                  ) })()}
-                                </div>
-                              </div>
+                            </div>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
                                 {/* 按钮区域（水平排列） */}
                                 <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
@@ -1387,21 +1421,21 @@ const AdminInventory: React.FC = () => {
                                       flexShrink: 0
                                     }} 
                                     onClick={() => {
-                                  setEditing(record)
-                                  form.setFieldsValue({
-                                    name: (record as any).name,
-                                    brand: (record as any).brand,
-                                    origin: (record as any).origin,
-                                    size: (record as any).size,
-                                    strength: (record as any).strength,
-                                    price: (record as any).price,
-                                    stock: getComputedStock((record as any)?.id) ?? 0,
-                                    minStock: (record as any)?.inventory?.minStock ?? 0,
-                                    reserved: (record as any)?.inventory?.reserved ?? 0,
-                                  })
+                              setEditing(record)
+                              form.setFieldsValue({
+                                name: (record as any).name,
+                                brand: (record as any).brand,
+                                origin: (record as any).origin,
+                                size: (record as any).size,
+                                strength: (record as any).strength,
+                                price: (record as any).price,
+                                stock: getComputedStock((record as any)?.id) ?? 0,
+                                minStock: (record as any)?.inventory?.minStock ?? 0,
+                                reserved: (record as any)?.inventory?.reserved ?? 0,
+                              })
                                     }}
                                   >
-                                  {t('common.edit')}
+                              {t('common.edit')}
                                 </button>
                                   <button 
                                     style={{ 
@@ -1422,7 +1456,7 @@ const AdminInventory: React.FC = () => {
                                     }}
                                   >
                                     {t('inventory.view')}
-                                  </button>
+                            </button>
                                 </div>
                                 {/* 库存数量（移到按钮下方，仅显示数量，用颜色表示状态，字体高度与价格+总入库/出库的总高度一致） */}
                                 <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', minHeight: 40 }}>
@@ -1455,102 +1489,70 @@ const AdminInventory: React.FC = () => {
                   )}
                 </div>
               )}
+              </div>
             </div>
           )}
           {activeTab === 'brand' && (
             <div>
               
-              {/* 搜索栏和添加品牌按钮 */}
-              <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', alignItems: 'center' }}>
-                <div style={{ position: 'relative', flex: 1 }}>
-                <div style={{ 
-                  position: 'absolute', 
-                  top: '50%', 
-                  left: '16px', 
-                  transform: 'translateY(-50%)',
-                  color: 'rgba(255,255,255,0.5)'
-                }}>
-                  <SearchOutlined style={{ fontSize: '20px' }} />
+              {/* 筛选区（置顶）：搜索框 + 添加品牌（同排显示） */}
+              <div
+                style={{
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 100,
+                  background: 'rgba(39,35,27,0.65)',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
+                  borderBottom: '1px solid rgba(244,175,37,0.2)',
+                  display: 'flex', gap: 12, marginBottom: 8, alignItems: 'center', paddingTop: 8, paddingBottom: 8
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <Search
+                    placeholder={t('inventory.searchBrand')}
+                    value={keyword}
+                    onChange={(e) => setKeyword(e.target.value)}
+                    allowClear
+                    style={{ flex: 1 }}
+                  />
                 </div>
-                <Input
-                  placeholder={t('inventory.searchBrand')}
-                  value={keyword}
-                  onChange={(e) => setKeyword(e.target.value)}
-                  style={{
-                    width: '100%',
-                    borderRadius: '9999px',
-                    border: 'none',
-                    background: 'rgba(255,255,255,0.05)',
-                    padding: '12px 16px 12px 48px',
-                    color: 'white',
-                    fontSize: '16px'
-                  }}
-                />
-                </div>
-                
-                {/* 添加品牌按钮 */}
+
+                {/* 添加品牌按钮（同排） */}
                 <button
                   onClick={() => setCreatingBrand(true)}
                   className="cigar-btn-gradient"
                   style={{
-                    height: '48px',
-                    borderRadius: '8px',
+                    height: 40,
+                    borderRadius: 8,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '8px',
-                    padding: '0 24px',
+                    gap: 8,
+                    padding: '0 16px',
                     cursor: 'pointer',
-                    fontSize: '16px',
-                    whiteSpace: 'nowrap',
-                    transition: 'all 0.3s ease'
+                    fontSize: 14,
+                    whiteSpace: 'nowrap'
                   }}
                 >
-                  <PlusOutlined style={{ fontSize: '20px' }} />
+                  <PlusOutlined style={{ fontSize: 18 }} />
                   <span>{t('inventory.addBrand')}</span>
                 </button>
               </div>
 
-              {/* 排序和筛选按钮 */}
-              <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
-                  <Button 
-                  style={{
-                    borderRadius: '9999px',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: 'none',
-                    color: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 16px'
-                  }}
-                >
-                  <span>{t('inventory.sort')}</span>
-                  <svg fill="currentColor" height="16" viewBox="0 0 256 256" width="16">
-                    <path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"></path>
-                  </svg>
-                  </Button>
-                <Button
-                  style={{
-                    borderRadius: '9999px',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: 'none',
-                    color: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 16px'
-                  }}
-                >
-                  <span>{t('inventory.filter')}</span>
-                  <svg fill="currentColor" height="16" viewBox="0 0 256 256" width="16">
-                    <path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"></path>
-                  </svg>
-                </Button>
-              </div>
+              {/* 添加品牌按钮单独区块已移除 */}
               
-              {/* 品牌列表 */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* 品牌列表（滚动容器） */}
+              <div
+                style={{
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  maxHeight: isMobile ? 'calc(100vh - 200px)' : 'calc(100vh - 230px)',
+                  paddingTop: 8,
+                  paddingBottom: 16,
+                  display: 'flex', flexDirection: 'column', gap: 16
+                }}
+              >
                 {brandList.length === 0 ? (
                   <div style={{ 
                     textAlign: 'center', 
@@ -1776,8 +1778,19 @@ const AdminInventory: React.FC = () => {
           )}
           {activeTab === 'in' && (
             <div>
-              {/* 搜索和筛选 - 两行布局 */}
-              <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {/* 搜索和筛选（置顶） - 两行布局 */}
+              <div
+                style={{
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 100,
+                  background: 'rgba(39,35,27,0.65)',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
+                  borderBottom: '1px solid rgba(244,175,37,0.2)',
+                  display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 8, paddingTop: 8, paddingBottom: 8
+                }}
+              >
                 {/* 第一行：搜索框 */}
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                 <Search
@@ -1827,6 +1840,8 @@ const AdminInventory: React.FC = () => {
                 </button>
               </div>
               </div>
+
+              {/* 入库列表渲染在后文（我们将在实际列表处包裹滚动容器） */}
               
               <Modal
                 title={editingOrder ? "📝 编辑入库订单" : t('inventory.inStockRecord')}
@@ -2382,6 +2397,16 @@ const AdminInventory: React.FC = () => {
                 </div>
               </Form>
               </Modal>
+              {/* 入库列表（滚动容器） */}
+              <div
+                style={{
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  maxHeight: isMobile ? 'calc(100vh - 210px)' : 'calc(100vh - 240px)',
+                  paddingTop: 8,
+                  paddingBottom: 16
+                }}
+              >
               {!isMobile ? (
               <Table
                   style={{ marginTop: 1 }}
@@ -3476,53 +3501,72 @@ const AdminInventory: React.FC = () => {
                   )}
                 </div>
               )}
+              </div>
             </div>
           )}
           {activeTab === 'out' && (
             <div>
-              {/* 搜索和筛选 */}
-              <div style={{ marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-                <Search
-                  placeholder={t('inventory.searchOutLogs')}
-                  value={outSearchKeyword}
-                  onChange={(e) => setOutSearchKeyword(e.target.value)}
-                  style={{ width: 300 }}
-                  allowClear
-                />
-                <Select
-                  placeholder={t('inventory.filterByBrand')}
-                  value={outBrandFilter}
-                  onChange={setOutBrandFilter}
-                  style={{ width: 200 }}
-                  allowClear
-                >
-                  {Array.from(new Set(items.map(i => i.brand))).sort().map(brand => (
-                    <Option key={brand} value={brand}>{brand}</Option>
-                  ))}
-                </Select>
-                <div style={{ flex: 1 }} />
-                <button 
-                  onClick={() => setOutStatsOpen(true)}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: 8,
-                    border: '1px solid rgba(244, 175, 37, 0.5)',
-                    background: 'rgba(244, 175, 37, 0.1)',
-                    color: '#f4af25',
-                    cursor: 'pointer',
-                    fontSize: 14,
-                    fontWeight: 600
-                  }}
-                >
-                  {t('inventory.outStats')}
-                </button>
-                <button
-                  onClick={() => setOutModalOpen(true)}
-                  className="cigar-btn-gradient"
-                  style={{ padding: '6px 14px', borderRadius: 8 }}
-                >
-                  {t('inventory.createOutStock')}
-                </button>
+              {/* 搜索和筛选（置顶） - 两行布局（与入库一致） */}
+              <div
+                style={{
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 100,
+                  background: 'rgba(39,35,27,0.65)',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
+                  borderBottom: '1px solid rgba(244,175,37,0.2)',
+                  display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 8, paddingTop: 8, paddingBottom: 8
+                }}
+              >
+                {/* 第一行：搜索框 */}
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                  <Search
+                    placeholder={t('inventory.searchOutLogs')}
+                    value={outSearchKeyword}
+                    onChange={(e) => setOutSearchKeyword(e.target.value)}
+                    style={{ flex: 1 }}
+                    allowClear
+                  />
+                </div>
+
+                {/* 第二行：品牌筛选 + 出库统计 + 创建出库 */}
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                  <Select
+                    placeholder={t('inventory.filterByBrand')}
+                    value={outBrandFilter}
+                    onChange={setOutBrandFilter}
+                    style={{ flex: 1 }}
+                    allowClear
+                  >
+                    {Array.from(new Set(items.map(i => i.brand))).sort().map(brand => (
+                      <Option key={brand} value={brand}>{brand}</Option>
+                    ))}
+                  </Select>
+                  <button 
+                    onClick={() => setOutStatsOpen(true)}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: 8,
+                      border: '1px solid rgba(244, 175, 37, 0.5)',
+                      background: 'rgba(244, 175, 37, 0.1)',
+                      color: '#f4af25',
+                      cursor: 'pointer',
+                      fontSize: 14,
+                      fontWeight: 600,
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {t('inventory.outStats')}
+                  </button>
+                  <button
+                    onClick={() => setOutModalOpen(true)}
+                    className="cigar-btn-gradient"
+                    style={{ padding: '6px 14px', borderRadius: 8, whiteSpace: 'nowrap' }}
+                  >
+                    {t('inventory.createOutStock')}
+                  </button>
+                </div>
               </div>
 
               {/* 出库创建弹窗 */}
@@ -3709,25 +3753,35 @@ const AdminInventory: React.FC = () => {
                 </Form>
               </Modal>
               
-              {!isMobile ? (
-              <Table
-                  title={() => t('inventory.outStockRecord')}
-                  columns={unifiedOutColumns}
-                  dataSource={unifiedOutRows}
-                rowKey="id"
-                  pagination={{ 
-                    pageSize: outPageSize,
-                    showSizeChanger: true,
-                    showQuickJumper: false,
-                    pageSizeOptions: ['5','10','20','50'],
-                    onChange: (_page, size) => {
-                      const next = size || outPageSize
-                      setOutPageSize(next)
-                      try { localStorage.setItem('inventory_out_page_size', String(next)) } catch {}
-                    }
-                  }}
-                />
-              ) : (
+              {/* 出库列表（滚动容器） */}
+              <div
+                style={{
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  maxHeight: isMobile ? 'calc(100vh - 210px)' : 'calc(100vh - 240px)',
+                  paddingTop: 8,
+                  paddingBottom: 16
+                }}
+              >
+                {!isMobile ? (
+                  <Table
+                    title={() => t('inventory.outStockRecord')}
+                    columns={unifiedOutColumns}
+                    dataSource={unifiedOutRows}
+                    rowKey="id"
+                    pagination={{ 
+                      pageSize: outPageSize,
+                      showSizeChanger: true,
+                      showQuickJumper: false,
+                      pageSizeOptions: ['5','10','20','50'],
+                      onChange: (_page, size) => {
+                        const next = size || outPageSize
+                        setOutPageSize(next)
+                        try { localStorage.setItem('inventory_out_page_size', String(next)) } catch {}
+                      }
+                    }}
+                  />
+                ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {unifiedOutRows.map((log: any) => {
                     const cigar = items.find(i => i.id === log.cigarId)
@@ -3759,7 +3813,7 @@ const AdminInventory: React.FC = () => {
                                 return event ? (
                                   <span>{t('inventory.source')}: {event.title}</span>
                                 ) : (
-                                  <span>{t('inventory.activityOrderOutbound')}: {userName}</span>
+                              <span>{t('inventory.activityOrderOutbound')}: {userName}</span>
                                 )
                               })()
                             ) : log.source === 'direct' ? (
@@ -3782,7 +3836,8 @@ const AdminInventory: React.FC = () => {
                     <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
                   )}
                 </div>
-              )}
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -3873,19 +3928,37 @@ const AdminInventory: React.FC = () => {
           {/* 图片上传占位 */}
           {isMobile && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-              <Upload
-                listType="picture-card"
-                fileList={imageList}
-                beforeUpload={() => false}
-                onChange={({ fileList }) => setImageList(fileList)}
-                showUploadList={{ showPreviewIcon: false }}
-              >
-                {imageList.length === 0 && (
-                  <div style={{ width: 96, height: 96, border: '2px dashed rgba(244,175,37,0.5)', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(34,28,16,0.5)', color: 'rgba(244,175,37,0.7)' }}>
-                    {t('common.upload')}
-                  </div>
-                )}
-              </Upload>
+              <ImageUpload
+                value={(() => {
+                  const imgs = (form.getFieldValue('images') || []) as string[]
+                  if (imgs && imgs.length > 0) return imgs[0]
+                  const existing = (editing as any)?.images
+                  return existing && existing.length > 0 ? existing[0] : undefined
+                })()}
+                onChange={async (url) => {
+                  const next = url ? [url] : []
+                  try { form.setFieldsValue({ images: next }) } catch {}
+                  if (editing) {
+                    setLoading(true)
+                    try {
+                      const res = await updateDocument<Cigar>(COLLECTIONS.CIGARS, (editing as any).id, { images: next, updatedAt: new Date() } as any)
+                      if (res.success) {
+                        message.success(t('common.saved'))
+                        const list = await getCigars()
+                        setItems(list)
+                      } else {
+                        message.error(t('common.saveFailed'))
+                      }
+                    } finally {
+                      setLoading(false)
+                    }
+                  }
+                }}
+                folder="products"
+                showPreview={true}
+                width={100}
+                height={100}
+              />
               <div style={{ fontSize: 12, color: 'rgba(244,175,37,0.8)' }}>{t('common.uploadProductImage')}</div>
             </div>
           )}
@@ -3894,12 +3967,39 @@ const AdminInventory: React.FC = () => {
           {!isMobile && (
             <div style={{ marginBottom: 16 }}>
               <Form.Item label={t('common.productImage')} name="images">
-                <ImageUpload
-                  folder="products"
-                  showPreview={true}
-                  width={100}
-                  height={100}
-                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <ImageUpload
+                    value={(() => {
+                      const imgs = (form.getFieldValue('images') || []) as string[]
+                      if (imgs && imgs.length > 0) return imgs[0]
+                      const existing = (editing as any)?.images
+                      return existing && existing.length > 0 ? existing[0] : undefined
+                    })()}
+                    onChange={async (url) => {
+                      const next = url ? [url] : []
+                      try { form.setFieldsValue({ images: next }) } catch {}
+                      if (editing) {
+                        setLoading(true)
+                        try {
+                          const res = await updateDocument<Cigar>(COLLECTIONS.CIGARS, (editing as any).id, { images: next, updatedAt: new Date() } as any)
+                          if (res.success) {
+                            message.success(t('common.saved'))
+                            const list = await getCigars()
+                            setItems(list)
+                          } else {
+                            message.error(t('common.saveFailed'))
+                          }
+                        } finally {
+                          setLoading(false)
+                        }
+                      }
+                    }}
+                    folder="products"
+                    showPreview={true}
+                    width={100}
+                    height={100}
+                  />
+                </div>
               </Form.Item>
             </div>
           )}

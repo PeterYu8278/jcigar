@@ -264,7 +264,7 @@ const AdminOrders: React.FC = () => {
 
   return (
     <div style={{ minHeight: '100vh' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{t('navigation.orders')}</h1>
       
         <Space>
@@ -289,6 +289,18 @@ const AdminOrders: React.FC = () => {
         </Space>
       </div>
 
+      {/* 置顶筛选区开始 */}
+      <div
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
+          background: 'transparent',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          borderBottom: '1px solid rgba(244,175,37,0.2)'
+        }}
+      >
       {/* 财务匹配状态标签 */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid rgba(244,175,37,0.2)' }}>
@@ -461,7 +473,18 @@ const AdminOrders: React.FC = () => {
           </div>
         </div>
       )}
+      </div>
 
+      {/* 列表滚动容器开始：仅列表滚动 */}
+      <div
+        style={{
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          maxHeight: isMobile ? 'calc(100vh - 230px)' : 'calc(100vh - 260px)',
+          paddingTop: 8,
+          paddingBottom: 16
+        }}
+      >
       {!isMobile ? (
       <Table
         columns={columns}
@@ -630,6 +653,7 @@ const AdminOrders: React.FC = () => {
           )}
         </div>
       )}
+      </div>
 
       {/* 查看订单详情 */}
       <Modal

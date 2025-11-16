@@ -30,7 +30,7 @@ export const uploadFile = async (
 ): Promise<UploadResult> => {
   try {
     const {
-      folder = 'cigar-app',
+      folder = 'jep-cigar',
       transformation = {},
       resource_type = 'image',
       allowed_formats = ['jpg', 'jpeg', 'png', 'webp'],

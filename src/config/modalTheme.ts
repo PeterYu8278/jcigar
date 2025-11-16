@@ -50,7 +50,7 @@ export const modalContentStyles = {
   section: {
     padding: '16px',
     borderRadius: '12px',
-    background: 'rgba(39, 35, 27, 0.5)',
+    background: 'transparent',
     backdropFilter: 'blur(10px)',
     border: '1px solid rgba(57, 51, 40, 0.7)',
     marginBottom: '16px'

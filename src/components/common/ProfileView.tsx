@@ -241,24 +241,24 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
         {/* Edit Button */}
         {showEditButton && onEdit && (
-          <Button
-            type="primary"
-            onClick={() => onEdit(user)}
-            style={{
-              marginTop: '16px',
-              width: '100%',
-              maxWidth: '320px',
-              height: '48px',
-              fontSize: '16px',
-              fontWeight: 'bold',
-              background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-              border: 'none',
-              borderRadius: '8px',
-              color: '#111',
-            }}
-          >
-            {t('usersAdmin.editProfile')}
-          </Button>
+          <div style={{ width: '100%', maxWidth: '640px', margin: '16px auto 0 auto' }}>
+            <Button
+              type="primary"
+              onClick={() => onEdit(user)}
+              style={{
+                width: '100%',
+                height: '48px',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                border: 'none',
+                borderRadius: '8px',
+                color: '#111',
+              }}
+            >
+              {t('usersAdmin.editProfile')}
+            </Button>
+          </div>
         )}
       </div>
 

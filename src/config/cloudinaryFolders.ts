@@ -5,7 +5,7 @@ export const UPLOAD_CONFIG = {
   // 基础配置
   CLOUD_NAME: 'dy2zb1n41',
   UPLOAD_PRESET: 'jep-cigar',
-  BASE_FOLDER: 'cigar-app',
+  BASE_FOLDER: 'jep-cigar',
   
   // 文件夹配置
   FOLDERS: CLOUDINARY_FOLDERS,
@@ -70,8 +70,14 @@ export function getUploadConfig(folderName: CloudinaryFolderName) {
 }
 
 // 生成完整的文件夹路径
+// 注意：由于上传预设的 Asset folder 设置为 'jep-cigar'，
+// 我们使用 public_id 参数来覆盖 Asset folder 设置，确保文件存储在正确的子文件夹中
 export function getFullFolderPath(folderName: CloudinaryFolderName): string {
-  return `${UPLOAD_CONFIG.BASE_FOLDER}/${folderName}`;
+  const folderConfig = (UPLOAD_CONFIG.FOLDER_CONFIGS as any)[folderName];
+  const subFolder = folderConfig?.folder || folderName;
+  // 返回完整路径，包含 Asset folder 和子文件夹
+  // 这样即使 Asset folder 设置为 'jep-cigar'，文件也会存储在正确的子文件夹中
+  return `${UPLOAD_CONFIG.BASE_FOLDER}/${subFolder}`;
 }
 
 // 验证文件夹名称
