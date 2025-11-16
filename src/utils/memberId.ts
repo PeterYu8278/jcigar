@@ -1,10 +1,20 @@
 /**
  * 会员编号生成工具
- * memberId 格式：M + 6位大写字母数字组合（基于 userId hash）
+ * 
+ * memberId 格式规范：
+ * - 编码：6位 Base36 编码（字符集：0-9, A-Z，共36个字符）
+ * - 生成方式：基于 userId 的 hash 值转换为 Base36 编码
+ * - 示例：3K7Y2W, 1A2B3C, 000001（全数字情况）
+ * 
  * memberId 用途：
- * 1. 会员唯一标识
- * 2. 引荐码（直接使用 memberId）
- * 3. 会员卡展示
+ * 1. 会员唯一标识（系统内唯一）
+ * 2. 引荐码（直接使用 memberId，用户可分享）
+ * 3. 会员卡展示（用于会员卡、个人资料等场景）
+ * 
+ * 特性：
+ * - 确定性：相同 userId 始终生成相同的 memberId
+ * - 唯一性：通过数据库查询确保不重复（冲突时使用时间戳降级方案）
+ * - 可读性：Base36 编码保证短小精悍，易于记忆和输入
  */
 
 import { collection, query, limit, getDocs, where } from 'firebase/firestore'
@@ -37,8 +47,15 @@ const toBase36 = (num: number, length: number = 6): string => {
 
 /**
  * 基于用户 ID 生成会员编号
+ * 
+ * 生成流程：
+ * 1. 对 userId 进行 hash 计算
+ * 2. 将 hash 值转换为 Base36 编码（0-9, A-Z）
+ * 3. 取前6位，不足6位左侧补0
+ * 4. 验证唯一性，冲突时使用 userId + timestamp 重新生成
+ * 
  * @param userId Firebase 用户文档 ID
- * @returns Promise<string> 格式：M + 6位大写字母数字（如 M3K7Y2W）
+ * @returns Promise<string> 格式：6位Base36编码，示例：3K7Y2W, 1A2B3C
  */
 export const generateMemberId = async (userId: string): Promise<string> => {
   try {
@@ -46,9 +63,7 @@ export const generateMemberId = async (userId: string): Promise<string> => {
     const hash = simpleHash(userId);
     
     // 转换为 Base36 格式（0-9, A-Z），取6位
-    const code = toBase36(hash, 6);
-    
-    const memberId = `M${code}`;
+    const memberId = toBase36(hash, 6);
     
     // 验证唯一性（极小概率会冲突）
     const exists = await checkMemberIdExists(memberId);
@@ -57,7 +72,7 @@ export const generateMemberId = async (userId: string): Promise<string> => {
       const timestamp = Date.now();
       const fallbackHash = simpleHash(`${userId}-${timestamp}`);
       const fallbackCode = toBase36(fallbackHash, 6);
-      return `M${fallbackCode}`;
+      return fallbackCode;
     }
     
     return memberId;
@@ -65,7 +80,7 @@ export const generateMemberId = async (userId: string): Promise<string> => {
     // 降级方案：使用时间戳
     const timestamp = Date.now();
     const fallbackCode = toBase36(timestamp, 6);
-    return `M${fallbackCode}`;
+    return fallbackCode;
   }
 };
 
@@ -136,7 +151,7 @@ export const validateReferralCode = async (code: string): Promise<{ valid: boole
 
 /**
  * 格式化会员编号显示
- * @param memberId 会员编号
+ * @param memberId 会员编号（6位Base36编码）
  * @param format 格式化方式: 'full' | 'short' | 'display'
  */
 export const formatMemberId = (memberId: string | undefined, format: 'full' | 'short' | 'display' = 'full'): string => {
@@ -144,11 +159,11 @@ export const formatMemberId = (memberId: string | undefined, format: 'full' | 's
   
   switch (format) {
     case 'full':
-      return memberId;  // M000001
+      return memberId;  // 完整格式：3K7Y2W
     case 'short':
-      return memberId.replace('M', '');  // 000001
+      return memberId;  // 短格式（与完整格式相同）：3K7Y2W
     case 'display':
-      return memberId.replace('M', 'M-');  // M-000001
+      return memberId;  // 显示格式（与完整格式相同）：3K7Y2W
     default:
       return memberId;
   }

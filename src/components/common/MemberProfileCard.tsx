@@ -295,7 +295,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
                     textShadow: '0 2px 4px rgba(0,0,0,0.7)',
                     fontFamily: "'Noto Sans SC', sans-serif"
                   }}>
-                    {user?.memberId || 'M000000'}
+                    {user?.memberId || '000000'}
                   </div>
                   <div style={{ 
                     color: 'rgba(255,255,255,0.7)', 

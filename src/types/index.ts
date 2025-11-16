@@ -15,7 +15,9 @@ export interface User {
   lastActive?: Date;
   
   // 会员编号（唯一标识，用于引荐码）
-  memberId?: string;  // 格式：M000001, M000002...
+  // 格式：6位Base36编码（0-9, A-Z），基于 userId hash 生成
+  // 示例：3K7Y2W, 1A2B3C, 000001（全数字情况）
+  memberId?: string;
   
   // 会员信息（对象形式）
   membership?: {

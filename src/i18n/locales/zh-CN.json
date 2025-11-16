@@ -349,7 +349,7 @@
     "noEmail": "该用户无邮箱",
     "passwordResetSent": "已发送密码重置邮件",
     "sendFailed": "发送失败",
-    "searchByNameOrEmail": "搜索用户姓名或邮箱",
+    "searchByNameOrEmail": "搜索用户姓名、邮箱或会员编号",
     "selectRole": "选择角色",
     "selectLevel": "选择等级",
     "selectStatus": "选择状态",

@@ -7,6 +7,7 @@ import ParticipantsSummary from './ParticipantsSummary'
 import { registerForEvent, createOrdersFromEventAllocations, updateDocument, COLLECTIONS, getEvents, createDocument, getUsers } from '../../services/firebase/firestore'
 import { useTranslation } from 'react-i18next'
 import { normalizePhoneNumber } from '../../utils/phoneNormalization'
+import { generateMemberId } from '../../utils/memberId'
 
 const { Option } = Select
 
@@ -184,6 +185,16 @@ const EventParticipantsManager: React.FC<EventParticipantsManagerProps> = ({
       
       if ((res as any)?.success) {
         const newUserId = (res as any).id
+        
+        // 生成会员ID并更新用户文档
+        try {
+          const memberId = await generateMemberId(newUserId)
+          await updateDocument<User>(COLLECTIONS.USERS, newUserId, { memberId } as any)
+        } catch (error) {
+          console.error('生成会员ID失败:', error)
+          // 不阻止用户创建流程，只记录错误
+        }
+        
         message.success(t('usersAdmin.created'))
         
         // 刷新用户列表

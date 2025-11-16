@@ -15,8 +15,9 @@ import { sendPasswordResetEmailFor } from '../../../services/firebase/auth'
 import { useTranslation } from 'react-i18next'
 import { getModalThemeStyles, getModalWidth } from '../../../config/modalTheme'
 import { normalizePhoneNumber } from '../../../utils/phoneNormalization'
-import { collection, query, where, getDocs, limit } from 'firebase/firestore'
+import { collection, query, where, getDocs, limit, doc, setDoc } from 'firebase/firestore'
 import { db } from '../../../config/firebase'
+import { generateMemberId } from '../../../utils/memberId'
 
 // CSS样式对象
 const glassmorphismInputStyle = {
@@ -59,6 +60,7 @@ const AdminUsers: React.FC = () => {
     }
     return {
     id: true,
+    memberId: true,
     displayName: true,
     email: true,
     role: true,
@@ -184,6 +186,13 @@ const AdminUsers: React.FC = () => {
       dataIndex: 'id',
       key: 'id',
       width: 80,
+    },
+    {
+      title: t('usersAdmin.memberId'),
+      dataIndex: 'memberId',
+      key: 'memberId',
+      width: 100,
+      render: (memberId: string) => memberId || '-',
     },
     {
       title: t('usersAdmin.name'),
@@ -332,7 +341,7 @@ const AdminUsers: React.FC = () => {
   const filteredUsers = useMemo(() => {
                       const kw = keyword.trim().toLowerCase()
     const filtered = users.filter(u => {
-      const passKw = !kw || u.displayName?.toLowerCase().includes(kw) || (u.email || '').toLowerCase().includes(kw) || ((u as any)?.profile?.phone || '').includes(keyword.trim())
+      const passKw = !kw || u.displayName?.toLowerCase().includes(kw) || (u.email || '').toLowerCase().includes(kw) || ((u as any)?.profile?.phone || '').includes(keyword.trim()) || (u.memberId || '').toLowerCase().includes(kw)
                       const passRole = !roleFilter || u.role === roleFilter
                       const passLevel = !levelFilter || u.membership?.level === levelFilter
       const status = statusMap[u.id] || (u as any).status || 'active'
@@ -682,7 +691,10 @@ const AdminUsers: React.FC = () => {
                               <div style={{ fontWeight: 700, color: '#f0f0f0' }}>{u.displayName || '-'}</div>
                               <span style={{ borderRadius: 999, background: 'rgba(148,148,148,0.2)', padding: '2px 8px', fontSize: 12, color: '#ddd' }}>{getMembershipText(level)}</span>
                             </div>
-                            <div style={{ marginTop: 4, fontSize: 12, color: '#aaa' }}>{maskPhone((u as any)?.profile?.phone)}</div>
+                            <div style={{ marginTop: 4, fontSize: 12, color: '#aaa' }}>
+                              {u.memberId && <span style={{ marginRight: 8, fontFamily: 'monospace' }}>{t('usersAdmin.memberId')}: {u.memberId}</span>}
+                              {maskPhone((u as any)?.profile?.phone)}
+                            </div>
                             <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
                               <span style={{ width: 8, height: 8, borderRadius: 999, background: status === 'active' ? '#52c41a' : '#ff4d4f', display: 'inline-block' }} />
                               <span style={{ fontSize: 12, color: '#ccc' }}>{getStatusText(status)}</span>
@@ -974,7 +986,8 @@ const AdminUsers: React.FC = () => {
               } as any)
                 if (res.success) message.success(t('usersAdmin.saved'))
             } else {
-              const res = await createDocument<User>(COLLECTIONS.USERS, {
+              // 创建新用户时，先创建文档获取ID，然后生成会员ID并更新
+              const userData: Omit<User, 'id'> = {
                 displayName: values.displayName,
                 email: values.email,
                 role: values.role,
@@ -982,8 +995,25 @@ const AdminUsers: React.FC = () => {
                 membership: { level: values.level, joinDate: new Date(), lastActive: new Date() },
                 createdAt: new Date(),
                 updatedAt: new Date(),
-              } as any)
-                if ((res as any).success) message.success(t('usersAdmin.created'))
+              } as any
+              
+              const res = await createDocument<User>(COLLECTIONS.USERS, userData)
+              
+              if ((res as any).success) {
+                const newUserId = (res as any).id
+                
+                // 生成会员ID并更新用户文档
+                try {
+                  const memberId = await generateMemberId(newUserId)
+                  await updateDocument<User>(COLLECTIONS.USERS, newUserId, { memberId } as any)
+                  message.success(t('usersAdmin.created'))
+                } catch (error) {
+                  console.error('生成会员ID失败:', error)
+                  message.warning(t('usersAdmin.created') + '，但会员ID生成失败，请稍后手动添加')
+                }
+              } else {
+                message.error(t('messages.dataLoadFailed'))
+              }
             }
             const list = await getUsers()
             setUsers(list)

@@ -351,7 +351,7 @@
     "noEmail": "This user has no email",
     "passwordResetSent": "Password reset email sent",
     "sendFailed": "Send failed",
-    "searchByNameOrEmail": "Search by name or email",
+    "searchByNameOrEmail": "Search by name, email or member ID",
     "selectRole": "Select Role",
     "selectLevel": "Select Level",
     "selectStatus": "Select Status",
