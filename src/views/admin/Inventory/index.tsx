@@ -1097,7 +1097,14 @@ const AdminInventory: React.FC = () => {
   }, [filtered])
 
   return (
-    <div style={{ minHeight: '10vh'}}>
+    <div
+      style={{
+        height: isMobile ? '90vh' : 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: isMobile ? 'hidden' : 'visible'
+      }}
+    >
       
            <h1 style={{ fontSize: 22, fontWeight: 800, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', paddingInline: 0, marginBottom: 12 }}>{t('navigation.inventory')}</h1>
  
@@ -1342,7 +1349,7 @@ const AdminInventory: React.FC = () => {
                 style={{
                   overflowY: 'auto',
                   overflowX: 'hidden',
-                  maxHeight: isMobile ? 'calc(100vh - 230px)' : 'calc(100vh - 260px)',
+                  maxHeight: isMobile ? 'calc(100vh - 300px)' : 'calc(100vh - 260px)',
                   paddingTop: 8,
                   paddingBottom: 16
                 }}
@@ -1549,7 +1556,7 @@ const AdminInventory: React.FC = () => {
                   overflowX: 'hidden',
                   maxHeight: isMobile ? 'calc(100vh - 200px)' : 'calc(100vh - 230px)',
                   paddingTop: 8,
-                  paddingBottom: 16,
+                  paddingBottom: 100,
                   display: 'flex', flexDirection: 'column', gap: 16
                 }}
               >
@@ -2404,7 +2411,7 @@ const AdminInventory: React.FC = () => {
                   overflowX: 'hidden',
                   maxHeight: isMobile ? 'calc(100vh - 210px)' : 'calc(100vh - 240px)',
                   paddingTop: 8,
-                  paddingBottom: 16
+                  paddingBottom: 84
                 }}
               >
               {!isMobile ? (
@@ -3760,7 +3767,7 @@ const AdminInventory: React.FC = () => {
                   overflowX: 'hidden',
                   maxHeight: isMobile ? 'calc(100vh - 210px)' : 'calc(100vh - 240px)',
                   paddingTop: 8,
-                  paddingBottom: 16
+                  paddingBottom: 84
                 }}
               >
                 {!isMobile ? (

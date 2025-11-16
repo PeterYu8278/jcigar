@@ -662,7 +662,14 @@ const AdminEvents: React.FC = () => {
   const columns = columnsAll.filter(c => visibleCols[c.key as string] !== false)
 
   return (
-    <div style={{ minHeight: '100vh' }}>
+    <div
+      style={{
+        height: isMobile ? '90vh' : 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: isMobile ? 'hidden' : 'visible'
+      }}
+    >
       <Modal open={orderSyncing} footer={null} closable={false} maskClosable={false} centered>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Spin />
@@ -794,10 +801,9 @@ const AdminEvents: React.FC = () => {
       
       <div
         style={{
+          flex: 1,
           overflowY: 'auto',
           overflowX: 'hidden',
-          // 预留顶部标题区 + 筛选区高度，确保仅列表区域滚动
-          maxHeight: isMobile ? 'calc(100vh - 170px)' : 'calc(100vh - 200px)',
           paddingTop: 8,
           paddingBottom: 16
         }}

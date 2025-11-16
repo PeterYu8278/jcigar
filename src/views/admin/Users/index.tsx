@@ -657,7 +657,7 @@ const AdminUsers: React.FC = () => {
               flex: 1,
               overflowY: 'auto',
               overflowX: 'hidden',
-              paddingBottom: '100px',
+              paddingBottom: '16px',
               position: 'relative',
               zIndex: 1
             }}

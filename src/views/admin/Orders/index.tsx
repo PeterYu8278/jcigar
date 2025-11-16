@@ -263,7 +263,14 @@ const AdminOrders: React.FC = () => {
   }, [filtered, sortDesc])
 
   return (
-    <div style={{ minHeight: '100vh' }}>
+    <div
+      style={{
+        height: isMobile ? '90vh' : 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: isMobile ? 'hidden' : 'visible'
+      }}
+    >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{t('navigation.orders')}</h1>
       
@@ -478,9 +485,9 @@ const AdminOrders: React.FC = () => {
       {/* 列表滚动容器开始：仅列表滚动 */}
       <div
         style={{
+          flex: 1,
           overflowY: 'auto',
           overflowX: 'hidden',
-          maxHeight: isMobile ? 'calc(100vh - 230px)' : 'calc(100vh - 260px)',
           paddingTop: 8,
           paddingBottom: 16
         }}
