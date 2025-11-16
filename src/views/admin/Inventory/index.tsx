@@ -1650,49 +1650,99 @@ const AdminInventory: React.FC = () => {
                                   }}>
                                     {brand.name}
                                   </h3>
-                                  <div style={{ 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    gap: '16px',
-                                    fontSize: '12px',
-                                    color: 'rgba(255,255,255,0.7)'
-                                  }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                      <svg 
-                                        style={{ color: '#f4af25' }} 
-                                        fill="none" 
-                                        height="14"                                         
-                                        stroke="currentColor" 
-                                        strokeLinecap="round" 
-                                        strokeLinejoin="round" 
-                                        strokeWidth="2" 
-                                        viewBox="0 0 24 24" 
-                                        width="14"
-                                      >
-                                        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
-                                        <circle cx="12" cy="10" r="3"></circle>
-                                      </svg>
-                                      <span>{t('inventory.origin')}：{brand.country || '-'}</span>
+                                  {isMobile ? (
+                                    <div style={{ 
+                                      display: 'flex', 
+                                      flexDirection: 'column',
+                                      gap: 4,
+                                      fontSize: '12px',
+                                      color: 'rgba(255,255,255,0.7)'
+                                    }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+                                        <svg 
+                                          style={{ color: '#f4af25' }} 
+                                          fill="none" 
+                                          height="14"                                         
+                                          stroke="currentColor" 
+                                          strokeLinecap="round" 
+                                          strokeLinejoin="round" 
+                                          strokeWidth="2" 
+                                          viewBox="0 0 24 24" 
+                                          width="14"
+                                        >
+                                          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+                                          <circle cx="12" cy="10" r="3"></circle>
+                                        </svg>
+                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                          {t('inventory.origin')}：{brand.country || '-'}
+                                        </span>
+                                      </div>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+                                        <svg 
+                                          style={{ color: '#f4af25' }} 
+                                          fill="none" 
+                                          height="14" 
+                                          stroke="currentColor" 
+                                          strokeLinecap="round" 
+                                          strokeLinejoin="round" 
+                                          strokeWidth="2" 
+                                          viewBox="0 0 24 24" 
+                                          width="14"
+                                        >
+                                          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                                          <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                                          <line x1="12" x2="12" y1="22.08" y2="12"></line>
+                                        </svg>
+                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                          {t('inventory.productTypes')}：{productCount}
+                                        </span>
+                                      </div>
                                     </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                      <svg 
-                                        style={{ color: '#f4af25' }} 
-                                        fill="none" 
-                                        height="14" 
-                                        stroke="currentColor" 
-                                        strokeLinecap="round" 
-                                        strokeLinejoin="round" 
-                                        strokeWidth="2" 
-                                        viewBox="0 0 24 24" 
-                                        width="14"
-                                      >
-                                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                                        <line x1="12" x2="12" y1="22.08" y2="12"></line>
-                                      </svg>
-                                      <span>{t('inventory.productTypes')}：{productCount}</span>
+                                  ) : (
+                                    <div style={{ 
+                                      display: 'flex', 
+                                      alignItems: 'center', 
+                                      gap: '16px',
+                                      fontSize: '12px',
+                                      color: 'rgba(255,255,255,0.7)'
+                                    }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <svg 
+                                          style={{ color: '#f4af25' }} 
+                                          fill="none" 
+                                          height="14"                                         
+                                          stroke="currentColor" 
+                                          strokeLinecap="round" 
+                                          strokeLinejoin="round" 
+                                          strokeWidth="2" 
+                                          viewBox="0 0 24 24" 
+                                          width="14"
+                                        >
+                                          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+                                          <circle cx="12" cy="10" r="3"></circle>
+                                        </svg>
+                                        <span>{t('inventory.origin')}：{brand.country || '-'}</span>
+                                      </div>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <svg 
+                                          style={{ color: '#f4af25' }} 
+                                          fill="none" 
+                                          height="14" 
+                                          stroke="currentColor" 
+                                          strokeLinecap="round" 
+                                          strokeLinejoin="round" 
+                                          strokeWidth="2" 
+                                          viewBox="0 0 24 24" 
+                                          width="14"
+                                        >
+                                          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                                          <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                                          <line x1="12" x2="12" y1="22.08" y2="12"></line>
+                                        </svg>
+                                        <span>{t('inventory.productTypes')}：{productCount}</span>
+                                      </div>
                                     </div>
-                                  </div>
+                                  )}
                                 </div>
                               </div>
                             </div>
