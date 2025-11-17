@@ -533,6 +533,14 @@ button + button { margin-left: 8px; }
     font-size: 18px !important;
   }
 
+  /* QR 图标特殊大小（不受小屏限制） */
+  .qr-icon-large.anticon,
+  .qr-icon-large {
+    font-size: 54px !important;
+    width: 54px !important;
+    height: 54px !important;
+  }
+
   .mobile-nav-item div:last-child {
     font-size: 10px !important;
   }
@@ -553,14 +561,21 @@ button + button { margin-left: 8px; }
 }
 
 /* 底部导航交互样式 */
+.mobile-nav-item {
+  background: transparent !important;
+  border: none !important;
+}
+
 .mobile-nav-item:hover {
   transform: translateY(-2px);
-  background: rgba(255, 215, 0, 0.1) !important;
-  border-color: rgba(255, 215, 0, 0.2) !important;
+  background: transparent !important;
+  border: none !important;
 }
 
 .mobile-nav-item:active {
   transform: translateY(0);
+  background: transparent !important;
+  border: none !important;
 }
 
 /* 底部导航徽章样式 */
@@ -810,4 +825,13 @@ button + button { margin-left: 8px; }
 .ant-modal-close:hover .anticon {
   color: #FFFFFF !important;
   opacity: 0.8;
+}
+
+/* QR 图标大小（全局，确保在所有情况下都生效） */
+.qr-icon-large.anticon,
+.qr-icon-large {
+  font-size: 40px !important;
+  width: 40px !important;
+  height: 40px !important;
+  line-height: 54px !important;
 }

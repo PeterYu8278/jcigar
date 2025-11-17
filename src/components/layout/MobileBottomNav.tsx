@@ -152,13 +152,13 @@ const MobileBottomNav: React.FC = () => {
         left: 0,
         right: 0,
         height: '70px',
-        background: 'linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%)',
-        borderTop: '2px solid #ffd700',
-        boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.3)',
-        padding: '8px 16px',
+        background: 'linear-gradient(180deg, rgba(45, 45, 45, 0.95) 0%, rgba(0, 0, 0, 0.95) 100%)',
+        borderTop: '1px solid rgba(255, 215, 0, 0.3)',
+        backdropFilter: 'blur(8px)',
+        padding: '0 16px 4px 16px',
         zIndex: 1000,
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-end',
         justifyContent: isAdmin ? 'space-around' : (navItems.length > 4 ? 'space-between' : 'space-around')
       }}
       className="mobile-bottom-nav"
@@ -195,46 +195,42 @@ const MobileBottomNav: React.FC = () => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
-                  padding: '8px 12px',
-                  borderRadius: '12px',
-                  width: '60px',
-                  minWidth: '60px',
-                  maxWidth: '60px',
+                  padding: '4px',
+                  width: '20%',
                   transition: 'all 0.3s ease',
-                  position: 'relative',
-                  background: active 
-                    ? 'linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%)'
-                    : 'transparent',
-                  border: active ? '1px solid rgba(255, 215, 0, 0.3)' : '1px solid transparent'
+                  position: 'relative'
                 }}
                 className="mobile-nav-item"
               >
-                {item.badge && (
-                  <Badge 
-                    count={item.badge} 
-                    size="small" 
-                    color="#ffd700"
-                    style={{
-                      position: 'absolute',
-                      top: '4px',
-                      right: '8px',
-                      fontSize: '10px'
-                    }}
-                  />
-                )}
-                
                 <div style={{
-                  fontSize: '20px',
-                  color: active ? '#ffd700' : '#c0c0c0',
-                  marginBottom: '4px',
-                  transition: 'all 0.3s ease'
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  marginBottom: '4px'
                 }}>
-                  {item.icon}
+                  <div style={{
+                    fontSize: '24px',
+                    color: active ? '#FFD700' : '#9ca3af',
+                    transition: 'all 0.3s ease'
+                  }}>
+                    {item.icon}
+                  </div>
+                  {item.badge && (
+                    <Badge 
+                      count={item.badge} 
+                      size="small" 
+                      color="#ffd700"
+                      style={{
+                        fontSize: '10px'
+                      }}
+                    />
+                  )}
                 </div>
                 
                 <div style={{
-                  fontSize: '11px',
-                  color: active ? '#ffd700' : '#999999',
+                  fontSize: '12px',
+                  color: active ? '#FFD700' : '#9ca3af',
                   fontWeight: active ? 600 : 400,
                   textAlign: 'center',
                   lineHeight: 1.2,
@@ -250,44 +246,39 @@ const MobileBottomNav: React.FC = () => {
           <div
             onClick={handleQRScanClick}
             style={{
+              width: '20%',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
               position: 'relative',
-              zIndex: 10,
-              marginBottom: '-8px'
+              zIndex: 10
             }}
             className="mobile-nav-item"
           >
             <div
               style={{
-                width: '56px',
-                height: '56px',
+                position: 'relative',
+                top: '-14px',
+                width: '80px',
+                height: '80px',
                 borderRadius: '50%',
-                background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
+                border: '4px solid rgba(26, 26, 26, 0.95)',
+                background: 'linear-gradient(135deg, #FDE08D 0%, #FDD017 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 4px 12px rgba(255, 215, 0, 0.4)',
-                marginBottom: '4px',
+                boxShadow: '0 4px 16px rgba(255, 215, 0, 0.3)',
                 transition: 'all 0.3s ease'
               }}
             >
-              <QrcodeOutlined style={{
-                fontSize: '28px',
-                color: '#111',
-              }} />
-            </div>
-            <div style={{
-              fontSize: '11px',
-              color: '#ffd700',
-              fontWeight: 600,
-              textAlign: 'center',
-              lineHeight: 1.2
-            }}>
-              QR Scan
+              <QrcodeOutlined 
+                style={{
+                  color: '#111',
+                }}
+                className="qr-icon-large"
+              />
             </div>
           </div>
 
@@ -304,46 +295,42 @@ const MobileBottomNav: React.FC = () => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
-                  padding: '8px 12px',
-                  borderRadius: '12px',
-                  width: '60px',
-                  minWidth: '60px',
-                  maxWidth: '60px',
+                  padding: '4px',
+                  width: '20%',
                   transition: 'all 0.3s ease',
-                  position: 'relative',
-                  background: active 
-                    ? 'linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%)'
-                    : 'transparent',
-                  border: active ? '1px solid rgba(255, 215, 0, 0.3)' : '1px solid transparent'
+                  position: 'relative'
                 }}
                 className="mobile-nav-item"
               >
-                {item.badge && (
-                  <Badge 
-                    count={item.badge} 
-                    size="small" 
-                    color="#ffd700"
-                    style={{
-                      position: 'absolute',
-                      top: '4px',
-                      right: '8px',
-                      fontSize: '10px'
-                    }}
-                  />
-                )}
-                
                 <div style={{
-                  fontSize: '20px',
-                  color: active ? '#ffd700' : '#c0c0c0',
-                  marginBottom: '4px',
-                  transition: 'all 0.3s ease'
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  marginBottom: '4px'
                 }}>
-                  {item.icon}
+                  <div style={{
+                    fontSize: '24px',
+                    color: active ? '#FFD700' : '#9ca3af',
+                    transition: 'all 0.3s ease'
+                  }}>
+                    {item.icon}
+                  </div>
+                  {item.badge && (
+                    <Badge 
+                      count={item.badge} 
+                      size="small" 
+                      color="#ffd700"
+                      style={{
+                        fontSize: '10px'
+                      }}
+                    />
+                  )}
                 </div>
                 
                 <div style={{
-                  fontSize: '11px',
-                  color: active ? '#ffd700' : '#999999',
+                  fontSize: '12px',
+                  color: active ? '#FFD700' : '#9ca3af',
                   fontWeight: active ? 600 : 400,
                   textAlign: 'center',
                   lineHeight: 1.2,
@@ -361,50 +348,46 @@ const MobileBottomNav: React.FC = () => {
         navItems.map((item) => {
           const active = isActive(item.key)
           return (
-            <div
-              key={item.key}
-              onClick={() => handleNavClick(item.key)}
-              style={{
+              <div
+                key={item.key}
+                onClick={() => handleNavClick(item.key)}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  width: '20%',
+                  transition: 'all 0.3s ease',
+                  position: 'relative'
+                }}
+                className="mobile-nav-item"
+              >
+              <div style={{
                 display: 'flex',
-                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                cursor: 'pointer',
-                padding: '8px 12px',
-                borderRadius: '12px',
-                width: navItems.length > 4 ? '60px' : '80px',
-                minWidth: navItems.length > 4 ? '60px' : '80px',
-                maxWidth: navItems.length > 4 ? '60px' : '80px',
-                transition: 'all 0.3s ease',
-                position: 'relative',
-                background: active 
-                  ? 'linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%)'
-                  : 'transparent',
-                border: active ? '1px solid rgba(255, 215, 0, 0.3)' : '1px solid transparent'
-              }}
-              className="mobile-nav-item"
-            >
-              {item.badge && (
-                <Badge 
-                  count={item.badge} 
-                  size="small" 
-                  color="#ffd700"
-                  style={{
-                    position: 'absolute',
-                    top: '4px',
-                    right: '8px',
-                    fontSize: '10px'
-                  }}
-                />
-              )}
-              
-              <div style={{
-                fontSize: '20px',
-                color: active ? '#ffd700' : '#c0c0c0',
-                marginBottom: '4px',
-                transition: 'all 0.3s ease'
+                gap: '4px',
+                marginBottom: '4px'
               }}>
-                {item.icon}
+                <div style={{
+                  fontSize: '20px',
+                  color: active ? '#ffd700' : '#c0c0c0',
+                  transition: 'all 0.3s ease'
+                }}>
+                  {item.icon}
+                </div>
+                {item.badge && (
+                  <Badge 
+                    count={item.badge} 
+                    size="small" 
+                    color="#ffd700"
+                    style={{
+                      fontSize: '10px'
+                    }}
+                  />
+                )}
               </div>
               
               <div style={{
