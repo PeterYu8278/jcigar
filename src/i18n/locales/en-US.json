@@ -203,6 +203,7 @@
     "orders": "Orders",
     "finance": "Finance",
     "pointsConfig": "Points Config",
+    "visitSessions": "Visit Sessions",
     "performance": "Performance"
   },
   "events": {

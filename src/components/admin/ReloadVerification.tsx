@@ -1,0 +1,336 @@
+// 充值验证组件
+import React, { useState, useEffect } from 'react';
+import { Table, Button, Space, Tag, Modal, Form, Input, message, Upload, Image } from 'antd';
+import { CheckOutlined, CloseOutlined, UploadOutlined, EyeOutlined } from '@ant-design/icons';
+import { getPendingReloadRecords, verifyReloadRecord, rejectReloadRecord } from '../../services/firebase/reload';
+import type { ReloadRecord } from '../../types';
+import dayjs from 'dayjs';
+import { uploadFile } from '../../services/cloudinary/create';
+
+interface ReloadVerificationProps {
+  onRefresh?: () => void;
+}
+
+export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefresh }) => {
+  const [loading, setLoading] = useState(false);
+  const [records, setRecords] = useState<ReloadRecord[]>([]);
+  const [verifyModalVisible, setVerifyModalVisible] = useState(false);
+  const [rejectModalVisible, setRejectModalVisible] = useState(false);
+  const [currentRecord, setCurrentRecord] = useState<ReloadRecord | null>(null);
+  const [form] = Form.useForm();
+  const [rejectForm] = Form.useForm();
+  const [uploading, setUploading] = useState(false);
+  const [proofUrl, setProofUrl] = useState<string>('');
+
+  useEffect(() => {
+    loadRecords();
+  }, []);
+
+  const loadRecords = async () => {
+    setLoading(true);
+    try {
+      const pendingRecords = await getPendingReloadRecords(50);
+      setRecords(pendingRecords);
+    } catch (error) {
+      message.error('加载充值记录失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerify = (record: ReloadRecord) => {
+    setCurrentRecord(record);
+    setVerifyModalVisible(true);
+    form.resetFields();
+    setProofUrl('');
+  };
+
+  const handleReject = (record: ReloadRecord) => {
+    setCurrentRecord(record);
+    setRejectModalVisible(true);
+    rejectForm.resetFields();
+  };
+
+  const onVerifySubmit = async (values: any) => {
+    if (!currentRecord) return;
+
+    setUploading(true);
+    try {
+      let finalProofUrl = proofUrl;
+      
+      // 如果有上传的文件，先上传到Cloudinary
+      if (values.proof && values.proof.fileList && values.proof.fileList.length > 0) {
+        const file = values.proof.fileList[0].originFileObj;
+        if (file) {
+          const uploadResult = await uploadFile(file, { 
+            folder: 'jep-cigar/reload-proofs',
+            resourceType: 'image'
+          });
+          if (uploadResult.secure_url || uploadResult.url) {
+            finalProofUrl = uploadResult.secure_url || uploadResult.url || '';
+          }
+        }
+      }
+
+      const result = await verifyReloadRecord(
+        currentRecord.id,
+        'admin', // TODO: 使用实际的管理员ID
+        finalProofUrl || undefined,
+        values.notes
+      );
+
+      if (result.success) {
+        message.success('充值验证成功');
+        setVerifyModalVisible(false);
+        form.resetFields();
+        setProofUrl('');
+        loadRecords();
+        onRefresh?.();
+      } else {
+        message.error(result.error || '验证失败');
+      }
+    } catch (error: any) {
+      message.error(error.message || '验证失败');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const onRejectSubmit = async (values: any) => {
+    if (!currentRecord) return;
+
+    try {
+      const result = await rejectReloadRecord(
+        currentRecord.id,
+        'admin', // TODO: 使用实际的管理员ID
+        values.notes
+      );
+
+      if (result.success) {
+        message.success('已拒绝充值请求');
+        setRejectModalVisible(false);
+        rejectForm.resetFields();
+        loadRecords();
+        onRefresh?.();
+      } else {
+        message.error(result.error || '操作失败');
+      }
+    } catch (error: any) {
+      message.error(error.message || '操作失败');
+    }
+  };
+
+  const columns = [
+    {
+      title: '时间',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 180,
+      render: (date: Date) => dayjs(date).format('YYYY-MM-DD HH:mm:ss')
+    },
+    {
+      title: '用户',
+      dataIndex: 'userName',
+      key: 'userName',
+      width: 150,
+      render: (name: string, record: ReloadRecord) => name || record.userId
+    },
+    {
+      title: '充值金额',
+      dataIndex: 'requestedAmount',
+      key: 'requestedAmount',
+      width: 120,
+      render: (amount: number, record: ReloadRecord) => (
+        <div>
+          <div>{amount} RM</div>
+          <div style={{ fontSize: 12, color: '#999' }}>
+            = {record.pointsEquivalent} 积分
+          </div>
+        </div>
+      )
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      render: (status: string) => {
+        const statusMap: Record<string, { color: string; text: string }> = {
+          pending: { color: 'orange', text: '待验证' },
+          verified: { color: 'blue', text: '已验证' },
+          completed: { color: 'green', text: '已完成' },
+          rejected: { color: 'red', text: '已拒绝' }
+        };
+        const statusInfo = statusMap[status] || { color: 'default', text: status };
+        return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
+      }
+    },
+    {
+      title: '凭证',
+      dataIndex: 'verificationProof',
+      key: 'verificationProof',
+      width: 100,
+      render: (proof: string) => {
+        if (!proof) return '-';
+        return (
+          <Button
+            type="link"
+            icon={<EyeOutlined />}
+            onClick={() => {
+              Modal.info({
+                title: '充值凭证',
+                content: <Image src={proof} alt="充值凭证" style={{ maxWidth: '100%' }} />,
+                width: 600
+              });
+            }}
+          >
+            查看
+          </Button>
+        );
+      }
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 200,
+      render: (_: any, record: ReloadRecord) => (
+        <Space>
+          <Button
+            type="primary"
+            size="small"
+            icon={<CheckOutlined />}
+            onClick={() => handleVerify(record)}
+            disabled={record.status !== 'pending'}
+          >
+            验证
+          </Button>
+          <Button
+            danger
+            size="small"
+            icon={<CloseOutlined />}
+            onClick={() => handleReject(record)}
+            disabled={record.status !== 'pending'}
+          >
+            拒绝
+          </Button>
+        </Space>
+      )
+    }
+  ];
+
+  return (
+    <>
+      <div style={{ marginBottom: 16, textAlign: 'right' }}>
+        <Button onClick={loadRecords} loading={loading}>
+          刷新
+        </Button>
+      </div>
+      <Table
+        columns={columns}
+        dataSource={records}
+        rowKey="id"
+        loading={loading}
+        pagination={{
+          pageSize: 20,
+          showSizeChanger: true
+        }}
+      />
+
+      {/* 验证模态框 */}
+      <Modal
+        title="验证充值"
+        open={verifyModalVisible}
+        onCancel={() => {
+          setVerifyModalVisible(false);
+          form.resetFields();
+          setProofUrl('');
+        }}
+        onOk={() => form.submit()}
+        confirmLoading={uploading}
+        width={600}
+      >
+        {currentRecord && (
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={onVerifySubmit}
+          >
+            <div style={{ marginBottom: 16 }}>
+              <div>用户: {currentRecord.userName || currentRecord.userId}</div>
+              <div>充值金额: {currentRecord.requestedAmount} RM</div>
+              <div>对应积分: {currentRecord.pointsEquivalent} 积分</div>
+            </div>
+
+            <Form.Item
+              name="proof"
+              label="上传充值凭证（可选）"
+            >
+              <Upload
+                listType="picture-card"
+                maxCount={1}
+                beforeUpload={() => false}
+                onChange={(info) => {
+                  if (info.fileList.length > 0 && info.fileList[0].originFileObj) {
+                    const file = info.fileList[0].originFileObj;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                      setProofUrl(e.target?.result as string);
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
+              >
+                <div>
+                  <UploadOutlined />
+                  <div style={{ marginTop: 8 }}>上传</div>
+                </div>
+              </Upload>
+            </Form.Item>
+
+            <Form.Item
+              name="notes"
+              label="备注（可选）"
+            >
+              <Input.TextArea rows={4} placeholder="输入验证备注..." />
+            </Form.Item>
+          </Form>
+        )}
+      </Modal>
+
+      {/* 拒绝模态框 */}
+      <Modal
+        title="拒绝充值"
+        open={rejectModalVisible}
+        onCancel={() => {
+          setRejectModalVisible(false);
+          rejectForm.resetFields();
+        }}
+        onOk={() => rejectForm.submit()}
+        okButtonProps={{ danger: true }}
+        width={500}
+      >
+        {currentRecord && (
+          <Form
+            form={rejectForm}
+            layout="vertical"
+            onFinish={onRejectSubmit}
+          >
+            <div style={{ marginBottom: 16 }}>
+              <div>用户: {currentRecord.userName || currentRecord.userId}</div>
+              <div>充值金额: {currentRecord.requestedAmount} RM</div>
+            </div>
+
+            <Form.Item
+              name="notes"
+              label="拒绝原因"
+              rules={[{ required: true, message: '请输入拒绝原因' }]}
+            >
+              <Input.TextArea rows={4} placeholder="输入拒绝原因..." />
+            </Form.Item>
+          </Form>
+        )}
+      </Modal>
+    </>
+  );
+};
+

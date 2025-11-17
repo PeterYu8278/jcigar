@@ -25,7 +25,17 @@ export const GLOBAL_COLLECTIONS = {
   /** 通知集合 */
   NOTIFICATIONS: 'notifications',
   /** 系统配置集合 */
-  SYSTEM_CONFIG: 'system_config'
+  SYSTEM_CONFIG: 'system_config',
+  /** 积分记录集合 */
+  POINTS_RECORDS: 'pointsRecords',
+  /** 驻店记录集合 */
+  VISIT_SESSIONS: 'visitSessions',
+  /** 会员年费记录集合 */
+  MEMBERSHIP_FEE_RECORDS: 'membershipFeeRecords',
+  /** 充值记录集合 */
+  RELOAD_RECORDS: 'reloadRecords',
+  /** 兑换记录集合 */
+  REDEMPTION_RECORDS: 'redemptionRecords'
 } as const
 
 export type CollectionName = typeof GLOBAL_COLLECTIONS[keyof typeof GLOBAL_COLLECTIONS]

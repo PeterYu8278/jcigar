@@ -7,6 +7,7 @@ import { getAllPointsRecords } from '../../../services/firebase/pointsRecords';
 import { useAuthStore } from '../../../store/modules/auth';
 import { useTranslation } from 'react-i18next';
 import type { PointsConfig, PointsRecord } from '../../../types';
+import { ReloadVerification } from '../../../components/admin/ReloadVerification';
 
 const { Title, Text } = Typography;
 
@@ -14,7 +15,7 @@ const PointsConfigPage: React.FC = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'config' | 'records'>('config');
+  const [activeTab, setActiveTab] = useState<'config' | 'records' | 'reload'>('config');
   const [pointsRecords, setPointsRecords] = useState<PointsRecord[]>([]);
   const [loadingRecords, setLoadingRecords] = useState(false);
   const { user } = useAuthStore();
@@ -151,6 +152,9 @@ const PointsConfigPage: React.FC = () => {
           event: t('pointsConfig.records.sources.event'),
           profile: t('pointsConfig.records.sources.profile'),
           checkin: t('pointsConfig.records.sources.checkin'),
+          visit: '驻店时长费用',
+          membership_fee: '年费',
+          reload: '充值',
           admin: t('pointsConfig.records.sources.admin'),
           other: t('pointsConfig.records.sources.other')
         };
@@ -183,7 +187,7 @@ const PointsConfigPage: React.FC = () => {
 
           <Tabs
             activeKey={activeTab}
-            onChange={(key) => setActiveTab(key as 'config' | 'records')}
+            onChange={(key) => setActiveTab(key as 'config' | 'records' | 'reload')}
             items={[
               {
                 key: 'config',
@@ -454,6 +458,20 @@ const PointsConfigPage: React.FC = () => {
                         emptyText: t('pointsConfig.records.noRecords')
                       }}
                     />
+                  </div>
+                )
+              },
+              {
+                key: 'reload',
+                label: (
+                  <span>
+                    <HistoryOutlined />
+                    充值验证
+                  </span>
+                ),
+                children: (
+                  <div>
+                    <ReloadVerification onRefresh={loadPointsRecords} />
                   </div>
                 )
               }

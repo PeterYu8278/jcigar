@@ -201,6 +201,7 @@
     "orders": "订单管理",
     "finance": "财务管理",
     "pointsConfig": "积分配置",
+    "visitSessions": "驻店记录",
     "performance": "性能监控"
   },
   "events": {

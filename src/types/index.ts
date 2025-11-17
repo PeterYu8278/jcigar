@@ -26,6 +26,10 @@ export interface User {
     lastActive?: Date;
     points?: number;
     referralPoints?: number;  // 引荐获得的积分
+    totalVisitHours?: number;  // 累计驻店时长（小时）
+    lastCheckInAt?: Date;      // 最后一次check-in时间
+    currentVisitSessionId?: string; // 当前进行中的visit session ID
+    nextFirstVisitWaiverExpiresAt?: Date; // 续费后首次驻店免扣费到期时间
   };
   
   // 引荐信息
@@ -349,10 +353,164 @@ export interface PointsRecord {
   userName?: string;        // 用户名（冗余字段，方便查询）
   type: 'earn' | 'spend';   // 获得 | 消费
   amount: number;           // 积分数量
-  source: 'registration' | 'referral' | 'purchase' | 'event' | 'profile' | 'checkin' | 'admin' | 'other';  // 来源
+  source: 'registration' | 'referral' | 'purchase' | 'event' | 'profile' | 'checkin' | 'visit' | 'membership_fee' | 'reload' | 'admin' | 'other';  // 来源
   description: string;      // 描述
-  relatedId?: string;       // 关联ID（订单ID、活动ID等）
+  relatedId?: string;       // 关联ID（订单ID、活动ID、驻店记录ID、年费记录ID、充值记录ID等）
   balance?: number;         // 操作后余额
   createdAt: Date;
   createdBy?: string;       // 创建人（管理员手动调整时）
+}
+
+// 驻店记录类型（Check-in/Check-out）
+export interface VisitSession {
+  id: string;
+  userId: string;
+  userName?: string;
+  
+  // Check-in
+  checkInAt: Date;
+  checkInBy: string; // 管理员ID
+  
+  // Check-out (可选，忘记时为空)
+  checkOutAt?: Date;
+  checkOutBy?: string; // 管理员ID
+  
+  // 时长计算
+  durationMinutes?: number; // 实际驻店时长（分钟）
+  durationHours?: number;   // 计费时长（小时，向上取整）
+  calculatedAt?: Date;      // 计算时间
+  
+  // 兑换项（必须在check-in到check-out之间设定）
+  redemptions?: Array<{
+    cigarId: string;
+    cigarName: string;
+    quantity: number;
+    redeemedAt: Date;
+    redeemedBy: string; // 管理员ID
+  }>;
+  
+  // 费用结算
+  pointsDeducted?: number;  // 扣除的积分
+  pointsRecordId?: string;  // 关联的积分记录ID
+  
+  // 状态
+  status: 'pending' | 'completed' | 'expired'; // expired = 忘记check-out后自动结算
+  
+  // 特殊标记
+  isFirstVisitAfterRenewal?: boolean; // 续费后首次驻店（不扣费）
+  
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// 会员年费配置
+export interface MembershipFeeConfig {
+  id: string; // 'default'
+  
+  // 年费配置（按日期范围）
+  annualFees: Array<{
+    startDate: Date;  // 生效开始日期
+    endDate?: Date;   // 生效结束日期（可选，为空表示永久生效）
+    amount: number;   // 年费金额（积分）
+  }>;
+  
+  // 驻店时长费用
+  hourlyRate: number; // 每小时扣除积分
+  
+  updatedAt: Date;
+  updatedBy: string;
+}
+
+// 会员年费记录
+export interface MembershipFeeRecord {
+  id: string;
+  userId: string;
+  userName?: string;
+  
+  // 扣费信息
+  amount: number;              // 年费金额
+  dueDate: Date;              // 应扣费日期（基于开通/续费日期+1年）
+  deductedAt?: Date;          // 实际扣费时间
+  pointsRecordId?: string;    // 关联的积分记录ID
+  
+  // 状态
+  status: 'pending' | 'paid' | 'failed' | 'cancelled';
+  
+  // 开通/续费信息
+  renewalType: 'initial' | 'renewal'; // 首次开通 | 续费
+  previousDueDate?: Date;             // 上次到期日（续费时）
+  
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// 充值记录
+export interface ReloadRecord {
+  id: string;
+  userId: string;
+  userName?: string;
+  
+  // 充值信息
+  requestedAmount: number;    // 用户请求的金额（RM）
+  pointsEquivalent: number;   // 对应的积分（基于汇率）
+  
+  // 状态
+  status: 'pending' | 'verified' | 'completed' | 'rejected';
+  
+  // 管理员验证
+  verifiedAt?: Date;
+  verifiedBy?: string;
+  verificationProof?: string; // 凭证URL（管理员上传）
+  adminNotes?: string;
+  
+  // 积分记录关联
+  pointsRecordId?: string;    // 验证后创建的积分记录ID
+  
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// 兑换配置
+export interface RedemptionConfig {
+  id: string; // 'default'
+  
+  // 默认限额
+  dailyLimit: number;        // 每日限额
+  totalLimit: number;        // 总限额
+  hourlyLimit?: number;      // 每小时限额（可选）
+  
+  // 时长里程碑奖励（提高限额）
+  milestoneRewards: Array<{
+    hoursRequired: number;   // 累计时长要求（小时）
+    dailyLimitBonus: number; // 每日限额加成
+    totalLimitBonus?: number; // 总限额加成（可选）
+  }>;
+  
+  // 兑换截止时间
+  cutoffTime: string;        // "23:00" (HH:mm格式)
+  
+  updatedAt: Date;
+  updatedBy: string;
+}
+
+// 兑换记录
+export interface RedemptionRecord {
+  id: string;
+  userId: string;
+  userName?: string;
+  visitSessionId: string;    // 关联的驻店记录
+  
+  cigarId: string;
+  cigarName: string;
+  quantity: number;
+  
+  // 限额追踪
+  dayKey: string;            // "2025-10-28" (YYYY-MM-DD)
+  hourKey?: string;          // "2025-10-28-14" (YYYY-MM-DD-HH) 如果有每小时限额
+  redemptionIndex: number;   // 当日第几次兑换
+  
+  redeemedAt: Date;
+  redeemedBy: string;        // 管理员ID
+  
+  createdAt: Date;
 }

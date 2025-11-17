@@ -14,6 +14,7 @@ import Events from './views/frontend/Events'
 import Shop from './views/frontend/Shop'
 import Profile from './views/frontend/Profile'
 import BrandDetail from './views/frontend/BrandDetail'
+import ReloadPage from './views/frontend/Reload'
 
 // 管理后台页面
 import AdminDashboard from './views/admin/Dashboard'
@@ -26,6 +27,8 @@ import CloudinaryTestPage from './views/admin/CloudinaryTest'
 import PerformanceMonitor from './components/admin/PerformanceMonitor'
 import EventOrderDebug from './views/admin/EventOrderDebug'
 import PointsConfigPage from './views/admin/PointsConfig'
+import MembershipFeeConfigPage from './views/admin/MembershipFeeConfig'
+import VisitSessionsPage from './views/admin/VisitSessions'
 import OrphanedUserCleanup from './views/admin/OrphanedUserCleanup'
 
 // 认证页面
@@ -176,6 +179,7 @@ const AppContent: React.FC = () => {
                   <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
                   <Route path="/shop" element={<ProtectedRoute roles={['member', 'admin']}><Shop /></ProtectedRoute>} />
                   <Route path="/profile" element={<ProtectedRoute roles={['member', 'admin']}><Profile /></ProtectedRoute>} />
+                  <Route path="/reload" element={<ProtectedRoute roles={['member', 'admin']}><ReloadPage /></ProtectedRoute>} />
                   <Route path="/brand/:brandId" element={<ProtectedRoute roles={['member', 'admin']}><BrandDetail /></ProtectedRoute>} />
                   
                   {/* 管理后台路由 */}
@@ -186,6 +190,8 @@ const AppContent: React.FC = () => {
                   <Route path="/admin/orders" element={<ProtectedRoute roles={['admin']}><AdminOrders /></ProtectedRoute>} />
                   <Route path="/admin/finance" element={<ProtectedRoute roles={['admin']}><AdminFinance /></ProtectedRoute>} />
                   <Route path="/admin/points-config" element={<ProtectedRoute roles={['admin']}><PointsConfigPage /></ProtectedRoute>} />
+                  <Route path="/admin/membership-fee-config" element={<ProtectedRoute roles={['admin']}><MembershipFeeConfigPage /></ProtectedRoute>} />
+                  <Route path="/admin/visit-sessions" element={<ProtectedRoute roles={['admin']}><VisitSessionsPage /></ProtectedRoute>} />
                   <Route path="/admin/orphaned-users" element={<ProtectedRoute roles={['admin']}><OrphanedUserCleanup /></ProtectedRoute>} />
                   <Route path="/admin/performance" element={<ProtectedRoute roles={['admin']}><PerformanceMonitor /></ProtectedRoute>} />
                   <Route path="/admin/cloudinary-test" element={<ProtectedRoute roles={['admin']}><CloudinaryTestPage /></ProtectedRoute>} />

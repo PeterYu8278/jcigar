@@ -560,11 +560,30 @@ export const onAuthStateChange = (callback: (user: FirebaseUser | null) => void)
 };
 
 // 获取用户完整信息
+const convertFirestoreTimestamps = (value: any): any => {
+  if (!value) return value;
+  if (typeof value?.toDate === 'function') {
+    return value.toDate();
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => convertFirestoreTimestamps(item));
+  }
+  if (typeof value === 'object') {
+    return Object.keys(value).reduce((acc, key) => {
+      acc[key] = convertFirestoreTimestamps(value[key]);
+      return acc;
+    }, {} as Record<string, any>);
+  }
+  return value;
+};
+
 export const getUserData = async (uid: string): Promise<User | null> => {
   try {
     const userDoc = await getDoc(doc(db, 'users', uid));
     if (userDoc.exists()) {
-      return { id: uid, ...userDoc.data() } as User;
+      const rawData = userDoc.data();
+      const data = convertFirestoreTimestamps(rawData);
+      return { id: uid, ...data } as User;
     }
     return null;
   } catch (error) {

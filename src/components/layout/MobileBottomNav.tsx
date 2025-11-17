@@ -10,10 +10,13 @@ import {
   DashboardOutlined,
   TeamOutlined,
   DatabaseOutlined,
-  DollarOutlined
+  DollarOutlined,
+  QrcodeOutlined
 } from '@ant-design/icons'
 import { useAuthStore } from '../../store/modules/auth'
 import { useTranslation } from 'react-i18next'
+import { useState } from 'react'
+import { QRScanner } from '../admin/QRScanner'
 
 const { Footer } = Layout
 
@@ -22,6 +25,8 @@ const MobileBottomNav: React.FC = () => {
   const location = useLocation()
   const { isAdmin } = useAuthStore()
   const { t } = useTranslation()
+  const [qrScannerVisible, setQrScannerVisible] = useState(false)
+  const [qrScannerMode, setQrScannerMode] = useState<'checkin' | 'checkout'>('checkin')
   // 普通用户导航项
   const frontendNavItems = [
     {
@@ -106,8 +111,25 @@ const MobileBottomNav: React.FC = () => {
 
   const navItems = isAdmin ? getAdminNavItems() : frontendNavItems
 
+  // 如果是管理员，将导航项分成两部分（中间插入QR按钮）
+  const getDisplayItems = (): { leftItems: typeof navItems; rightItems: typeof navItems } | null => {
+    if (!isAdmin) return null
+    
+    const middleIndex = Math.floor(navItems.length / 2)
+    return {
+      leftItems: navItems.slice(0, middleIndex),
+      rightItems: navItems.slice(middleIndex)
+    }
+  }
+
   const handleNavClick = (path: string) => {
     navigate(path)
+  }
+
+  const handleQRScanClick = () => {
+    // 打开QR扫描器，默认check-in模式
+    setQrScannerMode('checkin')
+    setQrScannerVisible(true)
   }
 
   const isActive = (path: string) => {
@@ -137,7 +159,7 @@ const MobileBottomNav: React.FC = () => {
         zIndex: 1000,
         display: 'flex',
         alignItems: 'center',
-        justifyContent: navItems.length > 4 ? 'space-between' : 'space-around'
+        justifyContent: isAdmin ? 'space-around' : (navItems.length > 4 ? 'space-between' : 'space-around')
       }}
       className="mobile-bottom-nav"
       data-admin={isAdmin.toString()}
@@ -154,69 +176,263 @@ const MobileBottomNav: React.FC = () => {
         pointerEvents: 'none'
       }} />
 
-      {navItems.map((item) => {
-        const active = isActive(item.key)
+      {isAdmin ? (() => {
+        const displayItems = getDisplayItems()
+        if (!displayItems) return null
         
         return (
+          <>
+            {/* 左侧导航项 */}
+            {displayItems.leftItems.map((item) => {
+            const active = isActive(item.key)
+            return (
+              <div
+                key={item.key}
+                onClick={() => handleNavClick(item.key)}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  padding: '8px 12px',
+                  borderRadius: '12px',
+                  width: '60px',
+                  minWidth: '60px',
+                  maxWidth: '60px',
+                  transition: 'all 0.3s ease',
+                  position: 'relative',
+                  background: active 
+                    ? 'linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%)'
+                    : 'transparent',
+                  border: active ? '1px solid rgba(255, 215, 0, 0.3)' : '1px solid transparent'
+                }}
+                className="mobile-nav-item"
+              >
+                {item.badge && (
+                  <Badge 
+                    count={item.badge} 
+                    size="small" 
+                    color="#ffd700"
+                    style={{
+                      position: 'absolute',
+                      top: '4px',
+                      right: '8px',
+                      fontSize: '10px'
+                    }}
+                  />
+                )}
+                
+                <div style={{
+                  fontSize: '20px',
+                  color: active ? '#ffd700' : '#c0c0c0',
+                  marginBottom: '4px',
+                  transition: 'all 0.3s ease'
+                }}>
+                  {item.icon}
+                </div>
+                
+                <div style={{
+                  fontSize: '11px',
+                  color: active ? '#ffd700' : '#999999',
+                  fontWeight: active ? 600 : 400,
+                  textAlign: 'center',
+                  lineHeight: 1.2,
+                  transition: 'all 0.3s ease'
+                }}>
+                  {item.label}
+                </div>
+              </div>
+            )
+          })}
+
+          {/* 中间的QR扫描按钮 */}
           <div
-            key={item.key}
-            onClick={() => handleNavClick(item.key)}
+            onClick={handleQRScanClick}
             style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              padding: '8px 12px',
-              borderRadius: '12px',
-              width: navItems.length > 4 ? '60px' : '80px',
-              minWidth: navItems.length > 4 ? '60px' : '80px',
-              maxWidth: navItems.length > 4 ? '60px' : '80px',
-              transition: 'all 0.3s ease',
               position: 'relative',
-              background: active 
-                ? 'linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%)'
-                : 'transparent',
-              border: active ? '1px solid rgba(255, 215, 0, 0.3)' : '1px solid transparent'
+              zIndex: 10,
+              marginBottom: '-8px'
             }}
             className="mobile-nav-item"
           >
-            {item.badge && (
-              <Badge 
-                count={item.badge} 
-                size="small" 
-                color="#ffd700"
-                style={{
-                  position: 'absolute',
-                  top: '4px',
-                  right: '8px',
-                  fontSize: '10px'
-                }}
-              />
-            )}
-            
-            <div style={{
-              fontSize: '20px',
-              color: active ? '#ffd700' : '#c0c0c0',
-              marginBottom: '4px',
-              transition: 'all 0.3s ease'
-            }}>
-              {item.icon}
+            <div
+              style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(255, 215, 0, 0.4)',
+                marginBottom: '4px',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              <QrcodeOutlined style={{
+                fontSize: '28px',
+                color: '#111',
+              }} />
             </div>
-            
             <div style={{
               fontSize: '11px',
-              color: active ? '#ffd700' : '#999999',
-              fontWeight: active ? 600 : 400,
+              color: '#ffd700',
+              fontWeight: 600,
               textAlign: 'center',
-              lineHeight: 1.2,
-              transition: 'all 0.3s ease'
+              lineHeight: 1.2
             }}>
-              {item.label}
+              QR Scan
             </div>
           </div>
+
+            {/* 右侧导航项 */}
+            {displayItems.rightItems.map((item) => {
+            const active = isActive(item.key)
+            return (
+              <div
+                key={item.key}
+                onClick={() => handleNavClick(item.key)}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  padding: '8px 12px',
+                  borderRadius: '12px',
+                  width: '60px',
+                  minWidth: '60px',
+                  maxWidth: '60px',
+                  transition: 'all 0.3s ease',
+                  position: 'relative',
+                  background: active 
+                    ? 'linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%)'
+                    : 'transparent',
+                  border: active ? '1px solid rgba(255, 215, 0, 0.3)' : '1px solid transparent'
+                }}
+                className="mobile-nav-item"
+              >
+                {item.badge && (
+                  <Badge 
+                    count={item.badge} 
+                    size="small" 
+                    color="#ffd700"
+                    style={{
+                      position: 'absolute',
+                      top: '4px',
+                      right: '8px',
+                      fontSize: '10px'
+                    }}
+                  />
+                )}
+                
+                <div style={{
+                  fontSize: '20px',
+                  color: active ? '#ffd700' : '#c0c0c0',
+                  marginBottom: '4px',
+                  transition: 'all 0.3s ease'
+                }}>
+                  {item.icon}
+                </div>
+                
+                <div style={{
+                  fontSize: '11px',
+                  color: active ? '#ffd700' : '#999999',
+                  fontWeight: active ? 600 : 400,
+                  textAlign: 'center',
+                  lineHeight: 1.2,
+                  transition: 'all 0.3s ease'
+                }}>
+                  {item.label}
+                </div>
+              </div>
+            )
+            })}
+          </>
         )
-      })}
+      })() : (
+        // 普通用户导航
+        navItems.map((item) => {
+          const active = isActive(item.key)
+          return (
+            <div
+              key={item.key}
+              onClick={() => handleNavClick(item.key)}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                padding: '8px 12px',
+                borderRadius: '12px',
+                width: navItems.length > 4 ? '60px' : '80px',
+                minWidth: navItems.length > 4 ? '60px' : '80px',
+                maxWidth: navItems.length > 4 ? '60px' : '80px',
+                transition: 'all 0.3s ease',
+                position: 'relative',
+                background: active 
+                  ? 'linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%)'
+                  : 'transparent',
+                border: active ? '1px solid rgba(255, 215, 0, 0.3)' : '1px solid transparent'
+              }}
+              className="mobile-nav-item"
+            >
+              {item.badge && (
+                <Badge 
+                  count={item.badge} 
+                  size="small" 
+                  color="#ffd700"
+                  style={{
+                    position: 'absolute',
+                    top: '4px',
+                    right: '8px',
+                    fontSize: '10px'
+                  }}
+                />
+              )}
+              
+              <div style={{
+                fontSize: '20px',
+                color: active ? '#ffd700' : '#c0c0c0',
+                marginBottom: '4px',
+                transition: 'all 0.3s ease'
+              }}>
+                {item.icon}
+              </div>
+              
+              <div style={{
+                fontSize: '11px',
+                color: active ? '#ffd700' : '#999999',
+                fontWeight: active ? 600 : 400,
+                textAlign: 'center',
+                lineHeight: 1.2,
+                transition: 'all 0.3s ease'
+              }}>
+                {item.label}
+              </div>
+            </div>
+          )
+        })
+      )}
+
+      {/* QR扫描器 */}
+      {isAdmin && (
+        <QRScanner
+          visible={qrScannerVisible}
+          onClose={() => setQrScannerVisible(false)}
+          mode={qrScannerMode}
+          onSuccess={() => {
+            // 扫描成功后可以刷新相关数据
+          }}
+        />
+      )}
     </Footer>
   )
 }

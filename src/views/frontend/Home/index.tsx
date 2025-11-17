@@ -24,6 +24,9 @@ import { useAuthStore } from '../../../store/modules/auth'
 import { useQRCode } from '../../../hooks/useQRCode'
 import { QRCodeDisplay } from '../../../components/common/QRCodeDisplay'
 import { MemberProfileCard } from '../../../components/common/MemberProfileCard'
+import { VisitTimerRedemption } from '../../../components/home/VisitTimerRedemption'
+import { MysteryGiftBanner } from '../../../components/home/MysteryGiftBanner'
+import { AvailableBalance } from '../../../components/home/AvailableBalance'
 
 const Home: React.FC = () => {
   const navigate = useNavigate()
@@ -278,9 +281,16 @@ const Home: React.FC = () => {
         </div>
       </Card>
 
-      
+      {/* 合并后的计时器和兑换模块 */}
+      <VisitTimerRedemption style={{ marginTop: 24 }} />
 
-      {/* 功能卡片 - 已移除旧“最新活动”卡片，改为下方新列表 */}
+      {/* 可用余额卡片 */}
+      <AvailableBalance />
+
+      {/* CTA 横幅 - 神秘礼物 */}
+      <MysteryGiftBanner />
+
+      {/* 功能卡片 - 已移除旧"最新活动"卡片，改为下方新列表 */}
 
       {/* 品牌导航 - Swiper轮播 */}
       <div style={{ marginTop: 32 }}>
