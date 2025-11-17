@@ -2,10 +2,22 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { resolve } from 'path'
+import { mkdirSync } from 'fs'
+import { existsSync } from 'fs'
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
+    // Ensure dist directory exists before PWA plugin runs
+    {
+      name: 'ensure-dist-exists',
+      buildStart() {
+        const distDir = resolve(__dirname, 'dist')
+        if (!existsSync(distDir)) {
+          mkdirSync(distDir, { recursive: true })
+        }
+      }
+    },
     react({
       // 禁用React DevTools提示
       jsxRuntime: 'automatic',
@@ -15,6 +27,8 @@ export default defineConfig({
       injectRegister: 'auto',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       selfDestroying: true, // 允许Service Worker自毁
+      strategies: 'generateSW',
+      filename: 'sw.js',
       manifest: {
         name: 'Gentleman Club - Cigar World',
         short_name: 'Gentleman Club',
