@@ -29,6 +29,15 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
   const [totalHours, setTotalHours] = useState(0);
   const [targetHours, setTargetHours] = useState(150);
   const [milestones, setMilestones] = useState<Array<{ hoursRequired: number; dailyLimitBonus: number; totalLimitBonus?: number }>>([]);
+  
+  // 计算基于小时数的兑换限额（每50小时+25支）
+  const calculateCigarLimitFromHours = (hours: number): number => {
+    const baseLimit = 25; // 基础25支
+    const bonusPer50Hours = 25; // 每50小时+25支
+    const bonusHours = Math.floor(hours / 50) * 50; // 向下取整到最近的50的倍数
+    const bonusCigars = (bonusHours / 50) * bonusPer50Hours;
+    return baseLimit + bonusCigars;
+  };
 
   // 加载驻店会话数据
   useEffect(() => {
@@ -163,11 +172,24 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
   cutoff.setHours(cutoffHour, cutoffMinute, 0, 0);
   const isBeforeCutoff = now < cutoff;
 
-  // 时长奖励进度相关
+  // 计算合并后的进度条数据
   const hoursText = formatHours(totalHours);
+  const currentCigarLimit = calculateCigarLimitFromHours(totalHours);
+  const maxCigarLimit = calculateCigarLimitFromHours(targetHours); // 150小时时的限额
   const hoursPercent = targetHours > 0 ? Math.min(100, (totalHours / targetHours) * 100) : 0;
-  const completedMilestones = milestones.filter(m => totalHours >= m.hoursRequired);
-  const nextMilestone = milestones.find(m => totalHours < m.hoursRequired);
+  const cigarPercent = maxCigarLimit > 0 ? Math.min(100, (totalCount / maxCigarLimit) * 100) : 0;
+  
+  // 生成里程碑（每50小时一个）
+  const generateMilestones = (maxHours: number) => {
+    const milestones = [];
+    for (let hours = 50; hours <= maxHours; hours += 50) {
+      const cigars = calculateCigarLimitFromHours(hours);
+      milestones.push({ hours, cigars });
+    }
+    return milestones;
+  };
+  
+  const progressMilestones = generateMilestones(targetHours);
 
   return (
     <Card
@@ -247,13 +269,13 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
             marginTop: 8
           }}
         >
-          {/* Redemption 区域 */}
-          <div style={{ marginBottom: 16 }}>
+          {/* 合并的进度条区域 */}
+          <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 24 }}>🎁</span>
+                <span style={{ fontSize: 24 }}>🏆</span>
                 <Title level={5} style={{ margin: 0, color: '#FFFFFF', fontSize: 18, fontWeight: 700 }}>
-                  Cigar Redemption
+                  Complimentary Cigars
                 </Title>
               </div>
               <Button 
@@ -266,27 +288,94 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
               </Button>
             </div>
 
-            {/* 限额显示 */}
+            {/* 合并的进度条显示 */}
             <div style={{ marginBottom: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Text style={{ fontSize: 14, fontWeight: 600, color: '#d1d5db' }}>Total Progress</Text>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'flex-end', marginBottom: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
                   <Text style={{ fontSize: 20, fontWeight: 700, color: '#FFD700' }}>{totalCount}</Text>
-                  <Text style={{ fontSize: 16, fontWeight: 400, color: '#9ca3af' }}>/{limits.totalLimit}</Text>
+                  <Text style={{ fontSize: 16, fontWeight: 400, color: '#9ca3af' }}>/ {currentCigarLimit} Cigars</Text>
                 </div>
               </div>
               
-              {/* 进度条 */}
-              <div style={{ height: 10, width: '100%', borderRadius: 9999, backgroundColor: '#374151', overflow: 'hidden' }}>
-                <div
-                  style={{
-                    height: '100%',
-                    borderRadius: 9999,
-                    background: 'linear-gradient(90deg, #FDE08D 0%, #C48D3A 100%)',
-                    width: `${(totalCount / limits.totalLimit) * 100}%`,
-                    transition: 'width 0.3s ease'
-                  }}
-                />
+              {/* 合并的进度条 */}
+              <div style={{ position: 'relative', marginBottom: 12 }}>
+                <div style={{ height: 12, width: '100%', borderRadius: 9999, backgroundColor: '#374151', overflow: 'visible', position: 'relative' }}>
+                  <div
+                    style={{
+                      height: '100%',
+                      borderRadius: 9999,
+                      background: 'linear-gradient(90deg, #FDE08D 0%, #C48D3A 100%)',
+                      width: `${hoursPercent}%`,
+                      transition: 'width 0.3s ease'
+                    }}
+                  />
+                  
+                  {/* 里程碑标记（每50小时）- 显示在进度条宽度范围内 */}
+                  {progressMilestones.length > 0 && (
+                    <div style={{ 
+                      position: 'absolute', 
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      display: 'flex', 
+                      alignItems: 'center',
+                      pointerEvents: 'none'
+                    }}>
+                      {progressMilestones.map((milestone, index) => {
+                        const position = (milestone.hours / targetHours) * 100;
+                        const isCompleted = totalHours >= milestone.hours;
+                        
+                        return (
+                          <div 
+                            key={index} 
+                            style={{ 
+                              position: 'absolute',
+                              left: `${position}%`,
+                              transform: 'translateX(-50%)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              width: '1px'
+                            }}
+                          >
+                            <div style={{ 
+                              height: '12px', 
+                              width: '1px', 
+                              backgroundColor: '#2D2D2D',
+                              marginBottom: '4px'
+                            }} />
+                            <Text style={{ 
+                              fontSize: 11, 
+                              color: isCompleted ? '#FFD700' : '#9ca3af',
+                              whiteSpace: 'nowrap',
+                              marginTop: '4px'
+                            }}>
+                              {milestone.hours}hrs
+                            </Text>
+                            <TrophyOutlined 
+                              style={{ 
+                                fontSize: 18, 
+                                color: isCompleted ? '#C48D3A' : '#9ca3af',
+                                marginTop: '4px'
+                              }}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 底部信息 */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 32 }}>
+                <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: 400 }}>
+                  <Text style={{ color: '#FFD700', fontWeight: 700 }}>{hoursText}</Text> / {targetHours} hrs
+                </Text>
+                <Text style={{ color: '#d1d5db', fontSize: 14, fontWeight: 600 }}>
+                  🎁 <Text style={{ color: '#FFD700' }}>25</Text> Cigars / 50 hrs
+                </Text>
               </div>
             </div>
 
@@ -305,77 +394,6 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                 Last call for redemption is at {cutoffTime} PM
               </Text>
             </div>
-          </div>
-
-          {/* 分隔线 */}
-          <div
-            style={{
-              height: 1,
-              background: 'linear-gradient(90deg, transparent 0%, rgba(255, 215, 0, 0.5) 50%, transparent 100%)',
-              margin: '16px 0'
-            }}
-          />
-
-          {/* 时长奖励进度区域 */}
-          <div>
-            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: 700, display: 'block', marginBottom: 12 }}>
-              🏆 More hours, more rewards!
-            </Text>
-
-            {/* 进度条和里程碑标记 */}
-            <div style={{ position: 'relative', marginBottom: 12 }}>
-              <div style={{ height: 12, width: '100%', borderRadius: 9999, backgroundColor: '#374151', overflow: 'hidden' }}>
-                <div
-                  style={{
-                    height: '100%',
-                    borderRadius: 9999,
-                    background: 'linear-gradient(90deg, #FDE08D 0%, #C48D3A 100%)',
-                    width: `${hoursPercent}%`,
-                    transition: 'width 0.3s ease'
-                  }}
-                />
-              </div>
-              
-              {/* 里程碑标记（覆盖在进度条上） */}
-              {milestones.length > 0 && (
-                <div style={{ 
-                  position: 'absolute', 
-                  inset: 0, 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  padding: '0 4px'
-                }}>
-                  {milestones.map((milestone, index) => {
-                    const position = (milestone.hoursRequired / targetHours) * 100;
-                    const isCompleted = totalHours >= milestone.hoursRequired;
-                    
-                    return (
-                      <div 
-                        key={index} 
-                        style={{ 
-                          position: 'absolute',
-                          left: `${position}%`,
-                          transform: 'translateX(-50%)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center'
-                        }}
-                      >
-                        <Text style={{ fontSize: 12, color: isCompleted ? '#FFD700' : '#9ca3af' }}>
-                          {milestone.hoursRequired}
-                        </Text>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* 当前进度 */}
-            <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: 400, display: 'block' }}>
-              <Text style={{ color: '#FFD700', fontWeight: 700 }}>{hoursText}</Text> / {targetHours} hrs
-            </Text>
           </div>
         </div>
       </Space>

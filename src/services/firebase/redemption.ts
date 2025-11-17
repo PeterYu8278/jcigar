@@ -94,7 +94,19 @@ export const getDefaultRedemptionConfig = (): RedemptionConfig => {
 };
 
 /**
+ * 计算基于小时数的兑换限额（每50小时+25支）
+ */
+const calculateCigarLimitFromHours = (hours: number): number => {
+  const baseLimit = 25; // 基础25支
+  const bonusPer50Hours = 25; // 每50小时+25支
+  const bonusHours = Math.floor(hours / 50) * 50; // 向下取整到最近的50的倍数
+  const bonusCigars = (bonusHours / 50) * bonusPer50Hours;
+  return baseLimit + bonusCigars;
+};
+
+/**
  * 获取用户的实际兑换限额（考虑累计时长里程碑）
+ * 新规则：每50小时+25支雪茄
  */
 export const getUserRedemptionLimits = async (userId: string): Promise<{
   dailyLimit: number;
@@ -115,9 +127,11 @@ export const getUserRedemptionLimits = async (userId: string): Promise<{
   const userData = userDoc.data() as User;
   const totalVisitHours = userData.membership?.totalVisitHours || 0;
 
-  // 计算里程碑加成
+  // 使用新的计算方式：每50小时+25支
+  const totalLimit = calculateCigarLimitFromHours(totalVisitHours);
+
+  // 计算里程碑加成（用于每日限额）
   let dailyLimitBonus = 0;
-  let totalLimitBonus = 0;
 
   if (config.milestoneRewards && config.milestoneRewards.length > 0) {
     // 按小时数排序，找到已达到的最高里程碑
@@ -128,14 +142,13 @@ export const getUserRedemptionLimits = async (userId: string): Promise<{
     for (const reward of sortedRewards) {
       if (totalVisitHours >= reward.hoursRequired) {
         dailyLimitBonus = reward.dailyLimitBonus;
-        totalLimitBonus = reward.totalLimitBonus || 0;
       }
     }
   }
 
   return {
     dailyLimit: config.dailyLimit + dailyLimitBonus,
-    totalLimit: config.totalLimit + totalLimitBonus,
+    totalLimit: totalLimit, // 使用新的计算方式
     hourlyLimit: config.hourlyLimit
   };
 };
