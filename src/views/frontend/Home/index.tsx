@@ -277,6 +277,7 @@ const Home: React.FC = () => {
           onToggleMemberCard={() => {}} // 主页不需要切换功能
           getMembershipText={getMembershipText}
           style={{ margin: '0 auto' }}
+          enableQrModal={true} // 启用点击会员卡放大QR code功能
         />
         </div>
       </Card>

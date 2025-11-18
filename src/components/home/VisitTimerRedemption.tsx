@@ -290,7 +290,13 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
 
             {/* 合并的进度条显示 */}
             <div style={{ marginBottom: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'flex-end', marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
+                {/* 驻店时间统计 */}
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                  <Text style={{ fontSize: 20, fontWeight: 700, color: '#FFD700' }}>{hoursText}</Text>
+                  <Text style={{ fontSize: 16, fontWeight: 400, color: '#9ca3af' }}>/ {targetHours} hrs</Text>
+                </div>
+                {/* 雪茄兑换统计 */}
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
                   <Text style={{ fontSize: 20, fontWeight: 700, color: '#FFD700' }}>{totalCount}</Text>
                   <Text style={{ fontSize: 16, fontWeight: 400, color: '#9ca3af' }}>/ {currentCigarLimit} Cigars</Text>
@@ -323,7 +329,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                       pointerEvents: 'none'
                     }}>
                       {progressMilestones.map((milestone, index) => {
-                        const position = (milestone.hours / targetHours) * 100;
+                        const position = (milestone.hours / targetHours) * 93;
                         const isCompleted = totalHours >= milestone.hours;
                         
                         return (
@@ -369,10 +375,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
               </div>
 
               {/* 底部信息 */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 32 }}>
-                <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: 400 }}>
-                  <Text style={{ color: '#FFD700', fontWeight: 700 }}>{hoursText}</Text> / {targetHours} hrs
-                </Text>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: 32 }}>
                 <Text style={{ color: '#d1d5db', fontSize: 14, fontWeight: 600 }}>
                   🎁 <Text style={{ color: '#FFD700' }}>25</Text> Cigars / 50 hrs
                 </Text>

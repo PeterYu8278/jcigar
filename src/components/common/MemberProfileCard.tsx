@@ -1,6 +1,7 @@
 // 共享的会员头像/会员卡组件
 import React, { useState } from 'react'
 import { CrownOutlined } from '@ant-design/icons'
+import { Modal } from 'antd'
 import { useQRCode } from '../../hooks/useQRCode'
 import { QRCodeDisplay } from '../common/QRCodeDisplay'
 import { useTranslation } from 'react-i18next'
@@ -13,6 +14,7 @@ interface MemberProfileCardProps {
   getMembershipText: (level: string) => string
   className?: string
   style?: React.CSSProperties
+  enableQrModal?: boolean // 是否启用点击会员卡放大QR code功能（主页场景）
 }
 
 export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
@@ -21,7 +23,8 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
   onToggleMemberCard,
   getMembershipText,
   className = '',
-  style = {}
+  style = {},
+  enableQrModal = false
 }) => {
   const { t } = useTranslation()
   
@@ -30,6 +33,8 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
   const [rotationDirection, setRotationDirection] = useState<'left' | 'right'>('right')
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
+  // QR code 放大显示状态
+  const [qrModalVisible, setQrModalVisible] = useState(false)
 
   // QR Code Hook - 基于会员编号生成引荐链接
   const { qrCodeDataURL, loading: qrLoading, error: qrError } = useQRCode({
@@ -50,6 +55,12 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
 
   const handleTouchEnd = () => {
     if (!touchStart || !touchEnd || isRotating) return
+    
+    // 如果启用了QR modal且显示会员卡，触摸时打开QR modal
+    if (enableQrModal && showMemberCard) {
+      setQrModalVisible(true)
+      return
+    }
     
     const distance = touchStart - touchEnd
     const isLeftSwipe = distance > 50
@@ -73,6 +84,12 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
   // 点击事件处理函数
   const handleClick = (e: React.MouseEvent) => {
     if (isRotating) return
+    
+    // 如果启用了QR modal且显示会员卡，点击时打开QR modal
+    if (enableQrModal && showMemberCard) {
+      setQrModalVisible(true)
+      return
+    }
     
     const rect = e.currentTarget.getBoundingClientRect()
     const clickX = e.clientX - rect.left
@@ -409,6 +426,68 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
           </div>
         )}
       </div>
+      
+      {/* QR Code 放大模态框 */}
+      <Modal
+        title={null}
+        open={qrModalVisible}
+        onCancel={() => setQrModalVisible(false)}
+        footer={null}
+        centered
+        width={400}
+        styles={{
+          body: {
+            padding: '40px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(45, 45, 45, 0.95) 100%)'
+          }
+        }}
+        style={{
+          background: 'rgba(0, 0, 0, 0.8)'
+        }}
+      >
+        <div style={{ 
+          textAlign: 'center',
+          width: '100%'
+        }}>
+          <div style={{ 
+            fontSize: 18, 
+            fontWeight: 700, 
+            color: '#FFFFFF',
+            marginBottom: 24,
+            fontFamily: "'Noto Sans SC', sans-serif"
+          }}>
+            {t('usersAdmin.memberId')}: {user?.memberId || '000000'}
+          </div>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: '20px',
+            background: '#FFFFFF',
+            borderRadius: '12px',
+            marginBottom: 16
+          }}>
+            <QRCodeDisplay
+              qrCodeDataURL={qrCodeDataURL}
+              loading={qrLoading}
+              error={qrError}
+              size={256}
+              showPlaceholder={true}
+            />
+          </div>
+          <div style={{ 
+            fontSize: 14, 
+            color: 'rgba(255, 255, 255, 0.7)',
+            fontFamily: "'Noto Sans SC', sans-serif"
+          }}>
+            {user?.displayName || t('common.member')}
+          </div>
+        </div>
+      </Modal>
     </>
   )
 }
