@@ -1,9 +1,10 @@
 import React from 'react'
-import { Layout, Space, Typography, Avatar, Button, Tooltip, Divider } from 'antd'
-import { HomeOutlined, DashboardOutlined } from '@ant-design/icons'
+import { Layout, Space, Typography, Avatar, Button, Tooltip, Dropdown, MenuProps, message } from 'antd'
+import { HomeOutlined, DashboardOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../../store/modules/auth'
+import { logoutUser } from '../../services/firebase/auth'
 import LanguageSwitcher from '../common/LanguageSwitcher'
 
 const { Header } = Layout
@@ -32,6 +33,41 @@ const AppHeader: React.FC = () => {
       navigate('/admin')
     }
   }
+
+  const handleLogout = async () => {
+    try {
+      const result = await logoutUser()
+      if (result.success) {
+        useAuthStore.getState().logout()
+        message.success(t('auth.logoutSuccess', { defaultValue: '已登出' }))
+        navigate('/login')
+      } else {
+        message.error(result.error?.message || t('auth.logoutFailed', { defaultValue: '登出失败' }))
+      }
+    } catch (error: any) {
+      message.error(error.message || t('auth.logoutFailed', { defaultValue: '登出失败' }))
+    }
+  }
+
+  // 用户下拉菜单
+  const userMenuItems: MenuProps['items'] = [
+    {
+      key: 'profile',
+      icon: <UserOutlined />,
+      label: t('navigation.profile', { defaultValue: '个人资料' }),
+      onClick: () => navigate('/profile')
+    },
+    {
+      type: 'divider'
+    },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: t('auth.logout', { defaultValue: '登出' }),
+      danger: true,
+      onClick: handleLogout
+    }
+  ]
 
   return (
     <Header
@@ -95,34 +131,39 @@ const AppHeader: React.FC = () => {
           />
         </Tooltip>
 
-        {/* 用户信息 */}
-        <Space
-          size="small"
-          align="center"
-          className="header-user-space"
-          style={{ cursor: 'pointer' }}
-          onClick={() => navigate('/profile')}
+        {/* 用户信息 - 下拉菜单 */}
+        <Dropdown
+          menu={{ items: userMenuItems }}
+          placement="bottomRight"
+          trigger={['click']}
         >
-          <Avatar
-            size={32}
-            src={
-              (user as any)?.profile?.avatar ||
-              'https://lh3.googleusercontent.com/aida-public/AB6AXuDs5P-wl44y-z3P55qwZDWCSmApe-9yEsTNGmr02UNzEVBeCMwE7hIq_ikKnzQespBptCZg7RY1P5pvidROpLwXpyUdWETLOFTJYuGtSIN_2d53icCJctg5HZDPl5zRc3QfbeMOn0fl6RWLZplcDWF9frxhgWKf4-RKyNaQsWhBGRCkTAVvLMDnCcZUDGLg-c8YjnHcY8-gFFEmIaa-bHoz3lEcP-SgonuSLCTv4Fa7-_dYYF8uQ3H5a7nAxZocj7UyH0Jl9CAQQWET'
-            }
-            style={{
-              border: '2px solid rgb(255,215,0)',
-              background: 'linear-gradient(135deg, #2d2d2d 0%, #444 100%)'
-            }}
-          />
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-            <Text style={{ color: 'rgb(248,248,248)', fontWeight: 600, fontSize: 14 }}>
-              {user?.displayName || user?.email || 'User'}
-            </Text>
-            <Text style={{ color: 'rgb(255,215,0)', fontSize: 12, fontWeight: 500 }}>
-              {isAdmin ? t('roles.admin', { defaultValue: '管理员' }) : t('roles.member', { defaultValue: '会员' })}
-            </Text>
-          </div>
-        </Space>
+          <Space
+            size="small"
+            align="center"
+            className="header-user-space"
+            style={{ cursor: 'pointer' }}
+          >
+            <Avatar
+              size={32}
+              src={
+                (user as any)?.profile?.avatar ||
+                'https://lh3.googleusercontent.com/aida-public/AB6AXuDs5P-wl44y-z3P55qwZDWCSmApe-9yEsTNGmr02UNzEVBeCMwE7hIq_ikKnzQespBptCZg7RY1P5pvidROpLwXpyUdWETLOFTJYuGtSIN_2d53icCJctg5HZDPl5zRc3QfbeMOn0fl6RWLZplcDWF9frxhgWKf4-RKyNaQsWhBGRCkTAVvLMDnCcZUDGLg-c8YjnHcY8-gFFEmIaa-bHoz3lEcP-SgonuSLCTv4Fa7-_dYYF8uQ3H5a7nAxZocj7UyH0Jl9CAQQWET'
+              }
+              style={{
+                border: '2px solid rgb(255,215,0)',
+                background: 'linear-gradient(135deg, #2d2d2d 0%, #444 100%)'
+              }}
+            />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <Text style={{ color: 'rgb(248,248,248)', fontWeight: 600, fontSize: 14 }}>
+                {user?.displayName || user?.email || 'User'}
+              </Text>
+              <Text style={{ color: 'rgb(255,215,0)', fontSize: 12, fontWeight: 500 }}>
+                {isAdmin ? t('roles.admin', { defaultValue: '管理员' }) : t('roles.member', { defaultValue: '会员' })}
+              </Text>
+            </div>
+          </Space>
+        </Dropdown>
       </Space>
     </Header>
   )

@@ -165,6 +165,7 @@
     "loginSuccess": "登录成功",
     "logoutSuccess": "退出成功",
     "loginFailed": "登录失败",
+    "logoutFailed": "登出失败",
     "pleaseLogin": "请先登录",
     "invalidCredentials": "用户名或密码错误",
     "emailRequired": "请输入邮箱",

@@ -167,6 +167,7 @@
     "loginSuccess": "Login successful",
     "logoutSuccess": "Logout successful",
     "loginFailed": "Login failed",
+    "logoutFailed": "Logout failed",
     "pleaseLogin": "Please login first",
     "invalidCredentials": "Invalid username or password",
     "emailRequired": "Please enter email",

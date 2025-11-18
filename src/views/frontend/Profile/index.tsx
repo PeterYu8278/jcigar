@@ -120,14 +120,12 @@ const Profile: React.FC = () => {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
-      paddingTop: isMobile ? '60px' : '80px',
+      paddingTop: isMobile ? '0px' : '60px',
       paddingBottom: isMobile ? '80px' : '40px'
     }}>
       <div style={{
         maxWidth: '640px',
-        margin: '0 auto',
-        padding: isMobile ? '0 16px' : '0 24px'
+        margin: '0 auto'
       }}>
         {/* Header */}
         <div style={{
