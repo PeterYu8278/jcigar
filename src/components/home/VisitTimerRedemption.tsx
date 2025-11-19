@@ -4,7 +4,9 @@ import { Card, Typography, Button, Space, Progress, message, Image } from 'antd'
 import { ClockCircleOutlined, GiftOutlined, ShoppingCartOutlined, TrophyOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../store/modules/auth';
 import { getPendingVisitSession } from '../../services/firebase/visitSessions';
-import { getUserRedemptionLimits, canUserRedeem, getDailyRedemptions, getTotalRedemptions, getRedemptionConfig } from '../../services/firebase/redemption';
+import { getUserRedemptionLimits, canUserRedeem, getDailyRedemptions, getTotalRedemptions, getHourlyRedemptions, getRedemptionConfig, createRedemptionRecord } from '../../services/firebase/redemption';
+import { createMembershipFeeRecord, deductMembershipFee } from '../../services/firebase/membershipFee';
+import { getUserData } from '../../services/firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import type { VisitSession } from '../../types';
 import dayjs from 'dayjs';
@@ -16,19 +18,82 @@ interface VisitTimerRedemptionProps {
 }
 
 export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ style }) => {
-  const { user } = useAuthStore();
+  const { user, setUser } = useAuthStore();
   const navigate = useNavigate();
   const [currentSession, setCurrentSession] = useState<VisitSession | null>(null);
   const [duration, setDuration] = useState<string>('00:00:00');
   const [lastCheckIn, setLastCheckIn] = useState<Date | null>(null);
   const [loading, setLoading] = useState(false);
-  const [limits, setLimits] = useState({ dailyLimit: 3, totalLimit: 25 });
+  const [limits, setLimits] = useState({ dailyLimit: 3, totalLimit: 25, hourlyLimit: undefined as number | undefined });
   const [dailyCount, setDailyCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const [hourlyCount, setHourlyCount] = useState(0);
   const [cutoffTime, setCutoffTime] = useState('23:00');
   const [totalHours, setTotalHours] = useState(0);
   const [targetHours, setTargetHours] = useState(150);
   const [milestones, setMilestones] = useState<Array<{ hoursRequired: number; dailyLimitBonus: number; totalLimitBonus?: number }>>([]);
+  const [canRedeemThisHour, setCanRedeemThisHour] = useState(true);
+  const [countdownSeconds, setCountdownSeconds] = useState<number | null>(null); // 倒计时剩余秒数
+  
+  // 加载倒计时状态（从localStorage）
+  useEffect(() => {
+    if (!user?.id) {
+      setCountdownSeconds(null);
+      return;
+    }
+
+    const storageKey = `redeem_countdown_${user.id}`;
+    const savedTimestamp = localStorage.getItem(storageKey);
+    
+    
+    if (savedTimestamp) {
+      const lastClickTime = parseInt(savedTimestamp, 10);
+      const now = Date.now();
+      const elapsed = Math.floor((now - lastClickTime) / 1000); // 已过秒数
+      const remaining = Math.max(0, 3600 - elapsed); // 1小时 = 3600秒
+      
+      
+      if (remaining > 0) {
+        setCountdownSeconds(remaining);
+      } else {
+        // 倒计时已结束，清除localStorage
+        localStorage.removeItem(storageKey);
+        setCountdownSeconds(null);
+      }
+    } else {
+      setCountdownSeconds(null);
+    }
+  }, [user?.id]);
+
+  // 倒计时更新
+  useEffect(() => {
+    if (countdownSeconds === null || countdownSeconds <= 0) {
+      return;
+    }
+
+
+    const interval = setInterval(() => {
+      setCountdownSeconds(prev => {
+        if (prev === null || prev <= 1) {
+          // 倒计时结束，清除localStorage
+          if (user?.id) {
+            const storageKey = `redeem_countdown_${user.id}`;
+            localStorage.removeItem(storageKey);
+          }
+          return null;
+        }
+        const newValue = prev - 1;
+        if (newValue % 60 === 0) {
+          // 每分钟记录一次日志
+        }
+        return newValue;
+      });
+    }, 1000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [countdownSeconds, user?.id]);
   
   // 计算基于小时数的兑换限额（每50小时+25支）
   const calculateCigarLimitFromHours = (hours: number): number => {
@@ -82,55 +147,203 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
     return () => clearInterval(interval);
   }, [currentSession]);
 
-  // 加载兑换数据和时长数据
-  useEffect(() => {
+  // 获取当前会员期限内的累计驻店时长
+  const loadTotalHours = async () => {
     if (!user?.id) {
       setTotalHours(0);
       return;
     }
+    const userId = user.id;
+    try {
+      const { getUserMembershipPeriod } = await import('../../services/firebase/membershipFee');
+      const { getUserVisitSessions } = await import('../../services/firebase/visitSessions');
+      const period = await getUserMembershipPeriod(userId);
+      
+      const sessions = await getUserVisitSessions(userId);
+      
+      if (!period) {
+        console.warn('=== [VisitTimerRedemption] 没有找到会员期限，累计驻店时长设为0 ===');
+        console.warn('用户ID:', userId);
+        console.warn('用户名称:', user.displayName);
+        console.warn('用户状态:', user.status);
+          console.warn('所有驻店记录:', {
+            totalSessions: sessions.length,
+            sessions: sessions.map(s => ({
+              id: s.id,
+              status: s.status,
+              checkInAt: s.checkInAt?.toISOString(),
+              checkInAtLocal: s.checkInAt?.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }),
+              checkOutAt: s.checkOutAt?.toISOString(),
+              checkOutAtLocal: s.checkOutAt?.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }),
+              durationMinutes: s.durationMinutes,
+              durationHours: s.durationHours
+            }))
+          });
+          console.warn('原因: 用户没有paid状态的年费记录，无法确定会员期限');
+          console.warn('建议: 需要先开通会员（创建并支付年费）才能计算累计驻店时长');
+          console.warn('==========================================');
+          setTotalHours(0);
+          return;
+        }
 
-    const hours = user.membership?.totalVisitHours || 0;
-    setTotalHours(hours);
+        
+        const periodSessions = sessions.filter(session => {
+          if (session.status !== 'completed' || !session.checkOutAt) {
+            return false;
+          }
+          const inPeriod = session.checkOutAt >= period.startDate && session.checkOutAt < period.endDate;
+          return inPeriod;
+        });
+        
+        
+        const hours = periodSessions.reduce((sum, session) => sum + (session.durationHours || 0), 0);
+        
+        
+        setTotalHours(hours);
+      } catch (error) {
+        console.error('加载累计驻店时长失败:', error);
+        setTotalHours(0);
+      }
+    };
 
-    const loadData = async () => {
-      try {
-        const userLimits = await getUserRedemptionLimits(user.id);
-        setLimits(userLimits);
+  // 加载兑换数据和时长数据
+  const loadData = async () => {
+    if (!user?.id) {
+      setTotalHours(0);
+      return;
+    }
+    const userId = user.id;
+    try {
+      // 加载累计驻店时长
+      await loadTotalHours();
+
+      const userLimits = await getUserRedemptionLimits(userId);
+        setLimits({
+          dailyLimit: userLimits.dailyLimit,
+          totalLimit: userLimits.totalLimit,
+          hourlyLimit: userLimits.hourlyLimit
+        });
 
         const config = await getRedemptionConfig();
         if (config) {
           setCutoffTime(config.cutoffTime);
           
-          // 加载里程碑配置
-          if (config.milestoneRewards && config.milestoneRewards.length > 0) {
-            const sortedRewards = [...config.milestoneRewards].sort((a, b) => a.hoursRequired - b.hoursRequired);
-            setMilestones(sortedRewards);
-            // 设置目标为最高里程碑
-            const maxMilestone = sortedRewards[sortedRewards.length - 1];
-            if (maxMilestone) {
-              setTargetHours(maxMilestone.hoursRequired);
-            }
-          }
+          // 设置目标为150小时（固定里程碑）
+          setTargetHours(150);
+          
+          // 生成固定里程碑（50, 100, 150小时）
+          setMilestones([
+            { hoursRequired: 50, dailyLimitBonus: 1 },
+            { hoursRequired: 100, dailyLimitBonus: 2 },
+            { hoursRequired: 150, dailyLimitBonus: 3 }
+          ]);
         }
 
-        // 获取当日兑换记录
+        // 获取当日兑换记录（只计算已完成的记录）
         const today = new Date().toISOString().split('T')[0];
-        const dailyRedemptions = await getDailyRedemptions(user.id, today);
-        setDailyCount(dailyRedemptions.reduce((sum, r) => sum + r.quantity, 0));
+        const dailyRedemptions = await getDailyRedemptions(userId, today);
+        const completedDailyRedemptions = dailyRedemptions.filter(r => r.status === 'completed');
+        const dailyCountValue = completedDailyRedemptions.reduce((sum, r) => sum + r.quantity, 0);
+        setDailyCount(dailyCountValue);
+        
 
-        // 获取总兑换记录
-        const totalRedemptions = await getTotalRedemptions(user.id);
-        setTotalCount(totalRedemptions.reduce((sum, r) => sum + r.quantity, 0));
+        // 获取总兑换记录（只计算已完成的记录）
+        const totalRedemptions = await getTotalRedemptions(userId);
+        const completedTotalRedemptions = totalRedemptions.filter(r => r.status === 'completed');
+        setTotalCount(completedTotalRedemptions.reduce((sum, r) => sum + r.quantity, 0));
+
+        // 获取本小时兑换记录（用于检查每小时限制）
+        try {
+          const now = new Date();
+          const hourKey = now.toISOString().split(':')[0]; // YYYY-MM-DDTHH
+          const hourlyRedemptions = await getHourlyRedemptions(userId, hourKey);
+        const currentHourlyCount = hourlyRedemptions.reduce((sum, r) => sum + r.quantity, 0);
+        setHourlyCount(currentHourlyCount);
+        
+        // 检查本小时是否还可以兑换（默认每小时只能兑换1次）
+        const effectiveHourlyLimit = userLimits.hourlyLimit !== undefined ? userLimits.hourlyLimit : 1;
+        setCanRedeemThisHour(currentHourlyCount < effectiveHourlyLimit);
+        
       } catch (error) {
-        console.error('加载兑换数据失败:', error);
+        console.error('[VisitTimerRedemption] 获取每小时兑换记录失败:', error);
+        // 如果获取失败，默认允许兑换（避免因为查询失败而禁用按钮）
+        setCanRedeemThisHour(true);
+        setHourlyCount(0);
       }
-    };
+    } catch (error) {
+      console.error('加载兑换数据失败:', error);
+    }
+  };
 
+  // 加载兑换数据和时长数据
+  useEffect(() => {
     loadData();
     const interval = setInterval(loadData, 30000); // 每30秒刷新一次
 
     return () => clearInterval(interval);
   }, [user]);
+
+  // 开通会员
+  const handleActivateMembership = async () => {
+    if (!user?.id) {
+      message.warning('请先登录');
+      return;
+    }
+
+    if (loading) {
+      return; // 防止重复点击
+    }
+
+    setLoading(true);
+
+    try {
+      // 创建年费记录（dueDate设为今天，立即生效）
+      const today = new Date();
+      const result = await createMembershipFeeRecord(
+        user.id,
+        today,
+        'initial'
+      );
+
+      if (!result.success || !result.recordId) {
+        message.error(result.error || '创建年费记录失败');
+        setLoading(false);
+        return;
+      }
+
+      // 立即尝试扣除年费
+      const deductResult = await deductMembershipFee(result.recordId);
+
+      if (deductResult.success) {
+        message.success('会员开通成功！');
+        
+        // 刷新用户信息
+        try {
+          const updatedUser = await getUserData(user.id);
+          if (updatedUser) {
+            setUser(updatedUser);
+          }
+        } catch (error) {
+          console.error('刷新用户信息失败:', error);
+        }
+        
+        // 重新加载数据
+        await loadData();
+      } else {
+        // 如果积分不足，提示用户
+        if (deductResult.error?.includes('积分不足')) {
+          message.warning(deductResult.error);
+        } else {
+          message.error(deductResult.error || '扣除年费失败，请稍后重试');
+        }
+      }
+    } catch (error: any) {
+      console.error('开通会员失败:', error);
+      message.error(error.message || '开通会员失败，请重试');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleRedeem = async () => {
     if (!user?.id) {
@@ -138,22 +351,53 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
       return;
     }
 
-    // 检查是否有pending session
-    const session = await getPendingVisitSession(user.id);
-    if (!session) {
-      message.warning('请先check-in才能兑换');
-      return;
+    if (loading) {
+      return; // 防止重复点击
     }
 
-    // 检查是否可以兑换
-    const canRedeem = await canUserRedeem(user.id, 1);
-    if (!canRedeem.canRedeem) {
-      message.warning(canRedeem.reason || '无法兑换');
-      return;
-    }
+    setLoading(true);
 
-    // 跳转到兑换页面（需要在管理后台完成兑换）
-    message.info('兑换功能需在驻店时联系管理员操作');
+    try {
+      // 检查是否有pending session
+      const session = await getPendingVisitSession(user.id);
+      if (!session) {
+        message.warning('请先check-in才能兑换');
+        setLoading(false);
+        return;
+      }
+
+      // 检查是否可以兑换
+      const canRedeem = await canUserRedeem(user.id, 1);
+      if (!canRedeem.canRedeem) {
+        message.warning(canRedeem.reason || '无法兑换');
+        setLoading(false);
+        return;
+      }
+
+      // 创建待处理的兑换记录（等待管理员选择雪茄）
+      const { createPendingRedemptionRecord } = await import('../../services/firebase/redemption');
+      const result = await createPendingRedemptionRecord(user.id, session.id, 1);
+      
+      if (result.success) {
+        message.success('兑换请求已提交，请等待管理员选择雪茄产品');
+        
+        // 开始1小时倒计时
+        const storageKey = `redeem_countdown_${user.id}`;
+        const now = Date.now();
+        localStorage.setItem(storageKey, now.toString());
+        setCountdownSeconds(3600); // 1小时 = 3600秒
+        
+        
+        // 数据会在管理员确认后，通过定时刷新（每30秒）自动更新
+      } else {
+        message.error(result.error || '提交兑换请求失败');
+      }
+    } catch (error: any) {
+      console.error('兑换失败:', error);
+      message.error(error.message || '兑换失败，请重试');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!user) {
@@ -170,6 +414,8 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
   const [cutoffHour, cutoffMinute] = cutoffTime.split(':').map(Number);
   const cutoff = new Date(now);
   cutoff.setHours(cutoffHour, cutoffMinute, 0, 0);
+  // 如果当前时间已经过了今天的截止时间，检查是否应该允许兑换
+  // 如果当前时间小于截止时间，说明还在今天，允许兑换
   const isBeforeCutoff = now < cutoff;
 
   // 计算合并后的进度条数据
@@ -199,7 +445,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
         borderRadius: 12,
         ...style
       }}
-      bodyStyle={{ padding: 16 }}
+      styles={{ body: { padding: 16 } }}
     >
       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
         {/* 上半部分：计时器区域 */}
@@ -233,29 +479,110 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
 
           {/* 右侧：Redeem 按钮 */}
           <div style={{ marginLeft: 16, textAlign: 'center' }}>
-            <Button
-              type="primary"
-              size="large"
-              icon={<ShoppingCartOutlined />}
-              onClick={handleRedeem}
-              disabled={!isBeforeCutoff || dailyRemaining <= 0 || !currentSession}
-              loading={loading}
-              style={{
+            {(() => {
+              // 计算倒计时显示文本
+              const formatCountdown = (seconds: number): string => {
+                const hours = Math.floor(seconds / 3600);
+                const minutes = Math.floor((seconds % 3600) / 60);
+                const secs = seconds % 60;
+                return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+              };
+
+              // 检查用户会员状态
+              const isActiveMember = user?.status === 'active';
+              
+              // 如果不是活跃会员，显示开通会员按钮
+              if (!isActiveMember) {
+                return (
+                  <>
+                    <Button
+                      type="primary"
+                      size="large"
+                      icon={<TrophyOutlined />}
+                      onClick={handleActivateMembership}
+                      disabled={loading}
+                      loading={loading}
+                      style={{
+                        background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
+                        border: 'none',
+                        color: '#111',
+                        height: 48,
+                        fontSize: 16,
+                        fontWeight: 600,
+                        minWidth: 120
+                      }}
+                      title="开通会员需要扣除年费积分"
+                    >
+                      开通会员
+                    </Button>
+                    <Text style={{ fontSize: 13, display: 'block', marginTop: 8, color: '#FFFFFF' }}>
+                      当前积分: {user?.membership?.points || 0}
+                    </Text>
+                  </>
+                );
+              }
+
+              // 判断按钮状态和显示文本
+              let buttonText = 'Redeem';
+              let isDisabled = true;
+              let buttonStyle: React.CSSProperties = {
                 background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
                 border: 'none',
                 color: '#111',
                 height: 48,
                 fontSize: 16,
                 fontWeight: 600,
-                minWidth: 120,
-                opacity: (!isBeforeCutoff || dailyRemaining <= 0 || !currentSession) ? 0.5 : 1
-              }}
-            >
-              Redeem
-            </Button>
-            <Text style={{ fontSize: 13, display: 'block', marginTop: 8, color: '#FFFFFF' }}>
-              Daily Limit: {dailyCount}/{limits.dailyLimit}
-            </Text>
+                minWidth: 120
+              };
+
+              // 如果dailyCount >= dailyLimit，显示"No Quota"
+              if (dailyCount >= limits.dailyLimit) {
+                buttonText = 'No Quota';
+                isDisabled = true;
+                buttonStyle.opacity = 0.5;
+              }
+              // 如果倒计时中，显示倒计时
+              else if (countdownSeconds !== null && countdownSeconds > 0) {
+                buttonText = formatCountdown(countdownSeconds);
+                isDisabled = true;
+                buttonStyle.opacity = 0.7;
+              }
+              // 其他情况，检查是否可以兑换
+              else {
+                isDisabled = !isBeforeCutoff || !currentSession || loading;
+                buttonStyle.opacity = isDisabled ? 0.5 : 1;
+              }
+
+              return (
+                <>
+                  <Button
+                    type="primary"
+                    size="large"
+                    icon={countdownSeconds === null || countdownSeconds <= 0 ? <ShoppingCartOutlined /> : undefined}
+                    onClick={handleRedeem}
+                    disabled={isDisabled || loading}
+                    loading={loading}
+                    style={buttonStyle}
+                    title={
+                      dailyCount >= limits.dailyLimit
+                        ? '今日兑换限额已用完'
+                        : countdownSeconds !== null && countdownSeconds > 0
+                          ? `请等待 ${formatCountdown(countdownSeconds)} 后再次兑换`
+                          : !currentSession 
+                            ? '请先check-in才能兑换' 
+                            : !isBeforeCutoff 
+                              ? `兑换截止时间为 ${cutoffTime}，请明日再试`
+                              : undefined
+                    }
+                  >
+                    {buttonText}
+                  </Button>
+                  <Text style={{ fontSize: 13, display: 'block', marginTop: 8, color: '#FFFFFF' }}>
+                    Daily Limit: {dailyCount}/{limits.dailyLimit}
+                  </Text>
+                </>
+              );
+            })()}
           </div>
         </div>
 

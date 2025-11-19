@@ -9,6 +9,7 @@ import {
   query, 
   where, 
   orderBy,
+  limit,
   updateDoc,
   Timestamp
 } from 'firebase/firestore';
@@ -16,6 +17,22 @@ import { db } from '../../config/firebase';
 import { GLOBAL_COLLECTIONS } from '../../config/globalCollections';
 import type { MembershipFeeConfig, MembershipFeeRecord, User } from '../../types';
 import { createPointsRecord } from './pointsRecords';
+
+/**
+ * 将 Firestore 文档转换为 MembershipFeeRecord
+ */
+const mapDocToMembershipFeeRecord = (doc: any): MembershipFeeRecord => {
+  const data = doc.data();
+  return {
+    id: doc.id,
+    ...data,
+    dueDate: data.dueDate?.toDate?.() || new Date(data.dueDate),
+    deductedAt: data.deductedAt?.toDate?.() || data.deductedAt,
+    previousDueDate: data.previousDueDate?.toDate?.() || data.previousDueDate,
+    createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+    updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt)
+  } as MembershipFeeRecord;
+};
 
 /**
  * 获取会员费配置
@@ -164,37 +181,112 @@ export const createMembershipFeeRecord = async (
 };
 
 /**
- * 获取待扣费的年费记录
+ * 获取待扣费的年费记录（查询所有到期的pending记录）
  */
 export const getPendingMembershipFeeRecords = async (targetDate?: Date): Promise<MembershipFeeRecord[]> => {
   try {
     const date = targetDate || new Date();
-    const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    const endOfDay = new Date(startOfDay);
-    endOfDay.setDate(endOfDay.getDate() + 1);
+    const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    endOfDay.setHours(23, 59, 59, 999); // 当天的最后一刻
 
+
+    // 查询所有status为pending且dueDate <= endOfDay的记录
     const q = query(
       collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
       where('status', '==', 'pending'),
-      where('dueDate', '>=', Timestamp.fromDate(startOfDay)),
-      where('dueDate', '<', Timestamp.fromDate(endOfDay)),
+      where('dueDate', '<=', Timestamp.fromDate(endOfDay)),
       orderBy('dueDate', 'asc')
     );
 
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-        dueDate: data.dueDate?.toDate?.() || new Date(data.dueDate),
-        deductedAt: data.deductedAt?.toDate?.() || data.deductedAt,
-        previousDueDate: data.previousDueDate?.toDate?.() || data.previousDueDate,
-        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
-        updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt)
-      } as MembershipFeeRecord;
-    });
-  } catch (error) {
+    const records = snapshot.docs.map(mapDocToMembershipFeeRecord);
+
+    // 查询所有pending记录用于调试（不限制日期）
+    try {
+      const allPendingQuery = query(
+        collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
+        where('status', '==', 'pending')
+      );
+      const allPendingSnapshot = await getDocs(allPendingQuery);
+      const allPendingRecords = allPendingSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          dueDate: data.dueDate?.toDate?.() || new Date(data.dueDate),
+          amount: data.amount,
+          userId: data.userId
+        };
+      });
+
+      
+      // 如果有pending记录但查询结果为0，输出警告
+      if (allPendingRecords.length > 0 && records.length === 0) {
+        const notDueRecords = allPendingRecords.filter(r => r.dueDate > endOfDay);
+        if (notDueRecords.length > 0) {
+          notDueRecords.forEach(r => {
+            const daysUntilDue = Math.ceil((r.dueDate.getTime() - endOfDay.getTime()) / (1000 * 60 * 60 * 24));
+            console.warn(
+              `[getPendingMembershipFeeRecords] 有pending记录但未到期: 用户 ${r.userId}, ` +
+              `应扣费日期 ${r.dueDate.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}, ` +
+              `距离到期还有 ${daysUntilDue} 天`
+            );
+          });
+          console.warn('[getPendingMembershipFeeRecords] 未到期记录详情:', {
+            count: notDueRecords.length,
+            endOfDay: endOfDay.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }),
+            records: notDueRecords.map(r => ({
+              id: r.id,
+              userId: r.userId,
+              dueDate: r.dueDate.toISOString(),
+              dueDateLocal: r.dueDate.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }),
+              amount: r.amount,
+              daysUntilDue: Math.ceil((r.dueDate.getTime() - endOfDay.getTime()) / (1000 * 60 * 60 * 24))
+            }))
+          });
+        }
+      }
+    } catch (debugError) {
+      // 调试查询失败不影响主流程
+    }
+
+    return records;
+  } catch (error: any) {
+    console.error('[getPendingMembershipFeeRecords] 查询失败:', error);
+    // 如果是索引错误，尝试不使用orderBy
+    if (error.code === 'failed-precondition' || error.message?.includes('index')) {
+      try {
+        const date = targetDate || new Date();
+        const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        endOfDay.setHours(23, 59, 59, 999);
+        
+        const q = query(
+          collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
+          where('status', '==', 'pending'),
+          where('dueDate', '<=', Timestamp.fromDate(endOfDay))
+        );
+        
+        const snapshot = await getDocs(q);
+        const records = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            dueDate: data.dueDate?.toDate?.() || new Date(data.dueDate),
+            deductedAt: data.deductedAt?.toDate?.() || data.deductedAt,
+            previousDueDate: data.previousDueDate?.toDate?.() || data.previousDueDate,
+            createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+            updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt)
+          } as MembershipFeeRecord;
+        });
+        
+        // 手动排序
+        records.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+        return records;
+      } catch (retryError) {
+        console.error('[getPendingMembershipFeeRecords] 重试查询也失败:', retryError);
+        return [];
+      }
+    }
     return [];
   }
 };
@@ -214,10 +306,15 @@ export const deductMembershipFee = async (
     const recordData = recordDoc.data();
     const record: MembershipFeeRecord = {
       id: recordDoc.id,
-      ...recordData,
+      userId: recordData.userId,
+      userName: recordData.userName || '',
+      amount: recordData.amount || 0,
+      status: recordData.status || 'pending',
+      renewalType: recordData.renewalType || 'initial',
       dueDate: recordData.dueDate?.toDate?.() || new Date(recordData.dueDate),
       deductedAt: recordData.deductedAt?.toDate?.() || recordData.deductedAt,
       previousDueDate: recordData.previousDueDate?.toDate?.() || recordData.previousDueDate,
+      pointsRecordId: recordData.pointsRecordId || null,
       createdAt: recordData.createdAt?.toDate?.() || new Date(recordData.createdAt),
       updatedAt: recordData.updatedAt?.toDate?.() || new Date(recordData.updatedAt)
     };
@@ -236,39 +333,36 @@ export const deductMembershipFee = async (
     const currentPoints = userData.membership?.points || 0;
     const newPoints = currentPoints - record.amount;
 
-    // 更新用户积分（允许负数）
-    await updateDoc(doc(db, GLOBAL_COLLECTIONS.USERS, record.userId), {
-      'membership.points': newPoints,
-      updatedAt: Timestamp.fromDate(new Date())
-    });
-
-    // 创建积分记录
-    const pointsRecord = await createPointsRecord({
-      userId: record.userId,
-      userName: record.userName,
-      type: 'spend',
-      amount: record.amount,
-      source: 'membership_fee',
-      description: `会员年费 (${record.renewalType === 'initial' ? '首次开通' : '续费'})`,
-      relatedId: recordId,
-      balance: newPoints
-    });
-
     const now = new Date();
 
-    // 更新年费记录状态
-    if (newPoints >= 0) {
-      // 扣费成功
+    // 检查积分是否足够
+    if (currentPoints >= record.amount) {
+      // 积分足够，自动扣除并激活会员
+
+      // 更新用户积分
+      await updateDoc(doc(db, GLOBAL_COLLECTIONS.USERS, record.userId), {
+        'membership.points': newPoints,
+        status: 'active', // 激活会员
+        updatedAt: Timestamp.fromDate(now)
+      });
+
+      // 创建积分记录（在积分记录标签页显示）
+      const pointsRecord = await createPointsRecord({
+        userId: record.userId,
+        userName: record.userName,
+        type: 'spend',
+        amount: record.amount,
+        source: 'membership_fee',
+        description: `会员年费 (${record.renewalType === 'initial' ? '首次开通' : '续费'})`,
+        relatedId: recordId,
+        balance: newPoints
+      });
+
+      // 更新年费记录状态为已支付
       await updateDoc(doc(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS, recordId), {
         status: 'paid',
         deductedAt: Timestamp.fromDate(now),
         pointsRecordId: pointsRecord?.id || null,
-        updatedAt: Timestamp.fromDate(now)
-      });
-
-      // 更新用户状态为活跃
-      await updateDoc(doc(db, GLOBAL_COLLECTIONS.USERS, record.userId), {
-        status: 'active',
         updatedAt: Timestamp.fromDate(now)
       });
 
@@ -292,20 +386,23 @@ export const deductMembershipFee = async (
         record.dueDate,
         record.userName
       );
-    } else {
-      // 扣费失败（余额不足）
-      await updateDoc(doc(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS, recordId), {
-        status: 'failed',
-        deductedAt: Timestamp.fromDate(now),
-        pointsRecordId: pointsRecord?.id || null,
-        updatedAt: Timestamp.fromDate(now)
-      });
 
-      // 更新用户状态为不活跃
+    } else {
+      // 积分不足，不扣除，保持pending状态，设置用户为不活跃
+
+      // 更新用户状态为不活跃（但不扣除积分，保持pending状态）
       await updateDoc(doc(db, GLOBAL_COLLECTIONS.USERS, record.userId), {
         status: 'inactive',
         updatedAt: Timestamp.fromDate(now)
       });
+
+      // 年费记录保持pending状态，等待用户充值后再次尝试
+      // 不创建积分记录，因为实际上没有扣除积分
+      
+      return { 
+        success: false, 
+        error: `积分不足，需要 ${record.amount} 积分，当前只有 ${currentPoints} 积分，缺少 ${record.amount - currentPoints} 积分` 
+      };
     }
 
     return { success: true };
@@ -322,6 +419,7 @@ export const getUserMembershipFeeRecords = async (
   limitCount: number = 20
 ): Promise<MembershipFeeRecord[]> => {
   try {
+    
     const q = query(
       collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
       where('userId', '==', userId),
@@ -330,20 +428,128 @@ export const getUserMembershipFeeRecords = async (
     );
 
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-        dueDate: data.dueDate?.toDate?.() || new Date(data.dueDate),
-        deductedAt: data.deductedAt?.toDate?.() || data.deductedAt,
-        previousDueDate: data.previousDueDate?.toDate?.() || data.previousDueDate,
-        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
-        updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt)
-      } as MembershipFeeRecord;
+    const records = snapshot.docs.map(mapDocToMembershipFeeRecord);
+    
+    return records;
+  } catch (error: any) {
+    console.error('[getUserMembershipFeeRecords] 查询失败，尝试不使用orderBy:', error);
+    
+    // 如果是因为缺少索引而失败，尝试不使用orderBy重新查询
+    try {
+      const q = query(
+        collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
+        where('userId', '==', userId),
+        limit(limitCount)
+      );
+
+      const snapshot = await getDocs(q);
+      const records = snapshot.docs.map(mapDocToMembershipFeeRecord);
+      
+      // 手动排序
+      const sortedRecords = records.sort((a, b) => b.dueDate.getTime() - a.dueDate.getTime());
+      
+      return sortedRecords;
+    } catch (retryError) {
+      console.error('[getUserMembershipFeeRecords] 重试查询也失败:', retryError);
+      return [];
+    }
+  }
+};
+
+/**
+ * 获取所有年费记录（管理员查看）
+ */
+export const getAllMembershipFeeRecords = async (
+  statusFilter?: 'pending' | 'paid' | 'failed' | 'cancelled',
+  limitCount: number = 100
+): Promise<MembershipFeeRecord[]> => {
+  try {
+    
+    let q;
+    if (statusFilter) {
+      q = query(
+        collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
+        where('status', '==', statusFilter),
+        orderBy('dueDate', 'desc'),
+        limit(limitCount)
+      );
+    } else {
+      q = query(
+        collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
+        orderBy('dueDate', 'desc'),
+        limit(limitCount)
+      );
+    }
+
+    const snapshot = await getDocs(q);
+    const records = snapshot.docs.map(mapDocToMembershipFeeRecord);
+    
+    
+    return records;
+  } catch (error: any) {
+    console.error('[getAllMembershipFeeRecords] 查询失败，尝试不使用orderBy:', error);
+    try {
+      let q;
+      if (statusFilter) {
+        q = query(
+          collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
+          where('status', '==', statusFilter),
+          limit(limitCount)
+        );
+      } else {
+        q = query(
+          collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
+          limit(limitCount)
+        );
+      }
+      const snapshot = await getDocs(q);
+      const records = snapshot.docs.map(mapDocToMembershipFeeRecord);
+      return records.sort((a, b) => b.dueDate.getTime() - a.dueDate.getTime());
+    } catch (retryError) {
+      console.error('[getAllMembershipFeeRecords] 重试查询也失败:', retryError);
+      return [];
+    }
+  }
+};
+
+export const getUserMembershipPeriod = async (userId: string): Promise<{ startDate: Date; endDate: Date } | null> => {
+  try {
+    // 获取用户所有年费记录
+    const allRecords = await getUserMembershipFeeRecords(userId, 100);
+    
+    
+    // 筛选出paid状态的记录
+    const paidRecords = allRecords.filter(r => r.status === 'paid' && r.deductedAt);
+    
+    
+    if (paidRecords.length === 0) {
+      console.warn('[getUserMembershipPeriod] 没有找到paid状态的年费记录');
+      return null;
+    }
+    
+    // 按deductedAt降序排序，取最新的
+    const sortedPaidRecords = paidRecords.sort((a, b) => {
+      const dateA = a.deductedAt?.getTime() || 0;
+      const dateB = b.deductedAt?.getTime() || 0;
+      return dateB - dateA;
     });
+    
+    const latestPaidRecord = sortedPaidRecords[0];
+    if (!latestPaidRecord.deductedAt) {
+      console.warn('[getUserMembershipPeriod] 最新paid记录没有deductedAt');
+      return null;
+    }
+    
+    // 会员期限：从deductedAt开始，往后1年
+    const startDate = new Date(latestPaidRecord.deductedAt);
+    const endDate = new Date(startDate);
+    endDate.setFullYear(endDate.getFullYear() + 1);
+    
+    
+    return { startDate, endDate };
   } catch (error) {
-    return [];
+    console.error('获取会员期限失败:', error);
+    return null;
   }
 };
 

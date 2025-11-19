@@ -287,7 +287,7 @@ const Home: React.FC = () => {
 
       {/* 可用余额卡片 */}
       <AvailableBalance />
-
+      
       {/* CTA 横幅 - 神秘礼物 */}
       <MysteryGiftBanner />
 

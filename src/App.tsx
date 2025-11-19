@@ -27,7 +27,6 @@ import CloudinaryTestPage from './views/admin/CloudinaryTest'
 import PerformanceMonitor from './components/admin/PerformanceMonitor'
 import EventOrderDebug from './views/admin/EventOrderDebug'
 import PointsConfigPage from './views/admin/PointsConfig'
-import MembershipFeeConfigPage from './views/admin/MembershipFeeConfig'
 import VisitSessionsPage from './views/admin/VisitSessions'
 import OrphanedUserCleanup from './views/admin/OrphanedUserCleanup'
 
@@ -190,7 +189,6 @@ const AppContent: React.FC = () => {
                   <Route path="/admin/orders" element={<ProtectedRoute roles={['admin']}><AdminOrders /></ProtectedRoute>} />
                   <Route path="/admin/finance" element={<ProtectedRoute roles={['admin']}><AdminFinance /></ProtectedRoute>} />
                   <Route path="/admin/points-config" element={<ProtectedRoute roles={['admin']}><PointsConfigPage /></ProtectedRoute>} />
-                  <Route path="/admin/membership-fee-config" element={<ProtectedRoute roles={['admin']}><MembershipFeeConfigPage /></ProtectedRoute>} />
                   <Route path="/admin/visit-sessions" element={<ProtectedRoute roles={['admin']}><VisitSessionsPage /></ProtectedRoute>} />
                   <Route path="/admin/orphaned-users" element={<ProtectedRoute roles={['admin']}><OrphanedUserCleanup /></ProtectedRoute>} />
                   <Route path="/admin/performance" element={<ProtectedRoute roles={['admin']}><PerformanceMonitor /></ProtectedRoute>} />

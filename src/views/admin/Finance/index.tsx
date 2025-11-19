@@ -138,7 +138,6 @@ const AdminFinance: React.FC = () => {
 
   // 当viewing改变时，更新表单值
   useEffect(() => {
-    console.log('👁️ [Finance] Viewing changed:', viewing)
     if (viewing && editForm) {
       const formValues = {
         transactionDate: toDateSafe(viewing.createdAt) ? dayjs(toDateSafe(viewing.createdAt)) : dayjs(),
@@ -148,10 +147,8 @@ const AdminFinance: React.FC = () => {
         relatedId: viewing.relatedId || undefined,
         relatedOrders: (viewing as any)?.relatedOrders || [],
       }
-      console.log('📝 [Finance] Setting form values:', formValues)
       editForm.setFieldsValue(formValues)
       setIsEditing(false) // 重置编辑状态
-      console.log('✅ [Finance] Form initialized, editing mode: false')
     }
   }, [viewing, editForm])
 
@@ -441,7 +438,6 @@ const AdminFinance: React.FC = () => {
       render: (_: any, record: Transaction) => (
         <Space size="small" style={{ justifyContent: 'center', width: '100%' }}>
           <Button type="link" icon={<EyeOutlined />} size="small" onClick={() => {
-            console.log('👁️ [Finance] View button clicked for transaction:', record)
             setViewing(record)
           }}>
           </Button>
@@ -1043,7 +1039,6 @@ const AdminFinance: React.FC = () => {
                 icon={<EyeOutlined />} 
                 size="small" 
                 onClick={() => {
-                  console.log('👁️ [Finance Mobile] View button clicked for transaction:', transaction)
                   setViewing(transaction)
                 }}
                 style={{ marginLeft: 8 }}
@@ -1074,19 +1069,12 @@ const AdminFinance: React.FC = () => {
           </button>,
           !isEditing ? (
             <button key="edit" type="button" className="cigar-btn-gradient" onClick={() => {
-              console.log('✏️ [Finance] Edit button clicked')
-              console.log('📝 [Finance] Form values before edit:', editForm.getFieldsValue())
               setIsEditing(true)
             }} style={theme.button.primary}>
               {t('common.edit')}
             </button>
           ) : (
             <button key="save" type="button" className="cigar-btn-gradient" onClick={() => {
-              console.log('💾 [Finance] Save button clicked')
-              console.log('📋 [Finance] Form instance:', editForm)
-              console.log('📝 [Finance] Current form values (all):', editForm.getFieldsValue(true))
-              console.log('📱 [Finance] Mobile tab:', isMobile ? mobileTxTab : 'N/A')
-              console.log('🔄 [Finance] Is editing:', isEditing)
               editForm.submit()
             }} style={theme.button.primary}>
               {t('common.save')}
@@ -1129,8 +1117,6 @@ const AdminFinance: React.FC = () => {
                     <button
                       key={tabKey}
                       onClick={() => {
-                        console.log('📱 [Finance] Mobile tab switching from', mobileTxTab, 'to', tabKey)
-                        console.log('📝 [Finance] Form values before tab switch:', editForm.getFieldsValue(true))
                         setMobileTxTab(tabKey)
                       }}
                       style={{ ...baseStyle, ...(isActive ? activeStyle : inactiveStyle) }}
@@ -1164,40 +1150,27 @@ const AdminFinance: React.FC = () => {
               '--required-mark-color': theme.form.requiredMarkColor
             } as React.CSSProperties}
             onFinish={async (values: any) => {
-              console.log('🔍 [Finance] Form onFinish triggered')
-              console.log('📝 [Finance] Form values:', values)
-              console.log('👤 [Finance] Current viewing transaction:', viewing)
-              console.log('🔄 [Finance] Is editing mode:', isEditing)
-              
               setLoading(true)
-              console.log('⏳ [Finance] Loading set to true')
               
               try {
                 const income = Number(values.incomeAmount || 0)
                 const expense = Number(values.expenseAmount || 0)
-                console.log('💰 [Finance] Income:', income, 'Expense:', expense)
                 
                 if (income <= 0 && expense <= 0) {
-                  console.log('❌ [Finance] Validation failed: no income or expense')
                   message.error(t('financeAdmin.enterIncomeOrExpense'))
                   setLoading(false)
                   return
                 }
                 
                 const amount = income - expense
-                console.log('💵 [Finance] Calculated amount:', amount)
-                
                 // 校验relatedOrders分配总额
                 const ro: Array<{ orderId: string; amount: number }> = Array.isArray(values.relatedOrders) ? values.relatedOrders.filter((r: any) => r?.orderId && Number(r?.amount) > 0).map((r: any) => ({ orderId: String(r.orderId), amount: Number(r.amount) })) : []
                 const roSum = ro.reduce((s, r) => s + r.amount, 0)
                 const absTx = Math.abs(amount)
                 const roSumCents = Math.round(roSum * 100)
                 const absTxCents = Math.round(absTx * 100)
-                console.log('🔗 [Finance] Related orders:', ro)
-                console.log('📊 [Finance] Related orders sum:', roSum, 'Transaction amount:', absTx)
                 
                 if (roSumCents > absTxCents) {
-                  console.log('❌ [Finance] Validation failed: related orders exceed transaction amount')
                   message.error(t('financeAdmin.relatedOrdersExceed'))
                   setLoading(false)
                   return
@@ -1223,25 +1196,18 @@ const AdminFinance: React.FC = () => {
                   updated.relatedOrders = [] // 明确设置为空数组以清空关联
                 }
                 
-                console.log('📦 [Finance] Update payload:', updated)
-                console.log('🎯 [Finance] Updating transaction ID:', viewing.id)
-                
                 await updateDocument(COLLECTIONS.TRANSACTIONS, viewing.id, updated)
-                console.log('✅ [Finance] Update successful')
                 
                 message.success(t('financeAdmin.updated'))
                 setIsEditing(false)
                 setViewing(null)
-                console.log('🚪 [Finance] Modal closed, editing mode off')
                 
                 await loadTransactions()
-                console.log('🔄 [Finance] Transactions reloaded')
               } catch (error) {
                 console.error('❌ [Finance] Save error:', error)
                 message.error(t('common.updateFailed'))
               } finally {
                 setLoading(false)
-                console.log('⏳ [Finance] Loading set to false')
               }
             }}
           >

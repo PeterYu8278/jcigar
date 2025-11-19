@@ -172,18 +172,14 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
               border: 'none'
             }}
             onClick={async () => {
-              console.log('📝 Edit/Save button clicked, isEditing:', isEditing, 'event.id:', event.id)
-              
               if (isEditing) {
                 // 🔥 创建模式：一次性创建活动，不要循环调用 onSaveField
                 if (event.id === 'new') {
-                  console.log('🟢 CREATE MODE: Saving as single create operation')
                   // 只调用一次 onSaveField，传入特殊标识
                   await onSaveField('__CREATE_ALL__')
                   onToggleEdit()
                 } else {
                   // 编辑模式：保存所有更改的字段
-                  console.log('🟠 EDIT MODE: Saving changed fields')
                   try {
                     // 保存所有字段
                     const fieldsToSave = ['title', 'description', 'status', 'isPrivate', 'locationName', 'fee', 'maxParticipants', 'image']
@@ -578,18 +574,14 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
               width: isMobile ? '100%' : 'auto'
             }}
             onClick={async () => {
-              console.log('📝 Edit/Save button clicked, isEditing:', isEditing, 'event.id:', event.id)
-              
               if (isEditing) {
                 // 🔥 创建模式：一次性创建活动，不要循环调用 onSaveField
                 if (event.id === 'new') {
-                  console.log('🟢 CREATE MODE: Saving as single create operation')
                   // 只调用一次 onSaveField，传入特殊标识
                   await onSaveField('__CREATE_ALL__')
                   onToggleEdit()
                 } else {
                   // 编辑模式：保存所有更改的字段
-                  console.log('🟠 EDIT MODE: Saving changed fields')
                 try {
                   // 保存所有字段
                   const fieldsToSave = ['title', 'description', 'status', 'isPrivate', 'locationName', 'fee', 'maxParticipants', 'image']

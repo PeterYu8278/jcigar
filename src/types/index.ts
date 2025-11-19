@@ -342,6 +342,11 @@ export interface PointsConfig {
     dailyCheckIn: number;      // 每日签到积分
   };
   
+  // 驻店时长费用
+  visit: {
+    hourlyRate: number;        // 每小时扣除积分
+  };
+  
   updatedAt: Date;
   updatedBy: string;  // 更新人的 userId
 }
@@ -455,7 +460,7 @@ export interface ReloadRecord {
   pointsEquivalent: number;   // 对应的积分（基于汇率）
   
   // 状态
-  status: 'pending' | 'verified' | 'completed' | 'rejected';
+  status: 'pending' | 'completed' | 'rejected';
   
   // 管理员验证
   verifiedAt?: Date;
@@ -504,13 +509,17 @@ export interface RedemptionRecord {
   cigarName: string;
   quantity: number;
   
+  // 状态
+  status: 'pending' | 'completed';  // pending: 用户发起，等待管理员选择雪茄；completed: 管理员已确认
+  
   // 限额追踪
   dayKey: string;            // "2025-10-28" (YYYY-MM-DD)
   hourKey?: string;          // "2025-10-28-14" (YYYY-MM-DD-HH) 如果有每小时限额
   redemptionIndex: number;   // 当日第几次兑换
   
   redeemedAt: Date;
-  redeemedBy: string;        // 管理员ID
+  redeemedBy: string;        // 用户ID（用户发起）或管理员ID（管理员创建/确认）
   
   createdAt: Date;
+  updatedAt?: Date;          // 管理员更新时的时间
 }

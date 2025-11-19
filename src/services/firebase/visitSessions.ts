@@ -17,6 +17,28 @@ import { GLOBAL_COLLECTIONS } from '../../config/globalCollections';
 import type { VisitSession, User } from '../../types';
 
 /**
+ * 处理 visit session 数据，转换日期字段和 redemptions
+ */
+const processVisitSessionData = (data: any, docId: string): VisitSession => {
+  // 处理 redemptions 数组中的日期字段
+  const redemptions = (data.redemptions || []).map((redemption: any) => ({
+    ...redemption,
+    redeemedAt: redemption.redeemedAt?.toDate?.() || new Date(redemption.redeemedAt) || new Date()
+  }));
+  
+  return {
+    id: docId,
+    ...data,
+    checkInAt: data.checkInAt?.toDate?.() || new Date(data.checkInAt),
+    checkOutAt: data.checkOutAt?.toDate?.() || data.checkOutAt,
+    calculatedAt: data.calculatedAt?.toDate?.() || data.calculatedAt,
+    createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+    updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
+    redemptions: redemptions.length > 0 ? redemptions : undefined
+  } as VisitSession;
+};
+
+/**
  * 计算驻店时长（分钟转小时，向上取整）
  * 规则：超过15分钟按半小时算，超过半小时则按1小时算
  */
@@ -40,8 +62,23 @@ export const createVisitSession = async (
   userName?: string
 ): Promise<{ success: boolean; sessionId?: string; error?: string }> => {
   try {
+    
     // 检查用户是否有未完成的session
-    const pendingSession = await getPendingVisitSession(userId);
+    let pendingSession: VisitSession | null = null;
+    try {
+      pendingSession = await getPendingVisitSession(userId);
+    } catch (error: any) {
+      console.error('[createVisitSession] 检查pending session失败:', error);
+      // 如果是索引错误，给出明确提示
+      if (error.code === 'failed-precondition' || error.message?.includes('index')) {
+        return { 
+          success: false, 
+          error: 'Firestore索引未创建，请在Firebase控制台创建复合索引：visitSessions (userId, status, checkInAt)' 
+        };
+      }
+      // 其他错误继续处理
+    }
+    
     if (pendingSession) {
       return { success: false, error: '用户已有未完成的驻店记录，请先check-out' };
     }
@@ -49,12 +86,16 @@ export const createVisitSession = async (
     // 获取用户信息，检查会员状态
     const userDoc = await getDoc(doc(db, GLOBAL_COLLECTIONS.USERS, userId));
     if (!userDoc.exists()) {
+      console.error('[createVisitSession] 用户不存在:', userId);
       return { success: false, error: '用户不存在' };
     }
 
     const userData = userDoc.data() as User;
-    if (userData.status !== 'active') {
-      return { success: false, error: '会员状态不活跃，无法check-in' };
+    
+    // 检查会员状态：undefined 或 'active' 都允许 check-in，只有明确设置为 'inactive' 或 'suspended' 才拒绝
+    if (userData.status && userData.status !== 'active') {
+      console.error('[createVisitSession] 会员状态不活跃:', userData.status);
+      return { success: false, error: `会员状态不活跃（当前状态：${userData.status}），无法check-in` };
     }
 
     // 检查是否为续费后首次驻店
@@ -89,6 +130,7 @@ export const createVisitSession = async (
 
     return { success: true, sessionId: docRef.id };
   } catch (error: any) {
+    console.error('[createVisitSession] 创建失败:', error);
     return { success: false, error: error.message || '创建驻店记录失败' };
   }
 };
@@ -136,10 +178,24 @@ export const completeVisitSession = async (
       durationHours = calculateVisitDuration(durationMinutes);
     }
 
-    // 获取会员费配置
-    const { getMembershipFeeConfig } = await import('./membershipFee');
-    const feeConfig = await getMembershipFeeConfig();
-    const hourlyRate = feeConfig?.hourlyRate || 0;
+    // 获取每小时扣除积分（优先从积分配置读取，如果没有则从会员费配置读取）
+    let hourlyRate = 0;
+    try {
+      const { getPointsConfig } = await import('./pointsConfig');
+      const pointsConfig = await getPointsConfig();
+      if (pointsConfig?.visit?.hourlyRate !== undefined) {
+        hourlyRate = pointsConfig.visit.hourlyRate;
+      } else {
+        // 向后兼容：从会员费配置读取
+        const { getMembershipFeeConfig } = await import('./membershipFee');
+        const feeConfig = await getMembershipFeeConfig();
+        hourlyRate = feeConfig?.hourlyRate || 0;
+      }
+    } catch (error) {
+      console.error('[completeVisitSession] 获取积分扣除配置失败，使用默认值', error);
+      // 如果都失败，使用默认值
+      hourlyRate = 10;
+    }
 
     // 计算应扣除的积分
     let pointsDeducted = 0;
@@ -224,17 +280,14 @@ export const getPendingVisitSession = async (userId: string): Promise<VisitSessi
 
     const docSnap = snapshot.docs[0];
     const data = docSnap.data();
-    return {
-      id: docSnap.id,
-      ...data,
-      checkInAt: data.checkInAt?.toDate?.() || new Date(data.checkInAt),
-      checkOutAt: data.checkOutAt?.toDate?.() || data.checkOutAt,
-      calculatedAt: data.calculatedAt?.toDate?.() || data.calculatedAt,
-      createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
-      updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt)
-    } as VisitSession;
+    const session = processVisitSessionData(data, docSnap.id);
+    return session;
   } catch (error: any) {
-    console.error('获取待处理驻店记录失败:', error);
+    console.error('[getPendingVisitSession] 查询失败:', error);
+    // 如果是索引错误，抛出以便上层处理
+    if (error.code === 'failed-precondition' || error.message?.includes('index')) {
+      throw error;
+    }
     return null;
   }
 };
@@ -255,19 +308,29 @@ export const getUserVisitSessions = async (
     );
 
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-        checkInAt: data.checkInAt?.toDate?.() || new Date(data.checkInAt),
-        checkOutAt: data.checkOutAt?.toDate?.() || data.checkOutAt,
-        calculatedAt: data.calculatedAt?.toDate?.() || data.calculatedAt,
-        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
-        updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt)
-      } as VisitSession;
-    });
-  } catch (error) {
+    const sessions = snapshot.docs.map(doc => processVisitSessionData(doc.data(), doc.id));
+    
+    return sessions;
+  } catch (error: any) {
+    console.error('[getUserVisitSessions] 查询失败:', error);
+    // 如果是索引错误，尝试不使用orderBy
+    if (error.code === 'failed-precondition' || error.message?.includes('index')) {
+      try {
+        const q = query(
+          collection(db, GLOBAL_COLLECTIONS.VISIT_SESSIONS),
+          where('userId', '==', userId),
+          limit(limitCount)
+        );
+        const snapshot = await getDocs(q);
+        const sessions = snapshot.docs.map(doc => processVisitSessionData(doc.data(), doc.id));
+        // 手动排序
+        sessions.sort((a, b) => b.checkInAt.getTime() - a.checkInAt.getTime());
+        return sessions;
+      } catch (retryError) {
+        console.error('[getUserVisitSessions] 重试查询也失败:', retryError);
+        return [];
+      }
+    }
     return [];
   }
 };
@@ -284,21 +347,29 @@ export const getAllPendingVisitSessions = async (): Promise<VisitSession[]> => {
     );
 
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-        checkInAt: data.checkInAt?.toDate?.() || new Date(data.checkInAt),
-        checkOutAt: data.checkOutAt?.toDate?.() || data.checkOutAt,
-        calculatedAt: data.calculatedAt?.toDate?.() || data.calculatedAt,
-        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
-        updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt)
-      } as VisitSession;
-    });
+    return snapshot.docs.map(doc => processVisitSessionData(doc.data(), doc.id));
   } catch (error: any) {
     // 如果查询失败（可能是缺少索引），返回空数组
     console.error('获取待处理驻店记录失败:', error);
+    return [];
+  }
+};
+
+/**
+ * 获取所有驻店记录（包括所有状态）
+ */
+export const getAllVisitSessions = async (limitCount: number = 100): Promise<VisitSession[]> => {
+  try {
+    const q = query(
+      collection(db, GLOBAL_COLLECTIONS.VISIT_SESSIONS),
+      orderBy('checkInAt', 'desc'),
+      limit(limitCount)
+    );
+
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => processVisitSessionData(doc.data(), doc.id));
+  } catch (error: any) {
+    console.error('获取所有驻店记录失败:', error);
     return [];
   }
 };
@@ -325,15 +396,7 @@ export const getExpiredVisitSessions = async (): Promise<VisitSession[]> => {
       const checkInAt = data.checkInAt?.toDate?.() || new Date(data.checkInAt);
       // 检查是否超过24小时
       if (checkInAt <= expireTime) {
-        sessions.push({
-          id: doc.id,
-          ...data,
-          checkInAt,
-          checkOutAt: data.checkOutAt?.toDate?.() || data.checkOutAt,
-          calculatedAt: data.calculatedAt?.toDate?.() || data.calculatedAt,
-          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
-          updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt)
-        } as VisitSession);
+        sessions.push(processVisitSessionData(data, doc.id));
       }
     });
 

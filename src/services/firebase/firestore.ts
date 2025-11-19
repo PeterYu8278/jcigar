@@ -69,15 +69,9 @@ export const COLLECTIONS = {
 
 // 通用CRUD操作
 export const createDocument = async <T>(collectionName: string, data: Omit<T, 'id'>) => {
-  console.log('🔷 ========== createDocument CALLED ==========')
-  console.log('🔷 Timestamp:', new Date().toISOString())
-  console.log('🔷 Collection:', collectionName)
-  console.log('🔷 Data received:', JSON.stringify(data, null, 2))
-  console.log('🔷 Call stack:', new Error().stack)
   
   try {
     const sanitized = sanitizeForFirestore(data);
-    console.log('🔷 Data after sanitization:', JSON.stringify(sanitized, null, 2))
     
     const docRef = await addDoc(collection(db, collectionName), {
       ...sanitized,
@@ -85,13 +79,10 @@ export const createDocument = async <T>(collectionName: string, data: Omit<T, 'i
       updatedAt: new Date(),
     });
     
-    console.log('🔷 Document created successfully, ID:', docRef.id)
-    console.log('🔷 ========================================')
     
     return { success: true, id: docRef.id };
   } catch (error) {
     console.error('🔷 ❌ createDocument ERROR:', error)
-    console.log('🔷 ========================================')
     return { success: false, error: error as Error };
   }
 };
@@ -923,29 +914,23 @@ export const updateInboundOrder = async (id: string, updates: Partial<InboundOrd
  */
 export const deleteInboundOrder = async (id: string): Promise<void> => {
   try {
-    console.log('deleteInboundOrder - 开始删除，订单ID:', id);
     
     if (!id || typeof id !== 'string') {
       throw new Error(`无效的订单ID: ${id}`);
     }
     
     // 1. 删除关联的 movements（通过 inboundOrderId）
-    console.log('deleteInboundOrder - 查找关联的 movements');
     const q = query(
       collection(db, COLLECTIONS.INVENTORY_MOVEMENTS),
       where('inboundOrderId', '==', id)
     );
     const snapshot = await getDocs(q);
-    console.log('deleteInboundOrder - 找到', snapshot.docs.length, '个关联的 movements');
     await Promise.all(snapshot.docs.map(doc => {
-      console.log('deleteInboundOrder - 删除 movement:', doc.id);
       return deleteDoc(doc.ref);
     }));
     
     // 2. 删除订单
-    console.log('deleteInboundOrder - 删除订单文档:', id);
     await deleteDoc(doc(db, COLLECTIONS.INBOUND_ORDERS, id));
-    console.log('deleteInboundOrder - 删除成功');
   } catch (error) {
     console.error('Error deleting inbound order:', error);
     console.error('Error details:', {

@@ -82,7 +82,7 @@ export const verifyReloadRecord = async (
       verifiedAt: recordData.verifiedAt?.toDate?.() || recordData.verifiedAt,
       createdAt: recordData.createdAt?.toDate?.() || new Date(recordData.createdAt),
       updatedAt: recordData.updatedAt?.toDate?.() || new Date(recordData.updatedAt)
-    };
+    } as ReloadRecord;
 
     if (record.status !== 'pending') {
       return { success: false, error: '该充值记录已处理' };
@@ -126,20 +126,14 @@ export const verifyReloadRecord = async (
 
     const now = new Date();
 
-    // 更新充值记录状态
+    // 更新充值记录状态为已完成（积分已到账）
     await updateDoc(doc(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS, recordId), {
-      status: 'verified',
+      status: 'completed',
       verifiedAt: Timestamp.fromDate(now),
       verifiedBy,
       verificationProof: verificationProof || null,
       adminNotes: adminNotes || null,
       pointsRecordId: pointsRecord?.id || null,
-      updatedAt: Timestamp.fromDate(now)
-    });
-
-    // 标记为已完成（积分已到账）
-    await updateDoc(doc(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS, recordId), {
-      status: 'completed',
       updatedAt: Timestamp.fromDate(now)
     });
 
@@ -214,6 +208,78 @@ export const getUserReloadRecords = async (
 };
 
 /**
+ * 获取所有充值记录（支持状态筛选）
+ */
+export const getAllReloadRecords = async (
+  statusFilter?: 'pending' | 'completed' | 'rejected',
+  limitCount: number = 100
+): Promise<ReloadRecord[]> => {
+  try {
+    let q;
+    if (statusFilter) {
+      q = query(
+        collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
+        where('status', '==', statusFilter),
+        orderBy('createdAt', 'desc'),
+        limit(limitCount)
+      );
+    } else {
+      q = query(
+        collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
+        orderBy('createdAt', 'desc'),
+        limit(limitCount)
+      );
+    }
+
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        verifiedAt: data.verifiedAt?.toDate?.() || data.verifiedAt,
+        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+        updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt)
+      } as ReloadRecord;
+    });
+  } catch (error: any) {
+    // 如果查询失败（可能是缺少索引），尝试不使用orderBy
+    console.error('[getAllReloadRecords] 查询失败，尝试不使用orderBy:', error);
+    try {
+      let q;
+      if (statusFilter) {
+        q = query(
+          collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
+          where('status', '==', statusFilter),
+          limit(limitCount)
+        );
+      } else {
+        q = query(
+          collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
+          limit(limitCount)
+        );
+      }
+      const snapshot = await getDocs(q);
+      const records = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          verifiedAt: data.verifiedAt?.toDate?.() || data.verifiedAt,
+          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+          updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt)
+        } as ReloadRecord;
+      });
+      // 手动排序
+      return records.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    } catch (retryError) {
+      console.error('[getAllReloadRecords] 重试查询也失败:', retryError);
+      return [];
+    }
+  }
+};
+
+/**
  * 获取所有待验证的充值记录
  */
 export const getPendingReloadRecords = async (limitCount: number = 50): Promise<ReloadRecord[]> => {
@@ -236,8 +302,32 @@ export const getPendingReloadRecords = async (limitCount: number = 50): Promise<
         updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt)
       } as ReloadRecord;
     });
-  } catch (error) {
-    return [];
+  } catch (error: any) {
+    // 如果查询失败（可能是缺少索引），尝试不使用orderBy
+    console.error('[getPendingReloadRecords] 查询失败，尝试不使用orderBy:', error);
+    try {
+      const q = query(
+        collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
+        where('status', '==', 'pending'),
+        limit(limitCount)
+      );
+      const snapshot = await getDocs(q);
+      const records = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          verifiedAt: data.verifiedAt?.toDate?.() || data.verifiedAt,
+          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+          updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt)
+        } as ReloadRecord;
+      });
+      // 手动排序
+      return records.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    } catch (retryError) {
+      console.error('[getPendingReloadRecords] 重试查询也失败:', retryError);
+      return [];
+    }
   }
 };
 

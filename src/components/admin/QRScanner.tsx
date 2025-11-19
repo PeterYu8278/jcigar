@@ -124,14 +124,16 @@ export const QRScanner: React.FC<QRScannerProps> = ({ visible, onClose, mode: in
         // Check-in
         const result = await createVisitSession(userId, adminUser.id, userResult.user.displayName);
         if (result.success) {
-          message.success('Check-in 成功！');
+          message.success(`Check-in 成功！Session ID: ${result.sessionId}`);
           // 延迟关闭，确保消息显示
           setTimeout(() => {
             onSuccess?.();
             onClose();
           }, 500);
         } else {
-          message.error(result.error || 'Check-in 失败');
+          const errorMsg = result.error || 'Check-in 失败';
+          console.error('[QRScanner] Check-in失败:', errorMsg);
+          message.error(errorMsg);
           setProcessing(false);
         }
       } else {
@@ -212,7 +214,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ visible, onClose, mode: in
         </Button>
       ]}
       width={600}
-      destroyOnClose
+      destroyOnHidden
     >
       <div style={{ textAlign: 'center', padding: '20px 0' }}>
         {processing ? (

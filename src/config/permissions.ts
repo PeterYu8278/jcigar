@@ -47,6 +47,7 @@ export const ROUTE_PERMISSIONS = {
   '/events': ['guest', 'member', 'admin'],
   '/shop': ['member', 'admin'],
   '/profile': ['member', 'admin'],
+  '/reload': ['member', 'admin'], // 充值页面权限
   '/brand': ['member', 'admin'], // 品牌详情页面权限
   '/admin': ['admin'],
   '/admin/users': ['admin'],

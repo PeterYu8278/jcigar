@@ -2735,29 +2735,16 @@ const AdminInventory: React.FC = () => {
                             icon={<EditOutlined />}
                             size="small"
                             onClick={() => {
-                              console.log('✏️ [编辑按钮点击] - 开始编辑订单')
-                              console.log('  - group.id:', group.id)
-                              console.log('  - group.referenceNo:', group.referenceNo)
-                              console.log('  - inboundOrders总数:', inboundOrders.length)
-                              
                               // 使用 group.id 直接查找订单，而不是通过 referenceNo
                               const order = inboundOrders.find(o => o.id === group.id)
-                              console.log('  - 查找订单结果:', order ? { 
-                                id: order.id, 
-                                referenceNo: order.referenceNo,
-                                itemsCount: order.items.length,
-                                totalQuantity: order.totalQuantity
-                              } : '未找到')
                               
                               if (order) {
-                                console.log('  - ✅ 设置编辑订单状态')
                                 setEditingOrder(order)
                                 orderEditForm.setFieldsValue({
                                   referenceNo: order.referenceNo,
                                   reason: order.reason,
                                   items: order.items
                                 })
-                                console.log('  - ✅ 表单字段已填充')
                               } else {
                                 console.error('  - ❌ 订单未找到')
                                 message.error('订单未找到')
@@ -2773,9 +2760,6 @@ const AdminInventory: React.FC = () => {
                             size="small"
                             style={{ color: '#faad14' }}
                             onClick={() => {
-                              console.log('⚠️ [取消按钮点击] - 显示取消确认对话框')
-                              console.log('  - group.id:', group.id)
-                              console.log('  - group.referenceNo:', group.referenceNo)
                               
                               Modal.confirm({
                                 title: '⚠️ 取消订单',
@@ -2790,26 +2774,14 @@ const AdminInventory: React.FC = () => {
                                 okText: '确认取消',
                                 cancelText: '返回',
                                 onOk: async () => {
-                                  console.log('⚠️ [取消订单确认] - 开始取消订单')
-                                  console.log('  - group.id:', group.id)
-                                  console.log('  - group.referenceNo:', group.referenceNo)
-                                  
                                   setLoading(true)
                                   try {
                                     // 使用 group.id 直接查找订单，而不是通过 referenceNo
                                     const order = inboundOrders.find(o => o.id === group.id)
-                                    console.log('  - 查找订单结果:', order ? { 
-                                      id: order.id, 
-                                      referenceNo: order.referenceNo,
-                                      currentStatus: order.status
-                                    } : '未找到')
                                     
                                     if (order) {
-                                      console.log('  - ✅ 开始更新订单状态为 cancelled')
                                       await updateInboundOrder(order.id, { status: 'cancelled' })
-                                      console.log('  - ✅ 订单状态更新成功')
                                       message.success('✅ 订单已取消')
-                                      console.log('  - ✅ 刷新订单列表')
                                       setInboundOrders(await getAllInboundOrders())
                                     } else {
                                       console.error('  - ❌ 订单未找到')
@@ -2828,7 +2800,6 @@ const AdminInventory: React.FC = () => {
                                   }
                                 },
                                 onCancel: () => {
-                                  console.log('⚠️ [取消订单确认] - 用户取消操作')
                                 }
                               })
                             }}
@@ -2842,10 +2813,6 @@ const AdminInventory: React.FC = () => {
                             size="small"
                             style={{ color: '#ff7a45' }}
                             onClick={() => {
-                              console.log('🔄 [退货按钮点击] - 显示创建反向订单确认对话框')
-                              console.log('  - group.id:', group.id)
-                              console.log('  - group.referenceNo:', group.referenceNo)
-                              console.log('  - group.totalQuantity:', group.totalQuantity)
                               
                               Modal.confirm({
                                 title: '🔄 创建反向订单',
@@ -2860,24 +2827,12 @@ const AdminInventory: React.FC = () => {
                                 okText: '确认创建',
                                 cancelText: '取消',
                                 onOk: async () => {
-                                  console.log('🔄 [创建反向订单确认] - 开始创建反向订单')
-                                  console.log('  - group.id:', group.id)
-                                  console.log('  - group.referenceNo:', group.referenceNo)
-                                  
                                   setLoading(true)
                                   try {
                                     // 使用 group.id 直接查找订单，而不是通过 referenceNo
                                     const order = inboundOrders.find(o => o.id === group.id)
-                                    console.log('  - 查找原订单结果:', order ? { 
-                                      id: order.id, 
-                                      referenceNo: order.referenceNo,
-                                      itemsCount: order.items.length,
-                                      totalQuantity: order.totalQuantity,
-                                      totalValue: order.totalValue
-                                    } : '未找到')
                                     
                                     if (!order) {
-                                      console.error('  - ❌ 原订单未找到')
                                       message.error('原订单未找到')
                                       return
                                     }
@@ -2899,18 +2854,8 @@ const AdminInventory: React.FC = () => {
                                       createdAt: new Date()
                                     }
                                     
-                                    console.log('  - ✅ 准备创建反向订单:', {
-                                      referenceNo: returnReferenceNo,
-                                      type: returnOrderData.type,
-                                      itemsCount: returnOrderData.items.length,
-                                      totalQuantity: returnOrderData.totalQuantity,
-                                      totalValue: returnOrderData.totalValue
-                                    })
-                                    
                                     await createInboundOrder(returnOrderData)
-                                    console.log('  - ✅ 反向订单创建成功')
                                     message.success('✅ 反向订单已创建')
-                                    console.log('  - ✅ 刷新订单列表和库存变动')
                                     setInboundOrders(await getAllInboundOrders())
                                     setInventoryMovements(await getAllInventoryMovements())
                                   } catch (error: any) {
@@ -2926,7 +2871,6 @@ const AdminInventory: React.FC = () => {
                                   }
                                 },
                                 onCancel: () => {
-                                  console.log('🔄 [创建反向订单确认] - 用户取消操作')
                                 }
                               })
                             }}
@@ -2941,29 +2885,6 @@ const AdminInventory: React.FC = () => {
                             size="small"
                             danger
                             onClick={() => {
-                              console.log('🗑️ [删除按钮点击] - 显示删除确认对话框')
-                              console.log('  - group.id:', group.id)
-                              console.log('  - group.referenceNo:', group.referenceNo)
-                              console.log('  - group.productCount:', group.productCount)
-                              
-                              // 准备翻译文本（仅用于日志）
-                              const title = t('inventory.deleteReferenceGroup')
-                              const content = t('inventory.deleteReferenceGroupConfirm', { 
-                                referenceNo: group.referenceNo, 
-                                count: group.productCount 
-                              })
-                              const okText = t('common.confirm')
-                              const cancelText = t('common.cancel')
-                              
-                              console.log('  - 翻译文本准备完成:', {
-                                title,
-                                content: content.substring(0, 50) + '...',
-                                okText,
-                                cancelText
-                              })
-                              
-                              console.log('  - 准备显示删除确认对话框')
-                              console.log('  - 设置删除目标订单:', { id: group.id, referenceNo: group.referenceNo, productCount: group.productCount })
                               
                               // 使用受控的 Modal 替代 modal.confirm，以解决 React 19 兼容性问题
                               setDeleteTargetOrder({
@@ -3150,29 +3071,16 @@ const AdminInventory: React.FC = () => {
                               <button
                               onClick={(e) => {
                                 e.stopPropagation()
-                                console.log('✏️ [编辑按钮点击 - 移动端] - 开始编辑订单')
-                                console.log('  - group.id:', group.id)
-                                console.log('  - group.referenceNo:', group.referenceNo)
-                                console.log('  - inboundOrders总数:', inboundOrders.length)
-                                
                                 // 使用 group.id 直接查找订单，而不是通过 referenceNo
                                 const order = inboundOrders.find(o => o.id === group.id)
-                                console.log('  - 查找订单结果:', order ? { 
-                                  id: order.id, 
-                                  referenceNo: order.referenceNo,
-                                  itemsCount: order.items.length,
-                                  totalQuantity: order.totalQuantity
-                                } : '未找到')
                                 
                                 if (order) {
-                                  console.log('  - ✅ 设置编辑订单状态')
                                   setEditingOrder(order)
                                   orderEditForm.setFieldsValue({
                                     referenceNo: order.referenceNo,
                                     reason: order.reason,
                                     items: order.items
                                   })
-                                  console.log('  - ✅ 表单字段已填充')
                                 } else {
                                   console.error('  - ❌ 订单未找到')
                                   message.error('订单未找到')
@@ -3197,9 +3105,6 @@ const AdminInventory: React.FC = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
-                                console.log('⚠️ [取消按钮点击 - 移动端] - 显示取消确认对话框')
-                                console.log('  - group.id:', group.id)
-                                console.log('  - group.referenceNo:', group.referenceNo)
                                 
                                 Modal.confirm({
                                   title: '⚠️ 取消订单',
@@ -3213,26 +3118,14 @@ const AdminInventory: React.FC = () => {
                                   okText: '确认取消',
                                   cancelText: '返回',
                                   onOk: async () => {
-                                    console.log('⚠️ [取消订单确认 - 移动端] - 开始取消订单')
-                                    console.log('  - group.id:', group.id)
-                                    console.log('  - group.referenceNo:', group.referenceNo)
-                                    
                                     setLoading(true)
                                     try {
                                       // 使用 group.id 直接查找订单，而不是通过 referenceNo
                                       const order = inboundOrders.find(o => o.id === group.id)
-                                      console.log('  - 查找订单结果:', order ? { 
-                                        id: order.id, 
-                                        referenceNo: order.referenceNo,
-                                        currentStatus: order.status
-                                      } : '未找到')
                                       
                                       if (order) {
-                                        console.log('  - ✅ 开始更新订单状态为 cancelled')
                                         await updateInboundOrder(order.id, { status: 'cancelled' })
-                                        console.log('  - ✅ 订单状态更新成功')
                                         message.success('✅ 订单已取消')
-                                        console.log('  - ✅ 刷新订单列表')
                                         setInboundOrders(await getAllInboundOrders())
                                       } else {
                                         console.error('  - ❌ 订单未找到')
@@ -3251,7 +3144,6 @@ const AdminInventory: React.FC = () => {
                                     }
                                   },
                                   onCancel: () => {
-                                    console.log('⚠️ [取消订单确认 - 移动端] - 用户取消操作')
                                   }
                                 })
                               }}
@@ -3274,10 +3166,6 @@ const AdminInventory: React.FC = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
-                                console.log('🔄 [退货按钮点击 - 移动端] - 显示创建反向订单确认对话框')
-                                console.log('  - group.id:', group.id)
-                                console.log('  - group.referenceNo:', group.referenceNo)
-                                console.log('  - group.totalQuantity:', group.totalQuantity)
                                 
                                 Modal.confirm({
                                   title: '🔄 创建反向订单',
@@ -3292,24 +3180,12 @@ const AdminInventory: React.FC = () => {
                                   okText: '确认创建',
                                   cancelText: '取消',
                                   onOk: async () => {
-                                    console.log('🔄 [创建反向订单确认 - 移动端] - 开始创建反向订单')
-                                    console.log('  - group.id:', group.id)
-                                    console.log('  - group.referenceNo:', group.referenceNo)
-                                    
                                     setLoading(true)
                                     try {
                                       // 使用 group.id 直接查找订单，而不是通过 referenceNo
                                       const order = inboundOrders.find(o => o.id === group.id)
-                                      console.log('  - 查找原订单结果:', order ? { 
-                                        id: order.id, 
-                                        referenceNo: order.referenceNo,
-                                        itemsCount: order.items.length,
-                                        totalQuantity: order.totalQuantity,
-                                        totalValue: order.totalValue
-                                      } : '未找到')
                                       
                                       if (!order) {
-                                        console.error('  - ❌ 原订单未找到')
                                         message.error('原订单未找到')
                                         return
                                       }
@@ -3330,18 +3206,8 @@ const AdminInventory: React.FC = () => {
                                         createdAt: new Date()
                                       }
                                       
-                                      console.log('  - ✅ 准备创建反向订单:', {
-                                        referenceNo: returnReferenceNo,
-                                        type: returnOrderData.type,
-                                        itemsCount: returnOrderData.items.length,
-                                        totalQuantity: returnOrderData.totalQuantity,
-                                        totalValue: returnOrderData.totalValue
-                                      })
-                                      
                                       await createInboundOrder(returnOrderData)
-                                      console.log('  - ✅ 反向订单创建成功')
                                       message.success('✅ 反向订单已创建')
-                                      console.log('  - ✅ 刷新订单列表和库存变动')
                                       setInboundOrders(await getAllInboundOrders())
                                       setInventoryMovements(await getAllInventoryMovements())
                                     } catch (error: any) {
@@ -3357,7 +3223,6 @@ const AdminInventory: React.FC = () => {
                                     }
                                   },
                                   onCancel: () => {
-                                    console.log('🔄 [创建反向订单确认 - 移动端] - 用户取消操作')
                                   }
                                 })
                               }}
@@ -3380,29 +3245,6 @@ const AdminInventory: React.FC = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
-                                console.log('🗑️ [删除按钮点击 - 移动端] - 显示删除确认对话框')
-                                console.log('  - group.id:', group.id)
-                                console.log('  - group.referenceNo:', group.referenceNo)
-                                console.log('  - group.productCount:', group.productCount)
-                                
-                                // 准备翻译文本（仅用于日志）
-                                const title = t('inventory.deleteReferenceGroup')
-                                const content = t('inventory.deleteReferenceGroupConfirm', { 
-                                  referenceNo: group.referenceNo, 
-                                  count: group.productCount 
-                                })
-                                const okText = t('common.confirm')
-                                const cancelText = t('common.cancel')
-                                
-                                console.log('  - 翻译文本准备完成:', {
-                                  title,
-                                  content: content.substring(0, 50) + '...',
-                                  okText,
-                                  cancelText
-                                })
-                                
-                                console.log('  - 准备显示删除确认对话框（移动端）')
-                                console.log('  - 设置删除目标订单:', { id: group.id, referenceNo: group.referenceNo, productCount: group.productCount })
                                 
                                 // 使用受控的 Modal 替代 modal.confirm，以解决 React 19 兼容性问题
                                 setDeleteTargetOrder({
@@ -5479,27 +5321,14 @@ const AdminInventory: React.FC = () => {
         onOk={async () => {
           if (!deleteTargetOrder) return
           
-          console.log('🗑️ [删除订单确认] - 开始删除订单')
-          console.log('  - deleteTargetOrder:', deleteTargetOrder)
-          console.log('  - inboundOrders总数:', inboundOrders.length)
           
           setLoading(true)
           try {
             // 使用 deleteTargetOrder.id 直接查找订单
             const order = inboundOrders.find(o => o.id === deleteTargetOrder.id)
-            console.log('  - 查找订单结果:', order ? { 
-              id: order.id, 
-              referenceNo: order.referenceNo,
-              itemsCount: order.items.length,
-              totalQuantity: order.totalQuantity
-            } : '未找到')
-            
             if (order && order.id) {
-              console.log('  - ✅ 开始删除订单，订单ID:', order.id)
               await deleteInboundOrder(order.id)
-              console.log('  - ✅ 订单删除成功')
               message.success(t('inventory.deleteSuccess'))
-              console.log('  - ✅ 刷新订单列表和库存变动')
               // 刷新数据
               setInboundOrders(await getAllInboundOrders())
               setInventoryMovements(await getAllInventoryMovements())
@@ -5524,7 +5353,6 @@ const AdminInventory: React.FC = () => {
           }
         }}
         onCancel={() => {
-          console.log('🗑️ [删除订单确认] - 用户取消操作')
           setDeleteConfirmOpen(false)
           setDeleteTargetOrder(null)
         }}

@@ -34,6 +34,8 @@ export const GLOBAL_COLLECTIONS = {
   MEMBERSHIP_FEE_RECORDS: 'membershipFeeRecords',
   /** 充值记录集合 */
   RELOAD_RECORDS: 'reloadRecords',
+  /** 兑换配置集合 */
+  REDEMPTION_CONFIG: 'redemptionConfig',
   /** 兑换记录集合 */
   REDEMPTION_RECORDS: 'redemptionRecords'
 } as const

@@ -34,11 +34,8 @@ const OrphanedUserCleanup: React.FC = () => {
     setOrphanedUsers([]);
 
     try {
-      console.log('🔍 开始扫描孤立用户...');
-      
       // 获取所有 Firestore 用户
       const usersSnapshot = await getDocs(collection(db, 'users'));
-      console.log(`📊 Firestore 中共有 ${usersSnapshot.size} 个用户文档`);
       
       const orphaned: OrphanedUser[] = [];
       
@@ -65,11 +62,9 @@ const OrphanedUserCleanup: React.FC = () => {
             hasReferrals: (userData.referral?.referrals?.length || 0) > 0
           });
         } catch (error: any) {
-          console.log(`⚠️ 检查用户 ${uid} 时出错:`, error.message);
         }
       }
       
-      console.log(`✅ 扫描完成，找到 ${orphaned.length} 个用户需要验证`);
       setOrphanedUsers(orphaned);
       
       if (orphaned.length === 0) {
@@ -90,15 +85,10 @@ const OrphanedUserCleanup: React.FC = () => {
     setDeleting(uid);
 
     try {
-      console.log(`🗑️ 开始删除孤立用户: ${email} (${uid})`);
-      
       // 1. 删除用户文档
-      console.log('  📄 删除 Firestore 用户文档...');
       await deleteDoc(doc(db, 'users', uid));
-      console.log('  ✅ 用户文档已删除');
       
       // 2. 删除用户的订单
-      console.log('  📦 查找并删除用户订单...');
       const ordersSnapshot = await getDocs(collection(db, 'orders'));
       let ordersDeleted = 0;
       for (const orderDoc of ordersSnapshot.docs) {
@@ -107,10 +97,8 @@ const OrphanedUserCleanup: React.FC = () => {
           ordersDeleted++;
         }
       }
-      console.log(`  ✅ 删除了 ${ordersDeleted} 个订单`);
       
       // 3. 从活动参与者中移除
-      console.log('  🎉 从活动参与者列表中移除...');
       const eventsSnapshot = await getDocs(collection(db, 'events'));
       let eventsUpdated = 0;
       for (const eventDoc of eventsSnapshot.docs) {
@@ -126,10 +114,8 @@ const OrphanedUserCleanup: React.FC = () => {
           eventsUpdated++;
         }
       }
-      console.log(`  ✅ 更新了 ${eventsUpdated} 个活动`);
       
       // 4. 清理引荐关系
-      console.log('  🔗 清理引荐关系...');
       const allUsersSnapshot = await getDocs(collection(db, 'users'));
       let referralsUpdated = 0;
       for (const otherUserDoc of allUsersSnapshot.docs) {
@@ -144,9 +130,7 @@ const OrphanedUserCleanup: React.FC = () => {
           referralsUpdated++;
         }
       }
-      console.log(`  ✅ 更新了 ${referralsUpdated} 个引荐关系`);
       
-      console.log(`🎉 用户 ${email} 及其所有关联数据已删除\n`);
       message.success(`用户 ${email} 已删除`);
       
       // 刷新列表

@@ -4,6 +4,7 @@ import {
   getDoc, 
   setDoc, 
   addDoc,
+  updateDoc,
   getDocs,
   collection,
   query, 
@@ -21,20 +22,21 @@ import type { RedemptionConfig, RedemptionRecord, User } from '../../types';
  */
 export const getRedemptionConfig = async (): Promise<RedemptionConfig | null> => {
   try {
-    const docRef = doc(db, 'config', 'redemption');
+    const docRef = doc(db, GLOBAL_COLLECTIONS.REDEMPTION_CONFIG, 'default');
     const docSnap = await getDoc(docRef);
     
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      return {
-        id: docSnap.id,
-        ...data,
-        updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt)
-      } as RedemptionConfig;
+    if (!docSnap.exists()) {
+      return null;
     }
     
-    return getDefaultRedemptionConfig();
+    const data = docSnap.data();
+    return {
+      id: docSnap.id,
+      ...data,
+      updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
+    } as RedemptionConfig;
   } catch (error) {
+    console.error('获取兑换配置失败:', error);
     return null;
   }
 };
@@ -43,114 +45,116 @@ export const getRedemptionConfig = async (): Promise<RedemptionConfig | null> =>
  * 更新兑换配置
  */
 export const updateRedemptionConfig = async (
-  config: Omit<RedemptionConfig, 'id' | 'updatedAt'>,
-  userId: string
+  config: Partial<RedemptionConfig>,
+  updatedBy: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    const docRef = doc(db, 'config', 'redemption');
+    const docRef = doc(db, GLOBAL_COLLECTIONS.REDEMPTION_CONFIG, 'default');
+    const now = new Date();
     
     await setDoc(docRef, {
       ...config,
-      updatedAt: Timestamp.fromDate(new Date()),
-      updatedBy: userId
+      updatedAt: Timestamp.fromDate(now),
+      updatedBy
     }, { merge: true });
     
     return { success: true };
   } catch (error: any) {
-    return { success: false, error: error.message || '更新失败' };
+    return { success: false, error: error.message || '更新兑换配置失败' };
   }
 };
 
 /**
- * 获取默认兑换配置
+ * 获取用户当前会员期限内的累计驻店时长
  */
-export const getDefaultRedemptionConfig = (): RedemptionConfig => {
-  return {
-    id: 'default',
-    dailyLimit: 3,
-    totalLimit: 25,
-    hourlyLimit: undefined, // 可选
-    milestoneRewards: [
-      {
-        hoursRequired: 50,
-        dailyLimitBonus: 1, // 每日限额 +1
-        totalLimitBonus: 5  // 总限额 +5
-      },
-      {
-        hoursRequired: 100,
-        dailyLimitBonus: 2,
-        totalLimitBonus: 10
-      },
-      {
-        hoursRequired: 150,
-        dailyLimitBonus: 3,
-        totalLimitBonus: 15
+const getUserTotalVisitHoursInPeriod = async (userId: string): Promise<number> => {
+  try {
+    // 获取会员期限
+    const { getUserMembershipPeriod } = await import('./membershipFee');
+    const period = await getUserMembershipPeriod(userId);
+    
+    if (!period) {
+      // 如果没有会员期限，返回0
+      console.warn('[getUserTotalVisitHoursInPeriod] 没有会员期限，返回0');
+      return 0;
+    }
+
+    // 查询当前会员期限内的completed sessions
+    const { getUserVisitSessions } = await import('./visitSessions');
+    const sessions = await getUserVisitSessions(userId);
+    
+    
+    // 筛选出在会员期限内的completed sessions
+    const periodSessions = sessions.filter(session => {
+      if (session.status !== 'completed' || !session.checkOutAt) {
+        return false;
       }
-    ],
-    cutoffTime: '23:00',
-    updatedAt: new Date(),
-    updatedBy: 'system'
-  };
+      const inPeriod = session.checkOutAt >= period.startDate && session.checkOutAt < period.endDate;
+      return inPeriod;
+    });
+    
+    
+    // 累计时长
+    const totalHours = periodSessions.reduce((sum, session) => sum + (session.durationHours || 0), 0);
+    
+    
+    return totalHours;
+  } catch (error) {
+    console.error('获取会员期限内累计驻店时长失败:', error);
+    return 0;
+  }
 };
 
 /**
- * 计算基于小时数的兑换限额（每50小时+25支）
- */
-const calculateCigarLimitFromHours = (hours: number): number => {
-  const baseLimit = 25; // 基础25支
-  const bonusPer50Hours = 25; // 每50小时+25支
-  const bonusHours = Math.floor(hours / 50) * 50; // 向下取整到最近的50的倍数
-  const bonusCigars = (bonusHours / 50) * bonusPer50Hours;
-  return baseLimit + bonusCigars;
-};
-
-/**
- * 获取用户的实际兑换限额（考虑累计时长里程碑）
- * 新规则：每50小时+25支雪茄
+ * 获取用户兑换限额
+ * 基于当前会员期限内的累计驻店时长计算里程碑奖励
  */
 export const getUserRedemptionLimits = async (userId: string): Promise<{
   dailyLimit: number;
   totalLimit: number;
   hourlyLimit?: number;
 }> => {
-  const config = await getRedemptionConfig();
-  if (!config) {
+  try {
+    const config = await getRedemptionConfig();
+    if (!config) {
+      return { dailyLimit: 3, totalLimit: 25 };
+    }
+
+    // 获取当前会员期限内的累计驻店时长
+    const totalVisitHours = await getUserTotalVisitHoursInPeriod(userId);
+    
+    // 基础限额
+    const baseDailyLimit = config.dailyLimit || 3;
+    const baseTotalLimit = config.totalLimit || 25;
+    
+    // 里程碑奖励计算（固定规则：50/100/150小时）
+    let dailyLimitBonus = 0;
+    let totalLimitBonus = 0;
+    
+    if (totalVisitHours >= 150) {
+      // 150小时：dailyLimit +3, totalLimit +75
+      dailyLimitBonus = 3;
+      totalLimitBonus = 75;
+    } else if (totalVisitHours >= 100) {
+      // 100小时：dailyLimit +2, totalLimit +50
+      dailyLimitBonus = 2;
+      totalLimitBonus = 50;
+    } else if (totalVisitHours >= 50) {
+      // 50小时：dailyLimit +1, totalLimit +25
+      dailyLimitBonus = 1;
+      totalLimitBonus = 25;
+    }
+    // 超过150小时不再增加
+
+    return {
+      dailyLimit: baseDailyLimit + dailyLimitBonus,
+      totalLimit: baseTotalLimit + totalLimitBonus,
+      hourlyLimit: config.hourlyLimit
+    };
+  } catch (error) {
+    console.error('获取用户兑换限额失败:', error);
     return { dailyLimit: 3, totalLimit: 25 };
   }
-
-  // 获取用户累计时长
-  const userDoc = await getDoc(doc(db, GLOBAL_COLLECTIONS.USERS, userId));
-  if (!userDoc.exists()) {
-    return { dailyLimit: config.dailyLimit, totalLimit: config.totalLimit, hourlyLimit: config.hourlyLimit };
-  }
-
-  const userData = userDoc.data() as User;
-  const totalVisitHours = userData.membership?.totalVisitHours || 0;
-
-  // 使用新的计算方式：每50小时+25支
-  const totalLimit = calculateCigarLimitFromHours(totalVisitHours);
-
-  // 计算里程碑加成（用于每日限额）
-  let dailyLimitBonus = 0;
-
-  if (config.milestoneRewards && config.milestoneRewards.length > 0) {
-    // 按小时数排序，找到已达到的最高里程碑
-    const sortedRewards = [...config.milestoneRewards].sort(
-      (a, b) => a.hoursRequired - b.hoursRequired
-    );
-
-    for (const reward of sortedRewards) {
-      if (totalVisitHours >= reward.hoursRequired) {
-        dailyLimitBonus = reward.dailyLimitBonus;
-      }
-    }
-  }
-
-  return {
-    dailyLimit: config.dailyLimit + dailyLimitBonus,
-    totalLimit: totalLimit, // 使用新的计算方式
-    hourlyLimit: config.hourlyLimit
-  };
 };
 
 /**
@@ -190,35 +194,41 @@ export const canUserRedeem = async (
     const { getPendingVisitSession } = await import('./visitSessions');
     const pendingSession = await getPendingVisitSession(userId);
     if (!pendingSession) {
-      return { canRedeem: false, reason: '必须在驻店期间才能兑换（请先check-in）' };
+      return { canRedeem: false, reason: '请先check-in才能兑换' };
     }
 
     // 获取限额
     const limits = await getUserRedemptionLimits(userId);
 
-    // 检查每日限额
+    // 检查每日限额（只计算已完成的记录）
     const dayKey = (targetDate || new Date()).toISOString().split('T')[0]; // YYYY-MM-DD
     const dailyRedemptions = await getDailyRedemptions(userId, dayKey);
-    const dailyCount = dailyRedemptions.reduce((sum, r) => sum + r.quantity, 0);
+    const completedDailyRedemptions = dailyRedemptions.filter(r => r.status === 'completed');
+    const dailyCount = completedDailyRedemptions.reduce((sum, r) => sum + r.quantity, 0);
     if (dailyCount + quantity > limits.dailyLimit) {
       return { canRedeem: false, reason: `今日兑换限额为 ${limits.dailyLimit}，已兑换 ${dailyCount}，剩余 ${limits.dailyLimit - dailyCount}` };
     }
 
-    // 检查总限额
+    // 检查总限额（只计算已完成的记录）
     const totalRedemptions = await getTotalRedemptions(userId);
-    const totalCount = totalRedemptions.reduce((sum, r) => sum + r.quantity, 0);
+    const completedTotalRedemptions = totalRedemptions.filter(r => r.status === 'completed');
+    const totalCount = completedTotalRedemptions.reduce((sum, r) => sum + r.quantity, 0);
     if (totalCount + quantity > limits.totalLimit) {
       return { canRedeem: false, reason: `总兑换限额为 ${limits.totalLimit}，已兑换 ${totalCount}，剩余 ${limits.totalLimit - totalCount}` };
     }
 
-    // 检查每小时限额（如果有）
-    if (limits.hourlyLimit) {
-      const hourKey = (targetDate || new Date()).toISOString().split(':')[0]; // YYYY-MM-DDTHH
-      const hourlyRedemptions = await getHourlyRedemptions(userId, hourKey);
-      const hourlyCount = hourlyRedemptions.reduce((sum, r) => sum + r.quantity, 0);
-      if (hourlyCount + quantity > limits.hourlyLimit) {
-        return { canRedeem: false, reason: `每小时兑换限额为 ${limits.hourlyLimit}，本小时已兑换 ${hourlyCount}` };
-      }
+    // 检查每小时限额（如果没有配置hourlyLimit，默认每小时只能兑换1次，只计算已完成的记录）
+    const now = targetDate || new Date();
+    const hourKey = now.toISOString().split(':')[0]; // YYYY-MM-DDTHH
+    const hourlyRedemptions = await getHourlyRedemptions(userId, hourKey);
+    const completedHourlyRedemptions = hourlyRedemptions.filter(r => r.status === 'completed');
+    const hourlyCount = completedHourlyRedemptions.reduce((sum, r) => sum + r.quantity, 0);
+    
+    // 如果配置了hourlyLimit，使用配置值；否则默认每小时只能兑换1次
+    const effectiveHourlyLimit = limits.hourlyLimit !== undefined ? limits.hourlyLimit : 1;
+    
+    if (hourlyCount + quantity > effectiveHourlyLimit) {
+      return { canRedeem: false, reason: `每小时兑换限额为 ${effectiveHourlyLimit}，本小时已兑换 ${hourlyCount}` };
     }
 
     return { canRedeem: true };
@@ -228,7 +238,73 @@ export const canUserRedeem = async (
 };
 
 /**
- * 创建兑换记录
+ * 创建待处理的兑换记录（用户发起，等待管理员选择雪茄）
+ */
+export const createPendingRedemptionRecord = async (
+  userId: string,
+  visitSessionId: string,
+  quantity: number,
+  targetDate?: Date
+): Promise<{ success: boolean; recordId?: string; error?: string }> => {
+  try {
+    // 验证是否可以兑换
+    const canRedeem = await canUserRedeem(userId, quantity, targetDate);
+    if (!canRedeem.canRedeem) {
+      return { success: false, error: canRedeem.reason || '无法兑换' };
+    }
+
+    const userDoc = await getDoc(doc(db, GLOBAL_COLLECTIONS.USERS, userId));
+    if (!userDoc.exists()) {
+      return { success: false, error: '用户不存在' };
+    }
+
+    const userData = userDoc.data() as User;
+    const now = targetDate || new Date();
+    
+    // 获取限额
+    const limits = await getUserRedemptionLimits(userId);
+    const dayKey = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    // 始终设置hourKey（即使没有配置hourlyLimit，也需要记录以便检查每小时限制）
+    const hourKey = now.toISOString().split(':')[0]; // YYYY-MM-DDTHH
+
+    // 获取当日兑换次数（只计算已完成的记录）
+    const dailyRedemptions = await getDailyRedemptions(userId, dayKey);
+    const completedRedemptions = dailyRedemptions.filter(r => r.status === 'completed');
+    const redemptionIndex = completedRedemptions.length + 1;
+
+    const recordData: Omit<RedemptionRecord, 'id'> = {
+      userId,
+      userName: userData.displayName,
+      visitSessionId,
+      cigarId: '',  // 待管理员选择
+      cigarName: '待选择',  // 占位符
+      quantity,
+      status: 'pending',  // 待处理状态
+      dayKey,
+      hourKey,
+      redemptionIndex,
+      redeemedAt: now,
+      redeemedBy: userId,  // 用户ID（用户发起）
+      createdAt: now
+    };
+
+    const docRef = await addDoc(collection(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS), {
+      ...recordData,
+      redeemedAt: Timestamp.fromDate(now),
+      createdAt: Timestamp.fromDate(now)
+    });
+
+    // 注意：待处理的兑换记录不添加到visit session的redemptions数组
+    // 只有当管理员确认后（status变为completed）才添加
+
+    return { success: true, recordId: docRef.id };
+  } catch (error: any) {
+    return { success: false, error: error.message || '创建兑换记录失败' };
+  }
+};
+
+/**
+ * 创建兑换记录（管理员创建或确认）
  */
 export const createRedemptionRecord = async (
   userId: string,
@@ -257,11 +333,13 @@ export const createRedemptionRecord = async (
     // 获取限额
     const limits = await getUserRedemptionLimits(userId);
     const dayKey = now.toISOString().split('T')[0]; // YYYY-MM-DD
-    const hourKey = limits.hourlyLimit ? now.toISOString().split(':')[0] : undefined; // YYYY-MM-DDTHH
+    // 始终设置hourKey（即使没有配置hourlyLimit，也需要记录以便检查每小时限制）
+    const hourKey = now.toISOString().split(':')[0]; // YYYY-MM-DDTHH
 
-    // 获取当日兑换次数
+    // 获取当日兑换次数（只计算已完成的记录）
     const dailyRedemptions = await getDailyRedemptions(userId, dayKey);
-    const redemptionIndex = dailyRedemptions.length + 1;
+    const completedRedemptions = dailyRedemptions.filter(r => r.status === 'completed');
+    const redemptionIndex = completedRedemptions.length + 1;
 
     const recordData: Omit<RedemptionRecord, 'id'> = {
       userId,
@@ -270,6 +348,7 @@ export const createRedemptionRecord = async (
       cigarId,
       cigarName,
       quantity,
+      status: 'completed',  // 管理员创建的直接是已完成状态
       dayKey,
       hourKey,
       redemptionIndex,
@@ -300,18 +379,60 @@ export const createRedemptionRecord = async (
 };
 
 /**
- * 获取用户当日的兑换记录
+ * 更新兑换记录（管理员选择雪茄并确认）
  */
-export const getDailyRedemptions = async (
-  userId: string,
-  dayKey: string
+export const updateRedemptionRecord = async (
+  recordId: string,
+  cigarId: string,
+  cigarName: string,
+  quantity: number,
+  confirmedBy: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const recordRef = doc(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS, recordId);
+    const recordDoc = await getDoc(recordRef);
+    
+    if (!recordDoc.exists()) {
+      return { success: false, error: '兑换记录不存在' };
+    }
+
+    const recordData = recordDoc.data() as RedemptionRecord;
+    
+    // 允许修改completed状态的记录
+    
+    const now = new Date();
+
+    // 更新兑换记录
+    await updateDoc(recordRef, {
+      cigarId,
+      cigarName,
+      quantity,
+      status: 'completed',
+      redeemedBy: confirmedBy,  // 更新为确认的管理员ID
+      updatedAt: Timestamp.fromDate(now)
+    });
+
+    // 注意：我们不调用 addRedemptionToSession，因为这会添加重复项。
+    // VisitSession.redemptions 数组可能会与 RedemptionRecord 集合不同步。
+    // 建议依赖 getRedemptionRecordsBySession 获取准确的兑换历史。
+
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message || '更新兑换记录失败' };
+  }
+};
+
+/**
+ * 获取指定驻店记录的兑换记录（包括待处理和已完成的）
+ */
+export const getRedemptionRecordsBySession = async (
+  visitSessionId: string
 ): Promise<RedemptionRecord[]> => {
   try {
     const q = query(
       collection(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS),
-      where('userId', '==', userId),
-      where('dayKey', '==', dayKey),
-      orderBy('redeemedAt', 'asc')
+      where('visitSessionId', '==', visitSessionId),
+      orderBy('createdAt', 'asc')
     );
 
     const snapshot = await getDocs(q);
@@ -320,12 +441,99 @@ export const getDailyRedemptions = async (
       return {
         id: doc.id,
         ...data,
+        status: data.status || 'completed',  // 兼容旧数据，默认为completed
         redeemedAt: data.redeemedAt?.toDate?.() || new Date(data.redeemedAt),
-        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt)
+        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
       } as RedemptionRecord;
     });
-  } catch (error) {
+  } catch (error: any) {
+    console.error('[getRedemptionRecordsBySession] 查询失败:', error);
     return [];
+  }
+};
+
+/**
+ * 获取用户当日的兑换记录（基于当前会员期限）
+ */
+export const getDailyRedemptions = async (
+  userId: string,
+  dayKey: string
+): Promise<RedemptionRecord[]> => {
+  try {
+    // 获取会员期限
+    const { getUserMembershipPeriod } = await import('./membershipFee');
+    const period = await getUserMembershipPeriod(userId);
+    
+    const q = query(
+      collection(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS),
+      where('userId', '==', userId),
+      where('dayKey', '==', dayKey),
+      orderBy('redeemedAt', 'asc')
+    );
+
+    const snapshot = await getDocs(q);
+    let records = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        status: data.status || 'completed',  // 兼容旧数据，默认为completed
+        redeemedAt: data.redeemedAt?.toDate?.() || new Date(data.redeemedAt),
+        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
+      } as RedemptionRecord;
+    });
+    
+    // 如果存在会员期限，过滤出在会员期限内的记录
+    if (period) {
+      records = records.filter(record => {
+        return record.redeemedAt >= period.startDate && record.redeemedAt < period.endDate;
+      });
+    }
+    
+    
+    return records;
+  } catch (error: any) {
+    // 如果查询失败（可能是缺少索引），尝试不使用orderBy
+    console.error('[getDailyRedemptions] 查询失败，尝试不使用orderBy:', error);
+    try {
+      // 重新获取会员期限（在重试逻辑中）
+      const { getUserMembershipPeriod } = await import('./membershipFee');
+      const retryPeriod = await getUserMembershipPeriod(userId);
+      
+      const q = query(
+        collection(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS),
+        where('userId', '==', userId),
+        where('dayKey', '==', dayKey)
+      );
+      const snapshot = await getDocs(q);
+      let records = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          status: data.status || 'completed',  // 兼容旧数据，默认为completed
+          redeemedAt: data.redeemedAt?.toDate?.() || new Date(data.redeemedAt),
+          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+          updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
+        } as RedemptionRecord;
+      });
+      
+      // 如果存在会员期限，过滤出在会员期限内的记录
+      if (retryPeriod) {
+        records = records.filter(record => {
+          return record.redeemedAt >= retryPeriod.startDate && record.redeemedAt < retryPeriod.endDate;
+        });
+      }
+      
+      // 手动排序
+      const sorted = records.sort((a, b) => a.redeemedAt.getTime() - b.redeemedAt.getTime());
+      return sorted;
+    } catch (retryError) {
+      console.error('[getDailyRedemptions] 重试查询也失败:', retryError);
+      return [];
+    }
   }
 };
 
@@ -350,20 +558,51 @@ export const getHourlyRedemptions = async (
       return {
         id: doc.id,
         ...data,
+        status: data.status || 'completed',  // 兼容旧数据，默认为completed
         redeemedAt: data.redeemedAt?.toDate?.() || new Date(data.redeemedAt),
-        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt)
+        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
       } as RedemptionRecord;
     });
-  } catch (error) {
-    return [];
+  } catch (error: any) {
+    // 如果查询失败（可能是缺少索引），尝试不使用orderBy
+    console.error('[getHourlyRedemptions] 查询失败，尝试不使用orderBy:', error);
+    try {
+      const q = query(
+        collection(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS),
+        where('userId', '==', userId),
+        where('hourKey', '==', hourKey)
+      );
+      const snapshot = await getDocs(q);
+      const records = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          status: data.status || 'completed',  // 兼容旧数据，默认为completed
+          redeemedAt: data.redeemedAt?.toDate?.() || new Date(data.redeemedAt),
+          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+          updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
+        } as RedemptionRecord;
+      });
+      // 手动排序
+      return records.sort((a, b) => a.redeemedAt.getTime() - b.redeemedAt.getTime());
+    } catch (retryError) {
+      console.error('[getHourlyRedemptions] 重试查询也失败:', retryError);
+      return [];
+    }
   }
 };
 
 /**
- * 获取用户的总兑换记录
+ * 获取用户的总兑换记录（基于当前会员期限）
  */
 export const getTotalRedemptions = async (userId: string): Promise<RedemptionRecord[]> => {
   try {
+    // 获取会员期限
+    const { getUserMembershipPeriod } = await import('./membershipFee');
+    const period = await getUserMembershipPeriod(userId);
+    
     const q = query(
       collection(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS),
       where('userId', '==', userId),
@@ -371,17 +610,28 @@ export const getTotalRedemptions = async (userId: string): Promise<RedemptionRec
     );
 
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => {
+    let records = snapshot.docs.map(doc => {
       const data = doc.data();
       return {
         id: doc.id,
         ...data,
+        status: data.status || 'completed',  // 兼容旧数据，默认为completed
         redeemedAt: data.redeemedAt?.toDate?.() || new Date(data.redeemedAt),
-        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt)
+        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
       } as RedemptionRecord;
     });
+    
+    // 如果存在会员期限，过滤出在会员期限内的记录
+    if (period) {
+      records = records.filter(record => {
+        return record.redeemedAt >= period.startDate && record.redeemedAt < period.endDate;
+      });
+    }
+    
+    return records;
   } catch (error) {
+    console.error('[getTotalRedemptions] 查询失败:', error);
     return [];
   }
 };
-

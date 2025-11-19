@@ -12,7 +12,12 @@ export const getPointsConfig = async (): Promise<PointsConfig | null> => {
     const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {
-      return { id: docSnap.id, ...docSnap.data() } as PointsConfig;
+      const data = docSnap.data();
+      // 确保 visit 字段存在（向后兼容）
+      if (!data.visit) {
+        data.visit = { hourlyRate: 10 }; // 默认值
+      }
+      return { id: docSnap.id, ...data } as PointsConfig;
     }
     
     // 如果不存在，返回默认配置
@@ -69,6 +74,9 @@ export const getDefaultPointsConfig = (): PointsConfig => {
       profileComplete: 30,   // 完善资料积分
       firstLogin: 10,        // 首次登录积分
       dailyCheckIn: 5,       // 每日签到积分
+    },
+    visit: {
+      hourlyRate: 10,        // 默认每小时扣除10积分
     },
     updatedAt: new Date(),
     updatedBy: 'system',

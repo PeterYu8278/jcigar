@@ -1,8 +1,9 @@
 // 充值验证组件
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Tag, Modal, Form, Input, message, Upload, Image } from 'antd';
+import { Table, Button, Space, Tag, Modal, Form, Input, message, Upload, Image, Select } from 'antd';
 import { CheckOutlined, CloseOutlined, UploadOutlined, EyeOutlined } from '@ant-design/icons';
-import { getPendingReloadRecords, verifyReloadRecord, rejectReloadRecord } from '../../services/firebase/reload';
+import { getAllReloadRecords, verifyReloadRecord, rejectReloadRecord } from '../../services/firebase/reload';
+import { processPendingMembershipFees } from '../../services/firebase/scheduledJobs';
 import type { ReloadRecord } from '../../types';
 import dayjs from 'dayjs';
 import { uploadFile } from '../../services/cloudinary/create';
@@ -14,6 +15,7 @@ interface ReloadVerificationProps {
 export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefresh }) => {
   const [loading, setLoading] = useState(false);
   const [records, setRecords] = useState<ReloadRecord[]>([]);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'rejected'>('all');
   const [verifyModalVisible, setVerifyModalVisible] = useState(false);
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [currentRecord, setCurrentRecord] = useState<ReloadRecord | null>(null);
@@ -24,15 +26,24 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
 
   useEffect(() => {
     loadRecords();
-  }, []);
+  }, [statusFilter]);
 
   const loadRecords = async () => {
     setLoading(true);
     try {
-      const pendingRecords = await getPendingReloadRecords(50);
-      setRecords(pendingRecords);
-    } catch (error) {
-      message.error('加载充值记录失败');
+      const filter = statusFilter === 'all' ? undefined : statusFilter;
+      const allRecords = await getAllReloadRecords(filter, 100);
+      setRecords(allRecords);
+      if (allRecords.length === 0) {
+        if (statusFilter === 'pending') {
+          message.info('暂无待验证的充值记录');
+        } else {
+          message.info('暂无充值记录');
+        }
+      }
+    } catch (error: any) {
+      console.error('[ReloadVerification] 加载充值记录失败:', error);
+      message.error('加载充值记录失败: ' + (error.message || '未知错误'));
     } finally {
       setLoading(false);
     }
@@ -86,6 +97,17 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
         setProofUrl('');
         loadRecords();
         onRefresh?.();
+        
+        // 充值验证成功后，自动检查并扣除年费
+        try {
+          const deductionResult = await processPendingMembershipFees();
+          if (deductionResult.success && deductionResult.processed > 0) {
+            // 静默执行，不显示消息
+          }
+        } catch (error: any) {
+          console.error('[ReloadVerification] 充值后自动扣除年费失败:', error);
+          // 静默失败，不显示错误消息
+        }
       } else {
         message.error(result.error || '验证失败');
       }
@@ -157,7 +179,6 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
       render: (status: string) => {
         const statusMap: Record<string, { color: string; text: string }> = {
           pending: { color: 'orange', text: '待验证' },
-          verified: { color: 'blue', text: '已验证' },
           completed: { color: 'green', text: '已完成' },
           rejected: { color: 'red', text: '已拒绝' }
         };
@@ -220,7 +241,18 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
 
   return (
     <>
-      <div style={{ marginBottom: 16, textAlign: 'right' }}>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Select
+          value={statusFilter}
+          onChange={(value) => setStatusFilter(value)}
+          style={{ width: 150 }}
+          options={[
+            { label: '全部', value: 'all' },
+            { label: '待验证', value: 'pending' },
+            { label: '已完成', value: 'completed' },
+            { label: '已拒绝', value: 'rejected' }
+          ]}
+        />
         <Button onClick={loadRecords} loading={loading}>
           刷新
         </Button>
@@ -264,6 +296,13 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
             <Form.Item
               name="proof"
               label="上传充值凭证（可选）"
+              valuePropName="fileList"
+              getValueFromEvent={(e) => {
+                if (Array.isArray(e)) {
+                  return e;
+                }
+                return e?.fileList;
+              }}
             >
               <Upload
                 listType="picture-card"
@@ -277,6 +316,8 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
                       setProofUrl(e.target?.result as string);
                     };
                     reader.readAsDataURL(file);
+                  } else {
+                    setProofUrl('');
                   }
                 }}
               >

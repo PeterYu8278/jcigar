@@ -102,7 +102,6 @@ const AdminOrders: React.FC = () => {
         await Promise.all(relatedOutboundOrders.map((order: OutboundOrder) => 
           deleteOutboundOrder(order.id)
         ))
-        console.log('✅ [Orders] Deleted', relatedOutboundOrders.length, 'outbound orders')
       }
     } catch (error) {
       console.error('❌ [Orders] Error deleting outbound records:', error)

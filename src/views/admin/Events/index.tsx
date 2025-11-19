@@ -145,13 +145,11 @@ const AdminEvents: React.FC = () => {
   const handleSaveField = async (fieldName: string) => {
     if (!viewing) return
     
-    console.log('💾 handleSaveField called - fieldName:', fieldName, 'viewing.id:', viewing.id)
     
     // 🔥 关键修复：创建模式下的特殊处理
     if (viewing.id === 'new') {
       // 特殊标识：一次性创建所有字段
       if (fieldName === '__CREATE_ALL__') {
-        console.log('🟢 CREATE MODE: Creating complete event with all fields')
         
         try {
           const newEventData: Partial<Event> = {
@@ -183,7 +181,6 @@ const AdminEvents: React.FC = () => {
             updatedAt: new Date()
           }
           
-          console.log('🟢 Creating event with data:', newEventData)
           
           const res = await createDocument<Event>(COLLECTIONS.EVENTS, newEventData as any)
           if (res.success) {
@@ -314,7 +311,6 @@ const AdminEvents: React.FC = () => {
 
       updateData.updatedAt = new Date()
 
-      console.log('💾 EDIT MODE: Updating document', viewing.id, 'with data:', updateData)
       
       const res = await updateDocument(COLLECTIONS.EVENTS, viewing.id, updateData)
       if (res.success) {
@@ -1180,7 +1176,6 @@ const AdminEvents: React.FC = () => {
         title={editing ? t('common.edit') : t('common.add')}
         open={creating || !!editing}
         onCancel={() => { 
-          console.log('🔴 Modal onCancel - Closing modal')
           setCreating(false)
           setEditing(null)
           form.resetFields()
@@ -1211,10 +1206,6 @@ const AdminEvents: React.FC = () => {
             type="button" 
             className="cigar-btn-gradient" 
             onClick={() => {
-              console.log('🟡 ========== SUBMIT BUTTON CLICKED ==========')
-              console.log('🟡 Timestamp:', new Date().toISOString())
-              console.log('🟡 editing:', editing)
-              console.log('🟡 creating:', creating)
               form.submit()
             }} 
             style={{ 
@@ -1228,12 +1219,6 @@ const AdminEvents: React.FC = () => {
         ]}
       >
         <Form form={form} layout="vertical" onFinish={async (values: any) => {
-          console.log('🔵 ========== FORM SUBMIT START ==========')
-          console.log('🔵 Timestamp:', new Date().toISOString())
-          console.log('🔵 Form values:', JSON.stringify(values, null, 2))
-          console.log('🔵 editing state:', editing)
-          console.log('🔵 creating state:', creating)
-          console.log('🔵 ========================================')
           
           setLoading(true)
           try {
@@ -1241,7 +1226,6 @@ const AdminEvents: React.FC = () => {
             const currentStatus = editing?.status || DEFAULT_STATUS
             const newStatus = values.status || DEFAULT_STATUS
             
-            console.log('🟡 Status check - current:', currentStatus, 'new:', newStatus)
             
             // Validate status transition
             if (editing && !isValidStatusTransition(currentStatus, newStatus)) {
@@ -1276,10 +1260,8 @@ const AdminEvents: React.FC = () => {
               updatedAt: new Date(),
             } as any
             
-            console.log('🟢 Payload prepared:', JSON.stringify(payload, null, 2))
             
             if (editing) {
-              console.log('🟠 EDITING MODE - Event ID:', editing.id)
               const res = await updateDocument<Event>(COLLECTIONS.EVENTS, editing.id, payload)
               if (res.success) {
                 // Auto-create orders when status is set to "completed"
@@ -1309,32 +1291,17 @@ const AdminEvents: React.FC = () => {
                 }
               }
             } else {
-              console.log('🟢 ========== CREATE MODE START ==========')
-              console.log('🟢 Creating NEW event')
-              console.log('🟢 Collection:', COLLECTIONS.EVENTS)
-              console.log('🟢 Payload with createdAt:', JSON.stringify({ ...payload, createdAt: new Date() }, null, 2))
-              console.log('🟢 Calling createDocument...')
-              
               const result = await createDocument<Event>(COLLECTIONS.EVENTS, { ...payload, createdAt: new Date() } as any)
-              
-              console.log('🟢 createDocument result:', result)
-              console.log('🟢 Result success:', result.success)
-              console.log('🟢 Result ID:', result.id)
-              console.log('🟢 ========== CREATE MODE END ==========')
               
               message.success(t('common.created'))
             }
             
-            console.log('🔵 Fetching updated events list...')
             const list = await getEvents()
-            console.log('🔵 Events count after fetch:', list.length)
-            console.log('🔵 Event IDs:', list.map(e => e.id))
             
             setEvents(list)
             setCreating(false)
             setEditing(null)
             
-            console.log('🔵 ========== FORM SUBMIT END ==========')
           } finally {
             setLoading(false)
           }
@@ -1511,7 +1478,6 @@ const AdminEvents: React.FC = () => {
                     folder="events"
                     showPreview={true}
                     onChange={(url) => {
-                      console.log('📸 ImageUpload onChange triggered, url:', url)
                     }}
                   />
                 </Form.Item>

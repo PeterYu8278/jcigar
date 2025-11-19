@@ -14,7 +14,6 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   ShoppingCartOutlined,
-  CrownOutlined,
   FireOutlined,
   ThunderboltOutlined,
   SyncOutlined,
@@ -214,42 +213,6 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
         }}
         className="cigar-sidebar-menu"
       />
-      
-      {/* 管理员标识 */}
-      {isAdmin && !collapsed && (
-        <div style={{
-          position: 'absolute',
-          bottom: '20px',
-          left: '16px',
-          right: '16px',
-          padding: '12px',
-          background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 215, 0, 0.05) 100%)',
-          border: '1px solid rgba(255, 215, 0, 0.3)',
-          borderRadius: '8px',
-          textAlign: 'center'
-        }}>
-          <CrownOutlined style={{ 
-            fontSize: '16px', 
-            marginBottom: '4px',
-            background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
-          }} />
-          <div>
-            <Text style={{ 
-              background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text', 
-              fontSize: '12px',
-              fontWeight: 600
-            }}>
-              管理员权限
-            </Text>
-          </div>
-        </div>
-      )}
       
     </Sider>
   )
