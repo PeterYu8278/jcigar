@@ -327,7 +327,7 @@ const AdminInventory: React.FC = () => {
         return (
           <div>
             <div style={{ fontWeight: 'bold' }}>{name}</div>
-            <div style={{ fontSize: '12px', color: '#666', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', display: 'flex', alignItems: 'center', gap: 4 }}>
               {brandInfo?.logo && (
                 <img 
                   src={brandInfo.logo} 
@@ -337,7 +337,7 @@ const AdminInventory: React.FC = () => {
               )}
               <span>{record.brand}</span>
               {brandInfo?.country && (
-                <span style={{ color: '#999' }}>- {brandInfo.country}</span>
+                <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>- {brandInfo.country}</span>
               )}
               <span>- {record.origin}</span>
             </div>
@@ -408,7 +408,7 @@ const AdminInventory: React.FC = () => {
           }}>
             <div style={{ 
               fontSize: 11, 
-              color: '#999',
+              color: 'rgba(255, 255, 255, 0.6)',
               marginBottom: 2
             }}>
               {t('inventory.currentStock')}
@@ -1152,19 +1152,29 @@ const AdminInventory: React.FC = () => {
                 <Space>
                   {selectedRowKeys.length > 1 && (
                     <>
-                      <Button onClick={async () => {
-                        setLoading(true)
-                        try {
-                          await Promise.all(selectedRowKeys.map(id => updateDocument(COLLECTIONS.CIGARS, String(id), { status: 'inactive' } as any)))
-                          message.success(t('inventory.batchDisabled'))
-                          const list = await getCigars()
-                          setItems(list)
-                          setSelectedRowKeys([])
-                        } finally {
-                          setLoading(false)
-                        }
-                      }}>{t('inventory.batchDisable')}</Button>
-                      <Button danger onClick={async () => {
+                      <Button 
+                        onClick={async () => {
+                          setLoading(true)
+                          try {
+                            await Promise.all(selectedRowKeys.map(id => updateDocument(COLLECTIONS.CIGARS, String(id), { status: 'inactive' } as any)))
+                            message.success(t('inventory.batchDisabled'))
+                            const list = await getCigars()
+                            setItems(list)
+                            setSelectedRowKeys([])
+                          } finally {
+                            setLoading(false)
+                          }
+                        }}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.1)',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          color: '#FFFFFF'
+                        }}
+                      >
+                        {t('inventory.batchDisable')}
+                      </Button>
+                      <Button 
+                        onClick={async () => {
                         
                         const confirmed = window.confirm(`确定要删除选中的 ${selectedRowKeys.length} 个产品吗？`)
                         
@@ -1200,7 +1210,16 @@ const AdminInventory: React.FC = () => {
                             }
                         } else {
                           }
-                      }}>{t('inventory.batchDelete')}</Button>
+                      }}
+                      style={{
+                        background: 'rgba(255, 77, 79, 0.8)',
+                        border: 'none',
+                        color: '#FFFFFF',
+                        fontWeight: 700
+                      }}
+                    >
+                      {t('inventory.batchDelete')}
+                    </Button>
                     </>
                   )}
                 </Space>
@@ -1212,13 +1231,14 @@ const AdminInventory: React.FC = () => {
                   position: 'sticky',
                   top: 0,
                   zIndex: 100,
-                  background: 'rgba(39,35,27,0.65)',
+                  background: 'rgba(255, 255, 255, 0.05)',
                   backdropFilter: 'blur(8px)',
                   WebkitBackdropFilter: 'blur(8px)',
                   borderBottom: '1px solid rgba(244,175,37,0.2)',
+                  border: '1px solid rgba(244,175,37,0.2)',
+                  borderRadius: 12,
                   marginBottom: 8,
-                  padding: 12,
-                  borderRadius: 6
+                  padding: 16
                 }}
               >
                 <Space size="middle" wrap>
@@ -1229,28 +1249,66 @@ const AdminInventory: React.FC = () => {
                     prefix={<SearchOutlined />}
                     value={keyword}
                     onChange={(e) => setKeyword(e.target.value)}
+                    className="points-config-form"
                   />
-                   <Select placeholder={t('inventory.brand')} style={{ width: 140 }} allowClear value={brandFilter} onChange={setBrandFilter}>
+                   <Select 
+                     placeholder={t('inventory.brand')} 
+                     style={{ width: 140 }} 
+                     allowClear 
+                     value={brandFilter} 
+                     onChange={setBrandFilter}
+                     className="points-config-form"
+                   >
                     {Array.from(new Set(items.map(i => i.brand))).sort().map(brand => (
                       <Option key={brand} value={brand}>{brand}</Option>
                       ))}
                   </Select>
-                   <Select placeholder={t('inventory.origin')} style={{ width: 140 }} allowClear value={originFilter} onChange={setOriginFilter}>
+                   <Select 
+                     placeholder={t('inventory.origin')} 
+                     style={{ width: 140 }} 
+                     allowClear 
+                     value={originFilter} 
+                     onChange={setOriginFilter}
+                     className="points-config-form"
+                   >
                     {[...new Set(items.map(i => i.origin).filter(Boolean))].map(org => (
                       <Option key={org} value={org}>{org}</Option>
                     ))}
                   </Select>
-                   <Select placeholder={t('inventory.strength')} style={{ width: 120 }} allowClear value={strengthFilter} onChange={setStrengthFilter}>
+                   <Select 
+                     placeholder={t('inventory.strength')} 
+                     style={{ width: 120 }} 
+                     allowClear 
+                     value={strengthFilter} 
+                     onChange={setStrengthFilter}
+                     className="points-config-form"
+                   >
              <Option value="mild">{t('inventory.mild')} </Option>
              <Option value="medium">{t('inventory.medium')}</Option>
              <Option value="full">{t('inventory.full')}</Option>
                   </Select>
-                   <Select placeholder= {t('inventory.stockStatus')} style={{ width: 140 }} allowClear value={statusFilter} onChange={setStatusFilter}>
+                   <Select 
+                     placeholder= {t('inventory.stockStatus')} 
+                     style={{ width: 140 }} 
+                     allowClear 
+                     value={statusFilter} 
+                     onChange={setStatusFilter}
+                     className="points-config-form"
+                   >
              <Option value="normal">{t('inventory.stockNormal')}</Option>
              <Option value="low">{t('inventory.stockLow')}</Option>
              <Option value="critical">{t('inventory.stockCritical')}</Option>
                   </Select>
-           <Button onClick={() => { setKeyword(''); setBrandFilter(undefined); setOriginFilter(undefined); setStrengthFilter(undefined); setStatusFilter(undefined); setSelectedRowKeys([]) }} style={{ color: '#000000' }}>{t('common.resetFilters')}</Button>
+           <Button 
+             onClick={() => { setKeyword(''); setBrandFilter(undefined); setOriginFilter(undefined); setStrengthFilter(undefined); setStatusFilter(undefined); setSelectedRowKeys([]) }} 
+             style={{ 
+               background: 'rgba(255, 255, 255, 0.1)',
+               border: '1px solid rgba(255, 255, 255, 0.2)',
+               color: '#FFFFFF' 
+             }}
+           >
+             {t('common.resetFilters')}
+           </Button>
            <button onClick={() => { setCreating(true); form.resetFields() }} style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 8, padding: '8px 16px', background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, cursor: 'pointer' }}>
              <PlusOutlined />
              {t('inventory.addProduct')}
@@ -1282,6 +1340,7 @@ const AdminInventory: React.FC = () => {
                       prefix={<SearchOutlined style={{ color: '#f4af25' }} />}
                       value={keyword}
                       onChange={(e) => setKeyword(e.target.value)}
+                      className="points-config-form"
                     />
                     <button 
                       onClick={() => { setCreating(true); form.resetFields() }} 
@@ -1314,6 +1373,7 @@ const AdminInventory: React.FC = () => {
                       value={brandFilter as any}
                       onChange={setBrandFilter}
                       style={{ flex: 1, minWidth: 0 }}
+                      className="points-config-form"
                     >
                       {Array.from(new Set(items.map(i => i.brand))).sort().map(brand => (
                         <Option key={brand} value={brand}>{brand}</Option>
@@ -1325,6 +1385,7 @@ const AdminInventory: React.FC = () => {
                       value={statusFilter as any}
                       onChange={setStatusFilter}
                       style={{ flex: 1, minWidth: 0 }}
+                      className="points-config-form"
                     >
                       <Option value="normal">{t('inventory.stockNormal')}</Option>
                       <Option value="low">{t('inventory.stockLow')}</Option>
@@ -1333,7 +1394,9 @@ const AdminInventory: React.FC = () => {
                     <Button 
                       onClick={() => { setKeyword(''); setBrandFilter(undefined); setStrengthFilter(undefined); setStatusFilter(undefined); setSelectedRowKeys([]) }} 
                       style={{ 
-                        color: '#000000',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        color: '#FFFFFF',
                         flex: '0 0 calc(33.333% - 6px)',
                         boxSizing: 'border-box'
                       }}
@@ -1357,26 +1420,31 @@ const AdminInventory: React.FC = () => {
               {!isMobile ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   {groupedByBrand.map(group => (
-                    <div key={group.key} style={{ border: '1px solid rgba(244,175,37,0.2)', borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
-                      <div style={{ padding: '8px 12px', background: 'rgba(244,175,37,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ fontWeight: 700 }}>{group.key}</div>
-                        <div style={{ fontSize: 12, color: '#666' }}>{t('inventory.productTypes')}：{group.items.length}</div>
+                    <div key={group.key} style={{ border: '1px solid rgba(244,175,37,0.2)', borderRadius: 12, overflow: 'hidden', background: 'rgba(255, 255, 255, 0.05)', backdropFilter: 'blur(10px)' }}>
+                      <div style={{ padding: '8px 12px', background: 'rgba(244,175,37,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ fontWeight: 700, color: '#FFFFFF' }}>{group.key}</div>
+                        <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>{t('inventory.productTypes')}：{group.items.length}</div>
                       </div>
                       <div style={{ padding: 12 }}>
-              <Table
-                columns={columns}
+                      <div className="points-config-form">
+                        <Table
+                          columns={columns}
                           dataSource={group.items}
-                rowKey="id"
+                          rowKey="id"
                           size="small"
-                loading={loading}
+                          loading={loading}
                           rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys, preserveSelectedRowKeys: true }}
                           pagination={false}
+                          style={{
+                            background: 'transparent'
+                          }}
                         />
+                      </div>
                       </div>
                     </div>
                   ))}
                   {groupedByBrand.length === 0 && (
-                    <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
+                    <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
                   )}
                 </div>
               ) : (
@@ -1492,7 +1560,7 @@ const AdminInventory: React.FC = () => {
                     </div>
                   ))}
                   {groupedByBrand.length === 0 && (
-                    <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
+                    <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
                   )}
                 </div>
               )}
@@ -1841,11 +1909,12 @@ const AdminInventory: React.FC = () => {
                   position: 'sticky',
                   top: 0,
                   zIndex: 100,
-                  background: 'rgba(39,35,27,0.65)',
+                  background: 'rgba(255, 255, 255, 0.05)',
                   backdropFilter: 'blur(8px)',
                   WebkitBackdropFilter: 'blur(8px)',
-                  borderBottom: '1px solid rgba(244,175,37,0.2)',
-                  display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 8, paddingTop: 8, paddingBottom: 8
+                  border: '1px solid rgba(244,175,37,0.2)',
+                  borderRadius: 12,
+                  display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 8, padding: 16
                 }}
               >
                 {/* 第一行：搜索框 */}
@@ -1856,6 +1925,7 @@ const AdminInventory: React.FC = () => {
                   onChange={(e) => setInSearchKeyword(e.target.value)}
                     style={{ flex: 1 }}
                   allowClear
+                  className="points-config-form"
                 />
                 </div>
                 
@@ -1867,6 +1937,7 @@ const AdminInventory: React.FC = () => {
                   onChange={setInBrandFilter}
                     style={{ flex: 1 }}
                   allowClear
+                  className="points-config-form"
                 >
                   {Array.from(new Set(items.map(i => i.brand))).sort().map(brand => (
                     <Option key={brand} value={brand}>{brand}</Option>
@@ -2465,9 +2536,10 @@ const AdminInventory: React.FC = () => {
                 }}
               >
               {!isMobile ? (
-              <Table
-                  style={{ marginTop: 1 }}
-                title={() => t('inventory.inStockRecord')}
+              <div className="points-config-form">
+                <Table
+                  style={{ marginTop: 1, background: 'transparent' }}
+                  title={() => t('inventory.inStockRecord')}
                   dataSource={inLogsGroupedByReference}
                   rowKey={(record) => record.id || `ref-${record.referenceNo}` || 'no-ref'}
                   pagination={{ 
@@ -2485,14 +2557,15 @@ const AdminInventory: React.FC = () => {
                     expandedRowKeys: inLogsExpandedKeys,
                     onExpandedRowsChange: (keys) => setInLogsExpandedKeys([...keys]),
                     expandedRowRender: (record: any) => (
-                      <Table
-                        dataSource={record.logs}
-                        rowKey="id"
-                        pagination={false}
-                        size="small"
-                        showHeader={true}
-                        style={{ marginLeft: 20 }}
-                        columns={[
+                      <div className="points-config-form">
+                        <Table
+                          dataSource={record.logs}
+                          rowKey="id"
+                          pagination={false}
+                          size="small"
+                          showHeader={true}
+                          style={{ marginLeft: 20, background: 'transparent' }}
+                          columns={[
                           { 
                             title: t('inventory.product'), 
                             dataIndex: 'cigarId', 
@@ -2571,7 +2644,7 @@ const AdminInventory: React.FC = () => {
                             render: (_: any, rec: any) => {
                               const attachments = rec.attachments || []
                               if (attachments.length === 0) {
-                                return <span style={{ color: '#8c8c8c' }}>-</span>
+                                return <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>-</span>
                               }
                               return (
                                 <Space size="small">
@@ -2598,6 +2671,7 @@ const AdminInventory: React.FC = () => {
                           // 如需修改，请使用"取消订单"或"创建反向订单"
                         ]}
                       />
+                      </div>
                     ),
                     columnWidth: 60,
                     columnTitle: (
@@ -2635,7 +2709,7 @@ const AdminInventory: React.FC = () => {
                         <span style={{ 
                           fontFamily: 'monospace', 
                           fontWeight: 600,
-                          color: refNo === t('inventory.unassignedReference') ? '#999' : '#1890ff'
+                          color: refNo === t('inventory.unassignedReference') ? 'rgba(255, 255, 255, 0.6)' : '#1890ff'
                         }}>
                           {refNo}
                         </span>
@@ -2766,9 +2840,9 @@ const AdminInventory: React.FC = () => {
                                 content: (
                                   <div>
                                     <p>将订单 <strong>{group.referenceNo}</strong> 标记为已取消状态</p>
-                                    <p style={{ marginTop: 8, fontSize: 12, color: '#8c8c8c' }}>• 订单数据将被保留（用于审计）</p>
-                                    <p style={{ fontSize: 12, color: '#8c8c8c' }}>• 库存计算将忽略此订单</p>
-                                    <p style={{ fontSize: 12, color: '#8c8c8c' }}>• 可以通过"退货"功能创建反向订单来冲销库存</p>
+                                    <p style={{ marginTop: 8, fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>• 订单数据将被保留（用于审计）</p>
+                                    <p style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>• 库存计算将忽略此订单</p>
+                                    <p style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>• 可以通过"退货"功能创建反向订单来冲销库存</p>
                                   </div>
                                 ),
                                 okText: '确认取消',
@@ -2900,6 +2974,7 @@ const AdminInventory: React.FC = () => {
                     }
                   ]}
                 />
+                </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {inLogsGroupedByReference.map((group: any) => {
@@ -3411,11 +3486,12 @@ const AdminInventory: React.FC = () => {
                   position: 'sticky',
                   top: 0,
                   zIndex: 100,
-                  background: 'rgba(39,35,27,0.65)',
+                  background: 'rgba(255, 255, 255, 0.05)',
                   backdropFilter: 'blur(8px)',
                   WebkitBackdropFilter: 'blur(8px)',
-                  borderBottom: '1px solid rgba(244,175,37,0.2)',
-                  display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 8, paddingTop: 8, paddingBottom: 8
+                  border: '1px solid rgba(244,175,37,0.2)',
+                  borderRadius: 12,
+                  display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 8, padding: 16
                 }}
               >
                 {/* 第一行：搜索框 */}
@@ -3426,6 +3502,7 @@ const AdminInventory: React.FC = () => {
                     onChange={(e) => setOutSearchKeyword(e.target.value)}
                     style={{ flex: 1 }}
                     allowClear
+                    className="points-config-form"
                   />
                 </div>
 
@@ -3437,6 +3514,7 @@ const AdminInventory: React.FC = () => {
                     onChange={setOutBrandFilter}
                     style={{ flex: 1 }}
                     allowClear
+                    className="points-config-form"
                   >
                     {Array.from(new Set(items.map(i => i.brand))).sort().map(brand => (
                       <Option key={brand} value={brand}>{brand}</Option>
@@ -3663,23 +3741,28 @@ const AdminInventory: React.FC = () => {
                 }}
               >
                 {!isMobile ? (
-                  <Table
-                    title={() => t('inventory.outStockRecord')}
-                    columns={unifiedOutColumns}
-                    dataSource={unifiedOutRows}
-                    rowKey="id"
-                    pagination={{ 
-                      pageSize: outPageSize,
-                      showSizeChanger: true,
-                      showQuickJumper: false,
-                      pageSizeOptions: ['5','10','20','50'],
-                      onChange: (_page, size) => {
-                        const next = size || outPageSize
-                        setOutPageSize(next)
-                        try { localStorage.setItem('inventory_out_page_size', String(next)) } catch {}
-                      }
-                    }}
-                  />
+                  <div className="points-config-form">
+                    <Table
+                      title={() => t('inventory.outStockRecord')}
+                      columns={unifiedOutColumns}
+                      dataSource={unifiedOutRows}
+                      rowKey="id"
+                      style={{
+                        background: 'transparent'
+                      }}
+                      pagination={{ 
+                        pageSize: outPageSize,
+                        showSizeChanger: true,
+                        showQuickJumper: false,
+                        pageSizeOptions: ['5','10','20','50'],
+                        onChange: (_page, size) => {
+                          const next = size || outPageSize
+                          setOutPageSize(next)
+                          try { localStorage.setItem('inventory_out_page_size', String(next)) } catch {}
+                        }
+                      }}
+                    />
+                  </div>
                 ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {unifiedOutRows.map((log: any) => {
@@ -3732,7 +3815,7 @@ const AdminInventory: React.FC = () => {
                     )
                   })}
                   {unifiedOutRows.length === 0 && (
-                    <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
+                    <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
                   )}
                 </div>
                 )}
@@ -3981,7 +4064,7 @@ const AdminInventory: React.FC = () => {
                         />
                       )}
                       <span>{brand.name}</span>
-                      <span style={{ color: '#999', fontSize: '12px' }}>({brand.country})</span>
+                      <span style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>({brand.country})</span>
                     </Space>
                   </Option>
                 ))}
@@ -4130,23 +4213,35 @@ const AdminInventory: React.FC = () => {
         footer={null}
         width={800}
       >
-        <Table
-          columns={[
-            { title: t('inventory.time'), dataIndex: 'createdAt', key: 'createdAt', render: (v: any) => { const d = toDateSafe(v); return d ? d.toLocaleString() : '-' } },
-            { title: t('inventory.product'), dataIndex: 'cigarId', key: 'cigarId', render: (id: string) => items.find(i => i.id === id)?.name || id },
-            { title: t('inventory.quantity'), dataIndex: 'quantity', key: 'quantity' },
-            { title: t('inventory.reason'), dataIndex: 'reason', key: 'reason', render: (v: any) => v || '-' },
-            { title: t('inventory.operator'), dataIndex: 'operatorId', key: 'operatorId', render: (v: any) => v || '-' },
-          ]}
-          dataSource={currentReferenceLogs}
-          rowKey="id"
-          pagination={false}
-          size="small"
-        />
-        <div style={{ marginTop: 16, padding: 12, background: '#f5f5f5', borderRadius: 6 }}>
-          <div style={{ fontWeight: 'bold', marginBottom: 8 }}>{t('inventory.referenceNo')}</div>
-          <div>{t('inventory.totalProductTypes')}：{currentReferenceLogs.length} {t('inventory.types')}</div>
-          <div>{t('inventory.totalInStockQuantity')}：{currentReferenceLogs.reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
+        <div className="points-config-form">
+          <Table
+            columns={[
+              { title: t('inventory.time'), dataIndex: 'createdAt', key: 'createdAt', render: (v: any) => { const d = toDateSafe(v); return d ? d.toLocaleString() : '-' } },
+              { title: t('inventory.product'), dataIndex: 'cigarId', key: 'cigarId', render: (id: string) => items.find(i => i.id === id)?.name || id },
+              { title: t('inventory.quantity'), dataIndex: 'quantity', key: 'quantity' },
+              { title: t('inventory.reason'), dataIndex: 'reason', key: 'reason', render: (v: any) => v || '-' },
+              { title: t('inventory.operator'), dataIndex: 'operatorId', key: 'operatorId', render: (v: any) => v || '-' },
+            ]}
+            dataSource={currentReferenceLogs}
+            rowKey="id"
+            pagination={false}
+            size="small"
+            style={{
+              background: 'transparent'
+            }}
+          />
+        </div>
+        <div style={{ 
+          marginTop: 16, 
+          padding: 12, 
+          background: 'rgba(255, 255, 255, 0.05)', 
+          borderRadius: 12,
+          border: '1px solid rgba(244,175,37,0.2)',
+          backdropFilter: 'blur(10px)'
+        }}>
+          <div style={{ fontWeight: 'bold', marginBottom: 8, color: '#FFFFFF' }}>{t('inventory.referenceNo')}</div>
+          <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.totalProductTypes')}：{currentReferenceLogs.length} {t('inventory.types')}</div>
+          <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.totalInStockQuantity')}：{currentReferenceLogs.reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
         </div>
       </Modal>
 
@@ -4172,7 +4267,8 @@ const AdminInventory: React.FC = () => {
         {!isMobile ? (
           // 电脑端 - 使用表格
           <>
-        <Table
+        <div className="points-config-form">
+          <Table
           columns={[
             { 
               title: t('inventory.time'), 
@@ -4273,13 +4369,24 @@ const AdminInventory: React.FC = () => {
             showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total })
           }}
           size="small"
+          style={{
+            background: 'transparent'
+          }}
         />
-        <div style={{ marginTop: 16, padding: 12, background: '#f5f5f5', borderRadius: 6 }}>
-          <div style={{ fontWeight: 'bold', marginBottom: 8 }}>{t('inventory.summary')}</div>
-          <div>{t('inventory.totalRecords')}：{currentProductLogs.length} {t('inventory.records')}</div>
-          <div>{t('inventory.totalInStock')}：{currentProductLogs.filter(log => log.type === 'in').reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
-          <div>{t('inventory.totalOutStock')}：{currentProductLogs.filter(log => log.type === 'out').reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
-          <div>{t('inventory.currentStock')}：{getComputedStock(viewingProductLogs || '')} {t('inventory.sticks')}</div>
+        </div>
+        <div style={{ 
+          marginTop: 16, 
+          padding: 12, 
+          background: 'rgba(255, 255, 255, 0.05)', 
+          borderRadius: 12,
+          border: '1px solid rgba(244,175,37,0.2)',
+          backdropFilter: 'blur(10px)'
+        }}>
+          <div style={{ fontWeight: 'bold', marginBottom: 8, color: '#FFFFFF' }}>{t('inventory.summary')}</div>
+          <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.totalRecords')}：{currentProductLogs.length} {t('inventory.records')}</div>
+          <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.totalInStock')}：{currentProductLogs.filter(log => log.type === 'in').reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
+          <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.totalOutStock')}：{currentProductLogs.filter(log => log.type === 'out').reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
+          <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.currentStock')}：{getComputedStock(viewingProductLogs || '')} {t('inventory.sticks')}</div>
         </div>
           </>
         ) : (
@@ -4654,7 +4761,7 @@ const AdminInventory: React.FC = () => {
           borderRadius: 8,
           border: '1px solid #e9ecef'
         }}>
-          <div style={{ fontSize: 16, fontWeight: 600, color: '#495057', marginBottom: 8 }}>
+          <div style={{ fontSize: 16, fontWeight: 600, color: '#FFFFFF', marginBottom: 8 }}>
             {t('inventory.inSummary')}
           </div>
           <div style={{ display: 'flex', gap: 24 }}>
@@ -4680,12 +4787,16 @@ const AdminInventory: React.FC = () => {
         </div>
 
         {/* 品牌入库统计表格 */}
-        <Table
-          dataSource={inStats}
-          rowKey="brand"
-          pagination={false}
-          size="small"
-          expandable={{
+        <div className="points-config-form">
+          <Table
+            dataSource={inStats}
+            rowKey="brand"
+            pagination={false}
+            size="small"
+            style={{
+              background: 'transparent'
+            }}
+            expandable={{
             columnWidth: 60,
             columnTitle: (
               <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -4700,12 +4811,12 @@ const AdminInventory: React.FC = () => {
                 style={{
                   padding: '2px 8px',
                   borderRadius: 4,
-                  border: '1px solid #d9d9d9',
-                  background: '#fff',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  background: 'rgba(255, 255, 255, 0.1)',
                   cursor: 'pointer',
                   fontSize: 16,
                   fontWeight: 600,
-                  color: '#666',
+                  color: 'rgba(255, 255, 255, 0.6)',
                   lineHeight: 1,
                   minWidth: 28,
                   height: 28
@@ -4719,14 +4830,15 @@ const AdminInventory: React.FC = () => {
             expandedRowKeys: inStatsExpandedKeys,
             onExpandedRowsChange: (keys) => setInStatsExpandedKeys([...keys]),
             expandedRowRender: (record: any) => (
-              <Table
-                dataSource={record.products}
-                rowKey={(p: any) => p.cigar.id}
-                pagination={false}
-                size="small"
-                showHeader={true}
-                style={{ marginLeft: 20 }}
-                columns={[
+              <div className="points-config-form">
+                <Table
+                  dataSource={record.products}
+                  rowKey={(p: any) => p.cigar.id}
+                  pagination={false}
+                  size="small"
+                  showHeader={true}
+                  style={{ marginLeft: 20, background: 'transparent' }}
+                  columns={[
                   {
                     title: t('inventory.productName'),
                     dataIndex: 'cigar',
@@ -4734,7 +4846,7 @@ const AdminInventory: React.FC = () => {
                     render: (cigar: any) => (
                       <div style={{ paddingLeft: 8 }}>
                         <div style={{ fontWeight: 500 }}>{cigar.name}</div>
-                        <div style={{ fontSize: 12, color: '#666' }}>{cigar.specification || '-'}</div>
+                        <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>{cigar.specification || '-'}</div>
     </div>
                     )
                   },
@@ -4768,10 +4880,11 @@ const AdminInventory: React.FC = () => {
                   }
                 ]}
               />
+              </div>
             ),
             rowExpandable: (record: any) => record.products && record.products.length > 0,
-        }}
-        columns={[
+          }}
+          columns={[
             {
               title: t('inventory.brand'),
               dataIndex: 'brand',
@@ -4815,6 +4928,7 @@ const AdminInventory: React.FC = () => {
           ]}
         />
         </div>
+        </div>
       </Modal>
 
       {/* 出库统计弹窗 */}
@@ -4834,7 +4948,7 @@ const AdminInventory: React.FC = () => {
           borderRadius: 8,
           border: '1px solid #e9ecef'
         }}>
-          <div style={{ fontSize: 16, fontWeight: 600, color: '#495057', marginBottom: 8 }}>
+          <div style={{ fontSize: 16, fontWeight: 600, color: '#FFFFFF', marginBottom: 8 }}>
             {t('inventory.outSummary')}
           </div>
           <div style={{ display: 'flex', gap: 24 }}>
@@ -4854,12 +4968,16 @@ const AdminInventory: React.FC = () => {
         </div>
 
         {/* 品牌出库统计表格（可展开产品明细） */}
-        <Table
-          dataSource={outStats}
-          rowKey="brand"
-          pagination={false}
-          size="small"
-          expandable={{
+        <div className="points-config-form">
+          <Table
+            dataSource={outStats}
+            rowKey="brand"
+            pagination={false}
+            size="small"
+            style={{
+              background: 'transparent'
+            }}
+            expandable={{
             columnWidth: 60,
             columnTitle: (
               <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -4874,12 +4992,12 @@ const AdminInventory: React.FC = () => {
                   style={{
                     padding: '2px 8px',
                     borderRadius: 4,
-                    border: '1px solid #d9d9d9',
-                    background: '#fff',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    background: 'rgba(255, 255, 255, 0.1)',
                     cursor: 'pointer',
                     fontSize: 16,
                     fontWeight: 600,
-                    color: '#666',
+                    color: 'rgba(255, 255, 255, 0.6)',
                     lineHeight: 1,
                     minWidth: 28,
                     height: 28
@@ -4893,14 +5011,15 @@ const AdminInventory: React.FC = () => {
             expandedRowKeys: outStatsExpandedKeys,
             onExpandedRowsChange: (keys) => setOutStatsExpandedKeys([...keys]),
             expandedRowRender: (record: any) => (
-              <Table
-                dataSource={record.products}
-                rowKey={(p: any) => p.cigar.id}
-                pagination={false}
-                size="small"
-                showHeader={true}
-                style={{ marginLeft: 20 }}
-                columns={[
+              <div className="points-config-form">
+                <Table
+                  dataSource={record.products}
+                  rowKey={(p: any) => p.cigar.id}
+                  pagination={false}
+                  size="small"
+                  showHeader={true}
+                  style={{ marginLeft: 20, background: 'transparent' }}
+                  columns={[
                   {
                     title: t('inventory.productName'),
                     dataIndex: 'cigar',
@@ -4908,7 +5027,7 @@ const AdminInventory: React.FC = () => {
                     render: (cigar: any) => (
                       <div style={{ paddingLeft: 8 }}>
                         <div style={{ fontWeight: 500 }}>{cigar.name}</div>
-                        <div style={{ fontSize: 12, color: '#666' }}>{cigar.specification || '-'}</div>
+                        <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>{cigar.specification || '-'}</div>
                       </div>
                     )
                   },
@@ -4932,6 +5051,7 @@ const AdminInventory: React.FC = () => {
                   }
                 ]}
               />
+              </div>
             ),
             rowExpandable: (record: any) => record.products && record.products.length > 0,
           }}
@@ -4968,6 +5088,7 @@ const AdminInventory: React.FC = () => {
             }
           ]}
         />
+        </div>
         </div>
       </Modal>
       
@@ -5215,7 +5336,7 @@ const AdminInventory: React.FC = () => {
                     {/* 产品标题、产品选择、数量、单价、删除按钮 - 全部同行显示 */}
                     <Row gutter={12} align="middle">
                       <Col flex="80px">
-                        <span style={{ fontWeight: 600, color: '#666' }}>产品 {index + 1}</span>
+                        <span style={{ fontWeight: 600, color: 'rgba(255, 255, 255, 0.6)' }}>产品 {index + 1}</span>
                       </Col>
                       <Col flex="auto">
                         <Form.Item

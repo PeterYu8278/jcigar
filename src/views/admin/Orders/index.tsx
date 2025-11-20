@@ -386,7 +386,14 @@ const AdminOrders: React.FC = () => {
 
       {/* 搜索和筛选 */}
       {!isMobile ? (
-      <div style={{ marginBottom: 16, padding: '16px', background: '#fafafa', borderRadius: '6px' }}>
+      <div style={{ 
+        marginBottom: 16, 
+        padding: '16px', 
+        background: 'rgba(255, 255, 255, 0.05)', 
+        borderRadius: 12,
+        border: '1px solid rgba(244, 175, 37, 0.2)',
+        backdropFilter: 'blur(10px)'
+      }}>
         <Space size="middle" wrap>
           <Search
               placeholder={t('ordersAdmin.searchPlaceholder')}
@@ -395,15 +402,30 @@ const AdminOrders: React.FC = () => {
             prefix={<SearchOutlined />}
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
+            className="points-config-form"
           />
-            <Select placeholder={t('ordersAdmin.selectStatus')} style={{ width: 120 }} allowClear value={statusFilter} onChange={setStatusFilter}>
+            <Select 
+              placeholder={t('ordersAdmin.selectStatus')} 
+              style={{ width: 120 }} 
+              allowClear 
+              value={statusFilter} 
+              onChange={setStatusFilter}
+              className="points-config-form"
+            >
               <Option value="pending">{t('ordersAdmin.status.pending')}</Option>
               <Option value="confirmed">{t('ordersAdmin.status.confirmed')}</Option>
               <Option value="shipped">{t('ordersAdmin.status.shipped')}</Option>
               <Option value="delivered">{t('ordersAdmin.status.delivered')}</Option>
               <Option value="cancelled">{t('ordersAdmin.status.cancelled')}</Option>
           </Select>
-            <Select placeholder={t('ordersAdmin.payment.title')} style={{ width: 120 }} allowClear value={paymentFilter} onChange={setPaymentFilter}>
+            <Select 
+              placeholder={t('ordersAdmin.payment.title')} 
+              style={{ width: 120 }} 
+              allowClear 
+              value={paymentFilter} 
+              onChange={setPaymentFilter}
+              className="points-config-form"
+            >
               <Option value="credit">{t('ordersAdmin.payment.credit')}</Option>
             <Option value="paypal">PayPal</Option>
               <Option value="bank_transfer">{t('ordersAdmin.payment.bankTransfer')}</Option>
@@ -412,6 +434,7 @@ const AdminOrders: React.FC = () => {
               placeholder={[t('common.startDate'), t('common.endDate')]}
             value={dateRange}
             onChange={setDateRange}
+            className="points-config-form"
           />
           <button 
             type="button"
@@ -422,7 +445,14 @@ const AdminOrders: React.FC = () => {
               setDateRange(null)
               setSelectedRowKeys([])
             }}
-            style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #d9d9d9', background: '#fff', cursor: 'pointer' }}
+            style={{ 
+              padding: '6px 12px', 
+              borderRadius: 6, 
+              border: '1px solid rgba(255, 255, 255, 0.2)', 
+              background: 'rgba(255, 255, 255, 0.1)', 
+              color: '#FFFFFF',
+              cursor: 'pointer' 
+            }}
           >
             {t('common.resetFilters')}
           </button>
@@ -436,6 +466,7 @@ const AdminOrders: React.FC = () => {
               allowClear
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
+              className="points-config-form"
             />
           </div>
           <div style={{ marginBottom: 8 }}>
@@ -444,6 +475,7 @@ const AdminOrders: React.FC = () => {
               placeholder={[t('common.startDate'), t('common.endDate')]}
               value={dateRange}
               onChange={setDateRange}
+              className="points-config-form"
             />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
@@ -454,6 +486,7 @@ const AdminOrders: React.FC = () => {
               value={statusFilter}
               onChange={setStatusFilter}
               style={{ width: '100%' }}
+              className="points-config-form"
             >
               <Option value="pending">{t('ordersAdmin.status.pending')}</Option>
               <Option value="confirmed">{t('ordersAdmin.status.confirmed')}</Option>
@@ -469,6 +502,7 @@ const AdminOrders: React.FC = () => {
               value={paymentFilter}
               onChange={setPaymentFilter}
               style={{ width: '100%' }}
+              className="points-config-form"
             >
               <Option value="bank_transfer">{t('ordersAdmin.payment.bankTransfer')}</Option>
               <Option value="credit">{t('ordersAdmin.payment.credit')}</Option>
@@ -492,53 +526,93 @@ const AdminOrders: React.FC = () => {
         }}
       >
       {!isMobile ? (
-      <Table
-        columns={columns}
+      <div className="points-config-form">
+        <Table
+          columns={columns}
           dataSource={filteredSorted}
-        rowKey="id"
-        loading={loading}
-        rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
-        title={() => (
-          <Space>
-            <button type="button" disabled={selectedRowKeys.length === 0} onClick={async () => {
-              setLoading(true)
-              try {
-                await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'confirmed' } as any)))
-                  message.success(t('ordersAdmin.batchConfirmed'))
-                loadData()
-                setSelectedRowKeys([])
-              } finally {
-                setLoading(false)
-              }
-            }} style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #d9d9d9', background: '#fff', cursor: selectedRowKeys.length === 0 ? 'not-allowed' : 'pointer', opacity: selectedRowKeys.length === 0 ? 0.6 : 1 }}>
+          rowKey="id"
+          loading={loading}
+          rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
+          title={() => (
+            <Space>
+              <button 
+                type="button" 
+                disabled={selectedRowKeys.length === 0} 
+                onClick={async () => {
+                  setLoading(true)
+                  try {
+                    await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'confirmed' } as any)))
+                    message.success(t('ordersAdmin.batchConfirmed'))
+                    loadData()
+                    setSelectedRowKeys([])
+                  } finally {
+                    setLoading(false)
+                  }
+                }} 
+                style={{ 
+                  padding: '6px 12px', 
+                  borderRadius: 6, 
+                  border: '1px solid rgba(255, 255, 255, 0.2)', 
+                  background: selectedRowKeys.length === 0 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.1)', 
+                  color: '#FFFFFF',
+                  cursor: selectedRowKeys.length === 0 ? 'not-allowed' : 'pointer', 
+                  opacity: selectedRowKeys.length === 0 ? 0.6 : 1 
+                }}
+              >
                 {t('ordersAdmin.batchConfirm')}
-            </button>
-              <button type="button" disabled={selectedRowKeys.length === 0} onClick={async () => {
-                setLoading(true)
-                try {
-                  await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'delivered' } as any)))
-                  message.success(t('ordersAdmin.batchDelivered'))
-                loadData()
-                setSelectedRowKeys([])
-              } finally {
-                setLoading(false)
-              }
-            }} style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #d9d9d9', background: '#fff', cursor: selectedRowKeys.length === 0 ? 'not-allowed' : 'pointer', opacity: selectedRowKeys.length === 0 ? 0.6 : 1 }}>
+              </button>
+              <button 
+                type="button" 
+                disabled={selectedRowKeys.length === 0} 
+                onClick={async () => {
+                  setLoading(true)
+                  try {
+                    await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'delivered' } as any)))
+                    message.success(t('ordersAdmin.batchDelivered'))
+                    loadData()
+                    setSelectedRowKeys([])
+                  } finally {
+                    setLoading(false)
+                  }
+                }} 
+                style={{ 
+                  padding: '6px 12px', 
+                  borderRadius: 6, 
+                  border: '1px solid rgba(255, 255, 255, 0.2)', 
+                  background: selectedRowKeys.length === 0 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.1)', 
+                  color: '#FFFFFF',
+                  cursor: selectedRowKeys.length === 0 ? 'not-allowed' : 'pointer', 
+                  opacity: selectedRowKeys.length === 0 ? 0.6 : 1 
+                }}
+              >
                 {t('ordersAdmin.batchDeliver')}
-            </button>
-            <button type="button" disabled={selectedRowKeys.length === 0} onClick={async () => {
-              setLoading(true)
-              try {
-                await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'cancelled' } as any)))
-                  message.success(t('ordersAdmin.batchCancelled'))
-                loadData()
-                setSelectedRowKeys([])
-              } finally {
-                setLoading(false)
-              }
-            }} style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #d9d9d9', background: '#fff', cursor: selectedRowKeys.length === 0 ? 'not-allowed' : 'pointer', opacity: selectedRowKeys.length === 0 ? 0.6 : 1 }}>
+              </button>
+              <button 
+                type="button" 
+                disabled={selectedRowKeys.length === 0} 
+                onClick={async () => {
+                  setLoading(true)
+                  try {
+                    await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'cancelled' } as any)))
+                    message.success(t('ordersAdmin.batchCancelled'))
+                    loadData()
+                    setSelectedRowKeys([])
+                  } finally {
+                    setLoading(false)
+                  }
+                }} 
+                style={{ 
+                  padding: '6px 12px', 
+                  borderRadius: 6, 
+                  border: '1px solid rgba(255, 255, 255, 0.2)', 
+                  background: selectedRowKeys.length === 0 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.1)', 
+                  color: '#FFFFFF',
+                  cursor: selectedRowKeys.length === 0 ? 'not-allowed' : 'pointer', 
+                  opacity: selectedRowKeys.length === 0 ? 0.6 : 1 
+                }}
+              >
                 {t('ordersAdmin.batchCancel')}
-            </button>
+              </button>
             <BatchDeleteButton
               selectedIds={selectedRowKeys}
               confirmTitle={t('ordersAdmin.batchDeleteConfirm')}
@@ -561,6 +635,12 @@ const AdminOrders: React.FC = () => {
               type="default"
               danger={true}
               showIcon={true}
+              style={{
+                background: 'rgba(255, 77, 79, 0.8)',
+                border: 'none',
+                color: '#FFFFFF',
+                fontWeight: 700
+              }}
             />
           </Space>
         )}
@@ -576,7 +656,11 @@ const AdminOrders: React.FC = () => {
           pageSizeOptions: ['10', '20', '50', '100'],
           style: { color: '#fff' }
         }}
-      />
+        style={{
+          background: 'transparent'
+        }}
+        />
+      </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {filteredSorted.map(order => {
@@ -655,7 +739,7 @@ const AdminOrders: React.FC = () => {
             )
           })}
           {filteredSorted.length === 0 && (
-            <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
+            <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
           )}
         </div>
       )}
@@ -699,16 +783,70 @@ const AdminOrders: React.FC = () => {
         {...getResponsiveModalConfig(isMobile, true, 960)}
         className="create-order-modal"
         footer={[
-          <button key="cancel" type="button" onClick={() => setCreating(false)} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #d9d9d9', background: '#fff', cursor: 'pointer' }}>
+          <button 
+            key="cancel" 
+            type="button" 
+            onClick={() => setCreating(false)} 
+            style={{ 
+              padding: '6px 14px', 
+              borderRadius: 8, 
+              border: '1px solid rgba(255, 255, 255, 0.2)', 
+              background: 'rgba(255, 255, 255, 0.1)', 
+              color: '#FFFFFF',
+              cursor: 'pointer' 
+            }}
+          >
             {t('common.cancel')}
           </button>,
-          <button key="submit" type="button" className="cigar-btn-gradient" onClick={() => {
-            const formEl = document.getElementById('createOrderForm') as HTMLFormElement | null
-            if (formEl) formEl.requestSubmit()
-          }} style={{ padding: '6px 14px', borderRadius: 8, cursor: 'pointer' }}>
+          <button 
+            key="submit" 
+            type="button" 
+            className="cigar-btn-gradient" 
+            onClick={() => {
+              const formEl = document.getElementById('createOrderForm') as HTMLFormElement | null
+              if (formEl) formEl.requestSubmit()
+            }} 
+            style={{ 
+              padding: '6px 14px', 
+              borderRadius: 8, 
+              cursor: 'pointer' 
+            }}
+          >
             {t('common.create')}
           </button>
         ]}
+        okButtonProps={{
+          style: {
+            background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+            border: 'none',
+            color: '#111',
+            fontWeight: 700
+          }
+        }}
+        cancelButtonProps={{
+          style: {
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            color: '#FFFFFF'
+          }
+        }}
+        styles={{
+          content: {
+            background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
+            border: '1px solid rgba(244, 175, 37, 0.3)'
+          },
+          header: {
+            background: 'transparent',
+            borderBottom: '1px solid rgba(244, 175, 37, 0.2)'
+          },
+          body: {
+            background: 'transparent'
+          },
+          footer: {
+            background: 'transparent',
+            borderTop: '1px solid rgba(244, 175, 37, 0.2)'
+          }
+        }}
       >
         <CreateOrderForm
           users={users}

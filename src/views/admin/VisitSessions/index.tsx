@@ -266,12 +266,17 @@ const VisitSessionsPage: React.FC = () => {
         return (
           <Space>
             <Button
-              type="primary"
               size="small"
               icon={<CheckOutlined />}
               onClick={(e) => {
                 e.stopPropagation();
                 handleManualCheckout(record.id);
+              }}
+              style={{
+                background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                border: 'none',
+                color: '#111',
+                fontWeight: 700
               }}
             >
               结算
@@ -284,6 +289,11 @@ const VisitSessionsPage: React.FC = () => {
                 forceCheckoutForm.setFieldsValue({ forceHours: 5 });
                 setForceCheckoutModalVisible(true);
               }}
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                color: '#FFFFFF'
+              }}
             >
               强制结算
             </Button>
@@ -294,31 +304,60 @@ const VisitSessionsPage: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: '24px' }}>
-      <Card>
+    <div style={{ minHeight: '100vh', color: '#FFFFFF', padding: '24px' }}>
+      {/* 标题 */}
+      <h1 style={{ 
+        fontSize: 22, 
+        fontWeight: 800, 
+        backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
+        WebkitBackgroundClip: 'text', 
+        color: 'transparent', 
+        marginBottom: 12 
+      }}>
+        驻店记录管理
+      </h1>
+      <Text style={{ color: 'rgba(255, 255, 255, 0.6)', display: 'block', marginBottom: 24 }}>
+        查看和管理所有驻店记录
+      </Text>
+
+      <Card style={{
+        background: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: 12,
+        border: '1px solid rgba(244, 175, 37, 0.2)',
+        backdropFilter: 'blur(10px)'
+      }}>
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <Title level={4}>驻店记录管理</Title>
-              <Text type="secondary">查看和管理所有驻店记录</Text>
-            </div>
-            <Space>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+            <div style={{ flex: 1 }} />
+            <Space wrap>
               <Button
-                type="primary"
                 icon={<LoginOutlined />}
                 onClick={() => {
                   setQrScannerMode('checkin');
                   setQrScannerVisible(true);
                 }}
+                style={{
+                  background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                  border: 'none',
+                  color: '#111',
+                  fontWeight: 700,
+                  boxShadow: '0 4px 15px rgba(244,175,37,0.35)'
+                }}
               >
                 QR Check-in
               </Button>
               <Button
-                type="primary"
                 icon={<LogoutOutlined />}
                 onClick={() => {
                   setQrScannerMode('checkout');
                   setQrScannerVisible(true);
+                }}
+                style={{
+                  background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                  border: 'none',
+                  color: '#111',
+                  fontWeight: 700,
+                  boxShadow: '0 4px 15px rgba(244,175,37,0.35)'
                 }}
               >
                 QR Check-out
@@ -327,6 +366,11 @@ const VisitSessionsPage: React.FC = () => {
                 icon={<ClockCircleOutlined />}
                 onClick={handleBatchProcessExpired}
                 loading={loading}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#FFFFFF'
+                }}
               >
                 批量处理过期记录
               </Button>
@@ -334,19 +378,24 @@ const VisitSessionsPage: React.FC = () => {
                 icon={<ReloadOutlined />}
                 onClick={loadAllSessions}
                 loading={loading}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#FFFFFF'
+                }}
               >
                 刷新
               </Button>
             </Space>
           </div>
 
-          <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
+          <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
             <Search
               placeholder="输入用户ID或会员ID搜索"
               allowClear
               enterButton="搜索"
               size="large"
-              style={{ flex: 1 }}
+              style={{ flex: 1, minWidth: 300 }}
               onSearch={(value) => {
                 if (value) {
                   setSearchUserId(value);
@@ -356,46 +405,87 @@ const VisitSessionsPage: React.FC = () => {
                   loadAllSessions();
                 }
               }}
+              className="points-config-form"
             />
-            <Space>
-              <Text>状态筛选：</Text>
+            <Space wrap>
+              <Text style={{ color: 'rgba(255, 255, 255, 0.85)' }}>状态筛选：</Text>
               <Button 
-                type={statusFilter === 'all' ? 'primary' : 'default'}
                 onClick={() => setStatusFilter('all')}
+                style={statusFilter === 'all' ? {
+                  background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                  border: 'none',
+                  color: '#111',
+                  fontWeight: 700
+                } : {
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#FFFFFF'
+                }}
               >
                 全部
               </Button>
               <Button 
-                type={statusFilter === 'pending' ? 'primary' : 'default'}
                 onClick={() => setStatusFilter('pending')}
+                style={statusFilter === 'pending' ? {
+                  background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                  border: 'none',
+                  color: '#111',
+                  fontWeight: 700
+                } : {
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#FFFFFF'
+                }}
               >
                 待处理
               </Button>
               <Button 
-                type={statusFilter === 'completed' ? 'primary' : 'default'}
                 onClick={() => setStatusFilter('completed')}
+                style={statusFilter === 'completed' ? {
+                  background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                  border: 'none',
+                  color: '#111',
+                  fontWeight: 700
+                } : {
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#FFFFFF'
+                }}
               >
                 已完成
               </Button>
               <Button 
-                type={statusFilter === 'expired' ? 'primary' : 'default'}
                 onClick={() => setStatusFilter('expired')}
+                style={statusFilter === 'expired' ? {
+                  background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                  border: 'none',
+                  color: '#111',
+                  fontWeight: 700
+                } : {
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#FFFFFF'
+                }}
               >
                 已过期
               </Button>
             </Space>
           </div>
 
-          <Table
-            columns={columns}
-            dataSource={sessions}
-            rowKey="id"
-            loading={loading}
-            pagination={{
-              pageSize: 20,
-              showSizeChanger: true
-            }}
-            expandable={{
+          <div className="points-config-form">
+            <Table
+              columns={columns}
+              dataSource={sessions}
+              rowKey="id"
+              loading={loading}
+              pagination={{
+                pageSize: 20,
+                showSizeChanger: true
+              }}
+              style={{
+                background: 'transparent'
+              }}
+              expandable={{
               expandedRowRender: (record: VisitSession) => {
                 // 从 redemptionRecords state 中获取该 session 的所有兑换记录（包括待处理和已完成）
                 const allRedemptionRecords = redemptionRecords.get(record.id) || [];
@@ -406,21 +496,26 @@ const VisitSessionsPage: React.FC = () => {
                 }
                 
                 return (
-                  <div style={{ padding: '16px', background: '#fafafa', marginLeft: 24 }}>
+                  <div style={{ padding: '16px', background: 'rgba(255, 255, 255, 0.05)', marginLeft: 24, borderRadius: 8, border: '1px solid rgba(255, 255, 255, 0.1)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                      <div style={{ fontWeight: 600, color: '#1890ff' }}>
+                      <div style={{ fontWeight: 600, color: '#FFD700' }}>
                         <GiftOutlined style={{ marginRight: 8 }} />
                         兑换记录 ({allRedemptionRecords.length} 项)
                       </div>
                       {record.status === 'pending' && (
                         <Button
-                          type="primary"
                           size="small"
                           icon={<PlusOutlined />}
                           onClick={() => {
                             setSelectedSession(record);
                             form.setFieldsValue({ items: [{ cigarId: undefined, quantity: 1 }] });
                             setAddRedemptionModalVisible(true);
+                          }}
+                          style={{
+                            background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                            border: 'none',
+                            color: '#111',
+                            fontWeight: 700
                           }}
                         >
                           添加兑换记录
@@ -429,14 +524,18 @@ const VisitSessionsPage: React.FC = () => {
                     </div>
                     
                     {allRedemptionRecords.length === 0 ? (
-                      <Text type="secondary">暂无兑换记录</Text>
+                      <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>暂无兑换记录</Text>
                     ) : (
-                      <Table
-                        dataSource={allRedemptionRecords}
-                        rowKey={(item) => item.id || `${record.id}-${item.createdAt}`}
-                        pagination={false}
-                        size="small"
-                        columns={[
+                      <div className="points-config-form">
+                        <Table
+                          dataSource={allRedemptionRecords}
+                          rowKey={(item) => item.id || `${record.id}-${item.createdAt}`}
+                          pagination={false}
+                          size="small"
+                          style={{
+                            background: 'transparent'
+                          }}
+                          columns={[
                           {
                             title: '状态',
                             dataIndex: 'status',
@@ -456,9 +555,9 @@ const VisitSessionsPage: React.FC = () => {
                             width: 200,
                             render: (name: string, record: any) => {
                               if (record.status === 'pending') {
-                                return <Text type="secondary">待选择</Text>;
+                                return <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>待选择</Text>;
                               }
-                              return <Text strong>{name}</Text>;
+                              return <Text strong style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{name}</Text>;
                             }
                           },
                           {
@@ -517,7 +616,8 @@ const VisitSessionsPage: React.FC = () => {
                             }
                           }
                         ]}
-                      />
+                        />
+                      </div>
                     )}
                   </div>
                 );
@@ -533,7 +633,8 @@ const VisitSessionsPage: React.FC = () => {
                 return true; // 总是可以展开，以便查看是否有待处理的记录
               }
             }}
-          />
+            />
+          </div>
         </Space>
       </Card>
 
@@ -549,12 +650,44 @@ const VisitSessionsPage: React.FC = () => {
 
       {/* 添加兑换记录弹窗 */}
       <Modal
-        title="添加兑换记录"
+        title={<span style={{ color: '#FFFFFF' }}>添加兑换记录</span>}
         open={addRedemptionModalVisible}
         onCancel={() => {
           setAddRedemptionModalVisible(false);
           setSelectedSession(null);
           form.resetFields();
+        }}
+        okButtonProps={{
+          style: {
+            background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+            border: 'none',
+            color: '#111',
+            fontWeight: 700
+          }
+        }}
+        cancelButtonProps={{
+          style: {
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            color: '#FFFFFF'
+          }
+        }}
+        styles={{
+          content: {
+            background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
+            border: '1px solid rgba(244, 175, 37, 0.3)'
+          },
+          header: {
+            background: 'transparent',
+            borderBottom: '1px solid rgba(244, 175, 37, 0.2)'
+          },
+          body: {
+            background: 'transparent'
+          },
+          footer: {
+            background: 'transparent',
+            borderTop: '1px solid rgba(244, 175, 37, 0.2)'
+          }
         }}
         onOk={async () => {
           if (!selectedSession || !user?.id) {
@@ -623,7 +756,7 @@ const VisitSessionsPage: React.FC = () => {
         confirmLoading={addingRedemption}
         width={600}
       >
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" className="points-config-form">
           <Form.List name="items">
             {(fields, { add, remove }) => (
               <>
@@ -679,13 +812,45 @@ const VisitSessionsPage: React.FC = () => {
 
       {/* 编辑兑换记录弹窗 */}
       <Modal
-        title="编辑兑换记录"
+        title={<span style={{ color: '#FFFFFF' }}>编辑兑换记录</span>}
         open={editRedemptionModalVisible}
         onCancel={() => {
           setEditRedemptionModalVisible(false);
           setSelectedRedemptionRecord(null);
           setSelectedSession(null);
           form.resetFields();
+        }}
+        okButtonProps={{
+          style: {
+            background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+            border: 'none',
+            color: '#111',
+            fontWeight: 700
+          }
+        }}
+        cancelButtonProps={{
+          style: {
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            color: '#FFFFFF'
+          }
+        }}
+        styles={{
+          content: {
+            background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
+            border: '1px solid rgba(244, 175, 37, 0.3)'
+          },
+          header: {
+            background: 'transparent',
+            borderBottom: '1px solid rgba(244, 175, 37, 0.2)'
+          },
+          body: {
+            background: 'transparent'
+          },
+          footer: {
+            background: 'transparent',
+            borderTop: '1px solid rgba(244, 175, 37, 0.2)'
+          }
         }}
         onOk={async () => {
           if (!selectedRedemptionRecord || !selectedSession || !user?.id) {
@@ -742,7 +907,7 @@ const VisitSessionsPage: React.FC = () => {
         confirmLoading={addingRedemption}
         width={500}
       >
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" className="points-config-form">
           <Form.Item
             name="cigarId"
             label="雪茄"
@@ -772,12 +937,44 @@ const VisitSessionsPage: React.FC = () => {
 
       {/* 强制结算弹窗 */}
       <Modal
-        title="强制结算"
+        title={<span style={{ color: '#FFFFFF' }}>强制结算</span>}
         open={forceCheckoutModalVisible}
         onCancel={() => {
           setForceCheckoutModalVisible(false);
           setSelectedSession(null);
           forceCheckoutForm.resetFields();
+        }}
+        okButtonProps={{
+          style: {
+            background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+            border: 'none',
+            color: '#111',
+            fontWeight: 700
+          }
+        }}
+        cancelButtonProps={{
+          style: {
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            color: '#FFFFFF'
+          }
+        }}
+        styles={{
+          content: {
+            background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
+            border: '1px solid rgba(244, 175, 37, 0.3)'
+          },
+          header: {
+            background: 'transparent',
+            borderBottom: '1px solid rgba(244, 175, 37, 0.2)'
+          },
+          body: {
+            background: 'transparent'
+          },
+          footer: {
+            background: 'transparent',
+            borderTop: '1px solid rgba(244, 175, 37, 0.2)'
+          }
         }}
         onOk={async () => {
           if (!selectedSession || !user?.id) {
@@ -812,10 +1009,10 @@ const VisitSessionsPage: React.FC = () => {
         }}
         width={400}
       >
-        <Form form={forceCheckoutForm} layout="vertical">
+        <Form form={forceCheckoutForm} layout="vertical" className="points-config-form">
           <Form.Item
             name="forceHours"
-            label="结算时长（小时）"
+            label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>结算时长（小时）</span>}
             rules={[
               { required: true, message: '请输入结算时长' },
               { type: 'number', min: 0.5, message: '结算时长必须大于等于0.5小时' }
@@ -831,7 +1028,7 @@ const VisitSessionsPage: React.FC = () => {
               addonAfter="小时"
             />
           </Form.Item>
-          <div style={{ color: '#999', fontSize: 12, marginTop: -8 }}>
+          <div style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 12, marginTop: -8 }}>
             提示：忘记check-out时，将按此时长进行强制结算
           </div>
         </Form>

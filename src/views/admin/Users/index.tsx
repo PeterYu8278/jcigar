@@ -1,9 +1,10 @@
 // 用户管理页面
 import React, { useEffect, useMemo, useState } from 'react'
-import { Table, Button, Tag, Space, Typography, Input, Select, message, Modal, Form, Switch, Dropdown, Checkbox, Row, Col, Spin } from 'antd'
+import { Table, Button, Tag, Space, Typography, Input, Select, message, Modal, Form, Switch, Dropdown, Checkbox, Row, Col, Spin, App } from 'antd'
 import { EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined, EyeOutlined, ArrowLeftOutlined, CalendarOutlined, ShoppingOutlined, TrophyOutlined } from '@ant-design/icons'
 import { MemberProfileCard } from '../../../components/common/MemberProfileCard'
 import { ProfileView } from '../../../components/common/ProfileView'
+import { ReferralTreeView } from '../../../components/admin/ReferralTreeView'
 
 const { Title } = Typography
 const { Search } = Input
@@ -40,6 +41,7 @@ const glassmorphismInputStyle = {
 
 const AdminUsers: React.FC = () => {
   const { t } = useTranslation()
+  const { modal } = App.useApp() // 使用 App.useApp() 获取 modal 实例以支持 React 19
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(false)
   const [editing, setEditing] = useState<null | User>(null)
@@ -70,7 +72,7 @@ const AdminUsers: React.FC = () => {
     action: true,
     }
   })
-  const [activeTab, setActiveTab] = useState<'cigar' | 'points' | 'activity' | 'referral'>('cigar')
+  const [activeTab, setActiveTab] = useState<'list' | 'referralTree'>('list')
   const [showMemberCard, setShowMemberCard] = useState(false) // 控制头像/会员卡切换
   const [userOrders, setUserOrders] = useState<Order[]>([])
   const [userEvents, setUserEvents] = useState<Event[]>([])
@@ -438,43 +440,150 @@ const AdminUsers: React.FC = () => {
       overflow: isMobile ? 'hidden' : 'visible',
       paddingRight: isMobile ? '32px' : '0'  // 为右侧索引栏预留空间
     }}>
+      {/* 标签页 */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{
+          display: 'flex',
+          borderBottom: '1px solid rgba(244,175,37,0.2)',
+          marginBottom: 16
+        }}>
+          {(['list', 'referralTree'] as const).map((tabKey) => {
+            const isActive = activeTab === tabKey
+            const baseStyle: React.CSSProperties = {
+              flex: 1,
+              padding: '10px 0',
+              fontWeight: 800,
+              fontSize: 12,
+              outline: 'none',
+              borderBottom: isActive ? '2px solid transparent' : '2px solid transparent',
+              cursor: 'pointer',
+              background: 'none',
+              border: 'none',
+              position: 'relative' as const,
+            }
+            const activeStyle: React.CSSProperties = {
+              color: 'transparent',
+              backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+              WebkitBackgroundClip: 'text',
+            }
+            const inactiveStyle: React.CSSProperties = {
+              color: '#A0A0A0',
+            }
+
+            const getTabLabel = (key: string) => {
+              switch (key) {
+                case 'list': return t('usersAdmin.userList')
+                case 'referralTree': return t('usersAdmin.referralTree')
+                default: return ''
+              }
+            }
+
+            return (
+              <button
+                key={tabKey}
+                style={{
+                  ...baseStyle,
+                  ...(isActive ? activeStyle : inactiveStyle),
+                }}
+                onClick={() => setActiveTab(tabKey)}
+              >
+                {getTabLabel(tabKey)}
+                {isActive && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: '2px',
+                    background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                  }} />
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {activeTab === 'referralTree' && (
+        <ReferralTreeView users={users} />
+      )}
+
+      {activeTab === 'list' && (
+        <>
       {!isMobile && (
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
          <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{t('navigation.users')}</h1>
         <Space>
-          {selectedRowKeys.length > 1 && (
+          {selectedRowKeys.length > 0 && (
             <>
-              <Button onClick={async () => {
-                setLoading(true)
-                try {
-                  await Promise.all(selectedRowKeys.map(id => updateDocument<User>(COLLECTIONS.USERS, String(id), { status: 'inactive' } as any)))
-                  message.success(t('usersAdmin.batchDisabled'))
-                  const list = await getUsers()
-                  setUsers(list)
-                  setSelectedRowKeys([])
-                } finally {
-                  setLoading(false)
-                }
-              }}>{t('usersAdmin.batchDisable')}</Button>
-              <Button danger onClick={async () => {
-    Modal.confirm({
-                  title: t('usersAdmin.batchDeleteConfirm'),
-                  content: t('usersAdmin.batchDeleteContent', { count: selectedRowKeys.length }),
-      okButtonProps: { danger: true },
-      onOk: async () => {
-                    setLoading(true)
-                    try {
-                      await Promise.all(selectedRowKeys.map(id => deleteDocument(COLLECTIONS.USERS, String(id))))
-                      message.success(t('usersAdmin.batchDeleted'))
-                      const list = await getUsers()
-                      setUsers(list)
-                      setSelectedRowKeys([])
-                    } finally {
-                      setLoading(false)
-                    }
+              <Button 
+                onClick={async () => {
+                  setLoading(true)
+                  try {
+                    await Promise.all(selectedRowKeys.map(id => updateDocument<User>(COLLECTIONS.USERS, String(id), { status: 'inactive' } as any)))
+                    message.success(t('usersAdmin.batchDisabled'))
+                    const list = await getUsers()
+                    setUsers(list)
+                    setSelectedRowKeys([])
+                  } finally {
+                    setLoading(false)
                   }
-                })
-              }}>{t('usersAdmin.batchDelete')}</Button>
+                }}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#FFFFFF'
+                }}
+              >
+                {t('usersAdmin.batchDisable')}
+              </Button>
+              <Button 
+                onClick={async () => {
+                try {
+                  modal.confirm({
+                    title: t('usersAdmin.batchDeleteConfirm'),
+                    content: t('usersAdmin.batchDeleteContent', { count: selectedRowKeys.length }),
+                    okButtonProps: { danger: true },
+                    onOk: async () => {
+                      setLoading(true)
+                      try {
+                        const results = await Promise.all(selectedRowKeys.map(id => deleteDocument(COLLECTIONS.USERS, String(id))))
+                        const failedCount = results.filter(r => !r.success).length
+                        const successCount = results.filter(r => r.success).length
+                        
+                        if (failedCount > 0) {
+                          message.error(t('usersAdmin.batchDeleteFailed', { failed: failedCount, total: selectedRowKeys.length }))
+                        } else {
+                          message.success(t('usersAdmin.batchDeleted'))
+                        }
+                        
+                        if (successCount > 0) {
+                          const list = await getUsers()
+                          setUsers(list)
+                          setSelectedRowKeys([])
+                        }
+                      } catch (error: any) {
+                        console.error('[AdminUsers] 批量删除失败:', error)
+                        message.error(error.message || t('messages.operationFailed'))
+                      } finally {
+                        setLoading(false)
+                      }
+                    }
+                  })
+                } catch (error: any) {
+                  console.error('[AdminUsers] 打开确认对话框失败:', error)
+                  message.error(error.message || '无法打开确认对话框')
+                }
+              }}
+              style={{
+                background: 'rgba(255, 77, 79, 0.8)',
+                border: 'none',
+                color: '#FFFFFF',
+                fontWeight: 700
+              }}
+            >
+              {t('usersAdmin.batchDelete')}
+            </Button>
             </>
           )}
 
@@ -491,7 +600,14 @@ const AdminUsers: React.FC = () => {
 
       {/* 桌面：搜索和筛选 */}
       {!isMobile && (
-      <div style={{ marginBottom: 16, padding: '16px', background: '#fafafa', borderRadius: '6px' }}>
+      <div style={{ 
+        marginBottom: 16, 
+        padding: '16px', 
+        background: 'rgba(255, 255, 255, 0.05)', 
+        borderRadius: 12,
+        border: '1px solid rgba(244, 175, 37, 0.2)',
+        backdropFilter: 'blur(10px)'
+      }}>
         <Space size="middle" wrap>
           <Search
             placeholder={t('usersAdmin.searchByNameOrEmail')}
@@ -500,6 +616,7 @@ const AdminUsers: React.FC = () => {
             prefix={<SearchOutlined />}
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
+            className="points-config-form"
           />
             <Select
               allowClear
@@ -507,6 +624,7 @@ const AdminUsers: React.FC = () => {
               value={roleFilter}
               style={{ width: 160 }}
               onChange={(v) => setRoleFilter(v)}
+              className="points-config-form"
             >
             <Option value="admin">{t('common.admin')}</Option>
             <Option value="member">{t('common.member')}</Option>
@@ -518,6 +636,7 @@ const AdminUsers: React.FC = () => {
               value={levelFilter}
               style={{ width: 160 }}
               onChange={(v) => setLevelFilter(v)}
+              className="points-config-form"
             >
             <Option value="bronze">{t('usersAdmin.bronzeMember')}</Option>
             <Option value="silver">{t('usersAdmin.silverMember')}</Option>
@@ -530,43 +649,58 @@ const AdminUsers: React.FC = () => {
               value={statusFilter}
               style={{ width: 160 }}
               onChange={(v) => setStatusFilter(v)}
+              className="points-config-form"
             >
             <Option value="active">{t('usersAdmin.active')}</Option>
               <Option value="inactive">{t('usersAdmin.inactive')}</Option>
           </Select>
-          <Button onClick={() => {
-            setKeyword('')
-            setRoleFilter(undefined)
-            setLevelFilter(undefined)
-            setSelectedRowKeys([])
-          }}>{t('common.resetFilters')}</Button>
+          <Button 
+            onClick={() => {
+              setKeyword('')
+              setRoleFilter(undefined)
+              setLevelFilter(undefined)
+              setSelectedRowKeys([])
+            }}
+            style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              color: '#FFFFFF'
+            }}
+          >
+            {t('common.resetFilters')}
+          </Button>
         </Space>
       </div>
       )}
 
       {/* 桌面：表格 */}
       {!isMobile && (
-      <Table
-        columns={columns}
+      <div className="points-config-form">
+        <Table
+          columns={columns}
           dataSource={filteredUsers}
-        rowKey="id"
-        loading={loading}
-        rowSelection={{
-          selectedRowKeys,
-          onChange: setSelectedRowKeys,
-        }}
-        pagination={{
+          rowKey="id"
+          loading={loading}
+          rowSelection={{
+            selectedRowKeys,
+            onChange: setSelectedRowKeys,
+          }}
+          pagination={{
             total: filteredUsers.length,
-          pageSize: 10,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
-        }}
-      />
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
+          }}
+          style={{
+            background: 'transparent'
+          }}
+        />
+      </div>
       )}
 
       {/* 移动端：列表视图 */}
-      {isMobile && (
+      {isMobile && activeTab === 'list' && (
         <div style={{
           display: 'flex',
           flexDirection: 'column',
@@ -590,6 +724,7 @@ const AdminUsers: React.FC = () => {
                 onChange={(e) => setKeyword(e.target.value)}
                 style={{ width: '100%' }}
                 prefix={<SearchOutlined />}
+                className="points-config-form"
               />
             </div>
             
@@ -606,7 +741,15 @@ const AdminUsers: React.FC = () => {
                   onClick: ({ key }) => setRoleFilter(key === 'all' ? undefined : (key as string)),
                 }}
               >
-                <Button shape="round" size="small">
+                <Button 
+                  shape="round" 
+                  size="small"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#FFFFFF'
+                  }}
+                >
                   {t('usersAdmin.role')}{roleFilter ? `: ${getRoleText(roleFilter)}` : ''}
                 </Button>
               </Dropdown>
@@ -622,7 +765,15 @@ const AdminUsers: React.FC = () => {
                   onClick: ({ key }) => setLevelFilter(key === 'all' ? undefined : (key as string)),
                 }}
               >
-                <Button shape="round" size="small">
+                <Button 
+                  shape="round" 
+                  size="small"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#FFFFFF'
+                  }}
+                >
                   {t('usersAdmin.level')}{levelFilter ? `：${getMembershipText(levelFilter)}` : ''}
                 </Button>
               </Dropdown>
@@ -636,7 +787,15 @@ const AdminUsers: React.FC = () => {
                   onClick: ({ key }) => setStatusFilter(key === 'all' ? undefined : (key as string)),
                 }}
               >
-                <Button shape="round" size="small">
+                <Button 
+                  shape="round" 
+                  size="small"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#FFFFFF'
+                  }}
+                >
                   {t('usersAdmin.status')}{statusFilter ? `: ${getStatusText(statusFilter)}` : ''}
                 </Button>
               </Dropdown>
@@ -726,7 +885,7 @@ const AdminUsers: React.FC = () => {
       )}
 
       {/* 右侧字母索引（固定居中）- 移至最外层 */}
-      {isMobile && (
+      {isMobile && activeTab === 'list' && (
         <div
           style={{
             position: 'fixed',
@@ -843,6 +1002,8 @@ const AdminUsers: React.FC = () => {
           scrollbar-width: none;  /* Firefox */
         }
       `}</style>
+      </>
+      )}
 
       {/* 查看用户详情弹窗 */}
       <Modal

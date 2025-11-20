@@ -9,9 +9,10 @@ import {
   UserOutlined,
   DashboardOutlined,
   TeamOutlined,
-  DatabaseOutlined,
   DollarOutlined,
-  QrcodeOutlined
+  QrcodeOutlined,
+  TrophyOutlined,
+  ClockCircleOutlined
 } from '@ant-design/icons'
 import { useAuthStore } from '../../store/modules/auth'
 import { useTranslation } from 'react-i18next'
@@ -55,7 +56,7 @@ const MobileBottomNav: React.FC = () => {
     }
   ]
 
-  // 管理员导航项（包含6个重要功能）
+  // 管理员导航项（包含6个重要功能，库存管理和订单管理已移除，因为仪表板有快速操作）
   const adminNavItems = [
     {
       key: '/admin',
@@ -76,21 +77,21 @@ const MobileBottomNav: React.FC = () => {
       badge: null
     },
     {
-      key: '/admin/orders',
-      icon: <ShoppingCartOutlined />,
-      label: t('navigation.orders'),
-      badge: 5
-    },
-    {
-      key: '/admin/inventory',
-      icon: <DatabaseOutlined />,
-      label: t('navigation.inventory'),
-      badge: null
-    },
-    {
       key: '/admin/finance',
       icon: <DollarOutlined />,
       label: t('navigation.finance'),
+      badge: null
+    },
+    {
+      key: '/admin/points-config',
+      icon: <TrophyOutlined />,
+      label: t('navigation.pointsConfig'),
+      badge: null
+    },
+    {
+      key: '/admin/visit-sessions',
+      icon: <ClockCircleOutlined />,
+      label: t('navigation.visitSessions'),
       badge: null
     }
   ]
@@ -112,9 +113,11 @@ const MobileBottomNav: React.FC = () => {
   const navItems = isAdmin ? getAdminNavItems() : frontendNavItems
 
   // 如果是管理员，将导航项分成两部分（中间插入QR按钮）
+  // 6个导航项分成3-3，中间是QR按钮，共7个位置
   const getDisplayItems = (): { leftItems: typeof navItems; rightItems: typeof navItems } | null => {
     if (!isAdmin) return null
     
+    // 6个项分成两半，左侧3个，右侧3个
     const middleIndex = Math.floor(navItems.length / 2)
     return {
       leftItems: navItems.slice(0, middleIndex),
@@ -196,7 +199,7 @@ const MobileBottomNav: React.FC = () => {
                   justifyContent: 'center',
                   cursor: 'pointer',
                   padding: '4px',
-                  width: '20%',
+                  width: '14.29%', // 7个位置（6个导航项+1个QR按钮），每个占100/7≈14.29%
                   transition: 'all 0.3s ease',
                   position: 'relative'
                 }}
@@ -210,7 +213,7 @@ const MobileBottomNav: React.FC = () => {
                   position: 'relative'
                 }}>
                   <div style={{
-                    fontSize: '24px',
+                    fontSize: '24px', // 图标大小
                     color: active ? '#FFD700' : '#9ca3af',
                     transition: 'all 0.3s ease'
                   }}>
@@ -233,12 +236,16 @@ const MobileBottomNav: React.FC = () => {
                 </div>
                 
                 <div style={{
-                  fontSize: '12px',
+                  fontSize: '12px', // 文字大小
                   color: active ? '#FFD700' : '#9ca3af',
                   fontWeight: active ? 600 : 400,
                   textAlign: 'center',
                   lineHeight: 1.2,
-                  transition: 'all 0.3s ease'
+                  transition: 'all 0.3s ease',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  maxWidth: '100%'
                 }}>
                   {item.label}
                 </div>
@@ -248,25 +255,24 @@ const MobileBottomNav: React.FC = () => {
 
           {/* 中间的QR扫描按钮 */}
           <div
-            onClick={handleQRScanClick}
             style={{
-              width: '20%',
+              width: '14.29%', // 7个位置（6个导航项+1个QR按钮），每个占100/7≈14.29%
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              cursor: 'pointer',
               position: 'relative',
               zIndex: 10
             }}
             className="mobile-nav-item"
           >
-            <div
+            <button
+              onClick={handleQRScanClick}
               style={{
                 position: 'relative',
                 top: '-14px',
-                width: '80px',
-                height: '80px',
+                width: '80px', // QR按钮大小
+                height: '80px', // QR按钮大小
                 borderRadius: '50%',
                 border: '4px solid rgba(26, 26, 26, 0.95)',
                 background: 'linear-gradient(135deg, #FDE08D 0%, #FDD017 100%)',
@@ -274,7 +280,18 @@ const MobileBottomNav: React.FC = () => {
                 alignItems: 'center',
                 justifyContent: 'center',
                 boxShadow: '0 4px 16px rgba(255, 215, 0, 0.3)',
-                transition: 'all 0.3s ease'
+                transition: 'all 0.3s ease',
+                cursor: 'pointer',
+                padding: 0,
+                outline: 'none'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.05)'
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(255, 215, 0, 0.4)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)'
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(255, 215, 0, 0.3)'
               }}
             >
               <QrcodeOutlined 
@@ -283,7 +300,7 @@ const MobileBottomNav: React.FC = () => {
                 }}
                 className="qr-icon-large"
               />
-            </div>
+            </button>
           </div>
 
             {/* 右侧导航项 */}
@@ -300,7 +317,7 @@ const MobileBottomNav: React.FC = () => {
                   justifyContent: 'center',
                   cursor: 'pointer',
                   padding: '4px',
-                  width: '20%',
+                  width: '14.29%', // 7个位置（6个导航项+1个QR按钮），每个占100/7≈14.29%
                   transition: 'all 0.3s ease',
                   position: 'relative'
                 }}
@@ -314,7 +331,7 @@ const MobileBottomNav: React.FC = () => {
                   position: 'relative'
                 }}>
                   <div style={{
-                    fontSize: '24px',
+                    fontSize: '24px', // 图标大小
                     color: active ? '#FFD700' : '#9ca3af',
                     transition: 'all 0.3s ease'
                   }}>
@@ -337,12 +354,16 @@ const MobileBottomNav: React.FC = () => {
                 </div>
                 
                 <div style={{
-                  fontSize: '12px',
+                  fontSize: '12px', // 文字大小
                   color: active ? '#FFD700' : '#9ca3af',
                   fontWeight: active ? 600 : 400,
                   textAlign: 'center',
                   lineHeight: 1.2,
-                  transition: 'all 0.3s ease'
+                  transition: 'all 0.3s ease',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  maxWidth: '100%'
                 }}>
                   {item.label}
                 </div>

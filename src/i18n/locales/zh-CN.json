@@ -144,7 +144,9 @@
     "currentNoData": "当前没有任何数据",
     "exportReport": "导出报告",
     "clearData": "清空数据",
-    "public": "公开"
+    "public": "公开",
+    "expand": "展开",
+    "collapse": "收起"
   },
   "container": {
     "loadFailed": "加载失败",
@@ -384,7 +386,17 @@
     "noCigarRecords": "暂无雪茄记录",
     "noPointsRecords": "暂无积分记录",
     "noActivityRecords": "暂无活动记录",
-    "noReferralRecords": "暂无引荐记录"
+    "noReferralRecords": "暂无引荐记录",
+    "userList": "用户列表",
+    "referralTree": "引荐关系图",
+    "hasReferrer": "有引荐人",
+    "hasReferrals": "有被引荐人",
+    "maxDepth": "最大层级",
+    "totalReferralPoints": "总引荐积分",
+    "totalUsers": "总用户数",
+    "expandAll": "展开全部",
+    "collapseAll": "折叠全部",
+    "noReferralData": "暂无引荐关系数据"
   },
   
   "ordersAdmin": {
@@ -620,6 +632,7 @@
     "inQuantity": "入库数量",
     "outQuantity": "出库数量",
     "recordCount": "记录数",
+    "totalQuantity": "总数量",
     "searchInLogs": "搜索入库记录（产品、原因、单号）",
     "searchOutLogs": "搜索出库记录（产品、原因、单号）",
     "filterByBrand": "按品牌筛选",
@@ -686,6 +699,9 @@
     "relatedOrder": "关联订单",
     "userId": "用户ID",
     "createdAt": "创建时间",
+    "transactionDate": "交易日期",
+    "income": "收入",
+    "expense": "支出",
     "actions": "操作",
     "transactionDetails": "交易详情",
     "relatedOrders": "关联订单",
@@ -696,6 +712,10 @@
     "currency": "货币",
     "selectTransactionType": "请选择交易类型",
     "enterAmount": "输入金额",
+    "enterIncomeAmount": "输入收入金额",
+    "enterExpenseAmount": "输入支出金额",
+    "selectTransactionDate": "请选择交易日期",
+    "enterIncomeOrExpense": "请输入收入或支出金额",
     "enterDescription": "输入交易描述",
     "relatedOrderId": "关联的订单ID或活动ID（选填）",
     "relatedUserId": "相关用户ID（选填）",

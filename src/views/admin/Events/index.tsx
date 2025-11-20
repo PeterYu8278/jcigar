@@ -552,7 +552,7 @@ const AdminEvents: React.FC = () => {
       render: (title: string, record: any) => (
         <div>
           <div style={{ fontWeight: 'bold' }}>{title}</div>
-          <div style={{ fontSize: '12px', color: '#666' }}>
+          <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
             {(record.description || '').length > 50 
               ? `${record.description.substring(0, 50)}...` 
               : record.description}
@@ -572,7 +572,7 @@ const AdminEvents: React.FC = () => {
               return dateVal ? new Date(dateVal).toLocaleDateString() : '-'
             })()}
           </div>
-          <div style={{ fontSize: '12px', color: '#666' }}>
+          <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
             {(() => {
               const e = (record?.schedule as any)?.endDate
               const dateVal = (e as any)?.toDate ? (e as any).toDate() : e
@@ -599,7 +599,7 @@ const AdminEvents: React.FC = () => {
               return maxParticipants === 0 ? `${registered}/∞ ${t('events.people')}` : `${registered}/${maxParticipants} ${t('events.people')}`
             })()}
           </div>
-          <div style={{ fontSize: '12px', color: '#666' }}>
+          <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
             {t('events.fee')}: RM{(record?.participants as any)?.fee ?? 0}
           </div>
         </div>
@@ -691,7 +691,13 @@ const AdminEvents: React.FC = () => {
                 }}
                 buttonText={t('common.batchCancelled')}
                 itemTypeName="活动"
-                style={{ padding: '8px 16px', borderRadius: 8, background: '#fff', color: '#000' }}
+                style={{ 
+                  padding: '8px 16px', 
+                  borderRadius: 8, 
+                  background: 'rgba(255, 255, 255, 0.1)', 
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#FFFFFF' 
+                }}
               />
               <BatchDeleteButton
                 selectedIds={selectedRowKeys}
@@ -705,7 +711,14 @@ const AdminEvents: React.FC = () => {
                       setSelectedRowKeys([])
                 }}
                 itemTypeName="活动"
-                style={{ padding: '8px 16px', borderRadius: 8, background: '#ff4d4f', color: '#fff' }}
+                style={{ 
+                  padding: '8px 16px', 
+                  borderRadius: 8, 
+                  background: 'rgba(255, 77, 79, 0.8)', 
+                  border: 'none',
+                  color: '#FFFFFF',
+                  fontWeight: 700
+                }}
               />
             </>
           )}
@@ -763,7 +776,9 @@ const AdminEvents: React.FC = () => {
               padding: '8px 16px', 
               background: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
               color: '#111', 
-              fontWeight: 700 
+              fontWeight: 700,
+              boxShadow: '0 4px 15px rgba(244,175,37,0.35)',
+              zIndex: 1000
             }}
           />
         </Space>
@@ -805,20 +820,25 @@ const AdminEvents: React.FC = () => {
         }}
       >
         {!isMobile ? (
-          <Table
-            columns={columns}
-            dataSource={filtered}
-            rowKey="id"
-            loading={loading}
-            rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
-            pagination={{
-              total: events.length,
-              pageSize: 10,
-              showSizeChanger: true,
-              showQuickJumper: true,
-              showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
-            }}
-          />
+          <div className="points-config-form">
+            <Table
+              columns={columns}
+              dataSource={filtered}
+              rowKey="id"
+              loading={loading}
+              rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
+              pagination={{
+                total: events.length,
+                pageSize: 10,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
+              }}
+              style={{
+                background: 'transparent'
+              }}
+            />
+          </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {filtered.map(ev => (
@@ -832,7 +852,7 @@ const AdminEvents: React.FC = () => {
               />
             ))}
             {filtered.length === 0 && (
-              <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
+              <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
             )}
           </div>
         )}
@@ -966,7 +986,7 @@ const AdminEvents: React.FC = () => {
         title={
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span>{t('common.participantsManagement')}</span>
-            <div style={{ fontSize: 14, color: '#666',marginRight: 30 }}>
+            <div style={{ fontSize: 14, color: 'rgba(255, 255, 255, 0.6)',marginRight: 30 }}>
               {t('common.registered')}：{((participantsEvent as any)?.participants?.registered || []).length} / {(participantsEvent as any)?.participants?.maxParticipants || 0}
             </div>
           </div>
@@ -1000,10 +1020,10 @@ const AdminEvents: React.FC = () => {
                   label: (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ flex: 1, textAlign: 'left' }}>{u.displayName || t('common.unnamed')}</span>
-                      <span style={{ flex: 2, textAlign: 'left', color: '#999', fontSize: '12px' }}>
+                      <span style={{ flex: 2, textAlign: 'left', color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
                         {(u as any)?.profile?.phone || t('common.noPhone')}
                       </span>
-                      <span style={{ flex: 6, textAlign: 'left', color: '#999', fontSize: '12px' }}>
+                      <span style={{ flex: 6, textAlign: 'left', color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
                         {u.email || t('common.noEmail')}
                       </span>
           </div>
@@ -1146,9 +1166,10 @@ const AdminEvents: React.FC = () => {
         <div style={{ 
           maxHeight: 400, 
           overflow: 'hidden', 
-          border: '1px solid #f0f0f0', 
-          borderRadius: 6,
-          background: '#fafafa'
+          border: '1px solid rgba(244, 175, 37, 0.2)', 
+          borderRadius: 12,
+          background: 'rgba(255, 255, 255, 0.05)',
+          backdropFilter: 'blur(10px)'
         }}>
           <ParticipantsList
             event={participantsEvent}

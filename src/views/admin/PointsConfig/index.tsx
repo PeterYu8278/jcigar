@@ -383,39 +383,127 @@ const PointsConfigPage: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: '24px' }}>
-      <Card>
-        <Space direction="vertical" size="large" style={{ width: '100%' }}>
-          <div>
-            <Title level={4}>{t('pointsConfig.title')}</Title>
-            <Text type="secondary">{t('pointsConfig.description')}</Text>
-          </div>
+    <div style={{ minHeight: '100vh', color: '#FFFFFF' }}>
+      {/* 标题 */}
+      <h1 style={{ 
+        fontSize: 22, 
+        fontWeight: 800, 
+        backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
+        WebkitBackgroundClip: 'text', 
+        color: 'transparent', 
+        marginBottom: 12 
+      }}>
+        {t('pointsConfig.title')}
+      </h1>
+      <Text style={{ color: 'rgba(255, 255, 255, 0.6)', display: 'block', marginBottom: 24 }}>
+        {t('pointsConfig.description')}
+      </Text>
 
-          <Tabs
-            activeKey={activeTab}
-            onChange={(key) => setActiveTab(key as 'config' | 'records' | 'reload')}
-            items={[
-              {
-                key: 'config',
-                label: (
-                  <span>
-                    <SettingOutlined />
-                    {t('pointsConfig.tabs.config')}
-                  </span>
-                ),
-                children: (
-                  <Form
-                    form={form}
-                    layout="vertical"
-                    onFinish={onFinish}
-                    initialValues={getDefaultPointsConfig()}
-                  >
+      {/* 标签页 */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{
+          display: 'flex',
+          borderBottom: '1px solid rgba(244,175,37,0.2)',
+          marginBottom: 16
+        }}>
+          {(['config', 'records', 'reload', 'membershipFees'] as const).map((tabKey) => {
+            const isActive = activeTab === tabKey
+            const baseStyle: React.CSSProperties = {
+              flex: 1,
+              padding: '10px 0',
+              fontWeight: 800,
+              fontSize: 12,
+              outline: 'none',
+              borderBottom: isActive ? '2px solid transparent' : '2px solid transparent',
+              cursor: 'pointer',
+              background: 'none',
+              border: 'none',
+              position: 'relative' as const,
+            }
+            const activeStyle: React.CSSProperties = {
+              color: 'transparent',
+              backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+              WebkitBackgroundClip: 'text',
+            }
+            const inactiveStyle: React.CSSProperties = {
+              color: '#A0A0A0',
+            }
+
+            const getTabLabel = (key: string) => {
+              switch (key) {
+                case 'config': return <><SettingOutlined style={{ marginRight: 4 }} />{t('pointsConfig.tabs.config')}</>
+                case 'records': return <><HistoryOutlined style={{ marginRight: 4 }} />{t('pointsConfig.tabs.records')}</>
+                case 'reload': return <><HistoryOutlined style={{ marginRight: 4 }} />充值验证</>
+                case 'membershipFees': return <><HistoryOutlined style={{ marginRight: 4 }} />年费记录</>
+                default: return ''
+              }
+            }
+
+            return (
+              <button
+                key={tabKey}
+                style={{
+                  ...baseStyle,
+                  ...(isActive ? activeStyle : inactiveStyle),
+                }}
+                onClick={() => setActiveTab(tabKey as 'config' | 'records' | 'reload' | 'membershipFees')}
+              >
+                {getTabLabel(tabKey)}
+                {isActive && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: '2px',
+                    background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                  }} />
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* 标签页内容 */}
+      <div>
+        {activeTab === 'config' && (
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: 12,
+            padding: 24,
+            border: '1px solid rgba(244, 175, 37, 0.2)',
+            backdropFilter: 'blur(10px)'
+          }}>
+            <Form
+              form={form}
+              layout="vertical"
+              onFinish={onFinish}
+              initialValues={getDefaultPointsConfig()}
+              className="points-config-form"
+            >
             {/* 注册相关积分 */}
-            <Card type="inner" title={t('pointsConfig.registration.title')} style={{ marginBottom: 16 }}>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.03)',
+              borderRadius: 8,
+              padding: 16,
+              marginBottom: 16,
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}>
+              <h3 style={{ 
+                fontSize: 16, 
+                fontWeight: 700, 
+                marginBottom: 16,
+                backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                WebkitBackgroundClip: 'text',
+                color: 'transparent'
+              }}>
+                {t('pointsConfig.registration.title')}
+              </h3>
               <Row gutter={16}>
                 <Col xs={24} sm={8}>
                   <Form.Item
-                    label={t('pointsConfig.registration.base')}
+                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.registration.base')}</span>}
                     name={['registration', 'base']}
                     rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
@@ -429,7 +517,7 @@ const PointsConfigPage: React.FC = () => {
                 </Col>
                 <Col xs={24} sm={8}>
                   <Form.Item
-                    label={t('pointsConfig.registration.withReferral')}
+                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.registration.withReferral')}</span>}
                     name={['registration', 'withReferral']}
                     rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
@@ -443,7 +531,7 @@ const PointsConfigPage: React.FC = () => {
                 </Col>
                 <Col xs={24} sm={8}>
                   <Form.Item
-                    label={t('pointsConfig.registration.referrerReward')}
+                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.registration.referrerReward')}</span>}
                     name={['registration', 'referrerReward']}
                     rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
@@ -456,14 +544,30 @@ const PointsConfigPage: React.FC = () => {
                   </Form.Item>
                 </Col>
               </Row>
-            </Card>
+            </div>
 
             {/* 购买相关积分 */}
-            <Card type="inner" title={t('pointsConfig.purchase.title')} style={{ marginBottom: 16 }}>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.03)',
+              borderRadius: 8,
+              padding: 16,
+              marginBottom: 16,
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}>
+              <h3 style={{ 
+                fontSize: 16, 
+                fontWeight: 700, 
+                marginBottom: 16,
+                backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                WebkitBackgroundClip: 'text',
+                color: 'transparent'
+              }}>
+                {t('pointsConfig.purchase.title')}
+              </h3>
               <Row gutter={16}>
                 <Col xs={24} sm={8}>
                   <Form.Item
-                    label={t('pointsConfig.purchase.firstOrder')}
+                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.purchase.firstOrder')}</span>}
                     name={['purchase', 'firstOrder']}
                     rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
@@ -477,7 +581,7 @@ const PointsConfigPage: React.FC = () => {
                 </Col>
                 <Col xs={24} sm={8}>
                   <Form.Item
-                    label={t('pointsConfig.purchase.perRinggit')}
+                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.purchase.perRinggit')}</span>}
                     name={['purchase', 'perRinggit']}
                     rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
@@ -493,7 +597,7 @@ const PointsConfigPage: React.FC = () => {
                 </Col>
                 <Col xs={24} sm={8}>
                   <Form.Item
-                    label={t('pointsConfig.purchase.referrerFirstOrder')}
+                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.purchase.referrerFirstOrder')}</span>}
                     name={['purchase', 'referrerFirstOrder']}
                     rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
@@ -506,14 +610,30 @@ const PointsConfigPage: React.FC = () => {
                   </Form.Item>
                 </Col>
               </Row>
-            </Card>
+            </div>
 
             {/* 活动相关积分 */}
-            <Card type="inner" title={t('pointsConfig.event.title')} style={{ marginBottom: 16 }}>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.03)',
+              borderRadius: 8,
+              padding: 16,
+              marginBottom: 16,
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}>
+              <h3 style={{ 
+                fontSize: 16, 
+                fontWeight: 700, 
+                marginBottom: 16,
+                backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                WebkitBackgroundClip: 'text',
+                color: 'transparent'
+              }}>
+                {t('pointsConfig.event.title')}
+              </h3>
               <Row gutter={16}>
                 <Col xs={24} sm={8}>
                   <Form.Item
-                    label={t('pointsConfig.event.registration')}
+                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.event.registration')}</span>}
                     name={['event', 'registration']}
                     rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
@@ -527,7 +647,7 @@ const PointsConfigPage: React.FC = () => {
                 </Col>
                 <Col xs={24} sm={8}>
                   <Form.Item
-                    label={t('pointsConfig.event.checkIn')}
+                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.event.checkIn')}</span>}
                     name={['event', 'checkIn']}
                     rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
@@ -541,7 +661,7 @@ const PointsConfigPage: React.FC = () => {
                 </Col>
                 <Col xs={24} sm={8}>
                   <Form.Item
-                    label={t('pointsConfig.event.completion')}
+                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.event.completion')}</span>}
                     name={['event', 'completion']}
                     rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
@@ -554,14 +674,30 @@ const PointsConfigPage: React.FC = () => {
                   </Form.Item>
                 </Col>
               </Row>
-            </Card>
+            </div>
 
             {/* 其他积分 */}
-            <Card type="inner" title={t('pointsConfig.other.title')} style={{ marginBottom: 16 }}>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.03)',
+              borderRadius: 8,
+              padding: 16,
+              marginBottom: 16,
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}>
+              <h3 style={{ 
+                fontSize: 16, 
+                fontWeight: 700, 
+                marginBottom: 16,
+                backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                WebkitBackgroundClip: 'text',
+                color: 'transparent'
+              }}>
+                {t('pointsConfig.other.title')}
+              </h3>
               <Row gutter={16}>
                 <Col xs={24} sm={8}>
                   <Form.Item
-                    label={t('pointsConfig.other.profileComplete')}
+                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.other.profileComplete')}</span>}
                     name={['other', 'profileComplete']}
                     rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
@@ -575,7 +711,7 @@ const PointsConfigPage: React.FC = () => {
                 </Col>
                 <Col xs={24} sm={8}>
                   <Form.Item
-                    label={t('pointsConfig.other.firstLogin')}
+                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.other.firstLogin')}</span>}
                     name={['other', 'firstLogin']}
                     rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
@@ -589,7 +725,7 @@ const PointsConfigPage: React.FC = () => {
                 </Col>
                 <Col xs={24} sm={8}>
                   <Form.Item
-                    label={t('pointsConfig.other.dailyCheckIn')}
+                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.other.dailyCheckIn')}</span>}
                     name={['other', 'dailyCheckIn']}
                     rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
@@ -602,14 +738,30 @@ const PointsConfigPage: React.FC = () => {
                   </Form.Item>
                 </Col>
               </Row>
-            </Card>
+            </div>
 
             {/* 驻店时长费用 */}
-            <Card type="inner" title="驻店时长费用" style={{ marginBottom: 16 }}>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.03)',
+              borderRadius: 8,
+              padding: 16,
+              marginBottom: 16,
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}>
+              <h3 style={{ 
+                fontSize: 16, 
+                fontWeight: 700, 
+                marginBottom: 16,
+                backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                WebkitBackgroundClip: 'text',
+                color: 'transparent'
+              }}>
+                驻店时长费用
+              </h3>
               <Row gutter={16}>
                 <Col xs={24} sm={8}>
                   <Form.Item
-                    label="每小时扣除积分"
+                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>每小时扣除积分</span>}
                     name={['membershipFee', 'hourlyRate']}
                     rules={[{ required: true, message: '请输入每小时扣除积分' }]}
                     tooltip="会员驻店时，每小时扣除的积分数"
@@ -623,10 +775,26 @@ const PointsConfigPage: React.FC = () => {
                   </Form.Item>
                 </Col>
               </Row>
-            </Card>
+            </div>
 
             {/* 年费配置（按日期范围） */}
-            <Card type="inner" title="年费配置（按日期范围）" style={{ marginBottom: 16 }}>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.03)',
+              borderRadius: 8,
+              padding: 16,
+              marginBottom: 16,
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}>
+              <h3 style={{ 
+                fontSize: 16, 
+                fontWeight: 700, 
+                marginBottom: 16,
+                backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                WebkitBackgroundClip: 'text',
+                color: 'transparent'
+              }}>
+                年费配置（按日期范围）
+              </h3>
               <Form.List name={['membershipFee', 'annualFees']}>
                 {(fields, { add, remove }) => (
                   <>
@@ -636,7 +804,7 @@ const PointsConfigPage: React.FC = () => {
                           <Form.Item
                             {...restField}
                             name={[name, 'startDate']}
-                            label="生效开始日期"
+                            label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>生效开始日期</span>}
                             rules={[{ required: true, message: '请选择开始日期' }]}
                           >
                             <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
@@ -646,7 +814,7 @@ const PointsConfigPage: React.FC = () => {
                           <Form.Item
                             {...restField}
                             name={[name, 'endDate']}
-                            label="生效结束日期（可选）"
+                            label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>生效结束日期（可选）</span>}
                           >
                             <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
                           </Form.Item>
@@ -655,7 +823,7 @@ const PointsConfigPage: React.FC = () => {
                           <Form.Item
                             {...restField}
                             name={[name, 'amount']}
-                            label="年费金额（积分）"
+                            label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>年费金额（积分）</span>}
                             rules={[{ required: true, message: '请输入年费金额' }]}
                           >
                             <InputNumber
@@ -687,222 +855,258 @@ const PointsConfigPage: React.FC = () => {
                   </>
                 )}
               </Form.List>
-            </Card>
+            </div>
 
-                    {/* 操作按钮 */}
-                    <div style={{ textAlign: 'right' }}>
-                      <Space>
-                        <Button
-                          type="default"
-                          icon={<PlayCircleOutlined />}
-                          onClick={handleProcessMembershipFees}
-                          loading={processingFees}
-                          title="手动触发自动扣除到期的会员年费（系统已自动执行，此按钮用于手动触发）"
-                        >
-                          手动执行扣除年费
-                        </Button>
-                        <Button
-                          icon={<ReloadOutlined />}
-                          onClick={resetToDefault}
-                          disabled={saving}
-                        >
-                          {t('pointsConfig.actions.resetToDefault')}
-                        </Button>
-                        <Button
-                          type="primary"
-                          icon={<SaveOutlined />}
-                          htmlType="submit"
-                          loading={saving}
-                        >
-                          {t('pointsConfig.actions.saveConfig')}
-                        </Button>
-                      </Space>
-                    </div>
-                  </Form>
-                )
-              },
-              {
-                key: 'records',
-                label: (
-                  <span>
-                    <HistoryOutlined />
-                    {t('pointsConfig.tabs.records')}
-                  </span>
-                ),
-                children: (
-                  <div>
-                    <div style={{ marginBottom: 16, textAlign: 'right' }}>
-                      <Button
-                        icon={<ReloadOutlined />}
-                        onClick={loadPointsRecords}
-                        loading={loadingRecords}
-                      >
-                        {t('common.refresh')}
-                      </Button>
-                    </div>
-                    <Table
-                      columns={columns}
-                      dataSource={pointsRecords}
-                      rowKey="id"
-                      loading={loadingRecords}
-                      pagination={{
-                        pageSize: 20,
-                        showSizeChanger: true,
-                        showTotal: (total) => t('common.paginationTotal', {
-                          start: 1,
-                          end: Math.min(20, total),
-                          total
-                        })
-                      }}
-                      locale={{
-                        emptyText: t('pointsConfig.records.noRecords')
-                      }}
-                    />
-                  </div>
-                )
-              },
-              {
-                key: 'reload',
-                label: (
-                  <span>
-                    <HistoryOutlined />
-                    充值验证
-                  </span>
-                ),
-                children: (
-                  <div>
-                    <ReloadVerification onRefresh={loadPointsRecords} />
-                  </div>
-                )
-              },
-              {
-                key: 'membershipFees',
-                label: (
-                  <span>
-                    <HistoryOutlined />
-                    年费记录
-                  </span>
-                ),
-                children: (
-                  <div>
-                    <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Select
-                        value={membershipFeeStatusFilter}
-                        onChange={(value: 'all' | 'pending' | 'paid' | 'failed' | 'cancelled') => setMembershipFeeStatusFilter(value)}
-                        style={{ width: 150 }}
-                        options={[
-                          { label: '全部', value: 'all' },
-                          { label: '待支付', value: 'pending' },
-                          { label: '已支付', value: 'paid' },
-                          { label: '失败', value: 'failed' },
-                          { label: '已取消', value: 'cancelled' }
-                        ]}
-                      />
-                      <Space>
-                        <Button 
-                          type="primary" 
-                          icon={<PlusOutlined />}
-                          onClick={() => setCreatingFeeRecord(true)}
-                        >
-                          创建年费记录
-                        </Button>
-                        <Button onClick={loadMembershipFeeRecords} loading={loadingMembershipFeeRecords}>
-                          刷新
-                        </Button>
-                      </Space>
-                    </div>
-                    <Table
-                      columns={[
-                        {
-                          title: '用户',
-                          dataIndex: 'userName',
-                          key: 'userName',
-                          width: 150,
-                          render: (name: string, record: MembershipFeeRecord) => name || record.userId
-                        },
-                        {
-                          title: '类型',
-                          dataIndex: 'renewalType',
-                          key: 'renewalType',
-                          width: 100,
-                          render: (type: string) => (
-                            <Tag color={type === 'initial' ? 'blue' : 'green'}>
-                              {type === 'initial' ? '首次开通' : '续费'}
-                            </Tag>
-                          )
-                        },
-                        {
-                          title: '金额',
-                          dataIndex: 'amount',
-                          key: 'amount',
-                          width: 120,
-                          render: (amount: number) => (
-                            <Text strong style={{ color: '#ff4d4f' }}>
-                              -{amount} 积分
-                            </Text>
-                          )
-                        },
-                        {
-                          title: '应扣费日期',
-                          dataIndex: 'dueDate',
-                          key: 'dueDate',
-                          width: 180,
-                          render: (date: Date) => dayjs(date).format('YYYY-MM-DD HH:mm:ss')
-                        },
-                        {
-                          title: '实际扣费时间',
-                          dataIndex: 'deductedAt',
-                          key: 'deductedAt',
-                          width: 180,
-                          render: (date: Date | undefined) => date ? dayjs(date).format('YYYY-MM-DD HH:mm:ss') : '-'
-                        },
-                        {
-                          title: '状态',
-                          dataIndex: 'status',
-                          key: 'status',
-                          width: 100,
-                          render: (status: string) => {
-                            const statusMap: Record<string, { color: string; text: string }> = {
-                              pending: { color: 'orange', text: '待支付' },
-                              paid: { color: 'green', text: '已支付' },
-                              failed: { color: 'red', text: '失败' },
-                              cancelled: { color: 'default', text: '已取消' }
-                            };
-                            const statusInfo = statusMap[status] || { color: 'default', text: status };
-                            return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
-                          }
-                        },
-                        {
-                          title: '创建时间',
-                          dataIndex: 'createdAt',
-                          key: 'createdAt',
-                          width: 180,
-                          render: (date: Date) => dayjs(date).format('YYYY-MM-DD HH:mm:ss')
-                        }
-                      ]}
-                      dataSource={membershipFeeRecords}
-                      rowKey="id"
-                      loading={loadingMembershipFeeRecords}
-                      pagination={{
-                        pageSize: 20,
-                        showSizeChanger: true,
-                        showTotal: (total) => `共 ${total} 条记录`
-                      }}
-                      locale={{
-                        emptyText: '暂无年费记录'
-                      }}
-                    />
-                  </div>
-                )
-              }
-            ]}
-          />
-        </Space>
-      </Card>
+            {/* 操作按钮 */}
+            <div style={{ textAlign: 'right', marginTop: 24 }}>
+              <Space>
+                <Button
+                  icon={<PlayCircleOutlined />}
+                  onClick={handleProcessMembershipFees}
+                  loading={processingFees}
+                  title="手动触发自动扣除到期的会员年费（系统已自动执行，此按钮用于手动触发）"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#FFFFFF'
+                  }}
+                >
+                  手动执行扣除年费
+                </Button>
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={resetToDefault}
+                  disabled={saving}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#FFFFFF'
+                  }}
+                >
+                  {t('pointsConfig.actions.resetToDefault')}
+                </Button>
+                <Button
+                  icon={<SaveOutlined />}
+                  htmlType="submit"
+                  loading={saving}
+                  style={{
+                    background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                    border: 'none',
+                    color: '#111',
+                    fontWeight: 700,
+                    boxShadow: '0 4px 15px rgba(244,175,37,0.35)'
+                  }}
+                >
+                  {t('pointsConfig.actions.saveConfig')}
+                </Button>
+              </Space>
+            </div>
+          </Form>
+          </div>
+        )}
+
+        {activeTab === 'records' && (
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: 12,
+            padding: 24,
+            border: '1px solid rgba(244, 175, 37, 0.2)',
+            backdropFilter: 'blur(10px)'
+          }}>
+            <div style={{ marginBottom: 16, textAlign: 'right' }}>
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={loadPointsRecords}
+                loading={loadingRecords}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#FFFFFF'
+                }}
+              >
+                {t('common.refresh')}
+              </Button>
+            </div>
+            <div className="points-config-form">
+              <Table
+                columns={columns}
+                dataSource={pointsRecords}
+                rowKey="id"
+                loading={loadingRecords}
+                pagination={{
+                  pageSize: 20,
+                  showSizeChanger: true,
+                  showTotal: (total) => t('common.paginationTotal', {
+                    start: 1,
+                    end: Math.min(20, total),
+                    total
+                  })
+                }}
+                locale={{
+                  emptyText: t('pointsConfig.records.noRecords')
+                }}
+                style={{
+                  background: 'transparent'
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'reload' && (
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: 12,
+            padding: 24,
+            border: '1px solid rgba(244, 175, 37, 0.2)',
+            backdropFilter: 'blur(10px)'
+          }}>
+            <ReloadVerification onRefresh={loadPointsRecords} />
+          </div>
+        )}
+
+        {activeTab === 'membershipFees' && (
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: 12,
+            padding: 24,
+            border: '1px solid rgba(244, 175, 37, 0.2)',
+            backdropFilter: 'blur(10px)'
+          }}>
+            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Select
+                value={membershipFeeStatusFilter}
+                onChange={(value: 'all' | 'pending' | 'paid' | 'failed' | 'cancelled') => setMembershipFeeStatusFilter(value)}
+                style={{ width: 150 }}
+                options={[
+                  { label: '全部', value: 'all' },
+                  { label: '待支付', value: 'pending' },
+                  { label: '已支付', value: 'paid' },
+                  { label: '失败', value: 'failed' },
+                  { label: '已取消', value: 'cancelled' }
+                ]}
+                className="points-config-form"
+              />
+              <Space>
+                <Button 
+                  icon={<PlusOutlined />}
+                  onClick={() => setCreatingFeeRecord(true)}
+                  style={{
+                    background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                    border: 'none',
+                    color: '#111',
+                    fontWeight: 700,
+                    boxShadow: '0 4px 15px rgba(244,175,37,0.35)'
+                  }}
+                >
+                  创建年费记录
+                </Button>
+                <Button 
+                  onClick={loadMembershipFeeRecords} 
+                  loading={loadingMembershipFeeRecords}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#FFFFFF'
+                  }}
+                >
+                  刷新
+                </Button>
+              </Space>
+            </div>
+            <div className="points-config-form">
+              <Table
+                columns={[
+                  {
+                    title: '用户',
+                    dataIndex: 'userName',
+                    key: 'userName',
+                    width: 150,
+                    render: (name: string, record: MembershipFeeRecord) => name || record.userId
+                  },
+                  {
+                    title: '类型',
+                    dataIndex: 'renewalType',
+                    key: 'renewalType',
+                    width: 100,
+                    render: (type: string) => (
+                      <Tag color={type === 'initial' ? 'blue' : 'green'}>
+                        {type === 'initial' ? '首次开通' : '续费'}
+                      </Tag>
+                    )
+                  },
+                  {
+                    title: '金额',
+                    dataIndex: 'amount',
+                    key: 'amount',
+                    width: 120,
+                    render: (amount: number) => (
+                      <Text strong style={{ color: '#ff4d4f' }}>
+                        -{amount} 积分
+                      </Text>
+                    )
+                  },
+                  {
+                    title: '应扣费日期',
+                    dataIndex: 'dueDate',
+                    key: 'dueDate',
+                    width: 180,
+                    render: (date: Date) => dayjs(date).format('YYYY-MM-DD HH:mm:ss')
+                  },
+                  {
+                    title: '实际扣费时间',
+                    dataIndex: 'deductedAt',
+                    key: 'deductedAt',
+                    width: 180,
+                    render: (date: Date | undefined) => date ? dayjs(date).format('YYYY-MM-DD HH:mm:ss') : '-'
+                  },
+                  {
+                    title: '状态',
+                    dataIndex: 'status',
+                    key: 'status',
+                    width: 100,
+                    render: (status: string) => {
+                      const statusMap: Record<string, { color: string; text: string }> = {
+                        pending: { color: 'orange', text: '待支付' },
+                        paid: { color: 'green', text: '已支付' },
+                        failed: { color: 'red', text: '失败' },
+                        cancelled: { color: 'default', text: '已取消' }
+                      };
+                      const statusInfo = statusMap[status] || { color: 'default', text: status };
+                      return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
+                    }
+                  },
+                  {
+                    title: '创建时间',
+                    dataIndex: 'createdAt',
+                    key: 'createdAt',
+                    width: 180,
+                    render: (date: Date) => dayjs(date).format('YYYY-MM-DD HH:mm:ss')
+                  }
+                ]}
+                dataSource={membershipFeeRecords}
+                rowKey="id"
+                loading={loadingMembershipFeeRecords}
+                pagination={{
+                  pageSize: 20,
+                  showSizeChanger: true,
+                  showTotal: (total) => `共 ${total} 条记录`
+                }}
+                locale={{
+                  emptyText: '暂无年费记录'
+                }}
+                style={{
+                  background: 'transparent'
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* 创建年费记录Modal */}
       <Modal
-        title="创建年费记录"
+        title={<span style={{ color: '#FFFFFF' }}>创建年费记录</span>}
         open={creatingFeeRecord}
         onCancel={() => {
           setCreatingFeeRecord(false);
@@ -911,6 +1115,38 @@ const PointsConfigPage: React.FC = () => {
         onOk={() => feeRecordForm.submit()}
         okText="创建"
         cancelText="取消"
+        okButtonProps={{
+          style: {
+            background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+            border: 'none',
+            color: '#111',
+            fontWeight: 700
+          }
+        }}
+        cancelButtonProps={{
+          style: {
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            color: '#FFFFFF'
+          }
+        }}
+        styles={{
+          content: {
+            background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
+            border: '1px solid rgba(244, 175, 37, 0.3)'
+          },
+          header: {
+            background: 'transparent',
+            borderBottom: '1px solid rgba(244, 175, 37, 0.2)'
+          },
+          body: {
+            background: 'transparent'
+          },
+          footer: {
+            background: 'transparent',
+            borderTop: '1px solid rgba(244, 175, 37, 0.2)'
+          }
+        }}
       >
         <Form
           form={feeRecordForm}
@@ -953,7 +1189,7 @@ const PointsConfigPage: React.FC = () => {
           </Form.Item>
 
           <Form.Item
-            label="应扣费日期"
+            label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>应扣费日期</span>}
             name="dueDate"
             rules={[{ required: true, message: '请选择应扣费日期' }]}
           >
@@ -965,7 +1201,7 @@ const PointsConfigPage: React.FC = () => {
           </Form.Item>
 
           <Form.Item>
-            <Text type="secondary">
+            <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
               年费金额将根据配置自动计算。创建后，系统会在应扣费日期自动尝试扣除。
             </Text>
           </Form.Item>

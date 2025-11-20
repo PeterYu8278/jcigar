@@ -938,12 +938,20 @@ const AdminFinance: React.FC = () => {
       {activeTab === 'transactions' && (
         <>
       {/* 筛选器 */}
-      <div style={{ marginBottom: 16, padding: '16px', background: '#fafafa', borderRadius: '6px' }}>
+      <div style={{ 
+        marginBottom: 16, 
+        padding: '16px', 
+        background: 'rgba(255, 255, 255, 0.05)', 
+        borderRadius: 12,
+        border: '1px solid rgba(244, 175, 37, 0.2)',
+        backdropFilter: 'blur(10px)'
+      }}>
         <Space size="middle" wrap>
           <RangePicker 
             placeholder={[t('financeAdmin.startDate'), t('financeAdmin.endDate')]}
             value={dateRange}
             onChange={setDateRange}
+            className="points-config-form"
           />
           {/* 移除交易类别筛选 */}
           {/* 移除货币筛选 */}
@@ -951,6 +959,11 @@ const AdminFinance: React.FC = () => {
             onClick={() => {
               setDateRange(null)
               
+            }}
+            style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              color: '#FFFFFF'
             }}
           >
             {t('financeAdmin.resetFilters')}
@@ -974,29 +987,46 @@ const AdminFinance: React.FC = () => {
               a.click()
               URL.revokeObjectURL(url)
             }}
+            style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              color: '#FFFFFF'
+            }}
           >
             {t('financeAdmin.exportReport')}
           </Button>
-          <Button onClick={() => setImporting(true)}>
+          <Button 
+            onClick={() => setImporting(true)}
+            style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              color: '#FFFFFF'
+            }}
+          >
             {t('financeAdmin.pasteImport')}
           </Button>
         </Space>
       </div>
 
       {!isMobile ? (
-      <Table
-        columns={columns}
+      <div className="points-config-form">
+        <Table
+          columns={columns}
           dataSource={enriched}
-        rowKey="id"
-        loading={loading}
-        pagination={{
+          rowKey="id"
+          loading={loading}
+          style={{
+            background: 'transparent'
+          }}
+          pagination={{
             total: enriched.length,
-          pageSize: 10,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
-        }}
-      />
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
+          }}
+        />
+      </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {enriched.map((transaction: any) => (
@@ -1627,26 +1657,31 @@ const AdminFinance: React.FC = () => {
         confirmLoading={loading}
       >
         <p style={{ marginBottom: 8 }}>{t('financeAdmin.pasteImportHint')}</p>
-        <p style={{ marginTop: 0, color: '#999' }}>{t('financeAdmin.pasteImportFormat')}</p>
+        <p style={{ marginTop: 0, color: 'rgba(255, 255, 255, 0.6)' }}>{t('financeAdmin.pasteImportFormat')}</p>
         <div
           onPaste={handlePasteToRows}
           tabIndex={0}
           style={{
-            border: '1px dashed #d9d9d9',
+            border: '1px dashed rgba(244, 175, 37, 0.3)',
             padding: 12,
             borderRadius: 6,
             marginBottom: 12,
             outline: 'none',
-            background: '#fafafa'
+            background: 'rgba(255, 255, 255, 0.05)',
+            color: 'rgba(255, 255, 255, 0.6)'
           }}
         >
           {t('financeAdmin.pasteHere')}
     </div>
-        <Table
-          dataSource={importRows.map((r, idx) => ({ key: idx, date: r.date, description: r.description, income: r.income, expense: r.expense }))}
-          size="small"
-          pagination={{ pageSize: 5 }}
-          columns={[
+        <div className="points-config-form">
+          <Table
+            dataSource={importRows.map((r, idx) => ({ key: idx, date: r.date, description: r.description, income: r.income, expense: r.expense }))}
+            size="small"
+            pagination={{ pageSize: 5 }}
+            style={{
+              background: 'transparent'
+            }}
+            columns={[
             {
               title: t('financeAdmin.transactionDate'),
               dataIndex: 'date',
@@ -1722,6 +1757,7 @@ const AdminFinance: React.FC = () => {
             },
           ]}
         />
+        </div>
       </Modal>
 
       {/* 品牌产品详情弹窗 */}

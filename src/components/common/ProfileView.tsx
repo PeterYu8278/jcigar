@@ -11,7 +11,8 @@ import {
 const { Text } = Typography
 
 import { getEventsByUser, getUsers, getOrdersByUser, getCigars, getDocument } from '../../services/firebase/firestore'
-import type { User, Event, Order, Cigar } from '../../types'
+import { getUserPointsRecords } from '../../services/firebase/pointsRecords'
+import type { User, Event, Order, Cigar, PointsRecord } from '../../types'
 import { useTranslation } from 'react-i18next'
 import { MemberProfileCard } from './MemberProfileCard'
 
@@ -41,6 +42,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [loadingOrders, setLoadingOrders] = useState(false)
   const [referredUsers, setReferredUsers] = useState<User[]>([])
   const [loadingReferrals, setLoadingReferrals] = useState(false)
+  const [pointsRecords, setPointsRecords] = useState<PointsRecord[]>([])
+  const [loadingPointsRecords, setLoadingPointsRecords] = useState(false)
 
   // 如果传入userId，加载用户数据
   useEffect(() => {
@@ -147,6 +150,31 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
     loadReferredUsers()
   }, [user?.referral?.referrals])
+
+  // 加载积分记录
+  useEffect(() => {
+    const loadPointsRecords = async () => {
+      if (!user?.id) {
+        setPointsRecords([])
+        return
+      }
+      
+      setLoadingPointsRecords(true)
+      try {
+        console.log('[ProfileView] 加载积分记录，用户ID:', user.id)
+        const records = await getUserPointsRecords(user.id, 50)
+        console.log('[ProfileView] 积分记录加载结果:', records.length, '条记录')
+        setPointsRecords(records)
+      } catch (error) {
+        console.error('[ProfileView] 加载积分记录失败:', error)
+        message.error(t('pointsConfig.loadRecordsFailed'))
+        setPointsRecords([])
+      } finally {
+        setLoadingPointsRecords(false)
+      }
+    }
+    loadPointsRecords()
+  }, [user?.id, t])
 
   // 计算雪茄购买总数量
   const totalCigarsPurchased = useMemo(() => {
@@ -464,15 +492,101 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           )}
 
           {activeTab === 'points' && (
-            <div style={{
-              textAlign: 'center',
-              padding: '40px 20px',
-              color: 'rgba(255, 255, 255, 0.6)'
-            }}>
-              <p style={{ margin: 0, fontSize: '14px' }}>
-                {t('usersAdmin.noPointsRecords')}
-              </p>
-            </div>
+            loadingPointsRecords ? (
+              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                <Space direction="vertical" size="middle">
+                  <div style={{ fontSize: '24px', color: '#ffd700' }}>
+                    <TrophyOutlined spin />
+                  </div>
+                  <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                    {t('common.loading')}
+                  </Text>
+                </Space>
+              </div>
+            ) : pointsRecords.length === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px 20px',
+                color: 'rgba(255, 255, 255, 0.6)'
+              }}>
+                <p style={{ margin: 0, fontSize: '14px' }}>
+                  {t('usersAdmin.noPointsRecords')}
+                </p>
+              </div>
+            ) : (
+              <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                {pointsRecords.map((record) => {
+                  const recordDate = record.createdAt instanceof Date 
+                    ? record.createdAt 
+                    : (record.createdAt as any)?.toDate 
+                      ? (record.createdAt as any).toDate() 
+                      : new Date(record.createdAt)
+                  
+                  const getSourceText = (source: string) => {
+                    const sourceMap: Record<string, string> = {
+                      registration: t('pointsConfig.records.sources.registration'),
+                      referral: t('pointsConfig.records.sources.referral'),
+                      purchase: t('pointsConfig.records.sources.purchase'),
+                      event: t('pointsConfig.records.sources.event'),
+                      profile: t('pointsConfig.records.sources.profile'),
+                      checkin: t('pointsConfig.records.sources.checkin'),
+                      visit: '驻店时长费用',
+                      membership_fee: '年费',
+                      reload: '充值',
+                      admin: t('pointsConfig.records.sources.admin'),
+                      other: t('pointsConfig.records.sources.other')
+                    }
+                    return sourceMap[source] || source
+                  }
+                  
+                  return (
+                    <Card
+                      key={record.id}
+                      size="small"
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
+                              {recordDate.toLocaleString('zh-CN', { 
+                                year: 'numeric', 
+                                month: '2-digit', 
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </Text>
+                            <span style={{ color: 'rgba(255, 255, 255, 0.3)' }}>•</span>
+                            <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
+                              {getSourceText(record.source)}
+                            </Text>
+                          </div>
+                          <Text style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: '14px', display: 'block' }}>
+                            {record.description}
+                          </Text>
+                        </div>
+                        <div style={{ textAlign: 'right', marginLeft: '16px' }}>
+                          <Text 
+                            strong 
+                            style={{ 
+                              color: record.type === 'earn' ? '#52c41a' : '#ff4d4f', 
+                              fontSize: '18px',
+                              display: 'block'
+                            }}
+                          >
+                            {record.type === 'earn' ? '+' : '-'}{record.amount}
+                          </Text>
+                        </div>
+                      </div>
+                    </Card>
+                  )
+                })}
+              </Space>
+            )
           )}
 
           {activeTab === 'activity' && (

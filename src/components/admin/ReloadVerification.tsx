@@ -194,19 +194,44 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
       render: (proof: string) => {
         if (!proof) return '-';
         return (
-          <Button
-            type="link"
-            icon={<EyeOutlined />}
-            onClick={() => {
-              Modal.info({
-                title: '充值凭证',
-                content: <Image src={proof} alt="充值凭证" style={{ maxWidth: '100%' }} />,
-                width: 600
-              });
-            }}
-          >
-            查看
-          </Button>
+        <Button
+          type="link"
+          icon={<EyeOutlined />}
+          onClick={() => {
+            Modal.info({
+              title: <span style={{ color: '#FFFFFF' }}>充值凭证</span>,
+              content: <Image src={proof} alt="充值凭证" style={{ maxWidth: '100%' }} />,
+              width: 600,
+              styles: {
+                content: {
+                  background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
+                  border: '1px solid rgba(244, 175, 37, 0.3)'
+                },
+                header: {
+                  background: 'transparent',
+                  borderBottom: '1px solid rgba(244, 175, 37, 0.2)'
+                },
+                body: {
+                  background: 'transparent'
+                }
+              },
+              okButtonProps: {
+                style: {
+                  background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                  border: 'none',
+                  color: '#111',
+                  fontWeight: 700
+                }
+              }
+            });
+          }}
+          style={{
+            color: '#FFD700',
+            padding: 0
+          }}
+        >
+          查看
+        </Button>
         );
       }
     },
@@ -217,20 +242,34 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
       render: (_: any, record: ReloadRecord) => (
         <Space>
           <Button
-            type="primary"
             size="small"
             icon={<CheckOutlined />}
             onClick={() => handleVerify(record)}
             disabled={record.status !== 'pending'}
+            style={{
+              background: record.status === 'pending' 
+                ? 'linear-gradient(to right, #FDE08D, #C48D3A)' 
+                : 'rgba(255, 255, 255, 0.1)',
+              border: 'none',
+              color: record.status === 'pending' ? '#111' : 'rgba(255, 255, 255, 0.5)',
+              fontWeight: 700
+            }}
           >
             验证
           </Button>
           <Button
-            danger
             size="small"
             icon={<CloseOutlined />}
             onClick={() => handleReject(record)}
             disabled={record.status !== 'pending'}
+            style={{
+              background: record.status === 'pending' 
+                ? 'rgba(255, 77, 79, 0.8)' 
+                : 'rgba(255, 255, 255, 0.1)',
+              border: 'none',
+              color: record.status === 'pending' ? '#FFFFFF' : 'rgba(255, 255, 255, 0.5)',
+              fontWeight: 700
+            }}
           >
             拒绝
           </Button>
@@ -252,25 +291,39 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
             { label: '已完成', value: 'completed' },
             { label: '已拒绝', value: 'rejected' }
           ]}
+          className="points-config-form"
         />
-        <Button onClick={loadRecords} loading={loading}>
+        <Button 
+          onClick={loadRecords} 
+          loading={loading}
+          style={{
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            color: '#FFFFFF'
+          }}
+        >
           刷新
         </Button>
       </div>
-      <Table
-        columns={columns}
-        dataSource={records}
-        rowKey="id"
-        loading={loading}
-        pagination={{
-          pageSize: 20,
-          showSizeChanger: true
-        }}
-      />
+      <div className="points-config-form">
+        <Table
+          columns={columns}
+          dataSource={records}
+          rowKey="id"
+          loading={loading}
+          pagination={{
+            pageSize: 20,
+            showSizeChanger: true
+          }}
+          style={{
+            background: 'transparent'
+          }}
+        />
+      </div>
 
       {/* 验证模态框 */}
       <Modal
-        title="验证充值"
+        title={<span style={{ color: '#FFFFFF' }}>验证充值</span>}
         open={verifyModalVisible}
         onCancel={() => {
           setVerifyModalVisible(false);
@@ -280,22 +333,55 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
         onOk={() => form.submit()}
         confirmLoading={uploading}
         width={600}
+        okButtonProps={{
+          style: {
+            background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+            border: 'none',
+            color: '#111',
+            fontWeight: 700
+          }
+        }}
+        cancelButtonProps={{
+          style: {
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            color: '#FFFFFF'
+          }
+        }}
+        styles={{
+          content: {
+            background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
+            border: '1px solid rgba(244, 175, 37, 0.3)'
+          },
+          header: {
+            background: 'transparent',
+            borderBottom: '1px solid rgba(244, 175, 37, 0.2)'
+          },
+          body: {
+            background: 'transparent'
+          },
+          footer: {
+            background: 'transparent',
+            borderTop: '1px solid rgba(244, 175, 37, 0.2)'
+          }
+        }}
       >
         {currentRecord && (
           <Form
             form={form}
             layout="vertical"
             onFinish={onVerifySubmit}
+            className="points-config-form"
           >
-            <div style={{ marginBottom: 16 }}>
-              <div>用户: {currentRecord.userName || currentRecord.userId}</div>
-              <div>充值金额: {currentRecord.requestedAmount} RM</div>
+            <div style={{ marginBottom: 16, color: 'rgba(255, 255, 255, 0.85)' }}>
+              <div style={{ marginBottom: 8 }}>用户: {currentRecord.userName || currentRecord.userId}</div>
+              <div style={{ marginBottom: 8 }}>充值金额: {currentRecord.requestedAmount} RM</div>
               <div>对应积分: {currentRecord.pointsEquivalent} 积分</div>
             </div>
 
             <Form.Item
               name="proof"
-              label="上传充值凭证（可选）"
+              label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>上传充值凭证（可选）</span>}
               valuePropName="fileList"
               getValueFromEvent={(e) => {
                 if (Array.isArray(e)) {
@@ -322,17 +408,25 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
                 }}
               >
                 <div>
-                  <UploadOutlined />
-                  <div style={{ marginTop: 8 }}>上传</div>
+                  <UploadOutlined style={{ color: 'rgba(255, 255, 255, 0.85)' }} />
+                  <div style={{ marginTop: 8, color: 'rgba(255, 255, 255, 0.85)' }}>上传</div>
                 </div>
               </Upload>
             </Form.Item>
 
             <Form.Item
               name="notes"
-              label="备注（可选）"
+              label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>备注（可选）</span>}
             >
-              <Input.TextArea rows={4} placeholder="输入验证备注..." />
+              <Input.TextArea 
+                rows={4} 
+                placeholder="输入验证备注..." 
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#FFFFFF'
+                }}
+              />
             </Form.Item>
           </Form>
         )}
@@ -340,33 +434,74 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
 
       {/* 拒绝模态框 */}
       <Modal
-        title="拒绝充值"
+        title={<span style={{ color: '#FFFFFF' }}>拒绝充值</span>}
         open={rejectModalVisible}
         onCancel={() => {
           setRejectModalVisible(false);
           rejectForm.resetFields();
         }}
         onOk={() => rejectForm.submit()}
-        okButtonProps={{ danger: true }}
+        okButtonProps={{ 
+          danger: true,
+          style: {
+            background: '#ff4d4f',
+            border: 'none',
+            color: '#FFFFFF',
+            fontWeight: 700
+          }
+        }}
+        cancelButtonProps={{
+          style: {
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            color: '#FFFFFF'
+          }
+        }}
         width={500}
+        styles={{
+          content: {
+            background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
+            border: '1px solid rgba(244, 175, 37, 0.3)'
+          },
+          header: {
+            background: 'transparent',
+            borderBottom: '1px solid rgba(244, 175, 37, 0.2)'
+          },
+          body: {
+            background: 'transparent'
+          },
+          footer: {
+            background: 'transparent',
+            borderTop: '1px solid rgba(244, 175, 37, 0.2)'
+          }
+        }}
       >
         {currentRecord && (
           <Form
             form={rejectForm}
             layout="vertical"
             onFinish={onRejectSubmit}
+            className="points-config-form"
           >
-            <div style={{ marginBottom: 16 }}>
-              <div>用户: {currentRecord.userName || currentRecord.userId}</div>
+            <div style={{ marginBottom: 16, color: 'rgba(255, 255, 255, 0.85)' }}>
+              <div style={{ marginBottom: 8 }}>用户: {currentRecord.userName || currentRecord.userId}</div>
               <div>充值金额: {currentRecord.requestedAmount} RM</div>
             </div>
 
             <Form.Item
               name="notes"
-              label="拒绝原因"
+              label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>拒绝原因</span>}
               rules={[{ required: true, message: '请输入拒绝原因' }]}
             >
-              <Input.TextArea rows={4} placeholder="输入拒绝原因..." />
+              <Input.TextArea 
+                rows={4} 
+                placeholder="输入拒绝原因..." 
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#FFFFFF'
+                }}
+              />
             </Form.Item>
           </Form>
         )}

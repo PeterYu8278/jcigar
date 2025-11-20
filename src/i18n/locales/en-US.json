@@ -146,7 +146,9 @@
     "currentNoData": "No data available",
     "exportReport": "Export Report",
     "clearData": "Clear Data",
-    "public": "Public"
+    "public": "Public",
+    "expand": "Expand",
+    "collapse": "Collapse"
   },
   "container": {
     "loadFailed": "Load failed",
@@ -386,7 +388,17 @@
     "noCigarRecords": "No cigar records",
     "noPointsRecords": "No points records",
     "noActivityRecords": "No activity records",
-    "noReferralRecords": "No referral records"
+    "noReferralRecords": "No referral records",
+    "userList": "User List",
+    "referralTree": "Referral Tree",
+    "hasReferrer": "Has Referrer",
+    "hasReferrals": "Has Referrals",
+    "maxDepth": "Max Depth",
+    "totalReferralPoints": "Total Referral Points",
+    "totalUsers": "Total Users",
+    "expandAll": "Expand All",
+    "collapseAll": "Collapse All",
+    "noReferralData": "No referral relationship data"
   },
 
   "ordersAdmin": {
@@ -622,6 +634,7 @@
     "inQuantity": "Inbound Quantity",
     "outQuantity": "Outbound Quantity",
     "recordCount": "Record Count",
+    "totalQuantity": "Total Quantity",
     "searchInLogs": "Search inbound records (product, reason, reference no.)",
     "searchOutLogs": "Search outbound records (product, reason, reference no.)",
     "filterByBrand": "Filter by Brand",

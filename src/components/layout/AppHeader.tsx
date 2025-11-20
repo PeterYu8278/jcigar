@@ -114,22 +114,24 @@ const AppHeader: React.FC = () => {
 
       {/* 右侧：操作区（已移除通知中心与购物车徽标） */}
       <Space size="middle" align="center" style={{ position: 'relative' }}>
-        {/* Admin/Home 切换 */}
-        <Tooltip title={isInAdmin ? t('navigation.home') : t('navigation.admin')} placement="bottomRight">
-          <Button
-            type="text"
-            onClick={handleToggle}
-            icon={isInAdmin ? <HomeOutlined /> : <DashboardOutlined />}
-            className="mobile-view-toggle"
-            style={{
-              color: 'rgb(192,192,192)',
-              fontSize: 18,
-              border: '1px solid #333',
-              borderRadius: 8,
-              padding: '8px 12px'
-            }}
-          />
-        </Tooltip>
+        {/* Admin/Home 切换 - 仅管理员可见 */}
+        {isAdmin && (
+          <Tooltip title={isInAdmin ? t('navigation.home') : t('navigation.admin')} placement="bottomRight">
+            <Button
+              type="text"
+              onClick={handleToggle}
+              icon={isInAdmin ? <HomeOutlined /> : <DashboardOutlined />}
+              className="mobile-view-toggle"
+              style={{
+                color: 'rgb(192,192,192)',
+                fontSize: 18,
+                border: '1px solid #333',
+                borderRadius: 8,
+                padding: '8px 12px'
+              }}
+            />
+          </Tooltip>
+        )}
 
         {/* 用户信息 - 下拉菜单 */}
         <Dropdown
