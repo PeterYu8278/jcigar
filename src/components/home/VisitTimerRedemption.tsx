@@ -34,6 +34,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
   const [milestones, setMilestones] = useState<Array<{ hoursRequired: number; dailyLimitBonus: number; totalLimitBonus?: number }>>([]);
   const [canRedeemThisHour, setCanRedeemThisHour] = useState(true);
   const [countdownSeconds, setCountdownSeconds] = useState<number | null>(null); // 倒计时剩余秒数
+  const [annualFeeAmount, setAnnualFeeAmount] = useState<number | null>(null); // 年费金额
   
   // 加载倒计时状态（从localStorage）
   useEffect(() => {
@@ -198,7 +199,6 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
         
         const hours = periodSessions.reduce((sum, session) => sum + (session.durationHours || 0), 0);
         
-        
         setTotalHours(hours);
       } catch (error) {
         console.error('加载累计驻店时长失败:', error);
@@ -218,6 +218,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
       await loadTotalHours();
 
       const userLimits = await getUserRedemptionLimits(userId);
+      
         setLimits({
           dailyLimit: userLimits.dailyLimit,
           totalLimit: userLimits.totalLimit,
@@ -250,7 +251,8 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
         // 获取总兑换记录（只计算已完成的记录）
         const totalRedemptions = await getTotalRedemptions(userId);
         const completedTotalRedemptions = totalRedemptions.filter(r => r.status === 'completed');
-        setTotalCount(completedTotalRedemptions.reduce((sum, r) => sum + r.quantity, 0));
+        const totalCountValue = completedTotalRedemptions.reduce((sum, r) => sum + r.quantity, 0);
+        setTotalCount(totalCountValue);
 
         // 获取本小时兑换记录（用于检查每小时限制）
         try {
@@ -275,6 +277,22 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
     }
   };
 
+  // 加载年费金额
+  useEffect(() => {
+    const loadAnnualFee = async () => {
+      try {
+        const { getCurrentAnnualFeeAmount } = await import('../../services/firebase/membershipFee');
+        const amount = await getCurrentAnnualFeeAmount();
+        setAnnualFeeAmount(amount);
+      } catch (error) {
+        console.error('获取年费金额失败:', error);
+      }
+    };
+    if (user?.id) {
+      loadAnnualFee();
+    }
+  }, [user?.id]);
+
   // 加载兑换数据和时长数据
   useEffect(() => {
     loadData();
@@ -297,22 +315,36 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
     setLoading(true);
 
     try {
-      // 创建年费记录（dueDate设为今天，立即生效）
-      const today = new Date();
-      const result = await createMembershipFeeRecord(
-        user.id,
-        today,
-        'initial'
-      );
+      // 先检查是否已存在 pending 状态的年费记录
+      const { getUserMembershipFeeRecords } = await import('../../services/firebase/membershipFee');
+      const existingRecords = await getUserMembershipFeeRecords(user.id, 10);
+      const pendingRecord = existingRecords.find(r => r.status === 'pending' && r.renewalType === 'initial');
+      
+      let recordId: string;
+      
+      if (pendingRecord) {
+        // 如果已存在 pending 状态的首次开通记录，使用该记录
+        recordId = pendingRecord.id;
+      } else {
+        // 如果不存在，创建新的年费记录（dueDate设为今天，立即生效）
+        const today = new Date();
+        const result = await createMembershipFeeRecord(
+          user.id,
+          today,
+          'initial'
+        );
 
-      if (!result.success || !result.recordId) {
-        message.error(result.error || '创建年费记录失败');
-        setLoading(false);
-        return;
+        if (!result.success || !result.recordId) {
+          message.error(result.error || '创建年费记录失败');
+          setLoading(false);
+          return;
+        }
+        
+        recordId = result.recordId;
       }
 
       // 立即尝试扣除年费
-      const deductResult = await deductMembershipFee(result.recordId);
+      const deductResult = await deductMembershipFee(recordId);
 
       if (deductResult.success) {
         message.success('会员开通成功！');
@@ -420,10 +452,11 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
 
   // 计算合并后的进度条数据
   const hoursText = formatHours(totalHours);
-  const currentCigarLimit = calculateCigarLimitFromHours(totalHours);
-  const maxCigarLimit = calculateCigarLimitFromHours(targetHours); // 150小时时的限额
+  // 使用后端返回的限额，而不是前端计算值（确保与里程碑奖励逻辑一致）
+  const currentCigarLimit = limits.totalLimit; // 使用 getUserRedemptionLimits 返回的 totalLimit
+  const maxCigarLimit = calculateCigarLimitFromHours(targetHours); // 150小时时的限额（仅用于进度条显示）
   const hoursPercent = targetHours > 0 ? Math.min(100, (totalHours / targetHours) * 100) : 0;
-  const cigarPercent = maxCigarLimit > 0 ? Math.min(100, (totalCount / maxCigarLimit) * 100) : 0;
+  const cigarPercent = currentCigarLimit > 0 ? Math.min(100, (totalCount / currentCigarLimit) * 100) : 0;
   
   // 生成里程碑（每50小时一个）
   const generateMilestones = (maxHours: number) => {
@@ -493,6 +526,10 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
               
               // 如果不是活跃会员，显示开通会员按钮
               if (!isActiveMember) {
+                const currentPoints = user?.membership?.points || 0;
+                const hasEnoughPoints = annualFeeAmount !== null && currentPoints >= annualFeeAmount;
+                const isDisabled = loading || (annualFeeAmount !== null && !hasEnoughPoints);
+                
                 return (
                   <>
                     <Button
@@ -500,23 +537,37 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                       size="large"
                       icon={<TrophyOutlined />}
                       onClick={handleActivateMembership}
-                      disabled={loading}
+                      disabled={isDisabled}
                       loading={loading}
                       style={{
-                        background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
+                        background: hasEnoughPoints || annualFeeAmount === null
+                          ? 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)'
+                          : 'linear-gradient(135deg, #666 0%, #444 100%)',
                         border: 'none',
-                        color: '#111',
+                        color: hasEnoughPoints || annualFeeAmount === null ? '#111' : '#999',
                         height: 48,
                         fontSize: 16,
                         fontWeight: 600,
-                        minWidth: 120
+                        minWidth: 120,
+                        opacity: isDisabled ? 0.6 : 1
                       }}
-                      title="开通会员需要扣除年费积分"
+                      title={
+                        annualFeeAmount === null
+                          ? '正在加载年费信息...'
+                          : !hasEnoughPoints
+                            ? `积分不足，需要 ${annualFeeAmount} 积分，当前只有 ${currentPoints} 积分`
+                            : `开通会员需要扣除 ${annualFeeAmount} 积分`
+                      }
                     >
                       开通会员
                     </Button>
                     <Text style={{ fontSize: 13, display: 'block', marginTop: 8, color: '#FFFFFF' }}>
-                      当前积分: {user?.membership?.points || 0}
+                      当前积分: {currentPoints}
+                      {annualFeeAmount !== null && (
+                        <span style={{ color: hasEnoughPoints ? '#52c41a' : '#ff4d4f', marginLeft: 8 }}>
+                          {hasEnoughPoints ? '✓' : '✗'} 需要 {annualFeeAmount}
+                        </span>
+                      )}
                     </Text>
                   </>
                 );

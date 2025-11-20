@@ -30,11 +30,12 @@ export const getRedemptionConfig = async (): Promise<RedemptionConfig | null> =>
     }
     
     const data = docSnap.data();
-    return {
+    const config = {
       id: docSnap.id,
       ...data,
       updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
     } as RedemptionConfig;
+    return config;
   } catch (error) {
     console.error('获取兑换配置失败:', error);
     return null;
@@ -83,7 +84,6 @@ const getUserTotalVisitHoursInPeriod = async (userId: string): Promise<number> =
     const { getUserVisitSessions } = await import('./visitSessions');
     const sessions = await getUserVisitSessions(userId);
     
-    
     // 筛选出在会员期限内的completed sessions
     const periodSessions = sessions.filter(session => {
       if (session.status !== 'completed' || !session.checkOutAt) {
@@ -93,10 +93,8 @@ const getUserTotalVisitHoursInPeriod = async (userId: string): Promise<number> =
       return inPeriod;
     });
     
-    
     // 累计时长
     const totalHours = periodSessions.reduce((sum, session) => sum + (session.durationHours || 0), 0);
-    
     
     return totalHours;
   } catch (error) {
@@ -116,16 +114,14 @@ export const getUserRedemptionLimits = async (userId: string): Promise<{
 }> => {
   try {
     const config = await getRedemptionConfig();
-    if (!config) {
-      return { dailyLimit: 3, totalLimit: 25 };
-    }
+    
+    // 即使配置为空，也使用默认值并执行里程碑逻辑
+    const baseDailyLimit = config?.dailyLimit || 3;
+    const baseTotalLimit = config?.totalLimit || 25;
+    const hourlyLimit = config?.hourlyLimit;
 
     // 获取当前会员期限内的累计驻店时长
     const totalVisitHours = await getUserTotalVisitHoursInPeriod(userId);
-    
-    // 基础限额
-    const baseDailyLimit = config.dailyLimit || 3;
-    const baseTotalLimit = config.totalLimit || 25;
     
     // 里程碑奖励计算（固定规则：50/100/150小时）
     let dailyLimitBonus = 0;
@@ -146,11 +142,13 @@ export const getUserRedemptionLimits = async (userId: string): Promise<{
     }
     // 超过150小时不再增加
 
-    return {
+    const finalLimits = {
       dailyLimit: baseDailyLimit + dailyLimitBonus,
       totalLimit: baseTotalLimit + totalLimitBonus,
-      hourlyLimit: config.hourlyLimit
+      hourlyLimit: hourlyLimit
     };
+
+    return finalLimits;
   } catch (error) {
     console.error('获取用户兑换限额失败:', error);
     return { dailyLimit: 3, totalLimit: 25 };
