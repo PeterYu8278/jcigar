@@ -206,8 +206,8 @@ const MobileBottomNav: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '4px',
-                  marginBottom: '4px'
+                  marginBottom: '4px',
+                  position: 'relative'
                 }}>
                   <div style={{
                     fontSize: '24px',
@@ -222,6 +222,10 @@ const MobileBottomNav: React.FC = () => {
                       size="small" 
                       color="#ffd700"
                       style={{
+                        position: 'absolute',
+                        top: '-6px',
+                        right: '-6px',
+                        zIndex: 1001,
                         fontSize: '10px'
                       }}
                     />
@@ -306,8 +310,8 @@ const MobileBottomNav: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '4px',
-                  marginBottom: '4px'
+                  marginBottom: '4px',
+                  position: 'relative'
                 }}>
                   <div style={{
                     fontSize: '24px',
@@ -322,6 +326,10 @@ const MobileBottomNav: React.FC = () => {
                       size="small" 
                       color="#ffd700"
                       style={{
+                        position: 'absolute',
+                        top: '-6px',
+                        right: '-6px',
+                        zIndex: 1001,
                         fontSize: '10px'
                       }}
                     />
@@ -368,8 +376,8 @@ const MobileBottomNav: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '4px',
-                marginBottom: '4px'
+                marginBottom: '4px',
+                position: 'relative'
               }}>
                 <div style={{
                   fontSize: '20px',
@@ -384,6 +392,10 @@ const MobileBottomNav: React.FC = () => {
                     size="small" 
                     color="#ffd700"
                     style={{
+                      position: 'absolute',
+                      top: '-6px',
+                      right: '-6px',
+                      zIndex: 1001,
                       fontSize: '10px'
                     }}
                   />

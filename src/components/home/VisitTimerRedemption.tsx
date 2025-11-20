@@ -754,9 +754,10 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                             }} />
                             <Text style={{ 
                               fontSize: 11, 
-                              color: isCompleted ? '#FFD700' : '#9ca3af',
+                              color: isCompleted ? '#000000' : '#9ca3af',
                               whiteSpace: 'nowrap',
-                              marginTop: '4px'
+                              marginTop: '4px',
+                              fontWeight: isCompleted ? 600 : 400
                             }}>
                               {milestone.hours}hrs
                             </Text>
