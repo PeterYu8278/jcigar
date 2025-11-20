@@ -209,6 +209,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           showMemberCard={showMemberCard}
           onToggleMemberCard={setShowMemberCard}
           getMembershipText={getMembershipText}
+          enableQrModal={true}
         />
 
         {/* User Info */}

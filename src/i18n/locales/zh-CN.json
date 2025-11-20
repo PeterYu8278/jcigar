@@ -864,6 +864,8 @@
     "shareInvitation": "分享邀请",
     "referralCodeCopied": "引荐码已复制",
     "inviteTextCopied": "邀请文字已复制",
+    "referralCodeNotFound": "引荐码不存在",
+    "copyFailed": "复制失败，请重试",
     "referralReward": "💰 每成功引荐1人注册获得 200 积分",
     "totalReferred": "累计引荐",
     "referralPoints": "引荐积分",

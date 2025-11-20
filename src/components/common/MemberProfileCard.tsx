@@ -1,7 +1,7 @@
 // 共享的会员头像/会员卡组件
 import React, { useState } from 'react'
-import { CrownOutlined } from '@ant-design/icons'
-import { Modal } from 'antd'
+import { CrownOutlined, CopyOutlined, ShareAltOutlined } from '@ant-design/icons'
+import { Modal, Button, Space, message } from 'antd'
 import { useQRCode } from '../../hooks/useQRCode'
 import { QRCodeDisplay } from '../common/QRCodeDisplay'
 import { useTranslation } from 'react-i18next'
@@ -42,6 +42,95 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
     memberName: user?.displayName,
     autoGenerate: true
   })
+
+  // 复制引荐码到剪贴板
+  const handleCopyReferralCode = async () => {
+    if (!user?.memberId) {
+      message.error(t('profile.referralCodeNotFound'))
+      return
+    }
+    
+    try {
+      await navigator.clipboard.writeText(user.memberId)
+      message.success(t('profile.referralCodeCopied'))
+    } catch (error) {
+      // 降级方案：使用传统方法
+      const textArea = document.createElement('textarea')
+      textArea.value = user.memberId
+      textArea.style.position = 'fixed'
+      textArea.style.opacity = '0'
+      document.body.appendChild(textArea)
+      textArea.select()
+      try {
+        document.execCommand('copy')
+        message.success(t('profile.referralCodeCopied'))
+      } catch (err) {
+        message.error(t('profile.copyFailed'))
+      }
+      document.body.removeChild(textArea)
+    }
+  }
+
+  // 复制分享链接到剪贴板
+  const handleCopyShareLink = async () => {
+    if (!user?.memberId) {
+      message.error(t('profile.referralCodeNotFound'))
+      return
+    }
+    
+    const baseUrl = window.location.origin
+    const shareLink = `${baseUrl}/register?ref=${user.memberId}`
+    
+    try {
+      await navigator.clipboard.writeText(shareLink)
+      message.success(t('profile.inviteTextCopied'))
+    } catch (error) {
+      // 降级方案
+      const textArea = document.createElement('textarea')
+      textArea.value = shareLink
+      textArea.style.position = 'fixed'
+      textArea.style.opacity = '0'
+      document.body.appendChild(textArea)
+      textArea.select()
+      try {
+        document.execCommand('copy')
+        message.success(t('profile.inviteTextCopied'))
+      } catch (err) {
+        message.error(t('profile.copyFailed'))
+      }
+      document.body.removeChild(textArea)
+    }
+  }
+
+  // 分享功能（使用 Web Share API）
+  const handleShare = async () => {
+    if (!user?.memberId) {
+      message.error(t('profile.referralCodeNotFound'))
+      return
+    }
+    
+    const baseUrl = window.location.origin
+    const shareLink = `${baseUrl}/register?ref=${user.memberId}`
+    const shareText = t('profile.shareText', { code: user.memberId })
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: t('profile.shareInvitation'),
+          text: shareText,
+          url: shareLink
+        })
+      } catch (error: any) {
+        // 用户取消分享或其他错误，不显示错误消息
+        if (error.name !== 'AbortError') {
+          console.error('Share failed:', error)
+        }
+      }
+    } else {
+      // 降级到复制链接
+      handleCopyShareLink()
+    }
+  }
 
   // 触摸事件处理函数
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -427,14 +516,14 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
         )}
       </div>
       
-      {/* QR Code 放大模态框 */}
+      {/* 引荐码分享模态框 */}
       <Modal
         title={null}
         open={qrModalVisible}
         onCancel={() => setQrModalVisible(false)}
         footer={null}
         centered
-        width={400}
+        width={420}
         styles={{
           content: {
             background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 50%, #D4AF37 100%)',
@@ -444,7 +533,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
               '0 0 20px rgba(212, 175, 55, 0.3), 0 0 40px rgba(212, 175, 55, 0.2), 0 0 60px rgba(212, 175, 55, 0.1), 0 8px 32px rgba(0, 0, 0, 0.5)'
           },
           body: {
-            padding: '40px',
+            padding: '32px',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -462,40 +551,111 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
           textAlign: 'center',
           width: '100%'
         }}>
+          {/* 标题 */}
           <div style={{ 
-            fontSize: 18, 
-            fontWeight: 700, 
-            color: '#FFFFFF',
-            marginBottom: 24,
+            fontSize: 16, 
+            fontWeight: 600, 
+            color: 'rgba(255, 255, 255, 0.8)',
+            marginBottom: 16,
             fontFamily: "'Noto Sans SC', sans-serif"
           }}>
-            {t('usersAdmin.memberId')}: {user?.memberId || '000000'}
+            {t('profile.myReferralCode')}
           </div>
+
+          {/* 引荐码显示 */}
+          <div style={{
+            fontSize: '36px',
+            fontWeight: 'bold',
+            color: '#ffd700',
+            letterSpacing: '4px',
+            fontFamily: 'monospace',
+            marginBottom: 24,
+            textShadow: '0 2px 8px rgba(255, 215, 0, 0.3)'
+          }}>
+            {user?.memberId || '------'}
+          </div>
+
+          {/* QR Code 显示 */}
           <div style={{
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            padding: '20px',
+            padding: '16px',
+            background: 'rgba(255, 255, 255, 0.05)',
             borderRadius: '12px',
-            marginBottom: 16
+            marginBottom: 24
           }}>
             <QRCodeDisplay
               qrCodeDataURL={qrCodeDataURL}
               loading={qrLoading}
               error={qrError}
-              size={256}
+              size={200}
               showPlaceholder={true}
             />
           </div>
-          <div style={{ 
-            fontSize: 14, 
-            color: 'rgba(255, 255, 255, 0.7)',
+
+          {/* 操作按钮 */}
+          <Space size="middle" direction="vertical" style={{ width: '100%', marginBottom: 20 }}>
+            <Button
+              type="default"
+              icon={<CopyOutlined />}
+              onClick={handleCopyReferralCode}
+              block
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(212, 175, 55, 0.3)',
+                color: '#fff',
+                borderRadius: '8px',
+                height: '44px',
+                fontSize: '15px',
+                fontWeight: 500
+              }}
+            >
+              {t('profile.copyReferralCode')}
+            </Button>
+            <Button
+              type="default"
+              icon={<ShareAltOutlined />}
+              onClick={handleShare}
+              block
+              style={{
+                background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                border: 'none',
+                color: '#111',
+                borderRadius: '8px',
+                height: '44px',
+                fontSize: '15px',
+                fontWeight: 'bold'
+              }}
+            >
+              {t('profile.shareInvitation')}
+            </Button>
+          </Space>
+
+          {/* 奖励说明 */}
+          <div style={{
+            padding: '12px',
+            background: 'rgba(212, 175, 55, 0.1)',
+            borderRadius: '8px',
+            fontSize: '12px',
+            color: 'rgba(255, 255, 255, 0.8)',
+            lineHeight: '1.6',
+            marginBottom: 12,
             fontFamily: "'Noto Sans SC', sans-serif"
           }}>
-            {user?.displayName || t('common.member')}
+            {t('profile.referralReward')}
+          </div>
+          <div style={{
+            fontSize: '12px',
+            color: 'rgba(255, 255, 255, 0.6)',
+            lineHeight: '1.6',
+            fontFamily: "'Noto Sans SC', sans-serif"
+          }}>
+            {t('profile.shareWithFriends')}
           </div>
         </div>
       </Modal>
     </>
   )
 }
+

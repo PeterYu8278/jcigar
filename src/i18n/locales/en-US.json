@@ -874,6 +874,8 @@
     "shareInvitation": "Share Invitation",
     "referralCodeCopied": "Referral code copied",
     "inviteTextCopied": "Invitation text copied",
+    "referralCodeNotFound": "Referral code not found",
+    "copyFailed": "Copy failed, please try again",
     "referralReward": "💰 Earn 200 points for each successful referral",
     "totalReferred": "Total Referred",
     "referralPoints": "Referral Points",

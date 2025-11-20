@@ -238,7 +238,9 @@ const ReloadPage: React.FC = () => {
               <Tag color="orange" style={{ 
                 fontSize: 14,
                 padding: '4px 12px',
-                borderRadius: 4
+                borderRadius: 4,
+                margin: 0,
+                display: 'inline-block'
               }}>
                 等待管理员验证
               </Tag>
