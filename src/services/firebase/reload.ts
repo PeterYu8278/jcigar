@@ -6,6 +6,7 @@ import {
   getDocs, 
   addDoc, 
   updateDoc,
+  deleteDoc,
   query, 
   where, 
   orderBy, 
@@ -144,6 +145,40 @@ export const verifyReloadRecord = async (
 };
 
 /**
+ * 用户撤销充值记录（用户操作）- 直接删除记录
+ */
+export const cancelReloadRecord = async (
+  recordId: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const recordDoc = await getDoc(doc(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS, recordId));
+    if (!recordDoc.exists()) {
+      return { success: false, error: '充值记录不存在' };
+    }
+
+    const recordData = recordDoc.data();
+    
+    // 验证记录属于当前用户
+    if (recordData.userId !== userId) {
+      return { success: false, error: '无权操作此充值记录' };
+    }
+
+    // 只能撤销 pending 状态的记录
+    if (recordData.status !== 'pending') {
+      return { success: false, error: '该充值记录已处理，无法撤销' };
+    }
+
+    // 直接删除记录
+    await deleteDoc(doc(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS, recordId));
+
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message || '撤销充值记录失败' };
+  }
+};
+
+/**
  * 拒绝充值记录（管理员操作）
  */
 export const rejectReloadRecord = async (
@@ -202,8 +237,113 @@ export const getUserReloadRecords = async (
         updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt)
       } as ReloadRecord;
     });
-  } catch (error) {
-    return [];
+  } catch (error: any) {
+    console.error('[getUserReloadRecords] 查询失败，尝试不使用orderBy:', error);
+    
+    // 如果是因为缺少索引而失败，尝试不使用orderBy重新查询
+    try {
+      const q = query(
+        collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
+        where('userId', '==', userId),
+        limit(limitCount)
+      );
+
+      const snapshot = await getDocs(q);
+      const records = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          verifiedAt: data.verifiedAt?.toDate?.() || data.verifiedAt,
+          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+          updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt)
+        } as ReloadRecord;
+      });
+      
+      // 手动排序
+      const sortedRecords = records.sort((a, b) => {
+        const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : 0;
+        const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : 0;
+        return bTime - aTime;
+      });
+      
+      return sortedRecords;
+    } catch (retryError) {
+      console.error('[getUserReloadRecords] 重试查询也失败:', retryError);
+      return [];
+    }
+  }
+};
+
+/**
+ * 获取用户待验证的充值记录
+ */
+export const getUserPendingReloadRecord = async (
+  userId: string
+): Promise<ReloadRecord | null> => {
+  try {
+    const q = query(
+      collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
+      where('userId', '==', userId),
+      where('status', '==', 'pending'),
+      orderBy('createdAt', 'desc'),
+      limit(1)
+    );
+
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) {
+      return null;
+    }
+
+    const doc = snapshot.docs[0];
+    const data = doc.data();
+    return {
+      id: doc.id,
+      ...data,
+      verifiedAt: data.verifiedAt?.toDate?.() || data.verifiedAt,
+      createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+      updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt)
+    } as ReloadRecord;
+  } catch (error: any) {
+    console.error('[getUserPendingReloadRecord] 查询失败，尝试不使用orderBy:', error);
+    
+    // 如果是因为缺少索引而失败，尝试不使用orderBy重新查询
+    try {
+      const q = query(
+        collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
+        where('userId', '==', userId),
+        where('status', '==', 'pending'),
+        limit(10)
+      );
+
+      const snapshot = await getDocs(q);
+      if (snapshot.empty) {
+        return null;
+      }
+
+      // 手动排序，取最新的
+      const records = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          verifiedAt: data.verifiedAt?.toDate?.() || data.verifiedAt,
+          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+          updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt)
+        } as ReloadRecord;
+      });
+      
+      const sortedRecords = records.sort((a, b) => {
+        const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : 0;
+        const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : 0;
+        return bTime - aTime;
+      });
+      
+      return sortedRecords[0] || null;
+    } catch (retryError) {
+      console.error('[getUserPendingReloadRecord] 重试查询也失败:', retryError);
+      return null;
+    }
   }
 };
 

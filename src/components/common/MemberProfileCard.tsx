@@ -436,13 +436,22 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
         centered
         width={400}
         styles={{
+          content: {
+            background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 50%, #D4AF37 100%)',
+            borderRadius: '12px',
+            padding: '1px',
+            boxShadow: 
+              '0 0 20px rgba(212, 175, 55, 0.3), 0 0 40px rgba(212, 175, 55, 0.2), 0 0 60px rgba(212, 175, 55, 0.1), 0 8px 32px rgba(0, 0, 0, 0.5)'
+          },
           body: {
             padding: '40px',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(45, 45, 45, 0.95) 100%)'
+            background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(45, 45, 45, 0.95) 100%)',
+            borderRadius: '10px',
+            margin: 0
           }
         }}
         style={{
@@ -467,7 +476,6 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
             justifyContent: 'center',
             alignItems: 'center',
             padding: '20px',
-            background: '#FFFFFF',
             borderRadius: '12px',
             marginBottom: 16
           }}>
