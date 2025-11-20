@@ -1,7 +1,7 @@
 // 合并后的驻店计时器和兑换模块组件
 import React, { useState, useEffect } from 'react';
 import { Card, Typography, Button, Space, Progress, message, Image } from 'antd';
-import { ClockCircleOutlined, GiftOutlined, ShoppingCartOutlined, TrophyOutlined } from '@ant-design/icons';
+import { ClockCircleOutlined, GiftOutlined, ShoppingCartOutlined, TrophyOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../store/modules/auth';
 import { getPendingVisitSession } from '../../services/firebase/visitSessions';
 import { getUserRedemptionLimits, canUserRedeem, getDailyRedemptions, getTotalRedemptions, getHourlyRedemptions, getRedemptionConfig, createRedemptionRecord } from '../../services/firebase/redemption';
@@ -561,21 +561,29 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                     >
                       开通会员
                     </Button>
-                    <Text style={{ fontSize: 13, display: 'block', marginTop: 8, color: '#FFFFFF' }}>
-                      当前积分: {currentPoints}
+                    <div style={{ marginTop: 8 }}>
+                      <Text style={{ fontSize: 13, display: 'block', color: '#FFFFFF' }}>
+                        当前积分: {currentPoints}
+                      </Text>
                       {annualFeeAmount !== null && (
-                        <span style={{ color: hasEnoughPoints ? '#52c41a' : '#ff4d4f', marginLeft: 8 }}>
+                        <Text style={{ fontSize: 13, display: 'block', color: hasEnoughPoints ? '#52c41a' : '#ff4d4f' }}>
                           {hasEnoughPoints ? '✓' : '✗'} 需要 {annualFeeAmount}
-                        </span>
+                        </Text>
                       )}
-                    </Text>
+                    </div>
                   </>
                 );
               }
 
+              // 检查积分是否少于50
+              const currentPoints = user?.membership?.points || 0;
+              const isLowPoints = currentPoints < 50;
+
               // 判断按钮状态和显示文本
               let buttonText = 'Redeem';
               let isDisabled = true;
+              let buttonIcon: React.ReactNode = undefined;
+              let buttonOnClick: () => void | Promise<void> = handleRedeem;
               let buttonStyle: React.CSSProperties = {
                 background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
                 border: 'none',
@@ -586,8 +594,20 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                 minWidth: 120
               };
 
+              // 如果积分少于50，显示Reload按钮
+              if (isLowPoints) {
+                buttonText = 'Reload';
+                buttonIcon = <ReloadOutlined />;
+                buttonOnClick = () => {
+                  navigate('/reload');
+                };
+                isDisabled = false;
+                buttonStyle.background = 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)';
+                buttonStyle.color = '#FFFFFF';
+                buttonStyle.opacity = 1;
+              }
               // 如果dailyCount >= dailyLimit，显示"No Quota"
-              if (dailyCount >= limits.dailyLimit) {
+              else if (dailyCount >= limits.dailyLimit) {
                 buttonText = 'No Quota';
                 isDisabled = true;
                 buttonStyle.opacity = 0.5;
@@ -602,6 +622,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
               else {
                 isDisabled = !isBeforeCutoff || !currentSession || loading;
                 buttonStyle.opacity = isDisabled ? 0.5 : 1;
+                buttonIcon = countdownSeconds === null || countdownSeconds <= 0 ? <ShoppingCartOutlined /> : undefined;
               }
 
               return (
@@ -609,21 +630,23 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                   <Button
                     type="primary"
                     size="large"
-                    icon={countdownSeconds === null || countdownSeconds <= 0 ? <ShoppingCartOutlined /> : undefined}
-                    onClick={handleRedeem}
+                    icon={buttonIcon}
+                    onClick={buttonOnClick}
                     disabled={isDisabled || loading}
                     loading={loading}
                     style={buttonStyle}
                     title={
-                      dailyCount >= limits.dailyLimit
-                        ? '今日兑换限额已用完'
-                        : countdownSeconds !== null && countdownSeconds > 0
-                          ? `请等待 ${formatCountdown(countdownSeconds)} 后再次兑换`
-                          : !currentSession 
-                            ? '请先check-in才能兑换' 
-                            : !isBeforeCutoff 
-                              ? `兑换截止时间为 ${cutoffTime}，请明日再试`
-                              : undefined
+                      isLowPoints
+                        ? `积分不足（当前: ${currentPoints}），请先充值`
+                        : dailyCount >= limits.dailyLimit
+                          ? '今日兑换限额已用完'
+                          : countdownSeconds !== null && countdownSeconds > 0
+                            ? `请等待 ${formatCountdown(countdownSeconds)} 后再次兑换`
+                            : !currentSession 
+                              ? '请先check-in才能兑换' 
+                              : !isBeforeCutoff 
+                                ? `兑换截止时间为 ${cutoffTime}，请明日再试`
+                                : undefined
                     }
                   >
                     {buttonText}
