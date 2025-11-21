@@ -14,7 +14,6 @@ import type { User } from '../../../types'
 import { auth } from '../../../config/firebase'
 import { updateEmail, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth'
 import { getResponsiveModalConfig, getModalTheme } from '../../../config/modalTheme'
-import { checkPhoneBindingEligibility, mergeUserAccounts } from '../../../services/firebase/accountMerge'
 
 const Profile: React.FC = () => {
   const { user, setUser } = useAuthStore()
@@ -44,58 +43,16 @@ const Profile: React.FC = () => {
     try {
       const values = await form.validateFields()
       setSaving(true)
-      
-      // 检查手机号是否需要合并账户
-      const normalizedPhone = normalizePhoneNumber(values.phone)
-      const oldPhone = user.profile?.phone
-      let accountMerged = false
-      
-      // 如果手机号发生变化，检查是否需要合并账户
-      if (normalizedPhone && normalizedPhone !== oldPhone) {
-        const bindingCheck = await checkPhoneBindingEligibility(normalizedPhone, user.id)
-        
-        if (!bindingCheck.canBind) {
-          message.error(bindingCheck.reason || '该手机号已被其他用户使用')
-          setSaving(false)
-          return
-        }
-        
-        // 如果需要合并账户，先执行合并
-        if (bindingCheck.needsMerge && bindingCheck.existingUser) {
-          console.log('[Profile] 需要合并账户:', {
-            currentUserId: user.id,
-            phoneOnlyUserId: bindingCheck.existingUser.id
-          })
-          
-          const mergeResult = await mergeUserAccounts(user.id, bindingCheck.existingUser.id)
-          if (!mergeResult.success) {
-            message.error(mergeResult.error || '账户合并失败')
-            setSaving(false)
-            return
-          }
-          
-          accountMerged = true
-          message.success('账户合并成功')
-          console.log('[Profile] 账户合并成功')
-        }
-      }
-      
       const updates: any = {
         displayName: values.displayName,
-        'profile.phone': normalizedPhone,
+        'profile.phone': normalizePhoneNumber(values.phone),
         'preferences.notifications': values.notifications,
         ...(values.language ? { 'preferences.locale': values.language } : {}),
         updatedAt: new Date(),
       }
 
-      // 更新非敏感字段（如果账户已合并，手机号已在合并时设置）
-      if (!accountMerged) {
-        await updateDocument('users', user.id, updates)
-      } else {
-        // 如果账户已合并，只更新displayName和preferences
-        const { 'profile.phone': _, ...otherUpdates } = updates
-        await updateDocument('users', user.id, otherUpdates)
-      }
+      // 先更新非敏感字段
+      await updateDocument('users', user.id, updates)
 
       const currentUser = auth.currentUser
 
@@ -286,54 +243,6 @@ const Profile: React.FC = () => {
           <Form.Item
             name="phone"
                 label={<span style={{ color: '#FFFFFF' }}>{t('profile.phoneLabel')}</span>}
-                rules={[
-                  {
-                    pattern: /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/,
-                    message: '手机号格式无效（需10-12位数字）'
-                  },
-                  {
-                    validator: async (_, value) => {
-                      if (!value) return Promise.resolve()
-                      
-                      // 先验证格式
-                      const formatPattern = /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/
-                      if (!formatPattern.test(value)) {
-                        return Promise.resolve()
-                      }
-                      
-                      // 标准化手机号
-                      const normalized = normalizePhoneNumber(value)
-                      if (!normalized) {
-                        return Promise.resolve()
-                      }
-                      
-                      // 检查是否已被使用（使用智能账户合并逻辑）
-                      try {
-                        if (!user?.id) {
-                          return Promise.reject(new Error('未登录'))
-                        }
-
-                        const result = await checkPhoneBindingEligibility(normalized, user.id)
-                        
-                        if (!result.canBind) {
-                          return Promise.reject(new Error(result.reason || '该手机号已被其他用户使用'))
-                        }
-
-                        // 可以绑定，如果需要合并账户，显示提示信息
-                        if (result.needsMerge && result.existingUser) {
-                          message.info(`该手机号对应的账户（${result.existingUser.displayName || '无名称'}）将与您的账户合并`, 5)
-                        }
-                      } catch (error) {
-                        console.error('[Profile] Phone validation error:', error)
-                        // 如果查询失败，允许通过
-                      }
-                      
-                      return Promise.resolve()
-                    }
-                  }
-                ]}
-                validateTrigger={['onBlur', 'onChange']}
-                validateDebounce={500}
           >
                 <Input prefix={<PhoneOutlined />} placeholder={t('profile.phonePlaceholder')} />
           </Form.Item>

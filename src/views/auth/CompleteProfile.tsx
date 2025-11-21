@@ -10,7 +10,6 @@ import { db, auth } from '../../config/firebase'
 import { signOut } from 'firebase/auth'
 import { getUserByMemberId } from '../../utils/memberId'
 import { useAuthStore } from '../../store/modules/auth'
-import { checkPhoneBindingEligibility } from '../../services/firebase/accountMerge'
 
 const { Title, Text } = Typography
 
@@ -149,7 +148,12 @@ const CompleteProfile: React.FC = () => {
       )
 
       if (result.success) {
-        message.success('账户信息已完善，欢迎加入 Gentleman Club！')
+        // 如果是账户合并，显示特殊提示
+        if ((result as any).merged) {
+          message.success((result as any).message || '已将您的 Google 账户与现有电话号码账户合并');
+        } else {
+          message.success('账户信息已完善，欢迎加入 Gentleman Club！');
+        }
         
         // ✅ 等待 Firestore 写入完成，然后手动设置用户状态
         const setupUserState = async () => {
@@ -317,25 +321,19 @@ const CompleteProfile: React.FC = () => {
                       return Promise.resolve()
                     }
                     
-                    // 检查是否已被使用（使用智能账户合并逻辑）
+                    // 检查是否已被使用
                     try {
-                      const currentUser = auth.currentUser
-                      if (!currentUser) {
-                        return Promise.reject(new Error('未登录'))
-                      }
-
-                      const result = await checkPhoneBindingEligibility(normalized, currentUser.uid)
+                      const phoneQuery = query(
+                        collection(db, 'users'), 
+                        where('profile.phone', '==', normalized),
+                        limit(1)
+                      )
+                      const phoneSnap = await getDocs(phoneQuery)
                       
-                      if (!result.canBind) {
-                        return Promise.reject(new Error(result.reason || '该手机号已被其他用户使用'))
-                      }
-
-                      // 可以绑定，如果需要合并账户，显示提示信息
-                      if (result.needsMerge && result.existingUser) {
-                        message.info(`该手机号对应的账户（${result.existingUser.displayName || '无名称'}）将与您的账户合并`, 5)
+                      if (!phoneSnap.empty) {
+                        return Promise.reject(new Error('该手机号已被其他用户使用'))
                       }
                     } catch (error) {
-                      console.error('[CompleteProfile] Phone validation error:', error)
                       // 如果查询失败，允许通过（不阻止用户提交）
                     }
                     
