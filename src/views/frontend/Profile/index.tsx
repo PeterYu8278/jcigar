@@ -233,11 +233,17 @@ const Profile: React.FC = () => {
             name="email"
                 label={<span style={{ color: '#FFFFFF' }}>{t('auth.email')}</span>}
                 rules={[
+                  { required: true, message: t('auth.emailRequired') },
                   { type: 'email', message: t('auth.emailInvalid') },
                   {
                     validator: async (_, value) => {
-                      // 如果没有输入或字段被禁用，跳过验证
-                      if (!value || !!(user as any)?.providerData?.find((p: any) => p.providerId === 'google.com')) {
+                      // 如果字段被禁用（Google登录），跳过验证
+                      if (!!(user as any)?.providerData?.find((p: any) => p.providerId === 'google.com')) {
+                        return Promise.resolve()
+                      }
+                      
+                      // 如果没有输入，跳过验证（required 规则会处理）
+                      if (!value) {
                         return Promise.resolve()
                       }
                       
@@ -290,6 +296,7 @@ const Profile: React.FC = () => {
             name="phone"
                 label={<span style={{ color: '#FFFFFF' }}>{t('profile.phoneLabel')}</span>}
                 rules={[
+                  { required: true, message: t('profile.phoneRequired') },
                   { 
                     pattern: /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/, 
                     message: '手机号格式无效（需10-12位数字）' 
