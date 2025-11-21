@@ -238,18 +238,14 @@ export const linkGoogleToPhoneAccount = async (
     // 用户没有邮箱，将 Google 邮箱写入该用户数据
     console.log('[linkGoogleToPhoneAccount] 用户无邮箱，绑定 Google 邮箱:', googleData.email);
     
-    // 1. 为该用户创建 Firebase Auth 账户（邮箱+密码）
-    const { createUserWithEmailAndPassword, updateProfile } = await import('firebase/auth');
-    
+    // 检查该 Google 邮箱是否已在 Firebase Auth 中存在
     try {
-      // 尝试创建 Firebase Auth 账户
-      const authResult = await createUserWithEmailAndPassword(auth, googleData.email, password);
-      console.log('[linkGoogleToPhoneAccount] Firebase Auth 账户已创建:', authResult.user.uid);
+      // 尝试用邮箱+密码登录
+      console.log('[linkGoogleToPhoneAccount] 尝试用邮箱+密码登录...');
+      await signInWithEmailAndPassword(auth, googleData.email, password);
+      console.log('[linkGoogleToPhoneAccount] ✅ 登录成功，该邮箱已存在于 Firebase Auth');
       
-      // 更新 displayName
-      await updateProfile(authResult.user, { displayName: googleData.displayName });
-      
-      // 2. 更新 Firestore 用户文档（添加邮箱）
+      // 登录成功，直接更新 Firestore 文档
       await setDoc(doc(db, GLOBAL_COLLECTIONS.USERS, userId), {
         email: googleData.email,
         displayName: googleData.displayName || userData.displayName,
@@ -261,12 +257,6 @@ export const linkGoogleToPhoneAccount = async (
       
       console.log('[linkGoogleToPhoneAccount] ✅ Google 邮箱已绑定到用户:', userId);
       
-      // 3. 登出刚创建的 Firebase Auth 账户
-      await signOut(auth);
-      
-      // 4. 重新登录（使用邮箱+密码）
-      await signInWithEmailAndPassword(auth, googleData.email, password);
-      
       // 清除暂存的 Google 信息
       sessionStorage.removeItem('googleLoginData');
       
@@ -276,40 +266,64 @@ export const linkGoogleToPhoneAccount = async (
       
       return { success: true, user: { ...updatedUserData, id: userId } };
       
-    } catch (authError: any) {
-      console.error('[linkGoogleToPhoneAccount] 创建 Auth 账户失败:', authError);
+    } catch (loginError: any) {
+      console.log('[linkGoogleToPhoneAccount] 邮箱不存在或密码错误，尝试创建新账户');
       
-      if (authError.code === 'auth/email-already-in-use') {
-        // 该邮箱已被其他 Firebase Auth 账户使用
-        // 尝试直接登录
-        try {
-          await signInWithEmailAndPassword(auth, googleData.email, password);
-          
-          // 更新 Firestore 文档（关联到该手机号用户）
-          await setDoc(doc(db, GLOBAL_COLLECTIONS.USERS, userId), {
-            email: googleData.email,
-            displayName: googleData.displayName || userData.displayName,
-            googlePhotoURL: googleData.photoURL,
-            authProvider: 'google',
-            googleLinkedAt: new Date(),
-            updatedAt: new Date(),
-          }, { merge: true });
-          
-          sessionStorage.removeItem('googleLoginData');
-          
-          const updatedUserDoc = await getDoc(doc(db, GLOBAL_COLLECTIONS.USERS, userId));
-          const updatedUserData = updatedUserDoc.data() as User;
-          
-          return { success: true, user: { ...updatedUserData, id: userId } };
-        } catch (loginError) {
+      // 邮箱不存在或密码错误，尝试创建新的 Firebase Auth 账户
+      const { createUserWithEmailAndPassword, updateProfile } = await import('firebase/auth');
+      
+      try {
+        // 创建 Firebase Auth 账户
+        const authResult = await createUserWithEmailAndPassword(auth, googleData.email, password);
+        console.log('[linkGoogleToPhoneAccount] ✅ Firebase Auth 账户已创建:', authResult.user.uid);
+        
+        // 更新 displayName
+        await updateProfile(authResult.user, { displayName: googleData.displayName });
+        
+        // 更新 Firestore 用户文档（添加邮箱）
+        await setDoc(doc(db, GLOBAL_COLLECTIONS.USERS, userId), {
+          email: googleData.email,
+          displayName: googleData.displayName || userData.displayName,
+          googlePhotoURL: googleData.photoURL,
+          authProvider: 'google',
+          googleLinkedAt: new Date(),
+          updatedAt: new Date(),
+        }, { merge: true });
+        
+        console.log('[linkGoogleToPhoneAccount] ✅ Google 邮箱已绑定到用户:', userId);
+        
+        // 清除暂存的 Google 信息
+        sessionStorage.removeItem('googleLoginData');
+        
+        // 重新获取用户数据
+        const updatedUserDoc = await getDoc(doc(db, GLOBAL_COLLECTIONS.USERS, userId));
+        const updatedUserData = updatedUserDoc.data() as User;
+        
+        return { success: true, user: { ...updatedUserData, id: userId } };
+        
+      } catch (createError: any) {
+        console.error('[linkGoogleToPhoneAccount] 创建 Auth 账户失败:', createError);
+        
+        if (createError.code === 'auth/email-already-in-use') {
+          // 邮箱已被使用，但密码不匹配
           return { 
             success: false, 
-            error: new Error('该邮箱已被使用且密码不匹配') 
+            error: new Error('该 Google 邮箱已被其他账户使用，且密码不匹配。请使用其他邮箱或联系管理员。') 
           };
         }
+        
+        if (createError.code === 'auth/weak-password') {
+          return { 
+            success: false, 
+            error: new Error('密码强度不足，请使用至少6位字符的密码') 
+          };
+        }
+        
+        return { 
+          success: false, 
+          error: new Error(createError.message || '创建账户失败，请重试') 
+        };
       }
-      
-      return { success: false, error: authError as Error };
     }
     
   } catch (error: any) {

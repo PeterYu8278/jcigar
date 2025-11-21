@@ -95,7 +95,7 @@ const LinkGoogle: React.FC = () => {
       )
 
       if (result.success && result.user) {
-        message.success('Google 账户绑定成功！')
+        message.success('Google 账户绑定成功！正在跳转...')
         
         // 设置用户状态
         setUser(result.user)
@@ -103,12 +103,19 @@ const LinkGoogle: React.FC = () => {
         // 跳转到目标页面
         setTimeout(() => {
           navigate(from, { replace: true })
-        }, 500)
+        }, 800)
       } else if (result.needsRegistration) {
         message.warning('该手机号未注册，请先注册账户')
-        navigate('/register', { state: { phone: values.phone } })
+        setTimeout(() => {
+          navigate('/register', { state: { phone: values.phone } })
+        }, 1000)
       } else {
-        message.error(result.error?.message || '绑定失败，请重试')
+        const errorMessage = result.error?.message || '绑定失败，请重试'
+        message.error({
+          content: errorMessage,
+          duration: 5,
+        })
+        console.error('[LinkGoogle] 绑定失败:', result.error)
       }
     } catch (error) {
       message.error('绑定失败，请重试')
@@ -284,6 +291,11 @@ const LinkGoogle: React.FC = () => {
                 { required: true, message: '请输入密码' },
                 { min: 6, message: '密码至少6位' }
               ]}
+              help={
+                <Text style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '11px' }}>
+                  💡 如果您之前用过该 Google 邮箱登录，请输入该邮箱的密码
+                </Text>
+              }
             >
               <Input.Password
                 prefix={<LockOutlined style={{ color: '#ffd700' }} />}
@@ -328,11 +340,17 @@ const LinkGoogle: React.FC = () => {
             borderRadius: '8px'
           }}>
             <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
-              💡 提示：
+              💡 使用说明：
               <ul style={{ margin: '8px 0 0 20px', padding: 0 }}>
-                <li>如果您的手机号已注册，Google 邮箱将绑定到该账户</li>
-                <li>如果您的手机号未注册，请先注册账户</li>
-                <li>密码将用于日后登录（邮箱+密码 或 手机号+密码）</li>
+                <li>输入您的手机号（需已在系统中注册）</li>
+                <li>
+                  输入密码：
+                  <ul style={{ margin: '4px 0 0 20px', padding: 0 }}>
+                    <li>如果该 Google 邮箱之前用过 → 输入该邮箱的密码</li>
+                    <li>如果该 Google 邮箱是第一次使用 → 设置一个新密码（至少6位）</li>
+                  </ul>
+                </li>
+                <li>绑定成功后，可以用邮箱或手机号登录</li>
               </ul>
             </Text>
           </div>
