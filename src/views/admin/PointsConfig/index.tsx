@@ -353,17 +353,9 @@ const PointsConfigPage: React.FC = () => {
       width: 120,
       render: (source: string) => {
         const sourceMap: Record<string, string> = {
-          registration: t('pointsConfig.records.sources.registration'),
-          referral: t('pointsConfig.records.sources.referral'),
-          purchase: t('pointsConfig.records.sources.purchase'),
-          event: t('pointsConfig.records.sources.event'),
-          profile: t('pointsConfig.records.sources.profile'),
-          checkin: t('pointsConfig.records.sources.checkin'),
-          visit: '驻店时长费用',
-          membership_fee: '年费',
           reload: '充值',
-          admin: t('pointsConfig.records.sources.admin'),
-          other: t('pointsConfig.records.sources.other')
+          membership_fee: '年费',
+          visit: '驻店时长费用'
         };
         return sourceMap[source] || source;
       }
@@ -788,17 +780,9 @@ const PointsConfigPage: React.FC = () => {
                   pointsRecords.map((record) => {
                     const getSourceText = (source: string) => {
                       const sourceMap: Record<string, string> = {
-                        registration: t('pointsConfig.records.sources.registration'),
-                        referral: t('pointsConfig.records.sources.referral'),
-                        purchase: t('pointsConfig.records.sources.purchase'),
-                        event: t('pointsConfig.records.sources.event'),
-                        profile: t('pointsConfig.records.sources.profile'),
-                        checkin: t('pointsConfig.records.sources.checkin'),
-                        visit: '驻店时长费用',
-                        membership_fee: '年费',
                         reload: '充值',
-                        admin: t('pointsConfig.records.sources.admin'),
-                        other: t('pointsConfig.records.sources.other')
+                        membership_fee: '年费',
+                        visit: '驻店时长费用'
                       };
                       return sourceMap[source] || source;
                     };

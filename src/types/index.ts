@@ -346,7 +346,7 @@ export interface PointsRecord {
   userName?: string;        // 用户名（冗余字段，方便查询）
   type: 'earn' | 'spend';   // 获得 | 消费
   amount: number;           // 积分数量
-  source: 'registration' | 'referral' | 'purchase' | 'event' | 'profile' | 'checkin' | 'visit' | 'membership_fee' | 'reload' | 'admin' | 'other';  // 来源
+  source: 'reload' | 'membership_fee' | 'visit';  // 来源
   description: string;      // 描述
   relatedId?: string;       // 关联ID（订单ID、活动ID、驻店记录ID、年费记录ID、充值记录ID等）
   balance?: number;         // 操作后余额

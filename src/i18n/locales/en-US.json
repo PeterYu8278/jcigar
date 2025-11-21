@@ -952,14 +952,9 @@
       "spend": "Spend",
       "noRecords": "No points records",
       "sources": {
-        "registration": "Registration",
-        "referral": "Referral",
-        "purchase": "Purchase",
-        "event": "Event",
-        "profile": "Profile",
-        "checkin": "Check-in",
-        "admin": "Admin Adjustment",
-        "other": "Other"
+        "reload": "Reload",
+        "membership_fee": "Membership Fee",
+        "visit": "Visit"
       }
     },
     "registration": {

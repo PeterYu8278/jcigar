@@ -952,14 +952,9 @@
       "spend": "消费",
       "noRecords": "暂无积分记录",
       "sources": {
-        "registration": "注册",
-        "referral": "引荐",
-        "purchase": "购买",
-        "event": "活动",
-        "profile": "完善资料",
-        "checkin": "签到",
-        "admin": "管理员调整",
-        "other": "其他"
+        "reload": "充值",
+        "membership_fee": "年费",
+        "visit": "驻店时长费用"
       }
     },
     "registration": {
