@@ -623,3 +623,58 @@ export const sendPasswordResetEmailFor = async (email: string) => {
     return { success: false, error: error as Error }
   }
 }
+
+// 通过手机号找到用户邮箱并发送密码重置邮件
+export const sendPasswordResetByPhone = async (phone: string) => {
+  try {
+    // 标准化手机号
+    const normalizedPhone = normalizePhoneNumber(phone)
+    if (!normalizedPhone) {
+      return { 
+        success: false, 
+        error: new Error('手机号格式无效') 
+      } as { success: false; error: Error }
+    }
+
+    // 查找拥有该手机号的用户
+    const usersQuery = query(
+      collection(db, 'users'),
+      where('profile.phone', '==', normalizedPhone),
+      limit(1)
+    )
+    const usersSnapshot = await getDocs(usersQuery)
+
+    if (usersSnapshot.empty) {
+      return { 
+        success: false, 
+        error: new Error('未找到与此手机号关联的账户') 
+      } as { success: false; error: Error }
+    }
+
+    // 获取用户邮箱
+    const userData = usersSnapshot.docs[0].data() as User
+    const userEmail = userData.email
+
+    if (!userEmail) {
+      return { 
+        success: false, 
+        error: new Error('该账户未绑定邮箱，无法重置密码。请联系管理员') 
+      } as { success: false; error: Error }
+    }
+
+    // 发送密码重置邮件
+    const { sendPasswordResetEmail } = await import('firebase/auth')
+    await sendPasswordResetEmail(auth, userEmail)
+
+    return { 
+      success: true, 
+      email: userEmail  // 返回邮箱（部分隐藏）以便用户知道发送到哪里
+    } as { success: true; email: string }
+  } catch (error: any) {
+    console.error('[sendPasswordResetByPhone] Error:', error)
+    return { 
+      success: false, 
+      error: new Error(error.message || '发送重置密码邮件失败') 
+    } as { success: false; error: Error }
+  }
+}

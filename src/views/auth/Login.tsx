@@ -1,9 +1,9 @@
 // 登录页面
 import React, { useState, useEffect, useRef } from 'react'
-import { Form, Input, Button, Card, Typography, Space, message, Divider, Spin } from 'antd'
-import { UserOutlined, LockOutlined, GoogleOutlined, LoadingOutlined } from '@ant-design/icons'
+import { Form, Input, Button, Card, Typography, Space, message, Divider, Spin, Modal } from 'antd'
+import { UserOutlined, LockOutlined, GoogleOutlined, LoadingOutlined, PhoneOutlined } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { loginWithEmailOrPhone, loginWithGoogle, handleGoogleRedirectResult } from '../../services/firebase/auth'
+import { loginWithEmailOrPhone, loginWithGoogle, handleGoogleRedirectResult, sendPasswordResetByPhone } from '../../services/firebase/auth'
 import { useAuthStore } from '../../store/modules/auth'
 import { useTranslation } from 'react-i18next'
 import { identifyInputType, normalizePhoneNumber, isValidEmail } from '../../utils/phoneNormalization'
@@ -17,6 +17,11 @@ const Login: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const touchStartY = useRef(0)
   const containerRef = useRef<HTMLDivElement>(null)
+  
+  // 忘记密码相关状态
+  const [forgotPasswordVisible, setForgotPasswordVisible] = useState(false)
+  const [resetPasswordForm] = Form.useForm()
+  const [resettingPassword, setResettingPassword] = useState(false)
   
   const navigate = useNavigate()
   const location = useLocation()
@@ -159,6 +164,29 @@ const Login: React.FC = () => {
     } catch (error) {
       setLoginError('登入失败：' + t('auth.loginFailed'))
       setLoading(false)
+    }
+  }
+
+  // 处理忘记密码
+  const handleForgotPassword = async (values: { phone: string }) => {
+    setResettingPassword(true)
+    try {
+      const result = await sendPasswordResetByPhone(values.phone)
+      
+      if (result.success) {
+        // 隐藏邮箱部分字符
+        const email = (result as any).email
+        const maskedEmail = email.replace(/(.{2})(.*)(@.*)/, '$1***$3')
+        message.success(`密码重置邮件已发送到 ${maskedEmail}，请检查您的邮箱`)
+        setForgotPasswordVisible(false)
+        resetPasswordForm.resetFields()
+      } else {
+        message.error(result.error.message || '发送失败，请重试')
+      }
+    } catch (error: any) {
+      message.error(error.message || '发送失败，请重试')
+    } finally {
+      setResettingPassword(false)
     }
   }
 
@@ -307,6 +335,7 @@ const Login: React.FC = () => {
             <Form.Item
               name="password"
               rules={[{ required: true, message: t('auth.passwordRequired') }]}
+              style={{ marginBottom: '8px' }}
             >
               <Input.Password
                 prefix={<LockOutlined style={{ color: loginError ? '#ff4d4f' : '#ffd700' }} />}
@@ -328,6 +357,22 @@ const Login: React.FC = () => {
                 className={loginError ? 'login-error-shake' : ''}
               />
             </Form.Item>
+
+            {/* 忘记密码链接 */}
+            <div style={{ textAlign: 'right', marginBottom: '16px' }}>
+              <Button 
+                type="link"
+                onClick={() => setForgotPasswordVisible(true)}
+                style={{
+                  color: '#FDD017',
+                  padding: 0,
+                  height: 'auto',
+                  fontSize: '14px'
+                }}
+              >
+                忘记密码？
+              </Button>
+            </div>
 
             <Form.Item style={{ marginBottom: '24px' }}>
               <Button
@@ -383,6 +428,128 @@ const Login: React.FC = () => {
           </div>
         </Space>
       </Card>
+
+      {/* 忘记密码模态框 */}
+      <Modal
+        title={
+          <span style={{
+            background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            fontWeight: 700,
+            fontSize: '18px'
+          }}>
+            重置密码
+          </span>
+        }
+        open={forgotPasswordVisible}
+        onCancel={() => {
+          setForgotPasswordVisible(false)
+          resetPasswordForm.resetFields()
+        }}
+        footer={null}
+        centered
+        styles={{
+          content: {
+            background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(45, 45, 45, 0.9) 100%)',
+            border: '1px solid rgba(255, 215, 0, 0.2)',
+            borderRadius: '16px',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+            backdropFilter: 'blur(10px)'
+          },
+          header: {
+            background: 'transparent',
+            borderBottom: '1px solid rgba(255, 215, 0, 0.1)'
+          },
+          body: {
+            padding: '24px'
+          }
+        }}
+      >
+        <div style={{ color: 'rgba(255, 255, 255, 0.8)', marginBottom: '16px', fontSize: '14px' }}>
+          请输入您注册时使用的手机号，我们将向您绑定的邮箱发送密码重置链接。
+        </div>
+        
+        <Form
+          form={resetPasswordForm}
+          onFinish={handleForgotPassword}
+          layout="vertical"
+        >
+          <Form.Item
+            name="phone"
+            rules={[
+              { required: true, message: '请输入手机号' },
+              { 
+                pattern: /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/, 
+                message: '手机号格式无效（需10-12位数字）' 
+              },
+              {
+                validator: async (_, value) => {
+                  if (!value) return Promise.resolve()
+                  
+                  const normalized = normalizePhoneNumber(value)
+                  if (!normalized) {
+                    return Promise.reject(new Error('手机号格式无效'))
+                  }
+                  
+                  return Promise.resolve()
+                }
+              }
+            ]}
+          >
+            <Input
+              prefix={<PhoneOutlined style={{ color: '#ffd700' }} />}
+              placeholder="手机号 (例: 0123456789)"
+              onInput={(e) => {
+                const input = e.currentTarget
+                input.value = input.value.replace(/[^\d+\s-]/g, '')
+              }}
+              style={{
+                background: 'rgba(45, 45, 45, 0.8)',
+                border: '1px solid #444444',
+                borderRadius: '8px',
+                color: '#f8f8f8',
+                height: '48px'
+              }}
+            />
+          </Form.Item>
+
+          <Form.Item style={{ marginBottom: 0 }}>
+            <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+              <Button
+                onClick={() => {
+                  setForgotPasswordVisible(false)
+                  resetPasswordForm.resetFields()
+                }}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#fff',
+                  borderRadius: '8px'
+                }}
+              >
+                取消
+              </Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={resettingPassword}
+                style={{ 
+                  background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: '#221c10',
+                  fontWeight: 600,
+                  boxShadow: '0 4px 20px rgba(255, 215, 0, 0.3)'
+                }}
+              >
+                发送重置链接
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
       
     </div>
   )
