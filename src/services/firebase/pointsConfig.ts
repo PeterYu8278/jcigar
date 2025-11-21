@@ -58,8 +58,10 @@ export const getDefaultPointsConfig = (): PointsConfig => {
     purchase: {
       firstOrder: 100,       // 首次购买奖励
       perRinggit: 1,         // 每消费1马币获得1积分
-      referrerFirstOrder: 50, // 被引荐人首次购买，引荐人获得50积分
-      referredFirstOrder: 50, // 被引荐人首次购买，被引荐人获得50积分
+    },
+    reload: {
+      referrerFirstReload: 50, // 被引荐人首次充值，引荐人获得50积分
+      referredFirstReload: 50, // 被引荐人首次充值，被引荐人获得50积分
     },
     event: {
       registration: 10,      // 活动报名积分

@@ -464,7 +464,7 @@ const PointsConfigPage: React.FC = () => {
             )
           })}
         </div>
-      </div>
+          </div>
 
       {/* 标签页内容 */}
       <div>
@@ -476,11 +476,11 @@ const PointsConfigPage: React.FC = () => {
             border: '1px solid rgba(244, 175, 37, 0.2)',
             backdropFilter: 'blur(10px)'
           }}>
-            <Form
-              form={form}
-              layout="vertical"
-              onFinish={onFinish}
-              initialValues={getDefaultPointsConfig()}
+                  <Form
+                    form={form}
+                    layout="vertical"
+                    onFinish={onFinish}
+                    initialValues={getDefaultPointsConfig()}
               className="points-config-form"
             >
             {/* 购买相关积分 */}
@@ -532,10 +532,32 @@ const PointsConfigPage: React.FC = () => {
                     />
                   </Form.Item>
                 </Col>
-                <Col xs={24} sm={8}>
+              </Row>
+            </div>
+
+            {/* 充值相关积分 */}
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.03)',
+              borderRadius: 8,
+              padding: 16,
+              marginBottom: 16,
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}>
+              <h3 style={{ 
+                fontSize: 16, 
+                fontWeight: 700, 
+                marginBottom: 16,
+                backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                WebkitBackgroundClip: 'text',
+                color: 'transparent'
+              }}>
+                {t('pointsConfig.reload.title')}
+              </h3>
+              <Row gutter={16}>
+                <Col xs={24} sm={12}>
                   <Form.Item
-                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.purchase.referrerFirstOrder')}</span>}
-                    name={['purchase', 'referrerFirstOrder']}
+                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.reload.referrerFirstReload')}</span>}
+                    name={['reload', 'referrerFirstReload']}
                     rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
                     <InputNumber
@@ -546,10 +568,10 @@ const PointsConfigPage: React.FC = () => {
                     />
                   </Form.Item>
                 </Col>
-                <Col xs={24} sm={8}>
+                <Col xs={24} sm={12}>
                   <Form.Item
-                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.purchase.referredFirstOrder')}</span>}
-                    name={['purchase', 'referredFirstOrder']}
+                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.reload.referredFirstReload')}</span>}
+                    name={['reload', 'referredFirstReload']}
                     rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
                     <InputNumber
@@ -744,38 +766,38 @@ const PointsConfigPage: React.FC = () => {
               </Form.List>
             </div>
 
-            {/* 操作按钮 */}
+                    {/* 操作按钮 */}
             <div style={{ textAlign: 'right', marginTop: 24 }}>
-              <Space>
-                <Button
-                  icon={<PlayCircleOutlined />}
-                  onClick={handleProcessMembershipFees}
-                  loading={processingFees}
-                  title="手动触发自动扣除到期的会员年费（系统已自动执行，此按钮用于手动触发）"
+                      <Space>
+                        <Button
+                          icon={<PlayCircleOutlined />}
+                          onClick={handleProcessMembershipFees}
+                          loading={processingFees}
+                          title="手动触发自动扣除到期的会员年费（系统已自动执行，此按钮用于手动触发）"
                   style={{
                     background: 'rgba(255, 255, 255, 0.1)',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
                     color: '#FFFFFF'
                   }}
-                >
-                  手动执行扣除年费
-                </Button>
-                <Button
-                  icon={<ReloadOutlined />}
-                  onClick={resetToDefault}
-                  disabled={saving}
+                        >
+                          手动执行扣除年费
+                        </Button>
+                        <Button
+                          icon={<ReloadOutlined />}
+                          onClick={resetToDefault}
+                          disabled={saving}
                   style={{
                     background: 'rgba(255, 255, 255, 0.1)',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
                     color: '#FFFFFF'
                   }}
-                >
-                  {t('pointsConfig.actions.resetToDefault')}
-                </Button>
-                <Button
-                  icon={<SaveOutlined />}
-                  htmlType="submit"
-                  loading={saving}
+                        >
+                          {t('pointsConfig.actions.resetToDefault')}
+                        </Button>
+                        <Button
+                          icon={<SaveOutlined />}
+                          htmlType="submit"
+                          loading={saving}
                   style={{
                     background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
                     border: 'none',
@@ -783,12 +805,12 @@ const PointsConfigPage: React.FC = () => {
                     fontWeight: 700,
                     boxShadow: '0 4px 15px rgba(244,175,37,0.35)'
                   }}
-                >
-                  {t('pointsConfig.actions.saveConfig')}
-                </Button>
-              </Space>
-            </div>
-          </Form>
+                        >
+                          {t('pointsConfig.actions.saveConfig')}
+                        </Button>
+                      </Space>
+                    </div>
+                  </Form>
           </div>
         )}
 
@@ -800,44 +822,44 @@ const PointsConfigPage: React.FC = () => {
             border: '1px solid rgba(244, 175, 37, 0.2)',
             backdropFilter: 'blur(10px)'
           }}>
-            <div style={{ marginBottom: 16, textAlign: 'right' }}>
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={loadPointsRecords}
-                loading={loadingRecords}
+                    <div style={{ marginBottom: 16, textAlign: 'right' }}>
+                      <Button
+                        icon={<ReloadOutlined />}
+                        onClick={loadPointsRecords}
+                        loading={loadingRecords}
                 style={{
                   background: 'rgba(255, 255, 255, 0.1)',
                   border: '1px solid rgba(255, 255, 255, 0.2)',
                   color: '#FFFFFF'
                 }}
-              >
-                {t('common.refresh')}
-              </Button>
-            </div>
+                      >
+                        {t('common.refresh')}
+                      </Button>
+                    </div>
             {!isMobile ? (
               <div className="points-config-form">
-                <Table
-                  columns={columns}
-                  dataSource={pointsRecords}
-                  rowKey="id"
-                  loading={loadingRecords}
-                  pagination={{
-                    pageSize: 20,
-                    showSizeChanger: true,
-                    showTotal: (total) => t('common.paginationTotal', {
-                      start: 1,
-                      end: Math.min(20, total),
-                      total
-                    })
-                  }}
-                  locale={{
-                    emptyText: t('pointsConfig.records.noRecords')
-                  }}
+                    <Table
+                      columns={columns}
+                      dataSource={pointsRecords}
+                      rowKey="id"
+                      loading={loadingRecords}
+                      pagination={{
+                        pageSize: 20,
+                        showSizeChanger: true,
+                        showTotal: (total) => t('common.paginationTotal', {
+                          start: 1,
+                          end: Math.min(20, total),
+                          total
+                        })
+                      }}
+                      locale={{
+                        emptyText: t('pointsConfig.records.noRecords')
+                      }}
                   style={{
                     background: 'transparent'
                   }}
-                />
-              </div>
+                    />
+                  </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {loadingRecords ? (
@@ -935,8 +957,8 @@ const PointsConfigPage: React.FC = () => {
             border: '1px solid rgba(244, 175, 37, 0.2)',
             backdropFilter: 'blur(10px)'
           }}>
-            <ReloadVerification onRefresh={loadPointsRecords} />
-          </div>
+                    <ReloadVerification onRefresh={loadPointsRecords} />
+                  </div>
         )}
 
         {activeTab === 'membershipFees' && (
@@ -947,24 +969,24 @@ const PointsConfigPage: React.FC = () => {
             border: '1px solid rgba(244, 175, 37, 0.2)',
             backdropFilter: 'blur(10px)'
           }}>
-            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Select
-                value={membershipFeeStatusFilter}
-                onChange={(value: 'all' | 'pending' | 'paid' | 'failed' | 'cancelled') => setMembershipFeeStatusFilter(value)}
-                style={{ width: 150 }}
-                options={[
-                  { label: '全部', value: 'all' },
-                  { label: '待支付', value: 'pending' },
-                  { label: '已支付', value: 'paid' },
-                  { label: '失败', value: 'failed' },
-                  { label: '已取消', value: 'cancelled' }
-                ]}
+                    <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Select
+                        value={membershipFeeStatusFilter}
+                        onChange={(value: 'all' | 'pending' | 'paid' | 'failed' | 'cancelled') => setMembershipFeeStatusFilter(value)}
+                        style={{ width: 150 }}
+                        options={[
+                          { label: '全部', value: 'all' },
+                          { label: '待支付', value: 'pending' },
+                          { label: '已支付', value: 'paid' },
+                          { label: '失败', value: 'failed' },
+                          { label: '已取消', value: 'cancelled' }
+                        ]}
                 className="points-config-form"
-              />
-              <Space>
-                <Button 
-                  icon={<PlusOutlined />}
-                  onClick={() => setCreatingFeeRecord(true)}
+                      />
+                      <Space>
+                        <Button 
+                          icon={<PlusOutlined />}
+                          onClick={() => setCreatingFeeRecord(true)}
                   style={{
                     background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
                     border: 'none',
@@ -972,9 +994,9 @@ const PointsConfigPage: React.FC = () => {
                     fontWeight: 700,
                     boxShadow: '0 4px 15px rgba(244,175,37,0.35)'
                   }}
-                >
-                  创建年费记录
-                </Button>
+                        >
+                          创建年费记录
+                        </Button>
                 <Button 
                   onClick={loadMembershipFeeRecords} 
                   loading={loadingMembershipFeeRecords}
@@ -984,97 +1006,97 @@ const PointsConfigPage: React.FC = () => {
                     color: '#FFFFFF'
                   }}
                 >
-                  刷新
-                </Button>
-              </Space>
-            </div>
+                          刷新
+                        </Button>
+                      </Space>
+                    </div>
             {!isMobile ? (
               <div className="points-config-form">
-                <Table
-                  columns={[
-                    {
-                      title: '用户',
-                      dataIndex: 'userName',
-                      key: 'userName',
-                      width: 150,
-                      render: (name: string, record: MembershipFeeRecord) => name || record.userId
-                    },
-                    {
-                      title: '类型',
-                      dataIndex: 'renewalType',
-                      key: 'renewalType',
-                      width: 100,
-                      render: (type: string) => (
-                        <Tag color={type === 'initial' ? 'blue' : 'green'}>
-                          {type === 'initial' ? '首次开通' : '续费'}
-                        </Tag>
-                      )
-                    },
-                    {
-                      title: '金额',
-                      dataIndex: 'amount',
-                      key: 'amount',
-                      width: 120,
-                      render: (amount: number) => (
-                        <Text strong style={{ color: '#ff4d4f' }}>
-                          -{amount} 积分
-                        </Text>
-                      )
-                    },
-                    {
-                      title: '应扣费日期',
-                      dataIndex: 'dueDate',
-                      key: 'dueDate',
-                      width: 180,
-                      render: (date: Date) => dayjs(date).format('YYYY-MM-DD HH:mm:ss')
-                    },
-                    {
-                      title: '实际扣费时间',
-                      dataIndex: 'deductedAt',
-                      key: 'deductedAt',
-                      width: 180,
-                      render: (date: Date | undefined) => date ? dayjs(date).format('YYYY-MM-DD HH:mm:ss') : '-'
-                    },
-                    {
-                      title: '状态',
-                      dataIndex: 'status',
-                      key: 'status',
-                      width: 100,
-                      render: (status: string) => {
-                        const statusMap: Record<string, { color: string; text: string }> = {
-                          pending: { color: 'orange', text: '待支付' },
-                          paid: { color: 'green', text: '已支付' },
-                          failed: { color: 'red', text: '失败' },
-                          cancelled: { color: 'default', text: '已取消' }
-                        };
-                        const statusInfo = statusMap[status] || { color: 'default', text: status };
-                        return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
-                      }
-                    },
-                    {
-                      title: '创建时间',
-                      dataIndex: 'createdAt',
-                      key: 'createdAt',
-                      width: 180,
-                      render: (date: Date) => dayjs(date).format('YYYY-MM-DD HH:mm:ss')
-                    }
-                  ]}
-                  dataSource={membershipFeeRecords}
-                  rowKey="id"
-                  loading={loadingMembershipFeeRecords}
-                  pagination={{
-                    pageSize: 20,
-                    showSizeChanger: true,
-                    showTotal: (total) => `共 ${total} 条记录`
-                  }}
-                  locale={{
-                    emptyText: '暂无年费记录'
-                  }}
+                    <Table
+                      columns={[
+                        {
+                          title: '用户',
+                          dataIndex: 'userName',
+                          key: 'userName',
+                          width: 150,
+                          render: (name: string, record: MembershipFeeRecord) => name || record.userId
+                        },
+                        {
+                          title: '类型',
+                          dataIndex: 'renewalType',
+                          key: 'renewalType',
+                          width: 100,
+                          render: (type: string) => (
+                            <Tag color={type === 'initial' ? 'blue' : 'green'}>
+                              {type === 'initial' ? '首次开通' : '续费'}
+                            </Tag>
+                          )
+                        },
+                        {
+                          title: '金额',
+                          dataIndex: 'amount',
+                          key: 'amount',
+                          width: 120,
+                          render: (amount: number) => (
+                            <Text strong style={{ color: '#ff4d4f' }}>
+                              -{amount} 积分
+                            </Text>
+                          )
+                        },
+                        {
+                          title: '应扣费日期',
+                          dataIndex: 'dueDate',
+                          key: 'dueDate',
+                          width: 180,
+                          render: (date: Date) => dayjs(date).format('YYYY-MM-DD HH:mm:ss')
+                        },
+                        {
+                          title: '实际扣费时间',
+                          dataIndex: 'deductedAt',
+                          key: 'deductedAt',
+                          width: 180,
+                          render: (date: Date | undefined) => date ? dayjs(date).format('YYYY-MM-DD HH:mm:ss') : '-'
+                        },
+                        {
+                          title: '状态',
+                          dataIndex: 'status',
+                          key: 'status',
+                          width: 100,
+                          render: (status: string) => {
+                            const statusMap: Record<string, { color: string; text: string }> = {
+                              pending: { color: 'orange', text: '待支付' },
+                              paid: { color: 'green', text: '已支付' },
+                              failed: { color: 'red', text: '失败' },
+                              cancelled: { color: 'default', text: '已取消' }
+                            };
+                            const statusInfo = statusMap[status] || { color: 'default', text: status };
+                            return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
+                          }
+                        },
+                        {
+                          title: '创建时间',
+                          dataIndex: 'createdAt',
+                          key: 'createdAt',
+                          width: 180,
+                          render: (date: Date) => dayjs(date).format('YYYY-MM-DD HH:mm:ss')
+                        }
+                      ]}
+                      dataSource={membershipFeeRecords}
+                      rowKey="id"
+                      loading={loadingMembershipFeeRecords}
+                      pagination={{
+                        pageSize: 20,
+                        showSizeChanger: true,
+                        showTotal: (total) => `共 ${total} 条记录`
+                      }}
+                      locale={{
+                        emptyText: '暂无年费记录'
+                      }}
                   style={{
                     background: 'transparent'
                   }}
-                />
-              </div>
+                    />
+                  </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {loadingMembershipFeeRecords ? (

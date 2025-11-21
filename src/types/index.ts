@@ -318,8 +318,12 @@ export interface PointsConfig {
   purchase: {
     firstOrder: number;        // 首次购买奖励
     perRinggit: number;        // 每消费1马币获得积分
-    referrerFirstOrder: number; // 被引荐人首次购买，引荐人获得积分
-    referredFirstOrder: number; // 被引荐人首次购买，被引荐人获得积分
+  };
+  
+  // 充值相关积分
+  reload: {
+    referrerFirstReload: number; // 被引荐人首次充值，引荐人获得积分
+    referredFirstReload: number; // 被引荐人首次充值，被引荐人获得积分
   };
   
   // 活动相关积分
