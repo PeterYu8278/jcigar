@@ -64,8 +64,6 @@ export const getDefaultPointsConfig = (): PointsConfig => {
     },
     event: {
       registration: 10,      // 活动报名积分
-      checkIn: 20,           // 活动签到积分
-      completion: 50,        // 完成活动积分
     },
     visit: {
       hourlyRate: 10,        // 默认每小时扣除10积分

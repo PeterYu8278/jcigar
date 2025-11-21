@@ -590,38 +590,10 @@ const PointsConfigPage: React.FC = () => {
                 {t('pointsConfig.event.title')}
               </h3>
               <Row gutter={16}>
-                <Col xs={24} sm={8}>
+                <Col xs={24} sm={12}>
                   <Form.Item
                     label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.event.registration')}</span>}
                     name={['event', 'registration']}
-                    rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
-                  >
-                    <InputNumber
-                      min={0}
-                      max={1000}
-                      style={{ width: '100%' }}
-                      addonAfter={t('pointsConfig.units.points')}
-                    />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} sm={8}>
-                  <Form.Item
-                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.event.checkIn')}</span>}
-                    name={['event', 'checkIn']}
-                    rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
-                  >
-                    <InputNumber
-                      min={0}
-                      max={1000}
-                      style={{ width: '100%' }}
-                      addonAfter={t('pointsConfig.units.points')}
-                    />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} sm={8}>
-                  <Form.Item
-                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.event.completion')}</span>}
-                    name={['event', 'completion']}
                     rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
                     <InputNumber

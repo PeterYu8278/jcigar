@@ -978,9 +978,7 @@
     },
     "event": {
       "title": "Event Points",
-      "registration": "Event Registration Points",
-      "checkIn": "Event Check-in Points",
-      "completion": "Event Completion Points"
+      "registration": "Event Registration Points"
     },
     "other": {
       "title": "Other Points",

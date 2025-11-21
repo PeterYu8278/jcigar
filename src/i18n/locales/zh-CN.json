@@ -978,9 +978,7 @@
     },
     "event": {
       "title": "活动相关积分",
-      "registration": "活动报名积分",
-      "checkIn": "活动签到积分",
-      "completion": "完成活动积分"
+      "registration": "活动报名积分"
     },
     "other": {
       "title": "其他积分",

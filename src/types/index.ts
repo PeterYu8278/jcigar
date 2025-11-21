@@ -328,8 +328,6 @@ export interface PointsConfig {
   // 活动相关积分
   event: {
     registration: number;      // 活动报名积分
-    checkIn: number;           // 活动签到积分
-    completion: number;        // 完成活动积分
   };
   
   // 驻店时长费用
