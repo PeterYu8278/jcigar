@@ -627,9 +627,14 @@ export const sendPasswordResetEmailFor = async (email: string) => {
 // 通过手机号找到用户邮箱并发送密码重置邮件
 export const sendPasswordResetByPhone = async (phone: string) => {
   try {
+    console.log('[sendPasswordResetByPhone] 开始处理手机号:', phone)
+    
     // 标准化手机号
     const normalizedPhone = normalizePhoneNumber(phone)
+    console.log('[sendPasswordResetByPhone] 标准化后手机号:', normalizedPhone)
+    
     if (!normalizedPhone) {
+      console.error('[sendPasswordResetByPhone] 手机号格式无效')
       return { 
         success: false, 
         error: new Error('手机号格式无效') 
@@ -637,6 +642,7 @@ export const sendPasswordResetByPhone = async (phone: string) => {
     }
 
     // 查找拥有该手机号的用户
+    console.log('[sendPasswordResetByPhone] 查询数据库...')
     const usersQuery = query(
       collection(db, 'users'),
       where('profile.phone', '==', normalizedPhone),
@@ -645,6 +651,7 @@ export const sendPasswordResetByPhone = async (phone: string) => {
     const usersSnapshot = await getDocs(usersQuery)
 
     if (usersSnapshot.empty) {
+      console.error('[sendPasswordResetByPhone] 未找到用户')
       return { 
         success: false, 
         error: new Error('未找到与此手机号关联的账户') 
@@ -654,8 +661,17 @@ export const sendPasswordResetByPhone = async (phone: string) => {
     // 获取用户邮箱
     const userData = usersSnapshot.docs[0].data() as User
     const userEmail = userData.email
+    console.log('[sendPasswordResetByPhone] 找到用户，邮箱:', userEmail)
+    console.log('[sendPasswordResetByPhone] 用户完整数据:', {
+      userId: userData.userId,
+      displayName: userData.displayName,
+      email: userData.email,
+      phone: userData.profile?.phone,
+      status: userData.status
+    })
 
     if (!userEmail) {
+      console.error('[sendPasswordResetByPhone] 用户没有邮箱')
       return { 
         success: false, 
         error: new Error('该账户未绑定邮箱，无法重置密码。请联系管理员') 
@@ -663,15 +679,19 @@ export const sendPasswordResetByPhone = async (phone: string) => {
     }
 
     // 发送密码重置邮件
+    console.log('[sendPasswordResetByPhone] 准备发送邮件到:', userEmail)
     const { sendPasswordResetEmail } = await import('firebase/auth')
     await sendPasswordResetEmail(auth, userEmail)
+    console.log('[sendPasswordResetByPhone] ✅ 邮件发送成功')
 
     return { 
       success: true, 
       email: userEmail  // 返回邮箱（部分隐藏）以便用户知道发送到哪里
     } as { success: true; email: string }
   } catch (error: any) {
-    console.error('[sendPasswordResetByPhone] Error:', error)
+    console.error('[sendPasswordResetByPhone] ❌ Error:', error)
+    console.error('[sendPasswordResetByPhone] Error code:', error.code)
+    console.error('[sendPasswordResetByPhone] Error message:', error.message)
     return { 
       success: false, 
       error: new Error(error.message || '发送重置密码邮件失败') 
