@@ -542,7 +542,7 @@ const PointsConfigPage: React.FC = () => {
                 <Col xs={24} sm={12}>
                   <Form.Item
                     label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>每小时扣除积分</span>}
-                    name={['visit', 'hourlyRate']}
+                    name={['membershipFee', 'hourlyRate']}
                     rules={[{ required: true, message: '请输入每小时扣除积分' }]}
                   >
                     <InputNumber
