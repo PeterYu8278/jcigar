@@ -29,6 +29,16 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
   const [dailyCount, setDailyCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [hourlyCount, setHourlyCount] = useState(0);
+
+  // ✅ 调试：验证 modal 实例
+  useEffect(() => {
+    console.log('[VisitTimerRedemption] Modal 实例检查:', {
+      modalExists: !!modal,
+      confirmExists: !!modal?.confirm,
+      modalType: typeof modal,
+      modalKeys: modal ? Object.keys(modal) : []
+    });
+  }, [modal]);
   const [cutoffTime, setCutoffTime] = useState('23:00');
   const [totalHours, setTotalHours] = useState(0);
   const [targetHours, setTargetHours] = useState(150);
@@ -304,15 +314,19 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
 
   // 开通会员
   const handleActivateMembership = async () => {
+    console.log('[开通会员] 函数被调用');
+    
     if (!user?.id) {
       message.warning('请先登录');
       return;
     }
 
     if (loading) {
+      console.log('[开通会员] 正在加载中，跳过');
       return; // 防止重复点击
     }
 
+    console.log('[开通会员] 开始处理, 用户ID:', user.id, '当前积分:', user?.membership?.points);
     setLoading(true);
 
     try {
@@ -346,30 +360,33 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
 
       // ✅ 在扣费前先检查积分是否充足
       const currentPoints = user?.membership?.points || 0;
-      const { getMembershipFeeConfig, getCurrentAnnualFeeAmount } = await import('../../services/firebase/membershipFee');
-      const feeConfig = await getMembershipFeeConfig();
-      const annualFee = getCurrentAnnualFeeAmount(new Date(), feeConfig);
+      const { getCurrentAnnualFeeAmount } = await import('../../services/firebase/membershipFee');
+      const annualFee = await getCurrentAnnualFeeAmount(new Date());
+      
+      console.log('[开通会员] 积分检查:', { currentPoints, annualFee, insufficient: currentPoints < annualFee });
       
       if (currentPoints < annualFee) {
         // ✅ 积分不足，显示友好提示并引导充值
         const shortage = annualFee - currentPoints;
         setLoading(false);
         
-        console.log('积分不足，准备显示 Modal', { currentPoints, annualFee, shortage, modal });
+        console.log('[开通会员] 准备显示积分不足 Modal:', { shortage, modalExists: !!modal, confirmExists: !!modal?.confirm });
         
-        // 确保 modal 实例存在
-        if (!modal || !modal.confirm) {
-          console.error('Modal 实例不存在，使用 message 提示');
-          message.warning(`积分不足！需要 ${annualFee} 积分，当前 ${currentPoints} 积分，还需 ${shortage} 积分。正在跳转到充值页面...`);
+        // 检查 modal 实例是否存在
+        if (!modal || typeof modal.confirm !== 'function') {
+          console.error('[开通会员] Modal 实例不存在或 confirm 方法不可用!');
+          message.warning(`积分不足！需要 ${annualFee} 积分，当前只有 ${currentPoints} 积分，还需 ${shortage} 积分。`);
+          message.info('正在跳转到充值页面...', 2);
           setTimeout(() => {
             navigate('/reload');
-          }, 1500);
+          }, 2000);
           return;
         }
         
+        console.log('[开通会员] 调用 modal.confirm');
         modal.confirm({
-          title: '积分不足',
-          icon: <WalletOutlined style={{ color: '#C48D3A' }} />,
+          title: <span style={{ color: '#FFFFFF', fontSize: 18, fontWeight: 600 }}>积分不足</span>,
+          icon: <WalletOutlined style={{ color: '#C48D3A', fontSize: 24 }} />,
           content: (
             <div style={{ marginTop: 16 }}>
               <div style={{ 
@@ -377,24 +394,25 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                 background: 'rgba(255, 255, 255, 0.05)',
                 borderRadius: 12,
                 border: '1px solid rgba(244, 175, 37, 0.2)',
-                marginBottom: 16
+                marginBottom: 16,
+                backdropFilter: 'blur(10px)'
               }}>
                 <Space direction="vertical" size="small" style={{ width: '100%' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text>需要积分：</Text>
+                    <Text style={{ color: 'rgba(255, 255, 255, 0.85)' }}>需要积分：</Text>
                     <Text strong style={{ color: '#C48D3A', fontSize: 20 }}>{annualFee}</Text>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text>当前积分：</Text>
-                    <Text strong style={{ fontSize: 20 }}>{currentPoints}</Text>
+                    <Text style={{ color: 'rgba(255, 255, 255, 0.85)' }}>当前积分：</Text>
+                    <Text strong style={{ color: '#FFFFFF', fontSize: 20 }}>{currentPoints}</Text>
                   </div>
                   <div style={{ 
                     height: 1, 
-                    background: 'rgba(255, 255, 255, 0.1)', 
-                    margin: '8px 0' 
+                    background: 'rgba(244, 175, 37, 0.3)', 
+                    margin: '12px 0' 
                   }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text>缺少积分：</Text>
+                    <Text style={{ color: 'rgba(255, 255, 255, 0.85)' }}>缺少积分：</Text>
                     <Text strong style={{ color: '#ff4d4f', fontSize: 20 }}>{shortage}</Text>
                   </div>
                 </Space>
@@ -402,11 +420,12 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
               
               <div style={{ 
                 padding: 12, 
-                background: 'rgba(244, 175, 37, 0.1)',
+                background: 'rgba(244, 175, 37, 0.15)',
                 borderRadius: 8,
-                border: '1px solid rgba(244, 175, 37, 0.3)'
+                border: '1px solid rgba(244, 175, 37, 0.4)',
+                backdropFilter: 'blur(6px)'
               }}>
-                <Text style={{ color: '#C48D3A' }}>
+                <Text style={{ color: '#FDE08D', fontSize: 14 }}>
                   💡 充值积分后，即可开通会员，享受VIP权益！
                 </Text>
               </div>
@@ -414,13 +433,53 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
           ),
           okText: '去充值',
           cancelText: '稍后再说',
+          width: 420,
+          centered: true,
           okButtonProps: {
             style: {
               background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
               color: '#000000',
               fontWeight: 600,
               border: 'none',
-              height: 40
+              height: 40,
+              fontSize: 15,
+              borderRadius: 8
+            }
+          },
+          cancelButtonProps: {
+            style: {
+              background: 'rgba(255, 255, 255, 0.1)',
+              color: 'rgba(255, 255, 255, 0.85)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              height: 40,
+              fontSize: 15,
+              borderRadius: 8
+            }
+          },
+          styles: {
+            content: {
+              background: 'linear-gradient(180deg, #1a1612 0%, #0f0d0a 100%)',
+              borderRadius: 16,
+              border: '1px solid rgba(244, 175, 37, 0.3)',
+              boxShadow: '0 8px 32px rgba(244, 175, 37, 0.2)',
+              padding: '24px'
+            },
+            header: {
+              background: 'transparent',
+              borderBottom: 'none',
+              paddingBottom: 16
+            },
+            body: {
+              color: '#FFFFFF'
+            },
+            footer: {
+              background: 'transparent',
+              borderTop: 'none',
+              marginTop: 20
+            },
+            mask: {
+              backdropFilter: 'blur(8px)',
+              background: 'rgba(0, 0, 0, 0.65)'
             }
           },
           onOk: () => {
@@ -454,9 +513,11 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
         message.error(deductResult.error || '扣除年费失败，请稍后重试');
       }
     } catch (error: any) {
-      console.error('开通会员失败:', error);
+      console.error('[开通会员] 捕获到错误:', error);
+      console.error('[开通会员] 错误堆栈:', error.stack);
       message.error(error.message || '开通会员失败，请重试');
     } finally {
+      console.log('[开通会员] 完成，设置 loading 为 false');
       setLoading(false);
     }
   };
@@ -642,16 +703,6 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                     >
                       开通会员
                     </Button>
-                    <div style={{ marginTop: 8 }}>
-                      <Text style={{ fontSize: 13, display: 'block', color: '#FFFFFF' }}>
-                        当前积分: {currentPoints}
-                      </Text>
-                      {annualFeeAmount !== null && (
-                        <Text style={{ fontSize: 13, display: 'block', color: hasEnoughPoints ? '#52c41a' : '#ff4d4f' }}>
-                          {hasEnoughPoints ? '✓' : '✗'} 需要 {annualFeeAmount} {!hasEnoughPoints && '(点击按钮充值)'}
-                        </Text>
-                      )}
-                    </div>
                   </>
                 );
               }
