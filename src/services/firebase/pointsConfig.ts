@@ -56,7 +56,6 @@ export const getDefaultPointsConfig = (): PointsConfig => {
   return {
     id: 'default',
     purchase: {
-      firstOrder: 100,       // 首次购买奖励
       perRinggit: 1,         // 每消费1马币获得1积分
     },
     reload: {

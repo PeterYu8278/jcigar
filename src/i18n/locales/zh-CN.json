@@ -969,7 +969,6 @@
     },
     "purchase": {
       "title": "购买相关积分",
-      "firstOrder": "首次购买奖励",
       "perRinggit": "每消费1马币积分"
     },
     "reload": {

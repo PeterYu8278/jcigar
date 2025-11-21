@@ -316,7 +316,6 @@ export interface PointsConfig {
   
   // 购买相关积分
   purchase: {
-    firstOrder: number;        // 首次购买奖励
     perRinggit: number;        // 每消费1马币获得积分
   };
   
