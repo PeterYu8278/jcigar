@@ -91,7 +91,7 @@ export const registerUser = async (
         level: 'bronze',
         joinDate: new Date(),
         lastActive: new Date(),
-        points: referrer ? 100 : 50,  // 被引荐：100积分，自然注册：50积分
+        points: 0,  // 注册不再赠送积分
         referralPoints: 0,
       },
       // ✅ 引荐信息（使用 null 替代 undefined，Firestore 不接受 undefined）
@@ -109,14 +109,12 @@ export const registerUser = async (
     
     await setDoc(doc(db, 'users', user.uid), userData);
     
-    // ✅ 如果有引荐人，更新引荐人的数据
+    // ✅ 如果有引荐人，更新引荐人的数据（不再赠送积分）
     if (referrer) {
       try {
         await updateDoc(doc(db, 'users', referrer.id), {
           'referral.referrals': arrayUnion(user.uid),
           'referral.totalReferred': increment(1),
-          'membership.points': increment(200),  // 引荐人获得200积分
-          'membership.referralPoints': increment(200),
           updatedAt: new Date()
         });
       } catch (error) {
@@ -330,7 +328,7 @@ export const loginWithGoogle = async () => {
           level: 'bronze',
           joinDate: new Date(),
           lastActive: new Date(),
-          points: 50,  // 初始积分（无引荐人）
+          points: 0,  // 注册不再赠送积分
           referralPoints: 0,
         },
         referral: {
@@ -421,7 +419,7 @@ export const handleGoogleRedirectResult = async () => {
               level: 'bronze',
               joinDate: new Date(),
               lastActive: new Date(),
-              points: 50,
+              points: 0,  // 注册不再赠送积分
               referralPoints: 0,
             },
             referral: {
@@ -493,7 +491,7 @@ export const handleGoogleRedirectResult = async () => {
           level: 'bronze',
           joinDate: new Date(),
           lastActive: new Date(),
-          points: 50,
+          points: 0,  // 注册不再赠送积分
           referralPoints: 0,
         },
         referral: {
@@ -615,7 +613,7 @@ export const completeGoogleUserProfile = async (
           updatedAt: new Date(),
         };
         
-        // 如果有引荐人，更新引荐信息和积分
+        // 如果有引荐人，更新引荐信息（不再赠送积分）
         if (referrer) {
           updateData.referral = {
             referredBy: referrer.memberId,
@@ -625,7 +623,6 @@ export const completeGoogleUserProfile = async (
             totalReferred: existingPhoneUser.data.referral?.totalReferred || 0,
             activeReferrals: existingPhoneUser.data.referral?.activeReferrals || 0,
           };
-          updateData['membership.points'] = increment(100);  // 被引荐用户额外获得100积分
         }
         
         await setDoc(oldUserRef, updateData, { merge: true });
@@ -654,14 +651,12 @@ export const completeGoogleUserProfile = async (
         // 更新 Firebase Auth displayName
         await updateProfile(currentAuthUser, { displayName });
         
-        // 如果有引荐人，更新引荐人的数据
+        // 如果有引荐人，更新引荐人的数据（不再赠送积分）
         if (referrer) {
           try {
             await updateDoc(doc(db, 'users', referrer.id), {
               'referral.referrals': arrayUnion(existingPhoneUser.id),
               'referral.totalReferred': increment(1),
-              'membership.points': increment(200),
-              'membership.referralPoints': increment(200),
               updatedAt: new Date()
             });
           } catch (error) {
@@ -700,7 +695,7 @@ export const completeGoogleUserProfile = async (
         updatedAt: new Date(),
       };
       
-      // 如果有引荐人，更新引荐信息和积分
+      // 如果有引荐人，更新引荐信息（不再赠送积分）
       if (referrer) {
         updateData.referral = {
           referredBy: referrer.memberId,
@@ -710,7 +705,6 @@ export const completeGoogleUserProfile = async (
           totalReferred: 0,
           activeReferrals: 0,
         };
-        updateData['membership.points'] = 100;  // 被引荐用户获得100积分
       }
       
       await setDoc(userRef, updateData, { merge: true });
@@ -731,14 +725,12 @@ export const completeGoogleUserProfile = async (
       // 更新 Firebase Auth displayName
       await updateProfile(currentAuthUser, { displayName });
       
-      // 如果有引荐人，更新引荐人的数据
+      // 如果有引荐人，更新引荐人的数据（不再赠送积分）
       if (referrer) {
         try {
           await updateDoc(doc(db, 'users', referrer.id), {
             'referral.referrals': arrayUnion(currentFirestoreUserId),
             'referral.totalReferred': increment(1),
-            'membership.points': increment(200),
-            'membership.referralPoints': increment(200),
             updatedAt: new Date()
           });
         } catch (error) {

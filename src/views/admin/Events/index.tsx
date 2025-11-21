@@ -821,23 +821,23 @@ const AdminEvents: React.FC = () => {
       >
         {!isMobile ? (
           <div className="points-config-form">
-            <Table
-              columns={columns}
-              dataSource={filtered}
-              rowKey="id"
-              loading={loading}
-              rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
-              pagination={{
-                total: events.length,
-                pageSize: 10,
-                showSizeChanger: true,
-                showQuickJumper: true,
-                showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
-              }}
+          <Table
+            columns={columns}
+            dataSource={filtered}
+            rowKey="id"
+            loading={loading}
+            rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
+            pagination={{
+              total: events.length,
+              pageSize: 10,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
+            }}
               style={{
                 background: 'transparent'
               }}
-            />
+          />
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

@@ -192,7 +192,7 @@
     "admin": "管理员",
     "member": "会员",
     "guest": "游客",
-    "vip": "VIP会员"
+    "vip": "VIP"
   },
   "navigation": {
     "home": "首页",

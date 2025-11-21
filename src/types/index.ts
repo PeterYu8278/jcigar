@@ -314,13 +314,6 @@ export interface RoutePermission {
 export interface PointsConfig {
   id: string;  // 固定为 'default'
   
-  // 注册相关积分
-  registration: {
-    base: number;              // 基础注册积分
-    withReferral: number;      // 被引荐注册积分
-    referrerReward: number;    // 引荐人奖励积分
-  };
-  
   // 购买相关积分
   purchase: {
     firstOrder: number;        // 首次购买奖励
@@ -333,13 +326,6 @@ export interface PointsConfig {
     registration: number;      // 活动报名积分
     checkIn: number;           // 活动签到积分
     completion: number;        // 完成活动积分
-  };
-  
-  // 其他积分
-  other: {
-    profileComplete: number;   // 完善资料积分
-    firstLogin: number;        // 首次登录积分
-    dailyCheckIn: number;      // 每日签到积分
   };
   
   // 驻店时长费用

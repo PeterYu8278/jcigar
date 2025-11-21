@@ -194,7 +194,7 @@
     "admin": "Admin",
     "member": "Member",
     "guest": "Guest",
-    "vip": "VIP Member"
+    "vip": "VIP"
   },
   "navigation": {
     "home": "Home",

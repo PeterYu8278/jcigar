@@ -55,11 +55,6 @@ export const updatePointsConfig = async (
 export const getDefaultPointsConfig = (): PointsConfig => {
   return {
     id: 'default',
-    registration: {
-      base: 50,              // 基础注册积分
-      withReferral: 100,     // 被引荐注册积分
-      referrerReward: 200,   // 引荐人奖励积分
-    },
     purchase: {
       firstOrder: 100,       // 首次购买奖励
       perRinggit: 1,         // 每消费1马币获得1积分
@@ -69,11 +64,6 @@ export const getDefaultPointsConfig = (): PointsConfig => {
       registration: 10,      // 活动报名积分
       checkIn: 20,           // 活动签到积分
       completion: 50,        // 完成活动积分
-    },
-    other: {
-      profileComplete: 30,   // 完善资料积分
-      firstLogin: 10,        // 首次登录积分
-      dailyCheckIn: 5,       // 每日签到积分
     },
     visit: {
       hourlyRate: 10,        // 默认每小时扣除10积分
