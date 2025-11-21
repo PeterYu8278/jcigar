@@ -495,7 +495,7 @@ const PointsConfigPage: React.FC = () => {
                 {t('pointsConfig.basicRules')}
               </h3>
               <Row gutter={16}>
-                <Col xs={24} sm={8}>
+                <Col xs={24} sm={6}>
                   <Form.Item
                     label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.purchase.perRinggit')}</span>}
                     name={['purchase', 'perRinggit']}
@@ -511,7 +511,7 @@ const PointsConfigPage: React.FC = () => {
                     />
                   </Form.Item>
                 </Col>
-                <Col xs={24} sm={8}>
+                <Col xs={24} sm={6}>
                   <Form.Item
                     label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.reload.referrerFirstReload')}</span>}
                     name={['reload', 'referrerFirstReload']}
@@ -525,7 +525,7 @@ const PointsConfigPage: React.FC = () => {
                     />
                   </Form.Item>
                 </Col>
-                <Col xs={24} sm={8}>
+                <Col xs={24} sm={6}>
                   <Form.Item
                     label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.reload.referredFirstReload')}</span>}
                     name={['reload', 'referredFirstReload']}
@@ -539,29 +539,7 @@ const PointsConfigPage: React.FC = () => {
                     />
                   </Form.Item>
                 </Col>
-              </Row>
-            </div>
-
-            {/* 活动相关积分 */}
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.03)',
-              borderRadius: 8,
-              padding: 16,
-              marginBottom: 16,
-              border: '1px solid rgba(255, 255, 255, 0.1)'
-            }}>
-              <h3 style={{ 
-                fontSize: 16, 
-                fontWeight: 700, 
-                marginBottom: 16,
-                backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-                WebkitBackgroundClip: 'text',
-                color: 'transparent'
-              }}>
-                {t('pointsConfig.event.title')}
-              </h3>
-              <Row gutter={16}>
-                <Col xs={24} sm={12}>
+                <Col xs={24} sm={6}>
                   <Form.Item
                     label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.event.registration')}</span>}
                     name={['event', 'registration']}
