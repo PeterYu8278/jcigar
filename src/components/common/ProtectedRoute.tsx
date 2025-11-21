@@ -15,7 +15,7 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
-  roles = ['guest', 'member', 'admin'], 
+  roles = ['guest', 'member', 'vip', 'admin'], 
   requireAuth = true 
 }) => {
   const { user, loading } = useAuthStore()
