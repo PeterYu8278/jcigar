@@ -178,22 +178,15 @@ export const completeVisitSession = async (
       durationHours = calculateVisitDuration(durationMinutes);
     }
 
-    // 获取每小时扣除积分（优先从积分配置读取，如果没有则从会员费配置读取）
+    // 获取当前时期生效的每小时扣除积分（基于签到时间）
     let hourlyRate = 0;
     try {
-      const { getPointsConfig } = await import('./pointsConfig');
-      const pointsConfig = await getPointsConfig();
-      if (pointsConfig?.visit?.hourlyRate !== undefined) {
-        hourlyRate = pointsConfig.visit.hourlyRate;
-      } else {
-        // 向后兼容：从会员费配置读取
-        const { getMembershipFeeConfig } = await import('./membershipFee');
-        const feeConfig = await getMembershipFeeConfig();
-        hourlyRate = feeConfig?.hourlyRate || 0;
-      }
+      const { getCurrentHourlyRate } = await import('./membershipFee');
+      // 使用签到时间作为基准日期，确保使用签到时的费率
+      hourlyRate = await getCurrentHourlyRate(session.checkInAt);
     } catch (error) {
       console.error('[completeVisitSession] 获取积分扣除配置失败，使用默认值', error);
-      // 如果都失败，使用默认值
+      // 如果失败，使用默认值
       hourlyRate = 10;
     }
 

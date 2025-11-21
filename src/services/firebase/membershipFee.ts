@@ -98,10 +98,10 @@ export const getDefaultMembershipFeeConfig = (): MembershipFeeConfig => {
     annualFees: [
       {
         startDate: new Date('2025-01-01'),
-        amount: 150 // 默认年费150积分
+        amount: 150, // 默认年费150积分
+        rate: 25     // 默认每小时25积分
       }
     ],
-    hourlyRate: 10, // 默认每小时10积分
     updatedAt: new Date(),
     updatedBy: 'system'
   };
@@ -133,6 +133,34 @@ export const getCurrentAnnualFeeAmount = async (date?: Date): Promise<number> =>
 
   // 如果没有匹配的，返回第一个（默认）
   return sortedFees[0]?.amount || 1000;
+};
+
+/**
+ * 根据日期获取当前生效的每小时扣除积分
+ */
+export const getCurrentHourlyRate = async (date?: Date): Promise<number> => {
+  const config = await getMembershipFeeConfig();
+  if (!config || !config.annualFees || config.annualFees.length === 0) {
+    return 25; // 默认值
+  }
+
+  const targetDate = date || new Date();
+  
+  // 找到第一个生效的配置（按startDate排序）
+  const sortedFees = [...config.annualFees].sort(
+    (a, b) => a.startDate.getTime() - b.startDate.getTime()
+  );
+
+  for (const fee of sortedFees.reverse()) {
+    if (targetDate >= fee.startDate) {
+      if (!fee.endDate || targetDate <= fee.endDate) {
+        return fee.rate;
+      }
+    }
+  }
+
+  // 如果没有匹配的，返回第一个（默认）
+  return sortedFees[0]?.rate || 10;
 };
 
 /**

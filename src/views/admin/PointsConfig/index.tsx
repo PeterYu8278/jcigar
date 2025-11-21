@@ -109,16 +109,10 @@ const PointsConfigPage: React.FC = () => {
       const defaultMembershipFeeConfig = getDefaultMembershipFeeConfig();
       
       // 合并配置到表单
-      // 优先使用MembershipFeeConfig的hourlyRate，如果没有则使用PointsConfig的visit.hourlyRate（向后兼容）
-      const hourlyRate = membershipFeeConfig?.hourlyRate 
-        || (pointsConfig as any)?.visit?.hourlyRate 
-        || defaultMembershipFeeConfig.hourlyRate;
-      
       const formValues: any = {
         ...(pointsConfig || defaultPointsConfig),
         // 会员年费配置
         membershipFee: {
-          hourlyRate: hourlyRate,
           annualFees: (membershipFeeConfig?.annualFees || defaultMembershipFeeConfig.annualFees).map(fee => ({
             ...fee,
             startDate: dayjs(fee.startDate),
@@ -148,22 +142,15 @@ const PointsConfigPage: React.FC = () => {
       // 分离积分配置和会员年费配置
       const { membershipFee, ...pointsConfigValues } = values;
       
-      // 如果存在会员年费配置的hourlyRate，同步到PointsConfig的visit字段（向后兼容）
-      if (membershipFee?.hourlyRate !== undefined) {
-        pointsConfigValues.visit = {
-          hourlyRate: membershipFee.hourlyRate
-        };
-      }
-      
       // 保存积分配置
       const pointsResult = await updatePointsConfig(pointsConfigValues, user.id);
       
       // 保存会员年费配置
       if (membershipFee) {
         const membershipFeeConfigData = {
-          hourlyRate: membershipFee.hourlyRate,
           annualFees: (membershipFee.annualFees || []).map((fee: any) => ({
             amount: fee.amount,
+            rate: fee.rate,
             startDate: fee.startDate.toDate(),
             endDate: fee.endDate ? fee.endDate.toDate() : undefined
           }))
@@ -229,7 +216,6 @@ const PointsConfigPage: React.FC = () => {
     const formValues: any = {
       ...defaultPointsConfig,
       membershipFee: {
-        hourlyRate: defaultMembershipFeeConfig.hourlyRate,
         annualFees: defaultMembershipFeeConfig.annualFees.map(fee => ({
           ...fee,
           startDate: dayjs(fee.startDate),
@@ -575,30 +561,12 @@ const PointsConfigPage: React.FC = () => {
                 年费配置（按日期范围）
               </h3>
               
-              {/* 驻店时长费用 */}
-              <Row gutter={16} style={{ marginBottom: 24 }}>
-                <Col xs={24} sm={8}>
-                  <Form.Item
-                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>每小时扣除积分</span>}
-                    name={['membershipFee', 'hourlyRate']}
-                    rules={[{ required: true, message: '请输入每小时扣除积分' }]}
-                  >
-                    <InputNumber
-                      min={0}
-                      max={1000}
-                      style={{ width: '100%' }}
-                      addonAfter="积分/小时"
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-
               <Form.List name={['membershipFee', 'annualFees']}>
                 {(fields, { add, remove }) => (
                   <>
                     {fields.map(({ key, name, ...restField }) => (
                       <Row key={key} gutter={16} style={{ marginBottom: 16 }}>
-                        <Col xs={24} sm={8}>
+                        <Col xs={24} sm={6}>
                           <Form.Item
                             {...restField}
                             name={[name, 'startDate']}
@@ -608,7 +576,7 @@ const PointsConfigPage: React.FC = () => {
                             <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
                           </Form.Item>
                         </Col>
-                        <Col xs={24} sm={6}>
+                        <Col xs={24} sm={5}>
                           <Form.Item
                             {...restField}
                             name={[name, 'endDate']}
@@ -617,7 +585,7 @@ const PointsConfigPage: React.FC = () => {
                             <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
                           </Form.Item>
                         </Col>
-                        <Col xs={24} sm={6}>
+                        <Col xs={24} sm={5}>
                           <Form.Item
                             {...restField}
                             name={[name, 'amount']}
@@ -629,6 +597,21 @@ const PointsConfigPage: React.FC = () => {
                               max={100000}
                               style={{ width: '100%' }}
                               addonAfter="积分"
+                            />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} sm={5}>
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'rate']}
+                            label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>每小时扣除积分</span>}
+                            rules={[{ required: true, message: '请输入每小时扣除积分' }]}
+                          >
+                            <InputNumber
+                              min={0}
+                              max={1000}
+                              style={{ width: '100%' }}
+                              addonAfter="积分/小时"
                             />
                           </Form.Item>
                         </Col>

@@ -405,10 +405,8 @@ export interface MembershipFeeConfig {
     startDate: Date;  // 生效开始日期
     endDate?: Date;   // 生效结束日期（可选，为空表示永久生效）
     amount: number;   // 年费金额（积分）
+    rate: number;     // 每小时扣除积分
   }>;
-  
-  // 驻店时长费用
-  hourlyRate: number; // 每小时扣除积分
   
   updatedAt: Date;
   updatedBy: string;
