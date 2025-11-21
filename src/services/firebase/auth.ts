@@ -78,6 +78,7 @@ export const registerUser = async (
       email: normalizedEmail,  // ✅ 邮箱必填（使用标准化格式）
       displayName,
       role: 'member',
+      status: 'inactive',  // ✅ 默认状态为非活跃
       memberId,  // ✅ 会员编号（用作引荐码）
       profile: {
         phone: normalizedPhone,  // ✅ 使用标准化格式
@@ -319,6 +320,7 @@ export const loginWithGoogle = async () => {
         email: googleEmail,
         displayName: googleUser.displayName || '未命名用户',
         role: 'member',
+        status: 'inactive',  // ✅ 默认状态为非活跃
         memberId,
         profile: {
           // phone 字段省略，待用户完善信息后添加
@@ -410,6 +412,7 @@ export const handleGoogleRedirectResult = async () => {
             email: googleEmail,
             displayName: currentUser.displayName || '未命名用户',
             role: 'member',
+            status: 'inactive',  // ✅ 默认状态为非活跃
             memberId,
             profile: {
               preferences: { language: 'zh', notifications: true },
@@ -481,6 +484,7 @@ export const handleGoogleRedirectResult = async () => {
         email: googleEmail,
         displayName: googleUser.displayName || '未命名用户',
         role: 'member',
+        status: 'inactive',  // ✅ 默认状态为非活跃
         memberId,
         profile: {
           preferences: { language: 'zh', notifications: true },

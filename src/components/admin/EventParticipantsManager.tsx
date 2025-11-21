@@ -168,6 +168,7 @@ const EventParticipantsManager: React.FC<EventParticipantsManagerProps> = ({
         displayName: values.displayName,
         email: values.email,
         role: 'member',
+        status: 'inactive',  // ✅ 默认状态为非活跃
         profile: { 
           phone: normalizedPhone,
           preferences: { language: 'zh', notifications: true } 
