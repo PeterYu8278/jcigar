@@ -185,7 +185,7 @@ export const ReferralTreeView: React.FC<ReferralTreeViewProps> = ({ users: propU
     const isExpanded = expandedNodes.has(user.id)
     const isSelected = selectedNodeId === user.id
 
-    const totalReferrals = user.referral?.totalReferred || 0
+    const totalReferrals = user.referral?.referrals?.length || 0
     const referralPoints = user.membership?.referralPoints || 0
 
     return (

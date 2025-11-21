@@ -742,7 +742,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     textAlign: 'center'
                   }}>
                     <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ffd700' }}>
-                      {user?.referral?.totalReferred || 0}
+                      {user?.referral?.referrals?.length || 0}
                     </div>
                     <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
                       {t('profile.totalReferred')}
