@@ -98,7 +98,7 @@ export const getDefaultMembershipFeeConfig = (): MembershipFeeConfig => {
     annualFees: [
       {
         startDate: new Date('2025-01-01'),
-        amount: 1000 // 默认年费1000积分
+        amount: 150 // 默认年费150积分
       }
     ],
     hourlyRate: 10, // 默认每小时10积分

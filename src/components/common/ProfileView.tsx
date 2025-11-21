@@ -504,15 +504,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </Space>
               </div>
             ) : pointsRecords.length === 0 ? (
-              <div style={{
-                textAlign: 'center',
-                padding: '40px 20px',
-                color: 'rgba(255, 255, 255, 0.6)'
-              }}>
-                <p style={{ margin: 0, fontSize: '14px' }}>
-                  {t('usersAdmin.noPointsRecords')}
-                </p>
-              </div>
+            <div style={{
+              textAlign: 'center',
+              padding: '40px 20px',
+              color: 'rgba(255, 255, 255, 0.6)'
+            }}>
+              <p style={{ margin: 0, fontSize: '14px' }}>
+                {t('usersAdmin.noPointsRecords')}
+              </p>
+            </div>
             ) : (
               <Space direction="vertical" size="middle" style={{ width: '100%' }}>
                 {pointsRecords.map((record) => {
