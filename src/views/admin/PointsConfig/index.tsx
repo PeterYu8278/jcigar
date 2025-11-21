@@ -495,7 +495,7 @@ const PointsConfigPage: React.FC = () => {
                 {t('pointsConfig.basicRules')}
               </h3>
               <Row gutter={16}>
-                <Col xs={24} sm={12}>
+                <Col xs={24} sm={8}>
                   <Form.Item
                     label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.purchase.perRinggit')}</span>}
                     name={['purchase', 'perRinggit']}
@@ -511,7 +511,7 @@ const PointsConfigPage: React.FC = () => {
                     />
                   </Form.Item>
                 </Col>
-                <Col xs={24} sm={12}>
+                <Col xs={24} sm={8}>
                   <Form.Item
                     label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.reload.referrerFirstReload')}</span>}
                     name={['reload', 'referrerFirstReload']}
@@ -525,7 +525,7 @@ const PointsConfigPage: React.FC = () => {
                     />
                   </Form.Item>
                 </Col>
-                <Col xs={24} sm={12}>
+                <Col xs={24} sm={8}>
                   <Form.Item
                     label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.reload.referredFirstReload')}</span>}
                     name={['reload', 'referredFirstReload']}
@@ -536,20 +536,6 @@ const PointsConfigPage: React.FC = () => {
                       max={10000}
                       style={{ width: '100%' }}
                       addonAfter={t('pointsConfig.units.points')}
-                    />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <Form.Item
-                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>每小时扣除积分</span>}
-                    name={['membershipFee', 'hourlyRate']}
-                    rules={[{ required: true, message: '请输入每小时扣除积分' }]}
-                  >
-                    <InputNumber
-                      min={0}
-                      max={1000}
-                      style={{ width: '100%' }}
-                      addonAfter="积分/小时"
                     />
                   </Form.Item>
                 </Col>
@@ -610,6 +596,25 @@ const PointsConfigPage: React.FC = () => {
               }}>
                 年费配置（按日期范围）
               </h3>
+              
+              {/* 驻店时长费用 */}
+              <Row gutter={16} style={{ marginBottom: 24 }}>
+                <Col xs={24} sm={8}>
+                  <Form.Item
+                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>每小时扣除积分</span>}
+                    name={['membershipFee', 'hourlyRate']}
+                    rules={[{ required: true, message: '请输入每小时扣除积分' }]}
+                  >
+                    <InputNumber
+                      min={0}
+                      max={1000}
+                      style={{ width: '100%' }}
+                      addonAfter="积分/小时"
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+
               <Form.List name={['membershipFee', 'annualFees']}>
                 {(fields, { add, remove }) => (
                   <>
