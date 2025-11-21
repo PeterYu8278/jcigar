@@ -546,6 +546,20 @@ const PointsConfigPage: React.FC = () => {
                     />
                   </Form.Item>
                 </Col>
+                <Col xs={24} sm={8}>
+                  <Form.Item
+                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.purchase.referredFirstOrder')}</span>}
+                    name={['purchase', 'referredFirstOrder']}
+                    rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
+                  >
+                    <InputNumber
+                      min={0}
+                      max={10000}
+                      style={{ width: '100%' }}
+                      addonAfter={t('pointsConfig.units.points')}
+                    />
+                  </Form.Item>
+                </Col>
               </Row>
             </div>
 

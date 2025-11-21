@@ -971,7 +971,8 @@
       "title": "Purchase Points",
       "firstOrder": "First Order Reward",
       "perRinggit": "Points per Ringgit Spent",
-      "referrerFirstOrder": "Referrer Reward for Referee's First Order"
+      "referrerFirstOrder": "Referrer Reward for Referee's First Order",
+      "referredFirstOrder": "Referee Reward for First Order"
     },
     "event": {
       "title": "Event Points",

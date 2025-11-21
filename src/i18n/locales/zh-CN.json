@@ -971,7 +971,8 @@
       "title": "购买相关积分",
       "firstOrder": "首次购买奖励",
       "perRinggit": "每消费1马币积分",
-      "referrerFirstOrder": "被引荐人首购，引荐人奖励"
+      "referrerFirstOrder": "被引荐人首购，引荐人奖励",
+      "referredFirstOrder": "被引荐人首购，被引荐人奖励"
     },
     "event": {
       "title": "活动相关积分",
