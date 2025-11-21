@@ -929,6 +929,7 @@
   "pointsConfig": {
     "title": "积分配置管理",
     "description": "配置系统中各项操作获得的积分奖励",
+    "basicRules": "基础积分规则",
     "loadFailed": "加载配置失败",
     "loadRecordsFailed": "加载积分记录失败",
     "userNotFound": "用户信息不存在",

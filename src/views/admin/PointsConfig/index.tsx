@@ -484,6 +484,7 @@ const PointsConfigPage: React.FC = () => {
               className="points-config-form"
             >
             {/* 购买相关积分 */}
+            {/* 基础积分规则 */}
             <div style={{
               background: 'rgba(255, 255, 255, 0.03)',
               borderRadius: 8,
@@ -499,7 +500,7 @@ const PointsConfigPage: React.FC = () => {
                 WebkitBackgroundClip: 'text',
                 color: 'transparent'
               }}>
-                {t('pointsConfig.purchase.title')}
+                {t('pointsConfig.basicRules')}
               </h3>
               <Row gutter={16}>
                 <Col xs={24} sm={12}>
@@ -518,28 +519,6 @@ const PointsConfigPage: React.FC = () => {
                     />
                   </Form.Item>
                 </Col>
-              </Row>
-            </div>
-
-            {/* 充值相关积分 */}
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.03)',
-              borderRadius: 8,
-              padding: 16,
-              marginBottom: 16,
-              border: '1px solid rgba(255, 255, 255, 0.1)'
-            }}>
-              <h3 style={{ 
-                fontSize: 16, 
-                fontWeight: 700, 
-                marginBottom: 16,
-                backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-                WebkitBackgroundClip: 'text',
-                color: 'transparent'
-              }}>
-                {t('pointsConfig.reload.title')}
-              </h3>
-              <Row gutter={16}>
                 <Col xs={24} sm={12}>
                   <Form.Item
                     label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.reload.referrerFirstReload')}</span>}
@@ -565,6 +544,20 @@ const PointsConfigPage: React.FC = () => {
                       max={10000}
                       style={{ width: '100%' }}
                       addonAfter={t('pointsConfig.units.points')}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>每小时扣除积分</span>}
+                    name={['visit', 'hourlyRate']}
+                    rules={[{ required: true, message: '请输入每小时扣除积分' }]}
+                  >
+                    <InputNumber
+                      min={0}
+                      max={1000}
+                      style={{ width: '100%' }}
+                      addonAfter="积分/小时"
                     />
                   </Form.Item>
                 </Col>
@@ -601,43 +594,6 @@ const PointsConfigPage: React.FC = () => {
                       max={1000}
                       style={{ width: '100%' }}
                       addonAfter={t('pointsConfig.units.points')}
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-            </div>
-
-            {/* 驻店时长费用 */}
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.03)',
-              borderRadius: 8,
-              padding: 16,
-              marginBottom: 16,
-              border: '1px solid rgba(255, 255, 255, 0.1)'
-            }}>
-              <h3 style={{ 
-                fontSize: 16, 
-                fontWeight: 700, 
-                marginBottom: 16,
-                backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-                WebkitBackgroundClip: 'text',
-                color: 'transparent'
-              }}>
-                驻店时长费用
-              </h3>
-              <Row gutter={16}>
-                <Col xs={24} sm={8}>
-                  <Form.Item
-                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>每小时扣除积分</span>}
-                    name={['membershipFee', 'hourlyRate']}
-                    rules={[{ required: true, message: '请输入每小时扣除积分' }]}
-                    tooltip="会员驻店时，每小时扣除的积分数"
-                  >
-                    <InputNumber
-                      min={0}
-                      max={1000}
-                      style={{ width: '100%' }}
-                      addonAfter="积分/小时"
                     />
                   </Form.Item>
                 </Col>

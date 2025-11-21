@@ -929,6 +929,7 @@
   "pointsConfig": {
     "title": "Points Configuration",
     "description": "Configure point rewards for various system operations",
+    "basicRules": "Basic Points Rules",
     "loadFailed": "Failed to load configuration",
     "loadRecordsFailed": "Failed to load points records",
     "userNotFound": "User information not found",
