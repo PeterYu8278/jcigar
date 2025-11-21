@@ -288,7 +288,7 @@ export interface InventoryMovement {
 }
 
 // 权限类型
-export type UserRole = 'guest' | 'member' | 'admin';
+export type UserRole = 'guest' | 'member' | 'vip' | 'admin';
 
 export interface Permission {
   canViewEvents: boolean;

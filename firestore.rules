@@ -1,0 +1,269 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ================================
+    // 辅助函数
+    // ================================
+    
+    // 检查用户是否已认证
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    // 获取用户文档
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    // 检查用户角色
+    function hasRole(role) {
+      return isSignedIn() && getUserData().role == role;
+    }
+    
+    // 检查是否为管理员
+    function isAdmin() {
+      return hasRole('admin');
+    }
+    
+    // 检查是否为 VIP 会员
+    function isVIP() {
+      return hasRole('vip');
+    }
+    
+    // 检查是否为普通会员
+    function isMember() {
+      return hasRole('member');
+    }
+    
+    // 检查是否为活跃用户（member、vip 或 admin）
+    function isActiveMember() {
+      return isSignedIn() && (isMember() || isVIP() || isAdmin());
+    }
+    
+    // 检查是否为资源所有者
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    // 检查用户状态是否活跃
+    function isActiveUser() {
+      return isSignedIn() && getUserData().status == 'active';
+    }
+    
+    // ================================
+    // Users Collection
+    // ================================
+    match /users/{userId} {
+      // 读取：用户只能读取自己的数据，或者管理员可以读取所有
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // 创建：仅在注册时允许（特殊情况）
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      
+      // 更新：用户可以更新自己的数据，管理员可以更新所有
+      // 限制：普通用户不能修改自己的 role 和 status
+      allow update: if (isOwner(userId) && 
+                       !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'status'])) 
+                    || isAdmin();
+      
+      // 删除：仅管理员
+      allow delete: if isAdmin();
+    }
+    
+    // ================================
+    // Events Collection
+    // ================================
+    match /events/{eventId} {
+      // 读取：所有已认证用户都可以查看活动
+      allow read: if isSignedIn();
+      
+      // 创建/更新/删除：仅管理员
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ================================
+    // Orders Collection
+    // ================================
+    match /orders/{orderId} {
+      // 读取：用户可以查看自己的订单，管理员可以查看所有
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      
+      // 创建：活跃会员（member/vip）和管理员可以创建订单
+      allow create: if isActiveMember() && isActiveUser();
+      
+      // 更新：仅管理员可以更新订单状态
+      allow update: if isAdmin();
+      
+      // 删除：仅管理员
+      allow delete: if isAdmin();
+    }
+    
+    // ================================
+    // Cigars/Inventory Collection
+    // ================================
+    match /cigars/{cigarId} {
+      // 读取：所有已认证用户都可以查看库存
+      allow read: if isSignedIn();
+      
+      // 创建/更新/删除：仅管理员
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ================================
+    // Brands Collection
+    // ================================
+    match /brands/{brandId} {
+      // 读取：所有已认证用户都可以查看品牌
+      allow read: if isSignedIn();
+      
+      // 创建/更新/删除：仅管理员
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ================================
+    // Points Records Collection
+    // ================================
+    match /pointsRecords/{recordId} {
+      // 读取：用户可以查看自己的积分记录，管理员可以查看所有
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      
+      // 创建：系统自动创建或管理员创建
+      allow create: if isAdmin();
+      
+      // 更新/删除：仅管理员
+      allow update, delete: if isAdmin();
+    }
+    
+    // ================================
+    // Visit Sessions Collection
+    // ================================
+    match /visitSessions/{sessionId} {
+      // 读取：用户可以查看自己的驻店记录，管理员可以查看所有
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      
+      // 创建：活跃会员和管理员可以创建驻店记录
+      allow create: if isActiveMember() && isActiveUser();
+      
+      // 更新：用户可以更新自己的记录，管理员可以更新所有
+      allow update: if isOwner(resource.data.userId) || isAdmin();
+      
+      // 删除：仅管理员
+      allow delete: if isAdmin();
+    }
+    
+    // ================================
+    // Redemption Records Collection
+    // ================================
+    match /redemptionRecords/{recordId} {
+      // 读取：用户可以查看自己的兑换记录，管理员可以查看所有
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      
+      // 创建/更新/删除：仅管理员
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ================================
+    // Reload Records Collection (充值记录)
+    // ================================
+    match /reloadRecords/{recordId} {
+      // 读取：用户可以查看自己的充值记录，管理员可以查看所有
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      
+      // 创建：活跃会员和管理员可以提交充值申请
+      allow create: if isActiveMember() && isActiveUser();
+      
+      // 更新：仅管理员可以审核充值
+      allow update: if isAdmin();
+      
+      // 删除：仅管理员
+      allow delete: if isAdmin();
+    }
+    
+    // ================================
+    // Membership Fee Records Collection
+    // ================================
+    match /membershipFeeRecords/{recordId} {
+      // 读取：用户可以查看自己的年费记录，管理员可以查看所有
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      
+      // 创建/更新/删除：仅管理员
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ================================
+    // Transactions Collection (财务记录)
+    // ================================
+    match /transactions/{transactionId} {
+      // 读取：仅管理员
+      allow read: if isAdmin();
+      
+      // 创建/更新/删除：仅管理员
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ================================
+    // Inbound Orders Collection (入库订单)
+    // ================================
+    match /inboundOrders/{orderId} {
+      // 读取：仅管理员
+      allow read: if isAdmin();
+      
+      // 创建/更新/删除：仅管理员
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ================================
+    // Outbound Orders Collection (出库订单)
+    // ================================
+    match /outboundOrders/{orderId} {
+      // 读取：仅管理员
+      allow read: if isAdmin();
+      
+      // 创建/更新/删除：仅管理员
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ================================
+    // Inventory Movements Collection
+    // ================================
+    match /inventoryMovements/{movementId} {
+      // 读取：仅管理员
+      allow read: if isAdmin();
+      
+      // 创建/更新/删除：仅管理员
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ================================
+    // Points Config Collection
+    // ================================
+    match /pointsConfig/{configId} {
+      // 读取：所有已认证用户都可以查看积分规则
+      allow read: if isSignedIn();
+      
+      // 创建/更新/删除：仅管理员
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ================================
+    // Membership Fee Config Collection
+    // ================================
+    match /membershipFeeConfig/{configId} {
+      // 读取：所有已认证用户都可以查看年费规则
+      allow read: if isSignedIn();
+      
+      // 创建/更新/删除：仅管理员
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ================================
+    // 默认拒绝规则
+    // ================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

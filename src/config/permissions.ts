@@ -27,6 +27,18 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission> = {
     canViewFinance: false,
     canSwitchToAdmin: false,
   },
+  vip: {
+    canViewEvents: true,
+    canRegisterEvent: true,
+    canPurchase: true,
+    canViewProfile: true,
+    canCreateEvent: false,
+    canManageInventory: false,
+    canManageUsers: false,
+    canManageOrders: false,
+    canViewFinance: false,
+    canSwitchToAdmin: false,
+  },
   admin: {
     canViewEvents: true,
     canRegisterEvent: true,
@@ -43,12 +55,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission> = {
 
 // 路由权限配置
 export const ROUTE_PERMISSIONS = {
-  '/': ['guest', 'member', 'admin'],
-  '/events': ['guest', 'member', 'admin'],
-  '/shop': ['member', 'admin'],
-  '/profile': ['member', 'admin'],
-  '/reload': ['member', 'admin'], // 充值页面权限
-  '/brand': ['member', 'admin'], // 品牌详情页面权限
+  '/': ['guest', 'member', 'vip', 'admin'],
+  '/events': ['guest', 'member', 'vip', 'admin'],
+  '/shop': ['member', 'vip', 'admin'],
+  '/profile': ['member', 'vip', 'admin'],
+  '/reload': ['member', 'vip', 'admin'], // 充值页面权限
+  '/brand': ['member', 'vip', 'admin'], // 品牌详情页面权限
   '/admin': ['admin'],
   '/admin/users': ['admin'],
   '/admin/inventory': ['admin'],
@@ -72,7 +84,7 @@ export const canAccessRoute = (userRole: UserRole, path: string): boolean => {
   
   // 动态路由匹配
   if (path.startsWith('/brand/')) {
-    return ['member', 'admin'].includes(userRole);
+    return ['member', 'vip', 'admin'].includes(userRole);
   }
   
   if (path.startsWith('/admin/')) {
