@@ -152,8 +152,8 @@ export const mergeUserAccounts = async (
         : (phoneUser.referral?.referralDate || googleUser.referral?.referralDate || null),
       // 引荐列表合并（去重）
       referrals: Array.from(new Set([
-        ...(phoneUser.referral?.referrals || []),
-        ...(googleUser.referral?.referrals || [])
+        ...(Array.isArray(phoneUser.referral?.referrals) ? phoneUser.referral.referrals : []),
+        ...(Array.isArray(googleUser.referral?.referrals) ? googleUser.referral.referrals : [])
       ])),
       // 总引荐数
       totalReferred: 
@@ -235,7 +235,8 @@ export const mergeUserAccounts = async (
     const events = await getDocs(eventsQuery);
     events.forEach(eventDoc => {
       const eventData = eventDoc.data();
-      const participants = eventData.participants || [];
+      // 确保 participants 是数组
+      const participants = Array.isArray(eventData.participants) ? eventData.participants : [];
       
       // 检查是否有phoneOnlyUserId在参与者列表中
       const hasPhoneUser = participants.some((p: any) => p.userId === phoneOnlyUserId);
