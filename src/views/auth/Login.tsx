@@ -122,18 +122,30 @@ const Login: React.FC = () => {
   // 初始化 reCAPTCHA（当模态框打开时）
   useEffect(() => {
     if (forgotPasswordVisible && resetStep === 'phone') {
-      try {
-        initRecaptchaVerifier('recaptcha-container', 'invisible')
-      } catch (error) {
-        console.error('[reCAPTCHA] 初始化失败:', error)
-      }
+      // 延迟初始化，确保 DOM 已渲染
+      const timer = setTimeout(() => {
+        try {
+          initRecaptchaVerifier('recaptcha-container', 'invisible')
+        } catch (error) {
+          console.error('[reCAPTCHA] 初始化失败:', error)
+          // 如果初始化失败，尝试清理后重试
+          cleanupRecaptcha()
+          setTimeout(() => {
+            try {
+              initRecaptchaVerifier('recaptcha-container', 'invisible')
+            } catch (retryError) {
+              console.error('[reCAPTCHA] 重试初始化失败:', retryError)
+            }
+          }, 100)
+        }
+      }, 100)
+
+      return () => clearTimeout(timer)
     }
     
-    // 清理函数
-    return () => {
-      if (!forgotPasswordVisible) {
-        cleanupRecaptcha()
-      }
+    // 清理函数 - 当模态框关闭时
+    if (!forgotPasswordVisible) {
+      cleanupRecaptcha()
     }
   }, [forgotPasswordVisible, resetStep])
 
