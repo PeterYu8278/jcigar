@@ -1117,30 +1117,18 @@ const AdminUsers: React.FC = () => {
                 return
               }
               normalizedPhone = normalized
-              
-              // 检查手机号唯一性
-              const phoneQuery = query(
-                collection(db, 'users'), 
-                where('profile.phone', '==', normalizedPhone), 
-                limit(1)
-              )
-              const phoneSnap = await getDocs(phoneQuery)
-              
-              if (!phoneSnap.empty) {
-                const existingUserId = phoneSnap.docs[0].id
-                // 如果是编辑模式，检查是否是当前用户自己的手机号
-                if (!editing || existingUserId !== editing.id) {
-                  message.error('该手机号已被其他用户使用')
-                  setLoading(false)
-                  return
-                }
-              }
+            }
+            
+            // 标准化邮箱
+            let normalizedEmail: string | undefined = undefined
+            if (values.email) {
+              normalizedEmail = values.email.toLowerCase().trim()
             }
             
             if (editing) {
               const res = await updateDocument<User>(COLLECTIONS.USERS, editing.id, {
                 displayName: values.displayName,
-                email: values.email,
+                email: normalizedEmail || values.email,  // ✅ 使用标准化邮箱
                 role: values.role,
                 membership: { ...editing.membership, level: values.level },
                 profile: { ...(editing as any).profile, phone: normalizedPhone },
@@ -1150,7 +1138,7 @@ const AdminUsers: React.FC = () => {
               // 创建新用户时，先创建文档获取ID，然后生成会员ID并更新
               const userData: Omit<User, 'id'> = {
                 displayName: values.displayName,
-                email: values.email,
+                email: normalizedEmail || values.email,  // ✅ 使用标准化邮箱
                 role: values.role,
                 profile: { phone: normalizedPhone, preferences: { language: 'zh', notifications: true } },
                 membership: { level: values.level, joinDate: new Date(), lastActive: new Date() },
@@ -1197,8 +1185,43 @@ const AdminUsers: React.FC = () => {
             name="email"
             rules={[
               { required: false, message: t('auth.emailRequired') },
-              { type: 'email', message: t('auth.emailInvalid') }
+              { type: 'email', message: t('auth.emailInvalid') },
+              {
+                validator: async (_, value) => {
+                  if (!value) return Promise.resolve()
+                  
+                  // ✅ 先验证格式，格式无效则跳过唯一性检查
+                  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+                  if (!emailPattern.test(value)) {
+                    return Promise.resolve()
+                  }
+                  
+                  // ✅ 格式有效，检查邮箱唯一性
+                  try {
+                    const emailQuery = query(
+                      collection(db, 'users'), 
+                      where('email', '==', value.toLowerCase().trim()),
+                      limit(1)
+                    )
+                    const emailSnap = await getDocs(emailQuery)
+                    
+                    if (!emailSnap.empty) {
+                      const existingUserId = emailSnap.docs[0].id
+                      // ✅ 如果是编辑模式，排除当前用户自己
+                      if (!editing || existingUserId !== editing.id) {
+                        return Promise.reject(new Error('该邮箱已被其他用户使用'))
+                      }
+                    }
+                  } catch (error) {
+                    // 如果查询失败，允许通过（不阻止用户提交）
+                  }
+                  
+                  return Promise.resolve()
+                }
+              }
             ]}
+            validateTrigger={['onBlur', 'onChange']}
+            validateDebounce={500}
           >
             <Input placeholder={t('auth.email')} />
           </Form.Item>
@@ -1206,9 +1229,62 @@ const AdminUsers: React.FC = () => {
           <Form.Item 
             label={<span style={{ color: '#FFFFFF' }}>{t('auth.phone')}</span>}
             name="phone" 
-            rules={[{ required: true, message: t('profile.phoneRequired') }]}
+            rules={[
+              { required: true, message: t('profile.phoneRequired') },
+              { 
+                pattern: /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/, 
+                message: '手机号格式无效（需10-12位数字）' 
+              },
+              {
+                validator: async (_, value) => {
+                  if (!value) return Promise.resolve()
+                  
+                  // ✅ 先验证格式，格式无效则跳过唯一性检查
+                  const formatPattern = /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/
+                  if (!formatPattern.test(value)) {
+                    return Promise.resolve()
+                  }
+                  
+                  // ✅ 格式有效，检查手机号唯一性
+                  const normalized = normalizePhoneNumber(value)
+                  if (!normalized) {
+                    return Promise.resolve()
+                  }
+                  
+                  try {
+                    const phoneQuery = query(
+                      collection(db, 'users'), 
+                      where('profile.phone', '==', normalized),
+                      limit(1)
+                    )
+                    const phoneSnap = await getDocs(phoneQuery)
+                    
+                    if (!phoneSnap.empty) {
+                      const existingUserId = phoneSnap.docs[0].id
+                      // ✅ 如果是编辑模式，排除当前用户自己
+                      if (!editing || existingUserId !== editing.id) {
+                        return Promise.reject(new Error('该手机号已被其他用户使用'))
+                      }
+                    }
+                  } catch (error) {
+                    // 如果查询失败，允许通过（不阻止用户提交）
+                  }
+                  
+                  return Promise.resolve()
+                }
+              }
+            ]}
+            validateTrigger={['onBlur', 'onChange']}
+            validateDebounce={500}
           >
-            <Input placeholder={t('auth.phone')} />
+            <Input 
+              placeholder={t('auth.phone')}
+              onInput={(e) => {
+                const input = e.currentTarget
+                // 只保留数字、加号
+                input.value = input.value.replace(/[^\d+]/g, '')
+              }}
+            />
           </Form.Item>
 
           <Form.Item 
