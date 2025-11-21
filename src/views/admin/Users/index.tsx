@@ -132,7 +132,7 @@ const AdminUsers: React.FC = () => {
     switch (role) {
       case 'admin': return 'red'
       case 'member': return 'blue'
-      case 'vip': return 'purple'
+      case 'vip': return 'gold'  // VIP 使用自定义渐变样式，此颜色不会被使用
       case 'guest': return 'default'
       default: return 'default'
     }
@@ -218,11 +218,29 @@ const AdminUsers: React.FC = () => {
       title: t('usersAdmin.role'),
       dataIndex: 'role',
       key: 'role',
-      render: (role: string) => (
-        <Tag color={getRoleColor(role)}>
-          {getRoleText(role)}
-        </Tag>
-      ),
+      render: (role: string) => {
+        // ✅ VIP 标签使用金色渐变背景和黑色字体
+        if (role === 'vip') {
+          return (
+            <Tag 
+              style={{
+                background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                color: '#000000',
+                border: 'none',
+                fontWeight: 600
+              }}
+            >
+              {getRoleText(role)}
+            </Tag>
+          )
+        }
+        // 其他角色使用默认颜色
+        return (
+          <Tag color={getRoleColor(role)}>
+            {getRoleText(role)}
+          </Tag>
+        )
+      },
       filterIcon: (filtered: boolean) => (
         <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />
       ),
