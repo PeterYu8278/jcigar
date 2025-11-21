@@ -891,7 +891,7 @@
     "inviteTextCopied": "Invitation text copied",
     "referralCodeNotFound": "Referral code not found",
     "copyFailed": "Copy failed, please try again",
-    "referralReward": "💰 Earn 200 points for each successful referral",
+    "referralReward": "💰 When your referral makes their first reload, both earn 50 points",
     "totalReferred": "Total Referred",
     "referralPoints": "Referral Points",
     "shareWithFriends": "Share your referral code with friends and earn rewards",
@@ -924,7 +924,7 @@
     "passwordUpdateFailed": "Password update failed",
     "phoneInvalidFormat": "Invalid phone number format",
     "updateFailed": "Update failed, please try again",
-    "shareText": "Join Gentleman Club! Use my referral code: {{code}} to earn extra points!"
+    "shareText": "Join Gentleman Club! Use my referral code: {{code}} and earn points on your first reload!"
   },
   "pointsConfig": {
     "title": "Points Configuration",

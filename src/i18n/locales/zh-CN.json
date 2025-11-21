@@ -888,7 +888,7 @@
     "inviteTextCopied": "邀请文字已复制",
     "referralCodeNotFound": "引荐码不存在",
     "copyFailed": "复制失败，请重试",
-    "referralReward": "💰 每成功引荐1人注册获得 200 积分",
+    "referralReward": "💰 好友首次充值时，双方各获得 50 积分",
     "totalReferred": "累计引荐",
     "referralPoints": "引荐积分",
     "shareWithFriends": "分享您的引荐码给好友，邀请他们加入获得奖励",
@@ -921,7 +921,7 @@
     "passwordUpdateFailed": "密码更新失败",
     "phoneInvalidFormat": "手机号格式无效",
     "updateFailed": "更新失败，请重试",
-    "shareText": "加入 Gentleman Club，使用我的引荐码：{{code}}，注册可获得额外积分！",
+    "shareText": "加入 Gentleman Club，使用我的引荐码：{{code}}，首次充值可获得积分奖励！",
     "currentPasswordHint": "更新邮箱或密码时需要",
     "confirmPassword": "确认密码",
     "confirmPasswordPlaceholder": "请再次输入新密码"
