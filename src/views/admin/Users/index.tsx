@@ -132,6 +132,7 @@ const AdminUsers: React.FC = () => {
     switch (role) {
       case 'admin': return 'red'
       case 'member': return 'blue'
+      case 'vip': return 'purple'
       case 'guest': return 'default'
       default: return 'default'
     }
@@ -141,6 +142,7 @@ const AdminUsers: React.FC = () => {
     switch (role) {
       case 'admin': return t('auth.admin')
       case 'member': return t('auth.member')
+      case 'vip': return t('auth.vip')
       case 'guest': return t('auth.guest')
       default: return t('profile.unknown')
     }
