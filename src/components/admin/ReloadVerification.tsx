@@ -1,6 +1,6 @@
 // 充值验证组件
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Tag, Modal, Form, Input, message, Upload, Image, Select } from 'antd';
+import { Table, Button, Space, Tag, Modal, Form, Input, message, Upload, Image, Select, Spin } from 'antd';
 import { CheckOutlined, CloseOutlined, UploadOutlined, EyeOutlined } from '@ant-design/icons';
 import { getAllReloadRecords, verifyReloadRecord, rejectReloadRecord } from '../../services/firebase/reload';
 import { processPendingMembershipFees } from '../../services/firebase/scheduledJobs';
@@ -23,6 +23,7 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
   const [rejectForm] = Form.useForm();
   const [uploading, setUploading] = useState(false);
   const [proofUrl, setProofUrl] = useState<string>('');
+  const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false;
 
   useEffect(() => {
     loadRecords();
@@ -305,21 +306,166 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
           刷新
         </Button>
       </div>
-      <div className="points-config-form">
-        <Table
-          columns={columns}
-          dataSource={records}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            pageSize: 20,
-            showSizeChanger: true
-          }}
-          style={{
-            background: 'transparent'
-          }}
-        />
-      </div>
+      {!isMobile ? (
+        <div className="points-config-form">
+          <Table
+            columns={columns}
+            dataSource={records}
+            rowKey="id"
+            loading={loading}
+            pagination={{
+              pageSize: 20,
+              showSizeChanger: true
+            }}
+            style={{
+              background: 'transparent'
+            }}
+          />
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'rgba(255, 255, 255, 0.6)' }}>
+              <Spin />
+            </div>
+          ) : records.length === 0 ? (
+            <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>
+              暂无充值记录
+            </div>
+          ) : (
+            records.map((record) => {
+              const statusMap: Record<string, { color: string; text: string }> = {
+                pending: { color: '#fb923c', text: '待验证' },
+                completed: { color: '#34d399', text: '已完成' },
+                rejected: { color: '#f87171', text: '已拒绝' }
+              };
+              const statusInfo = statusMap[record.status] || { color: '#9ca3af', text: record.status };
+
+              const createdDate = record.createdAt instanceof Date
+                ? record.createdAt
+                : (record.createdAt as any)?.toDate
+                  ? (record.createdAt as any).toDate()
+                  : new Date(record.createdAt);
+
+              return (
+                <div
+                  key={record.id}
+                  style={{
+                    border: '1px solid rgba(244,175,37,0.2)',
+                    borderRadius: 12,
+                    padding: 12,
+                    background: 'rgba(34,28,16,0.5)',
+                    backdropFilter: 'blur(10px)'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.85)', marginBottom: 4 }}>
+                        {record.userName || record.userId.substring(0, 20)}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>
+                        {dayjs(createdDate).format('YYYY-MM-DD HH:mm')}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
+                        {record.requestedAmount} RM = {record.pointsEquivalent} 积分
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right', marginLeft: 12 }}>
+                      <div style={{
+                        fontSize: 11,
+                        padding: '2px 8px',
+                        borderRadius: 4,
+                        background: statusInfo.color === '#fb923c' ? 'rgba(251,146,60,0.2)' :
+                          statusInfo.color === '#34d399' ? 'rgba(52,211,153,0.2)' :
+                          'rgba(248,113,113,0.2)',
+                        color: statusInfo.color,
+                        fontWeight: 600,
+                        marginBottom: 8
+                      }}>
+                        {statusInfo.text}
+                      </div>
+                      {record.verificationProof && (
+                        <Button
+                          type="link"
+                          icon={<EyeOutlined />}
+                          size="small"
+                          onClick={() => {
+                            Modal.info({
+                              title: <span style={{ color: '#FFFFFF' }}>充值凭证</span>,
+                              content: <Image src={record.verificationProof!} alt="充值凭证" style={{ maxWidth: '100%' }} />,
+                              width: isMobile ? '90%' : 600,
+                              styles: {
+                                content: {
+                                  background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
+                                  border: '1px solid rgba(244, 175, 37, 0.3)'
+                                },
+                                header: {
+                                  background: 'transparent',
+                                  borderBottom: '1px solid rgba(244, 175, 37, 0.2)'
+                                },
+                                body: {
+                                  background: 'transparent'
+                                }
+                              },
+                              okButtonProps: {
+                                style: {
+                                  background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                                  border: 'none',
+                                  color: '#111',
+                                  fontWeight: 700
+                                }
+                              }
+                            });
+                          }}
+                          style={{
+                            color: '#FFD700',
+                            padding: 0,
+                            fontSize: 11
+                          }}
+                        >
+                          查看凭证
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  {record.status === 'pending' && (
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(244,175,37,0.1)' }}>
+                      <Button
+                        size="small"
+                        icon={<CheckOutlined />}
+                        onClick={() => handleVerify(record)}
+                        style={{
+                          flex: 1,
+                          background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                          border: 'none',
+                          color: '#111',
+                          fontWeight: 700
+                        }}
+                      >
+                        验证
+                      </Button>
+                      <Button
+                        size="small"
+                        icon={<CloseOutlined />}
+                        onClick={() => handleReject(record)}
+                        style={{
+                          flex: 1,
+                          background: 'rgba(255, 77, 79, 0.8)',
+                          border: 'none',
+                          color: '#FFFFFF',
+                          fontWeight: 700
+                        }}
+                      >
+                        拒绝
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
 
       {/* 验证模态框 */}
       <Modal

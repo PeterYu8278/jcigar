@@ -33,6 +33,7 @@ const PointsConfigPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const { user } = useAuthStore();
   const { t } = useTranslation();
+  const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false;
 
   // 加载积分配置
   useEffect(() => {
@@ -927,29 +928,116 @@ const PointsConfigPage: React.FC = () => {
                 {t('common.refresh')}
               </Button>
             </div>
-            <div className="points-config-form">
-              <Table
-                columns={columns}
-                dataSource={pointsRecords}
-                rowKey="id"
-                loading={loadingRecords}
-                pagination={{
-                  pageSize: 20,
-                  showSizeChanger: true,
-                  showTotal: (total) => t('common.paginationTotal', {
-                    start: 1,
-                    end: Math.min(20, total),
-                    total
+            {!isMobile ? (
+              <div className="points-config-form">
+                <Table
+                  columns={columns}
+                  dataSource={pointsRecords}
+                  rowKey="id"
+                  loading={loadingRecords}
+                  pagination={{
+                    pageSize: 20,
+                    showSizeChanger: true,
+                    showTotal: (total) => t('common.paginationTotal', {
+                      start: 1,
+                      end: Math.min(20, total),
+                      total
+                    })
+                  }}
+                  locale={{
+                    emptyText: t('pointsConfig.records.noRecords')
+                  }}
+                  style={{
+                    background: 'transparent'
+                  }}
+                />
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {loadingRecords ? (
+                  <div style={{ textAlign: 'center', padding: '40px 20px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                    <Spin />
+                  </div>
+                ) : pointsRecords.length === 0 ? (
+                  <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>
+                    {t('pointsConfig.records.noRecords')}
+                  </div>
+                ) : (
+                  pointsRecords.map((record) => {
+                    const getSourceText = (source: string) => {
+                      const sourceMap: Record<string, string> = {
+                        registration: t('pointsConfig.records.sources.registration'),
+                        referral: t('pointsConfig.records.sources.referral'),
+                        purchase: t('pointsConfig.records.sources.purchase'),
+                        event: t('pointsConfig.records.sources.event'),
+                        profile: t('pointsConfig.records.sources.profile'),
+                        checkin: t('pointsConfig.records.sources.checkin'),
+                        visit: '驻店时长费用',
+                        membership_fee: '年费',
+                        reload: '充值',
+                        admin: t('pointsConfig.records.sources.admin'),
+                        other: t('pointsConfig.records.sources.other')
+                      };
+                      return sourceMap[source] || source;
+                    };
+
+                    const recordDate = record.createdAt instanceof Date
+                      ? record.createdAt
+                      : (record.createdAt as any)?.toDate
+                        ? (record.createdAt as any).toDate()
+                        : new Date(record.createdAt);
+
+                    return (
+                      <div
+                        key={record.id}
+                        style={{
+                          border: '1px solid rgba(244,175,37,0.2)',
+                          borderRadius: 12,
+                          padding: 12,
+                          background: 'rgba(34,28,16,0.5)',
+                          backdropFilter: 'blur(10px)'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>
+                              {recordDate.toLocaleString('zh-CN', {
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </div>
+                            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.85)', marginBottom: 4 }}>
+                              {record.description || '-'}
+                            </div>
+                            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+                              {getSourceText(record.source)}
+                            </div>
+                          </div>
+                          <div style={{ textAlign: 'right', marginLeft: 12 }}>
+                            <div style={{
+                              fontSize: 18,
+                              fontWeight: 700,
+                              color: record.type === 'earn' ? '#52c41a' : '#ff4d4f',
+                              marginBottom: 4
+                            }}>
+                              {record.type === 'earn' ? '+' : '-'}{record.amount}
+                            </div>
+                            {record.balance && (
+                              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
+                                余额: {record.balance}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
                   })
-                }}
-                locale={{
-                  emptyText: t('pointsConfig.records.noRecords')
-                }}
-                style={{
-                  background: 'transparent'
-                }}
-              />
-            </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -1014,92 +1102,194 @@ const PointsConfigPage: React.FC = () => {
                 </Button>
               </Space>
             </div>
-            <div className="points-config-form">
-              <Table
-                columns={[
-                  {
-                    title: '用户',
-                    dataIndex: 'userName',
-                    key: 'userName',
-                    width: 150,
-                    render: (name: string, record: MembershipFeeRecord) => name || record.userId
-                  },
-                  {
-                    title: '类型',
-                    dataIndex: 'renewalType',
-                    key: 'renewalType',
-                    width: 100,
-                    render: (type: string) => (
-                      <Tag color={type === 'initial' ? 'blue' : 'green'}>
-                        {type === 'initial' ? '首次开通' : '续费'}
-                      </Tag>
-                    )
-                  },
-                  {
-                    title: '金额',
-                    dataIndex: 'amount',
-                    key: 'amount',
-                    width: 120,
-                    render: (amount: number) => (
-                      <Text strong style={{ color: '#ff4d4f' }}>
-                        -{amount} 积分
-                      </Text>
-                    )
-                  },
-                  {
-                    title: '应扣费日期',
-                    dataIndex: 'dueDate',
-                    key: 'dueDate',
-                    width: 180,
-                    render: (date: Date) => dayjs(date).format('YYYY-MM-DD HH:mm:ss')
-                  },
-                  {
-                    title: '实际扣费时间',
-                    dataIndex: 'deductedAt',
-                    key: 'deductedAt',
-                    width: 180,
-                    render: (date: Date | undefined) => date ? dayjs(date).format('YYYY-MM-DD HH:mm:ss') : '-'
-                  },
-                  {
-                    title: '状态',
-                    dataIndex: 'status',
-                    key: 'status',
-                    width: 100,
-                    render: (status: string) => {
-                      const statusMap: Record<string, { color: string; text: string }> = {
-                        pending: { color: 'orange', text: '待支付' },
-                        paid: { color: 'green', text: '已支付' },
-                        failed: { color: 'red', text: '失败' },
-                        cancelled: { color: 'default', text: '已取消' }
-                      };
-                      const statusInfo = statusMap[status] || { color: 'default', text: status };
-                      return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
+            {!isMobile ? (
+              <div className="points-config-form">
+                <Table
+                  columns={[
+                    {
+                      title: '用户',
+                      dataIndex: 'userName',
+                      key: 'userName',
+                      width: 150,
+                      render: (name: string, record: MembershipFeeRecord) => name || record.userId
+                    },
+                    {
+                      title: '类型',
+                      dataIndex: 'renewalType',
+                      key: 'renewalType',
+                      width: 100,
+                      render: (type: string) => (
+                        <Tag color={type === 'initial' ? 'blue' : 'green'}>
+                          {type === 'initial' ? '首次开通' : '续费'}
+                        </Tag>
+                      )
+                    },
+                    {
+                      title: '金额',
+                      dataIndex: 'amount',
+                      key: 'amount',
+                      width: 120,
+                      render: (amount: number) => (
+                        <Text strong style={{ color: '#ff4d4f' }}>
+                          -{amount} 积分
+                        </Text>
+                      )
+                    },
+                    {
+                      title: '应扣费日期',
+                      dataIndex: 'dueDate',
+                      key: 'dueDate',
+                      width: 180,
+                      render: (date: Date) => dayjs(date).format('YYYY-MM-DD HH:mm:ss')
+                    },
+                    {
+                      title: '实际扣费时间',
+                      dataIndex: 'deductedAt',
+                      key: 'deductedAt',
+                      width: 180,
+                      render: (date: Date | undefined) => date ? dayjs(date).format('YYYY-MM-DD HH:mm:ss') : '-'
+                    },
+                    {
+                      title: '状态',
+                      dataIndex: 'status',
+                      key: 'status',
+                      width: 100,
+                      render: (status: string) => {
+                        const statusMap: Record<string, { color: string; text: string }> = {
+                          pending: { color: 'orange', text: '待支付' },
+                          paid: { color: 'green', text: '已支付' },
+                          failed: { color: 'red', text: '失败' },
+                          cancelled: { color: 'default', text: '已取消' }
+                        };
+                        const statusInfo = statusMap[status] || { color: 'default', text: status };
+                        return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
+                      }
+                    },
+                    {
+                      title: '创建时间',
+                      dataIndex: 'createdAt',
+                      key: 'createdAt',
+                      width: 180,
+                      render: (date: Date) => dayjs(date).format('YYYY-MM-DD HH:mm:ss')
                     }
-                  },
-                  {
-                    title: '创建时间',
-                    dataIndex: 'createdAt',
-                    key: 'createdAt',
-                    width: 180,
-                    render: (date: Date) => dayjs(date).format('YYYY-MM-DD HH:mm:ss')
-                  }
-                ]}
-                dataSource={membershipFeeRecords}
-                rowKey="id"
-                loading={loadingMembershipFeeRecords}
-                pagination={{
-                  pageSize: 20,
-                  showSizeChanger: true,
-                  showTotal: (total) => `共 ${total} 条记录`
-                }}
-                locale={{
-                  emptyText: '暂无年费记录'
-                }}
-                style={{
-                  background: 'transparent'
-                }}
-              />
-            </div>
+                  ]}
+                  dataSource={membershipFeeRecords}
+                  rowKey="id"
+                  loading={loadingMembershipFeeRecords}
+                  pagination={{
+                    pageSize: 20,
+                    showSizeChanger: true,
+                    showTotal: (total) => `共 ${total} 条记录`
+                  }}
+                  locale={{
+                    emptyText: '暂无年费记录'
+                  }}
+                  style={{
+                    background: 'transparent'
+                  }}
+                />
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {loadingMembershipFeeRecords ? (
+                  <div style={{ textAlign: 'center', padding: '40px 20px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                    <Spin />
+                  </div>
+                ) : membershipFeeRecords.length === 0 ? (
+                  <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>
+                    暂无年费记录
+                  </div>
+                ) : (
+                  membershipFeeRecords.map((record) => {
+                    const statusMap: Record<string, { color: string; text: string }> = {
+                      pending: { color: '#fb923c', text: '待支付' },
+                      paid: { color: '#34d399', text: '已支付' },
+                      failed: { color: '#f87171', text: '失败' },
+                      cancelled: { color: '#9ca3af', text: '已取消' }
+                    };
+                    const statusInfo = statusMap[record.status] || { color: '#9ca3af', text: record.status };
+
+                    const dueDate = record.dueDate instanceof Date
+                      ? record.dueDate
+                      : (record.dueDate as any)?.toDate
+                        ? (record.dueDate as any).toDate()
+                        : new Date(record.dueDate);
+
+                    const deductedDate = record.deductedAt instanceof Date
+                      ? record.deductedAt
+                      : (record.deductedAt as any)?.toDate
+                        ? (record.deductedAt as any).toDate()
+                        : record.deductedAt
+                          ? new Date(record.deductedAt)
+                          : null;
+
+                    const createdDate = record.createdAt instanceof Date
+                      ? record.createdAt
+                      : (record.createdAt as any)?.toDate
+                        ? (record.createdAt as any).toDate()
+                        : new Date(record.createdAt);
+
+                    return (
+                      <div
+                        key={record.id}
+                        style={{
+                          border: '1px solid rgba(244,175,37,0.2)',
+                          borderRadius: 12,
+                          padding: 12,
+                          background: 'rgba(34,28,16,0.5)',
+                          backdropFilter: 'blur(10px)'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.85)', marginBottom: 4 }}>
+                              {record.userName || record.userId.substring(0, 20)}
+                            </div>
+                            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>
+                              应扣费: {dayjs(dueDate).format('YYYY-MM-DD HH:mm')}
+                            </div>
+                            {deductedDate && (
+                              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>
+                                实际扣费: {dayjs(deductedDate).format('YYYY-MM-DD HH:mm')}
+                              </div>
+                            )}
+                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
+                              创建: {dayjs(createdDate).format('YYYY-MM-DD HH:mm')}
+                            </div>
+                          </div>
+                          <div style={{ textAlign: 'right', marginLeft: 12 }}>
+                            <div style={{
+                              fontSize: 18,
+                              fontWeight: 700,
+                              color: '#ff4d4f',
+                              marginBottom: 4
+                            }}>
+                              -{record.amount} 积分
+                            </div>
+                            <span style={{
+                              fontSize: 11,
+                              padding: '2px 8px',
+                              borderRadius: 4,
+                              background: statusInfo.color === '#fb923c' ? 'rgba(251,146,60,0.2)' :
+                                statusInfo.color === '#34d399' ? 'rgba(52,211,153,0.2)' :
+                                statusInfo.color === '#f87171' ? 'rgba(248,113,113,0.2)' :
+                                'rgba(156,163,175,0.2)',
+                              color: statusInfo.color,
+                              fontWeight: 600
+                            }}>
+                              {statusInfo.text}
+                            </span>
+                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>
+                              {record.renewalType === 'initial' ? '首次开通' : '续费'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

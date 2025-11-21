@@ -1,6 +1,6 @@
 // 驻店记录管理页面
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Button, Space, Tag, Modal, message, Input, Typography, App, Form, Select, InputNumber } from 'antd';
+import { Card, Table, Button, Space, Tag, Modal, message, Input, Typography, App, Form, Select, InputNumber, Spin } from 'antd';
 import { ReloadOutlined, CheckOutlined, ClockCircleOutlined, QrcodeOutlined, LoginOutlined, LogoutOutlined, GiftOutlined, PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { 
   getUserVisitSessions, 
@@ -39,6 +39,8 @@ const VisitSessionsPage: React.FC = () => {
   const [addingRedemption, setAddingRedemption] = useState(false);
   const [redemptionRecords, setRedemptionRecords] = useState<Map<string, any[]>>(new Map());
   const [forceCheckoutForm] = Form.useForm();
+  const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
+  const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false;
 
   useEffect(() => {
     loadAllSessions();
@@ -472,20 +474,21 @@ const VisitSessionsPage: React.FC = () => {
             </Space>
           </div>
 
-          <div className="points-config-form">
-            <Table
-              columns={columns}
-              dataSource={sessions}
-              rowKey="id"
-              loading={loading}
-              pagination={{
-                pageSize: 20,
-                showSizeChanger: true
-              }}
-              style={{
-                background: 'transparent'
-              }}
-              expandable={{
+          {!isMobile ? (
+            <div className="points-config-form">
+              <Table
+                columns={columns}
+                dataSource={sessions}
+                rowKey="id"
+                loading={loading}
+                pagination={{
+                  pageSize: 20,
+                  showSizeChanger: true
+                }}
+                style={{
+                  background: 'transparent'
+                }}
+                expandable={{
               expandedRowRender: (record: VisitSession) => {
                 // 从 redemptionRecords state 中获取该 session 的所有兑换记录（包括待处理和已完成）
                 const allRedemptionRecords = redemptionRecords.get(record.id) || [];
@@ -635,6 +638,208 @@ const VisitSessionsPage: React.FC = () => {
             }}
             />
           </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {loading ? (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                  <Spin />
+                </div>
+              ) : sessions.length === 0 ? (
+                <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>
+                  暂无驻店记录
+                </div>
+              ) : (
+                sessions.map((record) => {
+                  const statusMap: Record<string, { color: string; text: string }> = {
+                    pending: { color: '#fb923c', text: '待处理' },
+                    completed: { color: '#34d399', text: '已完成' },
+                    expired: { color: '#f87171', text: '已过期' }
+                  };
+                  const statusInfo = statusMap[record.status] || { color: '#9ca3af', text: record.status };
+
+                  const checkInDate = record.checkInAt instanceof Date
+                    ? record.checkInAt
+                    : (record.checkInAt as any)?.toDate
+                      ? (record.checkInAt as any).toDate()
+                      : new Date(record.checkInAt);
+
+                  const checkOutDate = record.checkOutAt instanceof Date
+                    ? record.checkOutAt
+                    : (record.checkOutAt as any)?.toDate
+                      ? (record.checkOutAt as any).toDate()
+                      : record.checkOutAt
+                        ? new Date(record.checkOutAt)
+                        : null;
+
+                  const calculateDuration = () => {
+                    if (record.durationHours !== undefined) {
+                      return `${record.durationHours} 小时`;
+                    }
+                    if (record.status === 'pending') {
+                      const now = new Date();
+                      const diffMs = now.getTime() - checkInDate.getTime();
+                      const hours = Math.floor(diffMs / (1000 * 60 * 60));
+                      const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                      return `${hours}:${String(minutes).padStart(2, '0')}`;
+                    }
+                    return '-';
+                  };
+
+                  const allRedemptionRecords = redemptionRecords.get(record.id) || [];
+                  const expanded = expandedSessions.has(record.id);
+
+                  return (
+                    <div
+                      key={record.id}
+                      style={{
+                        border: '1px solid rgba(244,175,37,0.2)',
+                        borderRadius: 12,
+                        padding: 12,
+                        background: 'rgba(34,28,16,0.5)',
+                        backdropFilter: 'blur(10px)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.85)', marginBottom: 4 }}>
+                            {record.userName || record.userId.substring(0, 20)}
+                          </div>
+                          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>
+                            Check-in: {dayjs(checkInDate).format('YYYY-MM-DD HH:mm')}
+                          </div>
+                          {checkOutDate && (
+                            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>
+                              Check-out: {dayjs(checkOutDate).format('YYYY-MM-DD HH:mm')}
+                            </div>
+                          )}
+                          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
+                            时长: {calculateDuration()}
+                            {record.pointsDeducted !== undefined && (
+                              <span style={{ marginLeft: 8 }}>
+                                • 扣除: -{record.pointsDeducted} 积分
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right', marginLeft: 12 }}>
+                          <div style={{
+                            fontSize: 11,
+                            padding: '2px 8px',
+                            borderRadius: 4,
+                            background: statusInfo.color === '#fb923c' ? 'rgba(251,146,60,0.2)' :
+                              statusInfo.color === '#34d399' ? 'rgba(52,211,153,0.2)' :
+                              'rgba(248,113,113,0.2)',
+                            color: statusInfo.color,
+                            fontWeight: 600,
+                            marginBottom: 8
+                          }}>
+                            {statusInfo.text}
+                          </div>
+                          {allRedemptionRecords.length > 0 && (
+                            <Button
+                              type="link"
+                              size="small"
+                              onClick={() => {
+                                const newExpanded = !expanded;
+                                if (newExpanded) {
+                                  setExpandedSessions(prev => new Set(prev).add(record.id));
+                                  if (allRedemptionRecords.length === 0 && record.status === 'pending') {
+                                    loadRedemptionRecords(record.id);
+                                  }
+                                } else {
+                                  setExpandedSessions(prev => {
+                                    const next = new Set(prev);
+                                    next.delete(record.id);
+                                    return next;
+                                  });
+                                }
+                              }}
+                              style={{
+                                color: '#FFD700',
+                                padding: 0,
+                                fontSize: 11
+                              }}
+                            >
+                              {expanded ? '收起' : `兑换记录 (${allRedemptionRecords.length})`}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      {record.status === 'pending' && (
+                        <div style={{ display: 'flex', gap: 8, marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(244,175,37,0.1)' }}>
+                          <Button
+                            size="small"
+                            icon={<CheckOutlined />}
+                            onClick={() => handleManualCheckout(record.id)}
+                            style={{
+                              flex: 1,
+                              background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                              border: 'none',
+                              color: '#111',
+                              fontWeight: 700
+                            }}
+                          >
+                            结算
+                          </Button>
+                          <Button
+                            size="small"
+                            onClick={() => {
+                              setSelectedSession(record);
+                              forceCheckoutForm.setFieldsValue({ forceHours: 5 });
+                              setForceCheckoutModalVisible(true);
+                            }}
+                            style={{
+                              flex: 1,
+                              background: 'rgba(255, 255, 255, 0.1)',
+                              border: '1px solid rgba(255, 255, 255, 0.2)',
+                              color: '#FFFFFF'
+                            }}
+                          >
+                            强制结算
+                          </Button>
+                        </div>
+                      )}
+                      {expanded && allRedemptionRecords.length > 0 && (
+                        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(244,175,37,0.1)' }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: '#FFD700', marginBottom: 8 }}>
+                            <GiftOutlined style={{ marginRight: 4 }} />
+                            兑换记录
+                          </div>
+                          {allRedemptionRecords.map((redemptionRecord) => (
+                            <div
+                              key={redemptionRecord.id || `${record.id}-${redemptionRecord.createdAt}`}
+                              style={{
+                                padding: 8,
+                                marginBottom: 8,
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                borderRadius: 6,
+                                fontSize: 11,
+                                color: 'rgba(255,255,255,0.7)'
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                  <span style={{ color: 'rgba(255,255,255,0.85)' }}>
+                                    {redemptionRecord.status === 'pending' ? '待选择' : redemptionRecord.cigarName || '-'}
+                                  </span>
+                                  <span style={{ marginLeft: 8, color: 'rgba(255,255,255,0.6)' }}>
+                                    × {redemptionRecord.quantity || 1}
+                                  </span>
+                                </div>
+                                <Tag color={redemptionRecord.status === 'pending' ? 'orange' : 'green'} style={{ fontSize: 10 }}>
+                                  {redemptionRecord.status === 'pending' ? '待选择' : '已完成'}
+                                </Tag>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
         </Space>
       </Card>
 
