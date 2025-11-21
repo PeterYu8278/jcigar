@@ -323,34 +323,35 @@ export const ReferralTreeView: React.FC<ReferralTreeViewProps> = ({ users: propU
     <div>
       {/* 统计面板 */}
       <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+        display: 'flex',
         gap: 12,
         marginBottom: 16,
         padding: 16,
         background: 'rgba(255, 255, 255, 0.05)',
         borderRadius: 12,
-        border: '1px solid rgba(244, 175, 37, 0.2)'
+        border: '1px solid rgba(244, 175, 37, 0.2)',
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch'
       }}>
-        <div style={{ textAlign: 'center' }}>
+        <div style={{ textAlign: 'center', minWidth: 100, flex: '0 0 auto' }}>
           <div style={{ fontSize: 24, fontWeight: 800, color: '#FFD700' }}>{stats.totalUsers}</div>
-          <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>{t('usersAdmin.totalUsers')}</div>
+          <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)', whiteSpace: 'nowrap' }}>{t('usersAdmin.totalUsers')}</div>
         </div>
-        <div style={{ textAlign: 'center' }}>
+        <div style={{ textAlign: 'center', minWidth: 100, flex: '0 0 auto' }}>
           <div style={{ fontSize: 24, fontWeight: 800, color: '#FFD700' }}>{stats.hasReferral}</div>
-          <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>{t('usersAdmin.hasReferrer')}</div>
+          <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)', whiteSpace: 'nowrap' }}>{t('usersAdmin.hasReferrer')}</div>
         </div>
-        <div style={{ textAlign: 'center' }}>
+        <div style={{ textAlign: 'center', minWidth: 100, flex: '0 0 auto' }}>
           <div style={{ fontSize: 24, fontWeight: 800, color: '#FFD700' }}>{stats.hasReferrals}</div>
-          <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>{t('usersAdmin.hasReferrals')}</div>
+          <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)', whiteSpace: 'nowrap' }}>{t('usersAdmin.hasReferrals')}</div>
         </div>
-        <div style={{ textAlign: 'center' }}>
+        <div style={{ textAlign: 'center', minWidth: 100, flex: '0 0 auto' }}>
           <div style={{ fontSize: 24, fontWeight: 800, color: '#FFD700' }}>{stats.maxDepth}</div>
-          <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>{t('usersAdmin.maxDepth')}</div>
+          <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)', whiteSpace: 'nowrap' }}>{t('usersAdmin.maxDepth')}</div>
         </div>
-        <div style={{ textAlign: 'center' }}>
+        <div style={{ textAlign: 'center', minWidth: 100, flex: '0 0 auto' }}>
           <div style={{ fontSize: 24, fontWeight: 800, color: '#FFD700' }}>{stats.totalReferralPoints}</div>
-          <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>{t('usersAdmin.totalReferralPoints')}</div>
+          <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)', whiteSpace: 'nowrap' }}>{t('usersAdmin.totalReferralPoints')}</div>
         </div>
       </div>
 
