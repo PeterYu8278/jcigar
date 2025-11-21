@@ -324,7 +324,7 @@ export const ReferralTreeView: React.FC<ReferralTreeViewProps> = ({ users: propU
       {/* 统计面板 */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
         gap: 12,
         marginBottom: 16,
         padding: 16,
@@ -359,14 +359,14 @@ export const ReferralTreeView: React.FC<ReferralTreeViewProps> = ({ users: propU
         <Search
           placeholder={t('usersAdmin.searchByNameOrEmail')}
           allowClear
-          style={{ width: 300 }}
+          style={{ width: '100%', maxWidth: 300 }}
           prefix={<SearchOutlined />}
           value={searchKeyword}
           onChange={(e) => setSearchKeyword(e.target.value)}
         />
         <Select
           value={filterType}
-          style={{ width: 180 }}
+          style={{ width: '100%', maxWidth: 180, minWidth: 150 }}
           onChange={setFilterType}
         >
           <Option value="all">{t('common.all')}</Option>
@@ -385,7 +385,14 @@ export const ReferralTreeView: React.FC<ReferralTreeViewProps> = ({ users: propU
       </Space>
 
       {/* 关系图 */}
-      <div style={{ minHeight: 400 }}>
+      <div style={{ 
+        minHeight: 400,
+        maxHeight: 'calc(100vh - 400px)',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        WebkitOverflowScrolling: 'touch',
+        paddingRight: 4
+      }}>
         {filteredTree.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 20px', color: 'rgba(255, 255, 255, 0.6)' }}>
             <Text>{t('usersAdmin.noReferralData')}</Text>
