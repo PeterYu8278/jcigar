@@ -122,30 +122,35 @@ const Login: React.FC = () => {
   // 初始化 reCAPTCHA（当模态框打开时）
   useEffect(() => {
     if (forgotPasswordVisible && resetStep === 'phone') {
-      // 延迟初始化，确保 DOM 已渲染
+      // 延迟初始化，确保 DOM 已渲染且旧实例已清理
       const timer = setTimeout(() => {
         try {
+          const container = document.getElementById('recaptcha-container')
+          if (!container) {
+            console.error('[reCAPTCHA] 容器不存在')
+            return
+          }
+          
           initRecaptchaVerifier('recaptcha-container', 'invisible')
         } catch (error) {
           console.error('[reCAPTCHA] 初始化失败:', error)
-          // 如果初始化失败，尝试清理后重试
-          cleanupRecaptcha()
-          setTimeout(() => {
-            try {
-              initRecaptchaVerifier('recaptcha-container', 'invisible')
-            } catch (retryError) {
-              console.error('[reCAPTCHA] 重试初始化失败:', retryError)
-            }
-          }, 100)
+          message.error('验证组件加载失败，请刷新页面重试')
         }
-      }, 100)
+      }, 300)
 
-      return () => clearTimeout(timer)
+      return () => {
+        clearTimeout(timer)
+      }
     }
     
-    // 清理函数 - 当模态框关闭时
-    if (!forgotPasswordVisible) {
-      cleanupRecaptcha()
+    // 清理函数 - 当模态框关闭或步骤改变时
+    if (!forgotPasswordVisible || resetStep !== 'phone') {
+      // 延迟清理，避免立即重新打开时冲突
+      const cleanupTimer = setTimeout(() => {
+        cleanupRecaptcha()
+      }, 100)
+      
+      return () => clearTimeout(cleanupTimer)
     }
   }, [forgotPasswordVisible, resetStep])
 
@@ -221,10 +226,27 @@ const Login: React.FC = () => {
         setResetStep('verify')
         setCountdown(60) // 60秒倒计时
       } else {
-        message.error(result.error?.message || '发送失败，请重试')
+        const errorMsg = result.error?.message || '发送失败，请重试'
+        message.error(errorMsg)
+        
+        // 如果是 reCAPTCHA 错误，建议刷新
+        if (errorMsg.includes('reCAPTCHA') || errorMsg.includes('recaptcha')) {
+          setTimeout(() => {
+            message.warning('建议刷新页面后重试（Ctrl+Shift+R）')
+          }, 1500)
+        }
       }
     } catch (error: any) {
-      message.error(error.message || '发送失败，请重试')
+      const errorMsg = error.message || '发送失败，请重试'
+      message.error(errorMsg)
+      
+      // 如果是 reCAPTCHA 错误，清理并建议刷新
+      if (errorMsg.includes('reCAPTCHA') || errorMsg.includes('recaptcha')) {
+        cleanupRecaptcha()
+        setTimeout(() => {
+          message.warning('请刷新页面后重试（Ctrl+Shift+R）')
+        }, 1500)
+      }
     } finally {
       setResettingPassword(false)
     }
@@ -282,12 +304,17 @@ const Login: React.FC = () => {
 
   // 重置模态框状态
   const handleResetModalClose = () => {
-    setForgotPasswordVisible(false)
-    resetPasswordForm.resetFields()
-    setResetStep('phone')
-    setResetPhone('')
-    setCountdown(0)
+    // 先清理 reCAPTCHA
     cleanupRecaptcha()
+    
+    // 延迟关闭，确保清理完成
+    setTimeout(() => {
+      setForgotPasswordVisible(false)
+      resetPasswordForm.resetFields()
+      setResetStep('phone')
+      setResetPhone('')
+      setCountdown(0)
+    }, 50)
   }
 
   return (

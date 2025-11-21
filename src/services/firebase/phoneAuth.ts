@@ -13,6 +13,7 @@ import { normalizePhoneNumber } from '../../utils/phoneNormalization';
 // 全局变量存储 recaptcha verifier 和 confirmation result
 let recaptchaVerifier: RecaptchaVerifier | null = null;
 let confirmationResult: ConfirmationResult | null = null;
+let recaptchaWidgetId: number | null = null;
 
 /**
  * 初始化 reCAPTCHA verifier
@@ -24,29 +25,34 @@ export const initRecaptchaVerifier = (
   size: 'normal' | 'invisible' | 'compact' = 'invisible'
 ): RecaptchaVerifier => {
   try {
-    // 如果已经初始化，直接返回现有实例
-    if (recaptchaVerifier) {
-      console.log('[reCAPTCHA] 使用现有实例');
-      return recaptchaVerifier;
+    // 强制清理旧实例（即使已存在）
+    cleanupRecaptcha();
+
+    // 等待一小段时间确保清理完成
+    const container = document.getElementById(containerId);
+    if (!container) {
+      throw new Error(`找不到 reCAPTCHA 容器: ${containerId}`);
     }
 
-    // 清理 DOM 中可能残留的 reCAPTCHA 元素
-    const container = document.getElementById(containerId);
-    if (container) {
-      // 清空容器内容
-      container.innerHTML = '';
-    }
+    // 确保容器是空的
+    container.innerHTML = '';
+    
+    // 移除所有可能的 reCAPTCHA 相关属性
+    container.removeAttribute('data-sitekey');
+    container.removeAttribute('data-callback');
+    container.removeAttribute('data-expired-callback');
 
     // 创建新的 reCAPTCHA verifier
     recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
       size: size,
-      callback: () => {
-        console.log('[reCAPTCHA] 验证成功');
+      callback: (response: any) => {
+        console.log('[reCAPTCHA] 验证成功', response);
       },
       'expired-callback': () => {
         console.log('[reCAPTCHA] 验证过期');
-        // 验证过期时清理并重新初始化
-        cleanupRecaptcha();
+      },
+      'error-callback': (error: any) => {
+        console.error('[reCAPTCHA] 验证错误:', error);
       }
     });
 
@@ -54,8 +60,6 @@ export const initRecaptchaVerifier = (
     return recaptchaVerifier;
   } catch (error) {
     console.error('[reCAPTCHA] 初始化失败:', error);
-    // 如果初始化失败，尝试清理后重新创建
-    cleanupRecaptcha();
     throw error;
   }
 };
@@ -97,15 +101,10 @@ export const sendPasswordResetSMS = async (phone: string): Promise<{
 
     // 3. 确保 reCAPTCHA 已初始化
     if (!recaptchaVerifier) {
-      // 尝试重新初始化
-      try {
-        recaptchaVerifier = initRecaptchaVerifier('recaptcha-container', 'invisible');
-      } catch (initError) {
-        return {
-          success: false,
-          error: new Error('reCAPTCHA 初始化失败，请刷新页面重试')
-        };
-      }
+      return {
+        success: false,
+        error: new Error('reCAPTCHA 未初始化，请刷新页面重试')
+      };
     }
 
     // 4. 发送 SMS 验证码
@@ -116,27 +115,18 @@ export const sendPasswordResetSMS = async (phone: string): Promise<{
 
     console.log('[sendPasswordResetSMS] 发送验证码到:', phoneWithCountryCode);
 
-    try {
-      confirmationResult = await signInWithPhoneNumber(
-        auth,
-        phoneWithCountryCode,
-        recaptchaVerifier
-      );
+    confirmationResult = await signInWithPhoneNumber(
+      auth,
+      phoneWithCountryCode,
+      recaptchaVerifier
+    );
 
-      console.log('[sendPasswordResetSMS] 验证码已发送');
+    console.log('[sendPasswordResetSMS] 验证码已发送');
 
-      return {
-        success: true,
-        phone: normalizedPhone
-      };
-    } catch (smsError: any) {
-      // 如果是 reCAPTCHA 错误，清理后抛出更友好的错误
-      if (smsError.message?.includes('reCAPTCHA')) {
-        cleanupRecaptcha();
-        throw new Error('reCAPTCHA 验证失败，请刷新页面后重试');
-      }
-      throw smsError;
-    }
+    return {
+      success: true,
+      phone: normalizedPhone
+    };
   } catch (error: any) {
     console.error('[sendPasswordResetSMS] Error:', error);
 
@@ -292,25 +282,51 @@ export const resetPasswordWithPhone = async (
  */
 export const cleanupRecaptcha = () => {
   try {
+    // 清理 verifier 实例
     if (recaptchaVerifier) {
-      recaptchaVerifier.clear();
+      try {
+        recaptchaVerifier.clear();
+      } catch (e) {
+        console.warn('[reCAPTCHA] Clear 失败:', e);
+      }
       recaptchaVerifier = null;
-      console.log('[reCAPTCHA] 已清理');
     }
     
-    // 清理 DOM 中的 reCAPTCHA 残留元素
+    // 清理 DOM 中的 reCAPTCHA 容器
     const container = document.getElementById('recaptcha-container');
     if (container) {
       container.innerHTML = '';
+      // 移除所有 data 属性
+      Array.from(container.attributes).forEach(attr => {
+        if (attr.name.startsWith('data-')) {
+          container.removeAttribute(attr.name);
+        }
+      });
     }
     
-    // 清理 Google reCAPTCHA 注入的全局元素
-    const grecaptchaBadge = document.querySelector('.grecaptcha-badge');
-    if (grecaptchaBadge && grecaptchaBadge.parentElement) {
-      grecaptchaBadge.parentElement.remove();
-    }
+    // 清理 Google reCAPTCHA 注入的所有全局元素
+    // Badge
+    document.querySelectorAll('.grecaptcha-badge').forEach(el => {
+      el.parentElement?.remove();
+    });
     
+    // reCAPTCHA frames
+    document.querySelectorAll('iframe[src*="recaptcha"]').forEach(el => {
+      el.remove();
+    });
+    
+    // reCAPTCHA 脚本添加的其他元素
+    document.querySelectorAll('[id^="g-recaptcha"]').forEach(el => {
+      if (el.id !== 'recaptcha-container') {
+        el.remove();
+      }
+    });
+    
+    // 清理确认结果
     confirmationResult = null;
+    recaptchaWidgetId = null;
+    
+    console.log('[reCAPTCHA] 已清理');
   } catch (error) {
     console.error('[reCAPTCHA] 清理失败:', error);
   }
