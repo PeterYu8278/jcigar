@@ -355,6 +355,18 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
         const shortage = annualFee - currentPoints;
         setLoading(false);
         
+        console.log('积分不足，准备显示 Modal', { currentPoints, annualFee, shortage, modal });
+        
+        // 确保 modal 实例存在
+        if (!modal || !modal.confirm) {
+          console.error('Modal 实例不存在，使用 message 提示');
+          message.warning(`积分不足！需要 ${annualFee} 积分，当前 ${currentPoints} 积分，还需 ${shortage} 积分。正在跳转到充值页面...`);
+          setTimeout(() => {
+            navigate('/reload');
+          }, 1500);
+          return;
+        }
+        
         modal.confirm({
           title: '积分不足',
           icon: <WalletOutlined style={{ color: '#C48D3A' }} />,
