@@ -11,7 +11,7 @@ import {
   getRedirectResult
 } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { doc, setDoc, getDoc, collection, getDocs, query, where, limit, updateDoc, arrayUnion, increment, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, getDocs, query, where, limit, updateDoc, arrayUnion, increment } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
 import type { User } from '../../types';
 import { normalizePhoneNumber, identifyInputType } from '../../utils/phoneNormalization';
@@ -190,7 +190,33 @@ export const loginWithEmailOrPhone = async (identifier: string, password: string
   }
 };
 
-// 使用 Google 登录（新用户需要完善信息）
+// ✅ 辅助函数：通过邮箱查找用户
+const findUserByEmail = async (email: string): Promise<{ id: string; data: User } | null> => {
+  try {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('email', '==', email), limit(1));
+    const snap = await getDocs(q);
+    
+    if (snap.empty) {
+      return null;
+    }
+    
+    const userDoc = snap.docs[0];
+    return {
+      id: userDoc.id,
+      data: { id: userDoc.id, ...userDoc.data() } as User
+    };
+  } catch (error) {
+    return null;
+  }
+};
+
+// ✅ 辅助函数：检查资料完整性（姓名、邮箱、手机号）
+const isProfileComplete = (userData: User): boolean => {
+  return !!(userData.displayName && userData.email && userData.profile?.phone);
+};
+
+// 使用 Google 登录（新架构：通过邮箱匹配用户）
 export const loginWithGoogle = async () => {
   // 检查是否已有 pending 的 redirect
   const hasPending = sessionStorage.getItem('googleRedirectPending');
@@ -236,52 +262,48 @@ export const loginWithGoogle = async () => {
     const googleEmail = googleUser.email;
 
     if (!googleEmail) {
-      return { success: false, error: new Error('无法获取Google邮箱信息') } as { success: false; error: Error };
+      return { success: false, error: new Error('无法获取 Google 邮箱信息') } as { success: false; error: Error };
     }
 
-    // 1. 检查该电邮地址是否已存在系统中（可能是通过电话号码注册的用户）
-    const emailQuery = query(collection(db, 'users'), where('email', '==', googleEmail), limit(1));
-    const emailSnap = await getDocs(emailQuery);
+    // ✅ 场景 A：通过 Google 邮箱查询系统中是否已存在该邮箱的用户
+    const existingUser = await findUserByEmail(googleEmail);
     
-    if (!emailSnap.empty) {
-      // 1.a. 电邮存在于系统中 - 获取现有用户数据
-      const existingUserDoc = emailSnap.docs[0];
-      const existingUserId = existingUserDoc.id;
-      const existingUserData = existingUserDoc.data() as User;
+    if (existingUser) {
+      // ✅ 场景 1.a：邮箱存在系统数据中
+      // 检查该用户的资料是否完整
+      const profileComplete = isProfileComplete(existingUser.data);
       
-      // 如果现有用户的UID与Google用户的UID不同，需要删除Google创建的用户并使用现有用户登录
-      if (existingUserId !== googleUser.uid) {
-        // 删除Google自动创建的Firebase Auth用户（如果存在）
-        try {
-          await googleUser.delete();
-        } catch (deleteError) {
-          console.warn('无法删除临时Google用户:', deleteError);
-        }
+      if (profileComplete) {
+        // ✅ 场景 1.a.1：资料完整，直接登录（使用该用户的 document ID）
+        // 需要将 Firebase Auth 用户关联到这个 Firestore 文档
+        // 我们通过 sessionStorage 传递该用户的 document ID
+        sessionStorage.setItem('firestoreUserId', existingUser.id);
         
-        // 使用现有用户的凭证登录
-        // 注意：这里我们不能直接切换UID，需要用户使用密码登录
         return { 
-          success: false, 
-          error: new Error('该邮箱已存在，请使用邮箱和密码登录'),
-          existingEmail: googleEmail
-        } as any;
-      }
-      
-      // UID相同，检查资料完整性
-      // 1.a.1 和 1.a.2: 检查用户资料是否完整
-      const isProfileComplete = existingUserData.displayName && existingUserData.email && existingUserData.profile?.phone;
-      
-      if (isProfileComplete) {
-        // 1.a.1 资料完整 - 直接登录
-        return { success: true, user: googleUser, needsProfile: false };
+          success: true, 
+          user: googleUser,
+          firestoreUserId: existingUser.id,
+          needsProfile: false 
+        };
       } else {
-        // 1.a.2 资料不完整 - 跳转到完善资料页面
-        return { success: true, user: googleUser, needsProfile: true };
+        // ✅ 场景 1.a.2：资料不完整，跳转到完善资料页面
+        sessionStorage.setItem('firestoreUserId', existingUser.id);
+        
+        return { 
+          success: true, 
+          user: googleUser,
+          firestoreUserId: existingUser.id,
+          needsProfile: true 
+        };
       }
     } else {
-      // 1.b. 电邮不存在于系统中 - 创建新用户
-      // 1.b.1 创建新用户文档并跳转到完善资料页面
-      const memberId = await generateMemberId(googleUser.uid);
+      // ✅ 场景 1.b：邮箱不存在系统数据中，创建新用户（使用 Firestore 自动生成 ID）
+      const usersRef = collection(db, 'users');
+      const newUserDoc = doc(usersRef); // Firestore 自动生成 ID
+      const newUserId = newUserDoc.id;
+      
+      // 生成会员编号
+      const memberId = await generateMemberId(newUserId);
       
       const tempUserData: Omit<User, 'id'> = {
         email: googleEmail,
@@ -296,7 +318,7 @@ export const loginWithGoogle = async () => {
           level: 'bronze',
           joinDate: new Date(),
           lastActive: new Date(),
-          points: 50,  // 初始积分
+          points: 50,  // 初始积分（无引荐人）
           referralPoints: 0,
         },
         referral: {
@@ -311,19 +333,26 @@ export const loginWithGoogle = async () => {
         updatedAt: new Date(),
       };
       
-      const userRef = doc(db, 'users', googleUser.uid);
-      await setDoc(userRef, tempUserData);
+      await setDoc(newUserDoc, tempUserData);
       
-      // 返回特殊标识：需要完善信息
-      return { success: true, user: googleUser, needsProfile: true };
+      // 保存新用户的 document ID
+      sessionStorage.setItem('firestoreUserId', newUserId);
+      
+      // ✅ 场景 1.b.1：跳转到完善资料页面
+      return { 
+        success: true, 
+        user: googleUser,
+        firestoreUserId: newUserId,
+        needsProfile: true 
+      };
     }
   } catch (error) {
-    const err = error as any;
+    const err = error as any
     return { success: false, error: err as Error } as { success: false; error: Error };
   }
 };
 
-// 处理 Google 重定向登录结果
+// 处理 Google 重定向登录结果（新架构：通过邮箱匹配）
 export const handleGoogleRedirectResult = async () => {
   const hasPending = sessionStorage.getItem('googleRedirectPending');
   
@@ -342,50 +371,34 @@ export const handleGoogleRedirectResult = async () => {
       // 备用方案：检查是否有标记 + 用户已登录
       const currentUser = auth.currentUser;
       
-      if (hasPending && currentUser) {
-        const googleUser = currentUser;
-        const googleEmail = googleUser.email;
+      if (hasPending && currentUser && currentUser.email) {
+        const googleEmail = currentUser.email;
         
-        if (!googleEmail) {
-          return { success: false, error: new Error('无法获取Google邮箱信息') } as { success: false; error: Error };
-        }
-
-        // 检查该电邮地址是否已存在系统中
-        const emailQuery = query(collection(db, 'users'), where('email', '==', googleEmail), limit(1));
-        const emailSnap = await getDocs(emailQuery);
+        // ✅ 通过邮箱查询系统中是否已存在该用户
+        const existingUser = await findUserByEmail(googleEmail);
         
-        if (!emailSnap.empty) {
-          // 电邮存在于系统中
-          const existingUserDoc = emailSnap.docs[0];
-          const existingUserId = existingUserDoc.id;
-          const existingUserData = existingUserDoc.data() as User;
+        if (existingUser) {
+          // 邮箱存在，检查资料完整性
+          const profileComplete = isProfileComplete(existingUser.data);
+          sessionStorage.setItem('firestoreUserId', existingUser.id);
           
-          if (existingUserId !== googleUser.uid) {
-            // UID不同，需要使用密码登录
-            try {
-              await googleUser.delete();
-            } catch (deleteError) {
-              console.warn('无法删除临时Google用户:', deleteError);
-            }
-            
-            return { 
-              success: false, 
-              error: new Error('该邮箱已存在，请使用邮箱和密码登录'),
-              existingEmail: googleEmail
-            } as any;
-          }
-          
-          // UID相同，检查资料完整性
-          const isProfileComplete = existingUserData.displayName && existingUserData.email && existingUserData.profile?.phone;
-          
-          return { success: true, user: googleUser, needsProfile: !isProfileComplete };
+          return { 
+            success: true, 
+            user: currentUser,
+            firestoreUserId: existingUser.id,
+            needsProfile: !profileComplete 
+          };
         } else {
-          // 电邮不存在，创建新用户
-          const memberId = await generateMemberId(googleUser.uid);
+          // 邮箱不存在，创建新用户
+          const usersRef = collection(db, 'users');
+          const newUserDoc = doc(usersRef);
+          const newUserId = newUserDoc.id;
+          
+          const memberId = await generateMemberId(newUserId);
           
           const tempUserData: Omit<User, 'id'> = {
             email: googleEmail,
-            displayName: googleUser.displayName || '未命名用户',
+            displayName: currentUser.displayName || '未命名用户',
             role: 'member',
             memberId,
             profile: {
@@ -410,10 +423,15 @@ export const handleGoogleRedirectResult = async () => {
             updatedAt: new Date(),
           };
           
-          const userRef = doc(db, 'users', googleUser.uid);
-          await setDoc(userRef, tempUserData);
+          await setDoc(newUserDoc, tempUserData);
+          sessionStorage.setItem('firestoreUserId', newUserId);
           
-          return { success: true, user: googleUser, needsProfile: true };
+          return { 
+            success: true, 
+            user: currentUser,
+            firestoreUserId: newUserId,
+            needsProfile: true 
+          };
         }
       }
       
@@ -424,41 +442,30 @@ export const handleGoogleRedirectResult = async () => {
     const googleEmail = googleUser.email;
 
     if (!googleEmail) {
-      return { success: false, error: new Error('无法获取Google邮箱信息') } as { success: false; error: Error };
+      return { success: false, error: new Error('无法获取 Google 邮箱信息') } as { success: false; error: Error };
     }
 
-    // 检查该电邮地址是否已存在系统中
-    const emailQuery = query(collection(db, 'users'), where('email', '==', googleEmail), limit(1));
-    const emailSnap = await getDocs(emailQuery);
+    // ✅ 通过邮箱查询系统中是否已存在该用户
+    const existingUser = await findUserByEmail(googleEmail);
     
-    if (!emailSnap.empty) {
-      // 电邮存在于系统中
-      const existingUserDoc = emailSnap.docs[0];
-      const existingUserId = existingUserDoc.id;
-      const existingUserData = existingUserDoc.data() as User;
+    if (existingUser) {
+      // 邮箱存在，检查资料完整性
+      const profileComplete = isProfileComplete(existingUser.data);
+      sessionStorage.setItem('firestoreUserId', existingUser.id);
       
-      if (existingUserId !== googleUser.uid) {
-        // UID不同，需要使用密码登录
-        try {
-          await googleUser.delete();
-        } catch (deleteError) {
-          console.warn('无法删除临时Google用户:', deleteError);
-        }
-        
-        return { 
-          success: false, 
-          error: new Error('该邮箱已存在，请使用邮箱和密码登录'),
-          existingEmail: googleEmail
-        } as any;
-      }
-      
-      // UID相同，检查资料完整性
-      const isProfileComplete = existingUserData.displayName && existingUserData.email && existingUserData.profile?.phone;
-      
-      return { success: true, user: googleUser, needsProfile: !isProfileComplete };
+      return { 
+        success: true, 
+        user: googleUser,
+        firestoreUserId: existingUser.id,
+        needsProfile: !profileComplete 
+      };
     } else {
-      // 电邮不存在，创建新用户
-      const memberId = await generateMemberId(googleUser.uid);
+      // 邮箱不存在，创建新用户
+      const usersRef = collection(db, 'users');
+      const newUserDoc = doc(usersRef);
+      const newUserId = newUserDoc.id;
+      
+      const memberId = await generateMemberId(newUserId);
       
       const tempUserData: Omit<User, 'id'> = {
         email: googleEmail,
@@ -487,10 +494,15 @@ export const handleGoogleRedirectResult = async () => {
         updatedAt: new Date(),
       };
       
-      const userRef = doc(db, 'users', googleUser.uid);
-      await setDoc(userRef, tempUserData);
+      await setDoc(newUserDoc, tempUserData);
+      sessionStorage.setItem('firestoreUserId', newUserId);
       
-      return { success: true, user: googleUser, needsProfile: true };
+      return { 
+        success: true, 
+        user: googleUser,
+        firestoreUserId: newUserId,
+        needsProfile: true 
+      };
     }
   } catch (error) {
     const err = error as any;
@@ -498,17 +510,50 @@ export const handleGoogleRedirectResult = async () => {
   }
 };
 
-// 完善 Google 登录用户的信息
+// ✅ 辅助函数：通过电话查找用户
+const findUserByPhone = async (phone: string): Promise<{ id: string; data: User } | null> => {
+  try {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('profile.phone', '==', phone), limit(1));
+    const snap = await getDocs(q);
+    
+    if (snap.empty) {
+      return null;
+    }
+    
+    const userDoc = snap.docs[0];
+    return {
+      id: userDoc.id,
+      data: { id: userDoc.id, ...userDoc.data() } as User
+    };
+  } catch (error) {
+    return null;
+  }
+};
+
+// ✅ 辅助函数：删除用户文档
+const deleteUserDocument = async (userId: string): Promise<boolean> => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    const { deleteDoc } = await import('firebase/firestore');
+    await deleteDoc(userRef);
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
+
+// 完善 Google 登录用户的信息（新架构：支持电话号码绑定旧账户）
 export const completeGoogleUserProfile = async (
-  uid: string,
+  currentFirestoreUserId: string,  // 当前临时用户的 Firestore document ID
   displayName: string,
   phone: string,
   password: string,
-  referralCode?: string  // ✅ 添加引荐码参数
+  referralCode?: string
 ) => {
   try {
     // 验证必需字段
-    if (!uid || !displayName || !phone || !password) {
+    if (!currentFirestoreUserId || !displayName || !phone || !password) {
       return { success: false, error: new Error('所有字段都是必需的') } as { success: false; error: Error }
     }
     
@@ -518,221 +563,177 @@ export const completeGoogleUserProfile = async (
       return { success: false, error: new Error('手机号格式无效') } as { success: false; error: Error }
     }
     
-    // 获取当前用户的 email（确保保留）
-    const currentUser = auth.currentUser;
-    if (!currentUser || !currentUser.email) {
+    // 获取当前 Firebase Auth 用户
+    const currentAuthUser = auth.currentUser;
+    if (!currentAuthUser || !currentAuthUser.email) {
       return { success: false, error: new Error('无法获取用户邮箱信息') } as { success: false; error: Error }
     }
-    const googleEmail = currentUser.email;
     
-    // 1.b.2 检查输入的电话号码是否存在系统数据中
-    const phoneQuery = query(collection(db, 'users'), where('profile.phone', '==', normalizedPhone), limit(1))
-    const phoneSnap = await getDocs(phoneQuery)
+    const googleEmail = currentAuthUser.email;
     
-    if (!phoneSnap.empty) {
-      const existingPhoneUser = phoneSnap.docs[0];
-      const existingPhoneUserId = existingPhoneUser.id;
-      const existingPhoneUserData = existingPhoneUser.data() as User;
+    // ✅ 场景 1.b.2：检查该电话号码是否存在系统数据中
+    const existingPhoneUser = await findUserByPhone(normalizedPhone);
+    
+    if (existingPhoneUser) {
+      // 电话号码已存在
+      const existingUserEmail = existingPhoneUser.data.email;
       
-      // 如果不是当前用户的电话号码
-      if (existingPhoneUserId !== uid) {
-        // 1.b.2.1 检查该电话号码的用户是否有电邮
-        if (!existingPhoneUserData.email) {
-          // 该电话号码的用户没有电邮，将Google邮箱写入该用户数据
-          // 并删除Google登录创建的临时用户，使用该旧用户
-          
-          try {
-            // 更新旧用户数据，添加电邮和displayName
-            await updateDoc(doc(db, 'users', existingPhoneUserId), {
-              email: googleEmail,
-              displayName: displayName,
-              updatedAt: new Date()
-            });
-            
-            // 为旧用户设置密码
-            // 注意：这里需要先切换到旧用户的Auth账号
-            // 但Firebase Auth不允许直接切换UID，所以需要不同的策略
-            
-            // 方案：删除Google创建的临时用户，要求用户使用旧账号+新密码登录
-            // 但这会导致用户需要重新登录，体验不好
-            
-            // 更好的方案：将临时Google用户的UID和旧用户的数据合并
-            // 将旧用户的数据（包括手机号）复制到Google用户的文档中
-            
-            // 获取旧用户的完整数据
-            const oldUserData = existingPhoneUserData;
-            
-            // 更新当前Google用户的文档（uid），合并旧用户的数据
-            const mergedData: any = {
-              ...oldUserData,
-              email: googleEmail,
-              displayName: displayName,
-              profile: {
-                ...oldUserData.profile,
-                phone: normalizedPhone
-              },
-              updatedAt: new Date()
-            };
-            
-            // 如果有引荐码，添加引荐信息
-            if (referralCode) {
-              const referralResult = await getUserByMemberId(referralCode.trim());
-              if (!referralResult.success) {
-                return { success: false, error: new Error(referralResult.error || '引荐码无效') } as { success: false; error: Error };
-              }
-              const referrer = referralResult.user;
-              
-              mergedData.referral = {
-                referredBy: referrer.memberId,
-                referredByUserId: referrer.id,
-                referralDate: new Date(),
-                referrals: oldUserData.referral?.referrals || [],
-                totalReferred: oldUserData.referral?.totalReferred || 0,
-                activeReferrals: oldUserData.referral?.activeReferrals || 0,
-              };
-              mergedData.membership = {
-                ...oldUserData.membership,
-                points: (oldUserData.membership?.points || 0) + 100,  // 被引荐用户额外获得100积分
-                referralPoints: oldUserData.membership?.referralPoints || 0,
-              };
-              
-              // 更新引荐人的数据
-              try {
-                await updateDoc(doc(db, 'users', referrer.id), {
-                  'referral.referrals': arrayUnion(uid),
-                  'referral.totalReferred': increment(1),
-                  'membership.points': increment(200),
-                  'membership.referralPoints': increment(200),
-                  updatedAt: new Date()
-                });
-              } catch (error) {
-                console.warn('更新引荐人数据失败:', error);
-              }
-            }
-            
-            // 将合并后的数据写入当前Google用户的文档
-            await setDoc(doc(db, 'users', uid), mergedData, { merge: true });
-            
-            // 删除旧用户文档（因为数据已经合并到Google用户）
-            await deleteDoc(doc(db, 'users', existingPhoneUserId));
-            
-            // 为当前Google用户设置密码
-            const { updatePassword, EmailAuthProvider, linkWithCredential } = await import('firebase/auth');
-            
-            if (currentUser.uid === uid) {
-              try {
-                const credential = EmailAuthProvider.credential(googleEmail, password);
-                await linkWithCredential(currentUser, credential);
-              } catch (linkError: any) {
-                if (linkError.code === 'auth/provider-already-linked') {
-                  await updatePassword(currentUser, password);
-                } else {
-                  throw linkError;
-                }
-              }
-              
-              await updateProfile(currentUser, { displayName });
-            }
-            
-            return { success: true };
-          } catch (error) {
-            console.error('合并用户数据失败:', error);
-            return { success: false, error: new Error('合并用户数据失败') } as { success: false; error: Error };
+      if (!existingUserEmail || existingUserEmail === '') {
+        // ✅ 场景 1.b.2.1：电话号码存在，但该用户没有邮箱
+        // 将 Google 邮箱写入该旧用户的数据，并删除临时文档
+        
+        // 验证引荐码（如果提供）
+        let referrer: any = null;
+        if (referralCode) {
+          const referralResult = await getUserByMemberId(referralCode.trim());
+          if (!referralResult.success) {
+            return { success: false, error: new Error(referralResult.error || '引荐码无效') } as { success: false; error: Error }
           }
-        } else {
-          // 1.b.2.2 该电话号码的用户已有电邮，提示错误
-          return { success: false, error: new Error('该手机号已被其他用户使用') } as { success: false; error: Error };
+          referrer = referralResult.user;
         }
-      }
-    }
-    
-    // 电话号码不存在或是当前用户自己的，正常更新
-    // ✅ 验证引荐码（如果提供）
-    let referrer: any = null;
-    if (referralCode) {
-      const referralResult = await getUserByMemberId(referralCode.trim());
-      if (!referralResult.success) {
-        return { success: false, error: new Error(referralResult.error || '引荐码无效') } as { success: false; error: Error }
-      }
-      referrer = referralResult.user;
-    }
-    
-    // 1. 更新 Firestore 用户文档
-    const userRef = doc(db, 'users', uid);
-    
-    // ✅ 准备更新数据
-    const updateData: any = {
-      email: googleEmail, // 确保 email 字段存在
-      displayName,
-      profile: {
-        phone: normalizedPhone, // 使用标准化后的手机号
-        preferences: { language: 'zh', notifications: true },
-      },
-      updatedAt: new Date(),
-    };
-    
-    // ✅ 如果有引荐人，更新引荐信息和积分
-    if (referrer) {
-      updateData.referral = {
-        referredBy: referrer.memberId,
-        referredByUserId: referrer.id,
-        referralDate: new Date(),
-        referrals: [],
-        totalReferred: 0,
-        activeReferrals: 0,
-      };
-      updateData.membership = {
-        level: 'bronze',
-        joinDate: new Date(),
-        lastActive: new Date(),
-        points: 100,  // 被引荐用户获得100积分
-        referralPoints: 0,
-      };
-    }
-    
-    await setDoc(userRef, updateData, { merge: true });
-
-    // 2. 为用户设置密码（通过 Firebase Auth）
-    if (currentUser.uid === uid) {
-      const { updatePassword, EmailAuthProvider, linkWithCredential } = await import('firebase/auth');
-      
-      // 如果用户还没有邮箱/密码凭证，需要先链接
-      const email = currentUser.email;
-      if (email) {
+        
+        // 更新旧用户的数据
+        const oldUserRef = doc(db, 'users', existingPhoneUser.id);
+        const updateData: any = {
+          email: googleEmail,  // 写入 Google 邮箱
+          displayName,
+          'profile.phone': normalizedPhone,
+          updatedAt: new Date(),
+        };
+        
+        // 如果有引荐人，更新引荐信息和积分
+        if (referrer) {
+          updateData.referral = {
+            referredBy: referrer.memberId,
+            referredByUserId: referrer.id,
+            referralDate: new Date(),
+            referrals: existingPhoneUser.data.referral?.referrals || [],
+            totalReferred: existingPhoneUser.data.referral?.totalReferred || 0,
+            activeReferrals: existingPhoneUser.data.referral?.activeReferrals || 0,
+          };
+          updateData['membership.points'] = increment(100);  // 被引荐用户额外获得100积分
+        }
+        
+        await setDoc(oldUserRef, updateData, { merge: true });
+        
+        // 删除临时创建的新用户文档
+        if (currentFirestoreUserId !== existingPhoneUser.id) {
+          await deleteUserDocument(currentFirestoreUserId);
+        }
+        
+        // 更新 sessionStorage，指向旧用户的 ID
+        sessionStorage.setItem('firestoreUserId', existingPhoneUser.id);
+        
+        // 为用户设置密码
+        const { updatePassword, EmailAuthProvider, linkWithCredential } = await import('firebase/auth');
         try {
-          // 创建邮箱/密码凭证并链接到当前用户
-          const credential = EmailAuthProvider.credential(email, password);
-          await linkWithCredential(currentUser, credential);
+          const credential = EmailAuthProvider.credential(googleEmail, password);
+          await linkWithCredential(currentAuthUser, credential);
         } catch (linkError: any) {
-          // 如果已经链接过，尝试直接更新密码
           if (linkError.code === 'auth/provider-already-linked') {
-            await updatePassword(currentUser, password);
+            await updatePassword(currentAuthUser, password);
           } else {
             throw linkError;
           }
         }
+        
+        // 更新 Firebase Auth displayName
+        await updateProfile(currentAuthUser, { displayName });
+        
+        // 如果有引荐人，更新引荐人的数据
+        if (referrer) {
+          try {
+            await updateDoc(doc(db, 'users', referrer.id), {
+              'referral.referrals': arrayUnion(existingPhoneUser.id),
+              'referral.totalReferred': increment(1),
+              'membership.points': increment(200),
+              'membership.referralPoints': increment(200),
+              updatedAt: new Date()
+            });
+          } catch (error) {
+            // 静默失败
+          }
+        }
+        
+        return { 
+          success: true, 
+          mergedUserId: existingPhoneUser.id,
+          message: '账户已成功关联' 
+        };
+      } else {
+        // ✅ 场景 1.b.2.2：电话号码存在，且该用户已有邮箱
+        return { success: false, error: new Error('该手机号已被其他用户使用') } as { success: false; error: Error }
+      }
+    } else {
+      // ✅ 场景 1.b.2.1（电话不存在）：完成新用户的资料
+      
+      // 验证引荐码（如果提供）
+      let referrer: any = null;
+      if (referralCode) {
+        const referralResult = await getUserByMemberId(referralCode.trim());
+        if (!referralResult.success) {
+          return { success: false, error: new Error(referralResult.error || '引荐码无效') } as { success: false; error: Error }
+        }
+        referrer = referralResult.user;
       }
       
-      // 3. 更新 Firebase Auth 的 displayName
-      await updateProfile(currentUser, { displayName });
-    }
-    
-    // 4. ✅ 如果有引荐人，更新引荐人的数据
-    if (referrer) {
-      try {
-        await updateDoc(doc(db, 'users', referrer.id), {
-          'referral.referrals': arrayUnion(uid),
-          'referral.totalReferred': increment(1),
-          'membership.points': increment(200),  // 引荐人获得200积分
-          'membership.referralPoints': increment(200),
-          updatedAt: new Date()
-        });
-      } catch (error) {
-        // 不影响完善资料流程，静默失败
+      // 更新当前用户文档
+      const userRef = doc(db, 'users', currentFirestoreUserId);
+      const updateData: any = {
+        email: googleEmail,
+        displayName,
+        'profile.phone': normalizedPhone,
+        updatedAt: new Date(),
+      };
+      
+      // 如果有引荐人，更新引荐信息和积分
+      if (referrer) {
+        updateData.referral = {
+          referredBy: referrer.memberId,
+          referredByUserId: referrer.id,
+          referralDate: new Date(),
+          referrals: [],
+          totalReferred: 0,
+          activeReferrals: 0,
+        };
+        updateData['membership.points'] = 100;  // 被引荐用户获得100积分
       }
+      
+      await setDoc(userRef, updateData, { merge: true });
+      
+      // 为用户设置密码
+      const { updatePassword, EmailAuthProvider, linkWithCredential } = await import('firebase/auth');
+      try {
+        const credential = EmailAuthProvider.credential(googleEmail, password);
+        await linkWithCredential(currentAuthUser, credential);
+      } catch (linkError: any) {
+        if (linkError.code === 'auth/provider-already-linked') {
+          await updatePassword(currentAuthUser, password);
+        } else {
+          throw linkError;
+        }
+      }
+      
+      // 更新 Firebase Auth displayName
+      await updateProfile(currentAuthUser, { displayName });
+      
+      // 如果有引荐人，更新引荐人的数据
+      if (referrer) {
+        try {
+          await updateDoc(doc(db, 'users', referrer.id), {
+            'referral.referrals': arrayUnion(currentFirestoreUserId),
+            'referral.totalReferred': increment(1),
+            'membership.points': increment(200),
+            'membership.referralPoints': increment(200),
+            updatedAt: new Date()
+          });
+        } catch (error) {
+          // 静默失败
+        }
+      }
+      
+      return { success: true };
     }
-
-    return { success: true };
   } catch (error) {
     const err = error as any;
     const message = 

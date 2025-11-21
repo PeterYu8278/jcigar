@@ -5,8 +5,7 @@ import { UserOutlined, LockOutlined, PhoneOutlined, LoadingOutlined, LogoutOutli
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { normalizePhoneNumber } from '../../utils/phoneNormalization'
-import { collection, query, where, getDocs, limit } from 'firebase/firestore'
-import { db, auth } from '../../config/firebase'
+import { auth } from '../../config/firebase'
 import { signOut } from 'firebase/auth'
 import { getUserByMemberId } from '../../utils/memberId'
 import { useAuthStore } from '../../store/modules/auth'
@@ -117,7 +116,7 @@ const CompleteProfile: React.FC = () => {
     displayName: string
     phone: string
     password: string
-    referralCode?: string  // ✅ 添加引荐码字段
+    referralCode?: string
   }) => {
     const currentUser = auth.currentUser
     
@@ -126,6 +125,9 @@ const CompleteProfile: React.FC = () => {
       navigate('/login')
       return
     }
+
+    // ✅ 获取 Firestore User ID（优先使用 sessionStorage，否则使用 Firebase UID）
+    const firestoreUserId = sessionStorage.getItem('firestoreUserId') || currentUser.uid;
 
     setLoading(true)
     try {
@@ -137,35 +139,44 @@ const CompleteProfile: React.FC = () => {
         return
       }
 
-      // 调用完善用户信息的服务函数
+      // ✅ 调用完善用户信息的服务函数（传递 firestoreUserId）
       const { completeGoogleUserProfile } = await import('../../services/firebase/auth')
       const result = await completeGoogleUserProfile(
-        currentUser.uid,
+        firestoreUserId,  // ✅ 使用 firestoreUserId 而不是 Firebase UID
         values.displayName,
         normalizedPhone,
         values.password,
-        values.referralCode  // ✅ 传递引荐码
+        values.referralCode
       )
 
       if (result.success) {
-        message.success('账户信息已完善，欢迎加入 Gentleman Club！')
+        // ✅ 如果是账户合并，显示特殊消息
+        const successMessage = (result as any).mergedUserId 
+          ? '账户已成功关联到现有账户，欢迎回来！'
+          : '账户信息已完善，欢迎加入 Gentleman Club！';
+        
+        message.success(successMessage);
         
         // ✅ 等待 Firestore 写入完成，然后手动设置用户状态
         const setupUserState = async () => {
-          if (currentUser) {
-            // 等待 800ms 让 Firestore 写入完成
-            await new Promise(resolve => setTimeout(resolve, 800));
+          // 等待 800ms 让 Firestore 写入完成
+          await new Promise(resolve => setTimeout(resolve, 800));
+          
+          // ✅ 如果是账户合并，使用合并后的用户 ID
+          const finalUserId = (result as any).mergedUserId || firestoreUserId;
+          
+          // 更新 sessionStorage
+          sessionStorage.setItem('firestoreUserId', finalUserId);
+          
+          const { getUserData } = await import('../../services/firebase/auth');
+          const userData = await getUserData(finalUserId);
+          
+          if (userData) {
+            useAuthStore.getState().setUser(userData);
+            useAuthStore.getState().setLoading(false);
             
-            const { getUserData } = await import('../../services/firebase/auth');
-            const userData = await getUserData(currentUser.uid);
-            
-            if (userData) {
-              useAuthStore.getState().setUser(userData);
-              useAuthStore.getState().setLoading(false);
-              
-              // 等待 500ms 让 React 重渲染完成（关键！）
-              await new Promise(resolve => setTimeout(resolve, 500));
-            }
+            // 等待 500ms 让 React 重渲染完成
+            await new Promise(resolve => setTimeout(resolve, 500));
           }
           
           navigate(from, { replace: true });
@@ -296,44 +307,6 @@ const CompleteProfile: React.FC = () => {
                 { 
                   pattern: /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/, 
                   message: '手机号格式无效（需10-12位数字）' 
-                },
-                {
-                  validator: async (_, value) => {
-                    if (!value) return Promise.resolve()
-                    
-                    // ✅ 先验证格式，格式无效则跳过唯一性检查
-                    const formatPattern = /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/
-                    if (!formatPattern.test(value)) {
-                      // 格式无效，不检查唯一性（避免重复错误提示）
-                      return Promise.resolve()
-                    }
-                    
-                    // ✅ 格式有效，检查手机号唯一性
-                    const normalized = normalizePhoneNumber(value)
-                    
-                    // 标准化失败，不报错（pattern 已经处理）
-                    if (!normalized) {
-                      return Promise.resolve()
-                    }
-                    
-                    // 检查是否已被使用
-                    try {
-                      const phoneQuery = query(
-                        collection(db, 'users'), 
-                        where('profile.phone', '==', normalized),
-                        limit(1)
-                      )
-                      const phoneSnap = await getDocs(phoneQuery)
-                      
-                      if (!phoneSnap.empty) {
-                        return Promise.reject(new Error('该手机号已被其他用户使用'))
-                      }
-                    } catch (error) {
-                      // 如果查询失败，允许通过（不阻止用户提交）
-                    }
-                    
-                    return Promise.resolve()
-                  }
                 }
               ]}
               validateTrigger={['onBlur', 'onChange']}

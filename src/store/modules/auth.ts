@@ -62,11 +62,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       if (firebaseUser) {
         try {
-          const userData = await getUserData(firebaseUser.uid)
+          // ✅ 优先使用 sessionStorage 中的 firestoreUserId（Google 登录后设置）
+          // 如果没有，则使用 firebaseUser.uid（普通邮箱登录）
+          const firestoreUserId = sessionStorage.getItem('firestoreUserId') || firebaseUser.uid;
+          
+          const userData = await getUserData(firestoreUserId);
+          
           if (userData) {
             setUser(userData)
             setFirebaseUser(firebaseUser)
             set({ isAdmin: userData.role === 'admin' })
+          } else {
+            // 如果使用 sessionStorage 的 ID 查不到，尝试使用 Firebase UID
+            if (firestoreUserId !== firebaseUser.uid) {
+              const fallbackData = await getUserData(firebaseUser.uid);
+              if (fallbackData) {
+                setUser(fallbackData)
+                setFirebaseUser(firebaseUser)
+                set({ isAdmin: fallbackData.role === 'admin' })
+              }
+            }
           }
         } catch (error) {
           set({ error: '获取用户数据失败' })
@@ -75,6 +90,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         setUser(null)
         setFirebaseUser(null)
         set({ isAdmin: false })
+        // 清除 sessionStorage 中的 firestoreUserId
+        sessionStorage.removeItem('firestoreUserId')
       }
       
       setLoading(false)
