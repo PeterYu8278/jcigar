@@ -1117,18 +1117,30 @@ const AdminUsers: React.FC = () => {
                 return
               }
               normalizedPhone = normalized
-            }
-            
-            // 标准化邮箱
-            let normalizedEmail: string | undefined = undefined
-            if (values.email) {
-              normalizedEmail = values.email.toLowerCase().trim()
+              
+              // 检查手机号唯一性
+              const phoneQuery = query(
+                collection(db, 'users'), 
+                where('profile.phone', '==', normalizedPhone), 
+                limit(1)
+              )
+              const phoneSnap = await getDocs(phoneQuery)
+              
+              if (!phoneSnap.empty) {
+                const existingUserId = phoneSnap.docs[0].id
+                // 如果是编辑模式，检查是否是当前用户自己的手机号
+                if (!editing || existingUserId !== editing.id) {
+                  message.error('该手机号已被其他用户使用')
+                  setLoading(false)
+                  return
+                }
+              }
             }
             
             if (editing) {
               const res = await updateDocument<User>(COLLECTIONS.USERS, editing.id, {
                 displayName: values.displayName,
-                email: normalizedEmail || values.email,  // ✅ 使用标准化邮箱
+                email: values.email,
                 role: values.role,
                 membership: { ...editing.membership, level: values.level },
                 profile: { ...(editing as any).profile, phone: normalizedPhone },
@@ -1138,7 +1150,7 @@ const AdminUsers: React.FC = () => {
               // 创建新用户时，先创建文档获取ID，然后生成会员ID并更新
               const userData: Omit<User, 'id'> = {
                 displayName: values.displayName,
-                email: normalizedEmail || values.email,  // ✅ 使用标准化邮箱
+                email: values.email,
                 role: values.role,
                 profile: { phone: normalizedPhone, preferences: { language: 'zh', notifications: true } },
                 membership: { level: values.level, joinDate: new Date(), lastActive: new Date() },
@@ -1188,7 +1200,15 @@ const AdminUsers: React.FC = () => {
               { type: 'email', message: t('auth.emailInvalid') },
               {
                 validator: async (_, value) => {
-                  if (!value) return Promise.resolve()
+                  // 如果没有输入，跳过验证（非必填）
+                  if (!value) {
+                    return Promise.resolve()
+                  }
+                  
+                  // ✅ 如果是编辑模式且邮箱没有改变，跳过验证
+                  if (editing && value === editing.email) {
+                    return Promise.resolve()
+                  }
                   
                   // ✅ 先验证格式，格式无效则跳过唯一性检查
                   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -1207,7 +1227,7 @@ const AdminUsers: React.FC = () => {
                     
                     if (!emailSnap.empty) {
                       const existingUserId = emailSnap.docs[0].id
-                      // ✅ 如果是编辑模式，排除当前用户自己
+                      // 如果是编辑模式，检查是否是当前用户
                       if (!editing || existingUserId !== editing.id) {
                         return Promise.reject(new Error('该邮箱已被其他用户使用'))
                       }
@@ -1239,6 +1259,15 @@ const AdminUsers: React.FC = () => {
                 validator: async (_, value) => {
                   if (!value) return Promise.resolve()
                   
+                  // ✅ 如果是编辑模式且手机号没有改变，跳过验证
+                  if (editing) {
+                    const currentPhone = normalizePhoneNumber((editing as any)?.profile?.phone || '')
+                    const newPhone = normalizePhoneNumber(value)
+                    if (newPhone === currentPhone) {
+                      return Promise.resolve()
+                    }
+                  }
+                  
                   // ✅ 先验证格式，格式无效则跳过唯一性检查
                   const formatPattern = /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/
                   if (!formatPattern.test(value)) {
@@ -1261,7 +1290,7 @@ const AdminUsers: React.FC = () => {
                     
                     if (!phoneSnap.empty) {
                       const existingUserId = phoneSnap.docs[0].id
-                      // ✅ 如果是编辑模式，排除当前用户自己
+                      // 如果是编辑模式，检查是否是当前用户
                       if (!editing || existingUserId !== editing.id) {
                         return Promise.reject(new Error('该手机号已被其他用户使用'))
                       }
@@ -1281,8 +1310,8 @@ const AdminUsers: React.FC = () => {
               placeholder={t('auth.phone')}
               onInput={(e) => {
                 const input = e.currentTarget
-                // 只保留数字、加号
-                input.value = input.value.replace(/[^\d+]/g, '')
+                // ✅ 只保留数字、加号和空格
+                input.value = input.value.replace(/[^\d+\s-]/g, '')
               }}
             />
           </Form.Item>
