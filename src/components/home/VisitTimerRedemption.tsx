@@ -1,7 +1,7 @@
 // 合并后的驻店计时器和兑换模块组件
 import React, { useState, useEffect } from 'react';
-import { Card, Typography, Button, Space, Progress, message, Image } from 'antd';
-import { ClockCircleOutlined, GiftOutlined, ShoppingCartOutlined, TrophyOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Card, Typography, Button, Space, Progress, message, Image, App } from 'antd';
+import { ClockCircleOutlined, GiftOutlined, ShoppingCartOutlined, TrophyOutlined, ReloadOutlined, WalletOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../store/modules/auth';
 import { getPendingVisitSession } from '../../services/firebase/visitSessions';
 import { getUserRedemptionLimits, canUserRedeem, getDailyRedemptions, getTotalRedemptions, getHourlyRedemptions, getRedemptionConfig, createRedemptionRecord } from '../../services/firebase/redemption';
@@ -20,6 +20,7 @@ interface VisitTimerRedemptionProps {
 export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ style }) => {
   const { user, setUser } = useAuthStore();
   const navigate = useNavigate();
+  const { modal } = App.useApp();
   const [currentSession, setCurrentSession] = useState<VisitSession | null>(null);
   const [duration, setDuration] = useState<string>('00:00:00');
   const [lastCheckIn, setLastCheckIn] = useState<Date | null>(null);
@@ -343,6 +344,81 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
         recordId = result.recordId;
       }
 
+      // ✅ 在扣费前先检查积分是否充足
+      const currentPoints = user?.membership?.points || 0;
+      const { getMembershipFeeConfig, getCurrentAnnualFeeAmount } = await import('../../services/firebase/membershipFee');
+      const feeConfig = await getMembershipFeeConfig();
+      const annualFee = getCurrentAnnualFeeAmount(new Date(), feeConfig);
+      
+      if (currentPoints < annualFee) {
+        // ✅ 积分不足，显示友好提示并引导充值
+        const shortage = annualFee - currentPoints;
+        setLoading(false);
+        
+        modal.confirm({
+          title: '积分不足',
+          icon: <WalletOutlined style={{ color: '#C48D3A' }} />,
+          content: (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ 
+                padding: 16,
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: 12,
+                border: '1px solid rgba(244, 175, 37, 0.2)',
+                marginBottom: 16
+              }}>
+                <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text>需要积分：</Text>
+                    <Text strong style={{ color: '#C48D3A', fontSize: 20 }}>{annualFee}</Text>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text>当前积分：</Text>
+                    <Text strong style={{ fontSize: 20 }}>{currentPoints}</Text>
+                  </div>
+                  <div style={{ 
+                    height: 1, 
+                    background: 'rgba(255, 255, 255, 0.1)', 
+                    margin: '8px 0' 
+                  }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text>缺少积分：</Text>
+                    <Text strong style={{ color: '#ff4d4f', fontSize: 20 }}>{shortage}</Text>
+                  </div>
+                </Space>
+              </div>
+              
+              <div style={{ 
+                padding: 12, 
+                background: 'rgba(244, 175, 37, 0.1)',
+                borderRadius: 8,
+                border: '1px solid rgba(244, 175, 37, 0.3)'
+              }}>
+                <Text style={{ color: '#C48D3A' }}>
+                  💡 充值积分后，即可开通会员，享受VIP权益！
+                </Text>
+              </div>
+            </div>
+          ),
+          okText: '去充值',
+          cancelText: '稍后再说',
+          okButtonProps: {
+            style: {
+              background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+              color: '#000000',
+              fontWeight: 600,
+              border: 'none',
+              height: 40
+            }
+          },
+          onOk: () => {
+            navigate('/reload');
+          }
+        });
+        
+        return;
+      }
+      
       // 立即尝试扣除年费
       const deductResult = await deductMembershipFee(recordId);
 
@@ -362,12 +438,8 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
         // 重新加载数据
         await loadData();
       } else {
-        // 如果积分不足，提示用户
-        if (deductResult.error?.includes('积分不足')) {
-          message.warning(deductResult.error);
-        } else {
-          message.error(deductResult.error || '扣除年费失败，请稍后重试');
-        }
+        // 其他错误
+        message.error(deductResult.error || '扣除年费失败，请稍后重试');
       }
     } catch (error: any) {
       console.error('开通会员失败:', error);
@@ -528,7 +600,6 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
               if (!isActiveMember) {
                 const currentPoints = user?.membership?.points || 0;
                 const hasEnoughPoints = annualFeeAmount !== null && currentPoints >= annualFeeAmount;
-                const isDisabled = loading || (annualFeeAmount !== null && !hasEnoughPoints);
                 
                 return (
                   <>
@@ -537,25 +608,23 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                       size="large"
                       icon={<TrophyOutlined />}
                       onClick={handleActivateMembership}
-                      disabled={isDisabled}
+                      disabled={loading || annualFeeAmount === null}
                       loading={loading}
                       style={{
-                        background: hasEnoughPoints || annualFeeAmount === null
-                          ? 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)'
-                          : 'linear-gradient(135deg, #666 0%, #444 100%)',
+                        background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
                         border: 'none',
-                        color: hasEnoughPoints || annualFeeAmount === null ? '#111' : '#999',
+                        color: '#111',
                         height: 48,
                         fontSize: 16,
                         fontWeight: 600,
                         minWidth: 120,
-                        opacity: isDisabled ? 0.6 : 1
+                        opacity: (loading || annualFeeAmount === null) ? 0.6 : 1
                       }}
                       title={
                         annualFeeAmount === null
                           ? '正在加载年费信息...'
                           : !hasEnoughPoints
-                            ? `积分不足，需要 ${annualFeeAmount} 积分，当前只有 ${currentPoints} 积分`
+                            ? `积分不足，需要 ${annualFeeAmount} 积分，点击充值`
                             : `开通会员需要扣除 ${annualFeeAmount} 积分`
                       }
                     >
@@ -567,7 +636,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                       </Text>
                       {annualFeeAmount !== null && (
                         <Text style={{ fontSize: 13, display: 'block', color: hasEnoughPoints ? '#52c41a' : '#ff4d4f' }}>
-                          {hasEnoughPoints ? '✓' : '✗'} 需要 {annualFeeAmount}
+                          {hasEnoughPoints ? '✓' : '✗'} 需要 {annualFeeAmount} {!hasEnoughPoints && '(点击按钮充值)'}
                         </Text>
                       )}
                     </div>
