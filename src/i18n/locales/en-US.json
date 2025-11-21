@@ -45,6 +45,7 @@
     "sort": "Sort",
     "member": "Member",
     "guest": "Guest",
+    "vip": "VIP Member",
     "participantsManagement": "Participants Management",
     "registered": "Registered",
     "pleaseInputNameEmailPhoneOrUserId": "Please input name, email, phone or user ID",
@@ -192,7 +193,8 @@
     "confirmPasswordRequired": "Please confirm password",
     "admin": "Admin",
     "member": "Member",
-    "guest": "Guest"
+    "guest": "Guest",
+    "vip": "VIP Member"
   },
   "navigation": {
     "home": "Home",

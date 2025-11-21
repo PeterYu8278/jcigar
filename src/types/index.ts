@@ -5,7 +5,7 @@ export interface User {
   id: string;
   email: string;
   displayName: string;
-  role: 'admin' | 'member' | 'guest';
+  role: 'admin' | 'member' | 'guest' | 'vip';
   
   // 扁平化的常用属性（向后兼容）
   photoURL?: string;

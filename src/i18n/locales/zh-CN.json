@@ -45,6 +45,7 @@
     "sort": "排序",
     "member": "会员",
     "guest": "游客",
+    "vip": "VIP会员",
     "participantsManagement": "参与者管理",
     "registered": "已报名",
     "pleaseInputNameEmailPhoneOrUserId": "请输入姓名、邮箱、手机或用户ID",
@@ -190,7 +191,8 @@
     "confirmPasswordRequired": "请确认密码",
     "admin": "管理员",
     "member": "会员",
-    "guest": "游客"
+    "guest": "游客",
+    "vip": "VIP会员"
   },
   "navigation": {
     "home": "首页",

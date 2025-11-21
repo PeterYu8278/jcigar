@@ -290,8 +290,22 @@ const AdminUsers: React.FC = () => {
               onChange={async (checked) => {
                 const next = checked ? 'active' : 'inactive'
                 setStatusMap((m) => ({ ...m, [record.id]: next }))
-                const res = await updateDocument<User>(COLLECTIONS.USERS, record.id, { status: next } as any)
-                if (res.success) message.success(t('usersAdmin.statusUpdated'))
+                
+                // ✅ 当状态变为活跃时，角色自动变为 VIP；变为非活跃时，角色改回 member（不影响 admin）
+                const updateData: Partial<User> = { status: next }
+                if (checked && record.role !== 'admin') {
+                  updateData.role = 'vip'
+                } else if (!checked && record.role === 'vip') {
+                  updateData.role = 'member'
+                }
+                
+                const res = await updateDocument<User>(COLLECTIONS.USERS, record.id, updateData as any)
+                if (res.success) {
+                  message.success(t('usersAdmin.statusUpdated'))
+                  // 刷新用户列表以显示角色变化
+                  const list = await getUsers()
+                  setUsers(list)
+                }
               }}
               size="small"
             />
@@ -520,7 +534,15 @@ const AdminUsers: React.FC = () => {
                 onClick={async () => {
                   setLoading(true)
                   try {
-                    await Promise.all(selectedRowKeys.map(id => updateDocument<User>(COLLECTIONS.USERS, String(id), { status: 'inactive' } as any)))
+                    // ✅ 批量禁用时，将 VIP 角色改回 member
+                    await Promise.all(selectedRowKeys.map(id => {
+                      const user = users.find(u => u.id === String(id))
+                      const updateData: Partial<User> = { status: 'inactive' }
+                      if (user?.role === 'vip') {
+                        updateData.role = 'member'
+                      }
+                      return updateDocument<User>(COLLECTIONS.USERS, String(id), updateData as any)
+                    }))
                     message.success(t('usersAdmin.batchDisabled'))
                     const list = await getUsers()
                     setUsers(list)
