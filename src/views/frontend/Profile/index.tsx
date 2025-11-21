@@ -62,10 +62,8 @@ const Profile: React.FC = () => {
         if (values.currentPassword) {
           const credential = EmailAuthProvider.credential(user.email || '', values.currentPassword)
           await reauthenticateWithCredential(currentUser, credential)
-          // ✅ 使用标准化的邮箱格式
-          const normalizedEmail = values.email.toLowerCase().trim()
-          await updateEmail(currentUser, normalizedEmail)
-          updates.email = normalizedEmail
+          await updateEmail(currentUser, values.email)
+          updates.email = values.email
         } else {
           message.warning(t('profile.emailChangeRequiresPassword'))
         }
@@ -84,7 +82,7 @@ const Profile: React.FC = () => {
         }
       }
 
-      // 同步本地（使用标准化的邮箱格式）
+      // 同步本地
       setUser({
         ...user,
         displayName: values.displayName,
@@ -233,44 +231,51 @@ const Profile: React.FC = () => {
           <Form.Item
             name="email"
                 label={<span style={{ color: '#FFFFFF' }}>{t('auth.email')}</span>}
-            rules={[
-              { type: 'email', message: t('auth.emailInvalid') },
-              {
-                validator: async (_, value) => {
-                  // 如果邮箱未改变或为空，跳过验证
-                  if (!value || value === user?.email) return Promise.resolve()
-                  
-                  // ✅ 先验证格式，格式无效则跳过唯一性检查
-                  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-                  if (!emailPattern.test(value)) {
-                    return Promise.resolve()
-                  }
-                  
-                  // ✅ 格式有效，检查邮箱唯一性
-                  const { collection, query, where, getDocs, limit } = await import('firebase/firestore')
-                  const { db } = await import('../../../config/firebase')
-                  
-                  try {
-                    const emailQuery = query(
-                      collection(db, 'users'), 
-                      where('email', '==', value.toLowerCase().trim()),
-                      limit(1)
-                    )
-                    const emailSnap = await getDocs(emailQuery)
-                    
-                    if (!emailSnap.empty) {
-                      return Promise.reject(new Error('该邮箱已被其他用户使用'))
+                rules={[
+                  { type: 'email', message: t('auth.emailInvalid') },
+                  {
+                    validator: async (_, value) => {
+                      // 如果没有输入或字段被禁用，跳过验证
+                      if (!value || !!(user as any)?.providerData?.find((p: any) => p.providerId === 'google.com')) {
+                        return Promise.resolve()
+                      }
+                      
+                      // 如果邮箱没有改变，跳过验证
+                      if (value === user?.email) {
+                        return Promise.resolve()
+                      }
+                      
+                      // ✅ 先验证格式，格式无效则跳过唯一性检查
+                      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+                      if (!emailPattern.test(value)) {
+                        return Promise.resolve()
+                      }
+                      
+                      // ✅ 格式有效，检查邮箱唯一性
+                      const { collection, query, where, getDocs, limit } = await import('firebase/firestore')
+                      const { db } = await import('../../../config/firebase')
+                      
+                      try {
+                        const emailQuery = query(
+                          collection(db, 'users'), 
+                          where('email', '==', value.toLowerCase().trim()),
+                          limit(1)
+                        )
+                        const emailSnap = await getDocs(emailQuery)
+                        
+                        if (!emailSnap.empty) {
+                          return Promise.reject(new Error('该邮箱已被其他用户使用'))
+                        }
+                      } catch (error) {
+                        // 如果查询失败，允许通过（不阻止用户提交）
+                      }
+                      
+                      return Promise.resolve()
                     }
-                  } catch (error) {
-                    // 如果查询失败，允许通过（不阻止用户提交）
                   }
-                  
-                  return Promise.resolve()
-                }
-              }
-            ]}
-            validateTrigger={['onBlur', 'onChange']}
-            validateDebounce={500}
+                ]}
+                validateTrigger={['onBlur', 'onChange']}
+                validateDebounce={500}
           >
             <Input 
               prefix={<MailOutlined />}
@@ -283,62 +288,72 @@ const Profile: React.FC = () => {
           <Form.Item
             name="phone"
                 label={<span style={{ color: '#FFFFFF' }}>{t('profile.phoneLabel')}</span>}
-            rules={[
-              { 
-                pattern: /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/, 
-                message: '手机号格式无效（需10-12位数字）' 
-              },
-              {
-                validator: async (_, value) => {
-                  // 如果手机号未改变或为空，跳过验证
-                  if (!value || value === (user as any)?.profile?.phone) return Promise.resolve()
-                  
-                  // ✅ 先验证格式，格式无效则跳过唯一性检查
-                  const formatPattern = /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/
-                  if (!formatPattern.test(value)) {
-                    return Promise.resolve()
-                  }
-                  
-                  // ✅ 格式有效，检查手机号唯一性
-                  const normalized = normalizePhoneNumber(value)
-                  if (!normalized) {
-                    return Promise.resolve()
-                  }
-                  
-                  try {
-                    const { collection, query, where, getDocs, limit } = await import('firebase/firestore')
-                    const { db } = await import('../../../config/firebase')
-                    
-                    const phoneQuery = query(
-                      collection(db, 'users'), 
-                      where('profile.phone', '==', normalized),
-                      limit(1)
-                    )
-                    const phoneSnap = await getDocs(phoneQuery)
-                    
-                    if (!phoneSnap.empty) {
-                      return Promise.reject(new Error('该手机号已被其他用户使用'))
+                rules={[
+                  { 
+                    pattern: /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/, 
+                    message: '手机号格式无效（需10-12位数字）' 
+                  },
+                  {
+                    validator: async (_, value) => {
+                      if (!value) return Promise.resolve()
+                      
+                      // 如果手机号没有改变，跳过验证
+                      const currentPhone = normalizePhoneNumber((user as any)?.profile?.phone || '')
+                      const newPhone = normalizePhoneNumber(value)
+                      if (newPhone === currentPhone) {
+                        return Promise.resolve()
+                      }
+                      
+                      // ✅ 先验证格式，格式无效则跳过唯一性检查
+                      const formatPattern = /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/
+                      if (!formatPattern.test(value)) {
+                        return Promise.resolve()
+                      }
+                      
+                      // ✅ 格式有效，检查手机号唯一性
+                      const normalized = normalizePhoneNumber(value)
+                      if (!normalized) {
+                        return Promise.resolve()
+                      }
+                      
+                      try {
+                        const { collection, query, where, getDocs, limit } = await import('firebase/firestore')
+                        const { db } = await import('../../../config/firebase')
+                        
+                        const phoneQuery = query(
+                          collection(db, 'users'), 
+                          where('profile.phone', '==', normalized),
+                          limit(1)
+                        )
+                        const phoneSnap = await getDocs(phoneQuery)
+                        
+                        if (!phoneSnap.empty) {
+                          // 检查是否是当前用户
+                          const existingUserId = phoneSnap.docs[0].id
+                          if (existingUserId !== user?.id) {
+                            return Promise.reject(new Error('该手机号已被其他用户使用'))
+                          }
+                        }
+                      } catch (error) {
+                        // 如果查询失败，允许通过（不阻止用户提交）
+                      }
+                      
+                      return Promise.resolve()
                     }
-                  } catch (error) {
-                    // 如果查询失败，允许通过（不阻止用户提交）
                   }
-                  
-                  return Promise.resolve()
-                }
-              }
-            ]}
-            validateTrigger={['onBlur', 'onChange']}
-            validateDebounce={500}
+                ]}
+                validateTrigger={['onBlur', 'onChange']}
+                validateDebounce={500}
           >
                 <Input 
-              prefix={<PhoneOutlined />} 
-              placeholder={t('profile.phonePlaceholder')}
-              onInput={(e) => {
-                const input = e.currentTarget
-                // 只保留数字、加号和空格
-                input.value = input.value.replace(/[^\d+\s-]/g, '')
-              }}
-            />
+                  prefix={<PhoneOutlined />} 
+                  placeholder={t('profile.phonePlaceholder')}
+                  onInput={(e) => {
+                    const input = e.currentTarget
+                    // 只保留数字、加号和空格
+                    input.value = input.value.replace(/[^\d+\s-]/g, '')
+                  }}
+                />
           </Form.Item>
           </Form>
           </div>
