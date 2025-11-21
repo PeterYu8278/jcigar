@@ -1,7 +1,7 @@
 // 账户合并服务
 import { doc, getDoc, updateDoc, writeBatch, collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-import { GLOBAL_COLLECTIONS } from './collections';
+import { GLOBAL_COLLECTIONS } from '../../config/globalCollections';
 import type { User } from '../../types';
 
 /**
