@@ -324,66 +324,81 @@ export const ReferralTreeView: React.FC<ReferralTreeViewProps> = ({ users: propU
       {/* 统计面板 */}
       <div style={{
         display: 'flex',
-        gap: 12,
+        gap: 8,
         marginBottom: 16,
-        padding: 16,
+        padding: 12,
         background: 'rgba(255, 255, 255, 0.05)',
         borderRadius: 12,
-        border: '1px solid rgba(244, 175, 37, 0.2)',
-        overflowX: 'auto',
-        WebkitOverflowScrolling: 'touch'
+        border: '1px solid rgba(244, 175, 37, 0.2)'
       }}>
-        <div style={{ textAlign: 'center', minWidth: 100, flex: '0 0 auto' }}>
-          <div style={{ fontSize: 24, fontWeight: 800, color: '#FFD700' }}>{stats.totalUsers}</div>
-          <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)', whiteSpace: 'nowrap' }}>{t('usersAdmin.totalUsers')}</div>
+        <div style={{ textAlign: 'center', flex: 1 }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: '#FFD700' }}>{stats.totalUsers}</div>
+          <div style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.2 }}>{t('usersAdmin.totalUsers')}</div>
         </div>
-        <div style={{ textAlign: 'center', minWidth: 100, flex: '0 0 auto' }}>
-          <div style={{ fontSize: 24, fontWeight: 800, color: '#FFD700' }}>{stats.hasReferral}</div>
-          <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)', whiteSpace: 'nowrap' }}>{t('usersAdmin.hasReferrer')}</div>
+        <div style={{ textAlign: 'center', flex: 1 }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: '#FFD700' }}>{stats.hasReferral}</div>
+          <div style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.2 }}>{t('usersAdmin.hasReferrer')}</div>
         </div>
-        <div style={{ textAlign: 'center', minWidth: 100, flex: '0 0 auto' }}>
-          <div style={{ fontSize: 24, fontWeight: 800, color: '#FFD700' }}>{stats.hasReferrals}</div>
-          <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)', whiteSpace: 'nowrap' }}>{t('usersAdmin.hasReferrals')}</div>
+        <div style={{ textAlign: 'center', flex: 1 }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: '#FFD700' }}>{stats.hasReferrals}</div>
+          <div style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.2 }}>{t('usersAdmin.hasReferrals')}</div>
         </div>
-        <div style={{ textAlign: 'center', minWidth: 100, flex: '0 0 auto' }}>
-          <div style={{ fontSize: 24, fontWeight: 800, color: '#FFD700' }}>{stats.maxDepth}</div>
-          <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)', whiteSpace: 'nowrap' }}>{t('usersAdmin.maxDepth')}</div>
+        <div style={{ textAlign: 'center', flex: 1 }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: '#FFD700' }}>{stats.maxDepth}</div>
+          <div style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.2 }}>{t('usersAdmin.maxDepth')}</div>
         </div>
-        <div style={{ textAlign: 'center', minWidth: 100, flex: '0 0 auto' }}>
-          <div style={{ fontSize: 24, fontWeight: 800, color: '#FFD700' }}>{stats.totalReferralPoints}</div>
-          <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)', whiteSpace: 'nowrap' }}>{t('usersAdmin.totalReferralPoints')}</div>
+        <div style={{ textAlign: 'center', flex: 1 }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: '#FFD700' }}>{stats.totalReferralPoints}</div>
+          <div style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.2 }}>{t('usersAdmin.totalReferralPoints')}</div>
         </div>
       </div>
 
       {/* 搜索和筛选 */}
-      <Space size="middle" wrap style={{ marginBottom: 16, width: '100%' }}>
+      <div style={{ marginBottom: 16 }}>
+        {/* 搜索框 */}
         <Search
           placeholder={t('usersAdmin.searchByNameOrEmail')}
           allowClear
-          style={{ width: '100%', maxWidth: 300 }}
+          style={{ width: '100%', marginBottom: 12 }}
           prefix={<SearchOutlined />}
           value={searchKeyword}
           onChange={(e) => setSearchKeyword(e.target.value)}
         />
-        <Select
-          value={filterType}
-          style={{ width: '100%', maxWidth: 180, minWidth: 150 }}
-          onChange={setFilterType}
-        >
-          <Option value="all">{t('common.all')}</Option>
-          <Option value="hasReferrer">{t('usersAdmin.hasReferrer')}</Option>
-          <Option value="hasReferrals">{t('usersAdmin.hasReferrals')}</Option>
-        </Select>
-        <Button icon={<ExpandOutlined />} onClick={expandAll}>
-          {t('usersAdmin.expandAll')}
-        </Button>
-        <Button icon={<ShrinkOutlined />} onClick={collapseAll}>
-          {t('usersAdmin.collapseAll')}
-        </Button>
-        <Button icon={<ReloadOutlined />} onClick={() => window.location.reload()}>
-          {t('common.refresh')}
-        </Button>
-      </Space>
+        
+        {/* 筛选和操作按钮 */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Select
+            value={filterType}
+            style={{ flex: '1 1 150px', minWidth: 120 }}
+            onChange={setFilterType}
+          >
+            <Option value="all">{t('common.all')}</Option>
+            <Option value="hasReferrer">{t('usersAdmin.hasReferrer')}</Option>
+            <Option value="hasReferrals">{t('usersAdmin.hasReferrals')}</Option>
+          </Select>
+          <Button 
+            icon={<ExpandOutlined />} 
+            onClick={expandAll}
+            style={{ flex: '1 1 auto' }}
+          >
+            {t('usersAdmin.expandAll')}
+          </Button>
+          <Button 
+            icon={<ShrinkOutlined />} 
+            onClick={collapseAll}
+            style={{ flex: '1 1 auto' }}
+          >
+            {t('usersAdmin.collapseAll')}
+          </Button>
+          <Button 
+            icon={<ReloadOutlined />} 
+            onClick={() => window.location.reload()}
+            style={{ flex: '1 1 auto' }}
+          >
+            {t('common.refresh')}
+          </Button>
+        </div>
+      </div>
 
       {/* 关系图 */}
       <div style={{ 
