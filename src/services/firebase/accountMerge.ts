@@ -125,24 +125,16 @@ export const mergeUserAccounts = async (
       points: (phoneUser.membership?.points || 0) + (googleUser.membership?.points || 0),
       // 引荐积分相加
       referralPoints: (phoneUser.membership?.referralPoints || 0) + (googleUser.membership?.referralPoints || 0),
-      // 累计消费相加
-      totalSpent: (phoneUser.membership?.totalSpent || 0) + (googleUser.membership?.totalSpent || 0),
       // 累计驻店时长相加
       totalVisitHours: (phoneUser.membership?.totalVisitHours || 0) + (googleUser.membership?.totalVisitHours || 0),
       // 保留两个账户中较早的注册时间
-      joinedAt: (phoneUser.membership?.joinedAt && googleUser.membership?.joinedAt)
-        ? (phoneUser.membership.joinedAt < googleUser.membership.joinedAt 
-            ? phoneUser.membership.joinedAt 
-            : googleUser.membership.joinedAt)
-        : (phoneUser.membership?.joinedAt || googleUser.membership?.joinedAt || new Date()),
-      // 保留会员ID（优先使用phoneUser的）
-      memberId: phoneUser.memberId || googleUser.memberId,
-      // 年费到期日（使用较晚的日期）
-      membershipExpiresAt: (phoneUser.membership?.membershipExpiresAt && googleUser.membership?.membershipExpiresAt)
-        ? (phoneUser.membership.membershipExpiresAt > googleUser.membership.membershipExpiresAt
-            ? phoneUser.membership.membershipExpiresAt
-            : googleUser.membership.membershipExpiresAt)
-        : (phoneUser.membership?.membershipExpiresAt || googleUser.membership?.membershipExpiresAt),
+      joinDate: (phoneUser.membership?.joinDate && googleUser.membership?.joinDate)
+        ? (phoneUser.membership.joinDate < googleUser.membership.joinDate 
+            ? phoneUser.membership.joinDate 
+            : googleUser.membership.joinDate)
+        : (phoneUser.membership?.joinDate || googleUser.membership?.joinDate || new Date()),
+      // 最后活跃时间
+      lastActive: new Date(),
       // 当前驻店会话ID（优先使用phoneUser的）
       currentVisitSessionId: phoneUser.membership?.currentVisitSessionId || googleUser.membership?.currentVisitSessionId || null
     };
@@ -150,7 +142,14 @@ export const mergeUserAccounts = async (
     // 2. 合并引荐数据
     const mergedReferral = {
       // 被谁引荐（优先使用phoneUser的）
+      referredBy: phoneUser.referral?.referredBy || googleUser.referral?.referredBy,
       referredByUserId: phoneUser.referral?.referredByUserId || googleUser.referral?.referredByUserId,
+      // 引荐日期（保留较早的）
+      referralDate: (phoneUser.referral?.referralDate && googleUser.referral?.referralDate)
+        ? (phoneUser.referral.referralDate < googleUser.referral.referralDate
+            ? phoneUser.referral.referralDate
+            : googleUser.referral.referralDate)
+        : (phoneUser.referral?.referralDate || googleUser.referral?.referralDate),
       // 引荐列表合并（去重）
       referrals: Array.from(new Set([
         ...(phoneUser.referral?.referrals || []),
@@ -160,8 +159,10 @@ export const mergeUserAccounts = async (
       totalReferred: 
         (phoneUser.referral?.totalReferred || 0) + 
         (googleUser.referral?.totalReferred || 0),
-      // 引荐码（优先使用phoneUser的）
-      referralCode: phoneUser.referral?.referralCode || googleUser.referral?.referralCode
+      // 活跃引荐数
+      activeReferrals:
+        (phoneUser.referral?.activeReferrals || 0) +
+        (googleUser.referral?.activeReferrals || 0)
     };
 
     // 3. 更新Google用户账户（主账户）
