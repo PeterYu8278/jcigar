@@ -32,6 +32,7 @@ const Profile: React.FC = () => {
     setEditing(true)
     form.setFieldsValue({
       displayName: u.displayName || '',
+      email: u.email || '',  // ✅ 添加邮箱字段初始化
       phone: (u as any)?.profile?.phone || '',
       notifications: (u as any)?.preferences?.notifications !== false,
       language: (u as any)?.preferences?.locale || i18n.language || 'zh-CN',
