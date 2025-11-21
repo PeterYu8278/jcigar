@@ -386,7 +386,6 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
         console.log('[开通会员] 调用 modal.confirm');
         modal.confirm({
           title: <span style={{ color: '#FFFFFF', fontSize: 18, fontWeight: 600 }}>积分不足</span>,
-          icon: <WalletOutlined style={{ color: '#C48D3A', fontSize: 24 }} />,
           content: (
             <div style={{ marginTop: 16 }}>
               <div style={{ 
