@@ -307,6 +307,57 @@ const CompleteProfile: React.FC = () => {
                 { 
                   pattern: /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/, 
                   message: '手机号格式无效（需10-12位数字）' 
+                },
+                {
+                  validator: async (_, value) => {
+                    if (!value) return Promise.resolve()
+                    
+                    // ✅ 先验证格式，格式无效则跳过唯一性检查
+                    const formatPattern = /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/
+                    if (!formatPattern.test(value)) {
+                      // 格式无效，不检查唯一性（避免重复错误提示）
+                      return Promise.resolve()
+                    }
+                    
+                    // ✅ 格式有效，检查手机号唯一性
+                    const normalized = normalizePhoneNumber(value)
+                    
+                    // 标准化失败，不报错（pattern 已经处理）
+                    if (!normalized) {
+                      return Promise.resolve()
+                    }
+                    
+                    // 检查是否已被使用
+                    try {
+                      const { collection, query, where, getDocs, limit } = await import('firebase/firestore')
+                      const { db } = await import('../../config/firebase')
+                      
+                      const phoneQuery = query(
+                        collection(db, 'users'), 
+                        where('profile.phone', '==', normalized),
+                        limit(1)
+                      )
+                      const phoneSnap = await getDocs(phoneQuery)
+                      
+                      if (!phoneSnap.empty) {
+                        const existingUser = phoneSnap.docs[0].data()
+                        const existingEmail = existingUser.email
+                        
+                        // ✅ 如果该手机号的用户已有邮箱，则提示已被使用
+                        // （如果没有邮箱，后端会自动合并账户，所以不阻止）
+                        if (existingEmail && existingEmail !== '') {
+                          return Promise.reject(new Error('该手机号已被其他用户使用'))
+                        }
+                        
+                        // 该手机号用户没有邮箱，允许通过（后端会合并账户）
+                        return Promise.resolve()
+                      }
+                    } catch (error) {
+                      // 如果查询失败，允许通过（不阻止用户提交）
+                    }
+                    
+                    return Promise.resolve()
+                  }
                 }
               ]}
               validateTrigger={['onBlur', 'onChange']}
