@@ -3,8 +3,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Form, Input, Button, Card, Typography, Space, message, Divider, Spin, Modal } from 'antd'
 import { UserOutlined, LockOutlined, GoogleOutlined, LoadingOutlined, PhoneOutlined } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { loginWithEmailOrPhone, loginWithGoogle, handleGoogleRedirectResult } from '../../services/firebase/auth'
-import { initRecaptchaVerifier, sendPasswordResetSMS, verifySMSCode, resetPasswordWithPhone, cleanupRecaptcha } from '../../services/firebase/phoneAuth'
+import { loginWithEmailOrPhone, loginWithGoogle, handleGoogleRedirectResult, sendPasswordResetByPhone } from '../../services/firebase/auth'
 import { useAuthStore } from '../../store/modules/auth'
 import { useTranslation } from 'react-i18next'
 import { identifyInputType, normalizePhoneNumber, isValidEmail } from '../../utils/phoneNormalization'
@@ -23,9 +22,6 @@ const Login: React.FC = () => {
   const [forgotPasswordVisible, setForgotPasswordVisible] = useState(false)
   const [resetPasswordForm] = Form.useForm()
   const [resettingPassword, setResettingPassword] = useState(false)
-  const [resetStep, setResetStep] = useState<'phone' | 'verify' | 'newPassword'>('phone')
-  const [resetPhone, setResetPhone] = useState('')
-  const [countdown, setCountdown] = useState(0)
   
   const navigate = useNavigate()
   const location = useLocation()
@@ -119,48 +115,6 @@ const Login: React.FC = () => {
     checkRedirectResult()
   }, [navigate, from, t])
 
-  // 初始化 reCAPTCHA（当模态框打开时）
-  useEffect(() => {
-    if (forgotPasswordVisible && resetStep === 'phone') {
-      // 延迟初始化，确保 DOM 已渲染且旧实例已清理
-      const timer = setTimeout(() => {
-        try {
-          const container = document.getElementById('recaptcha-container')
-          if (!container) {
-            console.error('[reCAPTCHA] 容器不存在')
-            return
-          }
-          
-          initRecaptchaVerifier('recaptcha-container', 'invisible')
-        } catch (error) {
-          console.error('[reCAPTCHA] 初始化失败:', error)
-          message.error('验证组件加载失败，请刷新页面重试')
-        }
-      }, 300)
-
-      return () => {
-        clearTimeout(timer)
-      }
-    }
-    
-    // 清理函数 - 当模态框关闭或步骤改变时
-    if (!forgotPasswordVisible || resetStep !== 'phone') {
-      // 延迟清理，避免立即重新打开时冲突
-      const cleanupTimer = setTimeout(() => {
-        cleanupRecaptcha()
-      }, 100)
-      
-      return () => clearTimeout(cleanupTimer)
-    }
-  }, [forgotPasswordVisible, resetStep])
-
-  // 倒计时
-  useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000)
-      return () => clearTimeout(timer)
-    }
-  }, [countdown])
 
   const onFinish = async (values: { email: string; password: string }) => {
     setLoading(true)
@@ -214,107 +168,27 @@ const Login: React.FC = () => {
     }
   }
 
-  // 第一步：发送 SMS 验证码
-  const handleSendSMS = async (values: { phone: string }) => {
+  // 处理忘记密码
+  const handleForgotPassword = async (values: { phone: string }) => {
     setResettingPassword(true)
     try {
-      const result = await sendPasswordResetSMS(values.phone)
+      const result = await sendPasswordResetByPhone(values.phone)
       
       if (result.success) {
-        message.success('验证码已发送到您的手机，请查收')
-        setResetPhone(values.phone)
-        setResetStep('verify')
-        setCountdown(60) // 60秒倒计时
-      } else {
-        const errorMsg = result.error?.message || '发送失败，请重试'
-        message.error(errorMsg)
-        
-        // 如果是 reCAPTCHA 错误，建议刷新
-        if (errorMsg.includes('reCAPTCHA') || errorMsg.includes('recaptcha')) {
-          setTimeout(() => {
-            message.warning('建议刷新页面后重试（Ctrl+Shift+R）')
-          }, 1500)
-        }
-      }
-    } catch (error: any) {
-      const errorMsg = error.message || '发送失败，请重试'
-      message.error(errorMsg)
-      
-      // 如果是 reCAPTCHA 错误，清理并建议刷新
-      if (errorMsg.includes('reCAPTCHA') || errorMsg.includes('recaptcha')) {
-        cleanupRecaptcha()
-        setTimeout(() => {
-          message.warning('请刷新页面后重试（Ctrl+Shift+R）')
-        }, 1500)
-      }
-    } finally {
-      setResettingPassword(false)
-    }
-  }
-
-  // 第二步：验证 SMS 验证码
-  const handleVerifyCode = async (values: { code: string }) => {
-    setResettingPassword(true)
-    try {
-      const result = await verifySMSCode(values.code)
-      
-      if (result.success) {
-        message.success('验证成功，请设置新密码')
-        setResetStep('newPassword')
-      } else {
-        message.error(result.error?.message || '验证码错误，请重试')
-      }
-    } catch (error: any) {
-      message.error(error.message || '验证失败，请重试')
-    } finally {
-      setResettingPassword(false)
-    }
-  }
-
-  // 第三步：设置新密码
-  const handleSetNewPassword = async (values: { newPassword: string; confirmPassword: string }) => {
-    if (values.newPassword !== values.confirmPassword) {
-      message.error('两次输入的密码不一致')
-      return
-    }
-
-    setResettingPassword(true)
-    try {
-      const result = await resetPasswordWithPhone(
-        resetPhone,
-        resetPasswordForm.getFieldValue('code'),
-        values.newPassword
-      )
-      
-      if (result.success) {
-        message.success('密码重置成功，请使用新密码登录')
+        // 隐藏邮箱部分字符
+        const email = (result as any).email
+        const maskedEmail = email.replace(/(.{2})(.*)(@.*)/, '$1***$3')
+        message.success(`密码重置邮件已发送到 ${maskedEmail}，请检查您的邮箱`)
         setForgotPasswordVisible(false)
         resetPasswordForm.resetFields()
-        setResetStep('phone')
-        setResetPhone('')
       } else {
-        message.error(result.error?.message || '密码重置失败，请重试')
+        message.error(result.error.message || '发送失败，请重试')
       }
     } catch (error: any) {
-      message.error(error.message || '密码重置失败，请重试')
+      message.error(error.message || '发送失败，请重试')
     } finally {
       setResettingPassword(false)
     }
-  }
-
-  // 重置模态框状态
-  const handleResetModalClose = () => {
-    // 先清理 reCAPTCHA
-    cleanupRecaptcha()
-    
-    // 延迟关闭，确保清理完成
-    setTimeout(() => {
-      setForgotPasswordVisible(false)
-      resetPasswordForm.resetFields()
-      setResetStep('phone')
-      setResetPhone('')
-      setCountdown(0)
-    }, 50)
   }
 
   return (
@@ -556,10 +430,7 @@ const Login: React.FC = () => {
         </Space>
       </Card>
 
-      {/* reCAPTCHA 容器（隐藏） */}
-      <div id="recaptcha-container"></div>
-
-      {/* 忘记密码模态框 - SMS 验证码方式 */}
+      {/* 忘记密码模态框 - 邮箱重置方式 */}
       <Modal
         title={
           <span style={{
@@ -570,11 +441,14 @@ const Login: React.FC = () => {
             fontWeight: 700,
             fontSize: '18px'
           }}>
-            重置密码 {resetStep === 'verify' && `(${countdown}s)`}
+            重置密码
           </span>
         }
         open={forgotPasswordVisible}
-        onCancel={handleResetModalClose}
+        onCancel={() => {
+          setForgotPasswordVisible(false)
+          resetPasswordForm.resetFields()
+        }}
         footer={null}
         centered
         styles={{
@@ -594,223 +468,61 @@ const Login: React.FC = () => {
           }
         }}
       >
-        {/* 步骤指示器 */}
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          marginBottom: '24px',
-          position: 'relative'
-        }}>
-          {['phone', 'verify', 'newPassword'].map((step, index) => (
-            <div key={step} style={{ 
-              flex: 1, 
-              textAlign: 'center',
-              position: 'relative',
-              zIndex: 1
-            }}>
-              <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                background: resetStep === step || ['verify', 'newPassword'].includes(resetStep) && index < (['phone', 'verify', 'newPassword'].indexOf(resetStep))
-                  ? 'linear-gradient(to right,#FDE08D,#C48D3A)'
-                  : 'rgba(255, 255, 255, 0.2)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto',
-                color: resetStep === step || ['verify', 'newPassword'].includes(resetStep) && index < (['phone', 'verify', 'newPassword'].indexOf(resetStep))
-                  ? '#221c10'
-                  : '#999',
-                fontWeight: 600,
-                fontSize: '14px'
-              }}>
-                {index + 1}
-              </div>
-              <div style={{
-                marginTop: '8px',
-                fontSize: '12px',
-                color: resetStep === step ? '#FDD017' : '#999'
-              }}>
-                {step === 'phone' ? '手机号' : step === 'verify' ? '验证码' : '新密码'}
-              </div>
-            </div>
-          ))}
-          {/* 连接线 */}
-          <div style={{
-            position: 'absolute',
-            top: '16px',
-            left: '16.67%',
-            width: '66.66%',
-            height: '2px',
-            background: 'rgba(255, 255, 255, 0.2)',
-            zIndex: 0
-          }} />
+        <div style={{ color: 'rgba(255, 255, 255, 0.8)', marginBottom: '16px', fontSize: '14px' }}>
+          请输入您注册时使用的手机号，我们将向您绑定的邮箱发送密码重置链接。
         </div>
-
+        
         <Form
           form={resetPasswordForm}
-          onFinish={
-            resetStep === 'phone' ? handleSendSMS 
-            : resetStep === 'verify' ? handleVerifyCode 
-            : handleSetNewPassword
-          }
+          onFinish={handleForgotPassword}
           layout="vertical"
         >
-          {/* 第一步：输入手机号 */}
-          {resetStep === 'phone' && (
-            <>
-              <div style={{ color: 'rgba(255, 255, 255, 0.8)', marginBottom: '16px', fontSize: '14px' }}>
-                请输入您注册时使用的手机号，我们将发送验证码到您的手机。
-              </div>
-              
-              <Form.Item
-                name="phone"
-                rules={[
-                  { required: true, message: '请输入手机号' },
-                  { 
-                    pattern: /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/, 
-                    message: '手机号格式无效（需10-12位数字）' 
+          <Form.Item
+            name="phone"
+            rules={[
+              { required: true, message: '请输入手机号' },
+              { 
+                pattern: /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/, 
+                message: '手机号格式无效（需10-12位数字）' 
+              },
+              {
+                validator: async (_, value) => {
+                  if (!value) return Promise.resolve()
+                  
+                  const normalized = normalizePhoneNumber(value)
+                  if (!normalized) {
+                    return Promise.reject(new Error('手机号格式无效'))
                   }
-                ]}
-              >
-                <Input
-                  prefix={<PhoneOutlined style={{ color: '#ffd700' }} />}
-                  placeholder="手机号 (例: 0123456789)"
-                  onInput={(e) => {
-                    const input = e.currentTarget
-                    input.value = input.value.replace(/[^\d+\s-]/g, '')
-                  }}
-                  style={{
-                    background: 'rgba(45, 45, 45, 0.8)',
-                    border: '1px solid #444444',
-                    borderRadius: '8px',
-                    color: '#f8f8f8',
-                    height: '48px'
-                  }}
-                />
-              </Form.Item>
-            </>
-          )}
-
-          {/* 第二步：输入验证码 */}
-          {resetStep === 'verify' && (
-            <>
-              <div style={{ color: 'rgba(255, 255, 255, 0.8)', marginBottom: '16px', fontSize: '14px' }}>
-                验证码已发送到 <span style={{ color: '#FDD017' }}>{resetPhone}</span>
-                <br />
-                请输入6位数字验证码
-              </div>
-              
-              <Form.Item
-                name="code"
-                rules={[
-                  { required: true, message: '请输入验证码' },
-                  { 
-                    pattern: /^\d{6}$/, 
-                    message: '验证码必须是6位数字' 
-                  }
-                ]}
-              >
-                <Input
-                  placeholder="请输入6位验证码"
-                  maxLength={6}
-                  onInput={(e) => {
-                    const input = e.currentTarget
-                    input.value = input.value.replace(/\D/g, '')
-                  }}
-                  style={{
-                    background: 'rgba(45, 45, 45, 0.8)',
-                    border: '1px solid #444444',
-                    borderRadius: '8px',
-                    color: '#f8f8f8',
-                    height: '48px',
-                    fontSize: '18px',
-                    letterSpacing: '8px',
-                    textAlign: 'center'
-                  }}
-                />
-              </Form.Item>
-
-              <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-                <Button
-                  type="link"
-                  disabled={countdown > 0}
-                  onClick={() => {
-                    resetPasswordForm.setFieldsValue({ phone: resetPhone })
-                    handleSendSMS({ phone: resetPhone })
-                  }}
-                  style={{
-                    color: countdown > 0 ? '#999' : '#FDD017',
-                    padding: 0
-                  }}
-                >
-                  {countdown > 0 ? `${countdown}秒后可重新发送` : '重新发送验证码'}
-                </Button>
-              </div>
-            </>
-          )}
-
-          {/* 第三步：设置新密码 */}
-          {resetStep === 'newPassword' && (
-            <>
-              <div style={{ color: 'rgba(255, 255, 255, 0.8)', marginBottom: '16px', fontSize: '14px' }}>
-                请设置新密码
-              </div>
-              
-              <Form.Item
-                name="newPassword"
-                rules={[
-                  { required: true, message: '请输入新密码' },
-                  { min: 6, message: '密码至少6位' }
-                ]}
-              >
-                <Input.Password
-                  prefix={<LockOutlined style={{ color: '#ffd700' }} />}
-                  placeholder="请输入新密码（至少6位）"
-                  style={{
-                    background: 'rgba(45, 45, 45, 0.8)',
-                    border: '1px solid #444444',
-                    borderRadius: '8px',
-                    color: '#f8f8f8',
-                    height: '48px'
-                  }}
-                />
-              </Form.Item>
-
-              <Form.Item
-                name="confirmPassword"
-                rules={[
-                  { required: true, message: '请再次输入新密码' },
-                  ({ getFieldValue }) => ({
-                    validator(_, value) {
-                      if (!value || getFieldValue('newPassword') === value) {
-                        return Promise.resolve()
-                      }
-                      return Promise.reject(new Error('两次输入的密码不一致'))
-                    }
-                  })
-                ]}
-              >
-                <Input.Password
-                  prefix={<LockOutlined style={{ color: '#ffd700' }} />}
-                  placeholder="请再次输入新密码"
-                  style={{
-                    background: 'rgba(45, 45, 45, 0.8)',
-                    border: '1px solid #444444',
-                    borderRadius: '8px',
-                    color: '#f8f8f8',
-                    height: '48px'
-                  }}
-                />
-              </Form.Item>
-            </>
-          )}
+                  
+                  return Promise.resolve()
+                }
+              }
+            ]}
+          >
+            <Input
+              prefix={<PhoneOutlined style={{ color: '#ffd700' }} />}
+              placeholder="手机号 (例: 0123456789)"
+              onInput={(e) => {
+                const input = e.currentTarget
+                input.value = input.value.replace(/[^\d+\s-]/g, '')
+              }}
+              style={{
+                background: 'rgba(45, 45, 45, 0.8)',
+                border: '1px solid #444444',
+                borderRadius: '8px',
+                color: '#f8f8f8',
+                height: '48px'
+              }}
+            />
+          </Form.Item>
 
           <Form.Item style={{ marginBottom: 0 }}>
             <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
               <Button
-                onClick={handleResetModalClose}
+                onClick={() => {
+                  setForgotPasswordVisible(false)
+                  resetPasswordForm.resetFields()
+                }}
                 style={{
                   background: 'rgba(255, 255, 255, 0.1)',
                   border: '1px solid rgba(255, 255, 255, 0.2)',
@@ -833,7 +545,7 @@ const Login: React.FC = () => {
                   boxShadow: '0 4px 20px rgba(255, 215, 0, 0.3)'
                 }}
               >
-                {resetStep === 'phone' ? '发送验证码' : resetStep === 'verify' ? '验证' : '重置密码'}
+                发送重置链接
               </Button>
             </Space>
           </Form.Item>
