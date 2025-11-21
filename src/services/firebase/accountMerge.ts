@@ -142,14 +142,14 @@ export const mergeUserAccounts = async (
     // 2. 合并引荐数据
     const mergedReferral = {
       // 被谁引荐（优先使用phoneUser的）
-      referredBy: phoneUser.referral?.referredBy || googleUser.referral?.referredBy,
-      referredByUserId: phoneUser.referral?.referredByUserId || googleUser.referral?.referredByUserId,
+      referredBy: phoneUser.referral?.referredBy || googleUser.referral?.referredBy || null,
+      referredByUserId: phoneUser.referral?.referredByUserId || googleUser.referral?.referredByUserId || null,
       // 引荐日期（保留较早的）
       referralDate: (phoneUser.referral?.referralDate && googleUser.referral?.referralDate)
         ? (phoneUser.referral.referralDate < googleUser.referral.referralDate
             ? phoneUser.referral.referralDate
             : googleUser.referral.referralDate)
-        : (phoneUser.referral?.referralDate || googleUser.referral?.referralDate),
+        : (phoneUser.referral?.referralDate || googleUser.referral?.referralDate || null),
       // 引荐列表合并（去重）
       referrals: Array.from(new Set([
         ...(phoneUser.referral?.referrals || []),
@@ -173,15 +173,15 @@ export const mergeUserAccounts = async (
       // 使用手机号用户的displayName（如果有）
       displayName: phoneUser.displayName || googleUser.displayName,
       // 使用手机号用户的手机号
-      'profile.phone': phoneUser.profile?.phone,
+      'profile.phone': phoneUser.profile?.phone ?? null,
       // 合并后的会员数据
       membership: mergedMembership,
       // 合并后的引荐数据
       referral: mergedReferral,
       // 使用phoneUser的memberId（如果有）
-      memberId: phoneUser.memberId || googleUser.memberId,
-      // 状态（使用活跃的账户状态）
-      status: phoneUser.status === 'active' ? phoneUser.status : googleUser.status,
+      memberId: phoneUser.memberId || googleUser.memberId || null,
+      // 状态（使用活跃的账户状态，默认为active）
+      status: phoneUser.status === 'active' ? 'active' : (googleUser.status || 'active'),
       // 记录合并信息
       mergedFrom: phoneOnlyUserId,
       mergedAt: Timestamp.now(),
