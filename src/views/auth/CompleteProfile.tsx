@@ -148,12 +148,7 @@ const CompleteProfile: React.FC = () => {
       )
 
       if (result.success) {
-        // 如果是账户合并，显示特殊提示
-        if ((result as any).merged) {
-          message.success((result as any).message || '已将您的 Google 账户与现有电话号码账户合并');
-        } else {
-          message.success('账户信息已完善，欢迎加入 Gentleman Club！');
-        }
+        message.success('账户信息已完善，欢迎加入 Gentleman Club！')
         
         // ✅ 等待 Firestore 写入完成，然后手动设置用户状态
         const setupUserState = async () => {

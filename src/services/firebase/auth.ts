@@ -495,81 +495,55 @@ export const completeGoogleUserProfile = async (
     const currentUserEmail = currentUser.email;
     
     if (!phoneSnap.empty && phoneSnap.docs[0].id !== uid) {
-      // 1.b.2 电话号码已存在系统中
+      // 电话号码已被其他用户使用
       const existingPhoneUserDoc = phoneSnap.docs[0];
       const existingPhoneUserId = existingPhoneUserDoc.id;
       const existingPhoneUserData = existingPhoneUserDoc.data() as User;
       
       if (!existingPhoneUserData.email) {
-        // 1.b.2.1 该电话号码的用户数据不存在电邮 → 合并账户
-        // 将当前 Google 用户的电邮写入该电话号码的用户数据
+        // 该电话号码的用户数据不存在电邮 → 将现有用户数据迁移到当前 Google UID
         try {
-          await updateDoc(doc(db, 'users', existingPhoneUserId), {
-            email: currentUserEmail,
-            displayName: displayName,
-            updatedAt: new Date()
-          });
-          
-          // 删除当前 Google 用户创建的临时用户文档（如果存在）
-          const currentUserRef = doc(db, 'users', uid);
-          const currentUserSnap = await getDoc(currentUserRef);
-          if (currentUserSnap.exists()) {
-            // 将当前用户文档的数据合并到已存在的电话号码用户文档
-            // 注意：这里我们不删除文档，因为 Firebase Auth UID 必须与 Firestore 文档 ID 一致
-            // 相反，我们将电话号码用户的数据迁移到当前用户文档
-          }
-          
-          // 实际上，我们应该将已存在的电话号码用户文档的数据复制到当前用户的 UID 文档
-          // 并删除旧的电话号码用户文档，以保持 UID 一致性
-          const mergedUserData = {
+          // 将现有用户的数据复制到当前 Google UID 文档，并添加电邮
+          const migratedUserData = {
             ...existingPhoneUserData,
             email: currentUserEmail,
             displayName: displayName,
-            profile: {
-              ...existingPhoneUserData.profile,
-              phone: normalizedPhone
-            },
             updatedAt: new Date()
           };
           
-          // 将合并后的数据写入当前用户的 UID 文档
-          await setDoc(doc(db, 'users', uid), mergedUserData);
+          // 写入当前 Google UID 文档
+          await setDoc(doc(db, 'users', uid), migratedUserData);
           
-          // 删除旧的电话号码用户文档（因为它的 UID 不匹配）
-          // 注意：这可能会影响引荐关系等，需要谨慎处理
-          // 暂时保留旧文档，仅标记为已合并
+          // 标记旧文档为已迁移（保留以便追踪）
           await updateDoc(doc(db, 'users', existingPhoneUserId), {
-            mergedInto: uid,
-            status: 'merged' as any,
+            migratedTo: uid,
+            status: 'migrated' as any,
             updatedAt: new Date()
           });
           
-          // 为当前用户设置密码
+          // 设置密码
           const { updatePassword, EmailAuthProvider, linkWithCredential } = await import('firebase/auth');
-          const email = currentUser.email;
-          if (email) {
-            try {
-              const credential = EmailAuthProvider.credential(email, password);
-              await linkWithCredential(currentUser, credential);
-            } catch (linkError: any) {
-              if (linkError.code === 'auth/provider-already-linked') {
-                await updatePassword(currentUser, password);
-              } else {
-                throw linkError;
-              }
+          try {
+            const credential = EmailAuthProvider.credential(currentUserEmail, password);
+            await linkWithCredential(currentUser, credential);
+          } catch (linkError: any) {
+            if (linkError.code === 'auth/provider-already-linked') {
+              await updatePassword(currentUser, password);
+            } else {
+              throw linkError;
             }
           }
           
-          // 更新 Firebase Auth 的 displayName
+          // 更新 displayName
           await updateProfile(currentUser, { displayName });
           
-          return { success: true, merged: true, message: '已将您的 Google 账户与现有电话号码账户合并' };
-        } catch (mergeError) {
-          console.error('账户合并失败:', mergeError);
-          return { success: false, error: new Error('账户合并失败') } as { success: false; error: Error }
+          return { success: true };
+        } catch (error) {
+          console.error('数据迁移失败:', error);
+          return { success: false, error: new Error('数据迁移失败') } as { success: false; error: Error }
         }
       } else {
-        // 1.b.2.2 该电话号码的用户数据已存在电邮 → 提示电话号码已被使用
+        // 该电话号码的用户数据已存在电邮 → 提示电话号码已被使用
         return { success: false, error: new Error('该手机号已被其他用户使用') } as { success: false; error: Error }
       }
     }
@@ -587,15 +561,9 @@ export const completeGoogleUserProfile = async (
     // 1. 更新 Firestore 用户文档
     const userRef = doc(db, 'users', uid);
     
-    // 获取当前用户的 email（确保保留）
-    const currentUser = auth.currentUser;
-    if (!currentUser || !currentUser.email) {
-      return { success: false, error: new Error('无法获取用户邮箱信息') } as { success: false; error: Error }
-    }
-    
     // ✅ 准备更新数据
     const updateData: any = {
-      email: currentUser.email, // 确保 email 字段存在
+      email: currentUserEmail, // 使用之前获取的 email
       displayName,
       profile: {
         phone: normalizedPhone, // 使用标准化后的手机号
