@@ -35,6 +35,7 @@ import Login from './views/auth/Login'
 import Register from './views/auth/Register'
 import CompleteProfile from './views/auth/CompleteProfile'
 import { ActionHandler } from './views/auth/ActionHandler'
+import LinkGoogle from './views/auth/LinkGoogle'
 
 const { Content } = Layout
 
@@ -174,6 +175,7 @@ const AppContent: React.FC = () => {
                   <Route path="/register" element={<Register />} />
                   <Route path="/auth/complete-profile" element={<CompleteProfile />} />
                   <Route path="/auth/action" element={<ActionHandler />} />
+                  <Route path="/auth/link-google" element={<LinkGoogle />} />
                   
                   {/* 前端路由 */}
                   <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />

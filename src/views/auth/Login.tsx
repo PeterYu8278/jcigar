@@ -3,7 +3,8 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Form, Input, Button, Card, Typography, Space, message, Divider, Spin, Modal } from 'antd'
 import { UserOutlined, LockOutlined, GoogleOutlined, LoadingOutlined, PhoneOutlined } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { loginWithEmailOrPhone, loginWithGoogle, handleGoogleRedirectResult, sendPasswordResetByPhone } from '../../services/firebase/auth'
+import { loginWithEmailOrPhone, sendPasswordResetByPhone } from '../../services/firebase/auth'
+import { initiateGoogleLogin, handleGoogleRedirectResult as handleGoogleRedirect, getStoredGoogleData } from '../../services/firebase/googleAuth'
 import { useAuthStore } from '../../store/modules/auth'
 import { useTranslation } from 'react-i18next'
 import { identifyInputType, normalizePhoneNumber, isValidEmail } from '../../utils/phoneNormalization'
@@ -93,27 +94,21 @@ const Login: React.FC = () => {
       hasCheckedRedirect.current = true;
       setLoading(true)
       try {
-        const result = await handleGoogleRedirectResult()
+        const result = await handleGoogleRedirect()
         
-        if (result.success) {
-          if ((result as any).needsProfile) {
-            message.info('请完善您的账户信息')
-            navigate('/auth/complete-profile', { replace: true })
-          } else {
-            message.success(t('auth.loginSuccess'))
-            navigate(from, { replace: true })
-          }
-        } else if (!result.noResult) {
-          message.error(result.error?.message || t('auth.loginFailed'))
+        if (result.success && result.googleData) {
+          message.info('请输入您的手机号以绑定 Google 账户')
+          navigate('/auth/link-google', { replace: true })
         }
       } catch (error) {
+        // 忽略错误（无重定向结果是正常的）
       } finally {
         setLoading(false)
       }
     }
     
     checkRedirectResult()
-  }, [navigate, from, t])
+  }, [navigate, t])
 
 
   const onFinish = async (values: { email: string; password: string }) => {
@@ -139,27 +134,24 @@ const Login: React.FC = () => {
     setLoading(true)
     setLoginError('') // 清除之前的错误
     try {
-      const res = await loginWithGoogle()
+      const res = await initiateGoogleLogin()
       
       if (res.success) {
         // 检查是否正在重定向
-        if ((res as any).isRedirecting) {
+        if (res.isRedirecting) {
           // 重定向中，页面即将刷新，保持 loading 状态
           message.loading('正在跳转到 Google 登录...', 0)
           return
         }
         
-        // 检查是否需要完善信息
-        if ((res as any).needsProfile) {
-          message.info('请完善您的账户信息')
-          navigate('/auth/complete-profile', { replace: true })
-        } else {
-          message.success(t('auth.loginSuccess'))
-          navigate(from, { replace: true })
+        // Google 登录成功，跳转到绑定手机号页面
+        if (res.googleData) {
+          message.info('请输入您的手机号以绑定 Google 账户')
+          navigate('/auth/link-google', { replace: true })
         }
       } else {
         // 使用 placeholder 显示错误
-        setLoginError('登入失败：' + ((res as any).error?.message || t('auth.loginFailed')))
+        setLoginError('登入失败：' + (res.error?.message || t('auth.loginFailed')))
         setLoading(false)
       }
     } catch (error) {
