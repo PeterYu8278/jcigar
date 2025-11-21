@@ -11,7 +11,7 @@ import {
   getRedirectResult
 } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { doc, setDoc, getDoc, collection, getDocs, query, where, limit, updateDoc, arrayUnion, increment } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, getDocs, query, where, limit, updateDoc, arrayUnion, increment, deleteDoc } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
 import type { User } from '../../types';
 import { normalizePhoneNumber, identifyInputType } from '../../utils/phoneNormalization';
@@ -232,22 +232,62 @@ export const loginWithGoogle = async () => {
       }
     }
     
-    const user = credential.user;
+    const googleUser = credential.user;
+    const googleEmail = googleUser.email;
 
-    // 检查 Firestore 中是否已存在用户文档
-    const ref = doc(db, 'users', user.uid);
-    const snap = await getDoc(ref);
+    if (!googleEmail) {
+      return { success: false, error: new Error('无法获取Google邮箱信息') } as { success: false; error: Error };
+    }
+
+    // 1. 检查该电邮地址是否已存在系统中（可能是通过电话号码注册的用户）
+    const emailQuery = query(collection(db, 'users'), where('email', '==', googleEmail), limit(1));
+    const emailSnap = await getDocs(emailQuery);
     
-    if (!snap.exists()) {
-      // 新用户：创建临时用户文档（仅包含邮箱和基础信息）
-      // ✅ 生成会员编号（基于 userId hash）
-      const memberId = await generateMemberId(user.uid);
+    if (!emailSnap.empty) {
+      // 1.a. 电邮存在于系统中 - 获取现有用户数据
+      const existingUserDoc = emailSnap.docs[0];
+      const existingUserId = existingUserDoc.id;
+      const existingUserData = existingUserDoc.data() as User;
+      
+      // 如果现有用户的UID与Google用户的UID不同，需要删除Google创建的用户并使用现有用户登录
+      if (existingUserId !== googleUser.uid) {
+        // 删除Google自动创建的Firebase Auth用户（如果存在）
+        try {
+          await googleUser.delete();
+        } catch (deleteError) {
+          console.warn('无法删除临时Google用户:', deleteError);
+        }
+        
+        // 使用现有用户的凭证登录
+        // 注意：这里我们不能直接切换UID，需要用户使用密码登录
+        return { 
+          success: false, 
+          error: new Error('该邮箱已存在，请使用邮箱和密码登录'),
+          existingEmail: googleEmail
+        } as any;
+      }
+      
+      // UID相同，检查资料完整性
+      // 1.a.1 和 1.a.2: 检查用户资料是否完整
+      const isProfileComplete = existingUserData.displayName && existingUserData.email && existingUserData.profile?.phone;
+      
+      if (isProfileComplete) {
+        // 1.a.1 资料完整 - 直接登录
+        return { success: true, user: googleUser, needsProfile: false };
+      } else {
+        // 1.a.2 资料不完整 - 跳转到完善资料页面
+        return { success: true, user: googleUser, needsProfile: true };
+      }
+    } else {
+      // 1.b. 电邮不存在于系统中 - 创建新用户
+      // 1.b.1 创建新用户文档并跳转到完善资料页面
+      const memberId = await generateMemberId(googleUser.uid);
       
       const tempUserData: Omit<User, 'id'> = {
-        email: user.email || '',
-        displayName: user.displayName || '未命名用户',
+        email: googleEmail,
+        displayName: googleUser.displayName || '未命名用户',
         role: 'member',
-        memberId,  // ✅ 添加会员编号
+        memberId,
         profile: {
           // phone 字段省略，待用户完善信息后添加
           preferences: { language: 'zh', notifications: true },
@@ -259,7 +299,6 @@ export const loginWithGoogle = async () => {
           points: 50,  // 初始积分
           referralPoints: 0,
         },
-        // ✅ 初始化引荐信息（Google 登录时没有引荐人）
         referral: {
           referredBy: null as string | null,
           referredByUserId: null as string | null,
@@ -271,19 +310,15 @@ export const loginWithGoogle = async () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      await setDoc(ref, tempUserData);
+      
+      const userRef = doc(db, 'users', googleUser.uid);
+      await setDoc(userRef, tempUserData);
       
       // 返回特殊标识：需要完善信息
-      return { success: true, user, needsProfile: true };
+      return { success: true, user: googleUser, needsProfile: true };
     }
-
-    // 已存在用户：检查是否已完善信息（需要：名字、电邮、手机号）
-    const userData = snap.data() as User;
-    const needsProfile = !userData.displayName || !userData.email || !userData.profile?.phone;
-    
-    return { success: true, user, needsProfile };
   } catch (error) {
-    const err = error as any
+    const err = error as any;
     return { success: false, error: err as Error } as { success: false; error: Error };
   }
 };
@@ -308,46 +343,49 @@ export const handleGoogleRedirectResult = async () => {
       const currentUser = auth.currentUser;
       
       if (hasPending && currentUser) {
-        const user = currentUser;
-        const userEmail = user.email;
+        const googleUser = currentUser;
+        const googleEmail = googleUser.email;
         
-        if (!userEmail) {
-          return { success: false, error: new Error('无法获取用户邮箱') } as { success: false; error: Error };
+        if (!googleEmail) {
+          return { success: false, error: new Error('无法获取Google邮箱信息') } as { success: false; error: Error };
         }
-        
-        // 1. 先检查该电邮是否已存在于系统中（通过 email 字段查询）
-        const emailQuery = query(collection(db, 'users'), where('email', '==', userEmail), limit(1));
+
+        // 检查该电邮地址是否已存在系统中
+        const emailQuery = query(collection(db, 'users'), where('email', '==', googleEmail), limit(1));
         const emailSnap = await getDocs(emailQuery);
         
         if (!emailSnap.empty) {
-          // 1.a 电邮已存在系统中
+          // 电邮存在于系统中
           const existingUserDoc = emailSnap.docs[0];
           const existingUserId = existingUserDoc.id;
           const existingUserData = existingUserDoc.data() as User;
           
-          // 1.a.1 检查资料是否完整
-          const needsProfile = !existingUserData.displayName || !existingUserData.email || !existingUserData.profile?.phone;
-          
-          // 如果当前 Firebase Auth UID 与数据库中的 UID 不一致，需要同步
-          if (user.uid !== existingUserId) {
-            // 这种情况不应该发生，但如果发生了，返回错误
-            return { success: false, error: new Error('账户状态异常，请联系管理员') } as { success: false; error: Error };
+          if (existingUserId !== googleUser.uid) {
+            // UID不同，需要使用密码登录
+            try {
+              await googleUser.delete();
+            } catch (deleteError) {
+              console.warn('无法删除临时Google用户:', deleteError);
+            }
+            
+            return { 
+              success: false, 
+              error: new Error('该邮箱已存在，请使用邮箱和密码登录'),
+              existingEmail: googleEmail
+            } as any;
           }
           
-          return { success: true, user, needsProfile };
-        }
-        
-        // 1.b 电邮不存在系统中 → 创建新用户
-        const ref = doc(db, 'users', user.uid);
-        const snap = await getDoc(ref);
-        
-        if (!snap.exists()) {
-          // 生成会员编号
-          const memberId = await generateMemberId(user.uid);
+          // UID相同，检查资料完整性
+          const isProfileComplete = existingUserData.displayName && existingUserData.email && existingUserData.profile?.phone;
+          
+          return { success: true, user: googleUser, needsProfile: !isProfileComplete };
+        } else {
+          // 电邮不存在，创建新用户
+          const memberId = await generateMemberId(googleUser.uid);
           
           const tempUserData: Omit<User, 'id'> = {
-            email: userEmail,
-            displayName: user.displayName || '未命名用户',
+            email: googleEmail,
+            displayName: googleUser.displayName || '未命名用户',
             role: 'member',
             memberId,
             profile: {
@@ -371,59 +409,60 @@ export const handleGoogleRedirectResult = async () => {
             createdAt: new Date(),
             updatedAt: new Date(),
           };
-          await setDoc(ref, tempUserData);
-          return { success: true, user, needsProfile: true };
+          
+          const userRef = doc(db, 'users', googleUser.uid);
+          await setDoc(userRef, tempUserData);
+          
+          return { success: true, user: googleUser, needsProfile: true };
         }
-        
-        // 已存在用户：检查是否已完善信息
-        const userData = snap.data() as User;
-        const needsProfile = !userData.displayName || !userData.email || !userData.profile?.phone;
-        return { success: true, user, needsProfile };
       }
       
       return { success: false, noResult: true } as any;
     }
     
-    const user = result.user;
-    const userEmail = user.email;
-    
-    if (!userEmail) {
-      return { success: false, error: new Error('无法获取用户邮箱') } as { success: false; error: Error };
+    const googleUser = result.user;
+    const googleEmail = googleUser.email;
+
+    if (!googleEmail) {
+      return { success: false, error: new Error('无法获取Google邮箱信息') } as { success: false; error: Error };
     }
 
-    // 1. 先检查该电邮是否已存在于系统中（通过 email 字段查询）
-    const emailQuery = query(collection(db, 'users'), where('email', '==', userEmail), limit(1));
+    // 检查该电邮地址是否已存在系统中
+    const emailQuery = query(collection(db, 'users'), where('email', '==', googleEmail), limit(1));
     const emailSnap = await getDocs(emailQuery);
     
     if (!emailSnap.empty) {
-      // 1.a 电邮已存在系统中
+      // 电邮存在于系统中
       const existingUserDoc = emailSnap.docs[0];
       const existingUserId = existingUserDoc.id;
       const existingUserData = existingUserDoc.data() as User;
       
-      // 1.a.1 检查资料是否完整
-      const needsProfile = !existingUserData.displayName || !existingUserData.email || !existingUserData.profile?.phone;
-      
-      // 如果当前 Firebase Auth UID 与数据库中的 UID 不一致，需要同步
-      if (user.uid !== existingUserId) {
-        // 这种情况不应该发生，但如果发生了，返回错误
-        return { success: false, error: new Error('账户状态异常，请联系管理员') } as { success: false; error: Error };
+      if (existingUserId !== googleUser.uid) {
+        // UID不同，需要使用密码登录
+        try {
+          await googleUser.delete();
+        } catch (deleteError) {
+          console.warn('无法删除临时Google用户:', deleteError);
+        }
+        
+        return { 
+          success: false, 
+          error: new Error('该邮箱已存在，请使用邮箱和密码登录'),
+          existingEmail: googleEmail
+        } as any;
       }
       
-      return { success: true, user, needsProfile };
-    }
-    
-    // 1.b 电邮不存在系统中 → 创建新用户
-    const ref = doc(db, 'users', user.uid);
-    const snap = await getDoc(ref);
-    
-    if (!snap.exists()) {
-      // 生成会员编号
-      const memberId = await generateMemberId(user.uid);
+      // UID相同，检查资料完整性
+      const isProfileComplete = existingUserData.displayName && existingUserData.email && existingUserData.profile?.phone;
+      
+      return { success: true, user: googleUser, needsProfile: !isProfileComplete };
+    } else {
+      // 电邮不存在，创建新用户
+      const memberId = await generateMemberId(googleUser.uid);
       
       const tempUserData: Omit<User, 'id'> = {
-        email: userEmail,
-        displayName: user.displayName || '未命名用户',
+        email: googleEmail,
+        displayName: googleUser.displayName || '未命名用户',
         role: 'member',
         memberId,
         profile: {
@@ -447,16 +486,12 @@ export const handleGoogleRedirectResult = async () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      await setDoc(ref, tempUserData);
       
-      return { success: true, user, needsProfile: true };
+      const userRef = doc(db, 'users', googleUser.uid);
+      await setDoc(userRef, tempUserData);
+      
+      return { success: true, user: googleUser, needsProfile: true };
     }
-
-    // 已存在用户：检查是否已完善信息
-    const userData = snap.data() as User;
-    const needsProfile = !userData.displayName || !userData.email || !userData.profile?.phone;
-    
-    return { success: true, user, needsProfile };
   } catch (error) {
     const err = error as any;
     return { success: false, error: err as Error } as { success: false; error: Error };
@@ -483,71 +518,135 @@ export const completeGoogleUserProfile = async (
       return { success: false, error: new Error('手机号格式无效') } as { success: false; error: Error }
     }
     
-    // 检查手机号是否已被其他用户使用
-    const phoneQuery = query(collection(db, 'users'), where('profile.phone', '==', normalizedPhone), limit(1))
-    const phoneSnap = await getDocs(phoneQuery)
-    
-    // 获取当前用户的 email
+    // 获取当前用户的 email（确保保留）
     const currentUser = auth.currentUser;
     if (!currentUser || !currentUser.email) {
       return { success: false, error: new Error('无法获取用户邮箱信息') } as { success: false; error: Error }
     }
-    const currentUserEmail = currentUser.email;
+    const googleEmail = currentUser.email;
     
-    if (!phoneSnap.empty && phoneSnap.docs[0].id !== uid) {
-      // 电话号码已被其他用户使用
-      const existingPhoneUserDoc = phoneSnap.docs[0];
-      const existingPhoneUserId = existingPhoneUserDoc.id;
-      const existingPhoneUserData = existingPhoneUserDoc.data() as User;
+    // 1.b.2 检查输入的电话号码是否存在系统数据中
+    const phoneQuery = query(collection(db, 'users'), where('profile.phone', '==', normalizedPhone), limit(1))
+    const phoneSnap = await getDocs(phoneQuery)
+    
+    if (!phoneSnap.empty) {
+      const existingPhoneUser = phoneSnap.docs[0];
+      const existingPhoneUserId = existingPhoneUser.id;
+      const existingPhoneUserData = existingPhoneUser.data() as User;
       
-      if (!existingPhoneUserData.email) {
-        // 该电话号码的用户数据不存在电邮 → 将现有用户数据迁移到当前 Google UID
-        try {
-          // 将现有用户的数据复制到当前 Google UID 文档，并添加电邮
-          const migratedUserData = {
-            ...existingPhoneUserData,
-            email: currentUserEmail,
-            displayName: displayName,
-            updatedAt: new Date()
-          };
+      // 如果不是当前用户的电话号码
+      if (existingPhoneUserId !== uid) {
+        // 1.b.2.1 检查该电话号码的用户是否有电邮
+        if (!existingPhoneUserData.email) {
+          // 该电话号码的用户没有电邮，将Google邮箱写入该用户数据
+          // 并删除Google登录创建的临时用户，使用该旧用户
           
-          // 写入当前 Google UID 文档
-          await setDoc(doc(db, 'users', uid), migratedUserData);
-          
-          // 标记旧文档为已迁移（保留以便追踪）
-          await updateDoc(doc(db, 'users', existingPhoneUserId), {
-            migratedTo: uid,
-            status: 'migrated' as any,
-            updatedAt: new Date()
-          });
-          
-          // 设置密码
-          const { updatePassword, EmailAuthProvider, linkWithCredential } = await import('firebase/auth');
           try {
-            const credential = EmailAuthProvider.credential(currentUserEmail, password);
-            await linkWithCredential(currentUser, credential);
-          } catch (linkError: any) {
-            if (linkError.code === 'auth/provider-already-linked') {
-              await updatePassword(currentUser, password);
-            } else {
-              throw linkError;
+            // 更新旧用户数据，添加电邮和displayName
+            await updateDoc(doc(db, 'users', existingPhoneUserId), {
+              email: googleEmail,
+              displayName: displayName,
+              updatedAt: new Date()
+            });
+            
+            // 为旧用户设置密码
+            // 注意：这里需要先切换到旧用户的Auth账号
+            // 但Firebase Auth不允许直接切换UID，所以需要不同的策略
+            
+            // 方案：删除Google创建的临时用户，要求用户使用旧账号+新密码登录
+            // 但这会导致用户需要重新登录，体验不好
+            
+            // 更好的方案：将临时Google用户的UID和旧用户的数据合并
+            // 将旧用户的数据（包括手机号）复制到Google用户的文档中
+            
+            // 获取旧用户的完整数据
+            const oldUserData = existingPhoneUserData;
+            
+            // 更新当前Google用户的文档（uid），合并旧用户的数据
+            const mergedData: any = {
+              ...oldUserData,
+              email: googleEmail,
+              displayName: displayName,
+              profile: {
+                ...oldUserData.profile,
+                phone: normalizedPhone
+              },
+              updatedAt: new Date()
+            };
+            
+            // 如果有引荐码，添加引荐信息
+            if (referralCode) {
+              const referralResult = await getUserByMemberId(referralCode.trim());
+              if (!referralResult.success) {
+                return { success: false, error: new Error(referralResult.error || '引荐码无效') } as { success: false; error: Error };
+              }
+              const referrer = referralResult.user;
+              
+              mergedData.referral = {
+                referredBy: referrer.memberId,
+                referredByUserId: referrer.id,
+                referralDate: new Date(),
+                referrals: oldUserData.referral?.referrals || [],
+                totalReferred: oldUserData.referral?.totalReferred || 0,
+                activeReferrals: oldUserData.referral?.activeReferrals || 0,
+              };
+              mergedData.membership = {
+                ...oldUserData.membership,
+                points: (oldUserData.membership?.points || 0) + 100,  // 被引荐用户额外获得100积分
+                referralPoints: oldUserData.membership?.referralPoints || 0,
+              };
+              
+              // 更新引荐人的数据
+              try {
+                await updateDoc(doc(db, 'users', referrer.id), {
+                  'referral.referrals': arrayUnion(uid),
+                  'referral.totalReferred': increment(1),
+                  'membership.points': increment(200),
+                  'membership.referralPoints': increment(200),
+                  updatedAt: new Date()
+                });
+              } catch (error) {
+                console.warn('更新引荐人数据失败:', error);
+              }
             }
+            
+            // 将合并后的数据写入当前Google用户的文档
+            await setDoc(doc(db, 'users', uid), mergedData, { merge: true });
+            
+            // 删除旧用户文档（因为数据已经合并到Google用户）
+            await deleteDoc(doc(db, 'users', existingPhoneUserId));
+            
+            // 为当前Google用户设置密码
+            const { updatePassword, EmailAuthProvider, linkWithCredential } = await import('firebase/auth');
+            
+            if (currentUser.uid === uid) {
+              try {
+                const credential = EmailAuthProvider.credential(googleEmail, password);
+                await linkWithCredential(currentUser, credential);
+              } catch (linkError: any) {
+                if (linkError.code === 'auth/provider-already-linked') {
+                  await updatePassword(currentUser, password);
+                } else {
+                  throw linkError;
+                }
+              }
+              
+              await updateProfile(currentUser, { displayName });
+            }
+            
+            return { success: true };
+          } catch (error) {
+            console.error('合并用户数据失败:', error);
+            return { success: false, error: new Error('合并用户数据失败') } as { success: false; error: Error };
           }
-          
-          // 更新 displayName
-          await updateProfile(currentUser, { displayName });
-          
-          return { success: true };
-        } catch (error) {
-          console.error('数据迁移失败:', error);
-          return { success: false, error: new Error('数据迁移失败') } as { success: false; error: Error }
+        } else {
+          // 1.b.2.2 该电话号码的用户已有电邮，提示错误
+          return { success: false, error: new Error('该手机号已被其他用户使用') } as { success: false; error: Error };
         }
-      } else {
-        // 该电话号码的用户数据已存在电邮 → 提示电话号码已被使用
-        return { success: false, error: new Error('该手机号已被其他用户使用') } as { success: false; error: Error }
       }
     }
     
+    // 电话号码不存在或是当前用户自己的，正常更新
     // ✅ 验证引荐码（如果提供）
     let referrer: any = null;
     if (referralCode) {
@@ -563,7 +662,7 @@ export const completeGoogleUserProfile = async (
     
     // ✅ 准备更新数据
     const updateData: any = {
-      email: currentUserEmail, // 使用之前获取的 email
+      email: googleEmail, // 确保 email 字段存在
       displayName,
       profile: {
         phone: normalizedPhone, // 使用标准化后的手机号
