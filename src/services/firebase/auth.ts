@@ -430,11 +430,29 @@ export const completeGoogleUserProfile = async (
       return { success: false, error: new Error('手机号格式无效') } as { success: false; error: Error }
     }
     
-    // 检查手机号是否已被其他用户使用
-    const phoneQuery = query(collection(db, 'users'), where('profile.phone', '==', normalizedPhone), limit(1))
-    const phoneSnap = await getDocs(phoneQuery)
-    if (!phoneSnap.empty && phoneSnap.docs[0].id !== uid) {
-      return { success: false, error: new Error('该手机号已被其他用户使用') } as { success: false; error: Error }
+    // 检查手机号是否已被其他用户使用（使用智能账户合并逻辑）
+    const { checkPhoneBindingEligibility, mergeUserAccounts } = await import('./accountMerge')
+    const bindingCheck = await checkPhoneBindingEligibility(normalizedPhone, uid)
+    
+    if (!bindingCheck.canBind) {
+      return { success: false, error: new Error(bindingCheck.reason || '该手机号已被其他用户使用') } as { success: false; error: Error }
+    }
+    
+    // 如果需要合并账户，先执行合并
+    let accountMerged = false
+    if (bindingCheck.needsMerge && bindingCheck.existingUser) {
+      console.log('[completeGoogleUserProfile] 需要合并账户:', {
+        googleUserId: uid,
+        phoneOnlyUserId: bindingCheck.existingUser.id
+      })
+      
+      const mergeResult = await mergeUserAccounts(uid, bindingCheck.existingUser.id)
+      if (!mergeResult.success) {
+        return { success: false, error: new Error(mergeResult.error || '账户合并失败') } as { success: false; error: Error }
+      }
+      
+      accountMerged = true
+      console.log('[completeGoogleUserProfile] 账户合并成功')
     }
     
     // ✅ 验证引荐码（如果提供）
@@ -456,34 +474,38 @@ export const completeGoogleUserProfile = async (
       return { success: false, error: new Error('无法获取用户邮箱信息') } as { success: false; error: Error }
     }
     
-    // ✅ 准备更新数据
+    // ✅ 准备更新数据（如果账户已合并，手机号已在合并时设置）
     const updateData: any = {
       email: currentUser.email, // 确保 email 字段存在
       displayName,
-      profile: {
-        phone: normalizedPhone, // 使用标准化后的手机号
-        preferences: { language: 'zh', notifications: true },
-      },
       updatedAt: new Date(),
     };
     
-    // ✅ 如果有引荐人，更新引荐信息和积分
-    if (referrer) {
-      updateData.referral = {
-        referredBy: referrer.memberId,
-        referredByUserId: referrer.id,
-        referralDate: new Date(),
-        referrals: [],
-        totalReferred: 0,
-        activeReferrals: 0,
+    // 如果没有合并账户，需要设置手机号
+    if (!accountMerged) {
+      updateData.profile = {
+        phone: normalizedPhone, // 使用标准化后的手机号
+        preferences: { language: 'zh', notifications: true },
       };
-      updateData.membership = {
-        level: 'bronze',
-        joinDate: new Date(),
-        lastActive: new Date(),
-        points: 100,  // 被引荐用户获得100积分
-        referralPoints: 0,
-      };
+      
+      // ✅ 如果有引荐人，更新引荐信息和积分（仅在未合并时）
+      if (referrer) {
+        updateData.referral = {
+          referredBy: referrer.memberId,
+          referredByUserId: referrer.id,
+          referralDate: new Date(),
+          referrals: [],
+          totalReferred: 0,
+          activeReferrals: 0,
+        };
+        updateData.membership = {
+          level: 'bronze',
+          joinDate: new Date(),
+          lastActive: new Date(),
+          points: 100,  // 被引荐用户获得100积分
+          referralPoints: 0,
+        };
+      }
     }
     
     await setDoc(userRef, updateData, { merge: true });
