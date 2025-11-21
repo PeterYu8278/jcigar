@@ -31,6 +31,16 @@ export const registerUser = async (
       return { success: false, error: new Error('所有字段都是必需的'), code: 'missing-required-fields' } as { success: false; error: Error; code?: string }
     }
     
+    // 标准化邮箱（转小写并去除空格）
+    const normalizedEmail = email.toLowerCase().trim()
+    
+    // ✅ 检查邮箱是否已在 Firestore 中使用
+    const emailQuery = query(collection(db, 'users'), where('email', '==', normalizedEmail), limit(1))
+    const emailSnap = await getDocs(emailQuery)
+    if (!emailSnap.empty) {
+      return { success: false, error: new Error('该邮箱已被注册'), code: 'email-already-in-use' } as { success: false; error: Error; code?: string }
+    }
+    
     // 标准化手机号为 E.164 格式
     const normalizedPhone = normalizePhoneNumber(phone)
     if (!normalizedPhone) {
@@ -54,7 +64,7 @@ export const registerUser = async (
       referrer = referralResult.user;
     }
     
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
     const user = userCredential.user;
     
     // 更新用户显示名称
@@ -65,7 +75,7 @@ export const registerUser = async (
     
     // 在Firestore中创建用户文档
     const userData: Omit<User, 'id'> = {
-      email,  // ✅ 邮箱必填
+      email: normalizedEmail,  // ✅ 邮箱必填（使用标准化格式）
       displayName,
       role: 'member',
       memberId,  // ✅ 会员编号（用作引荐码）

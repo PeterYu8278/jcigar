@@ -287,8 +287,43 @@ const Register: React.FC = () => {
               name="email"
               rules={[
                 { required: true, message: t('auth.emailRequired') },
-                { type: 'email', message: t('auth.emailInvalid') }
+                { type: 'email', message: t('auth.emailInvalid') },
+                {
+                  validator: async (_, value) => {
+                    if (!value) return Promise.resolve()
+                    
+                    // ✅ 先验证格式，格式无效则跳过唯一性检查
+                    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+                    if (!emailPattern.test(value)) {
+                      // 格式无效，不检查唯一性（避免重复错误提示）
+                      return Promise.resolve()
+                    }
+                    
+                    // ✅ 格式有效，检查邮箱唯一性
+                    const { collection, query, where, getDocs, limit } = await import('firebase/firestore')
+                    const { db } = await import('../../config/firebase')
+                    
+                    try {
+                      const emailQuery = query(
+                        collection(db, 'users'), 
+                        where('email', '==', value.toLowerCase().trim()),
+                        limit(1)
+                      )
+                      const emailSnap = await getDocs(emailQuery)
+                      
+                      if (!emailSnap.empty) {
+                        return Promise.reject(new Error('该邮箱已被其他用户使用'))
+                      }
+                    } catch (error) {
+                      // 如果查询失败，允许通过（不阻止用户提交）
+                    }
+                    
+                    return Promise.resolve()
+                  }
+                }
               ]}
+              validateTrigger={['onBlur', 'onChange']}
+              validateDebounce={500}
               style={{ marginBottom: '8px' }}
             >
               <Input
