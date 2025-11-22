@@ -12,6 +12,11 @@ admin.initializeApp();
  * 发送推送通知（HTTP Callable 函数）
  * 前端可以调用此函数发送通知
  * 
+ * Spark 计划优化：
+ * - 内存：256MB（默认，足够使用）
+ * - 超时：60秒（默认，足够发送通知）
+ * - 并发：适合中小型应用
+ * 
  * @example
  * ```typescript
  * const sendNotification = httpsCallable(functions, 'sendNotification');
@@ -23,8 +28,12 @@ admin.initializeApp();
  * });
  * ```
  */
-export const sendNotification = functions.https.onCall(
-    async (data, context) => {
+export const sendNotification = functions
+    .runWith({
+      timeoutSeconds: 60, // Spark 计划最大 60 秒
+      memory: "256MB", // Spark 计划默认内存
+    })
+    .https.onCall(async (data, context) => {
       // 验证用户已登录
       if (!context.auth) {
         throw new functions.https.HttpsError(
@@ -164,9 +173,18 @@ async function markTokenAsInactive(token: string): Promise<void> {
 /**
  * 充值验证后自动发送通知（Firestore 触发器）
  * 监听 reloadRecords 集合的变化，当状态从 pending 变为 completed 时发送通知
+ * 
+ * Spark 计划优化：
+ * - 超时：60秒（默认，足够发送通知）
+ * - 内存：256MB（默认）
+ * - 触发限制：Spark 计划支持 Firestore 触发器
  */
-export const onReloadVerified = functions.firestore
-    .document("reloadRecords/{recordId}")
+export const onReloadVerified = functions
+    .runWith({
+      timeoutSeconds: 60,
+      memory: "256MB",
+    })
+    .firestore.document("reloadRecords/{recordId}")
     .onUpdate(async (change, context) => {
       const newData = change.after.data();
       const oldData = change.before.data();
@@ -296,9 +314,18 @@ export const onReloadVerified = functions.firestore
  * 活动提醒（定时任务）
  * 每天检查即将开始的活动并发送提醒
  * 运行时间：每天上午 9 点（Asia/Kuala_Lumpur 时区）
+ * 
+ * Spark 计划优化：
+ * - 超时：540秒（9分钟，Spark 计划最大超时）
+ * - 内存：256MB（默认）
+ * - 批量处理：限制每批处理的用户数量，避免超时
  */
-export const sendEventReminders = functions.pubsub
-    .schedule("0 9 * * *") // 每天上午 9 点
+export const sendEventReminders = functions
+    .runWith({
+      timeoutSeconds: 540, // Spark 计划最大超时（9分钟）
+      memory: "256MB",
+    })
+    .pubsub.schedule("0 9 * * *") // 每天上午 9 点
     .timeZone("Asia/Kuala_Lumpur")
     .onRun(async () => {
       console.log("[sendEventReminders] Starting event reminder check");
@@ -347,14 +374,24 @@ export const sendEventReminders = functions.pubsub
               `to ${participants.length} participants`
           );
 
-          // 批量获取用户信息（限制并发）
-          const userPromises = participants.slice(0, 100).map((userId: string) =>
-            admin.firestore().doc(`users/${userId}`).get()
-          );
+          // 批量获取用户信息（限制并发，Spark 计划优化）
+          // 每批处理 50 个用户，避免超时和内存问题
+          const BATCH_SIZE = 50;
+          const participantBatches = [];
+          
+          for (let i = 0; i < participants.length; i += BATCH_SIZE) {
+            participantBatches.push(participants.slice(i, i + BATCH_SIZE));
+          }
 
-          const userDocs = await Promise.all(userPromises);
+          // 分批处理，避免一次性处理太多用户导致超时
+          for (const batch of participantBatches) {
+            const userPromises = batch.map((userId: string) =>
+              admin.firestore().doc(`users/${userId}`).get()
+            );
 
-          for (const userDoc of userDocs) {
+            const userDocs = await Promise.all(userPromises);
+
+            for (const userDoc of userDocs) {
             if (!userDoc.exists) continue;
 
             const userData = userDoc.data();
@@ -408,7 +445,8 @@ export const sendEventReminders = functions.pubsub
                   error
               );
             }
-          }
+            } // 结束 userDoc 循环
+          } // 结束 batch 循环
         }
 
         console.log(
