@@ -56,7 +56,7 @@ export const useNotifications = (userId?: string, userPushEnabled?: boolean): Us
   
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
-  // 初始化：检查支持和权限
+  // 初始化：检查支持和权限（不依赖 userId）
   useEffect(() => {
     const initialize = async () => {
       const supported = await isNotificationSupported();
@@ -71,51 +71,52 @@ export const useNotifications = (userId?: string, userPushEnabled?: boolean): Us
     initialize();
   }, []);
 
-  // 从传入的 userPushEnabled 值更新 isEnabled 状态
-  // 这样可以从 useAuthStore 的 user 对象中读取，避免重新查询数据库
+  // 同步 pushEnabled 状态（优先使用传入的值，或从数据库读取）
   useEffect(() => {
-    if (!isSupported) return;
-    
-    const perm = getNotificationPermission();
-    setPermission(perm);
-    
-    if (!userId) {
-      // 没有 userId，只基于浏览器权限
-      setIsEnabled(perm === 'granted');
+    if (!isSupported) {
       return;
     }
-    
+
+    const perm = getNotificationPermission();
+    setPermission(perm);
+
     // ✅ 优先使用传入的 userPushEnabled 值（来自 useAuthStore 的 user 对象）
-    // 这样可以确保状态与 store 中的 user 对象一致
+    // 这样可以确保状态与 store 中的 user 对象一致，避免重复查询数据库
     if (userPushEnabled !== undefined) {
       // userPushEnabled 明确是 boolean 值（true/false），使用它
       const newIsEnabled = userPushEnabled === true && perm === 'granted';
       setIsEnabled(newIsEnabled);
-      console.log('[useNotifications] Updated from user store:', {
+      console.log('[useNotifications] Synced pushEnabled from store:', {
         userPushEnabled,
         permission: perm,
-        isEnabled: newIsEnabled,
-        userId
+        isEnabled: newIsEnabled
       });
-    } else if (userId) {
-      // userPushEnabled 是 undefined（user 对象可能还未加载）
-      // 如果 userId 存在，说明用户已登录，但 user 对象可能还在加载中
-      // 暂时不设置状态，等待 user 对象加载完成
-      // 或者从数据库读取作为备用
+      return;
+    }
+
+    // ✅ 如果 userPushEnabled 是 undefined（user 对象可能还在加载中）
+    // 且有 userId，则从数据库读取作为备用
+    if (userId) {
       const loadFromDatabase = async () => {
         try {
           const userData = await getDocument<User>(GLOBAL_COLLECTIONS.USERS, userId);
           if (userData) {
             const pushEnabled = (userData as any)?.notifications?.pushEnabled;
-            setIsEnabled(pushEnabled === true && perm === 'granted');
-            console.log('[useNotifications] Loaded from database:', {
+            const newIsEnabled = pushEnabled === true && perm === 'granted';
+            setIsEnabled(newIsEnabled);
+            console.log('[useNotifications] Synced pushEnabled from database:', {
               pushEnabled,
               permission: perm,
-              isEnabled: pushEnabled === true && perm === 'granted'
+              isEnabled: newIsEnabled
             });
+          } else {
+            // 用户数据不存在，默认基于浏览器权限
+            setIsEnabled(perm === 'granted');
           }
         } catch (error) {
-          console.error('[useNotifications] Error loading from database:', error);
+          console.error('[useNotifications] Error loading user pushEnabled:', error);
+          // 读取失败时，默认基于浏览器权限
+          setIsEnabled(perm === 'granted');
         }
       };
       loadFromDatabase();
