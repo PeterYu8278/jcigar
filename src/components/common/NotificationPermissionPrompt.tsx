@@ -3,7 +3,7 @@
  * 友好地引导用户启用推送通知
  */
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal, Button, Space, Typography } from 'antd';
 import { BellOutlined, CloseOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';

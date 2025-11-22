@@ -3,7 +3,7 @@
  * 用于个人中心页面，管理推送通知偏好
  */
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Switch, List, Button, Space, Typography, Tag, Divider, message as antMessage, Modal } from 'antd';
 import { 
   BellOutlined, 
