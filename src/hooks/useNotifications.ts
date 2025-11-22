@@ -99,12 +99,19 @@ export const useNotifications = (userId?: string): UseNotificationsReturn => {
       if (payload.notification) {
         const { title, body } = payload.notification;
         const notificationType = payload.data?.type || 'system';
-        const icon = getNotificationIcon(notificationType);
+        const iconUrl = getNotificationIcon(notificationType);
+        
+        // 使用 createElement 而不是 JSX
+        const iconElement = React.createElement('img', {
+          src: iconUrl,
+          alt: 'notification',
+          style: { width: 24, height: 24 }
+        });
         
         antNotification.open({
           message: title,
           description: body,
-          icon: <img src={icon} alt="notification" style={{ width: 24, height: 24 }} />,
+          icon: iconElement,
           placement: 'topRight',
           duration: 5,
           onClick: () => {
