@@ -89,17 +89,39 @@ export const useNotifications = (userId?: string, userPushEnabled?: boolean): Us
     // 这样可以确保状态与 store 中的 user 对象一致
     if (userPushEnabled !== undefined) {
       // userPushEnabled 明确是 boolean 值（true/false），使用它
-      setIsEnabled(userPushEnabled === true && perm === 'granted');
-      console.log('[useNotifications] Initialized from user store:', {
+      const newIsEnabled = userPushEnabled === true && perm === 'granted';
+      setIsEnabled(newIsEnabled);
+      console.log('[useNotifications] Updated from user store:', {
         userPushEnabled,
         permission: perm,
-        isEnabled: userPushEnabled === true && perm === 'granted'
+        isEnabled: newIsEnabled,
+        userId
       });
+    } else if (userId) {
+      // userPushEnabled 是 undefined（user 对象可能还未加载）
+      // 如果 userId 存在，说明用户已登录，但 user 对象可能还在加载中
+      // 暂时不设置状态，等待 user 对象加载完成
+      // 或者从数据库读取作为备用
+      const loadFromDatabase = async () => {
+        try {
+          const userData = await getDocument<User>(GLOBAL_COLLECTIONS.USERS, userId);
+          if (userData) {
+            const pushEnabled = (userData as any)?.notifications?.pushEnabled;
+            setIsEnabled(pushEnabled === true && perm === 'granted');
+            console.log('[useNotifications] Loaded from database:', {
+              pushEnabled,
+              permission: perm,
+              isEnabled: pushEnabled === true && perm === 'granted'
+            });
+          }
+        } catch (error) {
+          console.error('[useNotifications] Error loading from database:', error);
+        }
+      };
+      loadFromDatabase();
     } else {
-      // userPushEnabled 是 undefined（user 对象可能还未加载），等待或使用默认值
-      // 为了保持一致性，如果浏览器权限已授予，先设置为 false（等待 user 对象加载）
-      setIsEnabled(false);
-      console.log('[useNotifications] Waiting for user data to load...');
+      // 没有 userId，只基于浏览器权限
+      setIsEnabled(perm === 'granted');
     }
   }, [userId, userPushEnabled, isSupported]);
 
