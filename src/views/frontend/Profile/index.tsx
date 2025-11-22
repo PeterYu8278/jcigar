@@ -8,6 +8,8 @@ import { useAuthStore } from '../../../store/modules/auth'
 import { useTranslation } from 'react-i18next'
 import { ProfileView } from '../../../components/common/ProfileView'
 import ImageUpload from '../../../components/common/ImageUpload'
+import { NotificationSettings } from '../../../components/common/NotificationSettings'
+import { NotificationPermissionPrompt } from '../../../components/common/NotificationPermissionPrompt'
 import { updateDocument } from '../../../services/firebase/firestore'
 import { normalizePhoneNumber } from '../../../utils/phoneNormalization'
 import type { User } from '../../../types'
@@ -161,6 +163,12 @@ const Profile: React.FC = () => {
           showEditButton={true}
           onEdit={(u) => handleEdit(u)}
         />
+
+        {/* 推送通知设置 */}
+        <NotificationSettings />
+
+        {/* 通知权限提示（首次使用时自动显示） */}
+        <NotificationPermissionPrompt userId={user?.id} autoShow={true} />
       </div>
 
       {/* 编辑资料弹窗（简化：昵称与手机 + 头像） */}

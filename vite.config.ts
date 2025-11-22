@@ -115,4 +115,6 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
   },
+  // 确保 Service Worker 文件可以被访问
+  publicDir: 'public',
 })

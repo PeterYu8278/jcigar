@@ -1036,5 +1036,57 @@
     "english": "English",
     "zhCN": "简体中文",
     "enUS": "English"
+  },
+  "notifications": {
+    "title": "Push Notifications",
+    "notSupported": "Your browser does not support push notifications",
+    "permissionGranted": "Notification permission granted",
+    "permissionDenied": "Notification permission denied",
+    "tokenFailed": "Failed to get notification token",
+    "saveFailed": "Failed to save notification token",
+    "subscribeSuccess": "Successfully subscribed to push notifications",
+    "subscribeFailed": "Failed to subscribe to push notifications",
+    "unsubscribeSuccess": "Successfully unsubscribed from push notifications",
+    "unsubscribeFailed": "Failed to unsubscribe from push notifications",
+    "preferencesUpdated": "Notification preferences updated",
+    "preferencesUpdateFailed": "Failed to update notification preferences",
+    "prompt": {
+      "title": "Enable Push Notifications",
+      "description": "Stay updated with reload status, order progress, event reminders and important messages",
+      "feature1": "💰 Instant reload notifications",
+      "feature2": "📦 Real-time order updates",
+      "feature3": "🎉 Event reminders",
+      "feature4": "⏰ Membership expiry alerts",
+      "enable": "Enable Notifications",
+      "later": "Remind Me Later",
+      "neverShow": "Don't Show Again"
+    },
+    "settings": {
+      "title": "Notification Settings",
+      "enableAll": "Enable Push Notifications",
+      "preferences": "Notification Preferences",
+      "reloadVerified": "Reload Verified",
+      "eventReminders": "Event Reminders",
+      "orderUpdates": "Order Updates",
+      "pointsUpdates": "Points Updates",
+      "membershipAlerts": "Membership Alerts",
+      "visitAlerts": "Visit Alerts",
+      "devices": "Registered Devices",
+      "deviceInfo": "{{browser}} on {{os}}",
+      "lastUsed": "Last used: {{time}}",
+      "removeDevice": "Remove Device",
+      "removeDeviceConfirm": "Are you sure you want to remove notifications for this device?",
+      "testNotification": "Send Test Notification",
+      "testNotificationSent": "Test notification sent"
+    },
+    "types": {
+      "reload_verified": "Reload Successful",
+      "event_reminder": "Event Reminder",
+      "order_status": "Order Update",
+      "membership_expiring": "Membership Expiring",
+      "points_awarded": "Points Awarded",
+      "visit_alert": "Visit Alert",
+      "system": "System Notification"
+    }
   }
 }

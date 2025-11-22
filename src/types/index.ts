@@ -51,6 +51,21 @@ export interface User {
       notifications: boolean;
     };
   };
+  
+  // 推送通知配置
+  notifications?: {
+    pushEnabled: boolean;        // 是否启用推送通知
+    preferences: {
+      reloadVerified: boolean;   // 充值验证通知
+      eventReminders: boolean;   // 活动提醒
+      orderUpdates: boolean;     // 订单更新
+      pointsUpdates: boolean;    // 积分变动
+      membershipAlerts: boolean; // 会员到期提醒
+      visitAlerts: boolean;      // 驻店相关提醒
+    };
+    deviceTokens: string[];      // FCM 设备令牌数组
+  };
+  
   createdAt: Date;
   updatedAt: Date;
 }
@@ -508,4 +523,50 @@ export interface RedemptionRecord {
   
   createdAt: Date;
   updatedAt?: Date;          // 管理员更新时的时间
+}
+
+// 推送通知相关类型
+
+// 设备令牌（FCM Token）
+export interface DeviceToken {
+  id: string;              // Firestore 文档 ID
+  userId: string;          // 用户 ID
+  token: string;           // FCM 令牌
+  deviceInfo: {
+    browser: string;       // Chrome/Safari/Firefox/Edge
+    os: string;            // Windows/macOS/Android/iOS
+    deviceType: string;    // desktop/mobile/tablet
+    userAgent?: string;    // 完整的 User Agent
+  };
+  createdAt: Date;
+  lastUsedAt: Date;
+  isActive: boolean;       // 令牌是否有效
+}
+
+// 通知历史记录
+export interface NotificationHistory {
+  id: string;
+  userId: string;
+  title: string;
+  body: string;
+  type: 'reload_verified' | 'event_reminder' | 'order_status' 
+        | 'membership_expiring' | 'points_awarded' | 'visit_alert' | 'system';
+  data?: Record<string, any>;  // 附加数据
+  sentAt: Date;
+  deliveryStatus: 'sent' | 'delivered' | 'failed';
+  clickedAt?: Date;
+  relatedId?: string;          // 相关实体ID（订单、活动等）
+}
+
+// 通知类型
+export type NotificationType = NotificationHistory['type'];
+
+// 通知偏好设置
+export interface NotificationPreferences {
+  reloadVerified: boolean;   // 充值验证通知
+  eventReminders: boolean;   // 活动提醒
+  orderUpdates: boolean;     // 订单更新
+  pointsUpdates: boolean;    // 积分变动
+  membershipAlerts: boolean; // 会员到期提醒
+  visitAlerts: boolean;      // 驻店相关提醒
 }
