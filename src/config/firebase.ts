@@ -30,4 +30,6 @@ export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 
+// 同时提供命名导出和默认导出
+export { app };
 export default app;
