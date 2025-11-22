@@ -264,12 +264,6 @@ export const useNotifications = (userId?: string): UseNotificationsReturn => {
       
       message.success(t('notifications.unsubscribeSuccess'));
       
-      // 刷新设备令牌列表
-      const devicesResult = await getUserDeviceTokens(userId);
-      if (devicesResult.success && devicesResult.tokens) {
-        setDeviceTokens(devicesResult.tokens);
-      }
-      
       // ✅ 更新数据库中的 pushEnabled 状态（即使没有令牌也要更新）
       try {
         const userRef = doc(db, GLOBAL_COLLECTIONS.USERS, userId);
@@ -285,6 +279,7 @@ export const useNotifications = (userId?: string): UseNotificationsReturn => {
         console.error('[useNotifications] Error updating pushEnabled:', error);
         // 更新失败不影响取消订阅流程
         setIsEnabled(false); // 仍然更新本地状态
+        setDeviceTokens([]);
       }
       
       return true;
