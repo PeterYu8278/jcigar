@@ -235,7 +235,6 @@ export const onReloadVerified = functions.firestore
             notification: {
               title: "💰 充值成功",
               body: `您的充值 ${requestedAmount} RM (${pointsEquivalent} 积分) 已到账`,
-              icon: "/icons/money-bag.png",
             },
             data: {
               type: "reload_verified",
@@ -383,7 +382,6 @@ export const sendEventReminders = functions.pubsub
               notification: {
                 title: "🎉 活动提醒",
                 body: `${eventData.title || "活动"} 将于明天开始`,
-                icon: "/icons/event.png",
               },
               data: {
                 type: "event_reminder",
