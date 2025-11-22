@@ -265,7 +265,7 @@ export const onReloadVerified = functions.firestore
 
           const response = await admin.messaging().sendMulticast(message);
           console.log(
-              `[onReloadVerified] Sent reload notification: ` +
+              "[onReloadVerified] Sent reload notification: " +
               `${response.successCount} successful, ${response.failureCount} failed`
           );
 
@@ -300,7 +300,7 @@ export const onReloadVerified = functions.firestore
 export const sendEventReminders = functions.pubsub
     .schedule("0 9 * * *") // 每天上午 9 点
     .timeZone("Asia/Kuala_Lumpur")
-    .onRun(async (context) => {
+    .onRun(async () => {
       console.log("[sendEventReminders] Starting event reminder check");
 
       const now = admin.firestore.Timestamp.now();
