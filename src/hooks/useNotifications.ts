@@ -21,9 +21,11 @@ import {
 } from '@/services/firebase/deviceTokens';
 import { DeviceToken, NotificationPreferences } from '@/types';
 import { playNotificationSound, getNotificationIcon, getNotificationURL } from '@/utils/notification';
-import { doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { GLOBAL_COLLECTIONS } from '@/config/globalCollections';
+import { getDocument } from '@/services/firebase/firestore';
+import type { User } from '@/types';
 
 interface UseNotificationsReturn {
   // 状态
@@ -54,7 +56,7 @@ export const useNotifications = (userId?: string): UseNotificationsReturn => {
   
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
-  // 初始化：检查支持和权限
+  // 初始化：检查支持、权限和数据库状态
   useEffect(() => {
     const initialize = async () => {
       const supported = await isNotificationSupported();
@@ -63,12 +65,33 @@ export const useNotifications = (userId?: string): UseNotificationsReturn => {
       if (supported) {
         const perm = getNotificationPermission();
         setPermission(perm);
-        setIsEnabled(perm === 'granted');
+        
+        // 如果提供了 userId，从数据库读取 pushEnabled 状态
+        if (userId) {
+          try {
+            const userData = await getDocument<User>(GLOBAL_COLLECTIONS.USERS, userId);
+            if (userData) {
+              const pushEnabled = (userData as any)?.notifications?.pushEnabled;
+              // 数据库中的 pushEnabled 值优先，但需要浏览器权限已授予
+              setIsEnabled(pushEnabled === true && perm === 'granted');
+            } else {
+              // 用户数据不存在，默认基于浏览器权限
+              setIsEnabled(perm === 'granted');
+            }
+          } catch (error) {
+            console.error('[useNotifications] Error loading user pushEnabled:', error);
+            // 读取失败时，默认基于浏览器权限
+            setIsEnabled(perm === 'granted');
+          }
+        } else {
+          // 没有 userId，只基于浏览器权限
+          setIsEnabled(perm === 'granted');
+        }
       }
     };
 
     initialize();
-  }, []);
+  }, [userId]);
 
   // 加载设备令牌
   useEffect(() => {
@@ -198,6 +221,20 @@ export const useNotifications = (userId?: string): UseNotificationsReturn => {
         setDeviceTokens(devicesResult.tokens);
       }
       
+      // ✅ 更新数据库中的 pushEnabled 状态
+      try {
+        const userRef = doc(db, GLOBAL_COLLECTIONS.USERS, userId);
+        await updateDoc(userRef, {
+          'notifications.pushEnabled': true,
+          updatedAt: Timestamp.fromDate(new Date())
+        });
+        setIsEnabled(true);
+        console.log('[useNotifications] Updated pushEnabled to true in database');
+      } catch (error) {
+        console.error('[useNotifications] Error updating pushEnabled:', error);
+        // 更新失败不影响订阅流程
+      }
+      
       return true;
     } catch (error) {
       console.error('[useNotifications] Subscribe error:', error);
@@ -210,25 +247,44 @@ export const useNotifications = (userId?: string): UseNotificationsReturn => {
 
   // 取消订阅推送通知
   const unsubscribeFromNotifications = useCallback(async (): Promise<boolean> => {
-    if (!userId || !currentToken) {
+    if (!userId) {
+      message.error('User not authenticated');
       return false;
     }
 
     setLoading(true);
     try {
-      // 删除 FCM 令牌
-      await deleteFCMToken();
+      // 如果有令牌，删除 FCM 令牌
+      if (currentToken) {
+        await deleteFCMToken();
+        // 从 Firestore 移除令牌
+        await removeDeviceToken(userId, currentToken);
+        setCurrentToken(null);
+      }
       
-      // 从 Firestore 移除令牌
-      await removeDeviceToken(userId, currentToken);
-      
-      setCurrentToken(null);
       message.success(t('notifications.unsubscribeSuccess'));
       
       // 刷新设备令牌列表
       const devicesResult = await getUserDeviceTokens(userId);
       if (devicesResult.success && devicesResult.tokens) {
         setDeviceTokens(devicesResult.tokens);
+      }
+      
+      // ✅ 更新数据库中的 pushEnabled 状态（即使没有令牌也要更新）
+      try {
+        const userRef = doc(db, GLOBAL_COLLECTIONS.USERS, userId);
+        await updateDoc(userRef, {
+          'notifications.pushEnabled': false,
+          'notifications.deviceTokens': [], // 清空设备令牌数组
+          updatedAt: Timestamp.fromDate(new Date())
+        });
+        setIsEnabled(false);
+        setDeviceTokens([]); // 清空本地状态
+        console.log('[useNotifications] Updated pushEnabled to false in database');
+      } catch (error) {
+        console.error('[useNotifications] Error updating pushEnabled:', error);
+        // 更新失败不影响取消订阅流程
+        setIsEnabled(false); // 仍然更新本地状态
       }
       
       return true;

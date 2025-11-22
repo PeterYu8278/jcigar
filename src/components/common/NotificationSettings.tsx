@@ -156,7 +156,7 @@ export const NotificationSettings: React.FC = () => {
           checked={isEnabled && permission === 'granted'}
           onChange={handleToggleNotifications}
           loading={loading}
-          disabled={permission === 'denied'}
+          disabled={permission === 'denied' || loading}
         />
       </div>
 
