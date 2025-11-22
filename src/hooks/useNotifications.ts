@@ -44,7 +44,7 @@ interface UseNotificationsReturn {
   updatePreferences: (preferences: Partial<NotificationPreferences>) => Promise<boolean>;
 }
 
-export const useNotifications = (userId?: string): UseNotificationsReturn => {
+export const useNotifications = (userId?: string, userPushEnabled?: boolean): UseNotificationsReturn => {
   const { t } = useTranslation();
   
   const [isSupported, setIsSupported] = useState(false);
@@ -56,7 +56,7 @@ export const useNotifications = (userId?: string): UseNotificationsReturn => {
   
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
-  // 初始化：检查支持、权限和数据库状态
+  // 初始化：检查支持和权限
   useEffect(() => {
     const initialize = async () => {
       const supported = await isNotificationSupported();
@@ -65,33 +65,43 @@ export const useNotifications = (userId?: string): UseNotificationsReturn => {
       if (supported) {
         const perm = getNotificationPermission();
         setPermission(perm);
-        
-        // 如果提供了 userId，从数据库读取 pushEnabled 状态
-        if (userId) {
-          try {
-            const userData = await getDocument<User>(GLOBAL_COLLECTIONS.USERS, userId);
-            if (userData) {
-              const pushEnabled = (userData as any)?.notifications?.pushEnabled;
-              // 数据库中的 pushEnabled 值优先，但需要浏览器权限已授予
-              setIsEnabled(pushEnabled === true && perm === 'granted');
-            } else {
-              // 用户数据不存在，默认基于浏览器权限
-              setIsEnabled(perm === 'granted');
-            }
-          } catch (error) {
-            console.error('[useNotifications] Error loading user pushEnabled:', error);
-            // 读取失败时，默认基于浏览器权限
-            setIsEnabled(perm === 'granted');
-          }
-        } else {
-          // 没有 userId，只基于浏览器权限
-          setIsEnabled(perm === 'granted');
-        }
       }
     };
 
     initialize();
-  }, [userId]);
+  }, []);
+
+  // 从传入的 userPushEnabled 值更新 isEnabled 状态
+  // 这样可以从 useAuthStore 的 user 对象中读取，避免重新查询数据库
+  useEffect(() => {
+    if (!isSupported) return;
+    
+    const perm = getNotificationPermission();
+    setPermission(perm);
+    
+    if (!userId) {
+      // 没有 userId，只基于浏览器权限
+      setIsEnabled(perm === 'granted');
+      return;
+    }
+    
+    // ✅ 优先使用传入的 userPushEnabled 值（来自 useAuthStore 的 user 对象）
+    // 这样可以确保状态与 store 中的 user 对象一致
+    if (userPushEnabled !== undefined) {
+      // userPushEnabled 明确是 boolean 值（true/false），使用它
+      setIsEnabled(userPushEnabled === true && perm === 'granted');
+      console.log('[useNotifications] Initialized from user store:', {
+        userPushEnabled,
+        permission: perm,
+        isEnabled: userPushEnabled === true && perm === 'granted'
+      });
+    } else {
+      // userPushEnabled 是 undefined（user 对象可能还未加载），等待或使用默认值
+      // 为了保持一致性，如果浏览器权限已授予，先设置为 false（等待 user 对象加载）
+      setIsEnabled(false);
+      console.log('[useNotifications] Waiting for user data to load...');
+    }
+  }, [userId, userPushEnabled, isSupported]);
 
   // 加载设备令牌
   useEffect(() => {
@@ -230,6 +240,25 @@ export const useNotifications = (userId?: string): UseNotificationsReturn => {
         });
         setIsEnabled(true);
         console.log('[useNotifications] Updated pushEnabled to true in database');
+        
+        // ✅ 同步更新 useAuthStore 中的用户数据
+        try {
+          const { useAuthStore } = await import('@/store/modules/auth');
+          const currentUser = useAuthStore.getState().user;
+          if (currentUser && currentUser.id === userId) {
+            useAuthStore.getState().setUser({
+              ...currentUser,
+              notifications: {
+                ...(currentUser as any)?.notifications,
+                pushEnabled: true
+              }
+            } as User);
+            console.log('[useNotifications] Synced pushEnabled to auth store');
+          }
+        } catch (storeError) {
+          console.error('[useNotifications] Error syncing to auth store:', storeError);
+          // 同步失败不影响订阅流程
+        }
       } catch (error) {
         console.error('[useNotifications] Error updating pushEnabled:', error);
         // 更新失败不影响订阅流程
@@ -275,6 +304,26 @@ export const useNotifications = (userId?: string): UseNotificationsReturn => {
         setIsEnabled(false);
         setDeviceTokens([]); // 清空本地状态
         console.log('[useNotifications] Updated pushEnabled to false in database');
+        
+        // ✅ 同步更新 useAuthStore 中的用户数据
+        try {
+          const { useAuthStore } = await import('@/store/modules/auth');
+          const currentUser = useAuthStore.getState().user;
+          if (currentUser && currentUser.id === userId) {
+            useAuthStore.getState().setUser({
+              ...currentUser,
+              notifications: {
+                ...(currentUser as any)?.notifications,
+                pushEnabled: false,
+                deviceTokens: []
+              }
+            } as User);
+            console.log('[useNotifications] Synced pushEnabled to auth store');
+          }
+        } catch (storeError) {
+          console.error('[useNotifications] Error syncing to auth store:', storeError);
+          // 同步失败不影响取消订阅流程
+        }
       } catch (error) {
         console.error('[useNotifications] Error updating pushEnabled:', error);
         // 更新失败不影响取消订阅流程

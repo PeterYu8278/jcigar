@@ -28,6 +28,9 @@ export const NotificationSettings: React.FC = () => {
   const { t } = useTranslation();
   const user = useAuthStore(state => state.user);
   
+  // ✅ 从 user store 中读取 pushEnabled 值，确保状态一致
+  const userPushEnabled = user?.notifications?.pushEnabled;
+  
   const {
     isSupported,
     permission,
@@ -37,7 +40,7 @@ export const NotificationSettings: React.FC = () => {
     subscribeToNotifications,
     unsubscribeFromNotifications,
     updatePreferences
-  } = useNotifications(user?.id);
+  } = useNotifications(user?.id, userPushEnabled);
 
   const [preferences, setPreferences] = useState<NotificationPreferences>({
     reloadVerified: true,
