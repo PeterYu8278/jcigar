@@ -1,5 +1,5 @@
 // 共享的会员头像/会员卡组件
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { CrownOutlined, CopyOutlined, ShareAltOutlined } from '@ant-design/icons'
 import { Modal, Button, Space, message } from 'antd'
 import { useQRCode } from '../../hooks/useQRCode'
@@ -35,6 +35,28 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
   // QR code 放大显示状态
   const [qrModalVisible, setQrModalVisible] = useState(false)
+  // 用于跟踪之前的 check-in 状态
+  const prevSessionIdRef = useRef<string | null | undefined>(null)
+
+  // 监听用户 check-in 状态，如果用户被 check-in 且引荐码分享模态框打开，则关闭模态框
+  useEffect(() => {
+    const currentSessionId = user?.membership?.currentVisitSessionId
+    const prevSessionId = prevSessionIdRef.current
+    
+    // 初始化：如果 ref 为 null 且当前有 session，直接设置 ref（避免首次加载时误触发）
+    if (prevSessionIdRef.current === null) {
+      prevSessionIdRef.current = currentSessionId
+      return
+    }
+    
+    // 检测到用户被 check-in（从没有 session 变为有 session）
+    if (!prevSessionId && currentSessionId && qrModalVisible) {
+      setQrModalVisible(false)
+    }
+    
+    // 更新 ref 为当前值
+    prevSessionIdRef.current = currentSessionId
+  }, [user?.membership?.currentVisitSessionId, qrModalVisible])
 
   // QR Code Hook - 基于会员编号生成引荐链接
   const { qrCodeDataURL, loading: qrLoading, error: qrError } = useQRCode({
