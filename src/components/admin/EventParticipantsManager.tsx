@@ -171,7 +171,10 @@ const EventParticipantsManager: React.FC<EventParticipantsManagerProps> = ({
         status: 'inactive',  // ✅ 默认状态为非活跃
         profile: { 
           phone: normalizedPhone,
-          preferences: { language: 'zh', notifications: true } 
+        },
+        preferences: {
+          locale: 'zh',
+          notifications: true,
         },
         membership: { 
           level: 'bronze', 

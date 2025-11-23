@@ -46,21 +46,22 @@ export interface User {
   profile?: {
     avatar?: string;
     phone?: string;
-    preferences?: {
-      language: 'zh' | 'en';
-      notifications: boolean; // 主开关：开启通知
-      pushNotifications?: {
-        types?: {
-          activity?: boolean;      // 活动提醒
-          points?: boolean;        // 积分变动
-          order?: boolean;         // 订单状态
-          marketing?: boolean;     // 营销推广
-        };
-        quietHours?: {
-          enabled?: boolean;
-          start?: string;          // HH:mm 格式，如 "22:00"
-          end?: string;            // HH:mm 格式，如 "09:00"
-        };
+  };
+  // 用户偏好设置（根级别）
+  preferences?: {
+    locale?: string;              // 语言设置（'zh' | 'en' | 'zh-CN' | 'en-US'）
+    notifications?: boolean;      // 主开关：开启通知
+    pushNotifications?: {
+      types?: {
+        activity?: boolean;      // 活动提醒
+        points?: boolean;        // 积分变动
+        order?: boolean;         // 订单状态
+        marketing?: boolean;     // 营销推广
+      };
+      quietHours?: {
+        enabled?: boolean;
+        start?: string;          // HH:mm 格式，如 "22:00"
+        end?: string;            // HH:mm 格式，如 "09:00"
       };
     };
   };

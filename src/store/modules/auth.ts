@@ -3,6 +3,7 @@ import { create } from 'zustand'
 import { onAuthStateChange, getUserData } from '../../services/firebase/auth'
 import type { User, UserRole, Permission } from '../../types'
 import { hasPermission } from '../../config/permissions'
+import { initializePushNotifications } from '../../services/firebase/messaging'
 
 interface AuthState {
   user: User | null
@@ -72,6 +73,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             setUser(userData)
             setFirebaseUser(firebaseUser)
             set({ isAdmin: userData.role === 'admin' })
+            
+            // 自动初始化推送通知（静默执行，不阻塞登录流程）
+            initializePushNotifications(userData).catch((error) => {
+              // 静默处理错误，不影响登录流程
+              console.warn('[Auth] Failed to initialize push notifications:', error)
+            })
           } else {
             // 如果使用 sessionStorage 的 ID 查不到，尝试使用 Firebase UID
             if (firestoreUserId !== firebaseUser.uid) {
@@ -80,6 +87,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 setUser(fallbackData)
                 setFirebaseUser(firebaseUser)
                 set({ isAdmin: fallbackData.role === 'admin' })
+                
+                // 自动初始化推送通知（静默执行，不阻塞登录流程）
+                initializePushNotifications(fallbackData).catch((error) => {
+                  // 静默处理错误，不影响登录流程
+                  console.warn('[Auth] Failed to initialize push notifications:', error)
+                })
               }
             }
           }

@@ -1195,7 +1195,11 @@ const AdminUsers: React.FC = () => {
                 email: values.email,
                 role: values.role,
                 status: 'inactive',  // ✅ 默认状态为非活跃
-                profile: { phone: normalizedPhone, preferences: { language: 'zh', notifications: true } },
+                profile: { phone: normalizedPhone },
+                preferences: {
+                  locale: 'zh',
+                  notifications: true,
+                },
                 membership: { level: values.level, joinDate: new Date(), lastActive: new Date() },
                 createdAt: new Date(),
                 updatedAt: new Date(),

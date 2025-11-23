@@ -17,6 +17,48 @@ import type { User } from '../../types';
 import { normalizePhoneNumber, identifyInputType } from '../../utils/phoneNormalization';
 import { generateMemberId, getUserByMemberId } from '../../utils/memberId';
 
+/**
+ * 创建 Google 登录临时用户数据的公共函数
+ * 用于统一创建新用户时的数据结构
+ */
+const createGoogleTempUserData = (
+  email: string,
+  displayName: string,
+  memberId: string
+): Omit<User, 'id'> => {
+  return {
+    email,
+    displayName: displayName || '未命名用户',
+    role: 'member',
+    status: 'inactive',
+    memberId,
+    profile: {
+      // phone 字段省略，待用户完善信息后添加
+    },
+    preferences: {
+      locale: 'zh',
+      notifications: true,
+    },
+    membership: {
+      level: 'bronze',
+      joinDate: new Date(),
+      lastActive: new Date(),
+      points: 0,
+      referralPoints: 0,
+    },
+    referral: {
+      referredBy: null as string | null,
+      referredByUserId: null as string | null,
+      referralDate: null as Date | null,
+      referrals: [],
+      totalReferred: 0,
+      activeReferrals: 0,
+    },
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+};
+
 // 用户注册（所有字段都是必需的）
 export const registerUser = async (
   email: string, 
@@ -82,10 +124,10 @@ export const registerUser = async (
       memberId,  // ✅ 会员编号（用作引荐码）
       profile: {
         phone: normalizedPhone,  // ✅ 使用标准化格式
-        preferences: {
-          language: 'zh',
-          notifications: true,
-        },
+      },
+      preferences: {
+        locale: 'zh',
+        notifications: true,
       },
       membership: {
         level: 'bronze',
@@ -314,34 +356,12 @@ export const loginWithGoogle = async () => {
       // 生成会员编号
       const memberId = await generateMemberId(newUserId);
       
-      const tempUserData: Omit<User, 'id'> = {
-        email: googleEmail,
-        displayName: googleUser.displayName || '未命名用户',
-        role: 'member',
-        status: 'inactive',  // ✅ 默认状态为非活跃
-        memberId,
-        profile: {
-          // phone 字段省略，待用户完善信息后添加
-          preferences: { language: 'zh', notifications: true },
-        },
-        membership: {
-          level: 'bronze',
-          joinDate: new Date(),
-          lastActive: new Date(),
-          points: 0,  // 注册不再赠送积分
-          referralPoints: 0,
-        },
-        referral: {
-          referredBy: null as string | null,
-          referredByUserId: null as string | null,
-          referralDate: null as Date | null,
-          referrals: [],
-          totalReferred: 0,
-          activeReferrals: 0,
-        },
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      // 使用公共函数创建临时用户数据
+      const tempUserData = createGoogleTempUserData(
+        googleEmail,
+        googleUser.displayName || '',
+        memberId
+      );
       
       await setDoc(newUserDoc, tempUserData);
       
@@ -406,33 +426,12 @@ export const handleGoogleRedirectResult = async () => {
           
           const memberId = await generateMemberId(newUserId);
           
-          const tempUserData: Omit<User, 'id'> = {
-            email: googleEmail,
-            displayName: currentUser.displayName || '未命名用户',
-            role: 'member',
-            status: 'inactive',  // ✅ 默认状态为非活跃
-            memberId,
-            profile: {
-              preferences: { language: 'zh', notifications: true },
-            },
-            membership: {
-              level: 'bronze',
-              joinDate: new Date(),
-              lastActive: new Date(),
-              points: 0,  // 注册不再赠送积分
-              referralPoints: 0,
-            },
-            referral: {
-              referredBy: null as string | null,
-              referredByUserId: null as string | null,
-              referralDate: null as Date | null,
-              referrals: [],
-              totalReferred: 0,
-              activeReferrals: 0,
-            },
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          };
+          // 使用公共函数创建临时用户数据
+          const tempUserData = createGoogleTempUserData(
+            googleEmail,
+            currentUser.displayName || '',
+            memberId
+          );
           
           await setDoc(newUserDoc, tempUserData);
           sessionStorage.setItem('firestoreUserId', newUserId);
@@ -478,33 +477,12 @@ export const handleGoogleRedirectResult = async () => {
       
       const memberId = await generateMemberId(newUserId);
       
-      const tempUserData: Omit<User, 'id'> = {
-        email: googleEmail,
-        displayName: googleUser.displayName || '未命名用户',
-        role: 'member',
-        status: 'inactive',  // ✅ 默认状态为非活跃
-        memberId,
-        profile: {
-          preferences: { language: 'zh', notifications: true },
-        },
-        membership: {
-          level: 'bronze',
-          joinDate: new Date(),
-          lastActive: new Date(),
-          points: 0,  // 注册不再赠送积分
-          referralPoints: 0,
-        },
-        referral: {
-          referredBy: null as string | null,
-          referredByUserId: null as string | null,
-          referralDate: null as Date | null,
-          referrals: [],
-          totalReferred: 0,
-          activeReferrals: 0,
-        },
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      // 使用公共函数创建临时用户数据
+      const tempUserData = createGoogleTempUserData(
+        googleEmail,
+        googleUser.displayName || '',
+        memberId
+      );
       
       await setDoc(newUserDoc, tempUserData);
       sessionStorage.setItem('firestoreUserId', newUserId);
@@ -609,7 +587,9 @@ export const completeGoogleUserProfile = async (
         const updateData: any = {
           email: googleEmail,  // 写入 Google 邮箱
           displayName,
-          'profile.phone': normalizedPhone,
+          profile: {
+            phone: normalizedPhone,  // ✅ 参考手动创建用户逻辑，使用对象结构
+          },
           updatedAt: new Date(),
         };
         
@@ -691,7 +671,9 @@ export const completeGoogleUserProfile = async (
     const updateData: any = {
         email: googleEmail,
       displayName,
-        'profile.phone': normalizedPhone,
+        profile: {
+          phone: normalizedPhone,  // ✅ 参考手动创建用户逻辑，使用对象结构
+        },
       updatedAt: new Date(),
     };
     
