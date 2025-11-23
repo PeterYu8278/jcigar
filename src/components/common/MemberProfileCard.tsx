@@ -6,6 +6,9 @@ import { useQRCode } from '../../hooks/useQRCode'
 import { QRCodeDisplay } from '../common/QRCodeDisplay'
 import { useTranslation } from 'react-i18next'
 import type { User } from '../../types'
+import { collection, query, where, orderBy, limit, onSnapshot, Unsubscribe } from 'firebase/firestore'
+import { db } from '../../config/firebase'
+import { GLOBAL_COLLECTIONS } from '../../config/globalCollections'
 
 interface MemberProfileCardProps {
   user: User | null
@@ -36,27 +39,71 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
   // QR code 放大显示状态
   const [qrModalVisible, setQrModalVisible] = useState(false)
   // 用于跟踪之前的 check-in 状态
-  const prevSessionIdRef = useRef<string | null | undefined>(null)
+  const prevHasPendingSessionRef = useRef<boolean | null>(null)
+  // 用于标记是否是首次回调
+  const isFirstCallbackRef = useRef<boolean>(true)
 
-  // 监听用户 check-in 状态，如果用户被 check-in 且引荐码分享模态框打开，则关闭模态框
+  // 使用 onSnapshot 实时监听用户 check-in 状态
   useEffect(() => {
-    const currentSessionId = user?.membership?.currentVisitSessionId
-    const prevSessionId = prevSessionIdRef.current
-    
-    // 初始化：如果 ref 为 null 且当前有 session，直接设置 ref（避免首次加载时误触发）
-    if (prevSessionIdRef.current === null) {
-      prevSessionIdRef.current = currentSessionId
+    if (!user?.id) {
+      // 重置状态
+      prevHasPendingSessionRef.current = null
+      isFirstCallbackRef.current = true
       return
     }
-    
-    // 检测到用户被 check-in（从没有 session 变为有 session）
-    if (!prevSessionId && currentSessionId && qrModalVisible) {
-      setQrModalVisible(false)
+
+    // 只有当引荐码分享模态框打开时才设置监听器
+    if (!qrModalVisible) {
+      // 模态框关闭时，重置状态以便下次打开时重新初始化
+      prevHasPendingSessionRef.current = null
+      isFirstCallbackRef.current = true
+      return
     }
-    
-    // 更新 ref 为当前值
-    prevSessionIdRef.current = currentSessionId
-  }, [user?.membership?.currentVisitSessionId, qrModalVisible])
+
+    // 查询当前用户的 pending visit session
+    const q = query(
+      collection(db, GLOBAL_COLLECTIONS.VISIT_SESSIONS),
+      where('userId', '==', user.id),
+      where('status', '==', 'pending'),
+      orderBy('checkInAt', 'desc'),
+      limit(1)
+    )
+
+    // 设置实时监听器
+    const unsubscribe: Unsubscribe = onSnapshot(
+      q,
+      (querySnapshot) => {
+        const hasPendingSession = !querySnapshot.empty
+        
+        // 首次回调：只初始化状态，不关闭模态框
+        if (isFirstCallbackRef.current) {
+          prevHasPendingSessionRef.current = hasPendingSession
+          isFirstCallbackRef.current = false
+          return
+        }
+        
+        // 后续回调：检测到用户被 check-in（从没有 pending session 变为有 pending session）
+        if (prevHasPendingSessionRef.current === false && hasPendingSession) {
+          // 关闭引荐码分享模态框
+          setQrModalVisible(false)
+        }
+        
+        // 更新 ref 为当前状态
+        prevHasPendingSessionRef.current = hasPendingSession
+      },
+      (error) => {
+        // 监听错误不影响主流程，静默处理
+        if (error.code !== 'failed-precondition' && !error.message?.includes('index')) {
+          // 非索引错误才记录
+        }
+      }
+    )
+
+    // 清理函数：组件卸载或依赖变化时取消监听
+    return () => {
+      unsubscribe()
+    }
+  }, [user?.id, qrModalVisible])
 
   // QR Code Hook - 基于会员编号生成引荐链接
   const { qrCodeDataURL, loading: qrLoading, error: qrError } = useQRCode({

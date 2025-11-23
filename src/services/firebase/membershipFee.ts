@@ -492,7 +492,7 @@ export const getUserMembershipFeeRecords = async (
     const records = snapshot.docs.map(mapDocToMembershipFeeRecord);
     
     return records;
-  } catch (error: any) {    
+  } catch (error: any) {
     // 如果是因为缺少索引而失败，尝试不使用orderBy重新查询
     try {
       const q = query(

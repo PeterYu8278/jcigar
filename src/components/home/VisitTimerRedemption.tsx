@@ -165,9 +165,9 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
       const sessions = await getUserVisitSessions(userId);
       
       if (!period) {
-        setTotalHours(0);
-        return;
-      }
+          setTotalHours(0);
+          return;
+        }
 
         
         const periodSessions = sessions.filter(session => {
@@ -446,7 +446,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
         
         return;
       }
-      
+
       // 立即尝试扣除年费
       const deductResult = await deductMembershipFee(recordId);
 
@@ -467,7 +467,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
         await loadData();
       } else {
         // 其他错误
-        message.error(deductResult.error || '扣除年费失败，请稍后重试');
+          message.error(deductResult.error || '扣除年费失败，请稍后重试');
       }
     } catch (error: any) {
       message.error(error.message || '开通会员失败，请重试');

@@ -55,7 +55,7 @@ export interface User {
     phone?: string;
   };
   // 用户偏好设置（根级别）
-  preferences?: {
+    preferences?: {
     locale?: string;              // 语言设置（'zh' | 'en' | 'zh-CN' | 'en-US'）
     notifications?: boolean;      // 主开关：开启通知
     pushNotifications?: {
@@ -428,6 +428,10 @@ export interface VisitSession {
   // 费用结算
   pointsDeducted?: number;  // 扣除的积分
   pointsRecordId?: string;  // 关联的积分记录ID
+  
+  // 兑换订单关联
+  orderId?: string;         // 关联的兑换订单ID（金额为0）
+  outboundOrderId?: string; // 关联的出库订单ID
   
   // 状态
   status: 'pending' | 'completed' | 'expired'; // expired = 忘记check-out后自动结算

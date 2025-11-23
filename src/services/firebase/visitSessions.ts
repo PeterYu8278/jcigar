@@ -5,16 +5,19 @@ import {
   getDoc, 
   getDocs, 
   addDoc, 
+  setDoc,
   updateDoc,
   query, 
   where, 
   orderBy, 
   limit,
-  Timestamp
+  Timestamp,
+  arrayUnion,
+  runTransaction
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { GLOBAL_COLLECTIONS } from '../../config/globalCollections';
-import type { VisitSession, User } from '../../types';
+import type { VisitSession, User, Order, OutboundOrder } from '../../types';
 
 /**
  * 处理 visit session 数据，转换日期字段和 redemptions
@@ -234,6 +237,166 @@ export const completeVisitSession = async (
       updatedAt: Timestamp.fromDate(now)
     });
 
+    // 处理兑换的雪茄：统计、创建订单和出库记录
+    let orderId: string | undefined;
+    let outboundOrderId: string | undefined;
+    
+    if (session.redemptions && session.redemptions.length > 0) {
+      try {
+        // 1. 统计兑换的雪茄（按 cigarId 分组）
+        const redemptionMap = new Map<string, { cigarName: string; quantity: number }>();
+        
+        for (const redemption of session.redemptions) {
+          const existing = redemptionMap.get(redemption.cigarId);
+          if (existing) {
+            existing.quantity += redemption.quantity;
+          } else {
+            redemptionMap.set(redemption.cigarId, {
+              cigarName: redemption.cigarName,
+              quantity: redemption.quantity
+            });
+          }
+        }
+
+        // 2. 获取雪茄信息并准备订单项
+        const { getCigarById } = await import('./firestore');
+        const orderItems: Array<{ cigarId: string; quantity: number; price: number }> = [];
+        const outboundItems: Array<{
+          cigarId: string;
+          cigarName: string;
+          itemType: 'cigar';
+          quantity: number;
+          unitPrice: number;
+          subtotal: number;
+        }> = [];
+        
+        let outboundTotalQty = 0;
+        let outboundTotalValue = 0;
+
+        for (const [cigarId, { cigarName, quantity }] of redemptionMap.entries()) {
+          const cigar = await getCigarById(cigarId);
+          if (!cigar) {
+            console.warn(`[completeVisitSession] 雪茄不存在: ${cigarId}`);
+            continue;
+          }
+
+          const unitPrice = cigar.price || 0;
+          orderItems.push({
+            cigarId,
+            quantity,
+            price: 0 // 兑换订单金额为0
+          });
+
+          outboundItems.push({
+            cigarId,
+            cigarName: cigar.name,
+            itemType: 'cigar',
+            quantity,
+            unitPrice,
+            subtotal: unitPrice * quantity
+          });
+
+          outboundTotalQty += quantity;
+          outboundTotalValue += unitPrice * quantity;
+        }
+
+        // 3. 创建订单（金额为0）
+        if (orderItems.length > 0) {
+          const { COLLECTIONS } = await import('./firestore');
+          
+          // 生成订单ID
+          const year = now.getFullYear();
+          const month = String(now.getMonth() + 1).padStart(2, '0');
+          const prefix = `ORD-${year}-${month}-`;
+          
+          // 查询当月订单数量
+          const startOfMonth = new Date(year, now.getMonth(), 1, 0, 0, 0, 0);
+          const endOfMonth = new Date(year, now.getMonth() + 1, 0, 23, 59, 59, 999);
+          const qCount = query(
+            collection(db, COLLECTIONS.ORDERS),
+            where('createdAt', '>=', Timestamp.fromDate(startOfMonth)),
+            where('createdAt', '<=', Timestamp.fromDate(endOfMonth))
+          );
+          const snap = await getDocs(qCount);
+          let seq = snap.size + 1;
+          let newOrderId = `${prefix}${String(seq).padStart(4, '0')}-R`; // R 表示兑换订单
+          
+          // 防止重复ID
+          while (true) {
+            const exists = await getDoc(doc(db, COLLECTIONS.ORDERS, newOrderId));
+            if (!exists.exists()) break;
+            seq += 1;
+            newOrderId = `${prefix}${String(seq).padStart(4, '0')}-R`;
+          }
+
+          const orderData: Omit<Order, 'id'> = {
+            userId: session.userId,
+            items: orderItems.map(item => ({
+              cigarId: item.cigarId,
+              quantity: item.quantity,
+              price: item.price
+            })),
+            total: 0, // 兑换订单金额为0
+            status: 'completed',
+            source: {
+              type: 'direct',
+              note: `驻店兑换订单 (Session: ${sessionId})`
+            },
+            payment: {
+              method: 'bank_transfer',
+              paidAt: now
+            },
+            shipping: {
+              address: '店内兑换'
+            },
+            createdAt: now,
+            updatedAt: now
+          };
+
+          // 清洗数据：移除 undefined 字段
+          const sanitizedOrderData: any = {};
+          Object.keys(orderData).forEach(key => {
+            const value = (orderData as any)[key];
+            if (value !== undefined) {
+              sanitizedOrderData[key] = value;
+            }
+          });
+          
+          await setDoc(doc(db, COLLECTIONS.ORDERS, newOrderId), {
+            ...sanitizedOrderData,
+            createdAt: Timestamp.fromDate(now),
+            updatedAt: Timestamp.fromDate(now)
+          });
+          
+          orderId = newOrderId;
+
+          // 4. 创建出库记录（会自动扣除库存）
+          if (outboundItems.length > 0) {
+            const { createOutboundOrder } = await import('./firestore');
+            const outboundOrderData: Omit<OutboundOrder, 'id' | 'updatedAt'> = {
+              referenceNo: newOrderId,
+              type: 'sale',
+              reason: `驻店兑换出库 (Session: ${sessionId})`,
+              items: outboundItems,
+              totalQuantity: outboundTotalQty,
+              totalValue: outboundTotalValue,
+              orderId: newOrderId,
+              userId: session.userId,
+              userName: session.userName,
+              status: 'completed',
+              operatorId: checkOutBy,
+              createdAt: now
+            };
+
+            outboundOrderId = await createOutboundOrder(outboundOrderData);
+          }
+        }
+      } catch (error: any) {
+        console.error('[completeVisitSession] 处理兑换雪茄失败:', error);
+        // 不阻断 check-out 流程，只记录错误
+      }
+    }
+
     // 更新驻店记录
     await updateDoc(doc(db, GLOBAL_COLLECTIONS.VISIT_SESSIONS, sessionId), {
       checkOutAt: Timestamp.fromDate(now),
@@ -243,6 +406,8 @@ export const completeVisitSession = async (
       calculatedAt: Timestamp.fromDate(now),
       pointsDeducted,
       pointsRecordId: pointsRecordId || null,
+      orderId: orderId || null,
+      outboundOrderId: outboundOrderId || null,
       status: 'completed',
       updatedAt: Timestamp.fromDate(now)
     });
@@ -403,6 +568,7 @@ export const getExpiredVisitSessions = async (): Promise<VisitSession[]> => {
 
 /**
  * 在驻店期间添加兑换项
+ * 使用事务确保所有兑换记录都写入同一个文档，避免并发问题
  */
 export const addRedemptionToSession = async (
   sessionId: string,
@@ -414,29 +580,37 @@ export const addRedemptionToSession = async (
   }
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    const sessionDoc = await getDoc(doc(db, GLOBAL_COLLECTIONS.VISIT_SESSIONS, sessionId));
-    if (!sessionDoc.exists()) {
-      return { success: false, error: '驻店记录不存在' };
-    }
-
-    const sessionData = sessionDoc.data();
-    if (sessionData.status !== 'pending') {
-      return { success: false, error: '只能在待处理的驻店记录中添加兑换' };
-    }
-
-    const redemptions = sessionData.redemptions || [];
-    redemptions.push({
+    const now = Timestamp.fromDate(new Date());
+    const redemptionRecord = {
       ...redemption,
-      redeemedAt: Timestamp.fromDate(new Date())
-    });
+      redeemedAt: now
+    };
 
-    await updateDoc(doc(db, GLOBAL_COLLECTIONS.VISIT_SESSIONS, sessionId), {
-      redemptions,
-      updatedAt: Timestamp.fromDate(new Date())
+    // 使用事务确保原子性更新
+    await runTransaction(db, async (transaction) => {
+      const sessionRef = doc(db, GLOBAL_COLLECTIONS.VISIT_SESSIONS, sessionId);
+      const sessionDoc = await transaction.get(sessionRef);
+      
+      if (!sessionDoc.exists()) {
+        throw new Error('驻店记录不存在');
+      }
+
+      const sessionData = sessionDoc.data();
+      if (sessionData.status !== 'pending') {
+        throw new Error('只能在待处理的驻店记录中添加兑换');
+      }
+
+      // 使用 arrayUnion 原子性地添加兑换记录到数组
+      // 这样可以确保即使有并发请求，所有记录都会被正确添加
+      transaction.update(sessionRef, {
+        redemptions: arrayUnion(redemptionRecord),
+        updatedAt: now
+      });
     });
 
     return { success: true };
   } catch (error: any) {
+    console.error('[addRedemptionToSession] 添加兑换项失败:', error);
     return { success: false, error: error.message || '添加兑换项失败' };
   }
 };
