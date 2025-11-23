@@ -1,6 +1,6 @@
 // 用户档案页面
 import React, { useState, useEffect } from 'react'
-import { Button, Modal, Form, Input, message, Switch, Select, TimePicker, Space, Typography, Checkbox, Divider } from 'antd'
+import { Button, Modal, Form, Input, message, Switch, Select, Space, Typography, Checkbox, Divider, TimePicker } from 'antd'
 import { ArrowLeftOutlined, MailOutlined, PhoneOutlined, BellOutlined, CalendarOutlined, WalletOutlined, ShoppingOutlined, GiftOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { useNavigate } from 'react-router-dom'
@@ -9,13 +9,12 @@ import { useAuthStore } from '../../../store/modules/auth'
 import { useTranslation } from 'react-i18next'
 import { ProfileView } from '../../../components/common/ProfileView'
 import ImageUpload from '../../../components/common/ImageUpload'
-import { updateDocument } from '../../../services/firebase/firestore'
+import { updateDocument, getUserById } from '../../../services/firebase/firestore'
 import { normalizePhoneNumber } from '../../../utils/phoneNormalization'
 import type { User } from '../../../types'
 import { auth } from '../../../config/firebase'
 import { updateEmail, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth'
 import { getResponsiveModalConfig, getModalTheme } from '../../../config/modalTheme'
-import { requestNotificationPermission, initializePushNotifications, getFCMToken } from '../../../services/firebase/messaging'
 
 const Profile: React.FC = () => {
   const { user, setUser } = useAuthStore()
@@ -29,74 +28,64 @@ const Profile: React.FC = () => {
     }
     return 'default'
   })
-  const [fcmTokenAvailable, setFcmTokenAvailable] = useState(false)
   const [form] = Form.useForm()
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(width: 768px)').matches : false
   const theme = getModalTheme()
   const labelFlex = isMobile ? '40%' : '120px'
 
-  // 检查通知权限和 FCM Token
+  // 检查通知权限
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       setNotificationPermission(Notification.permission)
-      
-      // 检查是否有 FCM Token
-      if (Notification.permission === 'granted' && user) {
-        getFCMToken().then(token => {
-          setFcmTokenAvailable(!!token)
-        })
-      }
     }
-  }, [user])
+  }, [])
 
-  const handleEdit = (userToEdit?: User) => {
-    const u = userToEdit || user
-    if (!u) return
-    setEditing(true)
-    
-    const pushPrefs = (u as any)?.profile?.preferences?.pushNotifications || {}
+  // 构建表单值的公共函数
+  const buildFormValues = (userData: User) => {
+    // preferences 在文档根目录下，不在 profile 下
+    const pushPrefs = (userData as any)?.preferences?.pushNotifications || {}
     const quietHours = pushPrefs.quietHours || {}
     
-    form.setFieldsValue({
-      displayName: u.displayName || '',
-      email: u.email || '',
-      phone: (u as any)?.profile?.phone || '',
-      notifications: (u as any)?.preferences?.notifications !== false,
-      language: (u as any)?.preferences?.locale || i18n.language || 'zh-CN',
-      // 推送通知设置
-      pushNotificationsEnabled: pushPrefs.enabled !== false,
-      pushActivity: pushPrefs.types?.activity !== false,
-      pushPoints: pushPrefs.types?.points !== false,
-      pushOrder: pushPrefs.types?.order !== false,
-      pushMarketing: pushPrefs.types?.marketing !== false,
-      quietHoursEnabled: quietHours.enabled === true,
+    return {
+      displayName: userData.displayName || '',
+      email: userData.email || '',
+      phone: (userData as any)?.profile?.phone || '',
+      notifications: (userData as any)?.preferences?.notifications ?? true,
+      language: (userData as any)?.preferences?.locale || i18n.language || 'zh-CN',
+      // 推送通知类型设置（使用 ?? 操作符，只在 undefined 时使用默认值 true，保留 false 值）
+      pushActivity: pushPrefs.types?.activity ?? true,
+      pushPoints: pushPrefs.types?.points ?? true,
+      pushOrder: pushPrefs.types?.order ?? true,
+      pushMarketing: pushPrefs.types?.marketing ?? true,
+      // 免打扰时段设置（使用 ?? 操作符，只在 undefined 时使用默认值 false，保留 false 值）
+      quietHoursEnabled: quietHours.enabled ?? false,
       quietHoursStart: quietHours.start ? dayjs(quietHours.start, 'HH:mm') : dayjs('22:00', 'HH:mm'),
       quietHoursEnd: quietHours.end ? dayjs(quietHours.end, 'HH:mm') : dayjs('09:00', 'HH:mm'),
-    })
+    }
   }
 
-  // 请求通知权限
-  const handleRequestNotificationPermission = async () => {
+  const handleEdit = async (userToEdit?: User) => {
+    const u = userToEdit || user
+    if (!u) return
+    
+    // 先打开 Modal，然后在 Modal 打开后再设置表单值
+    setEditing(true)
+    
+    // 重新从 Firestore 读取最新数据，确保与数据库一致
     try {
-      const permission = await requestNotificationPermission()
-      setNotificationPermission(permission)
+      const latestUser = await getUserById(u.id)
+      const userData = latestUser || u // 优先使用 Firestore 数据，否则使用本地数据
       
-      if (permission === 'granted') {
-        if (user) {
-          const success = await initializePushNotifications(user)
-          if (success) {
-            setFcmTokenAvailable(true)
-            message.success(t('profile.notifications.enabled'))
-          } else {
-            message.warning(t('profile.notifications.tokenFailed'))
-          }
-        }
-      } else if (permission === 'denied') {
-        message.warning(t('profile.notifications.permissionDenied'))
-      }
+      // 使用 setTimeout 确保 Modal 已渲染后再设置表单值
+      setTimeout(() => {
+        form.setFieldsValue(buildFormValues(userData))
+      }, 0)
     } catch (error) {
-      console.error('[Profile] Error requesting notification permission:', error)
-      message.error(t('profile.notifications.requestFailed'))
+      console.error('[Profile] 读取用户数据失败:', error)
+      // 如果读取失败，使用本地数据
+      setTimeout(() => {
+        form.setFieldsValue(buildFormValues(u))
+      }, 0)
     }
   }
 
@@ -105,24 +94,35 @@ const Profile: React.FC = () => {
     try {
       const values = await form.validateFields()
       setSaving(true)
+      
       const updates: any = {
         displayName: values.displayName,
         'profile.phone': normalizePhoneNumber(values.phone),
-        'preferences.notifications': values.notifications,
+        'preferences.notifications': values.notifications, // 主开关：开启通知
         ...(values.language ? { 'preferences.locale': values.language } : {}),
-        'preferences.pushNotifications.enabled': values.pushNotificationsEnabled,
-        'preferences.pushNotifications.types.activity': values.pushActivity,
-        'preferences.pushNotifications.types.points': values.pushPoints,
-        'preferences.pushNotifications.types.order': values.pushOrder,
-        'preferences.pushNotifications.types.marketing': values.pushMarketing,
-        'preferences.pushNotifications.quietHours.enabled': values.quietHoursEnabled,
-        'preferences.pushNotifications.quietHours.start': values.quietHoursStart ? values.quietHoursStart.format('HH:mm') : undefined,
-        'preferences.pushNotifications.quietHours.end': values.quietHoursEnd ? values.quietHoursEnd.format('HH:mm') : undefined,
+        // 推送通知类型设置（仅在开启通知时保存）
+        'preferences.pushNotifications.types.activity': values.pushActivity === true,
+        'preferences.pushNotifications.types.points': values.pushPoints === true,
+        'preferences.pushNotifications.types.order': values.pushOrder === true,
+        'preferences.pushNotifications.types.marketing': values.pushMarketing === true,
+        // 免打扰时段设置
+        'preferences.pushNotifications.quietHours.enabled': values.quietHoursEnabled === true,
         updatedAt: new Date(),
       }
-
-      // 先更新非敏感字段
-      await updateDocument('users', user.id, updates)
+      
+      // 只有有值时才设置 quietHours 的时间字段
+      if (values.quietHoursStart) {
+        updates['preferences.pushNotifications.quietHours.start'] = values.quietHoursStart.format('HH:mm')
+      }
+      if (values.quietHoursEnd) {
+        updates['preferences.pushNotifications.quietHours.end'] = values.quietHoursEnd.format('HH:mm')
+      }
+      
+      const updateResult = await updateDocument('users', user.id, updates)
+      
+      if (!updateResult.success) {
+        throw new Error('更新失败')
+      }
 
       const currentUser = auth.currentUser
 
@@ -152,27 +152,59 @@ const Profile: React.FC = () => {
         }
       }
 
-      // 如果启用推送通知，初始化 FCM
-      if (values.pushNotificationsEnabled && notificationPermission !== 'granted') {
-        await handleRequestNotificationPermission()
-      } else if (values.pushNotificationsEnabled && notificationPermission === 'granted') {
-        await initializePushNotifications(user)
-      }
-
-      // 同步本地
-      setUser({
-        ...user,
-        displayName: values.displayName,
-        email: updates.email || user.email,
-        profile: {
-          ...(user as any)?.profile,
-          phone: normalizePhoneNumber(values.phone),
+      // 重新从 Firestore 读取最新数据，确保本地状态与数据库一致
+      try {
+        const latestUser = await getUserById(user.id)
+        if (latestUser) {
+          setUser(latestUser as any)
+        } else {
+          // 如果无法读取最新数据，使用保存的值更新本地状态
+          // preferences 在文档根目录下，不在 profile 下
+          setUser({
+            ...user,
+            displayName: values.displayName,
+            email: updates.email || user.email,
+            profile: {
+              ...(user as any)?.profile,
+              phone: normalizePhoneNumber(values.phone),
+            },
+            preferences: {
+              ...(user as any)?.preferences,
+              notifications: values.notifications,
+              locale: values.language || (user as any)?.preferences?.locale,
+              pushNotifications: {
+                types: {
+                  activity: values.pushActivity,
+                  points: values.pushPoints,
+                  order: values.pushOrder,
+                  marketing: values.pushMarketing
+                },
+                quietHours: {
+                  enabled: values.quietHoursEnabled,
+                  start: values.quietHoursStart ? values.quietHoursStart.format('HH:mm') : undefined,
+                  end: values.quietHoursEnd ? values.quietHoursEnd.format('HH:mm') : undefined
+                }
+              }
+            }
+          } as any)
+        }
+      } catch (error) {
+        console.error('[Profile] 重新读取用户数据失败:', error)
+        // 如果读取失败，使用保存的值更新本地状态
+        // preferences 在文档根目录下，不在 profile 下
+        setUser({
+          ...user,
+          displayName: values.displayName,
+          email: updates.email || user.email,
+          profile: {
+            ...(user as any)?.profile,
+            phone: normalizePhoneNumber(values.phone),
+          },
           preferences: {
-            ...(user as any)?.profile?.preferences,
+            ...(user as any)?.preferences,
             notifications: values.notifications,
-            locale: values.language || (user as any)?.profile?.preferences?.locale,
+            locale: values.language || (user as any)?.preferences?.locale,
             pushNotifications: {
-              enabled: values.pushNotificationsEnabled,
               types: {
                 activity: values.pushActivity,
                 points: values.pushPoints,
@@ -186,8 +218,8 @@ const Profile: React.FC = () => {
               }
             }
           }
-        }
-      } as any)
+        } as any)
+      }
       if (values.language && values.language !== i18n.language) {
         try { await i18n.changeLanguage(values.language) } catch (e) {}
       }
@@ -517,79 +549,53 @@ const Profile: React.FC = () => {
           <Form.Item
             name="notifications"
             valuePropName="checked"
-                style={{ marginBottom: 0 }}
-                label={<span style={{ color: '#FFFFFF' }}>{t('profile.notificationsToggle')}</span>}
-              >
-                <Switch />
-              </Form.Item>
-              <Form.Item
-                name="language"
-                label={<span style={{ color: '#FFFFFF' }}>{t('profile.language')}</span>}
-                style={{ marginTop: 12, marginBottom: 0 }}
-              >
-                <Select
-                  placeholder={t('profile.language')}
-                  options={[
-                    { label: t('language.zhCN'), value: 'zh-CN' },
-                    { label: t('language.enUS'), value: 'en-US' }
-                  ]}
-                />
+            style={{ marginBottom: 12 }}
+            label={<span style={{ color: '#FFFFFF' }}>{t('profile.notificationsToggle')}</span>}
+          >
+            <Switch />
+          </Form.Item>
+          
+          <Form.Item
+            name="language"
+            label={<span style={{ color: '#FFFFFF' }}>{t('profile.language')}</span>}
+            style={{ marginBottom: 0 }}
+          >
+            <Select
+              placeholder={t('profile.language')}
+              options={[
+                { label: t('language.zhCN'), value: 'zh-CN' },
+                { label: t('language.enUS'), value: 'en-US' }
+              ]}
+            />
           </Form.Item>
         </Form>
 
-            {/* 推送通知设置 */}
-            <Divider style={{ margin: '16px 0', borderColor: 'rgba(255, 255, 255, 0.1)' }} />
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ color: '#FFFFFF', fontSize: 14, fontWeight: 600 }}>
-                  <BellOutlined style={{ marginRight: 8 }} />
-                  {t('profile.pushNotifications.title')}
-                </span>
-                {notificationPermission === 'denied' && (
-                  <Button
-                    type="link"
-                    size="small"
-                    onClick={handleRequestNotificationPermission}
-                    style={{ color: '#F4AF25', padding: 0 }}
-                  >
-                    {t('profile.pushNotifications.requestPermission')}
-                  </Button>
-                )}
-              </div>
-              {notificationPermission !== 'granted' && (
-                <div style={{
-                  padding: 12,
-                  borderRadius: 8,
-                  background: 'rgba(244, 175, 37, 0.1)',
-                  border: '1px solid rgba(244, 175, 37, 0.2)',
-                  marginBottom: 12
-                }}>
-                  <Typography.Text style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 12 }}>
-                    {notificationPermission === 'denied'
-                      ? t('profile.pushNotifications.permissionDeniedHint')
-                      : t('profile.pushNotifications.permissionRequiredHint')
-                    }
-                  </Typography.Text>
-                  {notificationPermission === 'default' && (
-                    <Button
-                      type="primary"
-                      size="small"
-                      onClick={handleRequestNotificationPermission}
-                      style={{
-                        marginTop: 8,
-                        background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-                        border: 'none',
-                        color: '#111',
-                        fontWeight: 600
-                      }}
-                      block
-                    >
-                      {t('profile.pushNotifications.enable')}
-                    </Button>
-                  )}
-                </div>
-              )}
+          {/* 推送通知详细设置 */}
+          <Divider style={{ margin: '16px 0', borderColor: 'rgba(255, 255, 255, 0.1)' }} />
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
+              <BellOutlined style={{ marginRight: 8, color: '#F4AF25' }} />
+              <span style={{ color: '#FFFFFF', fontSize: 14, fontWeight: 600 }}>
+                {t('profile.pushNotifications.title')}
+              </span>
             </div>
+            
+            {notificationPermission !== 'granted' && (
+              <div style={{
+                padding: 12,
+                borderRadius: 8,
+                background: 'rgba(244, 175, 37, 0.1)',
+                border: '1px solid rgba(244, 175, 37, 0.2)',
+                marginBottom: 12
+              }}>
+                <Typography.Text style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 12 }}>
+                  {notificationPermission === 'denied'
+                    ? t('profile.pushNotifications.permissionDeniedHint')
+                    : t('profile.pushNotifications.permissionRequiredHint')
+                  }
+                </Typography.Text>
+              </div>
+            )}
 
             <Form
               form={form}
@@ -597,28 +603,13 @@ const Profile: React.FC = () => {
               style={{ marginTop: 8 }}
             >
               <Form.Item
-                name="pushNotificationsEnabled"
-                valuePropName="checked"
-                style={{ marginBottom: 12 }}
-              >
-                <Space>
-                  <Switch
-                    disabled={notificationPermission !== 'granted'}
-                  />
-                  <Typography.Text style={{ color: '#FFFFFF' }}>
-                    {t('profile.pushNotifications.enableNotifications')}
-                  </Typography.Text>
-                </Space>
-              </Form.Item>
-
-              <Form.Item
                 noStyle
                 shouldUpdate={(prevValues, currentValues) =>
-                  prevValues.pushNotificationsEnabled !== currentValues.pushNotificationsEnabled
+                  prevValues.notifications !== currentValues.notifications
                 }
               >
                 {({ getFieldValue }) => {
-                  const enabled = getFieldValue('pushNotificationsEnabled') && notificationPermission === 'granted';
+                  const notificationsEnabled = getFieldValue('notifications') && notificationPermission === 'granted'
                   return (
                     <>
                       <div style={{
@@ -627,8 +618,8 @@ const Profile: React.FC = () => {
                         background: 'rgba(255, 255, 255, 0.03)',
                         border: '1px solid rgba(255, 255, 255, 0.1)',
                         marginBottom: 12,
-                        opacity: enabled ? 1 : 0.5,
-                        pointerEvents: enabled ? 'auto' : 'none'
+                        opacity: notificationsEnabled ? 1 : 0.5,
+                        pointerEvents: notificationsEnabled ? 'auto' : 'none'
                       }}>
                         <Typography.Text style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 8 }}>
                           {t('profile.pushNotifications.notificationTypes')}
@@ -665,7 +656,7 @@ const Profile: React.FC = () => {
                         style={{ marginBottom: 8 }}
                       >
                         <Space>
-                          <Switch disabled={!enabled} />
+                          <Switch disabled={!notificationsEnabled} />
                           <Typography.Text style={{ color: '#FFFFFF' }}>
                             {t('profile.pushNotifications.quietHours.enabled')}
                           </Typography.Text>
@@ -679,7 +670,7 @@ const Profile: React.FC = () => {
                         }
                       >
                         {({ getFieldValue }) => {
-                          const quietEnabled = getFieldValue('quietHoursEnabled') && enabled;
+                          const quietEnabled = getFieldValue('quietHoursEnabled') && notificationsEnabled
                           return (
                             <div style={{
                               display: 'flex',
@@ -712,14 +703,15 @@ const Profile: React.FC = () => {
                                 />
                               </Form.Item>
                             </div>
-                          );
+                          )
                         }}
                       </Form.Item>
                     </>
-                  );
+                  )
                 }}
               </Form.Item>
             </Form>
+          </div>
           </div>
         </div>
       </Modal>

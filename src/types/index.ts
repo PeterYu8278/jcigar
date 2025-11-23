@@ -48,41 +48,27 @@ export interface User {
     phone?: string;
     preferences?: {
       language: 'zh' | 'en';
-      notifications: boolean;
+      notifications: boolean; // 主开关：开启通知
       pushNotifications?: {
-        enabled: boolean;
-        types: {
-          activity: boolean;      // 活动提醒
-          points: boolean;        // 积分变动
-          order: boolean;         // 订单状态
-          marketing: boolean;     // 营销推广
+        types?: {
+          activity?: boolean;      // 活动提醒
+          points?: boolean;        // 积分变动
+          order?: boolean;         // 订单状态
+          marketing?: boolean;     // 营销推广
         };
         quietHours?: {
-          enabled: boolean;
-          start: string;          // HH:mm 格式，如 "22:00"
-          end: string;            // HH:mm 格式，如 "09:00"
+          enabled?: boolean;
+          start?: string;          // HH:mm 格式，如 "22:00"
+          end?: string;            // HH:mm 格式，如 "09:00"
         };
       };
     };
   };
-  
-  // FCM 设备令牌列表
-  fcmTokens?: Array<{
-    token: string;
-    deviceInfo: {
-      platform: string;
-      userAgent: string;
-      language: string;
-    };
-    createdAt: Date;
-    lastUsed?: Date;
-    active: boolean;
-  }>;
   createdAt: Date;
   updatedAt: Date;
 }
 
-// FCM 推送通知记录
+// 推送通知记录（已废弃，保留用于向后兼容）
 export interface PushNotificationRecord {
   id: string;
   title: string;
@@ -558,3 +544,4 @@ export interface RedemptionRecord {
   createdAt: Date;
   updatedAt?: Date;          // 管理员更新时的时间
 }
+

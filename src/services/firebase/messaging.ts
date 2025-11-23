@@ -273,7 +273,8 @@ export const deleteFCMToken = async (userId: string, token: string): Promise<boo
 export const initializePushNotifications = async (user: User): Promise<boolean> => {
   try {
     // 检查用户是否启用推送通知
-    const pushEnabled = user?.profile?.preferences?.pushNotifications?.enabled !== false;
+    // preferences 在文档根目录下，不在 profile 下
+    const pushEnabled = (user as any)?.preferences?.pushNotifications?.enabled !== false;
     if (!pushEnabled) {
       console.log('[FCM] Push notifications disabled by user');
       return false;

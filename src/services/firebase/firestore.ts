@@ -15,7 +15,8 @@ import {
   onSnapshot,
   Timestamp,
   arrayUnion,
-  arrayRemove
+  arrayRemove,
+  FieldValue
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import type { User, Brand, Cigar, Event, Order, Transaction, InboundOrder, OutboundOrder, InventoryMovement } from '../../types';
@@ -104,13 +105,39 @@ export const getDocument = async <T>(collectionName: string, id: string): Promis
 export const updateDocument = async <T>(collectionName: string, id: string, data: Partial<T>) => {
   try {
     const docRef = doc(db, collectionName, id);
-    const sanitized = sanitizeForFirestore(data);
-    await updateDoc(docRef, {
-      ...sanitized,
-      updatedAt: new Date(),
+    
+    // 处理点符号路径：Firestore 的 updateDoc 支持点符号路径，但需要确保值不是 undefined
+    // 对于点符号路径的键，直接传递给 updateDoc，不经过 sanitizeForFirestore
+    const dotNotationFields: Record<string, any> = {};
+    const regularFields: Record<string, any> = {};
+    
+    Object.keys(data).forEach(key => {
+      if (key.includes('.')) {
+        // 点符号路径：直接使用，但确保值不是 undefined
+        const value = (data as any)[key];
+        if (value !== undefined) {
+          dotNotationFields[key] = value;
+        }
+      } else {
+        // 普通字段：使用 sanitizeForFirestore 处理
+        regularFields[key] = (data as any)[key];
+      }
     });
+    
+    const sanitized = sanitizeForFirestore(regularFields);
+    
+    // 合并点符号路径字段和普通字段
+    const finalUpdateData = {
+      ...sanitized,
+      ...dotNotationFields,
+      updatedAt: new Date(),
+    };
+    
+    await updateDoc(docRef, finalUpdateData);
+    
     return { success: true };
   } catch (error) {
+    console.error('[updateDocument] Error:', error);
     return { success: false, error: error as Error };
   }
 };
