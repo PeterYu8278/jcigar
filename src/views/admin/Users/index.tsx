@@ -236,9 +236,9 @@ const AdminUsers: React.FC = () => {
         }
         // 其他角色使用默认颜色
         return (
-          <Tag color={getRoleColor(role)}>
-            {getRoleText(role)}
-          </Tag>
+        <Tag color={getRoleColor(role)}>
+          {getRoleText(role)}
+        </Tag>
         )
       },
       filterIcon: (filtered: boolean) => (
@@ -552,8 +552,8 @@ const AdminUsers: React.FC = () => {
             <>
               <Button 
                 onClick={async () => {
-                  setLoading(true)
-                  try {
+                setLoading(true)
+                try {
                     // ✅ 批量禁用时，将 VIP 角色改回 member
                     await Promise.all(selectedRowKeys.map(id => {
                       const user = users.find(u => u.id === String(id))
@@ -563,13 +563,13 @@ const AdminUsers: React.FC = () => {
                       }
                       return updateDocument<User>(COLLECTIONS.USERS, String(id), updateData as any)
                     }))
-                    message.success(t('usersAdmin.batchDisabled'))
-                    const list = await getUsers()
-                    setUsers(list)
-                    setSelectedRowKeys([])
-                  } finally {
-                    setLoading(false)
-                  }
+                  message.success(t('usersAdmin.batchDisabled'))
+                  const list = await getUsers()
+                  setUsers(list)
+                  setSelectedRowKeys([])
+                } finally {
+                  setLoading(false)
+                }
                 }}
                 style={{
                   background: 'rgba(255, 255, 255, 0.1)',
@@ -583,12 +583,12 @@ const AdminUsers: React.FC = () => {
                 onClick={async () => {
                 try {
                   modal.confirm({
-                    title: t('usersAdmin.batchDeleteConfirm'),
-                    content: t('usersAdmin.batchDeleteContent', { count: selectedRowKeys.length }),
-                    okButtonProps: { danger: true },
-                    onOk: async () => {
-                      setLoading(true)
-                      try {
+                  title: t('usersAdmin.batchDeleteConfirm'),
+                  content: t('usersAdmin.batchDeleteContent', { count: selectedRowKeys.length }),
+      okButtonProps: { danger: true },
+      onOk: async () => {
+                    setLoading(true)
+                    try {
                         const results = await Promise.all(selectedRowKeys.map(id => deleteDocument(COLLECTIONS.USERS, String(id))))
                         const failedCount = results.filter(r => !r.success).length
                         const successCount = results.filter(r => r.success).length
@@ -596,22 +596,22 @@ const AdminUsers: React.FC = () => {
                         if (failedCount > 0) {
                           message.error(t('usersAdmin.batchDeleteFailed', { failed: failedCount, total: selectedRowKeys.length }))
                         } else {
-                          message.success(t('usersAdmin.batchDeleted'))
+                      message.success(t('usersAdmin.batchDeleted'))
                         }
                         
                         if (successCount > 0) {
-                          const list = await getUsers()
-                          setUsers(list)
-                          setSelectedRowKeys([])
+                      const list = await getUsers()
+                      setUsers(list)
+                      setSelectedRowKeys([])
                         }
                       } catch (error: any) {
                         console.error('[AdminUsers] 批量删除失败:', error)
                         message.error(error.message || t('messages.operationFailed'))
-                      } finally {
-                        setLoading(false)
-                      }
+                    } finally {
+                      setLoading(false)
                     }
-                  })
+                  }
+                })
                 } catch (error: any) {
                   console.error('[AdminUsers] 打开确认对话框失败:', error)
                   message.error(error.message || '无法打开确认对话框')
@@ -698,10 +698,10 @@ const AdminUsers: React.FC = () => {
           </Select>
           <Button 
             onClick={() => {
-              setKeyword('')
-              setRoleFilter(undefined)
-              setLevelFilter(undefined)
-              setSelectedRowKeys([])
+            setKeyword('')
+            setRoleFilter(undefined)
+            setLevelFilter(undefined)
+            setSelectedRowKeys([])
             }}
             style={{
               background: 'rgba(255, 255, 255, 0.1)',
@@ -718,26 +718,26 @@ const AdminUsers: React.FC = () => {
       {/* 桌面：表格 */}
       {!isMobile && (
       <div className="points-config-form">
-        <Table
-          columns={columns}
+      <Table
+        columns={columns}
           dataSource={filteredUsers}
-          rowKey="id"
-          loading={loading}
-          rowSelection={{
-            selectedRowKeys,
-            onChange: setSelectedRowKeys,
-          }}
-          pagination={{
+        rowKey="id"
+        loading={loading}
+        rowSelection={{
+          selectedRowKeys,
+          onChange: setSelectedRowKeys,
+        }}
+        pagination={{
             total: filteredUsers.length,
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
-          }}
+          pageSize: 10,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
+        }}
           style={{
             background: 'transparent'
           }}
-        />
+      />
       </div>
       )}
 

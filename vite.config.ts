@@ -2,12 +2,27 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { resolve } from 'path'
-import { mkdirSync } from 'fs'
+import { mkdirSync, copyFileSync } from 'fs'
 import { existsSync } from 'fs'
+import { execSync } from 'child_process'
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
+    // Inject Service Worker config before build
+    {
+      name: 'inject-sw-config',
+      buildStart() {
+        try {
+          // 只在生产构建时注入（开发环境使用环境变量）
+          if (process.env.NODE_ENV === 'production' || process.env.VITE_APP_ENV === 'production') {
+            execSync('node scripts/inject-sw-config.js', { stdio: 'inherit' })
+          }
+        } catch (error) {
+          console.warn('⚠️  Service Worker config injection skipped (development mode)')
+        }
+      }
+    },
     // Ensure dist directory exists before PWA plugin runs
     {
       name: 'ensure-dist-exists',
@@ -15,6 +30,20 @@ export default defineConfig({
         const distDir = resolve(__dirname, 'dist')
         if (!existsSync(distDir)) {
           mkdirSync(distDir, { recursive: true })
+        }
+      }
+    },
+    // Copy firebase-messaging-sw.js to dist directory
+    {
+      name: 'copy-firebase-messaging-sw',
+      closeBundle() {
+        const swSource = resolve(__dirname, 'public/firebase-messaging-sw.js')
+        const swDest = resolve(__dirname, 'dist/firebase-messaging-sw.js')
+        if (existsSync(swSource)) {
+          copyFileSync(swSource, swDest)
+          console.log('✅ Copied firebase-messaging-sw.js to dist')
+        } else {
+          console.warn('⚠️  firebase-messaging-sw.js not found in public directory')
         }
       }
     },
@@ -115,6 +144,4 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
   },
-  // 确保 Service Worker 文件可以被访问
-  publicDir: 'public',
 })

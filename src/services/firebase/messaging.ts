@@ -1,296 +1,399 @@
-/**
- * Firebase Cloud Messaging (FCM) 核心服务
- * 负责推送通知的初始化、令牌管理和消息处理
- */
+// Firebase Cloud Messaging 服务
+import { getMessaging, getToken, onMessage, isSupported, Messaging } from 'firebase/messaging';
+import { getAuth } from 'firebase/auth';
+import { auth, db } from '../../config/firebase';
+import { collection, doc, setDoc, getDocs, query, where, deleteDoc } from 'firebase/firestore';
+import type { User } from '../../types';
 
-import { getMessaging, getToken, onMessage, deleteToken, Messaging, isSupported } from 'firebase/messaging';
-import { app } from '../../config/firebase';
-import { message as antMessage } from 'antd';
+// VAPID 公钥（从环境变量读取）
+const VAPID_KEY = import.meta.env.VITE_FCM_VAPID_KEY;
 
-let messaging: Messaging | null = null;
-let messagingInitialized = false;
-
-// VAPID 公钥（需要在 Firebase Console 生成）
-// 注意：部署前需要在 .env 中设置 VITE_FIREBASE_VAPID_KEY
-const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || '';
+let messagingInstance: Messaging | null = null;
 
 /**
- * 检查浏览器是否支持推送通知
+ * 获取 Messaging 实例（单例模式）
  */
-export const isNotificationSupported = async (): Promise<boolean> => {
-  try {
-    // 检查 Notification API
-    if (!('Notification' in window)) {
-      console.log('[FCM] Notification API not supported');
-      return false;
-    }
-
-    // 检查 Service Worker API
-    if (!('serviceWorker' in navigator)) {
-      console.log('[FCM] Service Worker not supported');
-      return false;
-    }
-
-    // 检查 FCM 是否支持
-    const supported = await isSupported();
-    if (!supported) {
-      console.log('[FCM] Firebase Messaging not supported');
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error('[FCM] Error checking notification support:', error);
-    return false;
-  }
-};
-
-/**
- * 初始化 Firebase Messaging
- */
-export const initializeMessaging = async (): Promise<Messaging | null> => {
-  try {
-    if (messagingInitialized && messaging) {
-      return messaging;
-    }
-
-    // 检查是否支持
-    const supported = await isNotificationSupported();
-    if (!supported) {
-      console.log('[FCM] Push notifications not supported in this browser');
-      return null;
-    }
-
-    // 检查 VAPID 密钥
-    if (!VAPID_KEY) {
-      console.error('[FCM] VAPID key not configured. Please set VITE_FIREBASE_VAPID_KEY in .env');
-      return null;
-    }
-
-    // 初始化 Messaging
-    messaging = getMessaging(app);
-    messagingInitialized = true;
-
-    console.log('[FCM] Firebase Messaging initialized successfully');
-    return messaging;
-  } catch (error) {
-    console.error('[FCM] Error initializing messaging:', error);
+export const getMessagingInstance = async (): Promise<Messaging | null> => {
+  // 检查浏览器支持
+  if (!await isSupported()) {
+    console.warn('[FCM] Browser does not support Firebase Cloud Messaging');
     return null;
   }
-};
 
-/**
- * 获取当前通知权限状态
- */
-export const getNotificationPermission = (): NotificationPermission => {
-  if ('Notification' in window) {
-    return Notification.permission;
+  if (!messagingInstance) {
+    try {
+      messagingInstance = getMessaging();
+    } catch (error) {
+      console.error('[FCM] Failed to initialize messaging:', error);
+      return null;
+    }
   }
-  return 'denied';
+
+  return messagingInstance;
 };
 
 /**
  * 请求通知权限
  */
-export const requestNotificationPermission = async (): Promise<{
-  success: boolean;
-  permission: NotificationPermission;
-  error?: string;
-}> => {
+export const requestNotificationPermission = async (): Promise<NotificationPermission> => {
+  if (!('Notification' in window)) {
+    console.warn('[FCM] This browser does not support notifications');
+    return 'denied';
+  }
+
+  if (Notification.permission === 'granted') {
+    return 'granted';
+  }
+
+  if (Notification.permission === 'denied') {
+    return 'denied';
+  }
+
+  // 请求权限
+  const permission = await Notification.requestPermission();
+  return permission;
+};
+
+/**
+ * 注册 Firebase Messaging Service Worker
+ */
+const registerFirebaseMessagingSW = async (): Promise<ServiceWorkerRegistration | null> => {
+  if (!('serviceWorker' in navigator)) {
+    console.warn('[FCM] Service Worker not supported');
+    return null;
+  }
+
   try {
-    // 检查是否支持
-    const supported = await isNotificationSupported();
-    if (!supported) {
-      return {
-        success: false,
-        permission: 'denied',
-        error: 'Push notifications are not supported in this browser'
-      };
+    // 检查是否已有 Service Worker 注册
+    const existingRegistration = await navigator.serviceWorker.getRegistration('/');
+    if (existingRegistration) {
+      console.log('[FCM] Using existing Service Worker:', existingRegistration.scope);
+      return existingRegistration;
+    }
+
+    // 尝试注册 Firebase Messaging Service Worker
+    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+      scope: '/'
+    });
+    
+    console.log('[FCM] Firebase Messaging Service Worker registered:', registration.scope);
+    
+    // 等待 Service Worker 激活
+    if (registration.installing) {
+      await new Promise<void>((resolve) => {
+        const installing = registration.installing;
+        if (!installing) {
+          resolve();
+          return;
+        }
+        
+        installing.addEventListener('statechange', () => {
+          // 检查 installing 是否仍然存在（可能在事件触发时变为 null）
+          if (!installing || installing.state === 'activated' || installing.state === 'redundant') {
+            resolve();
+          }
+        });
+        
+        // 如果已经激活，立即 resolve
+        if (installing.state === 'activated') {
+          resolve();
+        }
+      });
+    } else if (registration.waiting) {
+      await new Promise<void>((resolve) => {
+        const waiting = registration.waiting;
+        if (!waiting) {
+          resolve();
+          return;
+        }
+        
+        waiting.addEventListener('statechange', () => {
+          // 检查 waiting 是否仍然存在
+          if (!waiting || waiting.state === 'activated' || waiting.state === 'redundant') {
+            resolve();
+          }
+        });
+        
+        // 如果已经激活，立即 resolve
+        if (waiting.state === 'activated') {
+          resolve();
+        }
+      });
+    } else if (registration.active) {
+      // Service Worker 已经激活
+      console.log('[FCM] Service Worker already active');
+    }
+    
+    return registration;
+  } catch (error: any) {
+    console.error('[FCM] Failed to register Firebase Messaging Service Worker:', error);
+    
+    // 如果注册失败，尝试使用已存在的 Service Worker
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      console.log('[FCM] Using existing Service Worker (ready):', registration.scope);
+      return registration;
+    } catch (readyError) {
+      console.error('[FCM] No Service Worker available:', readyError);
+      // 在开发环境中，如果 Service Worker 不可用，返回 null 但不抛出错误
+      if (import.meta.env.DEV) {
+        console.warn('[FCM] Service Worker registration skipped in development mode');
+      }
+      return null;
+    }
+  }
+};
+
+/**
+ * 获取 FCM Token
+ */
+export const getFCMToken = async (): Promise<string | null> => {
+  try {
+    const messaging = await getMessagingInstance();
+    if (!messaging || !VAPID_KEY) {
+      console.warn('[FCM] Messaging not available or VAPID key missing');
+      return null;
+    }
+
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      console.warn('[FCM] User not authenticated');
+      return null;
     }
 
     // 请求权限
-    const permission = await Notification.requestPermission();
-    
-    if (permission === 'granted') {
-      console.log('[FCM] Notification permission granted');
-      return { success: true, permission };
-    } else if (permission === 'denied') {
-      console.log('[FCM] Notification permission denied');
-      return {
-        success: false,
-        permission,
-        error: 'Notification permission denied'
-      };
-    } else {
-      console.log('[FCM] Notification permission dismissed');
-      return {
-        success: false,
-        permission,
-        error: 'Notification permission not granted'
-      };
-    }
-  } catch (error: any) {
-    console.error('[FCM] Error requesting notification permission:', error);
-    return {
-      success: false,
-      permission: 'denied',
-      error: error.message || 'Failed to request permission'
-    };
-  }
-};
-
-/**
- * 获取 FCM 令牌
- */
-export const getFCMToken = async (): Promise<{ success: boolean; token?: string; error?: string }> => {
-  try {
-    // 初始化 Messaging
-    const msg = await initializeMessaging();
-    if (!msg) {
-      return {
-        success: false,
-        error: 'Firebase Messaging not initialized'
-      };
-    }
-
-    // 检查权限
-    const permission = getNotificationPermission();
+    const permission = await requestNotificationPermission();
     if (permission !== 'granted') {
-      return {
-        success: false,
-        error: 'Notification permission not granted'
-      };
+      console.warn('[FCM] Notification permission not granted');
+      return null;
     }
 
-    // 获取 Service Worker 注册
-    const registration = await navigator.serviceWorker.ready;
-    console.log('[FCM] Service Worker ready:', registration);
-
-    // 获取令牌
-    const token = await getToken(msg, {
-      vapidKey: VAPID_KEY,
-      serviceWorkerRegistration: registration
-    });
-
-    if (token) {
-      console.log('[FCM] FCM token obtained:', token.substring(0, 20) + '...');
-      return { success: true, token };
+    // 注册 Firebase Messaging Service Worker
+    const swRegistration = await registerFirebaseMessagingSW();
+    
+    // 准备 getToken 选项
+    const tokenOptions: { vapidKey: string; serviceWorkerRegistration?: ServiceWorkerRegistration } = {
+      vapidKey: VAPID_KEY
+    };
+    
+    // 如果成功注册了 Service Worker，则使用它
+    if (swRegistration) {
+      tokenOptions.serviceWorkerRegistration = swRegistration;
     } else {
-      console.log('[FCM] No registration token available');
-      return {
-        success: false,
-        error: 'No registration token available'
-      };
+      // 如果没有注册成功，尝试让 Firebase 使用默认的 Service Worker
+      // 这在开发环境中可能会失败，但不会阻止应用运行
+      if (import.meta.env.DEV) {
+        console.warn('[FCM] Service Worker registration failed, trying without explicit registration');
+      }
     }
-  } catch (error: any) {
-    console.error('[FCM] Error getting FCM token:', error);
-    return {
-      success: false,
-      error: error.message || 'Failed to get FCM token'
-    };
+
+    // 获取 Token
+    const token = await getToken(messaging, tokenOptions);
+
+    if (!token) {
+      console.warn('[FCM] No registration token available');
+      return null;
+    }
+
+    return token;
+  } catch (error) {
+    console.error('[FCM] Error getting token:', error);
+    return null;
   }
 };
 
 /**
- * 删除 FCM 令牌
+ * 保存 FCM Token 到 Firestore
  */
-export const deleteFCMToken = async (): Promise<{ success: boolean; error?: string }> => {
+export const saveFCMToken = async (token: string, userId: string): Promise<boolean> => {
   try {
-    if (!messaging) {
-      return { success: true }; // 没有初始化就不需要删除
+    const deviceInfo = {
+      platform: navigator.platform,
+      userAgent: navigator.userAgent,
+      language: navigator.language
+    };
+
+    const tokenData = {
+      token,
+      deviceInfo,
+      createdAt: new Date(),
+      lastUsed: new Date(),
+      active: true
+    };
+
+    // 检查是否已存在相同的 Token
+    const tokensRef = collection(db, 'users', userId, 'fcmTokens');
+    const existingQuery = query(tokensRef, where('token', '==', token));
+    const existingSnap = await getDocs(existingQuery);
+
+    if (!existingSnap.empty) {
+      // 更新现有 Token
+      const docId = existingSnap.docs[0].id;
+      await setDoc(doc(db, 'users', userId, 'fcmTokens', docId), {
+        ...tokenData,
+        lastUsed: new Date()
+      }, { merge: true });
+    } else {
+      // 创建新 Token 记录
+      const tokenDocRef = doc(tokensRef);
+      await setDoc(tokenDocRef, tokenData);
     }
 
-    await deleteToken(messaging);
-    console.log('[FCM] FCM token deleted');
-    return { success: true };
-  } catch (error: any) {
-    console.error('[FCM] Error deleting FCM token:', error);
-    return {
-      success: false,
-      error: error.message || 'Failed to delete FCM token'
-    };
+    return true;
+  } catch (error) {
+    console.error('[FCM] Error saving token:', error);
+    return false;
   }
 };
 
 /**
- * 监听前台消息（当应用在前台时收到推送）
+ * 删除 FCM Token
  */
-export const onForegroundMessage = (
-  callback: (payload: any) => void
-): (() => void) => {
-  if (!messaging) {
-    console.warn('[FCM] Messaging not initialized, cannot listen to foreground messages');
-    return () => {};
-  }
+export const deleteFCMToken = async (userId: string, token: string): Promise<boolean> => {
+  try {
+    const tokensRef = collection(db, 'users', userId, 'fcmTokens');
+    const querySnapshot = await getDocs(query(tokensRef, where('token', '==', token)));
 
-  const unsubscribe = onMessage(messaging, (payload) => {
-    console.log('[FCM] Foreground message received:', payload);
-    
-    // 显示 Ant Design 通知
-    if (payload.notification) {
-      antMessage.info({
-        content: `${payload.notification.title}: ${payload.notification.body}`,
-        duration: 5
-      });
+    if (!querySnapshot.empty) {
+      const docId = querySnapshot.docs[0].id;
+      await deleteDoc(doc(db, 'users', userId, 'fcmTokens', docId));
+      return true;
     }
-    
-    // 调用回调
-    callback(payload);
+
+    return false;
+  } catch (error) {
+    console.error('[FCM] Error deleting token:', error);
+    return false;
+  }
+};
+
+/**
+ * 初始化推送通知（获取 Token 并保存）
+ */
+export const initializePushNotifications = async (user: User): Promise<boolean> => {
+  try {
+    // 检查用户是否启用推送通知
+    const pushEnabled = user?.profile?.preferences?.pushNotifications?.enabled !== false;
+    if (!pushEnabled) {
+      console.log('[FCM] Push notifications disabled by user');
+      return false;
+    }
+
+    // 获取 Token
+    const token = await getFCMToken();
+    if (!token) {
+      return false;
+    }
+
+    // 保存 Token 到 Firestore
+    const saved = await saveFCMToken(token, user.id);
+    if (!saved) {
+      return false;
+    }
+
+    // 同时调用 Netlify Function 保存（向后端同步）
+    try {
+      const response = await fetch('/.netlify/functions/save-token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token,
+          userId: user.id,
+          deviceInfo: {
+            platform: navigator.platform,
+            userAgent: navigator.userAgent,
+            language: navigator.language
+          }
+        })
+      });
+
+      if (!response.ok) {
+        console.warn('[FCM] Failed to sync token to backend');
+      }
+    } catch (error) {
+      console.warn('[FCM] Error syncing token to backend:', error);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('[FCM] Error initializing push notifications:', error);
+    return false;
+  }
+};
+
+/**
+ * 监听前台推送消息（应用打开时）
+ */
+export const onForegroundMessage = (callback: (payload: any) => void): (() => void) | null => {
+  let unsubscribe: (() => void) | null = null;
+
+  getMessagingInstance().then((messaging) => {
+    if (!messaging) return;
+
+    unsubscribe = onMessage(messaging, (payload) => {
+      console.log('[FCM] Foreground message received:', payload);
+      callback(payload);
+    });
   });
 
-  return unsubscribe;
+  return unsubscribe || null;
 };
 
 /**
- * 获取设备信息
+ * 订阅主题
  */
-export const getDeviceInfo = (): {
-  browser: string;
-  os: string;
-  deviceType: string;
-  userAgent: string;
-} => {
-  const ua = navigator.userAgent;
-  
-  // 检测浏览器
-  let browser = 'Unknown';
-  if (ua.indexOf('Firefox') > -1) {
-    browser = 'Firefox';
-  } else if (ua.indexOf('Edg') > -1) {
-    browser = 'Edge';
-  } else if (ua.indexOf('Chrome') > -1) {
-    browser = 'Chrome';
-  } else if (ua.indexOf('Safari') > -1) {
-    browser = 'Safari';
-  }
+export const subscribeToTopic = async (topic: string): Promise<boolean> => {
+  try {
+    const token = await getFCMToken();
+    if (!token) return false;
 
-  // 检测操作系统
-  let os = 'Unknown';
-  if (ua.indexOf('Win') > -1) {
-    os = 'Windows';
-  } else if (ua.indexOf('Mac') > -1) {
-    os = 'macOS';
-  } else if (ua.indexOf('Linux') > -1) {
-    os = 'Linux';
-  } else if (ua.indexOf('Android') > -1) {
-    os = 'Android';
-  } else if (ua.indexOf('iOS') > -1 || ua.indexOf('iPhone') > -1 || ua.indexOf('iPad') > -1) {
-    os = 'iOS';
-  }
+    // 调用 Netlify Function 订阅主题
+    const response = await fetch('/.netlify/functions/subscribe-topic', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        token,
+        topic,
+        action: 'subscribe'
+      })
+    });
 
-  // 检测设备类型
-  let deviceType: 'desktop' | 'mobile' | 'tablet' = 'desktop';
-  if (/Mobi|Android/i.test(ua)) {
-    deviceType = 'mobile';
-  } else if (/Tablet|iPad/i.test(ua)) {
-    deviceType = 'tablet';
+    return response.ok;
+  } catch (error) {
+    console.error('[FCM] Error subscribing to topic:', error);
+    return false;
   }
+};
 
-  return {
-    browser,
-    os,
-    deviceType,
-    userAgent: ua
-  };
+/**
+ * 取消订阅主题
+ */
+export const unsubscribeFromTopic = async (topic: string): Promise<boolean> => {
+  try {
+    const token = await getFCMToken();
+    if (!token) return false;
+
+    // 调用 Netlify Function 取消订阅
+    const response = await fetch('/.netlify/functions/subscribe-topic', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        token,
+        topic,
+        action: 'unsubscribe'
+      })
+    });
+
+    return response.ok;
+  } catch (error) {
+    console.error('[FCM] Error unsubscribing from topic:', error);
+    return false;
+  }
 };
 

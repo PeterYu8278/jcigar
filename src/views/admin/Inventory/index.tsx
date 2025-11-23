@@ -1154,16 +1154,16 @@ const AdminInventory: React.FC = () => {
                     <>
                       <Button 
                         onClick={async () => {
-                          setLoading(true)
-                          try {
-                            await Promise.all(selectedRowKeys.map(id => updateDocument(COLLECTIONS.CIGARS, String(id), { status: 'inactive' } as any)))
-                            message.success(t('inventory.batchDisabled'))
-                            const list = await getCigars()
-                            setItems(list)
-                            setSelectedRowKeys([])
-                          } finally {
-                            setLoading(false)
-                          }
+                        setLoading(true)
+                        try {
+                          await Promise.all(selectedRowKeys.map(id => updateDocument(COLLECTIONS.CIGARS, String(id), { status: 'inactive' } as any)))
+                          message.success(t('inventory.batchDisabled'))
+                          const list = await getCigars()
+                          setItems(list)
+                          setSelectedRowKeys([])
+                        } finally {
+                          setLoading(false)
+                        }
                         }}
                         style={{
                           background: 'rgba(255, 255, 255, 0.1)',
@@ -1427,12 +1427,12 @@ const AdminInventory: React.FC = () => {
                       </div>
                       <div style={{ padding: 12 }}>
                       <div className="points-config-form">
-                        <Table
-                          columns={columns}
+              <Table
+                columns={columns}
                           dataSource={group.items}
-                          rowKey="id"
+                rowKey="id"
                           size="small"
-                          loading={loading}
+                loading={loading}
                           rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys, preserveSelectedRowKeys: true }}
                           pagination={false}
                           style={{
@@ -2537,9 +2537,9 @@ const AdminInventory: React.FC = () => {
               >
               {!isMobile ? (
               <div className="points-config-form">
-                <Table
+              <Table
                   style={{ marginTop: 1, background: 'transparent' }}
-                  title={() => t('inventory.inStockRecord')}
+                title={() => t('inventory.inStockRecord')}
                   dataSource={inLogsGroupedByReference}
                   rowKey={(record) => record.id || `ref-${record.referenceNo}` || 'no-ref'}
                   pagination={{ 
@@ -2558,14 +2558,14 @@ const AdminInventory: React.FC = () => {
                     onExpandedRowsChange: (keys) => setInLogsExpandedKeys([...keys]),
                     expandedRowRender: (record: any) => (
                       <div className="points-config-form">
-                        <Table
-                          dataSource={record.logs}
-                          rowKey="id"
-                          pagination={false}
-                          size="small"
-                          showHeader={true}
+                      <Table
+                        dataSource={record.logs}
+                        rowKey="id"
+                        pagination={false}
+                        size="small"
+                        showHeader={true}
                           style={{ marginLeft: 20, background: 'transparent' }}
-                          columns={[
+                        columns={[
                           { 
                             title: t('inventory.product'), 
                             dataIndex: 'cigarId', 
@@ -3742,26 +3742,26 @@ const AdminInventory: React.FC = () => {
               >
                 {!isMobile ? (
                   <div className="points-config-form">
-                    <Table
-                      title={() => t('inventory.outStockRecord')}
-                      columns={unifiedOutColumns}
-                      dataSource={unifiedOutRows}
-                      rowKey="id"
+                  <Table
+                    title={() => t('inventory.outStockRecord')}
+                    columns={unifiedOutColumns}
+                    dataSource={unifiedOutRows}
+                    rowKey="id"
                       style={{
                         background: 'transparent'
                       }}
-                      pagination={{ 
-                        pageSize: outPageSize,
-                        showSizeChanger: true,
-                        showQuickJumper: false,
-                        pageSizeOptions: ['5','10','20','50'],
-                        onChange: (_page, size) => {
-                          const next = size || outPageSize
-                          setOutPageSize(next)
-                          try { localStorage.setItem('inventory_out_page_size', String(next)) } catch {}
-                        }
-                      }}
-                    />
+                    pagination={{ 
+                      pageSize: outPageSize,
+                      showSizeChanger: true,
+                      showQuickJumper: false,
+                      pageSizeOptions: ['5','10','20','50'],
+                      onChange: (_page, size) => {
+                        const next = size || outPageSize
+                        setOutPageSize(next)
+                        try { localStorage.setItem('inventory_out_page_size', String(next)) } catch {}
+                      }
+                    }}
+                  />
                   </div>
                 ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -4214,22 +4214,22 @@ const AdminInventory: React.FC = () => {
         width={800}
       >
         <div className="points-config-form">
-          <Table
-            columns={[
-              { title: t('inventory.time'), dataIndex: 'createdAt', key: 'createdAt', render: (v: any) => { const d = toDateSafe(v); return d ? d.toLocaleString() : '-' } },
-              { title: t('inventory.product'), dataIndex: 'cigarId', key: 'cigarId', render: (id: string) => items.find(i => i.id === id)?.name || id },
-              { title: t('inventory.quantity'), dataIndex: 'quantity', key: 'quantity' },
-              { title: t('inventory.reason'), dataIndex: 'reason', key: 'reason', render: (v: any) => v || '-' },
-              { title: t('inventory.operator'), dataIndex: 'operatorId', key: 'operatorId', render: (v: any) => v || '-' },
-            ]}
-            dataSource={currentReferenceLogs}
-            rowKey="id"
-            pagination={false}
-            size="small"
+        <Table
+          columns={[
+            { title: t('inventory.time'), dataIndex: 'createdAt', key: 'createdAt', render: (v: any) => { const d = toDateSafe(v); return d ? d.toLocaleString() : '-' } },
+            { title: t('inventory.product'), dataIndex: 'cigarId', key: 'cigarId', render: (id: string) => items.find(i => i.id === id)?.name || id },
+            { title: t('inventory.quantity'), dataIndex: 'quantity', key: 'quantity' },
+            { title: t('inventory.reason'), dataIndex: 'reason', key: 'reason', render: (v: any) => v || '-' },
+            { title: t('inventory.operator'), dataIndex: 'operatorId', key: 'operatorId', render: (v: any) => v || '-' },
+          ]}
+          dataSource={currentReferenceLogs}
+          rowKey="id"
+          pagination={false}
+          size="small"
             style={{
               background: 'transparent'
             }}
-          />
+        />
         </div>
         <div style={{ 
           marginTop: 16, 
@@ -4268,7 +4268,7 @@ const AdminInventory: React.FC = () => {
           // 电脑端 - 使用表格
           <>
         <div className="points-config-form">
-          <Table
+        <Table
           columns={[
             { 
               title: t('inventory.time'), 
@@ -4788,15 +4788,15 @@ const AdminInventory: React.FC = () => {
 
         {/* 品牌入库统计表格 */}
         <div className="points-config-form">
-          <Table
-            dataSource={inStats}
-            rowKey="brand"
-            pagination={false}
-            size="small"
+        <Table
+          dataSource={inStats}
+          rowKey="brand"
+          pagination={false}
+          size="small"
             style={{
               background: 'transparent'
             }}
-            expandable={{
+          expandable={{
             columnWidth: 60,
             columnTitle: (
               <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -4831,14 +4831,14 @@ const AdminInventory: React.FC = () => {
             onExpandedRowsChange: (keys) => setInStatsExpandedKeys([...keys]),
             expandedRowRender: (record: any) => (
               <div className="points-config-form">
-                <Table
-                  dataSource={record.products}
-                  rowKey={(p: any) => p.cigar.id}
-                  pagination={false}
-                  size="small"
-                  showHeader={true}
+              <Table
+                dataSource={record.products}
+                rowKey={(p: any) => p.cigar.id}
+                pagination={false}
+                size="small"
+                showHeader={true}
                   style={{ marginLeft: 20, background: 'transparent' }}
-                  columns={[
+                columns={[
                   {
                     title: t('inventory.productName'),
                     dataIndex: 'cigar',
@@ -4883,8 +4883,8 @@ const AdminInventory: React.FC = () => {
               </div>
             ),
             rowExpandable: (record: any) => record.products && record.products.length > 0,
-          }}
-          columns={[
+        }}
+        columns={[
             {
               title: t('inventory.brand'),
               dataIndex: 'brand',
@@ -4969,15 +4969,15 @@ const AdminInventory: React.FC = () => {
 
         {/* 品牌出库统计表格（可展开产品明细） */}
         <div className="points-config-form">
-          <Table
-            dataSource={outStats}
-            rowKey="brand"
-            pagination={false}
-            size="small"
+        <Table
+          dataSource={outStats}
+          rowKey="brand"
+          pagination={false}
+          size="small"
             style={{
               background: 'transparent'
             }}
-            expandable={{
+          expandable={{
             columnWidth: 60,
             columnTitle: (
               <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -5012,14 +5012,14 @@ const AdminInventory: React.FC = () => {
             onExpandedRowsChange: (keys) => setOutStatsExpandedKeys([...keys]),
             expandedRowRender: (record: any) => (
               <div className="points-config-form">
-                <Table
-                  dataSource={record.products}
-                  rowKey={(p: any) => p.cigar.id}
-                  pagination={false}
-                  size="small"
-                  showHeader={true}
+              <Table
+                dataSource={record.products}
+                rowKey={(p: any) => p.cigar.id}
+                pagination={false}
+                size="small"
+                showHeader={true}
                   style={{ marginLeft: 20, background: 'transparent' }}
-                  columns={[
+                columns={[
                   {
                     title: t('inventory.productName'),
                     dataIndex: 'cigar',

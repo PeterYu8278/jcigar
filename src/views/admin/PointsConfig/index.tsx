@@ -729,7 +729,7 @@ const PointsConfigPage: React.FC = () => {
                       }}
                   style={{
                     background: 'transparent'
-                  }}
+                      }}
                     />
                   </div>
             ) : (
@@ -958,7 +958,7 @@ const PointsConfigPage: React.FC = () => {
                       }}
                   style={{
                     background: 'transparent'
-                  }}
+                      }}
                     />
                   </div>
             ) : (

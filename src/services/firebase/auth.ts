@@ -595,15 +595,15 @@ export const completeGoogleUserProfile = async (
         // 将 Google 邮箱写入该旧用户的数据，并删除临时文档
         
         // 验证引荐码（如果提供）
-        let referrer: any = null;
-        if (referralCode) {
-          const referralResult = await getUserByMemberId(referralCode.trim());
-          if (!referralResult.success) {
-            return { success: false, error: new Error(referralResult.error || '引荐码无效') } as { success: false; error: Error }
-          }
-          referrer = referralResult.user;
-        }
-        
+    let referrer: any = null;
+    if (referralCode) {
+      const referralResult = await getUserByMemberId(referralCode.trim());
+      if (!referralResult.success) {
+        return { success: false, error: new Error(referralResult.error || '引荐码无效') } as { success: false; error: Error }
+      }
+      referrer = referralResult.user;
+    }
+    
         // 更新旧用户的数据
         const oldUserRef = doc(db, 'users', existingPhoneUser.id);
         const updateData: any = {
@@ -634,7 +634,7 @@ export const completeGoogleUserProfile = async (
         
         // 更新 sessionStorage，指向旧用户的 ID
         sessionStorage.setItem('firestoreUserId', existingPhoneUser.id);
-        
+    
         // 为用户设置密码
         const { updatePassword, EmailAuthProvider, linkWithCredential } = await import('firebase/auth');
         try {
@@ -672,7 +672,7 @@ export const completeGoogleUserProfile = async (
       } else {
         // ✅ 场景 1.b.2.2：电话号码存在，且该用户已有邮箱
         return { success: false, error: new Error('该手机号已被其他用户使用') } as { success: false; error: Error }
-      }
+    }
     } else {
       // ✅ 场景 1.b.2.1（电话不存在）：完成新用户的资料
       
@@ -688,57 +688,57 @@ export const completeGoogleUserProfile = async (
       
       // 更新当前用户文档
       const userRef = doc(db, 'users', currentFirestoreUserId);
-      const updateData: any = {
+    const updateData: any = {
         email: googleEmail,
-        displayName,
+      displayName,
         'profile.phone': normalizedPhone,
-        updatedAt: new Date(),
-      };
-      
+      updatedAt: new Date(),
+    };
+    
       // 如果有引荐人，更新引荐信息（不再赠送积分）
-      if (referrer) {
-        updateData.referral = {
-          referredBy: referrer.memberId,
-          referredByUserId: referrer.id,
-          referralDate: new Date(),
-          referrals: [],
-          totalReferred: 0,
-          activeReferrals: 0,
-        };
-      }
-      
-      await setDoc(userRef, updateData, { merge: true });
-      
+    if (referrer) {
+      updateData.referral = {
+        referredBy: referrer.memberId,
+        referredByUserId: referrer.id,
+        referralDate: new Date(),
+        referrals: [],
+        totalReferred: 0,
+        activeReferrals: 0,
+      };
+    }
+    
+    await setDoc(userRef, updateData, { merge: true });
+
       // 为用户设置密码
       const { updatePassword, EmailAuthProvider, linkWithCredential } = await import('firebase/auth');
-      try {
+        try {
         const credential = EmailAuthProvider.credential(googleEmail, password);
         await linkWithCredential(currentAuthUser, credential);
-      } catch (linkError: any) {
-        if (linkError.code === 'auth/provider-already-linked') {
+        } catch (linkError: any) {
+          if (linkError.code === 'auth/provider-already-linked') {
           await updatePassword(currentAuthUser, password);
-        } else {
-          throw linkError;
+          } else {
+            throw linkError;
         }
       }
       
       // 更新 Firebase Auth displayName
       await updateProfile(currentAuthUser, { displayName });
-      
+    
       // 如果有引荐人，更新引荐人的数据（不再赠送积分）
-      if (referrer) {
-        try {
-          await updateDoc(doc(db, 'users', referrer.id), {
+    if (referrer) {
+      try {
+        await updateDoc(doc(db, 'users', referrer.id), {
             'referral.referrals': arrayUnion(currentFirestoreUserId),
-            'referral.totalReferred': increment(1),
-            updatedAt: new Date()
-          });
-        } catch (error) {
+          'referral.totalReferred': increment(1),
+          updatedAt: new Date()
+        });
+      } catch (error) {
           // 静默失败
-        }
       }
-      
-      return { success: true };
+    }
+
+    return { success: true };
     }
   } catch (error) {
     const err = error as any;

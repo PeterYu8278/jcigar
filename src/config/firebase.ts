@@ -30,6 +30,22 @@ export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 
-// 同时提供命名导出和默认导出
-export { app };
+// Messaging 服务延迟初始化（需要在 Service Worker 注册后）
+export const getMessagingInstance = async () => {
+  if (typeof window === 'undefined') return null;
+  
+  try {
+    const { getMessaging, isSupported } = await import('firebase/messaging');
+    const supported = await isSupported();
+    if (!supported) return null;
+    
+    // Service Worker 路径
+    const messaging = getMessaging(app);
+    return messaging;
+  } catch (error) {
+    console.error('[Firebase] Failed to initialize messaging:', error);
+    return null;
+  }
+};
+
 export default app;

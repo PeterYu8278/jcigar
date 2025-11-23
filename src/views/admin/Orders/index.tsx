@@ -527,27 +527,27 @@ const AdminOrders: React.FC = () => {
       >
       {!isMobile ? (
       <div className="points-config-form">
-        <Table
-          columns={columns}
+      <Table
+        columns={columns}
           dataSource={filteredSorted}
-          rowKey="id"
-          loading={loading}
-          rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
-          title={() => (
-            <Space>
+        rowKey="id"
+        loading={loading}
+        rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
+        title={() => (
+          <Space>
               <button 
                 type="button" 
                 disabled={selectedRowKeys.length === 0} 
                 onClick={async () => {
-                  setLoading(true)
-                  try {
-                    await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'confirmed' } as any)))
-                    message.success(t('ordersAdmin.batchConfirmed'))
-                    loadData()
-                    setSelectedRowKeys([])
-                  } finally {
-                    setLoading(false)
-                  }
+              setLoading(true)
+              try {
+                await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'confirmed' } as any)))
+                  message.success(t('ordersAdmin.batchConfirmed'))
+                loadData()
+                setSelectedRowKeys([])
+              } finally {
+                setLoading(false)
+              }
                 }} 
                 style={{ 
                   padding: '6px 12px', 
@@ -560,20 +560,20 @@ const AdminOrders: React.FC = () => {
                 }}
               >
                 {t('ordersAdmin.batchConfirm')}
-              </button>
+            </button>
               <button 
                 type="button" 
                 disabled={selectedRowKeys.length === 0} 
                 onClick={async () => {
-                  setLoading(true)
-                  try {
-                    await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'delivered' } as any)))
-                    message.success(t('ordersAdmin.batchDelivered'))
-                    loadData()
-                    setSelectedRowKeys([])
-                  } finally {
-                    setLoading(false)
-                  }
+                setLoading(true)
+                try {
+                  await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'delivered' } as any)))
+                  message.success(t('ordersAdmin.batchDelivered'))
+                loadData()
+                setSelectedRowKeys([])
+              } finally {
+                setLoading(false)
+              }
                 }} 
                 style={{ 
                   padding: '6px 12px', 
@@ -586,20 +586,20 @@ const AdminOrders: React.FC = () => {
                 }}
               >
                 {t('ordersAdmin.batchDeliver')}
-              </button>
+            </button>
               <button 
                 type="button" 
                 disabled={selectedRowKeys.length === 0} 
                 onClick={async () => {
-                  setLoading(true)
-                  try {
-                    await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'cancelled' } as any)))
-                    message.success(t('ordersAdmin.batchCancelled'))
-                    loadData()
-                    setSelectedRowKeys([])
-                  } finally {
-                    setLoading(false)
-                  }
+              setLoading(true)
+              try {
+                await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'cancelled' } as any)))
+                  message.success(t('ordersAdmin.batchCancelled'))
+                loadData()
+                setSelectedRowKeys([])
+              } finally {
+                setLoading(false)
+              }
                 }} 
                 style={{ 
                   padding: '6px 12px', 
@@ -612,7 +612,7 @@ const AdminOrders: React.FC = () => {
                 }}
               >
                 {t('ordersAdmin.batchCancel')}
-              </button>
+            </button>
             <BatchDeleteButton
               selectedIds={selectedRowKeys}
               confirmTitle={t('ordersAdmin.batchDeleteConfirm')}
@@ -659,7 +659,7 @@ const AdminOrders: React.FC = () => {
         style={{
           background: 'transparent'
         }}
-        />
+      />
       </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -803,8 +803,8 @@ const AdminOrders: React.FC = () => {
             type="button" 
             className="cigar-btn-gradient" 
             onClick={() => {
-              const formEl = document.getElementById('createOrderForm') as HTMLFormElement | null
-              if (formEl) formEl.requestSubmit()
+            const formEl = document.getElementById('createOrderForm') as HTMLFormElement | null
+            if (formEl) formEl.requestSubmit()
             }} 
             style={{ 
               padding: '6px 14px', 

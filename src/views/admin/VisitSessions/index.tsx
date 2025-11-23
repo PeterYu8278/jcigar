@@ -476,19 +476,19 @@ const VisitSessionsPage: React.FC = () => {
 
           {!isMobile ? (
             <div className="points-config-form">
-              <Table
-                columns={columns}
-                dataSource={sessions}
-                rowKey="id"
-                loading={loading}
-                pagination={{
-                  pageSize: 20,
-                  showSizeChanger: true
-                }}
+          <Table
+            columns={columns}
+            dataSource={sessions}
+            rowKey="id"
+            loading={loading}
+            pagination={{
+              pageSize: 20,
+              showSizeChanger: true
+            }}
                 style={{
                   background: 'transparent'
                 }}
-                expandable={{
+            expandable={{
               expandedRowRender: (record: VisitSession) => {
                 // 从 redemptionRecords state 中获取该 session 的所有兑换记录（包括待处理和已完成）
                 const allRedemptionRecords = redemptionRecords.get(record.id) || [];
@@ -530,15 +530,15 @@ const VisitSessionsPage: React.FC = () => {
                       <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>暂无兑换记录</Text>
                     ) : (
                       <div className="points-config-form">
-                        <Table
-                          dataSource={allRedemptionRecords}
-                          rowKey={(item) => item.id || `${record.id}-${item.createdAt}`}
-                          pagination={false}
-                          size="small"
+                      <Table
+                        dataSource={allRedemptionRecords}
+                        rowKey={(item) => item.id || `${record.id}-${item.createdAt}`}
+                        pagination={false}
+                        size="small"
                           style={{
                             background: 'transparent'
                           }}
-                          columns={[
+                        columns={[
                           {
                             title: '状态',
                             dataIndex: 'status',
@@ -619,7 +619,7 @@ const VisitSessionsPage: React.FC = () => {
                             }
                           }
                         ]}
-                        />
+                      />
                       </div>
                     )}
                   </div>
@@ -636,7 +636,7 @@ const VisitSessionsPage: React.FC = () => {
                 return true; // 总是可以展开，以便查看是否有待处理的记录
               }
             }}
-            />
+          />
           </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

@@ -195,13 +195,13 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
       render: (proof: string) => {
         if (!proof) return '-';
         return (
-        <Button
-          type="link"
-          icon={<EyeOutlined />}
-          onClick={() => {
-            Modal.info({
+          <Button
+            type="link"
+            icon={<EyeOutlined />}
+            onClick={() => {
+              Modal.info({
               title: <span style={{ color: '#FFFFFF' }}>充值凭证</span>,
-              content: <Image src={proof} alt="充值凭证" style={{ maxWidth: '100%' }} />,
+                content: <Image src={proof} alt="充值凭证" style={{ maxWidth: '100%' }} />,
               width: 600,
               styles: {
                 content: {
@@ -224,15 +224,15 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
                   fontWeight: 700
                 }
               }
-            });
-          }}
+              });
+            }}
           style={{
             color: '#FFD700',
             padding: 0
           }}
-        >
-          查看
-        </Button>
+          >
+            查看
+          </Button>
         );
       }
     },
@@ -308,15 +308,15 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
       </div>
       {!isMobile ? (
         <div className="points-config-form">
-          <Table
-            columns={columns}
-            dataSource={records}
-            rowKey="id"
-            loading={loading}
-            pagination={{
-              pageSize: 20,
-              showSizeChanger: true
-            }}
+      <Table
+        columns={columns}
+        dataSource={records}
+        rowKey="id"
+        loading={loading}
+        pagination={{
+          pageSize: 20,
+          showSizeChanger: true
+        }}
             style={{
               background: 'transparent'
             }}

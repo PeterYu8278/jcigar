@@ -867,6 +867,29 @@
     "phoneLabel": "手机",
     "phonePlaceholder": "请输入手机号码",
     "notificationsToggle": "开启通知",
+    "pushNotifications": {
+      "title": "推送通知设置",
+      "enableNotifications": "启用推送通知",
+      "enable": "立即开启",
+      "requestPermission": "请求权限",
+      "permissionRequiredHint": "需要浏览器通知权限才能接收推送通知",
+      "permissionDeniedHint": "通知权限已被拒绝，请在浏览器设置中手动开启",
+      "enabled": "推送通知已启用",
+      "tokenFailed": "获取推送令牌失败",
+      "requestFailed": "请求通知权限失败",
+      "notificationTypes": "通知类型",
+      "types": {
+        "activity": "活动提醒",
+        "points": "积分变动",
+        "order": "订单状态",
+        "marketing": "营销推广"
+      },
+      "quietHours": {
+        "enabled": "勿扰时段",
+        "start": "开始时间",
+        "end": "结束时间"
+      }
+    },
     "noNameSet": "未设置姓名",
     "notSet": "未设置",
     "points": "积分",
@@ -1036,57 +1059,5 @@
     "english": "English",
     "zhCN": "简体中文",
     "enUS": "English"
-  },
-  "notifications": {
-    "title": "推送通知",
-    "notSupported": "您的浏览器不支持推送通知",
-    "permissionGranted": "通知权限已启用",
-    "permissionDenied": "通知权限被拒绝",
-    "tokenFailed": "获取通知令牌失败",
-    "saveFailed": "保存通知令牌失败",
-    "subscribeSuccess": "已成功启用推送通知",
-    "subscribeFailed": "启用推送通知失败",
-    "unsubscribeSuccess": "已取消推送通知",
-    "unsubscribeFailed": "取消推送通知失败",
-    "preferencesUpdated": "通知偏好已更新",
-    "preferencesUpdateFailed": "更新通知偏好失败",
-    "prompt": {
-      "title": "开启推送通知",
-      "description": "及时了解充值状态、订单进度、活动提醒和重要消息",
-      "feature1": "💰 充值到账即时通知",
-      "feature2": "📦 订单状态实时更新",
-      "feature3": "🎉 活动提醒不错过",
-      "feature4": "⏰ 会员到期提醒",
-      "enable": "启用通知",
-      "later": "稍后提醒",
-      "neverShow": "不再显示"
-    },
-    "settings": {
-      "title": "通知设置",
-      "enableAll": "启用推送通知",
-      "preferences": "通知偏好",
-      "reloadVerified": "充值验证通知",
-      "eventReminders": "活动提醒",
-      "orderUpdates": "订单更新",
-      "pointsUpdates": "积分变动",
-      "membershipAlerts": "会员到期提醒",
-      "visitAlerts": "驻店相关提醒",
-      "devices": "已注册设备",
-      "deviceInfo": "{{browser}} on {{os}}",
-      "lastUsed": "最后使用：{{time}}",
-      "removeDevice": "移除设备",
-      "removeDeviceConfirm": "确定要移除此设备的通知吗？",
-      "testNotification": "发送测试通知",
-      "testNotificationSent": "测试通知已发送"
-    },
-    "types": {
-      "reload_verified": "充值成功",
-      "event_reminder": "活动提醒",
-      "order_status": "订单更新",
-      "membership_expiring": "会员到期",
-      "points_awarded": "积分到账",
-      "visit_alert": "驻店提醒",
-      "system": "系统通知"
-    }
   }
 }

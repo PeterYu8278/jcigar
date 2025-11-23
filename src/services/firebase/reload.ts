@@ -243,26 +243,6 @@ export const verifyReloadRecord = async (
       updatedAt: Timestamp.fromDate(now)
     });
 
-    // ✅ 发送充值验证成功通知
-    try {
-      const { sendNotificationToUser } = await import('./notifications');
-      await sendNotificationToUser({
-        userId: record.userId,
-        type: 'reload_verified',
-        message: {
-          title: '💰 充值成功',
-          body: `您的充值 ${record.requestedAmount} RM (${record.pointsEquivalent} 积分) 已到账`,
-          icon: '/icons/money-bag.png'
-        },
-        relatedId: recordId,
-        priority: 'high'
-      });
-      console.log(`[充值通知] 已发送充值成功通知给用户 ${record.userId}`);
-    } catch (notificationError: any) {
-      // 通知发送失败不应该影响充值验证流程
-      console.error('[充值通知] 发送通知失败:', notificationError);
-    }
-
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message || '验证充值记录失败' };

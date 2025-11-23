@@ -159,24 +159,24 @@ const CompleteProfile: React.FC = () => {
         
         // ✅ 等待 Firestore 写入完成，然后手动设置用户状态
         const setupUserState = async () => {
-          // 等待 800ms 让 Firestore 写入完成
-          await new Promise(resolve => setTimeout(resolve, 800));
+            // 等待 800ms 让 Firestore 写入完成
+            await new Promise(resolve => setTimeout(resolve, 800));
           
           // ✅ 如果是账户合并，使用合并后的用户 ID
           const finalUserId = (result as any).mergedUserId || firestoreUserId;
           
           // 更新 sessionStorage
           sessionStorage.setItem('firestoreUserId', finalUserId);
-          
-          const { getUserData } = await import('../../services/firebase/auth');
-          const userData = await getUserData(finalUserId);
-          
-          if (userData) {
-            useAuthStore.getState().setUser(userData);
-            useAuthStore.getState().setLoading(false);
             
+            const { getUserData } = await import('../../services/firebase/auth');
+          const userData = await getUserData(finalUserId);
+            
+            if (userData) {
+              useAuthStore.getState().setUser(userData);
+              useAuthStore.getState().setLoading(false);
+              
             // 等待 500ms 让 React 重渲染完成
-            await new Promise(resolve => setTimeout(resolve, 500));
+              await new Promise(resolve => setTimeout(resolve, 500));
           }
           
           navigate(from, { replace: true });
@@ -346,7 +346,7 @@ const CompleteProfile: React.FC = () => {
                         // ✅ 如果该手机号的用户已有邮箱，则提示已被使用
                         // （如果没有邮箱，后端会自动合并账户，所以不阻止）
                         if (existingEmail && existingEmail !== '') {
-                          return Promise.reject(new Error('该手机号已被其他用户使用'))
+                        return Promise.reject(new Error('该手机号已被其他用户使用'))
                         }
                         
                         // 该手机号用户没有邮箱，允许通过（后端会合并账户）
