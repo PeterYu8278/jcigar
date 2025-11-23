@@ -83,7 +83,6 @@ export const createDocument = async <T>(collectionName: string, data: Omit<T, 'i
     
     return { success: true, id: docRef.id };
   } catch (error) {
-    console.error('🔷 ❌ createDocument ERROR:', error)
     return { success: false, error: error as Error };
   }
 };
@@ -137,7 +136,6 @@ export const updateDocument = async <T>(collectionName: string, id: string, data
     
     return { success: true };
   } catch (error) {
-    console.error('[updateDocument] Error:', error);
     return { success: false, error: error as Error };
   }
 };
@@ -831,7 +829,6 @@ export const getAllInboundOrders = async (): Promise<InboundOrder[]> => {
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InboundOrder));
   } catch (error) {
-    console.error('Error fetching inbound orders:', error);
     return [];
   }
 };
@@ -848,7 +845,6 @@ export const getInboundOrderById = async (id: string): Promise<InboundOrder | nu
     }
     return null;
   } catch (error) {
-    console.error('Error fetching inbound order:', error);
     return null;
   }
 };
@@ -866,7 +862,6 @@ export const getInboundOrdersByReferenceNo = async (referenceNo: string): Promis
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InboundOrder));
   } catch (error) {
-    console.error('Error fetching inbound orders by reference:', error);
     return [];
   }
 };
@@ -914,7 +909,6 @@ export const createInboundOrder = async (orderData: Omit<InboundOrder, 'id' | 'u
     
     return generatedId;  // 返回自动生成的 ID
   } catch (error) {
-    console.error('Error creating inbound order:', error);
     throw error;
   }
 };
@@ -930,7 +924,6 @@ export const updateInboundOrder = async (id: string, updates: Partial<InboundOrd
       updatedAt: new Date()
     });
   } catch (error) {
-    console.error('Error updating inbound order:', error);
     throw error;
   }
 };
@@ -959,13 +952,6 @@ export const deleteInboundOrder = async (id: string): Promise<void> => {
     // 2. 删除订单
     await deleteDoc(doc(db, COLLECTIONS.INBOUND_ORDERS, id));
   } catch (error) {
-    console.error('Error deleting inbound order:', error);
-    console.error('Error details:', {
-      id,
-      message: (error as any)?.message,
-      code: (error as any)?.code,
-      stack: (error as any)?.stack
-    });
     throw error;
   }
 };
@@ -979,7 +965,6 @@ export const getAllOutboundOrders = async (): Promise<OutboundOrder[]> => {
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as OutboundOrder));
   } catch (error) {
-    console.error('Error fetching outbound orders:', error);
     return [];
   }
 };

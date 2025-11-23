@@ -25,7 +25,7 @@ export interface User {
     joinDate?: Date;
     lastActive?: Date;
     points?: number;
-    referralPoints?: number;  // 引荐获得的积分
+    referralPoints?: number;  // 引荐获得的积分（从 referral.referrals[].firstReloadReward 计算总和）
     totalVisitHours?: number;  // 累计驻店时长（小时）
     lastCheckInAt?: Date;      // 最后一次check-in时间
     currentVisitSessionId?: string; // 当前进行中的visit session ID
@@ -37,7 +37,14 @@ export interface User {
     referredBy?: string | null;       // 引荐人的 memberId（不是 userId）
     referredByUserId?: string | null; // 引荐人的 userId（方便查询）
     referralDate?: Date | null;       // 被引荐日期
-    referrals: string[];              // 我引荐的人的 userId 列表
+    referrals: Array<{
+      userId: string;                 // 被引荐人的 userId
+      userName?: string;              // 被引荐人的姓名
+      memberId?: string;              // 被引荐人的 memberId
+      firstReloadReward?: number;     // 首充奖励积分（仅记录首充奖励）
+      firstReloadDate?: Date;         // 首充日期
+      firstReloadRecordId?: string;   // 首充记录 ID
+    }>;
     totalReferred: number;            // 累计引荐人数
     activeReferrals: number;          // 活跃引荐人数（已完成首单）
   };
@@ -544,5 +551,24 @@ export interface RedemptionRecord {
   
   createdAt: Date;
   updatedAt?: Date;          // 管理员更新时的时间
+}
+
+// 引荐记录（存储在 users/{referrerId}/referrals/{referredUserId} 子集合中）
+export interface ReferralRecord {
+  id: string;                // 被引荐人的 userId（作为文档 ID）
+  referredUserId: string;    // 被引荐人的 userId
+  referredUserName?: string; // 被引荐人的姓名
+  referredUserMemberId?: string; // 被引荐人的 memberId
+  
+  // 开通会员信息
+  membershipActivatedAt?: Date; // 首次开通会员日期
+  
+  // 首充奖励信息
+  firstReloadReward?: number;   // 被引荐人首充时，引荐人获得的奖励积分
+  firstReloadAt?: Date;         // 首次充值日期
+  firstReloadRecordId?: string; // 首次充值记录 ID
+  
+  createdAt: Date;              // 引荐关系建立日期
+  updatedAt: Date;              // 最后更新时间
 }
 

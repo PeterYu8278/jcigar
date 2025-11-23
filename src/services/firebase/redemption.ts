@@ -37,7 +37,6 @@ export const getRedemptionConfig = async (): Promise<RedemptionConfig | null> =>
     } as RedemptionConfig;
     return config;
   } catch (error) {
-    console.error('获取兑换配置失败:', error);
     return null;
   }
 };
@@ -76,7 +75,6 @@ const getUserTotalVisitHoursInPeriod = async (userId: string): Promise<number> =
     
     if (!period) {
       // 如果没有会员期限，返回0
-      console.warn('[getUserTotalVisitHoursInPeriod] 没有会员期限，返回0');
       return 0;
     }
 
@@ -98,7 +96,6 @@ const getUserTotalVisitHoursInPeriod = async (userId: string): Promise<number> =
     
     return totalHours;
   } catch (error) {
-    console.error('获取会员期限内累计驻店时长失败:', error);
     return 0;
   }
 };
@@ -150,7 +147,6 @@ export const getUserRedemptionLimits = async (userId: string): Promise<{
 
     return finalLimits;
   } catch (error) {
-    console.error('获取用户兑换限额失败:', error);
     return { dailyLimit: 3, totalLimit: 25 };
   }
 };
@@ -446,7 +442,6 @@ export const getRedemptionRecordsBySession = async (
       } as RedemptionRecord;
     });
   } catch (error: any) {
-    console.error('[getRedemptionRecordsBySession] 查询失败:', error);
     return [];
   }
 };
@@ -494,7 +489,6 @@ export const getDailyRedemptions = async (
     return records;
   } catch (error: any) {
     // 如果查询失败（可能是缺少索引），尝试不使用orderBy
-    console.error('[getDailyRedemptions] 查询失败，尝试不使用orderBy:', error);
     try {
       // 重新获取会员期限（在重试逻辑中）
       const { getUserMembershipPeriod } = await import('./membershipFee');
@@ -529,7 +523,6 @@ export const getDailyRedemptions = async (
       const sorted = records.sort((a, b) => a.redeemedAt.getTime() - b.redeemedAt.getTime());
       return sorted;
     } catch (retryError) {
-      console.error('[getDailyRedemptions] 重试查询也失败:', retryError);
       return [];
     }
   }
@@ -564,7 +557,6 @@ export const getHourlyRedemptions = async (
     });
   } catch (error: any) {
     // 如果查询失败（可能是缺少索引），尝试不使用orderBy
-    console.error('[getHourlyRedemptions] 查询失败，尝试不使用orderBy:', error);
     try {
       const q = query(
         collection(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS),
@@ -586,7 +578,6 @@ export const getHourlyRedemptions = async (
       // 手动排序
       return records.sort((a, b) => a.redeemedAt.getTime() - b.redeemedAt.getTime());
     } catch (retryError) {
-      console.error('[getHourlyRedemptions] 重试查询也失败:', retryError);
       return [];
     }
   }
@@ -629,7 +620,6 @@ export const getTotalRedemptions = async (userId: string): Promise<RedemptionRec
     
     return records;
   } catch (error) {
-    console.error('[getTotalRedemptions] 查询失败:', error);
     return [];
   }
 };

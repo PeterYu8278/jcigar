@@ -279,7 +279,6 @@ export const getPendingMembershipFeeRecords = async (targetDate?: Date): Promise
 
     return records;
   } catch (error: any) {
-    console.error('[getPendingMembershipFeeRecords] 查询失败:', error);
     // 如果是索引错误，尝试不使用orderBy
     if (error.code === 'failed-precondition' || error.message?.includes('index')) {
       try {
@@ -311,7 +310,6 @@ export const getPendingMembershipFeeRecords = async (targetDate?: Date): Promise
         records.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
         return records;
       } catch (retryError) {
-        console.error('[getPendingMembershipFeeRecords] 重试查询也失败:', retryError);
         return [];
       }
     }
@@ -394,6 +392,41 @@ export const deductMembershipFee = async (
         updatedAt: Timestamp.fromDate(now)
       });
 
+      // 如果是首次开通会员，仅记录到引荐人的 referrals 子集合（不写入 users 文档）
+      if (record.renewalType === 'initial') {
+        const referrerId = userData.referral?.referredByUserId;
+        if (referrerId) {
+          try {
+            // 记录到 referrals 子集合
+            const referralsRef = collection(db, GLOBAL_COLLECTIONS.USERS, referrerId, 'referrals');
+            const referralDocRef = doc(referralsRef, record.userId);
+            
+            // 检查是否已存在引荐记录
+            const existingDoc = await getDoc(referralDocRef);
+            
+            if (existingDoc.exists()) {
+              // 更新现有记录
+              await updateDoc(referralDocRef, {
+                membershipActivatedAt: Timestamp.fromDate(now),
+                updatedAt: Timestamp.fromDate(now)
+              });
+            } else {
+              // 创建新记录
+              await setDoc(referralDocRef, {
+                referredUserId: record.userId,
+                referredUserName: record.userName,
+                referredUserMemberId: userData.memberId || null,
+                membershipActivatedAt: Timestamp.fromDate(now),
+                createdAt: Timestamp.fromDate(userData.referral?.referralDate || now),
+                updatedAt: Timestamp.fromDate(now)
+              });
+            }
+          } catch (referralError) {
+            // 记录失败不影响主流程
+          }
+        }
+      }
+
       // 如果是续费，设置首次驻店免扣费到期时间（续费后30天内）
       if (record.renewalType === 'renewal') {
         const waiverExpiresAt = new Date(now);
@@ -459,9 +492,7 @@ export const getUserMembershipFeeRecords = async (
     const records = snapshot.docs.map(mapDocToMembershipFeeRecord);
     
     return records;
-  } catch (error: any) {
-    console.error('[getUserMembershipFeeRecords] 查询失败，尝试不使用orderBy:', error);
-    
+  } catch (error: any) {    
     // 如果是因为缺少索引而失败，尝试不使用orderBy重新查询
     try {
       const q = query(
@@ -478,7 +509,6 @@ export const getUserMembershipFeeRecords = async (
       
       return sortedRecords;
     } catch (retryError) {
-      console.error('[getUserMembershipFeeRecords] 重试查询也失败:', retryError);
       return [];
     }
   }
@@ -515,7 +545,6 @@ export const getAllMembershipFeeRecords = async (
     
     return records;
   } catch (error: any) {
-    console.error('[getAllMembershipFeeRecords] 查询失败，尝试不使用orderBy:', error);
     try {
       let q;
       if (statusFilter) {
@@ -534,7 +563,6 @@ export const getAllMembershipFeeRecords = async (
       const records = snapshot.docs.map(mapDocToMembershipFeeRecord);
       return records.sort((a, b) => b.dueDate.getTime() - a.dueDate.getTime());
     } catch (retryError) {
-      console.error('[getAllMembershipFeeRecords] 重试查询也失败:', retryError);
       return [];
     }
   }
@@ -551,7 +579,6 @@ export const getUserMembershipPeriod = async (userId: string): Promise<{ startDa
     
     
     if (paidRecords.length === 0) {
-      console.warn('[getUserMembershipPeriod] 没有找到paid状态的年费记录');
       return null;
     }
     
@@ -564,7 +591,6 @@ export const getUserMembershipPeriod = async (userId: string): Promise<{ startDa
     
     const latestPaidRecord = sortedPaidRecords[0];
     if (!latestPaidRecord.deductedAt) {
-      console.warn('[getUserMembershipPeriod] 最新paid记录没有deductedAt');
       return null;
     }
     
@@ -576,7 +602,6 @@ export const getUserMembershipPeriod = async (userId: string): Promise<{ startDa
     
     return { startDate, endDate };
   } catch (error) {
-    console.error('获取会员期限失败:', error);
     return null;
   }
 };

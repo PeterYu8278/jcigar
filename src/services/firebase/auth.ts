@@ -154,11 +154,30 @@ export const registerUser = async (
     // ✅ 如果有引荐人，更新引荐人的数据（不再赠送积分）
     if (referrer) {
       try {
-        await updateDoc(doc(db, 'users', referrer.id), {
-          'referral.referrals': arrayUnion(user.uid),
-          'referral.totalReferred': increment(1),
-          updatedAt: new Date()
-        });
+        // 获取引荐人的当前 referrals 数组
+        const referrerDoc = await getDoc(doc(db, 'users', referrer.id));
+        const referrerData = referrerDoc.exists() ? referrerDoc.data() as User : null;
+        const existingReferrals = referrerData?.referral?.referrals || [];
+        
+        // 检查是否已存在该用户
+        const exists = existingReferrals.some((r: any) => 
+          (typeof r === 'string' ? r === user.uid : r.userId === user.uid)
+        );
+        
+        if (!exists) {
+          // 添加新的引荐记录（对象格式）
+          const newReferral = {
+            userId: user.uid,
+            userName: displayName,
+            memberId: memberId
+          };
+          
+          await updateDoc(doc(db, 'users', referrer.id), {
+            'referral.referrals': arrayUnion(newReferral),
+            'referral.totalReferred': increment(1),
+            updatedAt: new Date()
+          });
+        }
       } catch (error) {
         // 不影响注册流程，静默失败
       }
@@ -634,11 +653,34 @@ export const completeGoogleUserProfile = async (
         // 如果有引荐人，更新引荐人的数据（不再赠送积分）
         if (referrer) {
           try {
-            await updateDoc(doc(db, 'users', referrer.id), {
-              'referral.referrals': arrayUnion(existingPhoneUser.id),
-              'referral.totalReferred': increment(1),
-              updatedAt: new Date()
-            });
+            // 获取引荐人的当前 referrals 数组
+            const referrerDoc = await getDoc(doc(db, 'users', referrer.id));
+            const referrerData = referrerDoc.exists() ? referrerDoc.data() as User : null;
+            const existingReferrals = referrerData?.referral?.referrals || [];
+            
+            // 检查是否已存在该用户
+            const exists = existingReferrals.some((r: any) => 
+              (typeof r === 'string' ? r === existingPhoneUser.id : r.userId === existingPhoneUser.id)
+            );
+            
+            if (!exists) {
+              // 获取被引荐用户信息
+              const referredUserDoc = await getDoc(doc(db, 'users', existingPhoneUser.id));
+              const referredUserData = referredUserDoc.exists() ? referredUserDoc.data() as User : null;
+              
+              // 添加新的引荐记录（对象格式）
+              const newReferral = {
+                userId: existingPhoneUser.id,
+                userName: referredUserData?.displayName || '',
+                memberId: referredUserData?.memberId || null
+              };
+              
+              await updateDoc(doc(db, 'users', referrer.id), {
+                'referral.referrals': arrayUnion(newReferral),
+                'referral.totalReferred': increment(1),
+                updatedAt: new Date()
+              });
+            }
           } catch (error) {
             // 静默失败
           }
@@ -710,11 +752,34 @@ export const completeGoogleUserProfile = async (
       // 如果有引荐人，更新引荐人的数据（不再赠送积分）
     if (referrer) {
       try {
-        await updateDoc(doc(db, 'users', referrer.id), {
-            'referral.referrals': arrayUnion(currentFirestoreUserId),
-          'referral.totalReferred': increment(1),
-          updatedAt: new Date()
-        });
+        // 获取引荐人的当前 referrals 数组
+        const referrerDoc = await getDoc(doc(db, 'users', referrer.id));
+        const referrerData = referrerDoc.exists() ? referrerDoc.data() as User : null;
+        const existingReferrals = referrerData?.referral?.referrals || [];
+        
+        // 检查是否已存在该用户
+        const exists = existingReferrals.some((r: any) => 
+          (typeof r === 'string' ? r === currentFirestoreUserId : r.userId === currentFirestoreUserId)
+        );
+        
+        if (!exists) {
+          // 获取被引荐用户信息
+          const referredUserDoc = await getDoc(doc(db, 'users', currentFirestoreUserId));
+          const referredUserData = referredUserDoc.exists() ? referredUserDoc.data() as User : null;
+          
+          // 添加新的引荐记录（对象格式）
+          const newReferral = {
+            userId: currentFirestoreUserId,
+            userName: referredUserData?.displayName || displayName,
+            memberId: referredUserData?.memberId || null
+          };
+          
+          await updateDoc(doc(db, 'users', referrer.id), {
+            'referral.referrals': arrayUnion(newReferral),
+            'referral.totalReferred': increment(1),
+            updatedAt: new Date()
+          });
+        }
       } catch (error) {
           // 静默失败
       }
@@ -753,7 +818,7 @@ export const onAuthStateChange = (callback: (user: FirebaseUser | null) => void)
 };
 
 // 获取用户完整信息
-const convertFirestoreTimestamps = (value: any): any => {
+export const convertFirestoreTimestamps = (value: any): any => {
   if (!value) return value;
   if (typeof value?.toDate === 'function') {
     return value.toDate();

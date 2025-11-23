@@ -74,6 +74,8 @@ const ReloadPage: React.FC = () => {
         // 重新检查 pending 记录
         const pending = await getUserPendingReloadRecord(user.id);
         setPendingRecord(pending);
+        // 跳转到主页
+        navigate('/');
       } else {
         message.error(result.error || '提交充值请求失败');
       }

@@ -5,6 +5,7 @@ import {
   getDoc, 
   getDocs, 
   addDoc, 
+  setDoc,
   updateDoc,
   deleteDoc,
   query, 
@@ -18,6 +19,7 @@ import { GLOBAL_COLLECTIONS } from '../../config/globalCollections';
 import type { ReloadRecord, User } from '../../types';
 import { createPointsRecord } from './pointsRecords';
 import { getPointsConfig } from './pointsConfig';
+import { calculateReferralPointsFromArray } from '../../utils/referral';
 
 // 充值汇率（1 RM = 多少积分）
 const RELOAD_EXCHANGE_RATE = 1; // 1 RM = 1 积分（可根据配置调整）
@@ -142,22 +144,16 @@ export const verifyReloadRecord = async (
       const isFirstReload = completedReloadsSnapshot.empty;
       
       if (isFirstReload) {
-        console.log(`[首充检测] 用户 ${record.userId} 首次充值，检查引荐关系...`);
-        
         // 检查用户是否有引荐人
         const referrerId = userData.referral?.referredByUserId;
         
         if (referrerId) {
-          console.log(`[首充检测] 发现引荐人 ${referrerId}，准备发放首充奖励...`);
-          
           // 获取积分配置
           const pointsConfig = await getPointsConfig();
           
           if (pointsConfig?.reload) {
             const referrerReward = pointsConfig.reload.referrerFirstReload || 0;
             const referredReward = pointsConfig.reload.referredFirstReload || 0;
-            
-            console.log(`[首充奖励] 引荐人奖励: ${referrerReward}积分, 被引荐人奖励: ${referredReward}积分`);
             
             // 1. 给被引荐人（当前用户）增加首充奖励积分
             if (referredReward > 0) {
@@ -183,7 +179,6 @@ export const verifyReloadRecord = async (
               // 更新 newPoints 以便后续更新充值记录时使用正确的余额
               newPoints = referredNewPoints;
               
-              console.log(`[首充奖励] 被引荐人获得 ${referredReward} 积分`);
             }
             
             // 2. 给引荐人增加首充奖励积分
@@ -194,9 +189,43 @@ export const verifyReloadRecord = async (
                 const referrerCurrentPoints = referrerData.membership?.points || 0;
                 const referrerNewPoints = referrerCurrentPoints + referrerReward;
                 
+                // 更新引荐人的 referrals 数组，添加首充奖励信息
+                const existingReferrals = referrerData.referral?.referrals || [];
+                const referralIndex = existingReferrals.findIndex(
+                  (r: any) => (typeof r === 'string' ? r === record.userId : r.userId === record.userId)
+                );
+                
+                const referralData = {
+                  userId: record.userId,
+                  userName: record.userName,
+                  memberId: userData.memberId || null,
+                  firstReloadReward: referrerReward,
+                  firstReloadDate: Timestamp.fromDate(new Date()),
+                  firstReloadRecordId: recordId
+                };
+                
+                let updatedReferrals: any[];
+                if (referralIndex >= 0) {
+                  // 如果已存在，更新记录（兼容旧数据格式 string）
+                  updatedReferrals = [...existingReferrals];
+                  updatedReferrals[referralIndex] = {
+                    ...(typeof existingReferrals[referralIndex] === 'string' 
+                      ? { userId: existingReferrals[referralIndex] } 
+                      : existingReferrals[referralIndex]),
+                    ...referralData
+                  };
+                } else {
+                  // 如果不存在，添加新记录
+                  updatedReferrals = [...existingReferrals, referralData];
+                }
+                
+                // 从 referrals 数组计算 referralPoints 总和
+                const calculatedReferralPoints = calculateReferralPointsFromArray(updatedReferrals);
+                
                 await updateDoc(doc(db, GLOBAL_COLLECTIONS.USERS, referrerId), {
                   'membership.points': referrerNewPoints,
-                  'membership.referralPoints': (referrerData.membership?.referralPoints || 0) + referrerReward,
+                  'membership.referralPoints': calculatedReferralPoints,
+                  'referral.referrals': updatedReferrals,
                   updatedAt: Timestamp.fromDate(new Date())
                 });
                 
@@ -213,23 +242,48 @@ export const verifyReloadRecord = async (
                   createdBy: verifiedBy
                 });
                 
-                console.log(`[首充奖励] 引荐人获得 ${referrerReward} 积分`);
-              } else {
-                console.warn(`[首充奖励] 引荐人 ${referrerId} 不存在`);
+                // 记录到引荐人的 referrals 子集合
+                try {
+                  const referralsRef = collection(db, GLOBAL_COLLECTIONS.USERS, referrerId, 'referrals');
+                  const referralDocRef = doc(referralsRef, record.userId);
+                  
+                  // 检查是否已存在引荐记录
+                  const existingDoc = await getDoc(referralDocRef);
+                  
+                  if (existingDoc.exists()) {
+                    // 更新现有记录
+                    await updateDoc(referralDocRef, {
+                      firstReloadReward: referrerReward,
+                      firstReloadAt: Timestamp.fromDate(new Date()),
+                      firstReloadRecordId: recordId,
+                      updatedAt: Timestamp.fromDate(new Date())
+                    });
+                  } else {
+                    // 创建新记录
+                    const userDoc = await getDoc(doc(db, GLOBAL_COLLECTIONS.USERS, record.userId));
+                    const referredUserData = userDoc.exists() ? userDoc.data() as User : null;
+                    
+                    await setDoc(referralDocRef, {
+                      referredUserId: record.userId,
+                      referredUserName: record.userName,
+                      referredUserMemberId: referredUserData?.memberId || null,
+                      firstReloadReward: referrerReward,
+                      firstReloadAt: Timestamp.fromDate(new Date()),
+                      firstReloadRecordId: recordId,
+                      createdAt: Timestamp.fromDate(referredUserData?.referral?.referralDate || new Date()),
+                      updatedAt: Timestamp.fromDate(new Date())
+                    });
+                  }
+                } catch (referralError) {
+                  // 记录失败不影响主流程
+                }
               }
             }
-          } else {
-            console.log(`[首充奖励] 积分配置不存在或未配置充值奖励`);
           }
-        } else {
-          console.log(`[首充检测] 用户没有引荐人，跳过首充奖励`);
         }
-      } else {
-        console.log(`[首充检测] 非首次充值，跳过首充奖励`);
       }
     } catch (firstReloadError) {
       // 首充奖励发放失败不应该影响充值验证流程
-      console.error('[首充奖励] 发放失败:', firstReloadError);
     }
 
     // 更新充值记录状态为已完成（积分已到账）

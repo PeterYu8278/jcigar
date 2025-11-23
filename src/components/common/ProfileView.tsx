@@ -133,8 +133,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       setLoadingReferrals(true)
       try {
         const allUsers = await getUsers()
-        // 筛选出引荐的用户
-        const referred = allUsers.filter(u => user.referral?.referrals.includes(u.id))
+        // 筛选出引荐的用户（兼容新旧格式：string[] 或对象数组）
+        const referralUserIds = user.referral.referrals.map((r: any) => 
+          typeof r === 'string' ? r : r.userId
+        );
+        const referred = allUsers.filter(u => referralUserIds.includes(u.id))
         // 按注册日期降序排序
         referred.sort((a, b) => {
           const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt)

@@ -49,14 +49,12 @@ export const getUserPointsRecords = async (userId: string, limitCount: number = 
       } as PointsRecord;
     });
     
-    console.log(`[getUserPointsRecords] 查询用户 ${userId} 的积分记录，找到 ${records.length} 条`);
     return records;
   } catch (error: any) {
-    console.error('[getUserPointsRecords] 查询失败:', error);
     
     // 如果是索引错误，尝试降级查询（不使用 orderBy）
     if (error?.code === 'failed-precondition') {
-      console.warn('[getUserPointsRecords] Firestore 索引缺失，使用降级查询（不排序）');
+      
       try {
         const recordsRef = collection(db, GLOBAL_COLLECTIONS.POINTS_RECORDS);
         const fallbackQ = query(
@@ -84,10 +82,8 @@ export const getUserPointsRecords = async (userId: string, limitCount: number = 
         
         // 限制返回数量
         const limitedRecords = records.slice(0, limitCount);
-        console.log(`[getUserPointsRecords] 降级查询成功，找到 ${limitedRecords.length} 条记录`);
         return limitedRecords;
       } catch (fallbackError) {
-        console.error('[getUserPointsRecords] 降级查询也失败:', fallbackError);
         throw fallbackError;
       }
     }

@@ -122,9 +122,19 @@ const OrphanedUserCleanup: React.FC = () => {
         const otherUserData = otherUserDoc.data();
         const referrals = otherUserData.referral?.referrals || [];
         
-        if (referrals.includes(uid)) {
+        // 兼容新旧格式：检查 string[] 或对象数组
+        const hasReferral = referrals.some((r: any) => 
+          typeof r === 'string' ? r === uid : r.userId === uid
+        );
+        
+        if (hasReferral) {
+          // 找到要删除的项（兼容新旧格式）
+          const itemToRemove = referrals.find((r: any) => 
+            typeof r === 'string' ? r === uid : r.userId === uid
+          );
+          
           await updateDoc(doc(db, 'users', otherUserDoc.id), {
-            'referral.referrals': arrayRemove(uid),
+            'referral.referrals': arrayRemove(itemToRemove),
             'referral.totalReferred': (otherUserData.referral?.totalReferred || 1) - 1
           });
           referralsUpdated++;
