@@ -9,6 +9,13 @@ import LocalizedApp from './components/common/LocalizedApp'
 import { initializePWA, unregisterServiceWorker } from './utils/pwa'
 // import { initMobileDebug } from './utils/mobileDebug'
 
+// 在开发环境中，预加载 messaging 模块以确保测试函数暴露到全局对象
+if (import.meta.env.DEV) {
+  import('./services/firebase/messaging').catch(() => {
+    // 静默失败，不影响应用启动
+  });
+}
+
 // 初始化移动端调试工具（仅在移动设备上显示）
 // initMobileDebug() // 暂时禁用，解决重定向循环后再启用
 

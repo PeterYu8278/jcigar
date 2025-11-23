@@ -854,22 +854,52 @@ export const testFCMToken = async (options?: {
 
 // 在开发环境中，将测试函数暴露到全局对象，方便在控制台调用
 if (import.meta.env.DEV && typeof window !== 'undefined') {
-  (window as any).testFCMToken = testFCMToken;
-  (window as any).getCurrentDeviceFCMToken = async () => {
-    const { getAuth } = await import('firebase/auth');
-    const auth = getAuth();
-    const userId = auth.currentUser?.uid;
-    if (!userId) {
-      console.error('用户未登录');
-      return null;
-    }
-    return await getCurrentDeviceFCMToken(userId);
-  };
-  console.log('[FCM] 🧪 开发模式：测试函数已暴露到全局对象');
-  console.log('[FCM] 使用方法：');
-  console.log('  - testFCMToken() - 使用默认消息测试');
-  console.log('  - testFCMToken({ title: "标题", body: "内容" }) - 自定义消息测试');
-  console.log('  - getCurrentDeviceFCMToken() - 获取当前设备的 Token');
+  // 使用 Object.defineProperty 确保函数可以被正确暴露
+  try {
+    Object.defineProperty(window, 'testFCMToken', {
+      value: testFCMToken,
+      writable: true,
+      configurable: true,
+      enumerable: true
+    });
+    
+    Object.defineProperty(window, 'getCurrentDeviceFCMToken', {
+      value: async () => {
+        const { getAuth } = await import('firebase/auth');
+        const auth = getAuth();
+        const userId = auth.currentUser?.uid;
+        if (!userId) {
+          console.error('[FCM] 用户未登录');
+          return null;
+        }
+        return await getCurrentDeviceFCMToken(userId);
+      },
+      writable: true,
+      configurable: true,
+      enumerable: true
+    });
+    
+    console.log('[FCM] 🧪 开发模式：测试函数已暴露到全局对象');
+    console.log('[FCM] 使用方法：');
+    console.log('  - testFCMToken() - 使用默认消息测试');
+    console.log('  - testFCMToken({ title: "标题", body: "内容" }) - 自定义消息测试');
+    console.log('  - getCurrentDeviceFCMToken() - 获取当前设备的 Token');
+    console.log('[FCM] ✅ 函数已可用，可以在控制台直接调用');
+  } catch (error) {
+    console.warn('[FCM] ⚠️ 暴露测试函数到全局对象时出错:', error);
+    // 回退到直接赋值
+    (window as any).testFCMToken = testFCMToken;
+    (window as any).getCurrentDeviceFCMToken = async () => {
+      const { getAuth } = await import('firebase/auth');
+      const auth = getAuth();
+      const userId = auth.currentUser?.uid;
+      if (!userId) {
+        console.error('[FCM] 用户未登录');
+        return null;
+      }
+      return await getCurrentDeviceFCMToken(userId);
+    };
+  }
 }
 
 /**
