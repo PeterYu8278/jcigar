@@ -406,6 +406,63 @@ export const deleteFCMToken = async (userId: string, token: string): Promise<boo
 };
 
 /**
+ * 获取当前设备存储在 Firestore 中的 FCM Token
+ * 用于调试和测试
+ */
+export const getCurrentDeviceFCMToken = async (userId: string): Promise<string | null> => {
+  try {
+    const deviceId = getOrCreateDeviceId();
+    const tokensRef = collection(db, 'users', userId, 'fcmTokens');
+    
+    // 使用设备 ID 查询
+    const deviceIdQuery = query(
+      tokensRef,
+      where('deviceId', '==', deviceId),
+      where('active', '==', true)
+    );
+    const deviceIdSnapshot = await getDocs(deviceIdQuery);
+    
+    if (!deviceIdSnapshot.empty) {
+      const docSnap = deviceIdSnapshot.docs[0];
+      const data = docSnap.data();
+      return data.token as string;
+    }
+    
+    // 如果没有找到，查询所有活跃的 token
+    const activeTokensQuery = query(
+      tokensRef,
+      where('active', '==', true)
+    );
+    const snapshot = await getDocs(activeTokensQuery);
+    
+    if (!snapshot.empty) {
+      const tokens = snapshot.docs
+        .map(doc => {
+          const data = doc.data();
+          return {
+            token: data.token as string,
+            lastUsed: data.lastUsed
+          };
+        })
+        .sort((a, b) => {
+          const aTime = a.lastUsed?.toDate?.() || new Date(0);
+          const bTime = b.lastUsed?.toDate?.() || new Date(0);
+          return bTime.getTime() - aTime.getTime();
+        });
+      
+      if (tokens.length > 0) {
+        return tokens[0].token;
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('[FCM] 获取当前设备 Token 时出错:', error);
+    return null;
+  }
+};
+
+/**
  * 检查 Firestore 中是否已存在当前设备的 FCM Token
  * 优先使用设备 ID 匹配，如果没有设备 ID 则回退到 token 匹配
  */
@@ -638,6 +695,157 @@ export const onForegroundMessage = (callback: (payload: any) => void): (() => vo
 
   return unsubscribe || null;
 };
+
+/**
+ * 测试 FCM Token 推送通知
+ * 用于调试和测试推送通知功能
+ * 
+ * @param options 测试选项
+ * @returns Promise<{ success: boolean; message: string; data?: any }>
+ * 
+ * @example
+ * // 在浏览器控制台运行：
+ * import { testFCMToken } from '@/services/firebase/messaging';
+ * testFCMToken({ title: '测试', body: '这是一条测试通知' });
+ */
+export const testFCMToken = async (options?: {
+  title?: string;
+  body?: string;
+  token?: string;
+}): Promise<{ success: boolean; message: string; data?: any }> => {
+  try {
+    const { getAuth } = await import('firebase/auth');
+    const auth = getAuth();
+    const userId = auth.currentUser?.uid;
+
+    if (!userId) {
+      return {
+        success: false,
+        message: '用户未登录，无法测试推送通知'
+      };
+    }
+
+    console.log('[FCM Test] 📱 开始测试推送通知...');
+    console.log('[FCM Test] 用户 ID:', userId);
+
+    // 获取 token
+    let token: string | null = null;
+
+    if (options?.token) {
+      // 使用提供的 token
+      token = options.token;
+      console.log('[FCM Test] 使用提供的 Token:', token.substring(0, 20) + '...');
+    } else {
+      // 从 Firestore 获取当前设备的 token
+      console.log('[FCM Test] 🔍 从 Firestore 获取当前设备的 Token...');
+      token = await getCurrentDeviceFCMToken(userId);
+
+      if (!token) {
+        // 如果 Firestore 中没有，获取新 token
+        console.log('[FCM Test] ⚠️ 未找到已存储的 Token，获取新 Token...');
+        token = await getFCMToken();
+        
+        if (token) {
+          // 保存新 token
+          await saveFCMToken(token, userId);
+          console.log('[FCM Test] ✅ 已获取并保存新 Token');
+        }
+      } else {
+        console.log('[FCM Test] ✅ 找到已存储的 Token');
+      }
+    }
+
+    if (!token) {
+      return {
+        success: false,
+        message: '无法获取 FCM Token。请确保：\n1. 浏览器支持通知\n2. 已授予通知权限\n3. VAPID_KEY 已正确配置'
+      };
+    }
+
+    console.log('[FCM Test] 📤 发送测试通知到 Token:', token.substring(0, 20) + '...');
+
+    // 调用测试函数
+    const response = await fetch('/.netlify/functions/test-token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        token: token,
+        title: options?.title || '测试通知',
+        body: options?.body || '这是一条测试推送通知'
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      console.log('[FCM Test] ✅ 推送通知已发送！');
+      console.log('[FCM Test] Message ID:', result.messageId);
+      console.log('[FCM Test] 💡 提示：如果应用在前台，通知不会显示系统通知，而是触发 onMessage 回调');
+      console.log('[FCM Test] 💡 提示：请最小化窗口或切换到其他标签页，然后等待通知');
+      
+      return {
+        success: true,
+        message: '推送通知已发送！请检查设备通知。如果应用在前台，请切换到后台查看。',
+        data: result
+      };
+    } else {
+      console.error('[FCM Test] ❌ 推送通知发送失败:', result.message);
+      console.error('[FCM Test] 错误代码:', result.error);
+      
+      if (result.error === 'messaging/registration-token-not-registered') {
+        console.log('[FCM Test] 🔄 Token 已失效，尝试获取新 Token...');
+        
+        // Token 失效，获取新 token 并重试
+        const newToken = await getFCMToken();
+        if (newToken) {
+          await saveFCMToken(newToken, userId);
+          console.log('[FCM Test] ✅ 已获取新 Token，请重新运行测试');
+          
+          return {
+            success: false,
+            message: `Token 已失效。已获取新 Token: ${newToken.substring(0, 20)}...\n请重新运行测试函数。`,
+            data: { oldToken: token, newToken: newToken }
+          };
+        }
+      }
+      
+      return {
+        success: false,
+        message: `推送通知发送失败: ${result.message}`,
+        data: result
+      };
+    }
+  } catch (error: any) {
+    console.error('[FCM Test] ❌ 测试过程中发生错误:', error);
+    return {
+      success: false,
+      message: `测试失败: ${error.message || '未知错误'}`,
+      data: error
+    };
+  }
+};
+
+// 在开发环境中，将测试函数暴露到全局对象，方便在控制台调用
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  (window as any).testFCMToken = testFCMToken;
+  (window as any).getCurrentDeviceFCMToken = async () => {
+    const { getAuth } = await import('firebase/auth');
+    const auth = getAuth();
+    const userId = auth.currentUser?.uid;
+    if (!userId) {
+      console.error('用户未登录');
+      return null;
+    }
+    return await getCurrentDeviceFCMToken(userId);
+  };
+  console.log('[FCM] 🧪 开发模式：测试函数已暴露到全局对象');
+  console.log('[FCM] 使用方法：');
+  console.log('  - testFCMToken() - 使用默认消息测试');
+  console.log('  - testFCMToken({ title: "标题", body: "内容" }) - 自定义消息测试');
+  console.log('  - getCurrentDeviceFCMToken() - 获取当前设备的 Token');
+}
 
 /**
  * 订阅主题
