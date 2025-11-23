@@ -418,11 +418,12 @@ export interface VisitSession {
   
   // 兑换项（必须在check-in到check-out之间设定）
   redemptions?: Array<{
+    recordId?: string;      // 关联的 redemptionRecords 中的记录项ID（用于更新）
     cigarId: string;
     cigarName: string;
     quantity: number;
     redeemedAt: Date;
-    redeemedBy: string; // 管理员ID
+    redeemedBy: string; // 管理员ID或用户ID（用户发起时）
   }>;
   
   // 费用结算
@@ -531,13 +532,11 @@ export interface RedemptionConfig {
   updatedBy: string;
 }
 
-// 兑换记录
-export interface RedemptionRecord {
-  id: string;
+// 单个兑换记录项
+export interface RedemptionRecordItem {
+  id: string;                // 记录项的唯一ID（用于更新和删除）
   userId: string;
   userName?: string;
-  visitSessionId: string;    // 关联的驻店记录
-  
   cigarId: string;
   cigarName: string;
   quantity: number;
@@ -555,6 +554,23 @@ export interface RedemptionRecord {
   
   createdAt: Date;
   updatedAt?: Date;          // 管理员更新时的时间
+}
+
+// 兑换记录文档（按 visitSessionId 组织）
+export interface RedemptionRecordDocument {
+  id: string;                // 文档ID = visitSessionId
+  visitSessionId: string;    // 关联的驻店记录ID（与文档ID相同）
+  userId: string;            // 用户ID（冗余字段，便于查询）
+  userName?: string;         // 用户名（冗余字段）
+  redemptions: RedemptionRecordItem[];  // 该 session 的所有兑换记录
+  createdAt: Date;           // 文档创建时间
+  updatedAt: Date;           // 文档最后更新时间
+}
+
+// 向后兼容：RedemptionRecord 作为查询函数返回的单个记录项类型
+// 包含 visitSessionId 字段以便于使用
+export type RedemptionRecord = RedemptionRecordItem & {
+  visitSessionId: string;    // 添加 visitSessionId 字段以保持兼容性
 }
 
 // 引荐记录（存储在 users/{referrerId}/referrals/{referredUserId} 子集合中）

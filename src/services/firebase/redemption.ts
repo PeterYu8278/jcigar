@@ -11,11 +11,14 @@ import {
   where, 
   orderBy, 
   limit,
-  Timestamp
+  Timestamp,
+  arrayUnion,
+  runTransaction,
+  FieldValue
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { GLOBAL_COLLECTIONS } from '../../config/globalCollections';
-import type { RedemptionConfig, RedemptionRecord, User } from '../../types';
+import type { RedemptionConfig, RedemptionRecord, RedemptionRecordItem, RedemptionRecordDocument, User } from '../../types';
 
 /**
  * 获取兑换配置
@@ -233,6 +236,7 @@ export const canUserRedeem = async (
 
 /**
  * 创建待处理的兑换记录（用户发起，等待管理员选择雪茄）
+ * 同一个 visitSessionId 的所有兑换记录存储在同一个文档中
  */
 export const createPendingRedemptionRecord = async (
   userId: string,
@@ -266,10 +270,13 @@ export const createPendingRedemptionRecord = async (
     const completedRedemptions = dailyRedemptions.filter(r => r.status === 'completed');
     const redemptionIndex = completedRedemptions.length + 1;
 
-    const recordData: Omit<RedemptionRecord, 'id'> = {
+    // 生成记录项的唯一ID
+    const recordItemId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    const recordItem: RedemptionRecordItem = {
+      id: recordItemId,
       userId,
       userName: userData.displayName,
-      visitSessionId,
       cigarId: '',  // 待管理员选择
       cigarName: '待选择',  // 占位符
       quantity,
@@ -282,16 +289,46 @@ export const createPendingRedemptionRecord = async (
       createdAt: now
     };
 
-    const docRef = await addDoc(collection(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS), {
-      ...recordData,
-      redeemedAt: Timestamp.fromDate(now),
-      createdAt: Timestamp.fromDate(now)
+    // 使用事务确保原子性：将兑换记录添加到同一个 visitSessionId 的文档中
+    await runTransaction(db, async (transaction) => {
+      const docRef = doc(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS, visitSessionId);
+      const docSnap = await transaction.get(docRef);
+      
+      if (docSnap.exists()) {
+        // 文档已存在，使用 arrayUnion 添加新记录
+        transaction.update(docRef, {
+          redemptions: arrayUnion(recordItem),
+          updatedAt: Timestamp.fromDate(now)
+        });
+      } else {
+        // 文档不存在，创建新文档
+        const newDoc: Omit<RedemptionRecordDocument, 'id'> = {
+          visitSessionId,
+          userId,
+          userName: userData.displayName,
+          redemptions: [recordItem],
+          createdAt: now,
+          updatedAt: now
+        };
+        transaction.set(docRef, {
+          ...newDoc,
+          createdAt: Timestamp.fromDate(now),
+          updatedAt: Timestamp.fromDate(now)
+        });
+      }
     });
 
-    // 注意：待处理的兑换记录不添加到visit session的redemptions数组
-    // 只有当管理员确认后（status变为completed）才添加
+    // 同时添加到 visitSessions 文档的 redemptions 数组中
+    const { addRedemptionToSession } = await import('./visitSessions');
+    await addRedemptionToSession(visitSessionId, {
+      recordId: recordItemId,  // 添加 recordId 以便后续更新
+      cigarId: '',  // 待管理员选择
+      cigarName: '待选择',  // 占位符
+      quantity,
+      redeemedBy: userId  // 用户ID（用户发起）
+    });
 
-    return { success: true, recordId: docRef.id };
+    return { success: true, recordId: recordItemId };
   } catch (error: any) {
     return { success: false, error: error.message || '创建兑换记录失败' };
   }
@@ -299,6 +336,8 @@ export const createPendingRedemptionRecord = async (
 
 /**
  * 创建兑换记录（管理员创建或确认）
+ * 管理员手动添加时不受每日限额、总限额和每小时限额限制
+ * 同一个 visitSessionId 的所有兑换记录存储在同一个文档中
  */
 export const createRedemptionRecord = async (
   userId: string,
@@ -310,21 +349,32 @@ export const createRedemptionRecord = async (
   targetDate?: Date
 ): Promise<{ success: boolean; recordId?: string; error?: string }> => {
   try {
-    // 验证是否可以兑换
-    const canRedeem = await canUserRedeem(userId, quantity, targetDate);
-    if (!canRedeem.canRedeem) {
-      return { success: false, error: canRedeem.reason || '无法兑换' };
-    }
-
+    // 检查用户是否存在
     const userDoc = await getDoc(doc(db, GLOBAL_COLLECTIONS.USERS, userId));
     if (!userDoc.exists()) {
       return { success: false, error: '用户不存在' };
     }
 
     const userData = userDoc.data() as User;
+    
+    // 检查会员状态（管理员添加时也需要检查）
+    if (userData.status !== 'active') {
+      return { success: false, error: '会员状态不活跃，无法兑换' };
+    }
+
+    // 检查是否有pending的visit session（管理员添加时也需要检查）
+    const { getPendingVisitSession } = await import('./visitSessions');
+    const pendingSession = await getPendingVisitSession(userId);
+    if (!pendingSession) {
+      return { success: false, error: '请先check-in才能兑换' };
+    }
+
+    // 管理员手动添加时，跳过限额检查（每日限额、总限额、每小时限额）
+    // 只保留基本的会员状态和visit session检查
+    
     const now = targetDate || new Date();
     
-    // 获取限额
+    // 获取限额（用于计算 redemptionIndex）
     const limits = await getUserRedemptionLimits(userId);
     const dayKey = now.toISOString().split('T')[0]; // YYYY-MM-DD
     // 始终设置hourKey（即使没有配置hourlyLimit，也需要记录以便检查每小时限制）
@@ -335,10 +385,13 @@ export const createRedemptionRecord = async (
     const completedRedemptions = dailyRedemptions.filter(r => r.status === 'completed');
     const redemptionIndex = completedRedemptions.length + 1;
 
-    const recordData: Omit<RedemptionRecord, 'id'> = {
+    // 生成记录项的唯一ID
+    const recordItemId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    const recordItem: RedemptionRecordItem = {
+      id: recordItemId,
       userId,
       userName: userData.displayName,
-      visitSessionId,
       cigarId,
       cigarName,
       quantity,
@@ -351,10 +404,33 @@ export const createRedemptionRecord = async (
       createdAt: now
     };
 
-    const docRef = await addDoc(collection(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS), {
-      ...recordData,
-      redeemedAt: Timestamp.fromDate(now),
-      createdAt: Timestamp.fromDate(now)
+    // 使用事务确保原子性：将兑换记录添加到同一个 visitSessionId 的文档中
+    await runTransaction(db, async (transaction) => {
+      const docRef = doc(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS, visitSessionId);
+      const docSnap = await transaction.get(docRef);
+      
+      if (docSnap.exists()) {
+        // 文档已存在，使用 arrayUnion 添加新记录
+        transaction.update(docRef, {
+          redemptions: arrayUnion(recordItem),
+          updatedAt: Timestamp.fromDate(now)
+        });
+      } else {
+        // 文档不存在，创建新文档
+        const newDoc: Omit<RedemptionRecordDocument, 'id'> = {
+          visitSessionId,
+          userId,
+          userName: userData.displayName,
+          redemptions: [recordItem],
+          createdAt: now,
+          updatedAt: now
+        };
+        transaction.set(docRef, {
+          ...newDoc,
+          createdAt: Timestamp.fromDate(now),
+          updatedAt: Timestamp.fromDate(now)
+        });
+      }
     });
 
     // 添加到visit session的redemptions数组
@@ -366,7 +442,7 @@ export const createRedemptionRecord = async (
       redeemedBy
     });
 
-    return { success: true, recordId: docRef.id };
+    return { success: true, recordId: recordItemId };
   } catch (error: any) {
     return { success: false, error: error.message || '创建兑换记录失败' };
   }
@@ -374,6 +450,7 @@ export const createRedemptionRecord = async (
 
 /**
  * 更新兑换记录（管理员选择雪茄并确认）
+ * 需要找到包含该 recordId 的文档，然后更新数组中的特定项
  */
 export const updateRedemptionRecord = async (
   recordId: string,
@@ -383,32 +460,109 @@ export const updateRedemptionRecord = async (
   confirmedBy: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    const recordRef = doc(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS, recordId);
-    const recordDoc = await getDoc(recordRef);
+    // 需要查询所有文档来找到包含该 recordId 的文档
+    // 由于无法直接查询数组中的字段，我们需要遍历所有文档
+    const q = query(collection(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS));
+    const snapshot = await getDocs(q);
     
-    if (!recordDoc.exists()) {
+    let foundDoc: { docId: string; data: RedemptionRecordDocument } | null = null;
+    let foundItemIndex: number = -1;
+    
+    // 查找包含该 recordId 的文档和项
+    for (const docSnap of snapshot.docs) {
+      const data = docSnap.data() as RedemptionRecordDocument;
+      const index = data.redemptions?.findIndex((item: RedemptionRecordItem) => item.id === recordId);
+      if (index !== undefined && index >= 0) {
+        foundDoc = { docId: docSnap.id, data };
+        foundItemIndex = index;
+        break;
+      }
+    }
+    
+    if (!foundDoc || foundItemIndex < 0) {
       return { success: false, error: '兑换记录不存在' };
     }
 
-    const recordData = recordDoc.data() as RedemptionRecord;
-    
-    // 允许修改completed状态的记录
-    
     const now = new Date();
-
-    // 更新兑换记录
-    await updateDoc(recordRef, {
+    
+    // 更新数组中的特定项
+    const updatedRedemptions = [...foundDoc.data.redemptions];
+    updatedRedemptions[foundItemIndex] = {
+      ...updatedRedemptions[foundItemIndex],
       cigarId,
       cigarName,
       quantity,
       status: 'completed',
-      redeemedBy: confirmedBy,  // 更新为确认的管理员ID
+      redeemedBy: confirmedBy,
+      updatedAt: now
+    };
+
+    // 更新文档
+    const docRef = doc(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS, foundDoc.docId);
+    await updateDoc(docRef, {
+      redemptions: updatedRedemptions,
       updatedAt: Timestamp.fromDate(now)
     });
 
-    // 注意：我们不调用 addRedemptionToSession，因为这会添加重复项。
-    // VisitSession.redemptions 数组可能会与 RedemptionRecord 集合不同步。
-    // 建议依赖 getRedemptionRecordsBySession 获取准确的兑换历史。
+    // 更新 visitSessions 文档中对应的记录（将 '待选择' 的记录更新为实际的雪茄信息）
+    // 由于用户点击redeem时已经添加了记录，这里需要更新而不是添加
+    const { getDoc, updateDoc: updateDocFirestore, Timestamp: FirestoreTimestamp } = await import('firebase/firestore');
+    const { GLOBAL_COLLECTIONS: VISIT_COLLECTIONS } = await import('../../config/globalCollections');
+    
+    try {
+      const visitSessionRef = doc(db, VISIT_COLLECTIONS.VISIT_SESSIONS, foundDoc.data.visitSessionId);
+      const visitSessionDoc = await getDoc(visitSessionRef);
+      
+      if (visitSessionDoc.exists()) {
+        const visitSessionData = visitSessionDoc.data();
+        const redemptions = visitSessionData.redemptions || [];
+        
+        // 找到对应的记录（通过 recordId 匹配，如果没有 recordId 则使用时间戳匹配）
+        const recordItem = foundDoc.data.redemptions[foundItemIndex];
+        const recordRedeemedAt = recordItem.redeemedAt?.getTime?.() || new Date(recordItem.redeemedAt).getTime();
+        
+        const updatedRedemptions = redemptions.map((r: any) => {
+          // 优先使用 recordId 匹配
+          if (r.recordId === recordId) {
+            return {
+              ...r,
+              cigarId,
+              cigarName,
+              quantity,
+              redeemedBy: confirmedBy
+            };
+          }
+          // 如果没有 recordId，使用时间戳匹配（向后兼容）
+          const rRedeemedAt = r.redeemedAt?.toDate?.()?.getTime() || new Date(r.redeemedAt).getTime();
+          if (Math.abs(rRedeemedAt - recordRedeemedAt) < 1000 && (!r.cigarId || r.cigarId === '')) {
+            return {
+              ...r,
+              recordId: recordId,  // 添加 recordId 以便后续更新
+              cigarId,
+              cigarName,
+              quantity,
+              redeemedBy: confirmedBy
+            };
+          }
+          return r;
+        });
+        
+        await updateDocFirestore(visitSessionRef, {
+          redemptions: updatedRedemptions,
+          updatedAt: FirestoreTimestamp.fromDate(now)
+        });
+      }
+    } catch (error: any) {
+      console.warn('[updateRedemptionRecord] 更新 visitSessions 记录失败:', error);
+      // 如果更新失败，尝试添加新记录（向后兼容）
+      const { addRedemptionToSession } = await import('./visitSessions');
+      await addRedemptionToSession(foundDoc.data.visitSessionId, {
+        cigarId,
+        cigarName,
+        quantity,
+        redeemedBy: confirmedBy
+      });
+    }
 
     return { success: true };
   } catch (error: any) {
@@ -418,29 +572,30 @@ export const updateRedemptionRecord = async (
 
 /**
  * 获取指定驻店记录的兑换记录（包括待处理和已完成的）
+ * 文档ID = visitSessionId，直接读取文档并返回 redemptions 数组
  */
 export const getRedemptionRecordsBySession = async (
   visitSessionId: string
 ): Promise<RedemptionRecord[]> => {
   try {
-    const q = query(
-      collection(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS),
-      where('visitSessionId', '==', visitSessionId),
-      orderBy('createdAt', 'asc')
-    );
+    const docRef = doc(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS, visitSessionId);
+    const docSnap = await getDoc(docRef);
+    
+    if (!docSnap.exists()) {
+      return [];
+    }
 
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-        status: data.status || 'completed',  // 兼容旧数据，默认为completed
-        redeemedAt: data.redeemedAt?.toDate?.() || new Date(data.redeemedAt),
-        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
-        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
-      } as RedemptionRecord;
-    });
+    const data = docSnap.data() as RedemptionRecordDocument;
+    const redemptions = data.redemptions || [];
+    
+    // 转换日期字段并添加 visitSessionId 以保持兼容性
+    return redemptions.map(item => ({
+      ...item,
+      visitSessionId: visitSessionId,
+      redeemedAt: item.redeemedAt?.toDate?.() || new Date(item.redeemedAt),
+      createdAt: item.createdAt?.toDate?.() || new Date(item.createdAt),
+      updatedAt: item.updatedAt?.toDate?.() || item.updatedAt
+    } as RedemptionRecord));
   } catch (error: any) {
     return [];
   }
@@ -448,6 +603,7 @@ export const getRedemptionRecordsBySession = async (
 
 /**
  * 获取用户当日的兑换记录（基于当前会员期限）
+ * 查询所有包含该userId的文档，然后过滤redemptions数组中dayKey匹配的记录
  */
 export const getDailyRedemptions = async (
   userId: string,
@@ -458,128 +614,91 @@ export const getDailyRedemptions = async (
     const { getUserMembershipPeriod } = await import('./membershipFee');
     const period = await getUserMembershipPeriod(userId);
     
+    // 查询所有包含该userId的文档
     const q = query(
       collection(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS),
-      where('userId', '==', userId),
-      where('dayKey', '==', dayKey),
-      orderBy('redeemedAt', 'asc')
+      where('userId', '==', userId)
     );
 
     const snapshot = await getDocs(q);
-    let records = snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-        status: data.status || 'completed',  // 兼容旧数据，默认为completed
-        redeemedAt: data.redeemedAt?.toDate?.() || new Date(data.redeemedAt),
-        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
-        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
-      } as RedemptionRecord;
+    let allRecords: RedemptionRecord[] = [];
+    
+    // 遍历所有文档，提取redemptions数组中dayKey匹配的记录
+    snapshot.docs.forEach(docSnap => {
+      const data = docSnap.data() as RedemptionRecordDocument;
+      const redemptions = data.redemptions || [];
+      
+      redemptions.forEach(item => {
+        if (item.dayKey === dayKey) {
+          allRecords.push({
+            ...item,
+            visitSessionId: data.visitSessionId,
+            redeemedAt: item.redeemedAt?.toDate?.() || new Date(item.redeemedAt),
+            createdAt: item.createdAt?.toDate?.() || new Date(item.createdAt),
+            updatedAt: item.updatedAt?.toDate?.() || item.updatedAt
+          } as RedemptionRecord);
+        }
+      });
     });
     
     // 如果存在会员期限，过滤出在会员期限内的记录
     if (period) {
-      records = records.filter(record => {
+      allRecords = allRecords.filter(record => {
         return record.redeemedAt >= period.startDate && record.redeemedAt < period.endDate;
       });
     }
     
+    // 按时间排序
+    allRecords.sort((a, b) => a.redeemedAt.getTime() - b.redeemedAt.getTime());
     
-    return records;
+    return allRecords;
   } catch (error: any) {
-    // 如果查询失败（可能是缺少索引），尝试不使用orderBy
-    try {
-      // 重新获取会员期限（在重试逻辑中）
-      const { getUserMembershipPeriod } = await import('./membershipFee');
-      const retryPeriod = await getUserMembershipPeriod(userId);
-      
-      const q = query(
-        collection(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS),
-        where('userId', '==', userId),
-        where('dayKey', '==', dayKey)
-      );
-      const snapshot = await getDocs(q);
-      let records = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          status: data.status || 'completed',  // 兼容旧数据，默认为completed
-          redeemedAt: data.redeemedAt?.toDate?.() || new Date(data.redeemedAt),
-          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
-          updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
-        } as RedemptionRecord;
-      });
-      
-      // 如果存在会员期限，过滤出在会员期限内的记录
-      if (retryPeriod) {
-        records = records.filter(record => {
-          return record.redeemedAt >= retryPeriod.startDate && record.redeemedAt < retryPeriod.endDate;
-        });
-      }
-      
-      // 手动排序
-      const sorted = records.sort((a, b) => a.redeemedAt.getTime() - b.redeemedAt.getTime());
-      return sorted;
-    } catch (retryError) {
-      return [];
-    }
+    return [];
   }
 };
 
 /**
  * 获取用户每小时的兑换记录
+ * 查询所有包含该userId的文档，然后过滤redemptions数组中hourKey匹配的记录
  */
 export const getHourlyRedemptions = async (
   userId: string,
   hourKey: string
 ): Promise<RedemptionRecord[]> => {
   try {
+    // 查询所有包含该userId的文档
     const q = query(
       collection(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS),
-      where('userId', '==', userId),
-      where('hourKey', '==', hourKey),
-      orderBy('redeemedAt', 'asc')
+      where('userId', '==', userId)
     );
 
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-        status: data.status || 'completed',  // 兼容旧数据，默认为completed
-        redeemedAt: data.redeemedAt?.toDate?.() || new Date(data.redeemedAt),
-        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
-        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
-      } as RedemptionRecord;
-    });
-  } catch (error: any) {
-    // 如果查询失败（可能是缺少索引），尝试不使用orderBy
-    try {
-      const q = query(
-        collection(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS),
-        where('userId', '==', userId),
-        where('hourKey', '==', hourKey)
-      );
-      const snapshot = await getDocs(q);
-      const records = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          status: data.status || 'completed',  // 兼容旧数据，默认为completed
-          redeemedAt: data.redeemedAt?.toDate?.() || new Date(data.redeemedAt),
-          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
-          updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
-        } as RedemptionRecord;
+    const allRecords: RedemptionRecord[] = [];
+    
+    // 遍历所有文档，提取redemptions数组中hourKey匹配的记录
+    snapshot.docs.forEach(docSnap => {
+      const data = docSnap.data() as RedemptionRecordDocument;
+      const redemptions = data.redemptions || [];
+      
+      redemptions.forEach(item => {
+        if (item.hourKey === hourKey) {
+          allRecords.push({
+            ...item,
+            visitSessionId: data.visitSessionId,
+            redeemedAt: item.redeemedAt?.toDate?.() || new Date(item.redeemedAt),
+            createdAt: item.createdAt?.toDate?.() || new Date(item.createdAt),
+            updatedAt: item.updatedAt?.toDate?.() || item.updatedAt
+          } as RedemptionRecord);
+        }
       });
-      // 手动排序
-      return records.sort((a, b) => a.redeemedAt.getTime() - b.redeemedAt.getTime());
-    } catch (retryError) {
-      return [];
-    }
+    });
+    
+    // 按时间排序
+    allRecords.sort((a, b) => a.redeemedAt.getTime() - b.redeemedAt.getTime());
+    
+    return allRecords;
+  } catch (error: any) {
+    return [];
   }
 };
 

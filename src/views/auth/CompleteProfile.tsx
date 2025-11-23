@@ -1,7 +1,7 @@
 // Google 登录后完善用户信息页面
 import React, { useState, useEffect, useRef } from 'react'
-import { Form, Input, Button, Card, Typography, Space, App, Spin } from 'antd'
-import { UserOutlined, LockOutlined, PhoneOutlined, LoadingOutlined, LogoutOutlined, GiftOutlined } from '@ant-design/icons'
+import { Form, Input, Button, Card, Typography, Space, App, Spin, Avatar, Divider } from 'antd'
+import { UserOutlined, LockOutlined, PhoneOutlined, LoadingOutlined, LogoutOutlined, GiftOutlined, MailOutlined } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { normalizePhoneNumber } from '../../utils/phoneNormalization'
@@ -9,6 +9,7 @@ import { auth } from '../../config/firebase'
 import { signOut } from 'firebase/auth'
 import { getUserByMemberId } from '../../utils/memberId'
 import { useAuthStore } from '../../store/modules/auth'
+import type { User as FirebaseUser } from 'firebase/auth'
 
 const { Title, Text } = Typography
 
@@ -16,6 +17,7 @@ const CompleteProfile: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [pullDistance, setPullDistance] = useState(0)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [googleUser, setGoogleUser] = useState<FirebaseUser | null>(null)
   const touchStartY = useRef(0)
   const containerRef = useRef<HTMLDivElement>(null)
   const [form] = Form.useForm()
@@ -87,6 +89,9 @@ const CompleteProfile: React.FC = () => {
         navigate('/login', { replace: true })
         return
       }
+      
+      // 保存 Google 用户信息用于显示
+      setGoogleUser(currentUser)
       
       // 预填 Google 用户的显示名称
       if (currentUser.displayName) {
@@ -270,6 +275,61 @@ const CompleteProfile: React.FC = () => {
               为了更好地为您服务，请完善以下信息
             </Text>
           </div>
+
+          {/* Google 账户信息 */}
+          {googleUser && (
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: '12px',
+              padding: '16px',
+              border: '1px solid rgba(255, 215, 0, 0.2)',
+              marginBottom: '8px',
+              marginLeft: '20px',
+              marginRight: '20px',
+              width: 'calc(100% - 40px)'
+            }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '12px',
+                marginBottom: '12px'
+              }}>
+                <Avatar
+                  src={googleUser.photoURL}
+                  icon={<UserOutlined />}
+                  size={48}
+                  style={{
+                    border: '2px solid rgba(255, 215, 0, 0.5)',
+                    boxShadow: '0 2px 8px rgba(255, 215, 0, 0.2)'
+                  }}
+                />
+                <div style={{ flex: 1, textAlign: 'left' }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '6px',
+                    color: '#c0c0c0', 
+                    fontSize: '13px'
+                  }}>
+                    <MailOutlined style={{ color: '#ffd700' }} />
+                    <span>{googleUser.email}</span>
+                  </div>
+                </div>
+              </div>
+              <Divider style={{ 
+                margin: '12px 0', 
+                borderColor: 'rgba(255, 215, 0, 0.2)' 
+              }} />
+              <Text style={{ 
+                color: '#999999', 
+                fontSize: '12px',
+                display: 'block',
+                textAlign: 'center'
+              }}>
+                当前 Google 账户信息
+              </Text>
+            </div>
+          )}
 
           <Form
             form={form}

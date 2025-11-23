@@ -393,15 +393,16 @@ const PointsConfigPage: React.FC = () => {
               fontWeight: 800,
               fontSize: 12,
               outline: 'none',
-              borderBottom: isActive ? '2px solid transparent' : '2px solid transparent',
+              borderBottom: isActive ? '2px solid #f4af25' : '2px solid transparent',
+              borderTop: 'none',
+              borderLeft: 'none',
+              borderRight: 'none',
               cursor: 'pointer',
-              border: 'none',
-              position: 'relative' as const,
+              background: 'none',
             }
             const activeStyle: React.CSSProperties = {
               color: 'transparent',
-              background: 'none',
-              backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+              background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
               WebkitBackgroundClip: 'text',
             }
             const inactiveStyle: React.CSSProperties = {
@@ -428,16 +429,6 @@ const PointsConfigPage: React.FC = () => {
                 onClick={() => setActiveTab(tabKey as 'config' | 'records' | 'reload' | 'membershipFees')}
               >
                 {getTabLabel(tabKey)}
-                {isActive && (
-                  <div style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    height: '2px',
-                    background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-                  }} />
-                )}
               </button>
             )
           })}

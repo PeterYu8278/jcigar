@@ -153,6 +153,13 @@ export const completeVisitSession = async (
     }
 
     const sessionData = sessionDoc.data() as any;
+    
+    // 转换 redemptions 数组中的日期字段
+    const redemptions = (sessionData.redemptions || []).map((r: any) => ({
+      ...r,
+      redeemedAt: r.redeemedAt?.toDate?.() || (r.redeemedAt instanceof Date ? r.redeemedAt : new Date(r.redeemedAt))
+    }));
+    
     const session: VisitSession = {
       id: sessionDoc.id,
       ...sessionData,
@@ -160,7 +167,8 @@ export const completeVisitSession = async (
       checkOutAt: sessionData.checkOutAt?.toDate?.() || sessionData.checkOutAt,
       calculatedAt: sessionData.calculatedAt?.toDate?.() || sessionData.calculatedAt,
       createdAt: sessionData.createdAt?.toDate?.() || new Date(sessionData.createdAt),
-      updatedAt: sessionData.updatedAt?.toDate?.() || new Date(sessionData.updatedAt)
+      updatedAt: sessionData.updatedAt?.toDate?.() || new Date(sessionData.updatedAt),
+      redemptions: redemptions
     };
 
     if (session.status !== 'pending') {
@@ -237,16 +245,132 @@ export const completeVisitSession = async (
       updatedAt: Timestamp.fromDate(now)
     });
 
-    // 处理兑换的雪茄：统计、创建订单和出库记录
+    // 处理兑换的雪茄：确保所有记录都保存到redemptionRecords集合，然后统计、创建订单和出库记录
     let orderId: string | undefined;
     let outboundOrderId: string | undefined;
     
     if (session.redemptions && session.redemptions.length > 0) {
       try {
+        // 0. 确保所有兑换记录都保存到redemptionRecords集合的同一个文档中
+        // 文档ID = visitSessionId，包含该session的所有兑换记录
+        const { getRedemptionRecordsBySession } = await import('./redemption');
+        const existingRecords = await getRedemptionRecordsBySession(sessionId);
+        const existingRecordMap = new Map<string, boolean>();
+        existingRecords.forEach(record => {
+          // 使用 cigarId + quantity + redeemedAt 作为唯一标识
+          // record 是 RedemptionRecordItem 类型（包含 visitSessionId）
+          const key = `${record.cigarId}-${record.quantity}-${record.redeemedAt?.getTime()}`;
+          existingRecordMap.set(key, true);
+        });
+
+        // 收集需要添加到redemptionRecords文档的记录项
+        const recordsToAdd: Array<{
+          id: string;
+          userId: string;
+          userName?: string;
+          cigarId: string;
+          cigarName: string;
+          quantity: number;
+          status: 'completed';
+          dayKey: string;
+          hourKey: string;
+          redemptionIndex: number;
+          redeemedAt: Date;
+          redeemedBy: string;
+          createdAt: Date;
+        }> = [];
+
+        for (const redemption of session.redemptions) {
+          const key = `${redemption.cigarId}-${redemption.quantity}-${redemption.redeemedAt?.getTime()}`;
+          if (!existingRecordMap.has(key)) {
+            // 该兑换记录在redemptionRecords文档中不存在，需要添加
+            const redemptionDate = redemption.redeemedAt || now;
+            const dayKey = redemptionDate.toISOString().split('T')[0];
+            const hourKey = redemptionDate.toISOString().split(':')[0];
+            
+            // 获取当日兑换次数
+            const { getDailyRedemptions } = await import('./redemption');
+            const dailyRedemptions = await getDailyRedemptions(session.userId, dayKey);
+            const completedRedemptions = dailyRedemptions.filter(r => r.status === 'completed');
+            const redemptionIndex = completedRedemptions.length + 1;
+
+            const recordItemId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            recordsToAdd.push({
+              id: recordItemId,
+              userId: session.userId,
+              userName: session.userName,
+              cigarId: redemption.cigarId,
+              cigarName: redemption.cigarName,
+              quantity: redemption.quantity,
+              status: 'completed',
+              dayKey,
+              hourKey,
+              redemptionIndex,
+              redeemedAt: redemptionDate,
+              redeemedBy: redemption.redeemedBy || checkOutBy,
+              createdAt: redemptionDate
+            });
+          }
+        }
+
+        // 如果有需要添加的记录，使用事务更新文档
+        if (recordsToAdd.length > 0) {
+          try {
+            const { runTransaction, arrayUnion, Timestamp: RedemptionTimestamp } = await import('firebase/firestore');
+            const { GLOBAL_COLLECTIONS: REDEMPTION_COLLECTIONS } = await import('../../config/globalCollections');
+            
+            await runTransaction(db, async (transaction) => {
+              const docRef = doc(db, REDEMPTION_COLLECTIONS.REDEMPTION_RECORDS, sessionId);
+              const docSnap = await transaction.get(docRef);
+              
+              if (docSnap.exists()) {
+                // 文档已存在，使用 arrayUnion 添加新记录
+                const itemsToAdd = recordsToAdd.map(item => ({
+                  ...item,
+                  redeemedAt: RedemptionTimestamp.fromDate(item.redeemedAt),
+                  createdAt: RedemptionTimestamp.fromDate(item.createdAt)
+                }));
+                transaction.update(docRef, {
+                  redemptions: arrayUnion(...itemsToAdd),
+                  updatedAt: RedemptionTimestamp.fromDate(now)
+                });
+              } else {
+                // 文档不存在，创建新文档
+                const userDoc = await getDoc(doc(db, GLOBAL_COLLECTIONS.USERS, session.userId));
+                const userData = userDoc.exists() ? userDoc.data() as User : null;
+                
+                const newDoc = {
+                  visitSessionId: sessionId,
+                  userId: session.userId,
+                  userName: session.userName || userData?.displayName,
+                  redemptions: recordsToAdd.map(item => ({
+                    ...item,
+                    redeemedAt: RedemptionTimestamp.fromDate(item.redeemedAt),
+                    createdAt: RedemptionTimestamp.fromDate(item.createdAt)
+                  })),
+                  createdAt: RedemptionTimestamp.fromDate(now),
+                  updatedAt: RedemptionTimestamp.fromDate(now)
+                };
+                transaction.set(docRef, newDoc);
+              }
+            });
+          } catch (error: any) {
+            console.warn(`[completeVisitSession] 创建兑换记录到redemptionRecords失败:`, error);
+            // 不阻断流程，继续处理
+          }
+        }
+
         // 1. 统计兑换的雪茄（按 cigarId 分组）
+        // 只统计已确认的兑换记录（cigarId 不为空）
         const redemptionMap = new Map<string, { cigarName: string; quantity: number }>();
         
         for (const redemption of session.redemptions) {
+          // 跳过未确认的兑换记录（cigarId 为空表示待管理员选择）
+          if (!redemption.cigarId || redemption.cigarId.trim() === '') {
+            console.warn(`[completeVisitSession] 跳过未确认的兑换记录: ${redemption.cigarName}`);
+            continue;
+          }
+          
           const existing = redemptionMap.get(redemption.cigarId);
           if (existing) {
             existing.quantity += redemption.quantity;
@@ -573,6 +697,7 @@ export const getExpiredVisitSessions = async (): Promise<VisitSession[]> => {
 export const addRedemptionToSession = async (
   sessionId: string,
   redemption: {
+    recordId?: string;      // 关联的 redemptionRecords 中的记录项ID（用于更新）
     cigarId: string;
     cigarName: string;
     quantity: number;

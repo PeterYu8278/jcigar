@@ -948,11 +948,17 @@ const VisitSessionsPage: React.FC = () => {
             
             // 提示：用户端数据会在下次自动刷新时更新（每10秒）
           } catch (error: any) {
-            console.error('添加兑换记录失败:', error);
             if (error.errorFields) {
-              // 表单验证错误
+              // 表单验证错误 - Ant Design 会自动显示字段错误，这里不需要额外处理
+              // 只显示一个友好的提示
+              const errorMessages = error.errorFields.map((field: any) => field.errors?.[0]).filter(Boolean);
+              if (errorMessages.length > 0) {
+                message.warning(`请完善表单信息：${errorMessages.join('，')}`);
+              }
               return;
             }
+            // 其他错误才记录到控制台
+            console.error('添加兑换记录失败:', error);
             message.error(error.message || '添加兑换记录失败');
           } finally {
             setAddingRedemption(false);
@@ -990,7 +996,10 @@ const VisitSessionsPage: React.FC = () => {
                       {...restField}
                       name={[name, 'quantity']}
                       label="数量"
-                      rules={[{ required: true, message: '请输入数量' }]}
+                      rules={[
+                        { required: true, message: '请输入数量' },
+                        { type: 'number', min: 1, message: '数量必须大于0' }
+                      ]}
                       style={{ width: 100, marginBottom: 0 }}
                     >
                       <InputNumber min={1} max={100} placeholder="数量" />

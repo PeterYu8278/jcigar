@@ -1,9 +1,9 @@
 // 登录页面
 import React, { useState, useEffect, useRef } from 'react'
-import { Form, Input, Button, Card, Typography, Space, message, Divider, Spin } from 'antd'
+import { Form, Input, Button, Card, Typography, Space, message, Divider, Spin, Modal } from 'antd'
 import { UserOutlined, LockOutlined, GoogleOutlined, LoadingOutlined } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { loginWithEmailOrPhone, loginWithGoogle, handleGoogleRedirectResult } from '../../services/firebase/auth'
+import { loginWithEmailOrPhone, loginWithGoogle, handleGoogleRedirectResult, sendPasswordResetEmailFor } from '../../services/firebase/auth'
 import { useAuthStore } from '../../store/modules/auth'
 import { useTranslation } from 'react-i18next'
 import { identifyInputType, normalizePhoneNumber, isValidEmail } from '../../utils/phoneNormalization'
@@ -15,6 +15,9 @@ const Login: React.FC = () => {
   const [loginError, setLoginError] = useState<string>('')
   const [pullDistance, setPullDistance] = useState(0)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [resetPasswordVisible, setResetPasswordVisible] = useState(false)
+  const [resetPasswordLoading, setResetPasswordLoading] = useState(false)
+  const [resetPasswordForm] = Form.useForm()
   const touchStartY = useRef(0)
   const containerRef = useRef<HTMLDivElement>(null)
   
@@ -159,6 +162,24 @@ const Login: React.FC = () => {
     } catch (error) {
       setLoginError('登入失败：' + t('auth.loginFailed'))
       setLoading(false)
+    }
+  }
+
+  const handleResetPassword = async (values: { email: string }) => {
+    setResetPasswordLoading(true)
+    try {
+      const result = await sendPasswordResetEmailFor(values.email)
+      if (result.success) {
+        message.success('重置密码邮件已发送，请查收您的邮箱')
+        setResetPasswordVisible(false)
+        resetPasswordForm.resetFields()
+      } else {
+        message.error(result.error?.message || '发送重置密码邮件失败')
+      }
+    } catch (error: any) {
+      message.error(error.message || '发送重置密码邮件失败')
+    } finally {
+      setResetPasswordLoading(false)
     }
   }
 
@@ -329,6 +350,21 @@ const Login: React.FC = () => {
               />
             </Form.Item>
 
+            <Form.Item style={{ marginBottom: '16px', textAlign: 'right' }}>
+              <Button
+                type="link"
+                onClick={() => setResetPasswordVisible(true)}
+                style={{
+                  padding: 0,
+                  height: 'auto',
+                  color: '#ffd700',
+                  fontSize: '14px'
+                }}
+              >
+                {t('auth.resetPassword')}
+              </Button>
+            </Form.Item>
+
             <Form.Item style={{ marginBottom: '24px' }}>
               <Button
                 type="primary"
@@ -383,6 +419,100 @@ const Login: React.FC = () => {
           </div>
         </Space>
       </Card>
+
+      {/* 重置密码 Modal */}
+      <Modal
+        title={
+          <span style={{
+            background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            fontWeight: 700
+          }}>
+            {t('auth.resetPassword')}
+          </span>
+        }
+        open={resetPasswordVisible}
+        onCancel={() => {
+          setResetPasswordVisible(false)
+          resetPasswordForm.resetFields()
+        }}
+        footer={null}
+        style={{
+          top: '20%'
+        }}
+        styles={{
+          content: {
+            background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(45, 45, 45, 0.9) 100%)',
+            border: '1px solid rgba(255, 215, 0, 0.2)',
+            borderRadius: '16px',
+            backdropFilter: 'blur(10px)'
+          },
+          header: {
+            background: 'transparent',
+            borderBottom: '1px solid rgba(255, 215, 0, 0.2)',
+            padding: '16px 24px'
+          }
+        }}
+      >
+        <Form
+          form={resetPasswordForm}
+          layout="vertical"
+          onFinish={handleResetPassword}
+          style={{ marginTop: 24 }}
+        >
+          <Form.Item
+            name="email"
+            label={<span style={{ color: '#c0c0c0' }}>邮箱地址</span>}
+            rules={[
+              { required: true, message: '请输入邮箱地址' },
+              { type: 'email', message: '请输入有效的邮箱地址' }
+            ]}
+          >
+            <Input
+              prefix={<UserOutlined style={{ color: '#ffd700' }} />}
+              placeholder="请输入您的邮箱地址"
+              style={{
+                background: 'rgba(45, 45, 45, 0.8)',
+                border: '1px solid #444444',
+                borderRadius: '8px',
+                color: '#f8f8f8'
+              }}
+            />
+          </Form.Item>
+          <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
+            <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+              <Button
+                onClick={() => {
+                  setResetPasswordVisible(false)
+                  resetPasswordForm.resetFields()
+                }}
+                style={{
+                  color: '#c0c0c0',
+                  borderColor: '#444444'
+                }}
+              >
+                取消
+              </Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={resetPasswordLoading}
+                style={{
+                  background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: '#221c10',
+                  fontWeight: 600
+                }}
+              >
+                发送重置邮件
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
       
     </div>
   )
