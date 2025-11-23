@@ -764,6 +764,21 @@ export const testFCMToken = async (options?: {
 
     console.log('[FCM Test] 📤 发送测试通知到 Token:', token.substring(0, 20) + '...');
 
+    // 在开发环境中，Netlify Functions 不可用，跳过调用
+    if (import.meta.env.DEV) {
+      console.warn('[FCM Test] ⚠️ 开发环境：Netlify Functions 不可用');
+      console.log('[FCM Test] 💡 提示：');
+      console.log('[FCM Test]   1. 在生产环境（Netlify）中测试推送通知');
+      console.log('[FCM Test]   2. 或使用 Firebase Console 直接发送测试通知');
+      console.log('[FCM Test]   3. 当前 Token:', token);
+      
+      return {
+        success: false,
+        message: '开发环境：Netlify Functions 不可用。请在生产环境中测试，或使用 Firebase Console 发送测试通知。',
+        data: { token: token }
+      };
+    }
+
     // 调用测试函数
     const response = await fetch('/.netlify/functions/test-token', {
       method: 'POST',
@@ -776,6 +791,16 @@ export const testFCMToken = async (options?: {
         body: options?.body || '这是一条测试推送通知'
       })
     });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[FCM Test] ❌ HTTP 错误:', response.status, errorText);
+      return {
+        success: false,
+        message: `HTTP ${response.status}: ${errorText || '未知错误'}`,
+        data: { status: response.status, error: errorText }
+      };
+    }
 
     const result = await response.json();
 
