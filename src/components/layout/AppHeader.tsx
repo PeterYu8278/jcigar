@@ -161,7 +161,11 @@ const AppHeader: React.FC = () => {
                 {user?.displayName || user?.email || 'User'}
               </Text>
               <Text style={{ color: 'rgb(255,215,0)', fontSize: 12, fontWeight: 500 }}>
-                {isAdmin ? t('roles.admin', { defaultValue: '管理员' }) : t('roles.member', { defaultValue: '会员' })}
+                {user?.role === 'admin' 
+                  ? t('auth.admin', { defaultValue: '管理员' })
+                  : user?.role === 'vip'
+                  ? t('auth.vip', { defaultValue: 'VIP' })
+                  : t('auth.member', { defaultValue: '会员' })}
               </Text>
             </div>
           </Space>

@@ -23,7 +23,7 @@ export const MysteryGiftBanner: React.FC<MysteryGiftBannerProps> = ({ style }) =
         cursor: 'pointer',
         ...style
       }}
-      bodyStyle={{ padding: 16 }}
+      styles={{ body: { padding: 16 } }}
       onClick={() => navigate('/mystery-gift')}
     >
       <Space align="center" style={{ width: '100%' }}>

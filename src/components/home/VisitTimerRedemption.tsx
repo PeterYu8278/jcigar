@@ -30,15 +30,6 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
   const [totalCount, setTotalCount] = useState(0);
   const [hourlyCount, setHourlyCount] = useState(0);
 
-  // ✅ 调试：验证 modal 实例
-  useEffect(() => {
-    console.log('[VisitTimerRedemption] Modal 实例检查:', {
-      modalExists: !!modal,
-      confirmExists: !!modal?.confirm,
-      modalType: typeof modal,
-      modalKeys: modal ? Object.keys(modal) : []
-    });
-  }, [modal]);
   const [cutoffTime, setCutoffTime] = useState('23:00');
   const [totalHours, setTotalHours] = useState(0);
   const [targetHours, setTargetHours] = useState(150);
@@ -174,29 +165,9 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
       const sessions = await getUserVisitSessions(userId);
       
       if (!period) {
-        console.warn('=== [VisitTimerRedemption] 没有找到会员期限，累计驻店时长设为0 ===');
-        console.warn('用户ID:', userId);
-        console.warn('用户名称:', user.displayName);
-        console.warn('用户状态:', user.status);
-          console.warn('所有驻店记录:', {
-            totalSessions: sessions.length,
-            sessions: sessions.map(s => ({
-              id: s.id,
-              status: s.status,
-              checkInAt: s.checkInAt?.toISOString(),
-              checkInAtLocal: s.checkInAt?.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }),
-              checkOutAt: s.checkOutAt?.toISOString(),
-              checkOutAtLocal: s.checkOutAt?.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }),
-              durationMinutes: s.durationMinutes,
-              durationHours: s.durationHours
-            }))
-          });
-          console.warn('原因: 用户没有paid状态的年费记录，无法确定会员期限');
-          console.warn('建议: 需要先开通会员（创建并支付年费）才能计算累计驻店时长');
-          console.warn('==========================================');
-          setTotalHours(0);
-          return;
-        }
+        setTotalHours(0);
+        return;
+      }
 
         
         const periodSessions = sessions.filter(session => {
@@ -212,7 +183,6 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
         
         setTotalHours(hours);
       } catch (error) {
-        console.error('加载累计驻店时长失败:', error);
         setTotalHours(0);
       }
     };
@@ -278,13 +248,12 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
         setCanRedeemThisHour(currentHourlyCount < effectiveHourlyLimit);
         
       } catch (error) {
-        console.error('[VisitTimerRedemption] 获取每小时兑换记录失败:', error);
         // 如果获取失败，默认允许兑换（避免因为查询失败而禁用按钮）
         setCanRedeemThisHour(true);
         setHourlyCount(0);
       }
     } catch (error) {
-      console.error('加载兑换数据失败:', error);
+      // 加载失败，静默处理
     }
   };
 
@@ -296,7 +265,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
         const amount = await getCurrentAnnualFeeAmount();
         setAnnualFeeAmount(amount);
       } catch (error) {
-        console.error('获取年费金额失败:', error);
+        // 获取年费金额失败，静默处理
       }
     };
     if (user?.id) {
@@ -314,19 +283,15 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
 
   // 开通会员
   const handleActivateMembership = async () => {
-    console.log('[开通会员] 函数被调用');
-    
     if (!user?.id) {
       message.warning('请先登录');
       return;
     }
 
     if (loading) {
-      console.log('[开通会员] 正在加载中，跳过');
       return; // 防止重复点击
     }
 
-    console.log('[开通会员] 开始处理, 用户ID:', user.id, '当前积分:', user?.membership?.points);
     setLoading(true);
 
     try {
@@ -363,18 +328,13 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
       const { getCurrentAnnualFeeAmount } = await import('../../services/firebase/membershipFee');
       const annualFee = await getCurrentAnnualFeeAmount(new Date());
       
-      console.log('[开通会员] 积分检查:', { currentPoints, annualFee, insufficient: currentPoints < annualFee });
-      
       if (currentPoints < annualFee) {
         // ✅ 积分不足，显示友好提示并引导充值
         const shortage = annualFee - currentPoints;
         setLoading(false);
         
-        console.log('[开通会员] 准备显示积分不足 Modal:', { shortage, modalExists: !!modal, confirmExists: !!modal?.confirm });
-        
         // 检查 modal 实例是否存在
         if (!modal || typeof modal.confirm !== 'function') {
-          console.error('[开通会员] Modal 实例不存在或 confirm 方法不可用!');
           message.warning(`积分不足！需要 ${annualFee} 积分，当前只有 ${currentPoints} 积分，还需 ${shortage} 积分。`);
           message.info('正在跳转到充值页面...', 2);
           setTimeout(() => {
@@ -382,8 +342,6 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
           }, 2000);
           return;
         }
-        
-        console.log('[开通会员] 调用 modal.confirm');
         modal.confirm({
           title: <span style={{ color: '#FFFFFF', fontSize: 18, fontWeight: 600 }}>积分不足</span>,
           content: (
@@ -502,7 +460,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
             setUser(updatedUser);
           }
         } catch (error) {
-          console.error('刷新用户信息失败:', error);
+          // 刷新用户信息失败，静默处理
         }
         
         // 重新加载数据
@@ -512,11 +470,8 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
         message.error(deductResult.error || '扣除年费失败，请稍后重试');
       }
     } catch (error: any) {
-      console.error('[开通会员] 捕获到错误:', error);
-      console.error('[开通会员] 错误堆栈:', error.stack);
       message.error(error.message || '开通会员失败，请重试');
     } finally {
-      console.log('[开通会员] 完成，设置 loading 为 false');
       setLoading(false);
     }
   };
@@ -569,7 +524,6 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
         message.error(result.error || '提交兑换请求失败');
       }
     } catch (error: any) {
-      console.error('兑换失败:', error);
       message.error(error.message || '兑换失败，请重试');
     } finally {
       setLoading(false);

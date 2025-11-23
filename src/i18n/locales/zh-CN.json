@@ -503,7 +503,7 @@
     "stockNormal": "正常",
     "stockLow": "库存偏低",
     "stockCritical": "库存告急",
-    "stockNegative": "库存异常（负数）",
+    "stockNegative": "库存异常",
     "time": "时间",
     "product": "产品",
     "type": "类型",

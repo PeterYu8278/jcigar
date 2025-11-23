@@ -395,12 +395,12 @@ const PointsConfigPage: React.FC = () => {
               outline: 'none',
               borderBottom: isActive ? '2px solid transparent' : '2px solid transparent',
               cursor: 'pointer',
-              background: 'none',
               border: 'none',
               position: 'relative' as const,
             }
             const activeStyle: React.CSSProperties = {
               color: 'transparent',
+              background: 'none',
               backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
               WebkitBackgroundClip: 'text',
             }
