@@ -820,19 +820,50 @@ export const testFCMToken = async (options?: {
       console.error('[FCM Test] 错误代码:', result.error);
       
       if (result.error === 'messaging/registration-token-not-registered') {
-        console.log('[FCM Test] 🔄 Token 已失效，尝试获取新 Token...');
+        console.log('[FCM Test] 🔄 Token 已失效，尝试获取新 Token 并自动重试...');
         
-        // Token 失效，获取新 token 并重试
+        // Token 失效，获取新 token 并自动重试一次
         const newToken = await getFCMToken();
-        if (newToken) {
+        if (newToken && newToken !== token) {
           await saveFCMToken(newToken, userId);
-          console.log('[FCM Test] ✅ 已获取新 Token，请重新运行测试');
+          console.log('[FCM Test] ✅ 已获取新 Token，自动重试发送...');
+          
+          // 自动重试一次
+          try {
+            const retryResponse = await fetch('/.netlify/functions/test-token', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                token: newToken,
+                title: options?.title || '测试通知',
+                body: options?.body || '这是一条测试推送通知'
+              })
+            });
+
+            if (retryResponse.ok) {
+              const retryResult = await retryResponse.json();
+              if (retryResult.success) {
+                console.log('[FCM Test] ✅ 使用新 Token 重试成功！');
+                return {
+                  success: true,
+                  message: 'Token 已失效，已自动获取新 Token 并重试成功！',
+                  data: { ...retryResult, tokenRefreshed: true, oldToken: token, newToken: newToken }
+                };
+              }
+            }
+          } catch (retryError) {
+            console.error('[FCM Test] ⚠️ 重试时出错:', retryError);
+          }
           
           return {
             success: false,
             message: `Token 已失效。已获取新 Token: ${newToken.substring(0, 20)}...\n请重新运行测试函数。`,
             data: { oldToken: token, newToken: newToken }
           };
+        } else {
+          console.warn('[FCM Test] ⚠️ 无法获取新 Token 或新 Token 与旧 Token 相同');
         }
       }
       
