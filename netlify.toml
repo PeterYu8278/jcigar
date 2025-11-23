@@ -5,6 +5,10 @@
 [build.environment]
   NODE_VERSION = "22"
 
+# Functions 配置
+[functions]
+  directory = "netlify/functions"
+
 # 重定向规则 - 支持SPA路由
 [[redirects]]
   from = "/*"
