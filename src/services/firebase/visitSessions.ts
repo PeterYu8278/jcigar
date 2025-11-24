@@ -716,14 +716,14 @@ export const addRedemptionToSession = async (
       const sessionRef = doc(db, GLOBAL_COLLECTIONS.VISIT_SESSIONS, sessionId);
       const sessionDoc = await transaction.get(sessionRef);
       
-      if (!sessionDoc.exists()) {
+    if (!sessionDoc.exists()) {
         throw new Error('驻店记录不存在');
-      }
+    }
 
-      const sessionData = sessionDoc.data();
-      if (sessionData.status !== 'pending') {
+    const sessionData = sessionDoc.data();
+    if (sessionData.status !== 'pending') {
         throw new Error('只能在待处理的驻店记录中添加兑换');
-      }
+    }
 
       // 使用 arrayUnion 原子性地添加兑换记录到数组
       // 这样可以确保即使有并发请求，所有记录都会被正确添加

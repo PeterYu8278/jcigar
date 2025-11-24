@@ -14,6 +14,7 @@ import { getUsers, createDocument, updateDocument, deleteDocument, COLLECTIONS, 
 import type { User, Event, Order } from '../../../types'
 import { sendPasswordResetEmailFor } from '../../../services/firebase/auth'
 import { useTranslation } from 'react-i18next'
+import { useAuthStore } from '../../../store/modules/auth'
 import { getModalThemeStyles, getModalWidth } from '../../../config/modalTheme'
 import { normalizePhoneNumber } from '../../../utils/phoneNormalization'
 import { collection, query, where, getDocs, limit, doc, setDoc } from 'firebase/firestore'
@@ -42,6 +43,7 @@ const glassmorphismInputStyle = {
 const AdminUsers: React.FC = () => {
   const { t } = useTranslation()
   const { modal } = App.useApp() // 使用 App.useApp() 获取 modal 实例以支持 React 19
+  const { user: currentUser } = useAuthStore()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(false)
   const [editing, setEditing] = useState<null | User>(null)
@@ -130,6 +132,7 @@ const AdminUsers: React.FC = () => {
 
   const getRoleColor = (role: string) => {
     switch (role) {
+      case 'developer': return 'red'
       case 'admin': return 'red'
       case 'member': return 'blue'
       case 'vip': return 'gold'  // VIP 使用自定义渐变样式，此颜色不会被使用
@@ -140,6 +143,7 @@ const AdminUsers: React.FC = () => {
 
   const getRoleText = (role: string) => {
     switch (role) {
+      case 'developer': return t('auth.developer')
       case 'admin': return t('auth.admin')
       case 'member': return t('auth.member')
       case 'vip': return t('auth.vip')
@@ -377,6 +381,10 @@ const AdminUsers: React.FC = () => {
   const filteredUsers = useMemo(() => {
                       const kw = keyword.trim().toLowerCase()
     const filtered = users.filter(u => {
+      // 如果不是开发者，过滤掉开发者角色的用户
+      if (currentUser?.role !== 'developer' && u.role === 'developer') {
+        return false
+      }
       const passKw = !kw || u.displayName?.toLowerCase().includes(kw) || (u.email || '').toLowerCase().includes(kw) || ((u as any)?.profile?.phone || '').includes(keyword.trim()) || (u.memberId || '').toLowerCase().includes(kw)
                       const passRole = !roleFilter || u.role === roleFilter
                       const passLevel = !levelFilter || u.membership?.level === levelFilter
@@ -391,7 +399,7 @@ const AdminUsers: React.FC = () => {
       const nameB = (b.displayName || '').toLowerCase()
       return nameA.localeCompare(nameB)
     })
-  }, [users, keyword, roleFilter, levelFilter, statusFilter, statusMap])
+  }, [users, keyword, roleFilter, levelFilter, statusFilter, statusMap, currentUser?.role])
 
   const groupedByInitial = useMemo(() => {
     const groups: Record<string, User[]> = {}
@@ -671,6 +679,9 @@ const AdminUsers: React.FC = () => {
             <Option value="admin">{t('common.admin')}</Option>
             <Option value="member">{t('common.member')}</Option>
             <Option value="guest">{t('common.guest')}</Option>
+            {currentUser?.role === 'developer' && (
+              <Option value="developer">{t('auth.developer')}</Option>
+            )}
           </Select>
             <Select
               allowClear
@@ -779,6 +790,7 @@ const AdminUsers: React.FC = () => {
                     { key: 'admin', label: t('common.admin') },
                     { key: 'member', label: t('common.member') },
                     { key: 'guest', label: t('common.guest') },
+                    ...(currentUser?.role === 'developer' ? [{ key: 'developer', label: t('auth.developer') }] : []),
                   ],
                   onClick: ({ key }) => setRoleFilter(key === 'all' ? undefined : (key as string)),
                 }}
@@ -883,14 +895,16 @@ const AdminUsers: React.FC = () => {
                   <div style={{ color: '#f4af25', fontWeight: 600, marginBottom: 8 }}>{group.key}</div>
                   {group.items.map((u) => {
                     const status = statusMap[u.id] || (u as any).status || 'active'
-                    const level = u.membership?.level || 'bronze'
+                    const role = u.role || 'member'
                     return (
                       <div key={u.id} style={{ borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', padding: 12, marginBottom: 8, backdropFilter: 'blur(6px)' }}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                           <div style={{ flex: 1 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                               <div style={{ fontWeight: 700, color: '#f0f0f0' }}>{u.displayName || '-'}</div>
-                              <span style={{ borderRadius: 999, background: 'rgba(148,148,148,0.2)', padding: '2px 8px', fontSize: 12, color: '#ddd' }}>{getMembershipText(level)}</span>
+                              <Tag color={getRoleColor(role)} style={{ margin: 0 }}>
+                                {getRoleText(role)}
+                              </Tag>
                             </div>
                             <div style={{ marginTop: 4, fontSize: 12, color: '#aaa' }}>
                               {u.memberId && <span style={{ marginRight: 8, fontFamily: 'monospace' }}>{t('usersAdmin.memberId')}: {u.memberId}</span>}
@@ -932,10 +946,10 @@ const AdminUsers: React.FC = () => {
           style={{
             position: 'fixed',
             right: 7,
-            top: '50%',
+            top: '48%',
             transform: 'translateY(-50%)',
             maxHeight: '90vh',
-            padding: 6,
+            padding: 4,
             zIndex: 1000,
             background: 'rgba(0,0,0,0.35)',
             border: '1px solid rgba(255,215,0,0.25)',
@@ -948,7 +962,7 @@ const AdminUsers: React.FC = () => {
             justifyContent: 'center'
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, fontSize: 10, fontWeight: 600 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 600 }}>
             {alphaIndex.map(letter => {
               const enabled = groupedByInitial.some(g => g.key === letter)
               const isActive = letter === activeIndex
@@ -1373,6 +1387,9 @@ const AdminUsers: React.FC = () => {
               <Option value="admin">{t('common.admin')}</Option>
               <Option value="member">{t('common.member')}</Option>
               <Option value="guest">{t('common.guest')}</Option>
+              {currentUser?.role === 'developer' && (
+                <Option value="developer">{t('auth.developer')}</Option>
+              )}
             </Select>
           </Form.Item>
 

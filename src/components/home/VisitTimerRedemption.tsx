@@ -767,7 +767,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
               <Button 
                 type="link" 
                 size="small" 
-                onClick={() => navigate('/redemption-history')} 
+                onClick={() => navigate('/profile')} 
                 style={{ padding: 0, color: '#C48D3A', fontSize: 14, fontWeight: 600 }}
               >
                 History &gt;

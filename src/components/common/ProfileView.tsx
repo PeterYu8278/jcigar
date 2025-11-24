@@ -15,6 +15,8 @@ import { getUserPointsRecords } from '../../services/firebase/pointsRecords'
 import type { User, Event, Order, Cigar, PointsRecord } from '../../types'
 import { useTranslation } from 'react-i18next'
 import { MemberProfileCard } from './MemberProfileCard'
+import { isFeatureVisible } from '../../services/firebase/featureVisibility'
+import { useAuthStore } from '../../store/modules/auth'
 
 interface ProfileViewProps {
   user?: User | null          // 直接传入用户对象
@@ -32,10 +34,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onEdit
 }) => {
   const { t } = useTranslation()
+  const { user: authUser } = useAuthStore()
   const [user, setUser] = useState<User | null>(propUser || null)
   const [loadingUser, setLoadingUser] = useState(false)
   const [showMemberCard, setShowMemberCard] = useState(false)
   const [activeTab, setActiveTab] = useState<'cigar' | 'points' | 'activity' | 'referral'>('cigar')
+  const [eventsFeatureVisible, setEventsFeatureVisible] = useState<boolean>(true)
   const [userEvents, setUserEvents] = useState<Event[]>([])
   const [loadingEvents, setLoadingEvents] = useState(false)
   const [userOrders, setUserOrders] = useState<Order[]>([])
@@ -71,6 +75,26 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       setUser(propUser)
     }
   }, [propUser])
+
+  // 检查活动功能是否可见（developer 不受限制）
+  useEffect(() => {
+    const checkFeatureVisibility = async () => {
+      const visible = authUser?.role === 'developer' ? true : await isFeatureVisible('events')
+      setEventsFeatureVisible(visible)
+      // 如果活动功能不可见且当前激活的是活动标签，切换到雪茄标签
+      if (!visible && activeTab === 'activity') {
+        setActiveTab('cigar')
+      }
+    }
+    checkFeatureVisibility()
+  }, []) // 只在组件加载时检查一次
+
+  // 当活动功能可见性变化时，如果当前在活动标签且功能被隐藏，切换到雪茄标签
+  useEffect(() => {
+    if (!eventsFeatureVisible && activeTab === 'activity') {
+      setActiveTab('cigar')
+    }
+  }, [eventsFeatureVisible, activeTab])
 
   // 加载用户参与的活动
   useEffect(() => {
@@ -328,7 +352,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           borderBottom: '1px solid rgba(244,175,37,0.2)',
           marginBottom: '24px'
         }}>
-          {(['cigar', 'points', 'activity', 'referral'] as const).map((tabKey) => {
+          {(['cigar', 'points', 'activity', 'referral'] as const)
+            .filter((tabKey) => {
+              // 如果活动功能不可见，过滤掉活动标签
+              if (tabKey === 'activity' && !eventsFeatureVisible) {
+                return false
+              }
+              return true
+            })
+            .map((tabKey) => {
             const isActive = activeTab === tabKey
             const baseStyle: React.CSSProperties = {
               flex: 1,
@@ -339,6 +371,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               borderBottom: isActive ? '2px solid transparent' : '2px solid transparent',
               cursor: 'pointer',
               border: 'none',
+              background: 'none',
               position: 'relative' as const,
             }
             const activeStyle: React.CSSProperties = {
@@ -346,9 +379,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               background: 'none',
               backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
               WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
             }
             const inactiveStyle: React.CSSProperties = {
-              color: '#A0A0A0',
+              color: '#A0A0A0'
             }
             
             const getTabLabel = (key: string) => {

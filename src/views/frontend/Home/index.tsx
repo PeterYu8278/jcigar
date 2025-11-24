@@ -32,6 +32,7 @@ const Home: React.FC = () => {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const { user } = useAuthStore()
+  const isMobile = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 991px)').matches : false
   const [events, setEvents] = useState<Event[]>([])
   const [cigars, setCigars] = useState<Cigar[]>([])
   const [brands, setBrands] = useState<Brand[]>([])
@@ -123,12 +124,12 @@ const Home: React.FC = () => {
     
     const load = async () => {
       try {
-        // 检查活动功能是否可见
-        const eventsVisible = await isFeatureVisible('events')
+        // 检查活动功能是否可见（developer 不受限制）
+        const eventsVisible = user?.role === 'developer' ? true : await isFeatureVisible('events')
         setEventsFeatureVisible(eventsVisible)
         
-        // 检查商城功能是否可见
-        const shopVisible = await isFeatureVisible('shop')
+        // 检查商城功能是否可见（developer 不受限制）
+        const shopVisible = user?.role === 'developer' ? true : await isFeatureVisible('shop')
         setShopFeatureVisible(shopVisible)
         
         setLoadingEvents(true)
@@ -159,7 +160,10 @@ const Home: React.FC = () => {
   }, [])
   
   return (
-    <div style={{ minHeight: '100vh' }}>
+    <div style={{ 
+      minHeight: '100vh',
+      paddingBottom: isMobile ? '60px' : '0' // 移动端添加底部间距，避免被底部导航遮挡
+    }}>
       {/* 自定义导航和分页器样式 */}
       <style>{`
         .swiper-slide {

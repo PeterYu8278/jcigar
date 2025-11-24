@@ -134,28 +134,31 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
     },
   ]
 
-  // 根据功能可见性过滤菜单项
+  // 根据功能可见性过滤菜单项（developer 不受限制）
   const frontendMenuItems = useMemo(() => {
+    if (isDeveloper) {
+      return frontendMenuItemsBase
+    }
     return frontendMenuItemsBase.filter(item => {
       const featureKey = getFeatureKeyByRoute(item.key)
       return featureKey ? (featuresVisibility[featureKey] ?? true) : true
     })
-  }, [featuresVisibility, t])
+  }, [featuresVisibility, isDeveloper, t])
 
   const adminMenuItems = useMemo(() => {
-    const items = adminMenuItemsBase.filter(item => {
-      const featureKey = getFeatureKeyByRoute(item.key)
-      return featureKey ? (featuresVisibility[featureKey] ?? true) : true
-    })
-    
-    // 如果是开发者，添加功能管理菜单项
     if (isDeveloper) {
+      const items = [...adminMenuItemsBase]
       items.push({
         key: '/admin/feature-management',
         icon: <SettingOutlined />,
         label: t('navigation.featureManagement', { defaultValue: '功能管理' }),
       })
+      return items
     }
+    const items = adminMenuItemsBase.filter(item => {
+      const featureKey = getFeatureKeyByRoute(item.key)
+      return featureKey ? (featuresVisibility[featureKey] ?? true) : true
+    })
     
     return items
   }, [featuresVisibility, isDeveloper, t])

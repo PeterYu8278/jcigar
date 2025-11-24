@@ -482,9 +482,9 @@ export const updateRedemptionRecord = async (
     if (!foundDoc || foundItemIndex < 0) {
       return { success: false, error: '兑换记录不存在' };
     }
-
-    const now = new Date();
     
+    const now = new Date();
+
     // 更新数组中的特定项
     const updatedRedemptions = [...foundDoc.data.redemptions];
     updatedRedemptions[foundItemIndex] = {
@@ -653,7 +653,7 @@ export const getDailyRedemptions = async (
     
     return allRecords;
   } catch (error: any) {
-    return [];
+      return [];
   }
 };
 
@@ -698,7 +698,7 @@ export const getHourlyRedemptions = async (
     
     return allRecords;
   } catch (error: any) {
-    return [];
+      return [];
   }
 };
 

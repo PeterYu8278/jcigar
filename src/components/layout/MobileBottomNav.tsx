@@ -108,20 +108,26 @@ const MobileBottomNav: React.FC = () => {
     }
   ]
 
-  // 根据功能可见性过滤导航项
+  // 根据功能可见性过滤导航项（developer 不受限制）
   const frontendNavItems = useMemo(() => {
+    if (isDeveloper) {
+      return frontendNavItemsBase
+    }
     return frontendNavItemsBase.filter(item => {
       const featureKey = getFeatureKeyByRoute(item.key)
       return featureKey ? (featuresVisibility[featureKey] ?? true) : true
     })
-  }, [featuresVisibility, t])
+  }, [featuresVisibility, isDeveloper, t])
 
   const adminNavItems = useMemo(() => {
+    if (isDeveloper) {
+      return adminNavItemsBase
+    }
     return adminNavItemsBase.filter(item => {
       const featureKey = getFeatureKeyByRoute(item.key)
       return featureKey ? (featuresVisibility[featureKey] ?? true) : true
     })
-  }, [featuresVisibility, t])
+  }, [featuresVisibility, isDeveloper, t])
 
   // 判断当前是否在管理后台
   const isInAdminPanel = location.pathname.startsWith('/admin')

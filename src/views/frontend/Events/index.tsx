@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next'
 const Events: React.FC = () => {
   const { user } = useAuthStore()
   const { t } = useTranslation()
+  const isMobile = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 991px)').matches : false
   const [events, setEvents] = useState<Event[]>([])
   const [loadingId, setLoadingId] = useState<string | null>(null)
 
@@ -117,6 +118,7 @@ const Events: React.FC = () => {
   return (
     <div style={{ 
       minHeight: '100vh',
+      paddingBottom: isMobile ? '60px' : '0' // 移动端添加底部间距，避免被底部导航遮挡
     }}>
       {/* Header */}
       <div style={{
