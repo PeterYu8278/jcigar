@@ -48,6 +48,7 @@ const AppContent: React.FC = () => {
 
   // 在应用启动时初始化认证（仅一次）
   useEffect(() => {
+    console.log('[App] 🚀 应用启动，初始化认证')
     initializeAuth()
   }, [initializeAuth])
 

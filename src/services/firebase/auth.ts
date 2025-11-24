@@ -261,7 +261,7 @@ export const loginWithEmailOrPhone = async (identifier: string, password: string
 };
 
 // ✅ 辅助函数：通过邮箱查找用户
-const findUserByEmail = async (email: string): Promise<{ id: string; data: User } | null> => {
+export const findUserByEmail = async (email: string): Promise<{ id: string; data: User } | null> => {
   try {
     const usersRef = collection(db, 'users');
     const q = query(usersRef, where('email', '==', email), limit(1));
@@ -814,7 +814,14 @@ export const getCurrentUser = (): FirebaseUser | null => {
 
 // 监听认证状态变化
 export const onAuthStateChange = (callback: (user: FirebaseUser | null) => void) => {
-  return onAuthStateChanged(auth, callback);
+  console.log('[Auth Service] 📡 注册 onAuthStateChanged 监听器')
+  return onAuthStateChanged(auth, (user) => {
+    console.log('[Auth Service] 🔔 Firebase onAuthStateChanged 触发', { 
+      hasUser: !!user, 
+      uid: user?.uid 
+    })
+    callback(user)
+  });
 };
 
 // 获取用户完整信息
@@ -836,15 +843,20 @@ export const convertFirestoreTimestamps = (value: any): any => {
 };
 
 export const getUserData = async (uid: string): Promise<User | null> => {
+  console.log('[Auth Service] 📥 getUserData 开始', { uid })
   try {
     const userDoc = await getDoc(doc(db, 'users', uid));
+    console.log('[Auth Service] 📄 Firestore 查询完成', { exists: userDoc.exists() })
     if (userDoc.exists()) {
       const rawData = userDoc.data();
       const data = convertFirestoreTimestamps(rawData);
+      console.log('[Auth Service] ✅ 用户数据转换完成', { userId: uid, role: data.role })
       return { id: uid, ...data } as User;
     }
+    console.log('[Auth Service] ⚠️ 用户文档不存在', { uid })
     return null;
   } catch (error) {
+    console.error('[Auth Service] ❌ getUserData 错误:', error)
     return null;
   }
 };
