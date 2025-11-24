@@ -30,6 +30,7 @@ import EventOrderDebug from './views/admin/EventOrderDebug'
 import PointsConfigPage from './views/admin/PointsConfig'
 import VisitSessionsPage from './views/admin/VisitSessions'
 import OrphanedUserCleanup from './views/admin/OrphanedUserCleanup'
+import FeatureManagement from './views/admin/FeatureManagement'
 
 // 认证页面
 import Login from './views/auth/Login'
@@ -177,24 +178,25 @@ const AppContent: React.FC = () => {
                   {/* 前端路由 */}
                   <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
                   <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
-                  <Route path="/shop" element={<ProtectedRoute roles={['member','vip', 'admin']}><Shop /></ProtectedRoute>} />
-                  <Route path="/profile" element={<ProtectedRoute roles={['member','vip', 'admin']}><Profile /></ProtectedRoute>} />
-                  <Route path="/reload" element={<ProtectedRoute roles={['member','vip', 'admin']}><ReloadPage /></ProtectedRoute>} />
-                  <Route path="/brand/:brandId" element={<ProtectedRoute roles={['member','vip', 'admin']}><BrandDetail /></ProtectedRoute>} />
+                  <Route path="/shop" element={<ProtectedRoute roles={['member','vip', 'admin', 'developer']}><Shop /></ProtectedRoute>} />
+                  <Route path="/profile" element={<ProtectedRoute roles={['member','vip', 'admin', 'developer']}><Profile /></ProtectedRoute>} />
+                  <Route path="/reload" element={<ProtectedRoute roles={['member','vip', 'admin', 'developer']}><ReloadPage /></ProtectedRoute>} />
+                  <Route path="/brand/:brandId" element={<ProtectedRoute roles={['member','vip', 'admin', 'developer']}><BrandDetail /></ProtectedRoute>} />
                   
                   {/* 管理后台路由 */}
-                  <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminDashboard /></ProtectedRoute>} />
-                  <Route path="/admin/users" element={<ProtectedRoute roles={['admin']}><AdminUsers /></ProtectedRoute>} />
-                  <Route path="/admin/inventory" element={<ProtectedRoute roles={['admin']}><AdminInventory /></ProtectedRoute>} />
-                  <Route path="/admin/events" element={<ProtectedRoute roles={['admin']}><AdminEvents /></ProtectedRoute>} />
-                  <Route path="/admin/orders" element={<ProtectedRoute roles={['admin']}><AdminOrders /></ProtectedRoute>} />
-                  <Route path="/admin/finance" element={<ProtectedRoute roles={['admin']}><AdminFinance /></ProtectedRoute>} />
-                  <Route path="/admin/points-config" element={<ProtectedRoute roles={['admin']}><PointsConfigPage /></ProtectedRoute>} />
-                  <Route path="/admin/visit-sessions" element={<ProtectedRoute roles={['admin']}><VisitSessionsPage /></ProtectedRoute>} />
-                  <Route path="/admin/orphaned-users" element={<ProtectedRoute roles={['admin']}><OrphanedUserCleanup /></ProtectedRoute>} />
-                  <Route path="/admin/performance" element={<ProtectedRoute roles={['admin']}><PerformanceMonitor /></ProtectedRoute>} />
-                  <Route path="/admin/cloudinary-test" element={<ProtectedRoute roles={['admin']}><CloudinaryTestPage /></ProtectedRoute>} />
-                  <Route path="/admin/debug-orders" element={<ProtectedRoute roles={['admin']}><EventOrderDebug /></ProtectedRoute>} />
+                  <Route path="/admin" element={<ProtectedRoute roles={['admin', 'developer']}><AdminDashboard /></ProtectedRoute>} />
+                  <Route path="/admin/users" element={<ProtectedRoute roles={['admin', 'developer']}><AdminUsers /></ProtectedRoute>} />
+                  <Route path="/admin/inventory" element={<ProtectedRoute roles={['admin', 'developer']}><AdminInventory /></ProtectedRoute>} />
+                  <Route path="/admin/events" element={<ProtectedRoute roles={['admin', 'developer']}><AdminEvents /></ProtectedRoute>} />
+                  <Route path="/admin/orders" element={<ProtectedRoute roles={['admin', 'developer']}><AdminOrders /></ProtectedRoute>} />
+                  <Route path="/admin/finance" element={<ProtectedRoute roles={['admin', 'developer']}><AdminFinance /></ProtectedRoute>} />
+                  <Route path="/admin/points-config" element={<ProtectedRoute roles={['admin', 'developer']}><PointsConfigPage /></ProtectedRoute>} />
+                  <Route path="/admin/visit-sessions" element={<ProtectedRoute roles={['admin', 'developer']}><VisitSessionsPage /></ProtectedRoute>} />
+                  <Route path="/admin/orphaned-users" element={<ProtectedRoute roles={['developer']}><OrphanedUserCleanup /></ProtectedRoute>} />
+                  <Route path="/admin/performance" element={<ProtectedRoute roles={['admin', 'developer']}><PerformanceMonitor /></ProtectedRoute>} />
+                  <Route path="/admin/feature-management" element={<ProtectedRoute roles={['developer']}><FeatureManagement /></ProtectedRoute>} />
+                  <Route path="/admin/cloudinary-test" element={<ProtectedRoute roles={['developer']}><CloudinaryTestPage /></ProtectedRoute>} />
+                  <Route path="/admin/debug-orders" element={<ProtectedRoute roles={['developer']}><EventOrderDebug /></ProtectedRoute>} />
                   
                   {/* 默认重定向 */}
                   <Route path="*" element={<Navigate to="/" replace />} />

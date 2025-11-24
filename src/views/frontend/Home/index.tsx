@@ -26,6 +26,7 @@ import { QRCodeDisplay } from '../../../components/common/QRCodeDisplay'
 import { MemberProfileCard } from '../../../components/common/MemberProfileCard'
 import { VisitTimerRedemption } from '../../../components/home/VisitTimerRedemption'
 import { MysteryGiftBanner } from '../../../components/home/MysteryGiftBanner'
+import { isFeatureVisible } from '../../../services/firebase/featureVisibility'
 
 const Home: React.FC = () => {
   const navigate = useNavigate()
@@ -39,6 +40,8 @@ const Home: React.FC = () => {
   const [loadingBrands, setLoadingBrands] = useState<boolean>(false)
   const [registeringEvents, setRegisteringEvents] = useState<Set<string>>(new Set())
   const [swiperInstance, setSwiperInstance] = useState<any>(null)
+  const [eventsFeatureVisible, setEventsFeatureVisible] = useState<boolean>(true)
+  const [shopFeatureVisible, setShopFeatureVisible] = useState<boolean>(true)
   
   // 会员等级文本获取函数
   const getMembershipText = (level: string) => {
@@ -120,14 +123,23 @@ const Home: React.FC = () => {
     
     const load = async () => {
       try {
+        // 检查活动功能是否可见
+        const eventsVisible = await isFeatureVisible('events')
+        setEventsFeatureVisible(eventsVisible)
+        
+        // 检查商城功能是否可见
+        const shopVisible = await isFeatureVisible('shop')
+        setShopFeatureVisible(shopVisible)
+        
         setLoadingEvents(true)
         setLoadingCigars(true)
         setLoadingBrands(true)
         
+        // 只有在功能可见时才加载对应数据
         const [eventsData, cigarsData, brandsData] = await Promise.all([
-          getUpcomingEvents(),
-          getCigars(),
-          getBrands()
+          eventsVisible ? getUpcomingEvents() : Promise.resolve([]),
+          shopVisible ? getCigars() : Promise.resolve([]),
+          shopVisible ? getBrands() : Promise.resolve([])
         ])
         
         setEvents(Array.isArray(eventsData) ? eventsData : [])
@@ -289,10 +301,11 @@ const Home: React.FC = () => {
 
       {/* 功能卡片 - 已移除旧"最新活动"卡片，改为下方新列表 */}
 
-      {/* 品牌导航 - Swiper轮播 */}
-      <div style={{ marginTop: 32 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Title level={4} style={{ margin: 0, color: '#f8f8f8' }}>{t('home.productNavigation')}</Title>
+      {/* 品牌导航 - Swiper轮播 - 仅在商城功能可见时显示 */}
+      {shopFeatureVisible && (
+        <div style={{ marginTop: 32 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Title level={4} style={{ margin: 0, color: '#f8f8f8' }}>{t('home.productNavigation')}</Title>
           <Button 
             type="link" 
             style={{ 
@@ -422,10 +435,12 @@ const Home: React.FC = () => {
             </Swiper>
           </div>
         )}
-      </div>
+        </div>
+      )}
 
-      {/* 热门雪茄 - Swiper轮播 */}
-      <div>
+      {/* 热门雪茄 - Swiper轮播 - 仅在商城功能可见时显示 */}
+      {shopFeatureVisible && (
+        <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Title level={4} style={{ margin: 0, color: '#f8f8f8' }}>{t('home.popularCigars')}</Title>
           <Button 
@@ -586,93 +601,96 @@ const Home: React.FC = () => {
             />
           </div>
         )}
-      </div>
-
-      {/* 最新活动 列表（真实数据） */}
-      <div style={{ marginBottom: 32 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <Title level={4} style={{ margin: '0 0 16px', color: '#f8f8f8' }}>{t('home.latestEvents')}</Title>
-          <Button 
-            type="link" 
-            style={{ 
-              background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              fontWeight: 600, 
-              paddingRight: 0 
-            }}
-            onClick={() => navigate('/events')}
-          >
-            {t('home.viewAll')}
-          </Button>
         </div>
-        {loadingEvents ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
-            <Spin />
+      )}
+
+      {/* 最新活动 列表（真实数据） - 仅在活动功能可见时显示 */}
+      {eventsFeatureVisible && (
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <Title level={4} style={{ margin: '0 0 16px', color: '#f8f8f8' }}>{t('home.latestEvents')}</Title>
+            <Button 
+              type="link" 
+              style={{ 
+                background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                fontWeight: 600, 
+                paddingRight: 0 
+              }}
+              onClick={() => navigate('/events')}
+            >
+              {t('home.viewAll')}
+            </Button>
           </div>
-        ) : (
-          <Space direction="vertical" size={16} style={{ width: '100%' }}>
-            {events && events.length > 0 ? (
-              (events.slice(0, 5)).map((ev) => {
-                const name = (ev as any)?.name || (ev as any)?.title || '活动'
-                const start = (ev as any)?.schedule?.startDate
-                const dateObj = start?.toDate && typeof start.toDate === 'function' ? start.toDate() : (start ? new Date(start) : undefined)
-                const dateText = dateObj ? dateObj.toLocaleDateString() : ''
-                const desc = (ev as any)?.description || ''
-                const img = (ev as any)?.coverImage || (ev as any)?.banner || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYwIiBoZWlnaHQ9IjE2MCIgdmlld0JveD0iMCAwIDE2MCAxNjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxNjAiIGhlaWdodD0iMTYwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjgwIiB5PSI4MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+RXZlbnQ8L3RleHQ+Cjwvc3ZnPgo='
-                return (
-                  <div key={ev.id} style={{ display: 'flex', gap: 16, alignItems: 'center', background: 'rgba(30,30,30,0.6)', padding: 16, borderRadius: 12, border: '1px solid rgba(255,215,0,0.2)' }}>
-                    <img src={img} alt={name} style={{ width: 80, height: 80, borderRadius: 8, objectFit: 'cover' }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, color: '#f8f8f8' }}>{name}</div>
-                      <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>{dateText}</div>
-                      {desc && (
-                        <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{desc}</div>
-                      )}
-                    </div>
-                    {(() => {
-                      const isRegistered = isUserRegistered(ev as Event)
-                      const isLoading = registeringEvents.has(ev.id)
-                      const isPastDeadline = ev.schedule?.registrationDeadline && 
-                        new Date(ev.schedule.registrationDeadline) < new Date()
-                      
-                      return (
-                        <Button 
-                          type="primary" 
-                          size="small" 
-                          loading={isLoading}
-                          disabled={isPastDeadline}
-                          style={{ 
-                            background: isRegistered 
-                              ? 'linear-gradient(to right,#ff6b6b,#ee5a52)' 
-                              : 'linear-gradient(to right,#FDE08D,#C48D3A)', 
-                            color: '#0a0a0a', 
-                            fontWeight: 700,
-                            opacity: isPastDeadline ? 0.5 : 1
-                          }} 
-                          onClick={() => handleEventRegistration(ev.id, !!isRegistered)}
-                        >
-                          {isPastDeadline 
-                            ? '报名已截止' 
-                            : isRegistered 
-                              ? '取消报名' 
-                              : t('events.join')
-                          }
-                    </Button>
-                      )
-                    })()}
+          {loadingEvents ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
+              <Spin />
             </div>
-                )
-              })
-            ) : (
-              <Card style={{ background: 'rgba(30,30,30,0.6)', borderRadius: 12, border: '1px solid rgba(255,215,0,0.2)', color: '#c0c0c0' }}>
-                {t('home.noEvents')}
-          </Card>
-            )}
-          </Space>
-        )}
-      </div>
+          ) : (
+            <Space direction="vertical" size={16} style={{ width: '100%' }}>
+              {events && events.length > 0 ? (
+                (events.slice(0, 5)).map((ev) => {
+                  const name = (ev as any)?.name || (ev as any)?.title || '活动'
+                  const start = (ev as any)?.schedule?.startDate
+                  const dateObj = start?.toDate && typeof start.toDate === 'function' ? start.toDate() : (start ? new Date(start) : undefined)
+                  const dateText = dateObj ? dateObj.toLocaleDateString() : ''
+                  const desc = (ev as any)?.description || ''
+                  const img = (ev as any)?.coverImage || (ev as any)?.banner || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYwIiBoZWlnaHQ9IjE2MCIgdmlld0JveD0iMCAwIDE2MCAxNjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxNjAiIGhlaWdodD0iMTYwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjgwIiB5PSI4MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+RXZlbnQ8L3RleHQ+Cjwvc3ZnPgo='
+                  return (
+                    <div key={ev.id} style={{ display: 'flex', gap: 16, alignItems: 'center', background: 'rgba(30,30,30,0.6)', padding: 16, borderRadius: 12, border: '1px solid rgba(255,215,0,0.2)' }}>
+                      <img src={img} alt={name} style={{ width: 80, height: 80, borderRadius: 8, objectFit: 'cover' }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, color: '#f8f8f8' }}>{name}</div>
+                        <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>{dateText}</div>
+                        {desc && (
+                          <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{desc}</div>
+                        )}
+                      </div>
+                      {(() => {
+                        const isRegistered = isUserRegistered(ev as Event)
+                        const isLoading = registeringEvents.has(ev.id)
+                        const isPastDeadline = ev.schedule?.registrationDeadline && 
+                          new Date(ev.schedule.registrationDeadline) < new Date()
+                        
+                        return (
+                          <Button 
+                            type="primary" 
+                            size="small" 
+                            loading={isLoading}
+                            disabled={isPastDeadline}
+                            style={{ 
+                              background: isRegistered 
+                                ? 'linear-gradient(to right,#ff6b6b,#ee5a52)' 
+                                : 'linear-gradient(to right,#FDE08D,#C48D3A)', 
+                              color: '#0a0a0a', 
+                              fontWeight: 700,
+                              opacity: isPastDeadline ? 0.5 : 1
+                            }} 
+                            onClick={() => handleEventRegistration(ev.id, !!isRegistered)}
+                          >
+                            {isPastDeadline 
+                              ? '报名已截止' 
+                              : isRegistered 
+                                ? '取消报名' 
+                                : t('events.join')
+                            }
+                          </Button>
+                        )
+                      })()}
+                    </div>
+                  )
+                })
+              ) : (
+                <Card style={{ background: 'rgba(30,30,30,0.6)', borderRadius: 12, border: '1px solid rgba(255,215,0,0.2)', color: '#c0c0c0' }}>
+                  {t('home.noEvents')}
+                </Card>
+              )}
+            </Space>
+          )}
+        </div>
+      )}
 
       
 

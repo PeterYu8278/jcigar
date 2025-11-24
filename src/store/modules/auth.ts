@@ -13,6 +13,7 @@ interface AuthState {
   loading: boolean
   error: string | null
   isAdmin: boolean
+  isDeveloper: boolean
   initialized: boolean
   
   // Actions
@@ -35,6 +36,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   loading: true,
   error: null,
   isAdmin: false,
+  isDeveloper: false,
   initialized: false,
 
   setUser: (user) => set({ user }),
@@ -81,7 +83,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           if (userData) {
             setUser(userData)
             setFirebaseUser(firebaseUser)
-            set({ isAdmin: userData.role === 'admin' })
+            set({ 
+              isAdmin: userData.role === 'admin' || userData.role === 'developer',
+              isDeveloper: userData.role === 'developer'
+            })
             
             // 自动初始化推送通知（静默执行，不阻塞登录流程）
             initializePushNotifications(userData).catch((error) => {
@@ -98,7 +103,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 const data = convertFirestoreTimestamps(rawData)
                 const updatedUser = { id: firestoreUserId, ...data } as User
                 setUser(updatedUser)
-                set({ isAdmin: updatedUser.role === 'admin' })
+                set({ 
+                  isAdmin: updatedUser.role === 'admin' || updatedUser.role === 'developer',
+                  isDeveloper: updatedUser.role === 'developer'
+                })
               }
             }, (error) => {
               // 监听错误不影响主流程
@@ -111,7 +119,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               if (fallbackData) {
                 setUser(fallbackData)
                 setFirebaseUser(firebaseUser)
-                set({ isAdmin: fallbackData.role === 'admin' })
+                set({ 
+                  isAdmin: fallbackData.role === 'admin' || fallbackData.role === 'developer',
+                  isDeveloper: fallbackData.role === 'developer'
+                })
                 
                 // 自动初始化推送通知（静默执行，不阻塞登录流程）
                 initializePushNotifications(fallbackData).catch((error) => {
@@ -128,7 +139,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                     const data = convertFirestoreTimestamps(rawData)
                     const updatedUser = { id: firebaseUser.uid, ...data } as User
                     setUser(updatedUser)
-                    set({ isAdmin: updatedUser.role === 'admin' })
+                    set({ 
+                      isAdmin: updatedUser.role === 'admin' || updatedUser.role === 'developer',
+                      isDeveloper: updatedUser.role === 'developer'
+                    })
                   }
                 }, (error) => {
                   // 监听错误不影响主流程
@@ -143,7 +157,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       } else {
         setUser(null)
         setFirebaseUser(null)
-        set({ isAdmin: false })
+        set({ isAdmin: false, isDeveloper: false })
         // 清除 sessionStorage 中的 firestoreUserId
         sessionStorage.removeItem('firestoreUserId')
       }
@@ -161,7 +175,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       userDocUnsubscribe()
       userDocUnsubscribe = null
     }
-    set({ user: null, firebaseUser: null, isAdmin: false })
+    set({ user: null, firebaseUser: null, isAdmin: false, isDeveloper: false })
   },
 
   hasPermission: (permission: keyof Permission) => {

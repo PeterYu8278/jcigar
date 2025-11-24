@@ -1,11 +1,13 @@
 // 路由权限保护组件
-import React, { useEffect } from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
+import React, { useEffect, useState } from 'react'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Spin, Result, Button, message } from 'antd'
 import { useAuthStore } from '../../store/modules/auth'
 import type { UserRole } from '../../types'
 import { canAccessRoute } from '../../config/permissions'
 import { useTranslation } from 'react-i18next'
+import { isFeatureVisible } from '../../services/firebase/featureVisibility'
+import { getFeatureKeyByRoute } from '../../config/featureDefinitions'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -15,12 +17,35 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
-  roles = ['guest', 'member', 'vip', 'admin'], 
+  roles = ['guest', 'member', 'vip', 'admin', 'developer'], 
   requireAuth = true 
 }) => {
   const { user, loading } = useAuthStore()
   const location = useLocation()
+  const navigate = useNavigate()
   const { t } = useTranslation()
+  const [featureVisible, setFeatureVisible] = useState<boolean | null>(null)
+  const [checkingFeature, setCheckingFeature] = useState(false)
+
+  // 检查功能可见性
+  useEffect(() => {
+    const checkFeatureVisibility = async () => {
+      const featureKey = getFeatureKeyByRoute(location.pathname)
+      if (featureKey) {
+        setCheckingFeature(true)
+        const visible = await isFeatureVisible(featureKey)
+        setFeatureVisible(visible)
+        setCheckingFeature(false)
+      } else {
+        // 如果没有对应的功能键，默认可见
+        setFeatureVisible(true)
+      }
+    }
+    
+    if (!loading && user) {
+      checkFeatureVisibility()
+    }
+  }, [location.pathname, loading, user])
 
   // 处理未登录的情况
   useEffect(() => {
@@ -29,8 +54,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
   }, [loading, requireAuth, user, t])
 
-  // 加载中状态
-  if (loading) {
+  // 加载中状态或检查功能可见性中
+  if (loading || checkingFeature || featureVisible === null) {
     return (
       <div style={{ 
         display: 'flex', 
@@ -40,6 +65,22 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       }}>
         <Spin size="large" />
       </div>
+    )
+  }
+
+  // 功能不可见（仅对已登录用户检查，开发者不受限制）
+  if (user && user.role !== 'developer' && featureVisible === false) {
+    return (
+      <Result
+        status="404"
+        title="404"
+        subTitle={t('messages.featureNotAvailable', { defaultValue: '该功能暂不可用' })}
+        extra={
+          <Button type="primary" onClick={() => navigate('/')} style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}>
+            {t('common.back')}
+          </Button>
+        }
+      />
     )
   }
 

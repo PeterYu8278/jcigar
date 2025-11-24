@@ -191,9 +191,24 @@
     "passwordMinLength": "密码至少6位",
     "confirmPasswordRequired": "请确认密码",
     "admin": "管理员",
+    "developer": "开发者",
     "member": "会员",
     "guest": "游客",
     "vip": "VIP"
+  },
+  "featureManagement": {
+    "title": "功能管理",
+    "description": "配置系统中各个功能的显示/隐藏状态",
+    "frontendFeatures": "前端功能",
+    "adminFeatures": "管理后台功能",
+    "searchPlaceholder": "搜索功能...",
+    "showAll": "全部显示",
+    "hideAll": "全部隐藏",
+    "visible": "显示",
+    "hidden": "隐藏",
+    "saveChanges": "保存更改",
+    "resetToDefault": "重置为默认",
+    "noResults": "没有找到匹配的功能"
   },
   "navigation": {
     "home": "首页",
@@ -283,6 +298,7 @@
     "operationFailed": "操作失败",
     "confirmDelete": "确认删除吗？",
     "noPermission": "您没有权限执行此操作",
+    "featureNotAvailable": "该功能暂不可用",
     "dataLoadFailed": "数据加载失败",
     "networkError": "网络错误，请稍后重试",
     "serverError": "服务器错误",

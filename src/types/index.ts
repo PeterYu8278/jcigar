@@ -5,7 +5,7 @@ export interface User {
   id: string;
   email: string;
   displayName: string;
-  role: 'admin' | 'member' | 'guest' | 'vip';
+  role: 'admin' | 'member' | 'guest' | 'vip' | 'developer';
   
   // 扁平化的常用属性（向后兼容）
   photoURL?: string;
@@ -331,9 +331,28 @@ export interface InventoryMovement {
 }
 
 // 权限类型
-export type UserRole = 'guest' | 'member' | 'vip' | 'admin';
+export type UserRole = 'guest' | 'member' | 'vip' | 'admin' | 'developer';
+
+// 功能可见性配置
+export interface FeatureVisibilityConfig {
+  id: string; // 'default'
+  features: {
+    [featureKey: string]: {
+      visible: boolean;        // 是否可见
+      description: string;     // 功能描述
+      category: 'frontend' | 'admin'; // 分类
+      route: string;           // 路由路径
+      icon?: string;           // 图标名称
+      updatedAt: Date;
+      updatedBy: string;       // 最后更新的开发者ID
+    }
+  };
+  updatedAt: Date;
+  updatedBy: string;
+}
 
 export interface Permission {
+  canManageFeatures?: boolean; // 管理功能可见性（仅开发者）
   canViewEvents: boolean;
   canRegisterEvent: boolean;
   canPurchase: boolean;

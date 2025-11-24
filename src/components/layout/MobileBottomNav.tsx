@@ -1,5 +1,5 @@
 // 手机端底部导航组件 - Gentleman Club黑金主题
-import React from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Layout, Button, Badge } from 'antd'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
@@ -16,20 +16,32 @@ import {
 } from '@ant-design/icons'
 import { useAuthStore } from '../../store/modules/auth'
 import { useTranslation } from 'react-i18next'
-import { useState } from 'react'
 import { QRScanner } from '../admin/QRScanner'
+import { getFeaturesVisibility } from '../../services/firebase/featureVisibility'
+import { getFeatureKeyByRoute } from '../../config/featureDefinitions'
 
 const { Footer } = Layout
 
 const MobileBottomNav: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const { isAdmin } = useAuthStore()
+  const { isAdmin, isDeveloper } = useAuthStore()
   const { t } = useTranslation()
   const [qrScannerVisible, setQrScannerVisible] = useState(false)
   const [qrScannerMode, setQrScannerMode] = useState<'checkin' | 'checkout'>('checkin')
+  const [featuresVisibility, setFeaturesVisibility] = useState<Record<string, boolean>>({})
+
+  // 加载功能可见性配置
+  useEffect(() => {
+    const loadVisibility = async () => {
+      const visibility = await getFeaturesVisibility()
+      setFeaturesVisibility(visibility)
+    }
+    loadVisibility()
+  }, [])
+
   // 普通用户导航项
-  const frontendNavItems = [
+  const frontendNavItemsBase = [
     {
       key: '/',
       icon: <HomeOutlined />,
@@ -57,7 +69,7 @@ const MobileBottomNav: React.FC = () => {
   ]
 
   // 管理员导航项（包含6个重要功能，库存管理和订单管理已移除，因为仪表板有快速操作）
-  const adminNavItems = [
+  const adminNavItemsBase = [
     {
       key: '/admin',
       icon: <DashboardOutlined />,
@@ -95,6 +107,21 @@ const MobileBottomNav: React.FC = () => {
       badge: null
     }
   ]
+
+  // 根据功能可见性过滤导航项
+  const frontendNavItems = useMemo(() => {
+    return frontendNavItemsBase.filter(item => {
+      const featureKey = getFeatureKeyByRoute(item.key)
+      return featureKey ? (featuresVisibility[featureKey] ?? true) : true
+    })
+  }, [featuresVisibility, t])
+
+  const adminNavItems = useMemo(() => {
+    return adminNavItemsBase.filter(item => {
+      const featureKey = getFeatureKeyByRoute(item.key)
+      return featureKey ? (featuresVisibility[featureKey] ?? true) : true
+    })
+  }, [featuresVisibility, t])
 
   // 判断当前是否在管理后台
   const isInAdminPanel = location.pathname.startsWith('/admin')

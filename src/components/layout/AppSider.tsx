@@ -1,5 +1,5 @@
 // 应用侧边栏组件 - Gentleman Club黑金主题
-import React, { useState } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Layout, Menu, Button, Typography, Divider } from 'antd'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
@@ -18,11 +18,14 @@ import {
   ThunderboltOutlined,
   SyncOutlined,
   TrophyOutlined,
-  ClockCircleOutlined
+  ClockCircleOutlined,
+  SettingOutlined
 } from '@ant-design/icons'
 import { useAuthStore } from '../../store/modules/auth'
 import { useTranslation } from 'react-i18next'
 import { NAV_KEYS } from '../../i18n/constants'
+import { getFeaturesVisibility } from '../../services/firebase/featureVisibility'
+import { getFeatureKeyByRoute } from '../../config/featureDefinitions'
 
 const { Sider } = Layout
 const { Text } = Typography
@@ -33,10 +36,20 @@ interface AppSiderProps {
 
 const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
   const [collapsed, setCollapsed] = useState(false)
+  const [featuresVisibility, setFeaturesVisibility] = useState<Record<string, boolean>>({})
   const navigate = useNavigate()
   const location = useLocation()
-  const { isAdmin } = useAuthStore()
+  const { isAdmin, isDeveloper } = useAuthStore()
   const { t } = useTranslation()
+
+  // 加载功能可见性配置
+  useEffect(() => {
+    const loadVisibility = async () => {
+      const visibility = await getFeaturesVisibility()
+      setFeaturesVisibility(visibility)
+    }
+    loadVisibility()
+  }, [])
 
   // 处理侧边栏收起/展开
   const handleCollapseChange = (collapsed: boolean) => {
@@ -49,7 +62,7 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
   }
 
   // 前端菜单项
-  const frontendMenuItems = [
+  const frontendMenuItemsBase = [
     {
       key: '/',
       icon: <HomeOutlined />,
@@ -73,7 +86,7 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
   ]
 
   // 管理后台菜单项
-  const adminMenuItems = [
+  const adminMenuItemsBase = [
     {
       key: '/admin',
       icon: <DashboardOutlined />,
@@ -120,6 +133,32 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
       label: t(NAV_KEYS.PERFORMANCE),
     },
   ]
+
+  // 根据功能可见性过滤菜单项
+  const frontendMenuItems = useMemo(() => {
+    return frontendMenuItemsBase.filter(item => {
+      const featureKey = getFeatureKeyByRoute(item.key)
+      return featureKey ? (featuresVisibility[featureKey] ?? true) : true
+    })
+  }, [featuresVisibility, t])
+
+  const adminMenuItems = useMemo(() => {
+    const items = adminMenuItemsBase.filter(item => {
+      const featureKey = getFeatureKeyByRoute(item.key)
+      return featureKey ? (featuresVisibility[featureKey] ?? true) : true
+    })
+    
+    // 如果是开发者，添加功能管理菜单项
+    if (isDeveloper) {
+      items.push({
+        key: '/admin/feature-management',
+        icon: <SettingOutlined />,
+        label: t('navigation.featureManagement', { defaultValue: '功能管理' }),
+      })
+    }
+    
+    return items
+  }, [featuresVisibility, isDeveloper, t])
 
   // 为管理员合并前端和管理后台菜单
   const menuItems = isAdmin ? [

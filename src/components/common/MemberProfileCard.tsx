@@ -451,7 +451,9 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
                       textShadow: '0 1px 2px rgba(0,0,0,0.5)',
                       fontFamily: "'Noto Sans SC', sans-serif"
                     }}>
-                      {user?.role === 'admin' 
+                      {user?.role === 'developer'
+                        ? t('auth.developer', { defaultValue: '开发者' })
+                        : user?.role === 'admin' 
                         ? t('auth.admin', { defaultValue: '管理员' })
                         : user?.role === 'vip'
                         ? t('auth.vip', { defaultValue: 'VIP' })

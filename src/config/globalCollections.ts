@@ -37,7 +37,9 @@ export const GLOBAL_COLLECTIONS = {
   /** 兑换配置集合 */
   REDEMPTION_CONFIG: 'redemptionConfig',
   /** 兑换记录集合 */
-  REDEMPTION_RECORDS: 'redemptionRecords'
+  REDEMPTION_RECORDS: 'redemptionRecords',
+  /** 功能可见性配置集合 */
+  FEATURE_VISIBILITY: 'feature_visibility'
 } as const
 
 export type CollectionName = typeof GLOBAL_COLLECTIONS[keyof typeof GLOBAL_COLLECTIONS]

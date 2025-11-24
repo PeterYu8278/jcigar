@@ -1,0 +1,393 @@
+// 功能管理页面
+import React, { useState, useEffect } from 'react';
+import { Card, Switch, Button, Space, Typography, message, Spin, Tabs, Input, Checkbox } from 'antd';
+import { SaveOutlined, ReloadOutlined, EyeOutlined, EyeInvisibleOutlined, SearchOutlined } from '@ant-design/icons';
+import { useAuthStore } from '../../../store/modules/auth';
+import { useTranslation } from 'react-i18next';
+import {
+  getFeatureVisibilityConfig,
+  updateFeatureVisibilityConfig,
+  resetFeatureVisibilityConfig,
+} from '../../../services/firebase/featureVisibility';
+import { FEATURE_DEFINITIONS, type FeatureDefinition } from '../../../config/featureDefinitions';
+import type { FeatureVisibilityConfig } from '../../../types';
+
+const { Title, Text } = Typography;
+const { Search } = Input;
+
+const FeatureManagement: React.FC = () => {
+  const { user } = useAuthStore();
+  const { t, i18n } = useTranslation();
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<'frontend' | 'admin'>('frontend');
+  const [searchText, setSearchText] = useState('');
+  const [config, setConfig] = useState<FeatureVisibilityConfig | null>(null);
+  const [localFeatures, setLocalFeatures] = useState<Record<string, boolean>>({});
+
+  // 检查是否为开发者
+  useEffect(() => {
+    if (user?.role !== 'developer') {
+      message.error('仅开发者可以访问此页面');
+      // 可以重定向到首页
+    }
+  }, [user]);
+
+  // 加载配置
+  useEffect(() => {
+    loadConfig();
+  }, []);
+
+  const loadConfig = async () => {
+    setLoading(true);
+    try {
+      const featureConfig = await getFeatureVisibilityConfig();
+      if (featureConfig) {
+        setConfig(featureConfig);
+        // 初始化本地状态
+        const visibility: Record<string, boolean> = {};
+        FEATURE_DEFINITIONS.forEach(feature => {
+          visibility[feature.key] = featureConfig.features[feature.key]?.visible ?? feature.defaultVisible;
+        });
+        setLocalFeatures(visibility);
+      }
+    } catch (error) {
+      message.error('加载配置失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 切换功能可见性
+  const handleToggleFeature = (featureKey: string, visible: boolean) => {
+    setLocalFeatures(prev => ({
+      ...prev,
+      [featureKey]: visible,
+    }));
+  };
+
+  // 批量操作：全部显示
+  const handleShowAll = () => {
+    const newFeatures: Record<string, boolean> = {};
+    getFilteredFeatures().forEach(feature => {
+      newFeatures[feature.key] = true;
+    });
+    setLocalFeatures(prev => ({ ...prev, ...newFeatures }));
+  };
+
+  // 批量操作：全部隐藏
+  const handleHideAll = () => {
+    const newFeatures: Record<string, boolean> = {};
+    getFilteredFeatures().forEach(feature => {
+      newFeatures[feature.key] = false;
+    });
+    setLocalFeatures(prev => ({ ...prev, ...newFeatures }));
+  };
+
+  // 保存更改
+  const handleSave = async () => {
+    if (!user?.id) {
+      message.error('用户未登录');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // 计算需要更新的功能
+      const updates: Partial<FeatureVisibilityConfig['features']> = {};
+      
+      Object.entries(localFeatures).forEach(([key, visible]) => {
+        const currentVisible = config?.features[key]?.visible ?? FEATURE_DEFINITIONS.find(f => f.key === key)?.defaultVisible ?? true;
+        if (currentVisible !== visible) {
+          const feature = FEATURE_DEFINITIONS.find(f => f.key === key);
+          if (feature) {
+            updates[key] = {
+              visible,
+              description: feature.description,
+              category: feature.category,
+              route: feature.route,
+              icon: feature.icon,
+              updatedAt: new Date(),
+              updatedBy: user.id,
+            };
+          }
+        }
+      });
+
+      if (Object.keys(updates).length === 0) {
+        message.info('没有需要保存的更改');
+        return;
+      }
+
+      const result = await updateFeatureVisibilityConfig(updates, user.id);
+      if (result.success) {
+        message.success('配置已保存');
+        await loadConfig(); // 重新加载配置
+      } else {
+        message.error(result.error || '保存失败');
+      }
+    } catch (error) {
+      message.error('保存失败');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 重置为默认
+  const handleReset = async () => {
+    if (!user?.id) {
+      message.error('用户未登录');
+      return;
+    }
+
+    try {
+      const result = await resetFeatureVisibilityConfig(user.id);
+      if (result.success) {
+        message.success('已重置为默认配置');
+        await loadConfig();
+      } else {
+        message.error(result.error || '重置失败');
+      }
+    } catch (error) {
+      message.error('重置失败');
+    }
+  };
+
+  // 获取过滤后的功能列表
+  const getFilteredFeatures = (): FeatureDefinition[] => {
+    let features = FEATURE_DEFINITIONS.filter(f => f.category === activeTab);
+    
+    if (searchText) {
+      const searchLower = searchText.toLowerCase();
+      features = features.filter(f => {
+        const name = i18n.language === 'zh-CN' ? f.name : f.nameEn;
+        const desc = i18n.language === 'zh-CN' ? f.description : f.descriptionEn;
+        return name.toLowerCase().includes(searchLower) || desc.toLowerCase().includes(searchLower);
+      });
+    }
+    
+    return features;
+  };
+
+  // 获取功能名称（根据语言）
+  const getFeatureName = (feature: FeatureDefinition): string => {
+    return i18n.language === 'zh-CN' ? feature.name : feature.nameEn;
+  };
+
+  // 获取功能描述（根据语言）
+  const getFeatureDescription = (feature: FeatureDefinition): string => {
+    return i18n.language === 'zh-CN' ? feature.description : feature.descriptionEn;
+  };
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '40px' }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  const filteredFeatures = getFilteredFeatures();
+
+  return (
+    <div style={{ padding: '24px' }}>
+      <Title level={2} style={{
+        marginBottom: 8,
+        background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
+        fontWeight: 700,
+      }}>
+        {t('featureManagement.title', { defaultValue: '功能管理' })}
+      </Title>
+      <Text style={{ color: '#c0c0c0', fontSize: '14px', display: 'block', marginBottom: 24 }}>
+        {t('featureManagement.description', { defaultValue: '配置系统中各个功能的显示/隐藏状态' })}
+      </Text>
+
+      {/* 标签页 */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{
+          display: 'flex',
+          borderBottom: '1px solid rgba(244,175,37,0.2)',
+          marginBottom: 16
+        }}>
+          {(['frontend', 'admin'] as const).map((tabKey) => {
+            const isActive = activeTab === tabKey;
+            const baseStyle: React.CSSProperties = {
+              flex: 1,
+              padding: '10px 0',
+              fontWeight: 800,
+              fontSize: 12,
+              outline: 'none',
+              borderBottom: isActive ? '2px solid #f4af25' : '2px solid transparent',
+              borderTop: 'none',
+              borderLeft: 'none',
+              borderRight: 'none',
+              cursor: 'pointer',
+              background: 'none',
+            };
+            const activeStyle: React.CSSProperties = {
+              color: 'transparent',
+              background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+              WebkitBackgroundClip: 'text',
+            };
+            const inactiveStyle: React.CSSProperties = {
+              color: '#A0A0A0',
+            };
+
+            return (
+              <button
+                key={tabKey}
+                style={{
+                  ...baseStyle,
+                  ...(isActive ? activeStyle : inactiveStyle),
+                }}
+                onClick={() => setActiveTab(tabKey)}
+              >
+                {tabKey === 'frontend' 
+                  ? t('featureManagement.frontendFeatures', { defaultValue: '前端功能' })
+                  : t('featureManagement.adminFeatures', { defaultValue: '管理后台功能' })}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 搜索和批量操作 */}
+      <div style={{ marginBottom: 16, display: 'flex', gap: 12, alignItems: 'center' }}>
+        <Search
+          placeholder={t('featureManagement.searchPlaceholder', { defaultValue: '搜索功能...' })}
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          style={{ flex: 1, maxWidth: 300 }}
+          prefix={<SearchOutlined />}
+        />
+        <Space>
+          <Button
+            icon={<EyeOutlined />}
+            onClick={handleShowAll}
+            size="small"
+          >
+            {t('featureManagement.showAll', { defaultValue: '全部显示' })}
+          </Button>
+          <Button
+            icon={<EyeInvisibleOutlined />}
+            onClick={handleHideAll}
+            size="small"
+          >
+            {t('featureManagement.hideAll', { defaultValue: '全部隐藏' })}
+          </Button>
+        </Space>
+      </div>
+
+      {/* 功能列表 */}
+      <Card style={{
+        background: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: 12,
+        border: '1px solid rgba(244, 175, 37, 0.2)',
+        backdropFilter: 'blur(10px)'
+      }}>
+        {filteredFeatures.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
+            {t('featureManagement.noResults', { defaultValue: '没有找到匹配的功能' })}
+          </div>
+        ) : (
+          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+            {filteredFeatures.map(feature => {
+              const isVisible = localFeatures[feature.key] ?? feature.defaultVisible;
+              
+              return (
+                <div
+                  key={feature.key}
+                  style={{
+                    padding: '16px',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    borderRadius: 8,
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <Checkbox
+                      checked={isVisible}
+                      onChange={(e) => handleToggleFeature(feature.key, e.target.checked)}
+                      style={{
+                        color: isVisible ? '#ffd700' : '#999',
+                      }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <div style={{
+                        color: '#f8f8f8',
+                        fontSize: '16px',
+                        fontWeight: 600,
+                        marginBottom: '4px',
+                      }}>
+                        {getFeatureName(feature)}
+                      </div>
+                      <div style={{
+                        color: '#c0c0c0',
+                        fontSize: '13px',
+                        marginBottom: '4px',
+                      }}>
+                        {getFeatureDescription(feature)}
+                      </div>
+                      <div style={{
+                        color: '#999',
+                        fontSize: '12px',
+                        fontFamily: 'monospace',
+                      }}>
+                        {feature.route}
+                      </div>
+                    </div>
+                    <Space>
+                      <Button
+                        type={isVisible ? 'primary' : 'default'}
+                        icon={isVisible ? <EyeOutlined /> : <EyeInvisibleOutlined />}
+                        onClick={() => handleToggleFeature(feature.key, !isVisible)}
+                        size="small"
+                        style={{
+                          background: isVisible ? 'linear-gradient(to right,#FDE08D,#C48D3A)' : undefined,
+                          borderColor: isVisible ? undefined : '#444',
+                        }}
+                      >
+                        {isVisible 
+                          ? t('featureManagement.visible', { defaultValue: '显示' })
+                          : t('featureManagement.hidden', { defaultValue: '隐藏' })}
+                      </Button>
+                    </Space>
+                  </div>
+                </div>
+              );
+            })}
+          </Space>
+        )}
+      </Card>
+
+      {/* 操作按钮 */}
+      <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+        <Button
+          icon={<ReloadOutlined />}
+          onClick={handleReset}
+          disabled={saving}
+        >
+          {t('featureManagement.resetToDefault', { defaultValue: '重置为默认' })}
+        </Button>
+        <Button
+          type="primary"
+          icon={<SaveOutlined />}
+          onClick={handleSave}
+          loading={saving}
+          style={{
+            background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+            border: 'none',
+          }}
+        >
+          {t('featureManagement.saveChanges', { defaultValue: '保存更改' })}
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+export default FeatureManagement;
+
