@@ -1,14 +1,34 @@
 // 应用底部组件 - Gentleman Club黑金主题
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Layout, Typography, Space, Divider } from 'antd'
 import { HeartOutlined, GithubOutlined, MailOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
+import { getAppConfig } from '../../services/firebase/appConfig'
+import type { AppConfig } from '../../types'
 
 const { Footer } = Layout
 const { Text, Link } = Typography
 
 const AppFooter: React.FC = () => {
   const { t } = useTranslation()
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
+
+  // 加载应用配置
+  useEffect(() => {
+    const loadAppConfig = async () => {
+      const config = await getAppConfig()
+      if (config) {
+        setAppConfig(config)
+      }
+    }
+    loadAppConfig()
+  }, [])
+
+  // 如果配置为隐藏 Footer，则不渲染
+  if (appConfig?.hideFooter) {
+    return null
+  }
+
   return (
     <Footer style={{ 
       textAlign: 'center', 
@@ -42,7 +62,7 @@ const AppFooter: React.FC = () => {
               fontWeight: 700,
               letterSpacing: '2px'
             }}>
-              Gentleman Club
+              {appConfig?.appName || 'Gentlemen Club'}
             </Text>
             <div style={{ marginTop: '8px' }}>
               <Text style={{ color: '#c0c0c0', fontSize: '14px' }}>

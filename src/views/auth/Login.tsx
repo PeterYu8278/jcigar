@@ -7,6 +7,8 @@ import { loginWithEmailOrPhone, loginWithGoogle, handleGoogleRedirectResult, sen
 import { useAuthStore } from '../../store/modules/auth'
 import { useTranslation } from 'react-i18next'
 import { identifyInputType, normalizePhoneNumber, isValidEmail } from '../../utils/phoneNormalization'
+import { getAppConfig } from '../../services/firebase/appConfig'
+import type { AppConfig } from '../../types'
 
 const { Title, Text } = Typography
 
@@ -26,8 +28,20 @@ const Login: React.FC = () => {
   const { user, setUser } = useAuthStore()
   const { t } = useTranslation()
   const hasCheckedRedirect = useRef(false) // 防止 StrictMode 重复调用
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
 
   const from = location.state?.from?.pathname || '/'
+
+  // 加载应用配置
+  useEffect(() => {
+    const loadAppConfig = async () => {
+      const config = await getAppConfig()
+      if (config) {
+        setAppConfig(config)
+      }
+    }
+    loadAppConfig()
+  }, [])
   
   // 下拉刷新处理
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -74,11 +88,11 @@ const Login: React.FC = () => {
         // 资料不完整，重定向到完善资料页面
         navigate('/auth/complete-profile', { replace: true })
       } else {
-        // 资料完整，重定向到首页或原页面
-        navigate(from, { replace: true })
+        // 资料完整，重定向到首页
+        navigate('/', { replace: true })
       }
     }
-  }, [user, navigate, from])
+  }, [user, navigate])
 
   // 检查 Google 重定向登录结果
   useEffect(() => {
@@ -99,7 +113,7 @@ const Login: React.FC = () => {
             navigate('/auth/complete-profile', { replace: true })
           } else {
             message.success(t('auth.loginSuccess'))
-            navigate(from, { replace: true })
+            navigate('/', { replace: true })
           }
         } else if (!result.noResult) {
           message.error(result.error?.message || t('auth.loginFailed'))
@@ -111,7 +125,7 @@ const Login: React.FC = () => {
     }
     
     checkRedirectResult()
-  }, [navigate, from, t])
+  }, [navigate, t])
 
   const onFinish = async (values: { email: string; password: string }) => {
     setLoading(true)
@@ -120,7 +134,7 @@ const Login: React.FC = () => {
       const result = await loginWithEmailOrPhone(values.email, values.password)
       if (result.success) {
         message.success(t('auth.loginSuccess'))
-        navigate(from, { replace: true })
+        navigate('/', { replace: true })
       } else {
         // 使用 placeholder 显示错误
         setLoginError('登入失败：' + ((result as any).error?.message || t('auth.loginFailed')))
@@ -152,7 +166,7 @@ const Login: React.FC = () => {
           navigate('/auth/complete-profile', { replace: true })
         } else {
           message.success(t('auth.loginSuccess'))
-          navigate(from, { replace: true })
+          navigate('/', { replace: true })
         }
       } else {
         // 使用 placeholder 显示错误
@@ -243,7 +257,7 @@ const Login: React.FC = () => {
               fontWeight: 700,
               letterSpacing: '2px'
             }}>
-              Gentleman Club
+              {appConfig?.appName || 'Gentlemen Club'}
             </Title>
             <Text style={{ color: '#c0c0c0', fontSize: '16px' }}>
               {t('auth.welcomeBack')}

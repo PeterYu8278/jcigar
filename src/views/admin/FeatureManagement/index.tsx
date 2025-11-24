@@ -1,7 +1,7 @@
 // 功能管理页面
 import React, { useState, useEffect } from 'react';
-import { Card, Switch, Button, Space, Typography, message, Spin, Tabs, Input, Checkbox } from 'antd';
-import { SaveOutlined, ReloadOutlined, EyeOutlined, EyeInvisibleOutlined, SearchOutlined } from '@ant-design/icons';
+import { Card, Switch, Button, Space, Typography, message, Spin, Tabs, Input, Checkbox, Form } from 'antd';
+import { SaveOutlined, ReloadOutlined, EyeOutlined, EyeInvisibleOutlined, SearchOutlined, SettingOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../../store/modules/auth';
 import { useTranslation } from 'react-i18next';
 import {
@@ -10,7 +10,9 @@ import {
   resetFeatureVisibilityConfig,
 } from '../../../services/firebase/featureVisibility';
 import { FEATURE_DEFINITIONS, type FeatureDefinition } from '../../../config/featureDefinitions';
-import type { FeatureVisibilityConfig } from '../../../types';
+import type { FeatureVisibilityConfig, AppConfig } from '../../../types';
+import { getAppConfig, updateAppConfig, resetAppConfig } from '../../../services/firebase/appConfig';
+import ImageUpload from '../../../components/common/ImageUpload';
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -20,10 +22,13 @@ const FeatureManagement: React.FC = () => {
   const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'frontend' | 'admin'>('frontend');
+  const [activeTab, setActiveTab] = useState<'frontend' | 'admin' | 'app'>('frontend');
   const [searchText, setSearchText] = useState('');
   const [config, setConfig] = useState<FeatureVisibilityConfig | null>(null);
   const [localFeatures, setLocalFeatures] = useState<Record<string, boolean>>({});
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
+  const [appConfigForm] = Form.useForm();
+  const [savingAppConfig, setSavingAppConfig] = useState(false);
 
   // 检查是否为开发者
   useEffect(() => {
@@ -36,6 +41,7 @@ const FeatureManagement: React.FC = () => {
   // 加载配置
   useEffect(() => {
     loadConfig();
+    loadAppConfig();
   }, []);
 
   const loadConfig = async () => {
@@ -55,6 +61,22 @@ const FeatureManagement: React.FC = () => {
       message.error('加载配置失败');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadAppConfig = async () => {
+    try {
+      const config = await getAppConfig();
+      if (config) {
+        setAppConfig(config);
+        appConfigForm.setFieldsValue({
+          logoUrl: config.logoUrl,
+          appName: config.appName,
+          hideFooter: config.hideFooter ?? false,
+        });
+      }
+    } catch (error) {
+      message.error('加载应用配置失败');
     }
   };
 
@@ -153,6 +175,58 @@ const FeatureManagement: React.FC = () => {
     }
   };
 
+  // 保存应用配置
+  const handleSaveAppConfig = async () => {
+    if (!user?.id) {
+      message.error('用户未登录');
+      return;
+    }
+
+    setSavingAppConfig(true);
+    try {
+      const values = await appConfigForm.validateFields();
+      const result = await updateAppConfig(
+        {
+          logoUrl: values.logoUrl,
+          appName: values.appName,
+          hideFooter: values.hideFooter ?? false,
+        },
+        user.id
+      );
+      
+      if (result.success) {
+        message.success('应用配置已保存');
+        await loadAppConfig();
+      } else {
+        message.error(result.error || '保存失败');
+      }
+    } catch (error) {
+      message.error('保存失败');
+    } finally {
+      setSavingAppConfig(false);
+    }
+  };
+
+  // 重置应用配置
+  const handleResetAppConfig = async () => {
+    if (!user?.id) {
+      message.error('用户未登录');
+      return;
+    }
+
+    try {
+      const result = await resetAppConfig(user.id);
+      if (result.success) {
+        message.success('已重置为默认配置');
+        await loadAppConfig();
+      } else {
+        message.error(result.error || '重置失败');
+      }
+    } catch (error) {
+      message.error('重置失败');
+    }
+  };
+
   // 获取过滤后的功能列表
   const getFilteredFeatures = (): FeatureDefinition[] => {
     let features = FEATURE_DEFINITIONS.filter(f => f.category === activeTab);
@@ -212,7 +286,7 @@ const FeatureManagement: React.FC = () => {
           borderBottom: '1px solid rgba(244,175,37,0.2)',
           marginBottom: 16
         }}>
-          {(['frontend', 'admin'] as const).map((tabKey) => {
+          {(['frontend', 'admin', 'app'] as const).map((tabKey) => {
             const isActive = activeTab === tabKey;
             const baseStyle: React.CSSProperties = {
               flex: 1,
@@ -247,144 +321,232 @@ const FeatureManagement: React.FC = () => {
               >
                 {tabKey === 'frontend' 
                   ? t('featureManagement.frontendFeatures', { defaultValue: '前端功能' })
-                  : t('featureManagement.adminFeatures', { defaultValue: '管理后台功能' })}
+                  : tabKey === 'admin'
+                  ? t('featureManagement.adminFeatures', { defaultValue: '管理后台功能' })
+                  : t('featureManagement.appSettings', { defaultValue: '应用配置' })}
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* 搜索和批量操作 */}
-      <div style={{ marginBottom: 16, display: 'flex', gap: 12, alignItems: 'center' }}>
-        <Search
-          placeholder={t('featureManagement.searchPlaceholder', { defaultValue: '搜索功能...' })}
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          style={{ flex: 1, maxWidth: 300 }}
-          prefix={<SearchOutlined />}
-        />
-        <Space>
-          <Button
-            icon={<EyeOutlined />}
-            onClick={handleShowAll}
-            size="small"
-          >
-            {t('featureManagement.showAll', { defaultValue: '全部显示' })}
-          </Button>
-          <Button
-            icon={<EyeInvisibleOutlined />}
-            onClick={handleHideAll}
-            size="small"
-          >
-            {t('featureManagement.hideAll', { defaultValue: '全部隐藏' })}
-          </Button>
-        </Space>
-      </div>
+      {/* 搜索和批量操作（仅功能标签页显示） */}
+      {activeTab !== 'app' && (
+        <div style={{ marginBottom: 16, display: 'flex', gap: 12, alignItems: 'center' }}>
+          <Search
+            placeholder={t('featureManagement.searchPlaceholder', { defaultValue: '搜索功能...' })}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            style={{ flex: 1, maxWidth: 300 }}
+            prefix={<SearchOutlined />}
+          />
+          <Space>
+            <Button
+              icon={<EyeOutlined />}
+              onClick={handleShowAll}
+              size="small"
+            >
+              {t('featureManagement.showAll', { defaultValue: '全部显示' })}
+            </Button>
+            <Button
+              icon={<EyeInvisibleOutlined />}
+              onClick={handleHideAll}
+              size="small"
+            >
+              {t('featureManagement.hideAll', { defaultValue: '全部隐藏' })}
+            </Button>
+          </Space>
+        </div>
+      )}
 
-      {/* 功能列表 */}
-      <Card style={{
-        background: 'rgba(255, 255, 255, 0.05)',
-        borderRadius: 12,
-        border: '1px solid rgba(244, 175, 37, 0.2)',
-        backdropFilter: 'blur(10px)'
-      }}>
-        {filteredFeatures.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
-            {t('featureManagement.noResults', { defaultValue: '没有找到匹配的功能' })}
-          </div>
-        ) : (
-          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-            {filteredFeatures.map(feature => {
-              const isVisible = localFeatures[feature.key] ?? feature.defaultVisible;
-              
-              return (
-                <div
-                  key={feature.key}
-                  style={{
-                    padding: '16px',
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    borderRadius: 8,
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <Checkbox
-                      checked={isVisible}
-                      onChange={(e) => handleToggleFeature(feature.key, e.target.checked)}
+      {/* 功能列表或应用配置 */}
+      {activeTab === 'app' ? (
+        <Card style={{
+          background: 'rgba(255, 255, 255, 0.05)',
+          borderRadius: 12,
+          border: '1px solid rgba(244, 175, 37, 0.2)',
+          backdropFilter: 'blur(10px)'
+        }}>
+          <Form
+            form={appConfigForm}
+            layout="vertical"
+            onFinish={handleSaveAppConfig}
+          >
+            <Form.Item
+              label={<span style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600 }}>应用 Logo</span>}
+              name="logoUrl"
+              rules={[{ required: true, message: '请上传应用 Logo' }]}
+            >
+              <ImageUpload
+                folder="app-config"
+                value={appConfigForm.getFieldValue('logoUrl')}
+                onChange={(url) => appConfigForm.setFieldsValue({ logoUrl: url || '' })}
+                width={200}
+                height={200}
+                enableCrop={true}
+                cropAspectRatio={1}
+              />
+            </Form.Item>
+
+            <Form.Item
+              label={<span style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600 }}>应用名称</span>}
+              name="appName"
+              rules={[{ required: true, message: '请输入应用名称' }]}
+            >
+              <Input
+                placeholder="例如：Gentlemen Club"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  color: '#f8f8f8',
+                }}
+              />
+            </Form.Item>
+
+            <Form.Item
+              label={<span style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600 }}>隐藏 Footer</span>}
+              name="hideFooter"
+              valuePropName="checked"
+            >
+              <Switch
+                checkedChildren="隐藏"
+                unCheckedChildren="显示"
+                style={{
+                  background: appConfigForm.getFieldValue('hideFooter') ? 'linear-gradient(to right,#FDE08D,#C48D3A)' : undefined,
+                }}
+              />
+            </Form.Item>
+
+            <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={handleResetAppConfig}
+                disabled={savingAppConfig}
+              >
+                {t('featureManagement.resetToDefault', { defaultValue: '重置为默认' })}
+              </Button>
+              <Button
+                type="primary"
+                icon={<SaveOutlined />}
+                htmlType="submit"
+                loading={savingAppConfig}
+                style={{
+                  background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                  border: 'none',
+                }}
+              >
+                {t('featureManagement.saveChanges', { defaultValue: '保存更改' })}
+              </Button>
+            </div>
+          </Form>
+        </Card>
+      ) : (
+        <>
+          <Card style={{
+            background: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: 12,
+            border: '1px solid rgba(244, 175, 37, 0.2)',
+            backdropFilter: 'blur(10px)'
+          }}>
+            {filteredFeatures.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
+                {t('featureManagement.noResults', { defaultValue: '没有找到匹配的功能' })}
+              </div>
+            ) : (
+              <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                {filteredFeatures.map(feature => {
+                  const isVisible = localFeatures[feature.key] ?? feature.defaultVisible;
+                  
+                  return (
+                    <div
+                      key={feature.key}
                       style={{
-                        color: isVisible ? '#ffd700' : '#999',
+                        padding: '16px',
+                        background: 'rgba(255, 255, 255, 0.03)',
+                        borderRadius: 8,
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
                       }}
-                    />
-                    <div style={{ flex: 1 }}>
-                      <div style={{
-                        color: '#f8f8f8',
-                        fontSize: '16px',
-                        fontWeight: 600,
-                        marginBottom: '4px',
-                      }}>
-                        {getFeatureName(feature)}
-                      </div>
-                      <div style={{
-                        color: '#c0c0c0',
-                        fontSize: '13px',
-                        marginBottom: '4px',
-                      }}>
-                        {getFeatureDescription(feature)}
-                      </div>
-                      <div style={{
-                        color: '#999',
-                        fontSize: '12px',
-                        fontFamily: 'monospace',
-                      }}>
-                        {feature.route}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <Checkbox
+                          checked={isVisible}
+                          onChange={(e) => handleToggleFeature(feature.key, e.target.checked)}
+                          style={{
+                            color: isVisible ? '#ffd700' : '#999',
+                          }}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <div style={{
+                            color: '#f8f8f8',
+                            fontSize: '16px',
+                            fontWeight: 600,
+                            marginBottom: '4px',
+                          }}>
+                            {getFeatureName(feature)}
+                          </div>
+                          <div style={{
+                            color: '#c0c0c0',
+                            fontSize: '13px',
+                            marginBottom: '4px',
+                          }}>
+                            {getFeatureDescription(feature)}
+                          </div>
+                          <div style={{
+                            color: '#999',
+                            fontSize: '12px',
+                            fontFamily: 'monospace',
+                          }}>
+                            {feature.route}
+                          </div>
+                        </div>
+                        <Space>
+                          <Button
+                            type={isVisible ? 'primary' : 'default'}
+                            icon={isVisible ? <EyeOutlined /> : <EyeInvisibleOutlined />}
+                            onClick={() => handleToggleFeature(feature.key, !isVisible)}
+                            size="small"
+                            style={{
+                              background: isVisible ? 'linear-gradient(to right,#FDE08D,#C48D3A)' : undefined,
+                              borderColor: isVisible ? undefined : '#444',
+                            }}
+                          >
+                            {isVisible 
+                              ? t('featureManagement.visible', { defaultValue: '显示' })
+                              : t('featureManagement.hidden', { defaultValue: '隐藏' })}
+                          </Button>
+                        </Space>
                       </div>
                     </div>
-                    <Space>
-                      <Button
-                        type={isVisible ? 'primary' : 'default'}
-                        icon={isVisible ? <EyeOutlined /> : <EyeInvisibleOutlined />}
-                        onClick={() => handleToggleFeature(feature.key, !isVisible)}
-                        size="small"
-                        style={{
-                          background: isVisible ? 'linear-gradient(to right,#FDE08D,#C48D3A)' : undefined,
-                          borderColor: isVisible ? undefined : '#444',
-                        }}
-                      >
-                        {isVisible 
-                          ? t('featureManagement.visible', { defaultValue: '显示' })
-                          : t('featureManagement.hidden', { defaultValue: '隐藏' })}
-                      </Button>
-                    </Space>
-                  </div>
-                </div>
-              );
-            })}
-          </Space>
-        )}
-      </Card>
+                  );
+                })}
+              </Space>
+            )}
+          </Card>
 
-      {/* 操作按钮 */}
-      <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-        <Button
-          icon={<ReloadOutlined />}
-          onClick={handleReset}
-          disabled={saving}
-        >
-          {t('featureManagement.resetToDefault', { defaultValue: '重置为默认' })}
-        </Button>
-        <Button
-          type="primary"
-          icon={<SaveOutlined />}
-          onClick={handleSave}
-          loading={saving}
-          style={{
-            background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-            border: 'none',
-          }}
-        >
-          {t('featureManagement.saveChanges', { defaultValue: '保存更改' })}
-        </Button>
-      </div>
+          {/* 操作按钮 */}
+          <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={handleReset}
+              disabled={saving}
+            >
+              {t('featureManagement.resetToDefault', { defaultValue: '重置为默认' })}
+            </Button>
+            <Button
+              type="primary"
+              icon={<SaveOutlined />}
+              onClick={handleSave}
+              loading={saving}
+              style={{
+                background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                border: 'none',
+              }}
+            >
+              {t('featureManagement.saveChanges', { defaultValue: '保存更改' })}
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 };

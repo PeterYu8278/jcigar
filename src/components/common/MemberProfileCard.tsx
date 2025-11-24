@@ -5,10 +5,11 @@ import { Modal, Button, Space, message } from 'antd'
 import { useQRCode } from '../../hooks/useQRCode'
 import { QRCodeDisplay } from '../common/QRCodeDisplay'
 import { useTranslation } from 'react-i18next'
-import type { User } from '../../types'
+import type { User, AppConfig } from '../../types'
 import { collection, query, where, orderBy, limit, onSnapshot, Unsubscribe } from 'firebase/firestore'
 import { db } from '../../config/firebase'
 import { GLOBAL_COLLECTIONS } from '../../config/globalCollections'
+import { getAppConfig } from '../../services/firebase/appConfig'
 
 interface MemberProfileCardProps {
   user: User | null
@@ -30,6 +31,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
   enableQrModal = false
 }) => {
   const { t } = useTranslation()
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
   
   // 3D旋转动画状态
   const [isRotating, setIsRotating] = useState(false)
@@ -42,6 +44,17 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
   const prevHasPendingSessionRef = useRef<boolean | null>(null)
   // 用于标记是否是首次回调
   const isFirstCallbackRef = useRef<boolean>(true)
+
+  // 加载应用配置
+  useEffect(() => {
+    const loadAppConfig = async () => {
+      const config = await getAppConfig()
+      if (config) {
+        setAppConfig(config)
+      }
+    }
+    loadAppConfig()
+  }, [])
 
   // 使用 onSnapshot 实时监听用户 check-in 状态
   useEffect(() => {
@@ -404,7 +417,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
                     backgroundClip: 'text',
                     color: 'transparent',
                     backgroundImage: 'linear-gradient(to bottom, #F0E68C, #D4AF37)'
-                  }}>Gentleman Club</div>
+                  }}>{appConfig?.appName || 'Gentlemen Club'}</div>
                   <div style={{ 
                     fontSize: 12, 
                     fontWeight: 700, 

@@ -351,6 +351,16 @@ export interface FeatureVisibilityConfig {
   updatedBy: string;
 }
 
+// 应用配置类型
+export interface AppConfig {
+  id: string; // 'default'
+  logoUrl?: string;        // Logo URL
+  appName?: string;        // 应用名称（例如：Gentlemen Club）
+  hideFooter?: boolean;    // 是否隐藏 Footer
+  updatedAt: Date;
+  updatedBy: string;       // 最后更新的开发者ID
+}
+
 export interface Permission {
   canManageFeatures?: boolean; // 管理功能可见性（仅开发者）
   canViewEvents: boolean;

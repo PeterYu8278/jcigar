@@ -26,6 +26,8 @@ import { useTranslation } from 'react-i18next'
 import { NAV_KEYS } from '../../i18n/constants'
 import { getFeaturesVisibility } from '../../services/firebase/featureVisibility'
 import { getFeatureKeyByRoute } from '../../config/featureDefinitions'
+import { getAppConfig } from '../../services/firebase/appConfig'
+import type { AppConfig } from '../../types'
 
 const { Sider } = Layout
 const { Text } = Typography
@@ -37,10 +39,22 @@ interface AppSiderProps {
 const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
   const [collapsed, setCollapsed] = useState(false)
   const [featuresVisibility, setFeaturesVisibility] = useState<Record<string, boolean>>({})
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
   const navigate = useNavigate()
   const location = useLocation()
   const { isAdmin, isDeveloper } = useAuthStore()
   const { t } = useTranslation()
+
+  // 加载应用配置
+  useEffect(() => {
+    const loadAppConfig = async () => {
+      const config = await getAppConfig()
+      if (config) {
+        setAppConfig(config)
+      }
+    }
+    loadAppConfig()
+  }, [])
 
   // 加载功能可见性配置
   useEffect(() => {
@@ -223,7 +237,7 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
               fontSize: '16px',
               letterSpacing: '1px'
             }}>
-              Gentleman Club
+              {appConfig?.appName || 'Gentlemen Club'}
             </Text>
           </div>
         )}

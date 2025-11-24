@@ -26,9 +26,21 @@ const CompleteProfile: React.FC = () => {
   const location = useLocation()
   const { t } = useTranslation()
   const { message } = App.useApp() // ✅ 使用 App.useApp() 获取 message 实例
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
   
   // 获取用户原本想访问的页面
   const from = location.state?.from?.pathname || '/'
+
+  // 加载应用配置
+  useEffect(() => {
+    const loadAppConfig = async () => {
+      const config = await getAppConfig()
+      if (config) {
+        setAppConfig(config)
+      }
+    }
+    loadAppConfig()
+  }, [])
   
   // 下拉刷新处理
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -156,9 +168,10 @@ const CompleteProfile: React.FC = () => {
 
       if (result.success) {
         // ✅ 如果是账户合并，显示特殊消息
+        const appName = appConfig?.appName || 'Gentlemen Club'
         const successMessage = (result as any).mergedUserId 
           ? '账户已成功关联到现有账户，欢迎回来！'
-          : '账户信息已完善，欢迎加入 Gentleman Club！';
+          : `账户信息已完善，欢迎加入 ${appName}！`;
         
         message.success(successMessage);
         

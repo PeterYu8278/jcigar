@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Layout, Space, Typography, Avatar, Button, Tooltip, Dropdown, MenuProps, message } from 'antd'
 import { HomeOutlined, DashboardOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../../store/modules/auth'
 import { logoutUser } from '../../services/firebase/auth'
 import LanguageSwitcher from '../common/LanguageSwitcher'
+import { getAppConfig } from '../../services/firebase/appConfig'
+import type { AppConfig } from '../../types'
 
 const { Header } = Layout
 const { Text } = Typography
@@ -23,8 +25,20 @@ const AppHeader: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { t } = useTranslation()
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
 
   const isInAdmin = location.pathname.startsWith('/admin')
+
+  // 加载应用配置
+  useEffect(() => {
+    const loadAppConfig = async () => {
+      const config = await getAppConfig()
+      if (config) {
+        setAppConfig(config)
+      }
+    }
+    loadAppConfig()
+  }, [])
 
   const handleToggle = () => {
     if (isInAdmin) {
@@ -101,14 +115,16 @@ const AppHeader: React.FC = () => {
 
       {/* 左侧：标题与语言 */}
       <Space size={12} align="center" style={{ position: 'relative' }}>
-        <img
-          src="https://res.cloudinary.com/dy2zb1n41/image/upload/jep-cigar/brands/JEP_Logo_White_1763310931359_s1pkcz8y617"
-          alt="Gentleman Club"
-          style={{
-            height: 28,
-            display: 'block'
-          }}
-        />
+        {appConfig?.logoUrl && (
+          <img
+            src={appConfig.logoUrl}
+            alt={appConfig.appName || 'Gentleman Club'}
+            style={{
+              height: 28,
+              display: 'block'
+            }}
+          />
+        )}
         <LanguageSwitcher />
       </Space>
 

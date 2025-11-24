@@ -48,6 +48,14 @@ export const CLOUDINARY_FOLDERS: Record<string, CloudinaryFolder> = {
     formats: ['jpg', 'jpeg', 'png', 'webp'],
     dimensions: '任意',
     usage: '临时存储'
+  },
+  'app-config': {
+    name: 'app-config',
+    description: '应用配置图片（Logo等）',
+    maxSize: 2 * 1024 * 1024, // 2MB
+    formats: ['jpg', 'jpeg', 'png', 'webp'],
+    dimensions: '200x200',
+    usage: '应用配置管理'
   }
 } as const;
 

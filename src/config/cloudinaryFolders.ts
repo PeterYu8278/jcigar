@@ -60,6 +60,14 @@ export const UPLOAD_CONFIG = {
       width: 1200,
       height: 1200,
       crop: 'limit'
+    },
+    'app-config': {
+      folder: 'app-config',
+      maxSize: 2 * 1024 * 1024, // 2MB
+      width: 200,
+      height: 200,
+      crop: 'fill',
+      gravity: 'center'
     }
   }
 } as const;

@@ -7,6 +7,8 @@ import { registerUser } from '../../services/firebase/auth'
 import { useAuthStore } from '../../store/modules/auth'
 import { useTranslation } from 'react-i18next'
 import { getUserByMemberId } from '../../utils/memberId'
+import { getAppConfig } from '../../services/firebase/appConfig'
+import type { AppConfig } from '../../types'
 
 const { Title, Text } = Typography
 
@@ -22,8 +24,20 @@ const Register: React.FC = () => {
   const location = useLocation()
   const { user } = useAuthStore()
   const { t } = useTranslation()
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
 
   const from = location.state?.from?.pathname || '/'
+
+  // 加载应用配置
+  useEffect(() => {
+    const loadAppConfig = async () => {
+      const config = await getAppConfig()
+      if (config) {
+        setAppConfig(config)
+      }
+    }
+    loadAppConfig()
+  }, [])
   
   // 下拉刷新处理
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -184,10 +198,10 @@ const Register: React.FC = () => {
               fontWeight: 700,
               letterSpacing: '2px'
             }}>
-              Gentleman Club
+              {appConfig?.appName || 'Gentlemen Club'}
             </Title>
             <Text style={{ color: '#c0c0c0', fontSize: '14px' }}>
-              创建您的账户，加入Gentleman Club社区
+              {t('auth.createAccountSubtitle', { defaultValue: `创建您的账户，加入${appConfig?.appName || 'Gentlemen Club'}社区` })}
             </Text>
           </div>
 
