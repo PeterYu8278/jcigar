@@ -306,7 +306,7 @@ const VisitSessionsPage: React.FC = () => {
   ];
 
   return (
-    <div style={{ minHeight: '100vh', color: '#FFFFFF', padding: '24px' }}>
+    <div style={{ paddingBottom: isMobile ? '80px' : '0' }}>
       {/* 标题 */}
       <h1 style={{ 
         fontSize: 22, 
@@ -318,16 +318,10 @@ const VisitSessionsPage: React.FC = () => {
       }}>
         驻店记录管理
       </h1>
-      <Text style={{ color: 'rgba(255, 255, 255, 0.6)', display: 'block', marginBottom: 24 }}>
+      <Text style={{ color: 'rgba(255, 255, 255, 0.6)', display: 'block'}}>
         查看和管理所有驻店记录
       </Text>
-
-      <Card style={{
-        background: 'rgba(255, 255, 255, 0.05)',
-        borderRadius: 12,
-        border: '1px solid rgba(244, 175, 37, 0.2)',
-        backdropFilter: 'blur(10px)'
-      }}>
+      <div>
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
             <div style={{ flex: 1 }} />
@@ -364,18 +358,7 @@ const VisitSessionsPage: React.FC = () => {
               >
                 QR Check-out
               </Button>
-              <Button
-                icon={<ClockCircleOutlined />}
-                onClick={handleBatchProcessExpired}
-                loading={loading}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  color: '#FFFFFF'
-                }}
-              >
-                批量处理过期记录
-              </Button>
+              
               <Button
                 icon={<ReloadOutlined />}
                 onClick={loadAllSessions}
@@ -456,21 +439,7 @@ const VisitSessionsPage: React.FC = () => {
               >
                 已完成
               </Button>
-              <Button 
-                onClick={() => setStatusFilter('expired')}
-                style={statusFilter === 'expired' ? {
-                  background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                  border: 'none',
-                  color: '#111',
-                  fontWeight: 700
-                } : {
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  color: '#FFFFFF'
-                }}
-              >
-                已过期
-              </Button>
+              
             </Space>
           </div>
 
@@ -688,6 +657,11 @@ const VisitSessionsPage: React.FC = () => {
                   const allRedemptionRecords = redemptionRecords.get(record.id) || [];
                   const expanded = expandedSessions.has(record.id);
 
+                  // 展开时自动加载兑换记录
+                  if (expanded && allRedemptionRecords.length === 0) {
+                    loadRedemptionRecords(record.id);
+                  }
+
                   return (
                     <div
                       key={record.id}
@@ -735,34 +709,30 @@ const VisitSessionsPage: React.FC = () => {
                           }}>
                             {statusInfo.text}
                           </div>
-                          {allRedemptionRecords.length > 0 && (
-                            <Button
-                              type="link"
-                              size="small"
-                              onClick={() => {
-                                const newExpanded = !expanded;
-                                if (newExpanded) {
-                                  setExpandedSessions(prev => new Set(prev).add(record.id));
-                                  if (allRedemptionRecords.length === 0 && record.status === 'pending') {
-                                    loadRedemptionRecords(record.id);
-                                  }
-                                } else {
-                                  setExpandedSessions(prev => {
-                                    const next = new Set(prev);
-                                    next.delete(record.id);
-                                    return next;
-                                  });
-                                }
-                              }}
-                              style={{
-                                color: '#FFD700',
-                                padding: 0,
-                                fontSize: 11
-                              }}
-                            >
-                              {expanded ? '收起' : `兑换记录 (${allRedemptionRecords.length})`}
-                            </Button>
-                          )}
+                          <Button
+                            type="link"
+                            size="small"
+                            onClick={() => {
+                              const newExpanded = !expanded;
+                              if (newExpanded) {
+                                setExpandedSessions(prev => new Set(prev).add(record.id));
+                                loadRedemptionRecords(record.id);
+                              } else {
+                                setExpandedSessions(prev => {
+                                  const next = new Set(prev);
+                                  next.delete(record.id);
+                                  return next;
+                                });
+                              }
+                            }}
+                            style={{
+                              color: '#FFD700',
+                              padding: 0,
+                              fontSize: 11
+                            }}
+                          >
+                            {expanded ? '收起' : `兑换记录${allRedemptionRecords.length > 0 ? ` (${allRedemptionRecords.length})` : ''}`}
+                          </Button>
                         </div>
                       </div>
                       {record.status === 'pending' && (
@@ -799,39 +769,117 @@ const VisitSessionsPage: React.FC = () => {
                           </Button>
                         </div>
                       )}
-                      {expanded && allRedemptionRecords.length > 0 && (
+                      {expanded && (
                         <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(244,175,37,0.1)' }}>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: '#FFD700', marginBottom: 8 }}>
-                            <GiftOutlined style={{ marginRight: 4 }} />
-                            兑换记录
-                          </div>
-                          {allRedemptionRecords.map((redemptionRecord) => (
-                            <div
-                              key={redemptionRecord.id || `${record.id}-${redemptionRecord.createdAt}`}
-                              style={{
-                                padding: 8,
-                                marginBottom: 8,
-                                background: 'rgba(255, 255, 255, 0.05)',
-                                borderRadius: 6,
-                                fontSize: 11,
-                                color: 'rgba(255,255,255,0.7)'
-                              }}
-                            >
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div>
-                                  <span style={{ color: 'rgba(255,255,255,0.85)' }}>
-                                    {redemptionRecord.status === 'pending' ? '待选择' : redemptionRecord.cigarName || '-'}
-                                  </span>
-                                  <span style={{ marginLeft: 8, color: 'rgba(255,255,255,0.6)' }}>
-                                    × {redemptionRecord.quantity || 1}
-                                  </span>
-                                </div>
-                                <Tag color={redemptionRecord.status === 'pending' ? 'orange' : 'green'} style={{ fontSize: 10 }}>
-                                  {redemptionRecord.status === 'pending' ? '待选择' : '已完成'}
-                                </Tag>
-                              </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: '#FFD700' }}>
+                              <GiftOutlined style={{ marginRight: 4 }} />
+                              兑换记录 {allRedemptionRecords.length > 0 && `(${allRedemptionRecords.length} 项)`}
                             </div>
-                          ))}
+                            {record.status === 'pending' && (
+                              <Button
+                                size="small"
+                                icon={<PlusOutlined />}
+                                onClick={() => {
+                                  setSelectedSession(record);
+                                  form.setFieldsValue({ items: [{ cigarId: undefined, quantity: 1 }] });
+                                  setAddRedemptionModalVisible(true);
+                                }}
+                                style={{
+                                  background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                                  border: 'none',
+                                  color: '#111',
+                                  fontWeight: 700,
+                                  fontSize: 11,
+                                  height: 24,
+                                  padding: '0 8px'
+                                }}
+                              >
+                                添加
+                              </Button>
+                            )}
+                          </div>
+                          {allRedemptionRecords.length === 0 ? (
+                            <div style={{ 
+                              padding: 16, 
+                              textAlign: 'center', 
+                              color: 'rgba(255, 255, 255, 0.5)',
+                              fontSize: 12
+                            }}>
+                              暂无兑换记录
+                            </div>
+                          ) : (
+                            allRedemptionRecords.map((redemptionRecord) => {
+                              const redeemedAt = redemptionRecord.redeemedAt 
+                                ? (redemptionRecord.redeemedAt instanceof Date 
+                                  ? redemptionRecord.redeemedAt 
+                                  : (redemptionRecord.redeemedAt as any)?.toDate?.() || new Date(redemptionRecord.redeemedAt))
+                                : null;
+                              
+                              return (
+                                <div
+                                  key={redemptionRecord.id || `${record.id}-${redemptionRecord.createdAt}`}
+                                  style={{
+                                    padding: 10,
+                                    marginBottom: 8,
+                                    background: 'rgba(255, 255, 255, 0.05)',
+                                    borderRadius: 6,
+                                    border: '1px solid rgba(255, 255, 255, 0.1)'
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                                    <div style={{ flex: 1 }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                                        <span style={{ color: 'rgba(255,255,255,0.9)', fontWeight: 600, fontSize: 12 }}>
+                                          {redemptionRecord.status === 'pending' ? '待选择' : (redemptionRecord.cigarName || '-')}
+                                        </span>
+                                        <Tag color="blue" style={{ fontSize: 10, margin: 0 }}>
+                                          {redemptionRecord.quantity || 1} 支
+                                        </Tag>
+                                        <Tag color={redemptionRecord.status === 'pending' ? 'orange' : 'green'} style={{ fontSize: 10, margin: 0 }}>
+                                          {redemptionRecord.status === 'pending' ? '待选择' : '已完成'}
+                                        </Tag>
+                                      </div>
+                                      {redeemedAt && (
+                                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginBottom: 2 }}>
+                                          兑换时间: {dayjs(redeemedAt).format('YYYY-MM-DD HH:mm')}
+                                        </div>
+                                      )}
+                                      {redemptionRecord.redeemedBy && (
+                                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
+                                          操作人: {redemptionRecord.redeemedBy}
+                                        </div>
+                                      )}
+                                    </div>
+                                    {record.status === 'pending' && (
+                                      <Button
+                                        type="link"
+                                        size="small"
+                                        icon={<EditOutlined />}
+                                        onClick={() => {
+                                          setSelectedRedemptionRecord(redemptionRecord);
+                                          setSelectedSession(record);
+                                          form.setFieldsValue({
+                                            cigarId: redemptionRecord.cigarId || undefined,
+                                            quantity: redemptionRecord.quantity || 1
+                                          });
+                                          setEditRedemptionModalVisible(true);
+                                        }}
+                                        style={{
+                                          color: '#FFD700',
+                                          padding: 0,
+                                          fontSize: 11,
+                                          height: 'auto'
+                                        }}
+                                      >
+                                        编辑
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
                         </div>
                       )}
                     </div>
@@ -841,7 +889,7 @@ const VisitSessionsPage: React.FC = () => {
             </div>
           )}
         </Space>
-      </Card>
+      </div>
 
       {/* QR扫描器 */}
       <QRScanner

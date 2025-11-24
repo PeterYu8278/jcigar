@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import type { PointsConfig, PointsRecord } from '../../../types';
 import { ReloadVerification } from '../../../components/admin/ReloadVerification';
 import dayjs from 'dayjs';
+import { isFeatureVisible } from '../../../services/firebase/featureVisibility';
 
 const { Title, Text } = Typography;
 
@@ -34,6 +35,18 @@ const PointsConfigPage: React.FC = () => {
   const { user } = useAuthStore();
   const { t } = useTranslation();
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false;
+  const [eventsAdminFeatureVisible, setEventsAdminFeatureVisible] = useState<boolean>(true);
+
+  // 检查活动管理功能是否可见（developer 不受限制）
+  useEffect(() => {
+    const checkFeatureVisibility = async () => {
+      const visible = user?.role === 'developer' ? true : await isFeatureVisible('events-admin');
+      setEventsAdminFeatureVisible(visible);
+    };
+    if (user?.id) {
+      checkFeatureVisibility();
+    }
+  }, [user?.role, user?.id]);
 
   // 加载积分配置
   useEffect(() => {
@@ -362,7 +375,7 @@ const PointsConfigPage: React.FC = () => {
   ];
 
   return (
-    <div style={{ minHeight: '100vh', color: '#FFFFFF' }}>
+    <div style={{ minHeight: '100vh', color: '#FFFFFF', paddingBottom: isMobile ? '100px' : '0' }}>
       {/* 标题 */}
       <h1 style={{ 
         fontSize: 22, 
@@ -438,13 +451,7 @@ const PointsConfigPage: React.FC = () => {
       {/* 标签页内容 */}
       <div>
         {activeTab === 'config' && (
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            borderRadius: 12,
-            padding: 24,
-            border: '1px solid rgba(244, 175, 37, 0.2)',
-            backdropFilter: 'blur(10px)'
-          }}>
+          <div>
                   <Form
                     form={form}
                     layout="vertical"
@@ -516,20 +523,22 @@ const PointsConfigPage: React.FC = () => {
                     />
                   </Form.Item>
                 </Col>
-                <Col xs={24} sm={6}>
-                  <Form.Item
-                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.event.registration')}</span>}
-                    name={['event', 'registration']}
-                    rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
-                  >
-                    <InputNumber
-                      min={0}
-                      max={1000}
-                      style={{ width: '100%' }}
-                      addonAfter={t('pointsConfig.units.points')}
-                    />
-                  </Form.Item>
-                </Col>
+                {eventsAdminFeatureVisible && (
+                  <Col xs={24} sm={6}>
+                    <Form.Item
+                      label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.event.registration')}</span>}
+                      name={['event', 'registration']}
+                      rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
+                    >
+                      <InputNumber
+                        min={0}
+                        max={1000}
+                        style={{ width: '100%' }}
+                        addonAfter={t('pointsConfig.units.points')}
+                      />
+                    </Form.Item>
+                  </Col>
+                )}
               </Row>
             </div>
 
@@ -556,71 +565,90 @@ const PointsConfigPage: React.FC = () => {
                 {(fields, { add, remove }) => (
                   <>
                     {fields.map(({ key, name, ...restField }) => (
-                      <Row key={key} gutter={16} style={{ marginBottom: 16 }}>
-                        <Col xs={24} sm={6}>
-                          <Form.Item
-                            {...restField}
-                            name={[name, 'startDate']}
-                            label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>生效开始日期</span>}
-                            rules={[{ required: true, message: '请选择开始日期' }]}
-                          >
-                            <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
-                          </Form.Item>
-                        </Col>
-                        <Col xs={24} sm={5}>
-                          <Form.Item
-                            {...restField}
-                            name={[name, 'endDate']}
-                            label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>生效结束日期（可选）</span>}
-                          >
-                            <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
-                          </Form.Item>
-                        </Col>
-                        <Col xs={24} sm={5}>
-                          <Form.Item
-                            {...restField}
-                            name={[name, 'amount']}
-                            label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>年费金额（积分）</span>}
-                            rules={[{ required: true, message: '请输入年费金额' }]}
-                          >
-                            <InputNumber
-                              min={0}
-                              max={100000}
-                              style={{ width: '100%' }}
-                              addonAfter="积分"
-                            />
-                          </Form.Item>
-                        </Col>
-                        <Col xs={24} sm={5}>
-                          <Form.Item
-                            {...restField}
-                            name={[name, 'rate']}
-                            label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>每小时扣除积分</span>}
-                            rules={[{ required: true, message: '请输入每小时扣除积分' }]}
-                          >
-                            <InputNumber
-                              min={0}
-                              max={1000}
-                              style={{ width: '100%' }}
-                              addonAfter="积分/小时"
-                            />
-                          </Form.Item>
-                        </Col>
-                        <Col xs={24} sm={2}>
-                          <Form.Item label=" " style={{ marginBottom: 0 }}>
+                      <div key={key} style={{ marginBottom: isMobile ? 8 : 16 }}>
+                        <Row gutter={16}>
+                          <Col xs={12} sm={6}>
+                            <Form.Item
+                              {...restField}
+                              name={[name, 'startDate']}
+                              label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>生效开始日期</span>}
+                              rules={[{ required: true, message: '请选择开始日期' }]}
+                            >
+                              <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
+                            </Form.Item>
+                          </Col>
+                          <Col xs={12} sm={5}>
+                            <Form.Item
+                              {...restField}
+                              name={[name, 'endDate']}
+                              label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>生效结束日期（可选）</span>}
+                            >
+                              <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
+                            </Form.Item>
+                          </Col>
+                          <Col xs={12} sm={5}>
+                            <Form.Item
+                              {...restField}
+                              name={[name, 'amount']}
+                              label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>年费金额（积分）</span>}
+                              rules={[{ required: true, message: '请输入年费金额' }]}
+                            >
+                              <InputNumber
+                                min={0}
+                                max={100000}
+                                style={{ width: '100%' }}
+                                addonAfter="积分"
+                              />
+                            </Form.Item>
+                          </Col>
+                          <Col xs={12} sm={5}>
+                            <Form.Item
+                              {...restField}
+                              name={[name, 'rate']}
+                              label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>每小时扣除积分</span>}
+                              rules={[{ required: true, message: '请输入每小时扣除积分' }]}
+                            >
+                              <InputNumber
+                                min={0}
+                                max={1000}
+                                style={{ width: '100%' }}
+                                addonAfter="积分/小时"
+                              />
+                            </Form.Item>
+                          </Col>
+                        </Row>
+                        {fields.length > 1 && (
+                          <Form.Item style={{ marginTop: 8, marginBottom: 0 }}>
                             <Button
-                              type="link"
                               danger
                               icon={<DeleteOutlined />}
                               onClick={() => remove(name)}
-                              disabled={fields.length === 1}
-                            />
+                              block
+                              style={{
+                                background: 'rgba(255, 77, 79, 0.2)',
+                                border: '1px solid rgba(255, 77, 79, 0.5)',
+                                color: '#ff4d4f'
+                              }}
+                            >
+                              删除此配置
+                            </Button>
                           </Form.Item>
-                        </Col>
-                      </Row>
+                        )}
+                      </div>
                     ))}
-                    <Form.Item>
-                      <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
+                    <Form.Item style={{ marginTop: 8 }}>
+                      <Button 
+                        onClick={() => add()} 
+                        block 
+                        icon={<PlusOutlined />}
+                        style={{
+                          background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                          border: 'none',
+                          color: '#111',
+                          fontWeight: 700,
+                          boxShadow: '0 4px 15px rgba(244,175,37,0.35)'
+                        }}
+                      >
                         添加年费配置
                       </Button>
                     </Form.Item>
@@ -678,13 +706,7 @@ const PointsConfigPage: React.FC = () => {
         )}
 
         {activeTab === 'records' && (
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            borderRadius: 12,
-            padding: 24,
-            border: '1px solid rgba(244, 175, 37, 0.2)',
-            backdropFilter: 'blur(10px)'
-          }}>
+          <div>
                     <div style={{ marginBottom: 16, textAlign: 'right' }}>
                       <Button
                         icon={<ReloadOutlined />}
@@ -805,43 +827,31 @@ const PointsConfigPage: React.FC = () => {
         )}
 
         {activeTab === 'reload' && (
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            borderRadius: 12,
-            padding: 24,
-            border: '1px solid rgba(244, 175, 37, 0.2)',
-            backdropFilter: 'blur(10px)'
-          }}>
-                    <ReloadVerification onRefresh={loadPointsRecords} />
-                  </div>
+          <div>
+            <ReloadVerification onRefresh={loadPointsRecords} />
+          </div>
         )}
 
         {activeTab === 'membershipFees' && (
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            borderRadius: 12,
-            padding: 24,
-            border: '1px solid rgba(244, 175, 37, 0.2)',
-            backdropFilter: 'blur(10px)'
-          }}>
-                    <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Select
-                        value={membershipFeeStatusFilter}
-                        onChange={(value: 'all' | 'pending' | 'paid' | 'failed' | 'cancelled') => setMembershipFeeStatusFilter(value)}
-                        style={{ width: 150 }}
-                        options={[
-                          { label: '全部', value: 'all' },
-                          { label: '待支付', value: 'pending' },
-                          { label: '已支付', value: 'paid' },
-                          { label: '失败', value: 'failed' },
-                          { label: '已取消', value: 'cancelled' }
-                        ]}
+          <div>
+            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Select
+                value={membershipFeeStatusFilter}
+                onChange={(value: 'all' | 'pending' | 'paid' | 'failed' | 'cancelled') => setMembershipFeeStatusFilter(value)}
+                style={{ width: 150 }}
+                options={[
+                  { label: '全部', value: 'all' },
+                  { label: '待支付', value: 'pending' },
+                  { label: '已支付', value: 'paid' },
+                  { label: '失败', value: 'failed' },
+                  { label: '已取消', value: 'cancelled' }
+                ]}
                 className="points-config-form"
-                      />
-                      <Space>
-                        <Button 
-                          icon={<PlusOutlined />}
-                          onClick={() => setCreatingFeeRecord(true)}
+              />
+              <Space>
+                <Button 
+                  icon={<PlusOutlined />}
+                  onClick={() => setCreatingFeeRecord(true)}
                   style={{
                     background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
                     border: 'none',
@@ -849,9 +859,9 @@ const PointsConfigPage: React.FC = () => {
                     fontWeight: 700,
                     boxShadow: '0 4px 15px rgba(244,175,37,0.35)'
                   }}
-                        >
-                          创建年费记录
-                        </Button>
+                >
+                创建年费记录
+                </Button>
                 <Button 
                   onClick={loadMembershipFeeRecords} 
                   loading={loadingMembershipFeeRecords}
@@ -861,10 +871,10 @@ const PointsConfigPage: React.FC = () => {
                     color: '#FFFFFF'
                   }}
                 >
-                          刷新
-                        </Button>
-                      </Space>
-                    </div>
+                刷新
+                </Button>
+              </Space>
+            </div>
             {!isMobile ? (
               <div className="points-config-form">
                     <Table

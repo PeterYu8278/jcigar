@@ -480,7 +480,8 @@ const AdminUsers: React.FC = () => {
       display: 'flex',
       flexDirection: 'column',
       overflow: isMobile ? (activeTab === 'referralTree' ? 'auto' : 'hidden') : 'visible',
-      paddingRight: isMobile && activeTab === 'list' ? '32px' : '0'  // 为右侧索引栏预留空间（仅在用户列表标签页）
+      paddingRight: isMobile && activeTab === 'list' ? '32px' : '0',  // 为右侧索引栏预留空间（仅在用户列表标签页）
+      paddingBottom: isMobile ? '60px' : '0'
     }}>
       {/* 标签页 */}
       <div style={{ marginBottom: 16 }}>
