@@ -105,9 +105,7 @@ export const sendVipExpiryReminderToUser = async (
       return { success: false, error: '用户未设置手机号' };
     }
 
-    // 获取应用名称
-    const { getAppConfig } = await import('../firebase/appConfig');
-    const appConfig = await getAppConfig();
+    // 获取应用名称（appConfig 已在上面获取）
     const appName = appConfig?.appName || 'Gentlemen Club';
 
     // 获取消息模板
