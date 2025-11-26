@@ -270,7 +270,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         {/* User Info */}
         <div style={{ marginTop: '16px' }}>
           <h2 style={{
-            fontSize: '24px',
+            fontSize: '16px',
             fontWeight: 'bold',
             color: '#FFFFFF',
             margin: '0 0 8px 0'
@@ -332,7 +332,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             background: 'rgba(255, 255, 255, 0.05)',
             borderRadius: '12px',
             padding: '16px',
-            border: '1px solid rgba(244, 175, 37, 0.2)',
+            border: '1px solid rgba(244, 175, 37, 0.6)',
             textAlign: 'center'
           }}>
             <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#FFFFFF', marginBottom: '4px' }}>
@@ -667,7 +667,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         background: 'rgba(255, 255, 255, 0.05)',
                         borderRadius: '12px',
                         padding: '16px',
-                        border: '1px solid rgba(244, 175, 37, 0.2)',
+                        border: '1px solid rgba(244, 175, 37, 0.6)',
                         display: 'flex',
                         gap: '12px'
                       }}
@@ -775,7 +775,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     background: 'rgba(255, 255, 255, 0.05)',
                     borderRadius: '12px',
                     padding: '16px',
-                    border: '1px solid rgba(244, 175, 37, 0.2)',
+                    border: '1px solid rgba(244, 175, 37, 0.6)',
                     textAlign: 'center'
                   }}>
                     <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ffd700' }}>
@@ -791,7 +791,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     background: 'rgba(255, 255, 255, 0.05)',
                     borderRadius: '12px',
                     padding: '16px',
-                    border: '1px solid rgba(244, 175, 37, 0.2)',
+                    border: '1px solid rgba(244, 175, 37, 0.6)',
                     textAlign: 'center'
                   }}>
                     <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ffd700' }}>
@@ -833,7 +833,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         background: 'rgba(255, 255, 255, 0.05)',
                         borderRadius: '12px',
                         padding: '16px',
-                        border: '1px solid rgba(244, 175, 37, 0.2)',
+                        border: '1px solid rgba(244, 175, 37, 0.6)',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '12px'
@@ -843,14 +843,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                           width: '48px',
                           height: '48px',
                           borderRadius: '50%',
-                          background: 'linear-gradient(135deg, rgba(244, 175, 37, 0.3), rgba(244, 175, 37, 0.1))',
+                          background: 'linear-gradient(135deg, rgba(244, 175, 37, 0.6), rgba(244, 175, 37, 0.1))',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           fontSize: '20px',
                           fontWeight: 'bold',
                           color: '#ffd700',
-                          border: '2px solid rgba(244, 175, 37, 0.3)'
+                          border: '2px solid rgba(244, 175, 37, 0.6)'
                         }}>
                           {referred.displayName?.charAt(0) || '?'}
                         </div>

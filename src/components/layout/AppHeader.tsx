@@ -116,14 +116,14 @@ const AppHeader: React.FC = () => {
       {/* 左侧：标题与语言 */}
       <Space size={12} align="center" style={{ position: 'relative' }}>
         {appConfig?.logoUrl && (
-          <img
+        <img
             src={appConfig.logoUrl}
             alt={appConfig.appName || 'Gentleman Club'}
-            style={{
-              height: 28,
-              display: 'block'
-            }}
-          />
+          style={{
+            height: 28,
+            display: 'block'
+          }}
+        />
         )}
         <LanguageSwitcher />
       </Space>

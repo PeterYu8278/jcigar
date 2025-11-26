@@ -8,11 +8,12 @@ import CreateButton from '../../../components/common/CreateButton'
 import OrderDetails from './OrderDetails'
 import CreateOrderForm from './CreateOrderForm'
 import { useOrderColumns } from './useOrderColumns'
-import type { Order, User, Cigar, Transaction, OutboundOrder, InventoryMovement } from '../../../types'
+import type { Order, User, Cigar, Transaction, OutboundOrder, InventoryMovement, AppConfig } from '../../../types'
 import { getAllOrders, getUsers, getCigars, updateDocument, deleteDocument, COLLECTIONS, getAllTransactions, getAllOutboundOrders, getAllInventoryMovements, deleteOutboundOrder } from '../../../services/firebase/firestore'
 import { useTranslation } from 'react-i18next'
 import { filterOrders, sortOrders, getStatusColor, getStatusText, getUserName, getUserPhone } from './helpers'
 import { getModalThemeStyles, getModalWidth, getResponsiveModalConfig } from '../../../config/modalTheme'
+import { getAppConfig } from '../../../services/firebase/appConfig'
 
 const { Search } = Input
 const { Option } = Select
@@ -27,6 +28,7 @@ const AdminOrders: React.FC = () => {
   const [cigars, setCigars] = useState<Cigar[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [creating, setCreating] = useState(false)
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
 
   const [keyword, setKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState<string | undefined>()
@@ -49,7 +51,19 @@ const AdminOrders: React.FC = () => {
 
   useEffect(() => {
     loadData()
+    loadAppConfig()
   }, [])
+
+  const loadAppConfig = async () => {
+    try {
+      const config = await getAppConfig()
+      if (config) {
+        setAppConfig(config)
+      }
+    } catch (error) {
+      console.error('加载应用配置失败:', error)
+    }
+  }
 
   // 筛选条件变化时重置分页到第一页
   useEffect(() => {
@@ -286,9 +300,12 @@ const AdminOrders: React.FC = () => {
               gap: 8, 
               borderRadius: 8, 
               padding: '8px 16px', 
-              background: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
+              background: appConfig?.colorTheme?.primaryButton 
+                ? `linear-gradient(to right, ${appConfig.colorTheme.primaryButton.startColor}, ${appConfig.colorTheme.primaryButton.endColor})`
+                : 'linear-gradient(to right,#FDE08D,#C48D3A)', 
               color: '#111', 
               fontWeight: 700, 
+              border: 'none',
               cursor: 'pointer' 
             }}
           />
@@ -391,7 +408,7 @@ const AdminOrders: React.FC = () => {
         padding: '16px', 
         background: 'rgba(255, 255, 255, 0.05)', 
         borderRadius: 12,
-        border: '1px solid rgba(244, 175, 37, 0.2)',
+        border: '1px solid rgba(244, 175, 37, 0.6)',
         backdropFilter: 'blur(10px)'
       }}>
         <Space size="middle" wrap>
@@ -833,18 +850,18 @@ const AdminOrders: React.FC = () => {
         styles={{
           content: {
             background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
-            border: '1px solid rgba(244, 175, 37, 0.3)'
+            border: '1px solid rgba(244, 175, 37, 0.6)'
           },
           header: {
             background: 'transparent',
-            borderBottom: '1px solid rgba(244, 175, 37, 0.2)'
+            borderBottom: '1px solid rgba(244, 175, 37, 0.6)'
           },
           body: {
             background: 'transparent'
           },
           footer: {
             background: 'transparent',
-            borderTop: '1px solid rgba(244, 175, 37, 0.2)'
+            borderTop: '1px solid rgba(244, 175, 37, 0.6)'
           }
         }}
       >

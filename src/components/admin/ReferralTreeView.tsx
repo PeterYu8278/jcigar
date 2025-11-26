@@ -329,7 +329,7 @@ export const ReferralTreeView: React.FC<ReferralTreeViewProps> = ({ users: propU
         padding: 12,
         background: 'rgba(255, 255, 255, 0.05)',
         borderRadius: 12,
-        border: '1px solid rgba(244, 175, 37, 0.2)'
+        border: '1px solid rgba(244, 175, 37, 0.6)'
       }}>
         <div style={{ textAlign: 'center', flex: 1 }}>
           <div style={{ fontSize: 20, fontWeight: 800, color: '#FFD700' }}>{stats.totalUsers}</div>

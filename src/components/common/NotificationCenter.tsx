@@ -154,7 +154,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
         maxHeight: 500,
         background: 'rgba(24, 22, 17, 0.98)',
         borderRadius: 8,
-        border: '1px solid rgba(244, 175, 37, 0.3)',
+        border: '1px solid rgba(244, 175, 37, 0.6)',
         overflow: 'hidden',
         ...style
       }}

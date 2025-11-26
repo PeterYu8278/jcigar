@@ -1713,7 +1713,7 @@ const AdminInventory: React.FC = () => {
                                     background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
                                     WebkitBackgroundClip: 'text',
                                     color: 'transparent',
-                                    fontSize: '18px',
+                                    fontSize: '16px',
                                     margin: '0 0 4px 0'
                                   }}>
                                     {brand.name}
@@ -1948,7 +1948,7 @@ const AdminInventory: React.FC = () => {
                   style={{
                     padding: '6px 14px',
                     borderRadius: 8,
-                    border: '1px solid rgba(244, 175, 37, 0.5)',
+                    border: '1px solid rgba(244, 175, 37, 0.6)',
                     background: 'rgba(244, 175, 37, 0.1)',
                     color: '#f4af25',
                     cursor: 'pointer',
@@ -2688,7 +2688,7 @@ const AdminInventory: React.FC = () => {
                             padding: '2px 8px',
                             fontSize: 12,
                             background: 'rgba(244, 175, 37, 0.1)',
-                            border: '1px solid rgba(244, 175, 37, 0.3)',
+                            border: '1px solid rgba(244, 175, 37, 0.6)',
                             borderRadius: 4,
                             color: '#f4af25',
                             cursor: 'pointer',
@@ -2985,7 +2985,7 @@ const AdminInventory: React.FC = () => {
                         style={{
                           borderRadius: 16,
                           background: 'rgba(0, 0, 0, 0.2)',
-                          border: '1px solid rgba(244, 175, 37, 0.2)',
+                          border: '1px solid rgba(244, 175, 37, 0.6)',
                           overflow: 'hidden',
                           boxShadow: '0 10px 30px rgba(0, 0, 0, 0.25)'
                         }}
@@ -3071,7 +3071,7 @@ const AdminInventory: React.FC = () => {
                                         background: 'rgba(82, 196, 26, 0.2)',
                                         color: '#52c41a',
                                         borderRadius: 4,
-                                        border: '1px solid rgba(82, 196, 26, 0.4)'
+                                        border: '1px solid rgba(82, 196, 26, 0.5)'
                                       }}>
                                         ✓ {t('inventory.fullyPaid')}
                                       </span>
@@ -3525,7 +3525,7 @@ const AdminInventory: React.FC = () => {
                     style={{
                       padding: '6px 14px',
                       borderRadius: 8,
-                      border: '1px solid rgba(244, 175, 37, 0.5)',
+                      border: '1px solid rgba(244, 175, 37, 0.6)',
                       background: 'rgba(244, 175, 37, 0.1)',
                       color: '#f4af25',
                       cursor: 'pointer',
@@ -5298,7 +5298,7 @@ const AdminInventory: React.FC = () => {
             {(fields, { add, remove }) => (
               <>
                 <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h4 style={{ margin: 0 }}>产品列表</h4>
+                  <h4 style={{ margin: 0, fontSize: '16px' }}>产品列表</h4>
                   <Button
                     type="dashed"
                     onClick={() => add()}

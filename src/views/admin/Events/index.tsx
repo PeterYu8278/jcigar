@@ -1166,7 +1166,7 @@ const AdminEvents: React.FC = () => {
         <div style={{ 
           maxHeight: 400, 
           overflow: 'hidden', 
-          border: '1px solid rgba(244, 175, 37, 0.2)', 
+          border: '1px solid rgba(244, 175, 37, 0.6)', 
           borderRadius: 12,
           background: 'rgba(255, 255, 255, 0.05)',
           backdropFilter: 'blur(10px)'

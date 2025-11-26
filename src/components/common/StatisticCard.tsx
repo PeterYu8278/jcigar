@@ -186,7 +186,7 @@ const StatisticCard: React.FC<StatisticCardProps> = ({
   const getCardStyle = (): React.CSSProperties => {
     const baseStyle: React.CSSProperties = {
       borderRadius: '12px',
-      border: '1px solid rgba(244, 175, 37, 0.3)'
+      border: '1px solid rgba(244, 175, 37, 0.6)'
     }
 
     switch (variant) {

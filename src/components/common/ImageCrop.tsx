@@ -229,7 +229,7 @@ const ImageCrop: React.FC<ImageCropProps> = ({
         {/* 预览区域 */}
         {completedCrop && (
           <div style={{ marginTop: '20px' }}>
-            <h4 style={{ margin: '0 0 10px 0', color: '#333' }}>预览：</h4>
+            <h4 style={{ margin: '0 0 10px 0', color: '#333', fontSize: '16px' }}>预览：</h4>
             <canvas
               ref={previewCanvasRef}
               style={{

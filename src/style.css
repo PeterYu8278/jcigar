@@ -211,7 +211,7 @@ button + button { margin-left: 8px; }
 
 .ant-modal-header {
   background: transparent !important;
-  border-bottom: 1px solid rgba(244, 175, 37, 0.2) !important;
+  border-bottom: 1px solid rgba(244, 175, 37, 0.6) !important;
 }
 
 /* Space 组件间距调整 */
@@ -255,7 +255,7 @@ button + button { margin-left: 8px; }
 .dark-theme-form .ant-input-number-affix-wrapper,
 .dark-theme-form .ant-picker {
   background: rgba(255, 255, 255, 0.1) !important;
-  border-color: rgba(244, 175, 37, 0.3) !important;
+  border-color: rgba(244, 175, 37, 0.6) !important;
   color: #FFFFFF !important;
 }
 
@@ -294,7 +294,7 @@ button + button { margin-left: 8px; }
 
 .dark-theme-form .ant-select-selector {
   background: rgba(255, 255, 255, 0.1) !important;
-  border-color: rgba(244, 175, 37, 0.3) !important;
+  border-color: rgba(244, 175, 37, 0.6) !important;
   color: #FFFFFF !important;
 }
 
@@ -694,12 +694,12 @@ button + button { margin-left: 8px; }
 }
 
 .ant-descriptions .ant-descriptions-view {
-  border-color: rgba(244, 175, 37, 0.3) !important;
+  border-color: rgba(244, 175, 37, 0.6) !important;
 }
 
 .ant-descriptions .ant-descriptions-row > th,
 .ant-descriptions .ant-descriptions-row > td {
-  border-color: rgba(244, 175, 37, 0.2) !important;
+  border-color: rgba(244, 175, 37, 0.6) !important;
 }
 /* 活动详情弹窗 Tabs 样式 - 参考仪表板页面的 active tab 格式 */
 .ant-tabs-nav {
@@ -855,7 +855,7 @@ button + button { margin-left: 8px; }
 
 .points-config-form .ant-table-thead > tr > th {
   background: rgba(255, 255, 255, 0.05) !important;
-  border-bottom: 1px solid rgba(244, 175, 37, 0.2) !important;
+  border-bottom: 1px solid rgba(244, 175, 37, 0.6) !important;
   color: rgba(255, 255, 255, 0.85) !important;
 }
 
@@ -887,7 +887,7 @@ button + button { margin-left: 8px; }
 
 .points-config-form .ant-select-selector {
   background: rgba(255, 255, 255, 0.1) !important;
-  border-color: rgba(244, 175, 37, 0.3) !important;
+  border-color: rgba(244, 175, 37, 0.6) !important;
   color: #FFFFFF !important;
 }
 
@@ -911,7 +911,7 @@ button + button { margin-left: 8px; }
 
 .points-config-form .ant-select-dropdown {
   background: linear-gradient(180deg, #221c10 0%, #181611 100%) !important;
-  border: 1px solid rgba(244, 175, 37, 0.3) !important;
+  border: 1px solid rgba(244, 175, 37, 0.6) !important;
 }
 
 .points-config-form .ant-select-item {
@@ -919,7 +919,7 @@ button + button { margin-left: 8px; }
 }
 
 .points-config-form .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
-  background: rgba(244, 175, 37, 0.2) !important;
+  background: rgba(244, 175, 37, 0.6) !important;
   color: #FFFFFF !important;
 }
 

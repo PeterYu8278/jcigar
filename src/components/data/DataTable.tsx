@@ -216,7 +216,7 @@ const DataTable = <T extends Record<string, any>>({
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           {toolbar?.title && (
-            <h3 style={{ margin: 0, color: 'var(--cigar-text-primary)' }}>
+            <h3 style={{ margin: 0, color: 'var(--cigar-text-primary)', fontSize: '16px' }}>
               {toolbar.title}
             </h3>
           )}

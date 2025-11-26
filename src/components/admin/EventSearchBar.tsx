@@ -93,7 +93,7 @@ const EventSearchBar: React.FC<EventSearchBarProps> = ({
       padding: '16px', 
       background: 'rgba(255, 255, 255, 0.05)', 
       borderRadius: 12,
-      border: '1px solid rgba(244, 175, 37, 0.2)',
+      border: '1px solid rgba(244, 175, 37, 0.6)',
       backdropFilter: 'blur(10px)'
     }}>
       <Space size="middle" wrap>

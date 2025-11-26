@@ -1096,18 +1096,18 @@ const PointsConfigPage: React.FC = () => {
         styles={{
           content: {
             background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
-            border: '1px solid rgba(244, 175, 37, 0.3)'
+            border: '1px solid rgba(244, 175, 37, 0.6)'
           },
           header: {
             background: 'transparent',
-            borderBottom: '1px solid rgba(244, 175, 37, 0.2)'
+            borderBottom: '1px solid rgba(244, 175, 37, 0.6)'
           },
           body: {
             background: 'transparent'
           },
           footer: {
             background: 'transparent',
-            borderTop: '1px solid rgba(244, 175, 37, 0.2)'
+            borderTop: '1px solid rgba(244, 175, 37, 0.6)'
           }
         }}
       >

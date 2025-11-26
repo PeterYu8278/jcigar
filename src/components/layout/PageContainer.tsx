@@ -253,7 +253,7 @@ const PageContainer: React.FC<PageContainerProps> = ({
           {renderContent()}
         </div>
         {footer && (
-          <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid rgba(244, 175, 37, 0.2)' }}>
+          <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid rgba(244, 175, 37, 0.6)' }}>
             {footer}
           </div>
         )}

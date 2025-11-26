@@ -560,7 +560,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
                 0 8px 32px rgba(212, 175, 55, 0.25),
                 0 16px 48px rgba(212, 175, 55, 0.15)
               `,
-              border: '3px solid rgba(244, 175, 37, 0.3)',
+              border: '3px solid rgba(244, 175, 37, 0.6)',
               transition: 'all 0.3s ease'
             }}>
               {!user?.profile?.avatar && (user?.displayName?.charAt(0)?.toUpperCase() || 'U')}

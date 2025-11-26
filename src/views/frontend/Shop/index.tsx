@@ -348,7 +348,7 @@ const Shop: React.FC = () => {
         {cubanBrands.length > 0 && newWorldBrands.length > 0 && (
           <div style={{
             height: '1px',
-            background: 'linear-gradient(90deg, transparent 0%, rgba(244, 175, 37, 0.3) 50%, transparent 100%)',
+            background: 'linear-gradient(90deg, transparent 0%, rgba(244, 175, 37, 0.6) 50%, transparent 100%)',
             margin: isMobile ? '8px 0' : '12px 0'
           }} />
         )}
@@ -427,7 +427,7 @@ const Shop: React.FC = () => {
                   fontSize: isMobile ? '18px' : '24px',
                   fontWeight: 'bold',
                   color: brand.logo ? 'transparent' : '#F4AF25',
-                  border: '2px solid rgba(244, 175, 37, 0.3)'
+                  border: '2px solid rgba(244, 175, 37, 0.6)'
                 }}>
                   {!brand.logo && brand.name.charAt(0)}
                 </div>
@@ -558,7 +558,7 @@ const Shop: React.FC = () => {
                     borderTopRightRadius: '16px'
                   }}>
                     <h2 style={{
-                      fontSize: '18px',
+                      fontSize: '16px',
             fontWeight: 'bold', 
                       color: '#000',
             margin: 0,
@@ -600,7 +600,7 @@ const Shop: React.FC = () => {
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                           <div>
                             <h3 style={{ 
-                              fontSize: '15px', 
+                              fontSize: '16px', 
                               fontWeight: '700', 
                               color: '#fff',
                               margin: '0 0 4px 0',
@@ -692,7 +692,7 @@ const Shop: React.FC = () => {
                   e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'
                   e.currentTarget.style.transform = 'translateY(-4px)'
                   e.currentTarget.style.boxShadow = '0 12px 30px rgba(244, 175, 37, 0.25)'
-                  e.currentTarget.style.borderColor = 'rgba(244, 175, 37, 0.3)'
+                  e.currentTarget.style.borderColor = 'rgba(244, 175, 37, 0.6)'
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
@@ -732,7 +732,7 @@ const Shop: React.FC = () => {
                 {/* 商品信息 */}
                 <div style={{ padding: '12px' }}>
                   <h3 style={{ 
-                    fontSize: isMobile ? '13px' : '14px', 
+                    fontSize: '16px', 
                     fontWeight: '700', 
                     color: '#fff',
                     margin: '0 0 6px 0',
@@ -860,7 +860,7 @@ const Shop: React.FC = () => {
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 width: '100%',
-                boxShadow: '0 8px 24px rgba(244, 175, 37, 0.5)',
+                boxShadow: '0 8px 24px rgba(244, 175, 37, 0.6)',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
@@ -911,7 +911,7 @@ const Shop: React.FC = () => {
         }}>
           <h2 style={{
             margin: 0,
-            fontSize: '20px',
+            fontSize: '16px',
             fontWeight: 'bold',
             color: '#F4AF25'
           }}>
@@ -980,7 +980,7 @@ const Shop: React.FC = () => {
                     {/* 商品信息 */}
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                       <div>
-                        <h4 style={{ margin: '0 0 4px 0', color: '#fff', fontSize: '15px' }}>
+                        <h4 style={{ margin: '0 0 4px 0', color: '#fff', fontSize: '16px' }}>
                           {item.name}
                         </h4>
                         <div style={{ fontSize: '12px', color: '#999' }}>

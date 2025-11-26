@@ -11,10 +11,11 @@ import {
   getAllTransactions,
   getCigars
 } from '../../../services/firebase/firestore'
-import type { User, Order, Event, Transaction, Cigar } from '../../../types'
+import type { User, Order, Event, Transaction, Cigar, AppConfig } from '../../../types'
 import { useTranslation } from 'react-i18next'
 import { isFeatureVisible } from '../../../services/firebase/featureVisibility'
 import { useAuthStore } from '../../../store/modules/auth'
+import { getAppConfig } from '../../../services/firebase/appConfig'
 
 const { Title } = Typography
 
@@ -31,6 +32,7 @@ const AdminDashboard: React.FC = () => {
   const [inventoryFeatureVisible, setInventoryFeatureVisible] = useState<boolean>(true)
   const [eventsAdminFeatureVisible, setEventsAdminFeatureVisible] = useState<boolean>(true)
   const [ordersFeatureVisible, setOrdersFeatureVisible] = useState<boolean>(true)
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
 
   // 检查功能可见性（developer 不受限制）
   useEffect(() => {
@@ -57,7 +59,19 @@ const AdminDashboard: React.FC = () => {
   // 加载数据
   useEffect(() => {
     loadDashboardData()
+    loadAppConfig()
   }, [])
+
+  const loadAppConfig = async () => {
+    try {
+      const config = await getAppConfig()
+      if (config) {
+        setAppConfig(config)
+      }
+    } catch (error) {
+      console.error('加载应用配置失败:', error)
+    }
+  }
 
   const loadDashboardData = async () => {
     setLoading(true)
@@ -152,33 +166,33 @@ const AdminDashboard: React.FC = () => {
           gap: '8px'
         }}>
           {eventsAdminFeatureVisible && (
-            <button onClick={() => navigate('/admin/events')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 12, padding: 8, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, boxShadow: '0 4px 15px rgba(244,175,37,0.35)' }}>
-              <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v6h6a1 1 0 110 2h-6v6a1 1 0 11-2 0v-6H3a1 1 0 110-2h6V3a1 1 0 011-1z"/></svg>
-              <span>{t('dashboard.createEvent')}</span>
-            </button>
+          <button onClick={() => navigate('/admin/events')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 12, padding: 8, background: appConfig?.colorTheme?.primaryButton ? `linear-gradient(to right, ${appConfig.colorTheme.primaryButton.startColor}, ${appConfig.colorTheme.primaryButton.endColor})` : 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, boxShadow: '0 4px 15px rgba(244,175,37,0.35)', cursor: 'pointer' }}>
+            <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v6h6a1 1 0 110 2h-6v6a1 1 0 11-2 0v-6H3a1 1 0 110-2h6V3a1 1 0 011-1z"/></svg>
+            <span>{t('dashboard.createEvent')}</span>
+          </button>
           )}
           {ordersFeatureVisible && (
-            <button onClick={() => navigate('/admin/orders')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 12, padding: 8, background: 'rgba(255,255,255,0.05)', color: '#EAEAEA' }}>
-              <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path clipRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h14a1 1 0 001-1V4a1 1 0 00-1-1H3zm12 11H5V5h10v9z" fillRule="evenodd"></path><path d="M9 7a1 1 0 100 2h2a1 1 0 100-2H9z"></path></svg>
-              <span>{t('dashboard.viewOrders')}</span>
-            </button>
+          <button onClick={() => navigate('/admin/orders')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 12, padding: 8, background: appConfig?.colorTheme?.secondaryButton?.backgroundColor || 'rgba(255,255,255,0.05)', color: appConfig?.colorTheme?.secondaryButton?.textColor || '#EAEAEA', cursor: 'pointer' }}>
+            <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path clipRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h14a1 1 0 001-1V4a1 1 0 00-1-1H3zm12 11H5V5h10v9z" fillRule="evenodd"></path><path d="M9 7a1 1 0 100 2h2a1 1 0 100-2H9z"></path></svg>
+            <span>{t('dashboard.viewOrders')}</span>
+          </button>
           )}
-          <button onClick={() => navigate('/admin/users')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 12, padding: 8, background: 'rgba(255,255,255,0.05)', color: '#EAEAEA' }}>
+          <button onClick={() => navigate('/admin/users')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 12, padding: 8, background: appConfig?.colorTheme?.secondaryButton?.backgroundColor || 'rgba(255,255,255,0.05)', color: appConfig?.colorTheme?.secondaryButton?.textColor || '#EAEAEA', cursor: 'pointer' }}>
             <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path clipRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" fillRule="evenodd"></path></svg>
             <span>{t('dashboard.createUser')}</span>
           </button>
           {inventoryFeatureVisible && (
-            <button onClick={() => navigate('/admin/inventory')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 12, padding: 8, background: 'rgba(255,255,255,0.05)', color: '#EAEAEA' }}>
-              <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M5 8a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z"></path><path clipRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V3zm2 2v10h10V5H5z" fillRule="evenodd"></path></svg>
-              <span>{t('dashboard.inventoryManagement')}</span>
-            </button>
+          <button onClick={() => navigate('/admin/inventory')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 12, padding: 8, background: appConfig?.colorTheme?.secondaryButton?.backgroundColor || 'rgba(255,255,255,0.05)', color: appConfig?.colorTheme?.secondaryButton?.textColor || '#EAEAEA', cursor: 'pointer' }}>
+            <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M5 8a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z"></path><path clipRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V3zm2 2v10h10V5H5z" fillRule="evenodd"></path></svg>
+            <span>{t('dashboard.inventoryManagement')}</span>
+          </button>
           )}
             </div>
             </div>
 
       {/* 订单标签页 - 仅在订单管理功能可见时显示 */}
       {ordersFeatureVisible && (
-        <div style={{ marginBottom: 16, paddingInline: 8 }}>
+      <div style={{ marginBottom: 16, paddingInline: 8 }}>
         <div style={{ display: 'flex', borderBottom: '1px solid rgba(244,175,37,0.2)' }}>
           {(['pending','completed'] as const).map((tabKey) => {
             const isActive = activeTab === tabKey
@@ -251,8 +265,8 @@ const AdminDashboard: React.FC = () => {
 
       {/* 最近活动 - 仅在活动管理功能可见时显示 */}
       {eventsAdminFeatureVisible && (
-        <div style={{ marginBottom: 16 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, color: '#EAEAEA', paddingInline: 8 }}>{t('dashboard.recentActivities')}</h2>
+      <div style={{ marginBottom: 16 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 800, color: '#EAEAEA', paddingInline: 8 }}>{t('dashboard.recentActivities')}</h2>
         <div style={{ marginTop: 8, borderRadius: 12, padding: 12, background: 'rgba(255,255,255,0.05)' }}>
           {loading ? (
             <div style={{ textAlign: 'center', padding: '24px 0' }}><Spin /></div>
@@ -284,8 +298,8 @@ const AdminDashboard: React.FC = () => {
 
       {/* 库存状态 - 仅在库存管理功能可见时显示 */}
       {inventoryFeatureVisible && (
-        <div>
-          <h2 style={{ fontSize: 16, fontWeight: 800, color: '#EAEAEA', paddingInline: 8 }}>{t('dashboard.stockStatus')}</h2>
+      <div>
+        <h2 style={{ fontSize: 16, fontWeight: 800, color: '#EAEAEA', paddingInline: 8 }}>{t('dashboard.stockStatus')}</h2>
         <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: 12, padding: 12, background: 'rgba(255,255,255,0.05)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 48, height: 48, borderRadius: 9999, background: 'rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444' }}>!</div>

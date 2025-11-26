@@ -230,7 +230,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
           <div style={{ width: '100%' }}>
             <div style={{ 
               padding: '16px', 
-              border: '1px solid rgba(244, 175, 37, 0.3)', 
+              border: '1px solid rgba(244, 175, 37, 0.6)', 
               borderRadius: '6px',
               background: 'rgba(39, 35, 27, 0.5)',
               backdropFilter: 'blur(10px)'
@@ -335,7 +335,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
           <div style={{ width: '150px', flexShrink: 0 }}>
             <div style={{ 
               padding: '16px', 
-              border: '1px solid rgba(244, 175, 37, 0.3)', 
+              border: '1px solid rgba(244, 175, 37, 0.6)', 
               borderRadius: '6px',
               background: 'rgba(39, 35, 27, 0.5)',
               backdropFilter: 'blur(10px)'
@@ -551,7 +551,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
       <div style={{ 
         marginTop: '24px', 
         paddingTop: '16px', 
-        borderTop: '1px solid rgba(244, 175, 37, 0.2)' 
+        borderTop: '1px solid rgba(244, 175, 37, 0.6)' 
       }}>
         <Space 
           direction={isMobile ? 'vertical' : 'horizontal'} 

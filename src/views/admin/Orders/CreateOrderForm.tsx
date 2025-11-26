@@ -186,7 +186,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                           marginBottom: isMobile ? 8 : 8, 
                           gap: isMobile ? 8 : 12,
                           padding: isMobile ? '12px' : '0',
-                          border: isMobile ? '1px solid rgba(244, 175, 37, 0.2)' : 'none',
+                          border: isMobile ? '1px solid rgba(244, 175, 37, 0.6)' : 'none',
                           borderRadius: isMobile ? '8px' : '0',
                           background: isMobile ? 'rgba(255, 255, 255, 0.02)' : 'transparent'
                         }}>
@@ -326,7 +326,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                             padding: '6px 8px', 
                             fontWeight: 600, 
                             background: 'rgba(244, 175, 37, 0.1)',
-                            borderBottom: '1px solid rgba(244, 175, 37, 0.2)',
+                            borderBottom: '1px solid rgba(244, 175, 37, 0.6)',
                             color: '#f4af25'
                           }}>
                             {brand}
@@ -353,7 +353,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                     )}
                   </div>
                   <div style={{ 
-                    borderTop: '1px solid rgba(244, 175, 37, 0.2)', 
+                    borderTop: '1px solid rgba(244, 175, 37, 0.6)', 
                     marginTop: 8, 
                     paddingTop: 8 
                   }} />

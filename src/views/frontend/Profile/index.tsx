@@ -585,7 +585,7 @@ const Profile: React.FC = () => {
                 padding: 12,
                 borderRadius: 8,
                 background: 'rgba(244, 175, 37, 0.1)',
-                border: '1px solid rgba(244, 175, 37, 0.2)',
+                border: '1px solid rgba(244, 175, 37, 0.6)',
                 marginBottom: 12
               }}>
                 <Typography.Text style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 12 }}>

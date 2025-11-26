@@ -10,12 +10,60 @@ import {
   resetFeatureVisibilityConfig,
 } from '../../../services/firebase/featureVisibility';
 import { FEATURE_DEFINITIONS, type FeatureDefinition } from '../../../config/featureDefinitions';
-import type { FeatureVisibilityConfig, AppConfig } from '../../../types';
+import type { FeatureVisibilityConfig, AppConfig, ColorThemeConfig } from '../../../types';
 import { getAppConfig, updateAppConfig, resetAppConfig } from '../../../services/firebase/appConfig';
 import ImageUpload from '../../../components/common/ImageUpload';
+import MockAppInterface from '../../../components/admin/MockAppInterface';
 
 const { Title, Text } = Typography;
 const { Search } = Input;
+
+// 默认颜色主题配置（与 appConfig.ts 中的 DEFAULT_COLOR_THEME 保持一致）
+const DEFAULT_COLOR_THEME: ColorThemeConfig = {
+  primaryButton: {
+    startColor: '#FDE08D',
+    endColor: '#C48D3A',
+  },
+  secondaryButton: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderColor: '#444444',
+    textColor: '#ffffff',
+  },
+  warningButton: {
+    backgroundColor: '#faad14',
+    borderColor: '#faad14',
+    textColor: '#ffffff',
+  },
+  border: {
+    primary: '#333333',
+    secondary: '#444444',
+  },
+  tag: {
+    success: {
+      backgroundColor: '#52c41a',
+      textColor: '#ffffff',
+      borderColor: '#52c41a',
+    },
+    warning: {
+      backgroundColor: '#faad14',
+      textColor: '#ffffff',
+      borderColor: '#faad14',
+    },
+    error: {
+      backgroundColor: '#ff4d4f',
+      textColor: '#ffffff',
+      borderColor: '#ff4d4f',
+    },
+  },
+  text: {
+    primary: '#f8f8f8',
+    secondary: '#c0c0c0',
+    tertiary: '#999999',
+  },
+  icon: {
+    primary: '#ffd700',
+  },
+};
 
 const FeatureManagement: React.FC = () => {
   const { user } = useAuthStore();
@@ -29,6 +77,7 @@ const FeatureManagement: React.FC = () => {
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   const [appConfigForm] = Form.useForm();
   const [savingAppConfig, setSavingAppConfig] = useState(false);
+  const [pendingColorChanges, setPendingColorChanges] = useState<Partial<ColorThemeConfig>>({});
 
   // 检查是否为开发者
   useEffect(() => {
@@ -68,7 +117,24 @@ const FeatureManagement: React.FC = () => {
     try {
       const config = await getAppConfig();
       if (config) {
-        setAppConfig(config);
+        // 确保 colorTheme 存在，如果不存在则使用默认值
+        const configWithTheme = {
+          ...config,
+          colorTheme: config.colorTheme || {
+            primaryButton: { startColor: '#FDE08D', endColor: '#C48D3A' },
+            secondaryButton: { backgroundColor: 'rgba(255,255,255,0.1)', borderColor: '#444444', textColor: '#ffffff' },
+            warningButton: { backgroundColor: '#faad14', borderColor: '#faad14', textColor: '#ffffff' },
+              border: { primary: '#333333', secondary: '#444444' },
+              tag: {
+                success: { backgroundColor: '#52c41a', textColor: '#ffffff' },
+                warning: { backgroundColor: '#faad14', textColor: '#ffffff' },
+                error: { backgroundColor: '#ff4d4f', textColor: '#ffffff' },
+              },
+              text: { primary: '#f8f8f8', secondary: '#c0c0c0', tertiary: '#999999' },
+            icon: { primary: '#ffd700' },
+          },
+        };
+        setAppConfig(configWithTheme as AppConfig);
         appConfigForm.setFieldsValue({
           logoUrl: config.logoUrl,
           appName: config.appName,
@@ -185,17 +251,27 @@ const FeatureManagement: React.FC = () => {
     setSavingAppConfig(true);
     try {
       const values = await appConfigForm.validateFields();
+      // 合并待保存的颜色更改
+      const finalColorTheme = appConfig?.colorTheme
+        ? {
+            ...appConfig.colorTheme,
+            ...pendingColorChanges,
+          }
+        : undefined;
+      
       const result = await updateAppConfig(
         {
           logoUrl: values.logoUrl,
           appName: values.appName,
           hideFooter: values.hideFooter ?? false,
+          colorTheme: finalColorTheme, // 使用合并后的颜色主题
         },
         user.id
       );
       
       if (result.success) {
         message.success('应用配置已保存');
+        setPendingColorChanges({}); // 清空待保存的更改
         await loadAppConfig();
       } else {
         message.error(result.error || '保存失败');
@@ -218,6 +294,86 @@ const FeatureManagement: React.FC = () => {
       const result = await resetAppConfig(user.id);
       if (result.success) {
         message.success('已重置为默认配置');
+        await loadAppConfig();
+      } else {
+        message.error(result.error || '重置失败');
+      }
+    } catch (error) {
+      message.error('重置失败');
+    }
+  };
+
+  // 处理颜色更改（暂存，不立即保存）
+  const handleColorChange = (colors: Partial<ColorThemeConfig>) => {
+    setPendingColorChanges(prev => ({
+      ...prev,
+      ...colors,
+    }));
+    
+    // 实时更新本地状态以预览效果
+    if (appConfig?.colorTheme) {
+      setAppConfig({
+        ...appConfig,
+        colorTheme: {
+          ...appConfig.colorTheme,
+          ...colors,
+        },
+      });
+    }
+  };
+
+  // 保存颜色更改
+  const handleSaveColorTheme = async () => {
+    if (!user?.id || !appConfig || !appConfig.colorTheme) {
+      message.error('用户未登录或配置未加载');
+      return;
+    }
+
+    if (Object.keys(pendingColorChanges).length === 0) {
+      message.info('没有需要保存的更改');
+      return;
+    }
+
+    setSavingAppConfig(true);
+    try {
+      const updatedColorTheme: ColorThemeConfig = {
+        ...appConfig.colorTheme,
+        ...pendingColorChanges,
+      };
+
+      const result = await updateAppConfig(
+        {
+          colorTheme: updatedColorTheme,
+        },
+        user.id
+      );
+
+      if (result.success) {
+        message.success('颜色配置已保存');
+        setPendingColorChanges({});
+        await loadAppConfig();
+      } else {
+        message.error(result.error || '保存失败');
+      }
+    } catch (error) {
+      message.error('保存失败');
+    } finally {
+      setSavingAppConfig(false);
+    }
+  };
+
+  // 重置颜色配置
+  const handleResetColorTheme = async () => {
+    if (!user?.id) {
+      message.error('用户未登录');
+      return;
+    }
+
+    try {
+      const result = await resetAppConfig(user.id);
+      if (result.success) {
+        message.success('已重置为默认配置');
+        setPendingColorChanges({});
         await loadAppConfig();
       } else {
         message.error(result.error || '重置失败');
@@ -364,7 +520,7 @@ const FeatureManagement: React.FC = () => {
         <Card style={{
           background: 'rgba(255, 255, 255, 0.05)',
           borderRadius: 12,
-          border: '1px solid rgba(244, 175, 37, 0.2)',
+          border: '1px solid rgba(244, 175, 37, 0.6)',
           backdropFilter: 'blur(10px)'
         }}>
           <Form
@@ -417,6 +573,27 @@ const FeatureManagement: React.FC = () => {
               />
             </Form.Item>
 
+            {/* 颜色主题管理 */}
+            <div style={{ marginTop: 32 }}>
+              <div style={{ 
+                marginBottom: 16, 
+                paddingBottom: 12, 
+                borderBottom: '1px solid rgba(244, 175, 37, 0.2)' 
+              }}>
+                <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600 }}>
+                  颜色主题管理
+                </Text>
+              </div>
+              
+              <MockAppInterface
+                colorTheme={appConfig?.colorTheme || DEFAULT_COLOR_THEME}
+                onColorChange={handleColorChange}
+                onSave={handleSaveColorTheme}
+                onReset={handleResetColorTheme}
+                saving={savingAppConfig}
+              />
+            </div>
+
             <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
               <Button
                 icon={<ReloadOutlined />}
@@ -440,12 +617,14 @@ const FeatureManagement: React.FC = () => {
             </div>
           </Form>
         </Card>
-      ) : (
+      ) : null}
+
+      {activeTab !== 'app' && (
         <>
           <Card style={{
             background: 'rgba(255, 255, 255, 0.05)',
             borderRadius: 12,
-            border: '1px solid rgba(244, 175, 37, 0.2)',
+            border: '1px solid rgba(244, 175, 37, 0.6)',
             backdropFilter: 'blur(10px)'
           }}>
             {filteredFeatures.length === 0 ? (

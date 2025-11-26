@@ -9,7 +9,7 @@ import { LoadingOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import { COMMON_ACTIONS, CONTAINER_KEYS } from '../../i18n/constants'
 
-export interface ButtonProps extends Omit<AntButtonProps, 'type'> {
+export interface ButtonProps extends Omit<AntButtonProps, 'type' | 'variant'> {
   // 按钮变体
   variant?: 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'ghost' | 'link' | 'text'
   
@@ -61,7 +61,7 @@ const Button: React.FC<ButtonProps> = ({
       case 'secondary':
         return 'default'
       case 'ghost':
-        return 'ghost'
+        return 'default' // Ant Design 5 的 type 不支持 'ghost'，使用 'default' 并通过样式实现 ghost 效果
       case 'link':
         return 'link'
       case 'text':
@@ -84,6 +84,16 @@ const Button: React.FC<ButtonProps> = ({
         ...baseStyle,
         background: 'linear-gradient(135deg, #ffd700 0%, #ffed4e 100%)',
         border: 'none'
+      }
+    }
+
+    // Ghost 变体样式（透明背景，有边框）
+    if (variant === 'ghost') {
+      return {
+        ...baseStyle,
+        background: 'transparent',
+        borderColor: 'rgba(255, 255, 255, 0.3)',
+        color: '#f8f8f8'
       }
     }
 

@@ -117,7 +117,7 @@ const PerformanceMonitor: React.FC = () => {
     <div style={{ padding: '24px', background: 'var(--cigar-black-primary)' }}>
       {/* 头部操作栏 */}
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ margin: 0, color: 'var(--cigar-text-primary)' }}>
+        <h2 style={{ margin: 0, color: 'var(--cigar-text-primary)', fontSize: '16px' }}>
           <DashboardOutlined /> {t(PERFORMANCE_KEYS.TITLE)}
         </h2>
         <Space>

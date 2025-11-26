@@ -28,14 +28,14 @@ export const getModalThemeStyles = (isMobile: boolean, isDarkTheme: boolean = tr
   },
   content: {
       background: 'rgba(24, 22, 17, 0.95)',
-      border: '1px solid rgba(244, 175, 37, 0.3)',
+      border: '1px solid rgba(244, 175, 37, 0.6)',
       borderRadius: '12px',
       backdropFilter: 'blur(20px)',
       boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)'
   },
   header: {
     background: 'transparent',
-    borderBottom: '1px solid rgba(244, 175, 37, 0.2)',
+    borderBottom: '1px solid rgba(244, 175, 37, 0.6)',
     marginBottom: '16px',
     paddingBottom: '12px',
     color: '#FFFFFF'
@@ -86,14 +86,14 @@ export const modalContentStyles = {
 export const modalTagStyles = {
   base: {
     background: 'rgba(244, 175, 37, 0.15)',
-    border: '1px solid rgba(244, 175, 37, 0.4)',
+    border: '1px solid rgba(244, 175, 37, 0.6)',
     color: '#f4af25',
     borderRadius: '4px',
     padding: '2px 8px'
   } as React.CSSProperties,
   success: {
-    background: 'rgba(82, 196, 26, 0.15)',
-    border: '1px solid rgba(82, 196, 26, 0.4)',
+    background: 'rgba(82, 196, 26, 0.1)',
+    border: '1px solid rgba(82, 196, 26, 0.5)',
     color: '#52c41a'
   } as React.CSSProperties,
   warning: {
@@ -124,7 +124,7 @@ export const modalButtonStyles = {
   secondary: {
     padding: '6px 14px',
     borderRadius: 8,
-    border: '1px solid rgba(244, 175, 37, 0.3)',
+    border: '1px solid rgba(244, 175, 37, 0.6)',
     background: 'rgba(255,255,255,0.1)',
     color: '#ffffff',
     cursor: 'pointer'
@@ -140,7 +140,7 @@ export const modalButtonStyles = {
   text: {
     padding: '4px 8px',
     borderRadius: 6,
-    border: '1px solid rgba(244, 175, 37, 0.3)',
+    border: '1px solid rgba(244, 175, 37, 0.6)',
     background: 'rgba(255,255,255,0.05)',
     color: '#ffffff',
     cursor: 'pointer'
@@ -152,14 +152,14 @@ export const modalButtonStyles = {
  */
 export const modalCardStyles = {
   base: {
-    border: '1px solid rgba(244, 175, 37, 0.3)',
+    border: '1px solid rgba(244, 175, 37, 0.6)',
     borderRadius: 8,
     padding: 12,
     background: 'rgba(255,255,255,0.05)',
     marginBottom: 8
   } as React.CSSProperties,
   elevated: {
-    border: '1px solid rgba(244, 175, 37, 0.4)',
+    border: '1px solid rgba(244, 175, 37, 0.6)',
     borderRadius: 12,
     padding: 16,
     background: 'rgba(39, 35, 27, 0.5)',
@@ -167,7 +167,7 @@ export const modalCardStyles = {
     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
   } as React.CSSProperties,
   highlight: {
-    border: '1px solid rgba(244, 175, 37, 0.5)',
+    border: '1px solid rgba(244, 175, 37, 0.6)',
     borderRadius: 8,
     padding: 12,
     background: 'rgba(244, 175, 37, 0.1)'
@@ -184,7 +184,7 @@ export const modalCardStyles = {
     padding: 8,
     background: 'rgba(255,255,255,0.1)',
     borderRadius: 4,
-    border: '1px solid rgba(244, 175, 37, 0.2)'
+    border: '1px solid rgba(244, 175, 37, 0.6)'
   } as React.CSSProperties
 }
 
@@ -194,13 +194,13 @@ export const modalCardStyles = {
 export const modalInputStyles = {
   base: {
     background: 'rgba(255, 255, 255, 0.1)',
-    border: '1px solid rgba(244, 175, 37, 0.3)',
+    border: '1px solid rgba(244, 175, 37, 0.6)',
     color: '#ffffff',
     borderRadius: '4px'
   } as React.CSSProperties,
   focus: {
     background: 'rgba(255, 255, 255, 0.15)',
-    border: '1px solid rgba(244, 175, 37, 0.5)',
+    border: '1px solid rgba(244, 175, 37, 0.6)',
     color: '#ffffff'
   } as React.CSSProperties
 }

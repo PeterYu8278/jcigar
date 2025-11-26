@@ -357,8 +357,56 @@ export interface AppConfig {
   logoUrl?: string;        // Logo URL
   appName?: string;        // 应用名称（例如：Gentlemen Club）
   hideFooter?: boolean;    // 是否隐藏 Footer
+  colorTheme?: ColorThemeConfig;  // 颜色主题配置
   updatedAt: Date;
   updatedBy: string;       // 最后更新的开发者ID
+}
+
+// 颜色主题配置
+export interface ColorThemeConfig {
+  primaryButton: {
+    startColor: string;  // 渐变起始色
+    endColor: string;    // 渐变结束色
+  };
+  secondaryButton: {
+    backgroundColor: string;
+    borderColor: string;
+    textColor: string;
+  };
+  warningButton: {
+    backgroundColor: string;
+    borderColor: string;
+    textColor: string;
+  };
+  border: {
+    primary: string;
+    secondary: string;
+  };
+  tag: {
+    success: {
+      backgroundColor: string;
+      textColor: string;
+      borderColor: string;
+    };
+    warning: {
+      backgroundColor: string;
+      textColor: string;
+      borderColor: string;
+    };
+    error: {
+      backgroundColor: string;
+      textColor: string;
+      borderColor: string;
+    };
+  };
+  text: {
+    primary: string;
+    secondary: string;
+    tertiary: string;
+  };
+  icon: {
+    primary: string;
+  };
 }
 
 export interface Permission {

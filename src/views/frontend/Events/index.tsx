@@ -201,7 +201,7 @@ const Events: React.FC = () => {
             }}>
               <h2 style={{
                 color: '#FFFFFF',
-                fontSize: '20px',
+                fontSize: '16px',
                 fontWeight: 'bold',
                 lineHeight: '1.2',
                 margin: 0,
@@ -249,18 +249,18 @@ const Events: React.FC = () => {
                   padding: '8px 24px',
                   borderRadius: '9999px',
                   cursor: event.status === 'completed' || !user ? 'not-allowed' : 'pointer',
-                  boxShadow: '0 4px 15px rgba(244, 175, 37, 0.3)',
+                  boxShadow: '0 4px 15px rgba(244, 175, 37, 0.6)',
                   transition: 'all 0.3s ease',
                   opacity: event.status === 'completed' || !user ? 0.6 : 1
                 }}
                 onMouseEnter={(e) => {
                   if (event.status !== 'completed' && user) {
-                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(244, 175, 37, 0.5)'
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(244, 175, 37, 0.6)'
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (event.status !== 'completed' && user) {
-                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(244, 175, 37, 0.3)'
+                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(244, 175, 37, 0.6)'
                   }
                 }}
                 onClick={async () => {

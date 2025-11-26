@@ -1,6 +1,6 @@
 // 合并后的驻店计时器和兑换模块组件
 import React, { useState, useEffect } from 'react';
-import { Card, Typography, Button, Space, Progress, message, Image, App } from 'antd';
+import { Card, Typography, Space, Progress, message, Image, App } from 'antd';
 import { ClockCircleOutlined, GiftOutlined, ShoppingCartOutlined, TrophyOutlined, ReloadOutlined, WalletOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../store/modules/auth';
 import { getPendingVisitSession } from '../../services/firebase/visitSessions';
@@ -8,7 +8,8 @@ import { getUserRedemptionLimits, canUserRedeem, getDailyRedemptions, getTotalRe
 import { createMembershipFeeRecord, deductMembershipFee } from '../../services/firebase/membershipFee';
 import { getUserData } from '../../services/firebase/auth';
 import { useNavigate } from 'react-router-dom';
-import type { VisitSession } from '../../types';
+import type { VisitSession, AppConfig } from '../../types';
+import { getAppConfig } from '../../services/firebase/appConfig';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -37,6 +38,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
   const [canRedeemThisHour, setCanRedeemThisHour] = useState(true);
   const [countdownSeconds, setCountdownSeconds] = useState<number | null>(null); // 倒计时剩余秒数
   const [annualFeeAmount, setAnnualFeeAmount] = useState<number | null>(null); // 年费金额
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   
   // 加载倒计时状态（从localStorage）
   useEffect(() => {
@@ -186,6 +188,21 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
         setTotalHours(0);
       }
     };
+
+  // 加载应用配置
+  useEffect(() => {
+    const loadAppConfig = async () => {
+      try {
+        const config = await getAppConfig();
+        if (config) {
+          setAppConfig(config);
+        }
+      } catch (error) {
+        console.error('加载应用配置失败:', error);
+      }
+    };
+    loadAppConfig();
+  }, []);
 
   // 加载兑换数据和时长数据
   const loadData = async () => {
@@ -350,7 +367,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                 padding: 16,
                 background: 'rgba(255, 255, 255, 0.05)',
                 borderRadius: 12,
-                border: '1px solid rgba(244, 175, 37, 0.2)',
+                border: '1px solid rgba(244, 175, 37, 0.6)',
                 marginBottom: 16,
                 backdropFilter: 'blur(10px)'
               }}>
@@ -365,7 +382,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                   </div>
                   <div style={{ 
                     height: 1, 
-                    background: 'rgba(244, 175, 37, 0.3)', 
+                    background: 'rgba(244, 175, 37, 0.6)', 
                     margin: '12px 0' 
                   }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -379,7 +396,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                 padding: 12, 
                 background: 'rgba(244, 175, 37, 0.15)',
                 borderRadius: 8,
-                border: '1px solid rgba(244, 175, 37, 0.4)',
+                border: '1px solid rgba(244, 175, 37, 0.6)',
                 backdropFilter: 'blur(6px)'
               }}>
                 <Text style={{ color: '#FDE08D', fontSize: 14 }}>
@@ -397,7 +414,6 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
               background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
               color: '#000000',
               fontWeight: 600,
-              border: 'none',
               height: 40,
               fontSize: 15,
               borderRadius: 8
@@ -417,8 +433,8 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
             content: {
               background: 'linear-gradient(180deg, #1a1612 0%, #0f0d0a 100%)',
               borderRadius: 16,
-              border: '1px solid rgba(244, 175, 37, 0.3)',
-              boxShadow: '0 8px 32px rgba(244, 175, 37, 0.2)',
+              border: '1px solid rgba(244, 175, 37, 0.6)',
+              boxShadow: '0 8px 32px rgba(244, 175, 37, 0.6)',
               padding: '24px'
             },
             header: {
@@ -629,22 +645,27 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                 
                 return (
                   <>
-                    <Button
-                      type="primary"
-                      size="large"
-                      icon={<TrophyOutlined />}
+                    <button
+                      type="button"
                       onClick={handleActivateMembership}
                       disabled={loading || annualFeeAmount === null}
-                      loading={loading}
                       style={{
-                        background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
-                        border: 'none',
+                        background: appConfig?.colorTheme?.primaryButton 
+                          ? `linear-gradient(135deg, ${appConfig.colorTheme.primaryButton.startColor} 0%, ${appConfig.colorTheme.primaryButton.endColor} 100%)`
+                          : 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
                         color: '#111',
                         height: 48,
                         fontSize: 16,
                         fontWeight: 600,
                         minWidth: 120,
-                        opacity: (loading || annualFeeAmount === null) ? 0.6 : 1
+                        opacity: (loading || annualFeeAmount === null) ? 0.6 : 1,
+                        cursor: (loading || annualFeeAmount === null) ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                        borderRadius: 6,
+                        padding: '0 16px'
                       }}
                       title={
                         annualFeeAmount === null
@@ -654,8 +675,10 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                             : `开通会员需要扣除 ${annualFeeAmount} 积分`
                       }
                     >
+                      {loading && <span style={{ display: 'inline-block', width: 16, height: 16, border: '2px solid #111', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />}
+                      <TrophyOutlined />
                       开通会员
-                    </Button>
+                    </button>
                   </>
                 );
               }
@@ -670,7 +693,9 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
               let buttonIcon: React.ReactNode = undefined;
               let buttonOnClick: () => void | Promise<void> = handleRedeem;
               let buttonStyle: React.CSSProperties = {
-                background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
+                background: appConfig?.colorTheme?.primaryButton 
+                  ? `linear-gradient(135deg, ${appConfig.colorTheme.primaryButton.startColor} 0%, ${appConfig.colorTheme.primaryButton.endColor} 100%)`
+                  : 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
                 border: 'none',
                 color: '#111',
                 height: 48,
@@ -712,14 +737,20 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
 
               return (
                 <>
-                  <Button
-                    type="primary"
-                    size="large"
-                    icon={buttonIcon}
+                  <button
+                    type="button"
                     onClick={buttonOnClick}
                     disabled={isDisabled || loading}
-                    loading={loading}
-                    style={buttonStyle}
+                    style={{
+                      ...buttonStyle,
+                      cursor: (isDisabled || loading) ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      borderRadius: 6,
+                      padding: '0 16px'
+                    }}
                     title={
                       isLowPoints
                         ? `积分不足（当前: ${currentPoints}），请先充值`
@@ -734,8 +765,10 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                                 : undefined
                     }
                   >
+                    {loading && <span style={{ display: 'inline-block', width: 16, height: 16, border: '2px solid #111', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />}
+                    {buttonIcon}
                     {buttonText}
-                  </Button>
+                  </button>
                   <Text style={{ fontSize: 13, display: 'block', marginTop: 8, color: '#FFFFFF' }}>
                     Daily Limit: {dailyCount}/{limits.dailyLimit}
                   </Text>
@@ -764,14 +797,21 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                   Complimentary Cigars
                 </Title>
               </div>
-              <Button 
-                type="link" 
-                size="small" 
-                onClick={() => navigate('/profile')} 
-                style={{ padding: 0, color: '#C48D3A', fontSize: 14, fontWeight: 600 }}
+              <button
+                type="button"
+                onClick={() => navigate('/profile')}
+                style={{
+                  background: 'none',
+                  padding: 0,
+                  color: '#C48D3A',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  textDecoration: 'none'
+                }}
               >
                 History &gt;
-              </Button>
+              </button>
             </div>
 
             {/* 合并的进度条显示 */}

@@ -151,7 +151,7 @@ const ParticipantsSummary: React.FC<ParticipantsSummaryProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {categoryStats.map(([category, stats]) => (
             <div key={category} style={{ 
-              border: '1px solid rgba(82, 196, 26, 0.2)',
+              border: '1px solid rgba(82, 196, 26, 0.5)',
       borderRadius: 6,
               overflow: 'hidden'
             }}>
