@@ -110,14 +110,14 @@ export const sendTextMessage = async (
         type: 'custom',
         message: text,
         status: 'sent',
-        messageId,
+        ...(messageId && { messageId }), // 只有当 messageId 存在时才包含该字段
         createdBy: userId,
       });
     }
 
     return {
       success: true,
-      messageId,
+      ...(messageId && { messageId }), // 只有当 messageId 存在时才包含该字段
       data: response.data,
     };
   } catch (error: any) {
@@ -299,8 +299,13 @@ export const formatPhoneNumber = (phone: string): string => {
  */
 export const recordMessage = async (message: Omit<MessageRecord, 'id' | 'createdAt'>): Promise<string | null> => {
   try {
+    // 过滤掉所有 undefined 值，因为 Firestore 不允许存储 undefined
+    const cleanMessage = Object.fromEntries(
+      Object.entries(message).filter(([_, value]) => value !== undefined)
+    );
+    
     const docRef = await addDoc(collection(db, GLOBAL_COLLECTIONS.WHAPI_MESSAGES), {
-      ...message,
+      ...cleanMessage,
       createdAt: Timestamp.fromDate(new Date()),
     });
     return docRef.id;
