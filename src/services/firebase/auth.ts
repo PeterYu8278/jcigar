@@ -225,12 +225,21 @@ export const loginWithEmailOrPhone = async (identifier: string, password: string
       return { success: false, error: new Error('请输入有效的邮箱或手机号') } as { success: false; error: Error }
     }
     
+    // 检查是否禁用了电邮登录（只禁止邮箱登录，不禁止手机号登录）
+    const { getAppConfig } = await import('./appConfig')
+    const appConfig = await getAppConfig()
+    
+    // 如果是邮箱登录且已禁用，则阻止
+    if (type === 'email' && appConfig?.auth?.disableEmailLogin) {
+      return { success: false, error: new Error('邮箱登录已被禁用，请使用手机号登录') } as { success: false; error: Error }
+    }
+    
     // 邮箱登录
     if (type === 'email') {
       return await loginUser(identifier.trim(), password)
     }
     
-    // 手机号登录
+    // 手机号登录（即使禁用了电邮登录，手机号登录仍然允许）
     const normalizedPhone = normalizePhoneNumber(identifier)
     
     if (!normalizedPhone) {
@@ -288,6 +297,13 @@ const isProfileComplete = (userData: User): boolean => {
 
 // 使用 Google 登录（新架构：通过邮箱匹配用户）
 export const loginWithGoogle = async () => {
+  // 检查是否禁用了 Google 登录
+  const { getAppConfig } = await import('./appConfig')
+  const appConfig = await getAppConfig()
+  if (appConfig?.auth?.disableGoogleLogin) {
+    return { success: false, error: new Error('Google 登录已被禁用') } as { success: false; error: Error }
+  }
+  
   // 检查是否已有 pending 的 redirect
   const hasPending = sessionStorage.getItem('googleRedirectPending');
   if (hasPending) {
@@ -403,6 +419,15 @@ export const loginWithGoogle = async () => {
 
 // 处理 Google 重定向登录结果（新架构：通过邮箱匹配）
 export const handleGoogleRedirectResult = async () => {
+  // 检查是否禁用了 Google 登录
+  const { getAppConfig } = await import('./appConfig')
+  const appConfig = await getAppConfig()
+  if (appConfig?.auth?.disableGoogleLogin) {
+    // 清除可能的 pending 标记
+    sessionStorage.removeItem('googleRedirectPending')
+    return { success: false, error: new Error('Google 登录已被禁用') } as { success: false; error: Error }
+  }
+  
   const hasPending = sessionStorage.getItem('googleRedirectPending');
   
   try {
@@ -814,12 +839,7 @@ export const getCurrentUser = (): FirebaseUser | null => {
 
 // 监听认证状态变化
 export const onAuthStateChange = (callback: (user: FirebaseUser | null) => void) => {
-  console.log('[Auth Service] 📡 注册 onAuthStateChanged 监听器')
   return onAuthStateChanged(auth, (user) => {
-    console.log('[Auth Service] 🔔 Firebase onAuthStateChanged 触发', { 
-      hasUser: !!user, 
-      uid: user?.uid 
-    })
     callback(user)
   });
 };
@@ -843,17 +863,13 @@ export const convertFirestoreTimestamps = (value: any): any => {
 };
 
 export const getUserData = async (uid: string): Promise<User | null> => {
-  console.log('[Auth Service] 📥 getUserData 开始', { uid })
   try {
     const userDoc = await getDoc(doc(db, 'users', uid));
-    console.log('[Auth Service] 📄 Firestore 查询完成', { exists: userDoc.exists() })
     if (userDoc.exists()) {
       const rawData = userDoc.data();
       const data = convertFirestoreTimestamps(rawData);
-      console.log('[Auth Service] ✅ 用户数据转换完成', { userId: uid, role: data.role })
       return { id: uid, ...data } as User;
     }
-    console.log('[Auth Service] ⚠️ 用户文档不存在', { uid })
     return null;
   } catch (error) {
     console.error('[Auth Service] ❌ getUserData 错误:', error)
@@ -866,8 +882,131 @@ export const sendPasswordResetEmailFor = async (email: string) => {
   try {
     const { sendPasswordResetEmail } = await import('firebase/auth')
     await sendPasswordResetEmail(auth, email)
+    
+    // 尝试通过 WhatsApp 发送重置密码消息（异步，不阻塞主流程）
+    try {
+      // 查找用户
+      const user = await findUserByEmail(email);
+      if (user?.id) {
+        // 生成重置链接（Firebase 会在邮件中包含）
+        const resetLink = `${window.location.origin}/reset-password`;
+        const { sendPasswordResetToUser } = await import('../whapi/integrations');
+        sendPasswordResetToUser(user.id, resetLink).catch(error => {
+          console.warn('[sendPasswordResetEmailFor] 发送WhatsApp重置密码消息失败:', error);
+        });
+      }
+    } catch (whapiError) {
+      // 静默失败，不影响主流程
+      console.warn('[sendPasswordResetEmailFor] Whapi 集成失败:', whapiError);
+    }
+    
     return { success: true }
   } catch (error) {
     return { success: false, error: error as Error }
   }
 }
+
+/**
+ * 通过手机号重置密码
+ * 生成临时密码并通过 whapi 发送
+ */
+export const resetPasswordByPhone = async (phone: string) => {
+  try {
+    // 标准化手机号
+    const normalizedPhone = normalizePhoneNumber(phone);
+    if (!normalizedPhone) {
+      return { success: false, error: '手机号格式无效' };
+    }
+
+    // 查找用户
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('profile.phone', '==', normalizedPhone), limit(1));
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
+      return { success: false, error: '未找到绑定该手机号的账户' };
+    }
+
+    const userDoc = snap.docs[0];
+    const userData = userDoc.data() as User;
+    const email = userData.email;
+
+    if (!email) {
+      return { success: false, error: '该手机号未绑定邮箱账户' };
+    }
+
+    // 生成临时密码（8位随机数字+字母）
+    const tempPassword = generateTempPassword();
+
+    // 调用 Netlify Function 创建临时密码
+    try {
+      const response = await fetch('/.netlify/functions/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          newPassword: tempPassword,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: '重置密码失败' }));
+        return { success: false, error: errorData.error || '重置密码失败' };
+      }
+    } catch (netlifyError: any) {
+      // 如果 Netlify Function 不可用，尝试直接更新（仅开发环境）
+      console.warn('[resetPasswordByPhone] Netlify Function 不可用，尝试直接更新:', netlifyError);
+      // 注意：在生产环境中，应该使用 Netlify Function 来更新密码
+      return { success: false, error: '重置密码服务暂时不可用，请稍后重试' };
+    }
+
+    // 通过 whapi 发送临时密码
+    try {
+      const { sendPasswordReset } = await import('../whapi');
+      const { getAppConfig } = await import('./appConfig');
+      const appConfig = await getAppConfig();
+      const appName = appConfig?.appName || 'Gentlemen Club';
+
+      const message = `[${appName}] 重置密码
+
+您好 ${userData.displayName || '用户'}，您的密码已重置。
+
+临时密码：${tempPassword}
+
+请尽快登录并修改密码。如非本人操作，请立即联系管理员。`;
+
+      const result = await sendPasswordReset(
+        normalizedPhone,
+        userData.displayName || '用户',
+        tempPassword,
+        userDoc.id,
+        message
+      );
+
+      if (!result.success) {
+        return { success: false, error: result.error || '发送临时密码失败' };
+      }
+    } catch (whapiError: any) {
+      return { success: false, error: `密码已重置，但发送临时密码失败: ${whapiError.message || '未知错误'}` };
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message || '重置密码失败' };
+  }
+}
+
+/**
+ * 生成临时密码（8位随机数字+字母）
+ */
+const generateTempPassword = (): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let password = '';
+  for (let i = 0; i < 8; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+}
+

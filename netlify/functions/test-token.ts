@@ -109,14 +109,10 @@ export const handler: Handler = async (event, context) => {
       }
     };
 
-    console.log('[test-token] 准备发送测试通知到 token:', token.substring(0, 20) + '...');
-    console.log('[test-token] 消息内容:', JSON.stringify(message, null, 2));
-
     // 发送消息
     let messageId: string;
     try {
       messageId = await messaging.send(message);
-      console.log('[test-token] ✅ 消息发送成功，Message ID:', messageId);
 
       return {
         statusCode: 200,

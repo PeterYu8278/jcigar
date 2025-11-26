@@ -4,7 +4,7 @@
  */
 import React, { useState } from 'react';
 import { Tabs, Button, Space } from 'antd';
-import { SaveOutlined, ReloadOutlined, FullscreenOutlined } from '@ant-design/icons';
+import { FullscreenOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import type { ColorThemeConfig } from '../../types';
 import MockDesktopLayout from './MockDesktopLayout';
@@ -14,8 +14,8 @@ import ColorPickerModal from './ColorPickerModal';
 export interface MockAppInterfaceProps {
   colorTheme: ColorThemeConfig;
   onColorChange: (colors: Partial<ColorThemeConfig>) => void;
-  onSave: () => void;
-  onReset: () => void;
+  onSave?: () => void;  // 已废弃，保留用于向后兼容
+  onReset?: () => void; // 已废弃，保留用于向后兼容
   saving?: boolean;
 }
 
@@ -71,21 +71,12 @@ const MockAppInterface: React.FC<MockAppInterfaceProps> = ({
     }
   }, [colorTheme]);
 
-  // 保存更改
-  const handleSave = () => {
-    onSave();
-  };
-
-  // 重置为默认
-  const handleReset = () => {
-    onReset();
-    setLocalColorTheme(colorTheme);
-  };
+  // 保存更改（已移除，统一使用表单底部的保存按钮）
+  // 重置为默认（已移除，统一使用表单底部的重置按钮）
 
   // 全屏预览
   const handleFullscreen = () => {
     // TODO: 实现全屏预览功能
-    console.log('全屏预览');
   };
 
   return (
@@ -109,21 +100,6 @@ const MockAppInterface: React.FC<MockAppInterfaceProps> = ({
         <Space>
           <Button icon={<FullscreenOutlined />} onClick={handleFullscreen}>
             全屏
-          </Button>
-          <Button icon={<ReloadOutlined />} onClick={handleReset} disabled={saving}>
-            重置
-          </Button>
-          <Button
-            type="primary"
-            icon={<SaveOutlined />}
-            onClick={handleSave}
-            loading={saving}
-            style={{
-              background: `linear-gradient(to right, ${localColorTheme.primaryButton.startColor}, ${localColorTheme.primaryButton.endColor})`,
-              border: 'none',
-            }}
-          >
-            保存
           </Button>
         </Space>
       </div>

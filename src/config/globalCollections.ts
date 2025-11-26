@@ -41,7 +41,9 @@ export const GLOBAL_COLLECTIONS = {
   /** 功能可见性配置集合 */
   FEATURE_VISIBILITY: 'feature_visibility',
   /** 应用配置集合 */
-  APP_CONFIG: 'app_config'
+  APP_CONFIG: 'app_config',
+  /** Whapi 消息记录集合 */
+  WHAPI_MESSAGES: 'whapi_messages'
 } as const
 
 export type CollectionName = typeof GLOBAL_COLLECTIONS[keyof typeof GLOBAL_COLLECTIONS]

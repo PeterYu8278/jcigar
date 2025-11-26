@@ -1,9 +1,9 @@
 // 登录页面
 import React, { useState, useEffect, useRef } from 'react'
 import { Form, Input, Button, Card, Typography, Space, message, Divider, Spin, Modal } from 'antd'
-import { UserOutlined, LockOutlined, GoogleOutlined, LoadingOutlined } from '@ant-design/icons'
+import { UserOutlined, LockOutlined, GoogleOutlined, LoadingOutlined, EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { loginWithEmailOrPhone, loginWithGoogle, handleGoogleRedirectResult, sendPasswordResetEmailFor } from '../../services/firebase/auth'
+import { loginWithEmailOrPhone, loginWithGoogle, handleGoogleRedirectResult, sendPasswordResetEmailFor, resetPasswordByPhone } from '../../services/firebase/auth'
 import { useAuthStore } from '../../store/modules/auth'
 import { useTranslation } from 'react-i18next'
 import { identifyInputType, normalizePhoneNumber, isValidEmail } from '../../utils/phoneNormalization'
@@ -179,19 +179,37 @@ const Login: React.FC = () => {
     }
   }
 
-  const handleResetPassword = async (values: { email: string }) => {
+  const handleResetPassword = async (values: { identifier: string }) => {
     setResetPasswordLoading(true)
     try {
-      const result = await sendPasswordResetEmailFor(values.email)
-      if (result.success) {
-        message.success('重置密码邮件已发送，请查收您的邮箱')
-        setResetPasswordVisible(false)
-        resetPasswordForm.resetFields()
+      const identifier = values.identifier.trim()
+      const type = identifyInputType(identifier)
+      
+      if (type === 'email') {
+        // 邮箱重置：发送重置链接
+        const result = await sendPasswordResetEmailFor(identifier)
+        if (result.success) {
+          message.success('重置密码邮件已发送，请查收您的邮箱')
+          setResetPasswordVisible(false)
+          resetPasswordForm.resetFields()
+        } else {
+          message.error(result.error?.message || '发送重置密码邮件失败')
+        }
+      } else if (type === 'phone') {
+        // 手机号重置：生成临时密码并通过 whapi 发送
+        const result = await resetPasswordByPhone(identifier)
+        if (result.success) {
+          message.success('密码已重置，临时密码已发送到您的手机')
+          setResetPasswordVisible(false)
+          resetPasswordForm.resetFields()
+        } else {
+          message.error(result.error || '重置密码失败')
+        }
       } else {
-        message.error(result.error?.message || '发送重置密码邮件失败')
+        message.error('请输入有效的邮箱地址或手机号')
       }
     } catch (error: any) {
-      message.error(error.message || '发送重置密码邮件失败')
+      message.error(error.message || '重置密码失败')
     } finally {
       setResetPasswordLoading(false)
     }
@@ -264,6 +282,7 @@ const Login: React.FC = () => {
             </Text>
           </div>
 
+          {/* 显示登录表单（即使禁用电邮登录，仍允许手机号登录） */}
           <Form
             name="login"
             onFinish={onFinish}
@@ -274,7 +293,7 @@ const Login: React.FC = () => {
             <Form.Item
               name="email"
               rules={[
-                { required: true, message: '请输入邮箱或手机号' },
+                { required: true, message: appConfig?.auth?.disableEmailLogin ? '请输入手机号' : '请输入邮箱或手机号' },
                 {
                   validator: (_, value) => {
                     if (!value) return Promise.resolve()
@@ -287,7 +306,12 @@ const Login: React.FC = () => {
                     const type = identifyInputType(value)
                     
                     if (type === 'unknown') {
-                      return Promise.reject(new Error('请输入有效的邮箱或手机号'))
+                      return Promise.reject(new Error(appConfig?.auth?.disableEmailLogin ? '请输入有效的手机号' : '请输入有效的邮箱或手机号'))
+                    }
+                    
+                    // 如果禁用了电邮登录，不允许使用邮箱
+                    if (appConfig?.auth?.disableEmailLogin && type === 'email') {
+                      return Promise.reject(new Error('请输入有效的手机号'))
                     }
                     
                     // 邮箱验证：必须包含 @ 和 .
@@ -310,107 +334,160 @@ const Login: React.FC = () => {
                 }
               ]}
             >
-              <Input
-                prefix={<UserOutlined style={{ color: loginError ? '#ff4d4f' : '#ffd700' }} />}
-                placeholder={loginError || "邮箱 / 手机号 (例: admin@example.com 或 0123456789)"}
-                onInput={(e) => {
-                  const input = e.currentTarget
-                  // 清除错误状态
-                  if (loginError) setLoginError('')
-                  
-                  // 禁止输入中文字符
-                  input.value = input.value.replace(/[\u4e00-\u9fa5]/g, '')
-                  // 如果不是邮箱（不含@），自动清理空格
-                  if (!input.value.includes('@')) {
-                    input.value = input.value.replace(/\s/g, '')
-                  }
-                }}
-                onFocus={() => {
-                  // 获得焦点时清除错误
-                  if (loginError) setLoginError('')
-                }}
-                style={{
-                  background: 'rgba(45, 45, 45, 0.8)',
-                  border: loginError ? '1px solid #ff4d4f' : '1px solid #444444',
-                  borderRadius: '8px',
-                  color: '#f8f8f8'
-                }}
-                className={loginError ? 'login-error-shake' : ''}
-              />
-            </Form.Item>
+                <Input
+                  prefix={<UserOutlined style={{ color: loginError ? '#ff4d4f' : '#ffd700' }} />}
+                  placeholder={loginError || (appConfig?.auth?.disableEmailLogin ? "手机号 (例: 0123456789)" : "邮箱 / 手机号 (例: admin@example.com 或 0123456789)")}
+                  onInput={(e) => {
+                    const input = e.currentTarget
+                    // 清除错误状态
+                    if (loginError) setLoginError('')
+                    
+                    // 如果禁用了电邮登录，只允许输入数字
+                    if (appConfig?.auth?.disableEmailLogin) {
+                      input.value = input.value.replace(/\D/g, '')
+                    } else {
+                      // 禁止输入中文字符
+                      input.value = input.value.replace(/[\u4e00-\u9fa5]/g, '')
+                      // 如果不是邮箱（不含@），自动清理空格
+                      if (!input.value.includes('@')) {
+                        input.value = input.value.replace(/\s/g, '')
+                      }
+                    }
+                  }}
+                  onKeyPress={(e) => {
+                    // 如果禁用了电邮登录，只允许输入数字
+                    if (appConfig?.auth?.disableEmailLogin) {
+                      const char = String.fromCharCode(e.which || e.keyCode)
+                      if (!/[0-9]/.test(char)) {
+                        e.preventDefault()
+                      }
+                    }
+                  }}
+                  onPaste={(e) => {
+                    // 如果禁用了电邮登录，只允许粘贴数字
+                    if (appConfig?.auth?.disableEmailLogin) {
+                      e.preventDefault()
+                      const paste = (e.clipboardData || (window as any).clipboardData).getData('text')
+                      const numbersOnly = paste.replace(/\D/g, '')
+                      const input = e.currentTarget as HTMLInputElement
+                      const start = input.selectionStart || 0
+                      const end = input.selectionEnd || 0
+                      const currentValue = input.value
+                      input.value = currentValue.substring(0, start) + numbersOnly + currentValue.substring(end)
+                      input.setSelectionRange(start + numbersOnly.length, start + numbersOnly.length)
+                    }
+                  }}
+                  onFocus={() => {
+                    // 获得焦点时清除错误
+                    if (loginError) setLoginError('')
+                  }}
+                  style={{
+                    background: 'rgba(45, 45, 45, 0.8)',
+                    border: loginError ? '1px solid #ff4d4f' : '1px solid #444444',
+                    borderRadius: '8px',
+                    color: '#f8f8f8'
+                  }}
+                  className={loginError ? 'login-error-shake' : ''}
+                />
+              </Form.Item>
 
-            <Form.Item
-              name="password"
-              rules={[{ required: true, message: t('auth.passwordRequired') }]}
-            >
-              <Input.Password
-                prefix={<LockOutlined style={{ color: loginError ? '#ff4d4f' : '#ffd700' }} />}
-                placeholder={t('auth.password')}
-                onInput={() => {
-                  // 清除错误状态
-                  if (loginError) setLoginError('')
-                }}
-                onFocus={() => {
-                  // 获得焦点时清除错误
-                  if (loginError) setLoginError('')
-                }}
-                style={{
-                  background: 'rgba(45, 45, 45, 0.8)',
-                  border: loginError ? '1px solid #ff4d4f' : '1px solid #444444',
-                  borderRadius: '8px',
-                  color: '#f8f8f8'
-                }}
-                className={loginError ? 'login-error-shake' : ''}
-              />
-            </Form.Item>
-
-            <Form.Item style={{ marginBottom: '16px', textAlign: 'right' }}>
-              <Button
-                type="link"
-                onClick={() => setResetPasswordVisible(true)}
-                style={{
-                  padding: 0,
-                  height: 'auto',
-                  color: '#ffd700',
-                  fontSize: '14px'
-                }}
+              <Form.Item
+                name="password"
+                rules={[{ required: true, message: t('auth.passwordRequired') }]}
               >
-                {t('auth.resetPassword')}
-              </Button>
-            </Form.Item>
+                <Input.Password
+                  prefix={<LockOutlined style={{ color: loginError ? '#ff4d4f' : '#ffd700' }} />}
+                  placeholder={t('auth.password')}
+                  iconRender={(visible) => 
+                    visible ? (
+                      <EyeOutlined style={{ color: '#ffd700' }} />
+                    ) : (
+                      <EyeInvisibleOutlined style={{ color: '#ffd700' }} />
+                    )
+                  }
+                  onInput={() => {
+                    // 清除错误状态
+                    if (loginError) setLoginError('')
+                  }}
+                  onFocus={() => {
+                    // 获得焦点时清除错误
+                    if (loginError) setLoginError('')
+                  }}
+                  style={{
+                    background: 'rgba(45, 45, 45, 0.8)',
+                    border: loginError ? '1px solid #ff4d4f' : '1px solid #444444',
+                    borderRadius: '8px',
+                    color: '#f8f8f8'
+                  }}
+                  className={loginError ? 'login-error-shake' : ''}
+                />
+              </Form.Item>
 
-            <Form.Item style={{ marginBottom: '24px' }}>
+              <Form.Item style={{textAlign: 'right' }}>
+                <Button
+                  type="link"
+                  onClick={() => setResetPasswordVisible(true)}
+                  style={{
+                    padding: 0,
+                    height: 'auto',
+                    color: '#ffd700',
+                    fontSize: '14px'
+                  }}
+                >
+                  {t('auth.resetPassword')}
+                </Button>
+              </Form.Item>
+
+              <Form.Item>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={loading}
+                  style={{ 
+                    width: '100%',
+                    height: '48px',
+                    background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: '#221c10',
+                    fontSize: '16px',
+                    fontWeight: 600,
+                    boxShadow: '0 4px 20px rgba(255, 215, 0, 0.3)'
+                  }}
+                  className="login-button"
+                >
+                  {t('auth.login')}
+                </Button>
+              </Form.Item>
+            </Form>
+
+          {/* 如果 Google 登录未被禁用，显示 Google 登录按钮 */}
+          {!appConfig?.auth?.disableGoogleLogin && (
+            <div style={{ padding: '0 20px' }}>
               <Button
-                type="primary"
-                htmlType="submit"
+                icon={<GoogleOutlined />}
+                onClick={onGoogle}
                 loading={loading}
                 style={{ 
                   width: '100%',
                   height: '48px',
-                  background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
                   border: 'none',
                   borderRadius: '8px',
                   color: '#221c10',
                   fontSize: '16px',
                   fontWeight: 600,
-                  boxShadow: '0 4px 20px rgba(255, 215, 0, 0.3)'
+                  boxShadow: '0 4px 20px rgba(255, 215, 0, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
                 }}
-                className="login-button"
               >
-                {t('auth.login')}
+                {t('auth.loginWithGoogle')}
               </Button>
-            </Form.Item>
+            </div>
+          )}
 
-            <Divider style={{ color: '#c0c0c0' }}>{t('common.or')}</Divider>
-            <Button
-              icon={<GoogleOutlined />}
-              onClick={onGoogle}
-              loading={loading}
-              style={{ width: '100%' }}
-            >
-              {t('auth.loginWithGoogle')}
-            </Button>
-          </Form>
 
           <div style={{ textAlign: 'center', paddingBottom: '20px' }}>
             <Text style={{ color: '#999999' }}>
@@ -453,9 +530,8 @@ const Login: React.FC = () => {
           resetPasswordForm.resetFields()
         }}
         footer={null}
-        style={{
-          top: '20%'
-        }}
+        width={400}
+        centered
         styles={{
           content: {
             background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(45, 45, 45, 0.9) 100%)',
@@ -477,16 +553,47 @@ const Login: React.FC = () => {
           style={{ marginTop: 24 }}
         >
           <Form.Item
-            name="email"
-            label={<span style={{ color: '#c0c0c0' }}>邮箱地址</span>}
+            name="identifier"
+            label={<span style={{ color: '#c0c0c0' }}>邮箱地址或手机号</span>}
             rules={[
-              { required: true, message: '请输入邮箱地址' },
-              { type: 'email', message: '请输入有效的邮箱地址' }
+              { required: true, message: '请输入邮箱地址或手机号' },
+              {
+                validator: (_, value) => {
+                  if (!value) return Promise.resolve()
+                  
+                  const type = identifyInputType(value)
+                  if (type === 'unknown') {
+                    return Promise.reject(new Error('请输入有效的邮箱地址或手机号'))
+                  }
+                  
+                  if (type === 'email') {
+                    if (!isValidEmail(value)) {
+                      return Promise.reject(new Error('邮箱格式无效'))
+                    }
+                  }
+                  
+                  if (type === 'phone') {
+                    const normalized = normalizePhoneNumber(value)
+                    if (!normalized) {
+                      return Promise.reject(new Error('手机号格式无效'))
+                    }
+                  }
+                  
+                  return Promise.resolve()
+                }
+              }
             ]}
           >
             <Input
               prefix={<UserOutlined style={{ color: '#ffd700' }} />}
-              placeholder="请输入您的邮箱地址"
+              placeholder="请输入您的邮箱地址或手机号"
+              onInput={(e) => {
+                const input = e.currentTarget
+                // 如果不是邮箱（不含@），自动清理空格
+                if (!input.value.includes('@')) {
+                  input.value = input.value.replace(/\s/g, '')
+                }
+              }}
               style={{
                 background: 'rgba(45, 45, 45, 0.8)',
                 border: '1px solid #444444',
@@ -521,7 +628,7 @@ const Login: React.FC = () => {
                   fontWeight: 600
                 }}
               >
-                发送重置邮件
+                 发送重置
               </Button>
             </Space>
           </Form.Item>

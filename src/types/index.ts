@@ -358,6 +358,12 @@ export interface AppConfig {
   appName?: string;        // 应用名称（例如：Gentlemen Club）
   hideFooter?: boolean;    // 是否隐藏 Footer
   colorTheme?: ColorThemeConfig;  // 颜色主题配置
+  whapi?: import('./whapi').WhapiConfig;  // Whapi.Cloud WhatsApp 配置
+  whapiTemplates?: import('./whapi').MessageTemplate[];  // 消息模板
+  auth?: {
+    disableGoogleLogin?: boolean;  // 禁用 Google 登录
+    disableEmailLogin?: boolean;   // 禁用电邮登录
+  };
   updatedAt: Date;
   updatedBy: string;       // 最后更新的开发者ID
 }

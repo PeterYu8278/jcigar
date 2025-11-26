@@ -27,54 +27,27 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const [featureVisible, setFeatureVisible] = useState<boolean | null>(null)
   const [checkingFeature, setCheckingFeature] = useState(false)
 
-  console.log('[ProtectedRoute] 🔍 状态检查', {
-    path: location.pathname,
-    loading,
-    hasUser: !!user,
-    checkingFeature,
-    featureVisible,
-    requireAuth
-  })
-
   // 检查功能可见性
   useEffect(() => {
-    console.log('[ProtectedRoute] 🔄 useEffect [checkFeatureVisibility] 触发', {
-      path: location.pathname,
-      loading,
-      hasUser: !!user
-    })
-    
     const checkFeatureVisibility = async () => {
-      console.log('[ProtectedRoute] 🔍 开始检查功能可见性')
       const featureKey = getFeatureKeyByRoute(location.pathname)
-      console.log('[ProtectedRoute] 🔑 功能键:', featureKey)
       
       if (featureKey) {
         setCheckingFeature(true)
-        console.log('[ProtectedRoute] ⏳ 设置 checkingFeature = true')
         const visible = await isFeatureVisible(featureKey)
-        console.log('[ProtectedRoute] ✅ 功能可见性检查完成', { visible })
         setFeatureVisible(visible)
         setCheckingFeature(false)
-        console.log('[ProtectedRoute] ✅ 设置 checkingFeature = false')
       } else {
         // 如果没有对应的功能键，默认可见
-        console.log('[ProtectedRoute] ℹ️ 无功能键，默认可见')
         setFeatureVisible(true)
       }
     }
     
     if (!loading && user) {
-      console.log('[ProtectedRoute] ✅ 条件满足，开始检查功能可见性')
       checkFeatureVisibility()
     } else {
-      console.log('[ProtectedRoute] ⏸️ 条件不满足，跳过功能可见性检查', {
-        loading,
-        hasUser: !!user
-      })
       // 如果未登录，也设置 featureVisible 为 true，避免一直 loading
       if (!loading && !user) {
-        console.log('[ProtectedRoute] 👤 用户未登录，设置 featureVisible = true')
         setFeatureVisible(true)
       }
     }
@@ -89,11 +62,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // 加载中状态或检查功能可见性中
   if (loading || checkingFeature || featureVisible === null) {
-    console.log('[ProtectedRoute] ⏳ 显示 Loading 状态', {
-      loading,
-      checkingFeature,
-      featureVisible
-    })
     return (
       <div style={{ 
         display: 'flex', 
@@ -105,8 +73,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       </div>
     )
   }
-  
-  console.log('[ProtectedRoute] ✅ Loading 完成，继续渲染内容')
 
   // 功能不可见（仅对已登录用户检查，开发者不受限制）
   if (user && user.role !== 'developer' && featureVisible === false) {

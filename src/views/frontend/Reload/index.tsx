@@ -32,7 +32,6 @@ const ReloadPage: React.FC = () => {
       try {
         // 直接查询 pending 状态的记录
         const pending = await getUserPendingReloadRecord(user.id);
-        console.log('[ReloadPage] 找到的 pending 记录:', pending);
         setPendingRecord(pending);
       } catch (error) {
         console.error('[ReloadPage] 检查充值记录失败:', error);
@@ -92,8 +91,6 @@ const ReloadPage: React.FC = () => {
       return;
     }
 
-    console.log('[ReloadPage] 点击撤销按钮，准备显示确认对话框');
-
     modal.confirm({
       title: '确认撤销充值请求',
       content: `确定要撤销 ${pendingRecord.requestedAmount} RM 的充值请求吗？撤销后将无法恢复。`,
@@ -103,11 +100,9 @@ const ReloadPage: React.FC = () => {
         danger: true
       },
       onOk: async () => {
-        console.log('[ReloadPage] 用户确认撤销，开始执行撤销操作');
         setLoading(true);
         try {
           const result = await cancelReloadRecord(pendingRecord.id, user.id);
-          console.log('[ReloadPage] 撤销结果:', result);
           if (result.success) {
             message.success('充值请求已撤销');
             setPendingRecord(null);

@@ -5,6 +5,8 @@ import { doc, getDoc, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { GLOBAL_COLLECTIONS } from '../../config/globalCollections';
 import type { AppConfig, ColorThemeConfig } from '../../types';
+import type { WhapiConfig, MessageTemplate } from '../../types/whapi';
+import { DEFAULT_MESSAGE_TEMPLATES } from '../../types/whapi';
 
 // 默认颜色主题配置
 const DEFAULT_COLOR_THEME: ColorThemeConfig = {
@@ -85,6 +87,33 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
     
     const data = docSnap.data();
     
+    // 处理 whapi 配置
+    const whapiConfig: WhapiConfig | undefined = data.whapi ? {
+      apiToken: data.whapi.apiToken,
+      channelId: data.whapi.channelId,
+      baseUrl: data.whapi.baseUrl,
+      enabled: data.whapi.enabled ?? false,
+    } : undefined;
+
+    // 处理消息模板
+    const whapiTemplates: MessageTemplate[] = data.whapiTemplates 
+      ? data.whapiTemplates.map((t: any) => ({
+          id: t.id || '',
+          name: t.name,
+          type: t.type,
+          template: t.template,
+          variables: t.variables || [],
+          enabled: t.enabled ?? true,
+          createdAt: t.createdAt?.toDate?.() || new Date(t.createdAt),
+          updatedAt: t.updatedAt?.toDate?.() || new Date(t.updatedAt),
+        }))
+      : DEFAULT_MESSAGE_TEMPLATES.map((t, index) => ({
+          id: `default_${index}`,
+          ...t,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }));
+
     return {
       id: docSnap.id,
       logoUrl: data.logoUrl || undefined,
@@ -99,6 +128,12 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
         text: data.colorTheme.text || DEFAULT_COLOR_THEME.text,
         icon: data.colorTheme.icon || DEFAULT_COLOR_THEME.icon,
       } : DEFAULT_COLOR_THEME,
+      whapi: whapiConfig,
+      whapiTemplates,
+      auth: data.auth ? {
+        disableGoogleLogin: data.auth.disableGoogleLogin ?? false,
+        disableEmailLogin: data.auth.disableEmailLogin ?? false,
+      } : undefined,
       updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
       updatedBy: data.updatedBy || '',
     };
@@ -112,7 +147,7 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
  * 更新应用配置
  */
 export const updateAppConfig = async (
-  updates: Partial<Pick<AppConfig, 'logoUrl' | 'appName' | 'hideFooter' | 'colorTheme'>>,
+  updates: Partial<Pick<AppConfig, 'logoUrl' | 'appName' | 'hideFooter' | 'colorTheme' | 'whapi' | 'whapiTemplates' | 'auth'>>,
   updatedBy: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {

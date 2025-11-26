@@ -30,7 +30,6 @@ const getOrCreateDeviceId = (): string => {
     // 保存到 localStorage
     localStorage.setItem(STORAGE_KEY, newDeviceId);
     
-    console.log('[FCM] 生成新的设备 ID:', newDeviceId);
     return newDeviceId;
   } catch (error) {
     // 如果 localStorage 不可用，生成临时 ID（每次可能不同）
@@ -113,7 +112,6 @@ const registerFirebaseMessagingSW = async (): Promise<ServiceWorkerRegistration 
     // 检查是否已有 Service Worker 注册
     const existingRegistration = await navigator.serviceWorker.getRegistration('/');
     if (existingRegistration) {
-      console.log('[FCM] Using existing Service Worker:', existingRegistration.scope);
       return existingRegistration;
     }
 
@@ -121,8 +119,6 @@ const registerFirebaseMessagingSW = async (): Promise<ServiceWorkerRegistration 
     const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
       scope: '/'
     });
-    
-    console.log('[FCM] Firebase Messaging Service Worker registered:', registration.scope);
     
     // 等待 Service Worker 激活
     if (registration.installing) {
@@ -167,7 +163,6 @@ const registerFirebaseMessagingSW = async (): Promise<ServiceWorkerRegistration 
       });
     } else if (registration.active) {
       // Service Worker 已经激活
-      console.log('[FCM] Service Worker already active');
     }
     
     return registration;
@@ -177,7 +172,6 @@ const registerFirebaseMessagingSW = async (): Promise<ServiceWorkerRegistration 
     // 如果注册失败，尝试使用已存在的 Service Worker
     try {
       const registration = await navigator.serviceWorker.ready;
-      console.log('[FCM] Using existing Service Worker (ready):', registration.scope);
       return registration;
     } catch (readyError) {
       console.error('[FCM] No Service Worker available:', readyError);
@@ -208,9 +202,7 @@ export const getFCMToken = async (): Promise<string | null> => {
     }
 
     // 请求权限
-    console.log('[FCM] 当前通知权限:', Notification.permission);
     const permission = await requestNotificationPermission();
-    console.log('[FCM] 请求权限后的状态:', permission);
     
     if (permission !== 'granted') {
       console.warn('[FCM] ⚠️ 通知权限未授予，当前状态:', permission);
@@ -221,7 +213,6 @@ export const getFCMToken = async (): Promise<string | null> => {
       }
       return null;
     }
-    console.log('[FCM] ✅ 通知权限已授予');
 
     // 注册 Firebase Messaging Service Worker
     const swRegistration = await registerFirebaseMessagingSW();
@@ -243,7 +234,6 @@ export const getFCMToken = async (): Promise<string | null> => {
     }
 
     // 获取 Token
-    console.log('[FCM] 调用 Firebase getToken...');
     const token = await getToken(messaging, tokenOptions);
 
     if (!token) {
@@ -251,7 +241,6 @@ export const getFCMToken = async (): Promise<string | null> => {
       return null;
     }
 
-    console.log('[FCM] ✅ 成功获取 Token，长度:', token.length);
     return token;
   } catch (error) {
     console.error('[FCM] ❌ 获取 Token 时发生错误:', error);
@@ -271,11 +260,8 @@ export const getFCMToken = async (): Promise<string | null> => {
  */
 export const saveFCMToken = async (token: string, userId: string): Promise<boolean> => {
   try {
-    console.log('[FCM] 准备保存 Token，用户ID:', userId);
-    
     // 获取或创建设备 ID
     const deviceId = getOrCreateDeviceId();
-    console.log('[FCM] 设备 ID:', deviceId);
     
     const deviceInfo = {
       platform: navigator.platform,
@@ -295,7 +281,6 @@ export const saveFCMToken = async (token: string, userId: string): Promise<boole
     // ✅ 优先检查是否已存在相同设备 ID 的 Token
     // 注意：允许多个不同 device ID 的 token 文档共存，每个设备有独立的 token
     const tokensRef = collection(db, 'users', userId, 'fcmTokens');
-    console.log('[FCM] 检查是否已存在相同设备 ID 的 Token...');
     const existingDeviceQuery = query(tokensRef, where('deviceId', '==', deviceId));
     const existingDeviceSnap = await getDocs(existingDeviceQuery);
 
@@ -306,7 +291,6 @@ export const saveFCMToken = async (token: string, userId: string): Promise<boole
       
       if (deviceDocs.length > 1) {
         // 如果同一个设备 ID 有多个文档，只保留最新的，其他的标记为 inactive
-        console.log('[FCM] 发现同一设备 ID 有多个 Token 文档，清理旧文档...');
         const sortedDocs = deviceDocs.sort((a, b) => {
           const aTime = a.data().lastUsed?.toDate?.() || a.data().createdAt?.toDate?.() || new Date(0);
           const bTime = b.data().lastUsed?.toDate?.() || b.data().createdAt?.toDate?.() || new Date(0);
@@ -326,29 +310,25 @@ export const saveFCMToken = async (token: string, userId: string): Promise<boole
           ...tokenData,
           lastUsed: new Date()
         }, { merge: true });
-        console.log('[FCM] ✅ Token 已更新（设备 ID:', deviceId, '，已清理', deviceDocs.length - 1, '个旧文档）');
       } else {
         // 只有一个文档，直接更新
         const docId = deviceDocs[0].id;
         const existingData = deviceDocs[0].data();
-        console.log('[FCM] 找到相同设备 ID 的 Token，更新文档:', docId);
         
         // 如果 token 不同，说明设备重新注册了，更新 token
         if (existingData.token !== token) {
-          console.log('[FCM] Token 已变化，更新为新 Token');
+          // Token 已变化，更新为新 Token
         }
         
         await setDoc(doc(db, 'users', userId, 'fcmTokens', docId), {
           ...tokenData,
           lastUsed: new Date()
         }, { merge: true });
-        console.log('[FCM] ✅ Token 已更新（设备 ID:', deviceId, ')');
       }
     } else {
       // ✅ 没有找到相同设备 ID 的 Token，创建新文档
       // 注意：即使存在相同 token（其他设备的），也创建新文档，因为不同设备应该有不同的 token
       // 如果确实存在相同 token，可能是异常情况，但为了支持多设备，仍然创建新文档
-      console.log('[FCM] 未找到相同设备 ID 的 Token，创建新文档（设备 ID:', deviceId, ')...');
       
       // 可选：检查是否存在相同的 token（用于日志记录，但不阻止创建）
       const existingTokenQuery = query(tokensRef, where('token', '==', token));
@@ -362,7 +342,6 @@ export const saveFCMToken = async (token: string, userId: string): Promise<boole
       // 创建新 Token 记录（允许多个不同 device ID 的 token 文档共存）
       const tokenDocRef = doc(tokensRef);
       await setDoc(tokenDocRef, tokenData);
-      console.log('[FCM] ✅ Token 已创建，文档ID:', tokenDocRef.id, '设备 ID:', deviceId);
     }
 
     return true;
@@ -472,7 +451,6 @@ const getExistingFCMToken = async (userId: string): Promise<{ token: string; doc
     const tokensRef = collection(db, 'users', userId, 'fcmTokens');
     
     // ✅ 优先使用设备 ID 查询（更准确）
-    console.log('[FCM] 使用设备 ID 查询现有 Token，设备 ID:', deviceId);
     const deviceIdQuery = query(
       tokensRef,
       where('deviceId', '==', deviceId),
@@ -484,7 +462,6 @@ const getExistingFCMToken = async (userId: string): Promise<{ token: string; doc
       // 找到当前设备的 Token
       const docSnap = deviceIdSnapshot.docs[0];
       const data = docSnap.data();
-      console.log('[FCM] ✅ 找到当前设备的 Token（设备 ID 匹配）');
       return {
         token: data.token as string,
         docId: docSnap.id
@@ -493,7 +470,6 @@ const getExistingFCMToken = async (userId: string): Promise<{ token: string; doc
     
     // 如果没有找到设备 ID 匹配的 Token，回退到查询所有活跃的 token
     // 这种情况可能发生在设备 ID 功能添加之前已存在的 token
-    console.log('[FCM] 未找到设备 ID 匹配的 Token，查询所有活跃的 Token...');
     const activeTokensQuery = query(
       tokensRef,
       where('active', '==', true)
@@ -518,7 +494,6 @@ const getExistingFCMToken = async (userId: string): Promise<{ token: string; doc
         });
       
       if (tokens.length > 0) {
-        console.log('[FCM] ✅ 找到活跃的 Token（回退匹配）');
         return {
           token: tokens[0].token,
           docId: tokens[0].id
@@ -540,14 +515,11 @@ const getExistingFCMToken = async (userId: string): Promise<{ token: string; doc
  */
 export const initializePushNotifications = async (user: User): Promise<boolean> => {
   try {
-    console.log('[FCM] 开始初始化推送通知，用户ID:', user.id);
-    
     // 检查 VAPID KEY
     if (!VAPID_KEY) {
       console.error('[FCM] ❌ VAPID_KEY 未配置，请检查环境变量 VITE_FCM_VAPID_KEY');
       return false;
     }
-    console.log('[FCM] ✅ VAPID_KEY 已配置');
     
     // 检查浏览器支持
     const isSupportedResult = await isSupported();
@@ -555,7 +527,6 @@ export const initializePushNotifications = async (user: User): Promise<boolean> 
       console.error('[FCM] ❌ 浏览器不支持 Firebase Cloud Messaging');
       return false;
     }
-    console.log('[FCM] ✅ 浏览器支持 FCM');
     
     // 检查用户认证状态
     const currentUser = auth.currentUser;
@@ -563,7 +534,6 @@ export const initializePushNotifications = async (user: User): Promise<boolean> 
       console.error('[FCM] ❌ 用户未认证，无法获取 Token');
       return false;
     }
-    console.log('[FCM] ✅ 用户已认证:', currentUser.uid);
     
     // 检查通知权限
     if (!('Notification' in window)) {
@@ -572,7 +542,6 @@ export const initializePushNotifications = async (user: User): Promise<boolean> 
     }
     
     const currentPermission = Notification.permission;
-    console.log('[FCM] 当前通知权限状态:', currentPermission);
     
     if (currentPermission === 'denied') {
       console.warn('[FCM] ⚠️ 通知权限已被拒绝，无法获取 Token。请在浏览器设置中手动开启通知权限');
@@ -580,14 +549,11 @@ export const initializePushNotifications = async (user: User): Promise<boolean> 
     }
     
     // ✅ 优化：先检查 Firestore 中是否已存在当前设备的 token
-    console.log('[FCM] 检查 Firestore 中是否已存在当前设备的 Token...');
     const existingTokenData = await getExistingFCMToken(user.id);
     
     let token: string | null = null;
     
     if (existingTokenData) {
-      console.log('[FCM] ✅ 找到当前设备的 Token，直接使用并更新 lastUsed 时间');
-      
       // 直接使用现有 token，只更新 lastUsed 时间
       // 注意：不验证 token 是否仍然有效，因为验证本身可能会触发新 token 的生成
       // 如果 token 真的失效了，Firebase 会在下次发送推送时返回错误，那时再重新获取
@@ -602,7 +568,6 @@ export const initializePushNotifications = async (user: User): Promise<boolean> 
             language: navigator.language
           }
         }, { merge: true });
-        console.log('[FCM] ✅ Token 的 lastUsed 时间已更新，跳过重新获取（设备 ID:', deviceId, ')');
         return true; // 直接返回，不需要重新获取和保存
       } catch (error) {
         console.warn('[FCM] 更新现有 Token 的 lastUsed 时出错，将获取新 Token:', error);
@@ -612,23 +577,19 @@ export const initializePushNotifications = async (user: User): Promise<boolean> 
     
     // 如果没有现有 token 或现有 token 已失效，获取新 token
     if (!token) {
-      console.log('[FCM] 开始获取新的 FCM Token...');
       token = await getFCMToken();
       if (!token) {
         console.error('[FCM] ❌ 获取 FCM Token 失败');
         return false;
       }
-      console.log('[FCM] ✅ 成功获取 FCM Token:', token.substring(0, 20) + '...');
     }
 
     // 保存 Token 到 Firestore
-    console.log('[FCM] 开始保存 Token 到 Firestore...');
     const saved = await saveFCMToken(token, user.id);
     if (!saved) {
       console.error('[FCM] ❌ 保存 Token 到 Firestore 失败');
       return false;
     }
-    console.log('[FCM] ✅ Token 已保存到 Firestore');
 
     // 同时调用 Netlify Function 保存（向后端同步）
     // 在开发环境中，Netlify Functions 可能不可用，跳过同步
@@ -658,12 +619,8 @@ export const initializePushNotifications = async (user: User): Promise<boolean> 
       } catch (error) {
         console.warn('[FCM] Error syncing token to backend:', error);
       }
-    } else {
-      // 开发环境：Token 已保存到 Firestore，Netlify Function 同步在生产环境进行
-      console.log('[FCM] Token saved to Firestore (Netlify Function sync skipped in dev mode)');
     }
 
-    console.log('[FCM] ✅ 推送通知初始化完成');
     return true;
   } catch (error) {
     console.error('[FCM] ❌ 初始化推送通知时发生错误:', error);
@@ -688,7 +645,6 @@ export const onForegroundMessage = (callback: (payload: any) => void): (() => vo
     if (!messaging) return;
 
     unsubscribe = onMessage(messaging, (payload) => {
-      console.log('[FCM] Foreground message received:', payload);
       callback(payload);
     });
   });
@@ -725,33 +681,24 @@ export const testFCMToken = async (options?: {
       };
     }
 
-    console.log('[FCM Test] 📱 开始测试推送通知...');
-    console.log('[FCM Test] 用户 ID:', userId);
-
     // 获取 token
     let token: string | null = null;
 
     if (options?.token) {
       // 使用提供的 token
       token = options.token;
-      console.log('[FCM Test] 使用提供的 Token:', token.substring(0, 20) + '...');
     } else {
       // 从 Firestore 获取当前设备的 token
-      console.log('[FCM Test] 🔍 从 Firestore 获取当前设备的 Token...');
       token = await getCurrentDeviceFCMToken(userId);
 
       if (!token) {
         // 如果 Firestore 中没有，获取新 token
-        console.log('[FCM Test] ⚠️ 未找到已存储的 Token，获取新 Token...');
         token = await getFCMToken();
         
         if (token) {
           // 保存新 token
           await saveFCMToken(token, userId);
-          console.log('[FCM Test] ✅ 已获取并保存新 Token');
         }
-      } else {
-        console.log('[FCM Test] ✅ 找到已存储的 Token');
       }
     }
 
@@ -762,15 +709,9 @@ export const testFCMToken = async (options?: {
       };
     }
 
-    console.log('[FCM Test] 📤 发送测试通知到 Token:', token.substring(0, 20) + '...');
-
     // 在开发环境中，Netlify Functions 不可用，跳过调用
     if (import.meta.env.DEV) {
       console.warn('[FCM Test] ⚠️ 开发环境：Netlify Functions 不可用');
-      console.log('[FCM Test] 💡 提示：');
-      console.log('[FCM Test]   1. 在生产环境（Netlify）中测试推送通知');
-      console.log('[FCM Test]   2. 或使用 Firebase Console 直接发送测试通知');
-      console.log('[FCM Test]   3. 当前 Token:', token);
       
       return {
         success: false,
@@ -805,11 +746,6 @@ export const testFCMToken = async (options?: {
     const result = await response.json();
 
     if (result.success) {
-      console.log('[FCM Test] ✅ 推送通知已发送！');
-      console.log('[FCM Test] Message ID:', result.messageId);
-      console.log('[FCM Test] 💡 提示：如果应用在前台，通知不会显示系统通知，而是触发 onMessage 回调');
-      console.log('[FCM Test] 💡 提示：请最小化窗口或切换到其他标签页，然后等待通知');
-      
       return {
         success: true,
         message: '推送通知已发送！请检查设备通知。如果应用在前台，请切换到后台查看。',
@@ -820,13 +756,10 @@ export const testFCMToken = async (options?: {
       console.error('[FCM Test] 错误代码:', result.error);
       
       if (result.error === 'messaging/registration-token-not-registered') {
-        console.log('[FCM Test] 🔄 Token 已失效，尝试获取新 Token 并自动重试...');
-        
         // Token 失效，获取新 token 并自动重试一次
         const newToken = await getFCMToken();
         if (newToken && newToken !== token) {
           await saveFCMToken(newToken, userId);
-          console.log('[FCM Test] ✅ 已获取新 Token，自动重试发送...');
           
           // 自动重试一次
           try {
@@ -845,7 +778,6 @@ export const testFCMToken = async (options?: {
             if (retryResponse.ok) {
               const retryResult = await retryResponse.json();
               if (retryResult.success) {
-                console.log('[FCM Test] ✅ 使用新 Token 重试成功！');
                 return {
                   success: true,
                   message: 'Token 已失效，已自动获取新 Token 并重试成功！',
@@ -910,12 +842,6 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
       enumerable: true
     });
     
-    console.log('[FCM] 🧪 开发模式：测试函数已暴露到全局对象');
-    console.log('[FCM] 使用方法：');
-    console.log('  - testFCMToken() - 使用默认消息测试');
-    console.log('  - testFCMToken({ title: "标题", body: "内容" }) - 自定义消息测试');
-    console.log('  - getCurrentDeviceFCMToken() - 获取当前设备的 Token');
-    console.log('[FCM] ✅ 函数已可用，可以在控制台直接调用');
   } catch (error) {
     console.warn('[FCM] ⚠️ 暴露测试函数到全局对象时出错:', error);
     // 回退到直接赋值

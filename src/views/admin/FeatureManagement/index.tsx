@@ -1,6 +1,6 @@
 // 功能管理页面
 import React, { useState, useEffect } from 'react';
-import { Card, Switch, Button, Space, Typography, message, Spin, Tabs, Input, Checkbox, Form } from 'antd';
+import { Card, Switch, Button, Space, Typography, message, Spin, Tabs, Input, Checkbox, Form, Divider } from 'antd';
 import { SaveOutlined, ReloadOutlined, EyeOutlined, EyeInvisibleOutlined, SearchOutlined, SettingOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../../store/modules/auth';
 import { useTranslation } from 'react-i18next';
@@ -14,6 +14,7 @@ import type { FeatureVisibilityConfig, AppConfig, ColorThemeConfig } from '../..
 import { getAppConfig, updateAppConfig, resetAppConfig } from '../../../services/firebase/appConfig';
 import ImageUpload from '../../../components/common/ImageUpload';
 import MockAppInterface from '../../../components/admin/MockAppInterface';
+import WhapiMessageTester from '../../../components/admin/WhapiMessageTester';
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -70,7 +71,8 @@ const FeatureManagement: React.FC = () => {
   const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'frontend' | 'admin' | 'app'>('frontend');
+  const [activeTab, setActiveTab] = useState<'frontend' | 'admin' | 'app' | 'whapi'>('frontend');
+  const [whapiForm] = Form.useForm();
   const [searchText, setSearchText] = useState('');
   const [config, setConfig] = useState<FeatureVisibilityConfig | null>(null);
   const [localFeatures, setLocalFeatures] = useState<Record<string, boolean>>({});
@@ -92,6 +94,21 @@ const FeatureManagement: React.FC = () => {
     loadConfig();
     loadAppConfig();
   }, []);
+
+  // 当切换到 whapi 标签页时，设置表单值
+  useEffect(() => {
+    if (activeTab === 'whapi' && appConfig) {
+      whapiForm.setFieldsValue({
+        whapiApiToken: appConfig.whapi?.apiToken || '',
+        whapiChannelId: appConfig.whapi?.channelId || '',
+        whapiBaseUrl: appConfig.whapi?.baseUrl || 'https://gate.whapi.cloud',
+        whapiEnabled: appConfig.whapi?.enabled ?? false,
+        whapiEventReminder: appConfig.whapi?.features?.eventReminder ?? true,
+        whapiVipExpiry: appConfig.whapi?.features?.vipExpiry ?? true,
+        whapiPasswordReset: appConfig.whapi?.features?.passwordReset ?? true,
+      });
+    }
+  }, [activeTab, appConfig, whapiForm]);
 
   const loadConfig = async () => {
     setLoading(true);
@@ -139,6 +156,8 @@ const FeatureManagement: React.FC = () => {
           logoUrl: config.logoUrl,
           appName: config.appName,
           hideFooter: config.hideFooter ?? false,
+          disableGoogleLogin: config.auth?.disableGoogleLogin ?? false,
+          disableEmailLogin: config.auth?.disableEmailLogin ?? false,
         });
       }
     } catch (error) {
@@ -259,12 +278,18 @@ const FeatureManagement: React.FC = () => {
           }
         : undefined;
       
+      const authConfig = {
+        disableGoogleLogin: Boolean(values.disableGoogleLogin),
+        disableEmailLogin: Boolean(values.disableEmailLogin),
+      };
+      
       const result = await updateAppConfig(
         {
           logoUrl: values.logoUrl,
           appName: values.appName,
           hideFooter: values.hideFooter ?? false,
           colorTheme: finalColorTheme, // 使用合并后的颜色主题
+          auth: authConfig,
         },
         user.id
       );
@@ -294,6 +319,7 @@ const FeatureManagement: React.FC = () => {
       const result = await resetAppConfig(user.id);
       if (result.success) {
         message.success('已重置为默认配置');
+        setPendingColorChanges({}); // 清空待保存的颜色更改
         await loadAppConfig();
       } else {
         message.error(result.error || '重置失败');
@@ -418,9 +444,10 @@ const FeatureManagement: React.FC = () => {
   }
 
   const filteredFeatures = getFilteredFeatures();
+  const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches;
 
   return (
-    <div style={{ padding: '24px' }}>
+    <div style={{ paddingBottom: isMobile ? '100px' : '0' }}>
       <Title level={2} style={{
         marginBottom: 8,
         background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
@@ -442,7 +469,7 @@ const FeatureManagement: React.FC = () => {
           borderBottom: '1px solid rgba(244,175,37,0.2)',
           marginBottom: 16
         }}>
-          {(['frontend', 'admin', 'app'] as const).map((tabKey) => {
+          {(['frontend', 'admin', 'app', 'whapi'] as const).map((tabKey) => {
             const isActive = activeTab === tabKey;
             const baseStyle: React.CSSProperties = {
               flex: 1,
@@ -479,7 +506,9 @@ const FeatureManagement: React.FC = () => {
                   ? t('featureManagement.frontendFeatures', { defaultValue: '前端功能' })
                   : tabKey === 'admin'
                   ? t('featureManagement.adminFeatures', { defaultValue: '管理后台功能' })
-                  : t('featureManagement.appSettings', { defaultValue: '应用配置' })}
+                  : tabKey === 'app'
+                  ? t('featureManagement.appSettings', { defaultValue: '应用配置' })
+                  : t('featureManagement.whapiSettings', { defaultValue: 'WhatsApp 管理' })}
               </button>
             );
           })}
@@ -487,7 +516,7 @@ const FeatureManagement: React.FC = () => {
       </div>
 
       {/* 搜索和批量操作（仅功能标签页显示） */}
-      {activeTab !== 'app' && (
+      {activeTab !== 'app' && activeTab !== 'whapi' && (
         <div style={{ marginBottom: 16, display: 'flex', gap: 12, alignItems: 'center' }}>
           <Search
             placeholder={t('featureManagement.searchPlaceholder', { defaultValue: '搜索功能...' })}
@@ -565,11 +594,45 @@ const FeatureManagement: React.FC = () => {
               valuePropName="checked"
             >
               <Switch
-                checkedChildren="隐藏"
-                unCheckedChildren="显示"
+                checkedChildren={<span style={{ color: '#000' }}>隐藏</span>}
+                unCheckedChildren={<span style={{ color: '#000' }}>显示</span>}
                 style={{
                   background: appConfigForm.getFieldValue('hideFooter') ? 'linear-gradient(to right,#FDE08D,#C48D3A)' : undefined,
                 }}
+              />
+            </Form.Item>
+
+            <Divider style={{ borderColor: 'rgba(244, 175, 37, 0.2)', margin: '24px 0' }} />
+
+            <div style={{ marginBottom: 16 }}>
+              <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600 }}>
+                登录方式配置
+              </Text>
+            </div>
+
+            <Form.Item
+              label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>禁用 Google 登录</span>}
+              name="disableGoogleLogin"
+              valuePropName="checked"
+              getValueFromEvent={(checked) => checked}
+              style={{ marginBottom: 16 }}
+            >
+              <Switch
+                checkedChildren={<span style={{ color: '#000' }}>禁用</span>}
+                unCheckedChildren={<span style={{ color: '#000' }}>启用</span>}
+              />
+            </Form.Item>
+
+            <Form.Item
+              label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>禁用电邮登录</span>}
+              name="disableEmailLogin"
+              valuePropName="checked"
+              getValueFromEvent={(checked) => checked}
+              style={{ marginBottom: 16 }}
+            >
+              <Switch
+                checkedChildren={<span style={{ color: '#000' }}>禁用</span>}
+                unCheckedChildren={<span style={{ color: '#000' }}>启用</span>}
               />
             </Form.Item>
 
@@ -619,7 +682,205 @@ const FeatureManagement: React.FC = () => {
         </Card>
       ) : null}
 
-      {activeTab !== 'app' && (
+      {/* WhatsApp 管理标签页 */}
+      {activeTab === 'whapi' ? (
+        <>
+          <Card style={{
+            background: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: 12,
+            border: '1px solid rgba(244, 175, 37, 0.6)',
+            backdropFilter: 'blur(10px)',
+            marginBottom: 16,
+          }}>
+            <Form
+              form={whapiForm}
+              layout="vertical"
+              onFinish={async () => {
+                if (!user?.id) {
+                  message.error('用户未登录');
+                  return;
+                }
+
+                setSavingAppConfig(true);
+                try {
+                  const values = await whapiForm.validateFields();
+                  const whapiConfig = {
+                    apiToken: values.whapiApiToken,
+                    channelId: values.whapiChannelId,
+                    baseUrl: values.whapiBaseUrl || 'https://gate.whapi.cloud',
+                    enabled: values.whapiEnabled ?? false,
+                    features: {
+                      eventReminder: values.whapiEventReminder ?? true,
+                      vipExpiry: values.whapiVipExpiry ?? true,
+                      passwordReset: values.whapiPasswordReset ?? true,
+                    },
+                  };
+
+                  const result = await updateAppConfig(
+                    { whapi: whapiConfig },
+                    user.id
+                  );
+
+                  if (result.success) {
+                    message.success('WhatsApp 配置已保存');
+                    await loadAppConfig();
+                    // 重新初始化 Whapi 客户端
+                    const { initWhapiClient } = await import('../../../services/whapi');
+                    await initWhapiClient(whapiConfig);
+                  } else {
+                    message.error(result.error || '保存失败');
+                  }
+                } catch (error) {
+                  message.error('保存失败');
+                } finally {
+                  setSavingAppConfig(false);
+                }
+              }}
+            >
+              <Form.Item
+                name="whapiEnabled"
+                valuePropName="checked"
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600 }}>启用 WhatsApp</span>
+                  <Switch
+                    checkedChildren={<span style={{ color: '#000' }}>启用</span>}
+                    unCheckedChildren={<span style={{ color: '#000' }}>禁用</span>}
+                  />
+                </div>
+              </Form.Item>
+
+              <Form.Item
+                label={<span style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600 }}>API 配置</span>}
+              >
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+                  <Form.Item
+                    label={<span style={{ color: '#f8f8f8', fontSize: '14px', fontWeight: 600 }}>API Token</span>}
+                    name="whapiApiToken"
+                    rules={[{ required: true, message: '请输入 API Token' }]}
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Input.Password
+                      placeholder="输入 Whapi.Cloud API Token"
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        color: '#f8f8f8',
+                      }}
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    label={<span style={{ color: '#f8f8f8', fontSize: '14px', fontWeight: 600 }}>Channel ID</span>}
+                    name="whapiChannelId"
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Input
+                      placeholder="输入 Channel ID（可选）"
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        color: '#f8f8f8',
+                      }}
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    label={<span style={{ color: '#f8f8f8', fontSize: '14px', fontWeight: 600 }}>Base URL</span>}
+                    name="whapiBaseUrl"
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Input
+                      placeholder="https://gate.whapi.cloud"
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        color: '#f8f8f8',
+                      }}
+                    />
+                  </Form.Item>
+                </div>
+              </Form.Item>
+
+              <Divider style={{ margin: '24px 0', borderColor: 'rgba(255, 255, 255, 0.1)' }} />
+
+              <div style={{ marginBottom: 16 }}>
+                <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600, display: 'block', marginBottom: 16 }}>
+                  功能开关
+                </Text>
+                <Text style={{ color: '#c0c0c0', fontSize: '14px', display: 'block', marginBottom: 16 }}>
+                  控制自动发送消息功能的启用/禁用
+                </Text>
+              </div>
+
+              <Form.Item
+                label={<span style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600 }}>功能开关</span>}
+              >
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+                  <Form.Item
+                    label={<span style={{ color: '#f8f8f8', fontSize: '14px', fontWeight: 600 }}>活动提醒</span>}
+                    name="whapiEventReminder"
+                    valuePropName="checked"
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Switch
+                      checkedChildren={<span style={{ color: '#000' }}>启用</span>}
+                      unCheckedChildren={<span style={{ color: '#000' }}>禁用</span>}
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    label={<span style={{ color: '#f8f8f8', fontSize: '14px', fontWeight: 600 }}>VIP到期提醒</span>}
+                    name="whapiVipExpiry"
+                    valuePropName="checked"
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Switch
+                      checkedChildren={<span style={{ color: '#000' }}>启用</span>}
+                      unCheckedChildren={<span style={{ color: '#000' }}>禁用</span>}
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    label={<span style={{ color: '#f8f8f8', fontSize: '14px', fontWeight: 600 }}>重置密码</span>}
+                    name="whapiPasswordReset"
+                    valuePropName="checked"
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Switch
+                      checkedChildren={<span style={{ color: '#000' }}>启用</span>}
+                      unCheckedChildren={<span style={{ color: '#000' }}>禁用</span>}
+                    />
+                  </Form.Item>
+                </div>
+              </Form.Item>
+
+              <Form.Item>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button
+                    type="primary"
+                    icon={<SaveOutlined />}
+                    htmlType="submit"
+                    loading={savingAppConfig}
+                    style={{
+                      background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                      border: 'none',
+                      color: '#000',
+                    }}
+                  >
+                    {t('featureManagement.saveChanges', { defaultValue: '保存配置' })}
+                  </Button>
+                </div>
+              </Form.Item>
+            </Form>
+          </Card>
+
+          {/* 消息发送测试 */}
+          <WhapiMessageTester whapiConfig={appConfig?.whapi} />
+        </>
+      ) : null}
+
+      {activeTab !== 'app' && activeTab !== 'whapi' && (
         <>
           <Card style={{
             background: 'rgba(255, 255, 255, 0.05)',

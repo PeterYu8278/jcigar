@@ -57,6 +57,17 @@ export const processPendingMembershipFees = async (): Promise<{
 
     for (const record of pendingRecords) {
       try {
+        // 在扣费前发送 VIP 到期提醒（异步，不阻塞主流程）
+        try {
+          const { sendVipExpiryReminderToUser } = await import('../whapi/integrations');
+          sendVipExpiryReminderToUser(record.userId, record.dueDate).catch(error => {
+            console.warn(`[processPendingMembershipFees] 发送VIP到期提醒失败 (用户 ${record.userId}):`, error);
+          });
+        } catch (whapiError) {
+          // 静默失败，不影响主流程
+          console.warn(`[processPendingMembershipFees] Whapi 集成失败 (用户 ${record.userId}):`, whapiError);
+        }
+
         const result = await deductMembershipFee(record.id);
         if (result.success) {
           processed++;

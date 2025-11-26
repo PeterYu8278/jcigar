@@ -314,6 +314,21 @@ export const registerForEvent = async (eventId: string, userId: string) => {
       'participants.registered': arrayUnion(userId),
       updatedAt: new Date(),
     });
+    
+    // 发送活动提醒（异步，不阻塞主流程）
+    try {
+      const event = await getEventById(eventId);
+      if (event) {
+        const { sendEventReminderToUser } = await import('../whapi/integrations');
+        sendEventReminderToUser(userId, event).catch(error => {
+          console.warn('[registerForEvent] 发送活动提醒失败:', error);
+        });
+      }
+    } catch (whapiError) {
+      // 静默失败，不影响主流程
+      console.warn('[registerForEvent] Whapi 集成失败:', whapiError);
+    }
+    
     return { success: true };
   } catch (error) {
     return { success: false, error: error as Error };

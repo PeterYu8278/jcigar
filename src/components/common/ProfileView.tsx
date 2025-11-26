@@ -188,9 +188,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       
       setLoadingPointsRecords(true)
       try {
-        console.log('[ProfileView] 加载积分记录，用户ID:', user.id)
         const records = await getUserPointsRecords(user.id, 50)
-        console.log('[ProfileView] 积分记录加载结果:', records.length, '条记录')
         setPointsRecords(records)
       } catch (error) {
         console.error('[ProfileView] 加载积分记录失败:', error)
