@@ -21,30 +21,29 @@ if (!getApps().length) {
 }
 
 export const handler: Handler = async (event, context) => {
-  // 只允许 POST 请求
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS'
-      },
-      body: JSON.stringify({ error: 'Method not allowed' })
-    };
-  }
+  // 统一的 CORS headers
+  const corsHeaders = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS'
+  };
 
   // 处理 CORS 预检请求
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS'
-      },
+      headers: corsHeaders,
       body: ''
+    };
+  }
+
+  // 只允许 POST 请求
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: 'Method not allowed' })
     };
   }
 
@@ -55,10 +54,7 @@ export const handler: Handler = async (event, context) => {
     if (!email || !newPassword) {
       return {
         statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        },
+        headers: corsHeaders,
         body: JSON.stringify({ error: 'Missing required fields: email, newPassword' })
       };
     }
@@ -67,10 +63,7 @@ export const handler: Handler = async (event, context) => {
     if (newPassword.length < 6) {
       return {
         statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        },
+        headers: corsHeaders,
         body: JSON.stringify({ error: 'Password must be at least 6 characters long' })
       };
     }
@@ -86,10 +79,7 @@ export const handler: Handler = async (event, context) => {
       if (error.code === 'auth/user-not-found') {
         return {
           statusCode: 404,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-          },
+          headers: corsHeaders,
           body: JSON.stringify({ error: 'User not found' })
         };
       }
@@ -105,10 +95,7 @@ export const handler: Handler = async (event, context) => {
 
     return {
       statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      },
+      headers: corsHeaders,
       body: JSON.stringify({ 
         success: true,
         message: 'Password reset successfully'
@@ -133,10 +120,7 @@ export const handler: Handler = async (event, context) => {
 
     return {
       statusCode,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      },
+      headers: corsHeaders,
       body: JSON.stringify({ error: errorMessage })
     };
   }
