@@ -30,10 +30,41 @@ const Login: React.FC = () => {
   const hasCheckedRedirect = useRef(false) // 防止 StrictMode 重复调用
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
   const [configLoading, setConfigLoading] = useState(true)
-  const lastResetPasswordTime = useRef<number | null>(null) // 记录上次发送重置密码的时间
   const [resetPasswordCooldown, setResetPasswordCooldown] = useState<number | null>(null) // 剩余冷却时间（秒）
 
   const from = location.state?.from?.pathname || '/'
+
+  // 从 localStorage 获取上次发送重置密码的时间
+  const getLastResetPasswordTime = (): number | null => {
+    try {
+      const stored = localStorage.getItem('resetPasswordLastSendTime')
+      if (stored) {
+        const timestamp = parseInt(stored, 10)
+        // 检查是否已过期（超过1分钟）
+        const now = Date.now()
+        const oneMinute = 60 * 1000
+        if (now - timestamp < oneMinute) {
+          return timestamp
+        } else {
+          // 已过期，清除存储
+          localStorage.removeItem('resetPasswordLastSendTime')
+          return null
+        }
+      }
+      return null
+    } catch {
+      return null
+    }
+  }
+
+  // 保存上次发送重置密码的时间到 localStorage
+  const saveLastResetPasswordTime = (timestamp: number) => {
+    try {
+      localStorage.setItem('resetPasswordLastSendTime', timestamp.toString())
+    } catch (error) {
+      console.error('[saveLastResetPasswordTime] 保存失败:', error)
+    }
+  }
 
   // 加载应用配置
   useEffect(() => {
@@ -65,13 +96,14 @@ const Login: React.FC = () => {
     if (!resetPasswordVisible) return
 
     const updateCooldown = () => {
-      if (lastResetPasswordTime.current === null) {
+      const lastSendTime = getLastResetPasswordTime()
+      if (lastSendTime === null) {
         setResetPasswordCooldown(null)
         return
       }
 
       const now = Date.now()
-      const timeSinceLastSend = now - lastResetPasswordTime.current
+      const timeSinceLastSend = now - lastSendTime
       const oneMinute = 60 * 1000
 
       if (timeSinceLastSend < oneMinute) {
@@ -79,6 +111,8 @@ const Login: React.FC = () => {
         setResetPasswordCooldown(remainingSeconds)
       } else {
         setResetPasswordCooldown(null)
+        // 冷却时间已过，清除存储
+        localStorage.removeItem('resetPasswordLastSendTime')
       }
     }
 
@@ -86,7 +120,7 @@ const Login: React.FC = () => {
     const interval = setInterval(updateCooldown, 1000)
 
     return () => clearInterval(interval)
-  }, [resetPasswordVisible, lastResetPasswordTime.current])
+  }, [resetPasswordVisible])
   
   // 下拉刷新处理
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -227,8 +261,10 @@ const Login: React.FC = () => {
   const handleResetPassword = async (values: { identifier: string }) => {
     // 检查是否距离上次发送不足1分钟
     const now = Date.now()
-    if (lastResetPasswordTime.current !== null) {
-      const timeSinceLastSend = now - lastResetPasswordTime.current
+    const lastSendTime = getLastResetPasswordTime()
+    
+    if (lastSendTime !== null) {
+      const timeSinceLastSend = now - lastSendTime
       const oneMinute = 60 * 1000 // 1分钟 = 60000毫秒
       
       if (timeSinceLastSend < oneMinute) {
@@ -246,7 +282,8 @@ const Login: React.FC = () => {
       if (appConfig?.auth?.disableEmailLogin && appConfig?.auth?.disableGoogleLogin) {
         const result = await resetPasswordByPhone(identifier)
         if (result.success) {
-          lastResetPasswordTime.current = Date.now() // 记录发送时间
+          const sendTime = Date.now()
+          saveLastResetPasswordTime(sendTime) // 保存发送时间到 localStorage
           message.success('密码已重置，临时密码已发送到您的手机')
           setResetPasswordVisible(false)
           resetPasswordForm.resetFields()
@@ -263,7 +300,8 @@ const Login: React.FC = () => {
         // 邮箱重置：发送重置链接
         const result = await sendPasswordResetEmailFor(identifier)
         if (result.success) {
-          lastResetPasswordTime.current = Date.now() // 记录发送时间
+          const sendTime = Date.now()
+          saveLastResetPasswordTime(sendTime) // 保存发送时间到 localStorage
           message.success('重置密码邮件已发送，请查收您的邮箱')
           setResetPasswordVisible(false)
           resetPasswordForm.resetFields()
@@ -274,7 +312,8 @@ const Login: React.FC = () => {
         // 手机号重置：生成临时密码并通过 whapi 发送
         const result = await resetPasswordByPhone(identifier)
         if (result.success) {
-          lastResetPasswordTime.current = Date.now() // 记录发送时间
+          const sendTime = Date.now()
+          saveLastResetPasswordTime(sendTime) // 保存发送时间到 localStorage
           message.success('密码已重置，临时密码已发送到您的手机')
           setResetPasswordVisible(false)
           resetPasswordForm.resetFields()
