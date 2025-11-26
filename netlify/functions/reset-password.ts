@@ -48,14 +48,23 @@ export const handler: Handler = async (event, context) => {
   }
 
   try {
-    const { email, newPassword } = JSON.parse(event.body || '{}');
+    const { uid, email, phoneNumber, newPassword } = JSON.parse(event.body || '{}');
 
     // 验证必需字段
-    if (!email || !newPassword) {
+    if (!newPassword) {
       return {
         statusCode: 400,
         headers: corsHeaders,
-        body: JSON.stringify({ error: 'Missing required fields: email, newPassword' })
+        body: JSON.stringify({ error: 'Missing required field: newPassword' })
+      };
+    }
+
+    // 至少需要 uid、email 或 phoneNumber 之一
+    if (!uid && !email && !phoneNumber) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Missing required field: uid, email, or phoneNumber' })
       };
     }
 
@@ -71,10 +80,24 @@ export const handler: Handler = async (event, context) => {
     // 获取 Firebase Auth 实例
     const auth = getAuth();
 
-    // 通过邮箱查找用户
+    // 通过 uid、email 或 phoneNumber 查找用户（优先级：uid > email > phoneNumber）
     let user;
+    let userIdentifier = '';
+    
     try {
-      user = await auth.getUserByEmail(email);
+      if (uid) {
+        // 优先使用 uid（最直接）
+        user = await auth.getUser(uid);
+        userIdentifier = `uid: ${uid}`;
+      } else if (email) {
+        // 其次使用 email
+        user = await auth.getUserByEmail(email);
+        userIdentifier = `email: ${email}`;
+      } else if (phoneNumber) {
+        // 最后使用 phoneNumber
+        user = await auth.getUserByPhoneNumber(phoneNumber);
+        userIdentifier = `phoneNumber: ${phoneNumber}`;
+      }
     } catch (error: any) {
       if (error.code === 'auth/user-not-found') {
         return {
@@ -86,12 +109,20 @@ export const handler: Handler = async (event, context) => {
       throw error;
     }
 
+    if (!user) {
+      return {
+        statusCode: 404,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'User not found' })
+      };
+    }
+
     // 更新用户密码
     await auth.updateUser(user.uid, {
       password: newPassword
     });
 
-    console.log(`[reset-password] Password reset successfully for user: ${email}`);
+    console.log(`[reset-password] Password reset successfully for user: ${userIdentifier} (uid: ${user.uid})`);
 
     return {
       statusCode: 200,

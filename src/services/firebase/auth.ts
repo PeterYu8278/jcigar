@@ -929,26 +929,36 @@ export const resetPasswordByPhone = async (phone: string) => {
 
     const userDoc = snap.docs[0];
     const userData = userDoc.data() as User;
-    const email = userData.email;
-
-    if (!email) {
-      return { success: false, error: '该手机号未绑定邮箱账户' };
-    }
+    const uid = userDoc.id; // 使用 Firestore 文档 ID 作为 uid
+    const email = userData.email; // 可选，用于日志记录
 
     // 生成临时密码（8位随机数字+字母）
     const tempPassword = generateTempPassword();
 
     // 调用 Netlify Function 创建临时密码
+    // 优先使用 uid，如果没有 uid 则使用 email 或 phoneNumber
     try {
+      const requestBody: { uid?: string; email?: string; phoneNumber?: string; newPassword: string } = {
+        newPassword: tempPassword,
+      };
+
+      // 优先使用 uid（最可靠）
+      if (uid) {
+        requestBody.uid = uid;
+      } else if (email) {
+        // 如果没有 uid，使用 email
+        requestBody.email = email;
+      } else {
+        // 如果既没有 uid 也没有 email，使用 phoneNumber
+        requestBody.phoneNumber = normalizedPhone;
+      }
+
       const response = await fetch('/.netlify/functions/reset-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          email,
-          newPassword: tempPassword,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -970,7 +980,6 @@ export const resetPasswordByPhone = async (phone: string) => {
       const appName = appConfig?.appName || 'Gentlemen Club';
 
       const message = `[${appName}] 重置密码
-
 您好 ${userData.displayName || '用户'}，您的密码已重置。
 
 临时密码：${tempPassword}
