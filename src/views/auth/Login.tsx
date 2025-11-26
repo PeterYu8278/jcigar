@@ -31,6 +31,7 @@ const Login: React.FC = () => {
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
   const [configLoading, setConfigLoading] = useState(true)
   const lastResetPasswordTime = useRef<number | null>(null) // 记录上次发送重置密码的时间
+  const [resetPasswordCooldown, setResetPasswordCooldown] = useState<number | null>(null) // 剩余冷却时间（秒）
 
   const from = location.state?.from?.pathname || '/'
 
@@ -58,6 +59,34 @@ const Login: React.FC = () => {
     }
     loadAppConfig()
   }, [])
+
+  // 重置密码冷却时间倒计时
+  useEffect(() => {
+    if (!resetPasswordVisible) return
+
+    const updateCooldown = () => {
+      if (lastResetPasswordTime.current === null) {
+        setResetPasswordCooldown(null)
+        return
+      }
+
+      const now = Date.now()
+      const timeSinceLastSend = now - lastResetPasswordTime.current
+      const oneMinute = 60 * 1000
+
+      if (timeSinceLastSend < oneMinute) {
+        const remainingSeconds = Math.ceil((oneMinute - timeSinceLastSend) / 1000)
+        setResetPasswordCooldown(remainingSeconds)
+      } else {
+        setResetPasswordCooldown(null)
+      }
+    }
+
+    updateCooldown()
+    const interval = setInterval(updateCooldown, 1000)
+
+    return () => clearInterval(interval)
+  }, [resetPasswordVisible, lastResetPasswordTime.current])
   
   // 下拉刷新处理
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -204,17 +233,7 @@ const Login: React.FC = () => {
       
       if (timeSinceLastSend < oneMinute) {
         const remainingSeconds = Math.ceil((oneMinute - timeSinceLastSend) / 1000)
-        const remainingMinutes = Math.floor(remainingSeconds / 60)
-        const remainingSecs = remainingSeconds % 60
-        
-        let timeText = ''
-        if (remainingMinutes > 0) {
-          timeText = `${remainingMinutes} 分 ${remainingSecs} 秒`
-        } else {
-          timeText = `${remainingSeconds} 秒`
-        }
-        
-        message.warning(`发送过于频繁，请等待 ${timeText} 后再试`)
+        setResetPasswordCooldown(remainingSeconds)
         return
       }
     }
@@ -626,6 +645,20 @@ const Login: React.FC = () => {
           onFinish={handleResetPassword}
           style={{ marginTop: 24 }}
         >
+          {resetPasswordCooldown !== null && resetPasswordCooldown > 0 && (
+            <div style={{
+              marginBottom: 16,
+              padding: '12px 16px',
+              background: 'rgba(255, 193, 7, 0.1)',
+              border: '1px solid rgba(255, 193, 7, 0.3)',
+              borderRadius: '8px',
+              color: '#ffc107',
+              fontSize: '14px',
+              textAlign: 'center'
+            }}>
+              发送过于频繁，请等待 {resetPasswordCooldown} 秒后再试
+            </div>
+          )}
           <Form.Item
             name="identifier"
             label={<span style={{ color: '#c0c0c0' }}>
@@ -742,15 +775,25 @@ const Login: React.FC = () => {
                 type="primary"
                 htmlType="submit"
                 loading={resetPasswordLoading}
+                disabled={resetPasswordCooldown !== null && resetPasswordCooldown > 0}
                 style={{
-                  background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                  background: resetPasswordCooldown !== null && resetPasswordCooldown > 0
+                    ? 'rgba(255, 255, 255, 0.1)'
+                    : 'linear-gradient(to right,#FDE08D,#C48D3A)',
                   border: 'none',
                   borderRadius: '8px',
-                  color: '#221c10',
-                  fontWeight: 600
+                  color: resetPasswordCooldown !== null && resetPasswordCooldown > 0
+                    ? '#999999'
+                    : '#221c10',
+                  fontWeight: 600,
+                  cursor: resetPasswordCooldown !== null && resetPasswordCooldown > 0
+                    ? 'not-allowed'
+                    : 'pointer'
                 }}
               >
-                 发送重置
+                {resetPasswordCooldown !== null && resetPasswordCooldown > 0
+                  ? `请等待 ${resetPasswordCooldown} 秒`
+                  : '发送重置'}
               </Button>
             </Space>
           </Form.Item>
