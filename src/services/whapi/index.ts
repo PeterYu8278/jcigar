@@ -258,14 +258,12 @@ export const sendPasswordReset = async (
     if (isLink) {
       // 重置链接格式
       message = `[${appName}] 重置密码
-
 您好 ${userName}，您已申请重置密码。如非本人操作，请忽略此消息。
 
 重置链接：${resetLinkOrPassword} (有效期24小时)`;
     } else {
       // 临时密码格式
       message = `[${appName}] 重置密码
-
 您好 ${userName}，您的密码已重置。
 
 临时密码：${resetLinkOrPassword}

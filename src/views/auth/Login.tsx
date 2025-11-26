@@ -29,15 +29,31 @@ const Login: React.FC = () => {
   const { t } = useTranslation()
   const hasCheckedRedirect = useRef(false) // 防止 StrictMode 重复调用
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
+  const [configLoading, setConfigLoading] = useState(true)
+  const lastResetPasswordTime = useRef<number | null>(null) // 记录上次发送重置密码的时间
 
   const from = location.state?.from?.pathname || '/'
 
   // 加载应用配置
   useEffect(() => {
     const loadAppConfig = async () => {
-      const config = await getAppConfig()
-      if (config) {
-        setAppConfig(config)
+      setConfigLoading(true)
+      try {
+        const config = await getAppConfig()
+        if (config) {
+          setAppConfig(config)
+        } else {
+          // 如果配置加载失败，使用默认禁用状态
+          setAppConfig({
+            id: 'default',
+            auth: {
+              disableGoogleLogin: true,
+              disableEmailLogin: true,
+            },
+          } as AppConfig)
+        }
+      } finally {
+        setConfigLoading(false)
       }
     }
     loadAppConfig()
@@ -180,15 +196,45 @@ const Login: React.FC = () => {
   }
 
   const handleResetPassword = async (values: { identifier: string }) => {
+    // 检查是否距离上次发送不足1分钟
+    const now = Date.now()
+    if (lastResetPasswordTime.current !== null) {
+      const timeSinceLastSend = now - lastResetPasswordTime.current
+      const oneMinute = 60 * 1000 // 1分钟 = 60000毫秒
+      
+      if (timeSinceLastSend < oneMinute) {
+        const remainingSeconds = Math.ceil((oneMinute - timeSinceLastSend) / 1000)
+        message.warning(`请等待 ${remainingSeconds} 秒后再试`)
+        return
+      }
+    }
+    
     setResetPasswordLoading(true)
     try {
       const identifier = values.identifier.trim()
+      
+      // 如果禁用了邮箱和 Google 登录，只处理手机号重置
+      if (appConfig?.auth?.disableEmailLogin && appConfig?.auth?.disableGoogleLogin) {
+        const result = await resetPasswordByPhone(identifier)
+        if (result.success) {
+          lastResetPasswordTime.current = Date.now() // 记录发送时间
+          message.success('密码已重置，临时密码已发送到您的手机')
+          setResetPasswordVisible(false)
+          resetPasswordForm.resetFields()
+        } else {
+          message.error(result.error || '重置密码失败')
+        }
+        return
+      }
+      
+      // 否则根据输入类型处理
       const type = identifyInputType(identifier)
       
       if (type === 'email') {
         // 邮箱重置：发送重置链接
         const result = await sendPasswordResetEmailFor(identifier)
         if (result.success) {
+          lastResetPasswordTime.current = Date.now() // 记录发送时间
           message.success('重置密码邮件已发送，请查收您的邮箱')
           setResetPasswordVisible(false)
           resetPasswordForm.resetFields()
@@ -199,6 +245,7 @@ const Login: React.FC = () => {
         // 手机号重置：生成临时密码并通过 whapi 发送
         const result = await resetPasswordByPhone(identifier)
         if (result.success) {
+          lastResetPasswordTime.current = Date.now() // 记录发送时间
           message.success('密码已重置，临时密码已发送到您的手机')
           setResetPasswordVisible(false)
           resetPasswordForm.resetFields()
@@ -264,6 +311,22 @@ const Login: React.FC = () => {
         position: 'relative',
         zIndex: 1
       }}>
+        {configLoading ? (
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            minHeight: '300px',
+            flexDirection: 'column',
+            gap: '16px'
+          }}>
+            <Spin 
+              indicator={<LoadingOutlined style={{ fontSize: 32, color: '#ffd700' }} spin />}
+              size="large"
+            />
+            <Text style={{ color: '#c0c0c0' }}>加载中...</Text>
+          </div>
+        ) : (
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
           <div style={{ textAlign: 'center', paddingTop: '20px' }}>
             <Title level={2} style={{ 
@@ -509,6 +572,7 @@ const Login: React.FC = () => {
             </Text>
           </div>
         </Space>
+        )}
       </Card>
 
       {/* 重置密码 Modal */}
@@ -554,13 +618,29 @@ const Login: React.FC = () => {
         >
           <Form.Item
             name="identifier"
-            label={<span style={{ color: '#c0c0c0' }}>邮箱地址或手机号</span>}
+            label={<span style={{ color: '#c0c0c0' }}>
+              {appConfig?.auth?.disableEmailLogin && appConfig?.auth?.disableGoogleLogin 
+                ? '手机号' 
+                : '邮箱地址或手机号'}
+            </span>}
             rules={[
-              { required: true, message: '请输入邮箱地址或手机号' },
+              { required: true, message: appConfig?.auth?.disableEmailLogin && appConfig?.auth?.disableGoogleLogin 
+                ? '请输入手机号' 
+                : '请输入邮箱地址或手机号' },
               {
                 validator: (_, value) => {
                   if (!value) return Promise.resolve()
                   
+                  // 如果禁用了邮箱和 Google 登录，只验证手机号
+                  if (appConfig?.auth?.disableEmailLogin && appConfig?.auth?.disableGoogleLogin) {
+                    const normalized = normalizePhoneNumber(value)
+                    if (!normalized) {
+                      return Promise.reject(new Error('手机号格式无效'))
+                    }
+                    return Promise.resolve()
+                  }
+                  
+                  // 否则验证邮箱或手机号
                   const type = identifyInputType(value)
                   if (type === 'unknown') {
                     return Promise.reject(new Error('请输入有效的邮箱地址或手机号'))
@@ -586,12 +666,44 @@ const Login: React.FC = () => {
           >
             <Input
               prefix={<UserOutlined style={{ color: '#ffd700' }} />}
-              placeholder="请输入您的邮箱地址或手机号"
+              placeholder={
+                appConfig?.auth?.disableEmailLogin && appConfig?.auth?.disableGoogleLogin
+                  ? "手机号 (例: 0123456789)"
+                  : "请输入您的邮箱地址或手机号"
+              }
               onInput={(e) => {
                 const input = e.currentTarget
-                // 如果不是邮箱（不含@），自动清理空格
-                if (!input.value.includes('@')) {
-                  input.value = input.value.replace(/\s/g, '')
+                // 如果禁用了邮箱和 Google 登录，只允许输入数字
+                if (appConfig?.auth?.disableEmailLogin && appConfig?.auth?.disableGoogleLogin) {
+                  input.value = input.value.replace(/\D/g, '')
+                } else {
+                  // 如果不是邮箱（不含@），自动清理空格
+                  if (!input.value.includes('@')) {
+                    input.value = input.value.replace(/\s/g, '')
+                  }
+                }
+              }}
+              onKeyPress={(e) => {
+                // 如果禁用了邮箱和 Google 登录，只允许输入数字
+                if (appConfig?.auth?.disableEmailLogin && appConfig?.auth?.disableGoogleLogin) {
+                  const char = String.fromCharCode(e.which || e.keyCode)
+                  if (!/[0-9]/.test(char)) {
+                    e.preventDefault()
+                  }
+                }
+              }}
+              onPaste={(e) => {
+                // 如果禁用了邮箱和 Google 登录，只允许粘贴数字
+                if (appConfig?.auth?.disableEmailLogin && appConfig?.auth?.disableGoogleLogin) {
+                  e.preventDefault()
+                  const paste = (e.clipboardData || (window as any).clipboardData).getData('text')
+                  const numbersOnly = paste.replace(/\D/g, '')
+                  const input = e.currentTarget as HTMLInputElement
+                  const start = input.selectionStart || 0
+                  const end = input.selectionEnd || 0
+                  const currentValue = input.value
+                  input.value = currentValue.substring(0, start) + numbersOnly + currentValue.substring(end)
+                  input.setSelectionRange(start + numbersOnly.length, start + numbersOnly.length)
                 }
               }}
               style={{

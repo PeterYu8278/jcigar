@@ -73,6 +73,10 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
         appName: 'Gentlemen Club',
         hideFooter: false,
         colorTheme: DEFAULT_COLOR_THEME,
+        auth: {
+          disableGoogleLogin: true,
+          disableEmailLogin: true,
+        },
         updatedAt: new Date(),
         updatedBy: '',
       };
@@ -131,9 +135,12 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
       whapi: whapiConfig,
       whapiTemplates,
       auth: data.auth ? {
-        disableGoogleLogin: data.auth.disableGoogleLogin ?? false,
-        disableEmailLogin: data.auth.disableEmailLogin ?? false,
-      } : undefined,
+        disableGoogleLogin: data.auth.disableGoogleLogin ?? true,
+        disableEmailLogin: data.auth.disableEmailLogin ?? true,
+      } : {
+        disableGoogleLogin: true,
+        disableEmailLogin: true,
+      },
       updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
       updatedBy: data.updatedBy || '',
     };
