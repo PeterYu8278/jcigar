@@ -204,7 +204,17 @@ const Login: React.FC = () => {
       
       if (timeSinceLastSend < oneMinute) {
         const remainingSeconds = Math.ceil((oneMinute - timeSinceLastSend) / 1000)
-        message.warning(`请等待 ${remainingSeconds} 秒后再试`)
+        const remainingMinutes = Math.floor(remainingSeconds / 60)
+        const remainingSecs = remainingSeconds % 60
+        
+        let timeText = ''
+        if (remainingMinutes > 0) {
+          timeText = `${remainingMinutes} 分 ${remainingSecs} 秒`
+        } else {
+          timeText = `${remainingSeconds} 秒`
+        }
+        
+        message.warning(`发送过于频繁，请等待 ${timeText} 后再试`)
         return
       }
     }
