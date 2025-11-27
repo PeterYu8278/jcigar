@@ -96,6 +96,8 @@ const FeatureManagement: React.FC = () => {
     state: 'idle' | 'deploying' | 'success' | 'error';
     message: string;
     links?: string[];
+    manualDeployCommand?: string;
+    indexesData?: any;
   }>({ state: 'idle', message: '' });
   const [firebaseConfigCode, setFirebaseConfigCode] = useState<string>('');
 
@@ -619,6 +621,8 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
           state: 'error',
           message: errorMessage,
           links: result.links,
+          manualDeployCommand: result.manualDeployCommand,
+          indexesData: result.indexesData,
         });
         
         if (result.manualDeployCommand) {
@@ -1997,19 +2001,54 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                         </>
                       )}
                       {indexDeployStatus.state === 'error' && (
-                        <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginTop: 8 }}>
-                          提示：您也可以使用 Firebase CLI 命令手动部署：
-                          <br />
-                          <code style={{ 
-                            background: 'rgba(255, 255, 255, 0.1)', 
-                            padding: '4px 8px', 
-                            borderRadius: '4px',
-                            display: 'inline-block',
-                            marginTop: 4
-                          }}>
-                            firebase deploy --only firestore:indexes
-                          </code>
-                        </Text>
+                        <div style={{ marginTop: 8 }}>
+                          <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 8 }}>
+                            提示：由于 Netlify Function 环境限制，无法自动部署。请使用以下方法之一：
+                          </Text>
+                          {indexDeployStatus.manualDeployCommand && (
+                            <div style={{ marginBottom: 8 }}>
+                              <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 4 }}>
+                                <strong>方法 1：使用 Firebase CLI（推荐）</strong>
+                              </Text>
+                              <div style={{ 
+                                background: 'rgba(255, 255, 255, 0.1)', 
+                                padding: '8px 12px', 
+                                borderRadius: '4px',
+                                marginTop: 4
+                              }}>
+                                <code style={{ 
+                                  color: '#ffd700',
+                                  fontSize: '12px',
+                                  fontFamily: 'monospace',
+                                  wordBreak: 'break-all'
+                                }}>
+                                  {indexDeployStatus.manualDeployCommand}
+                                </code>
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  icon={<CopyOutlined />}
+                                  onClick={async () => {
+                                    try {
+                                      await navigator.clipboard.writeText(indexDeployStatus.manualDeployCommand || '');
+                                      message.success('命令已复制到剪贴板');
+                                    } catch (error) {
+                                      message.error('复制失败');
+                                    }
+                                  }}
+                                  style={{ color: '#ffd700', marginLeft: 8 }}
+                                >
+                                  复制
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                          <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block' }}>
+                            <strong>方法 2：通过 Firebase Console 手动创建</strong>
+                            <br />
+                            点击上方的链接，在 Firebase Console 中手动创建索引。
+                          </Text>
+                        </div>
                       )}
                     </div>
                   }
