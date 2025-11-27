@@ -259,6 +259,18 @@ service cloud.firestore {
     }
     
     // ================================
+    // App Config Collection (应用配置)
+    // ================================
+    match /app_config/{configId} {
+      // 读取：允许所有用户（包括未认证用户）读取应用配置
+      // 这是必需的，因为登录页面需要读取配置来决定是否显示登录选项
+      allow read: if true;
+      
+      // 创建/更新/删除：仅管理员
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ================================
     // 默认拒绝规则
     // ================================
     match /{document=**} {
