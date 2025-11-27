@@ -349,7 +349,7 @@ const Home: React.FC = () => {
               modules={[Autoplay, Navigation, Pagination, A11y]}
               slidesPerView="auto"
               spaceBetween={12}
-              loop={brands.filter(brand => brand.status === 'active').length > 8}
+              loop={brands.filter(brand => brand.status === 'active').length > 16}
               autoplay={{ 
                 delay: 0,
                 disableOnInteraction: false,
@@ -486,7 +486,7 @@ const Home: React.FC = () => {
               modules={[Autoplay, Navigation, Pagination, A11y]}
               slidesPerView="auto"
               spaceBetween={12}
-              loop={cigars.length > 8}
+              loop={cigars.length > 16}
               autoplay={{ 
                 delay: 0,
                 disableOnInteraction: false,

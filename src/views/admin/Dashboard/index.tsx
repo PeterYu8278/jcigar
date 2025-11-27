@@ -204,17 +204,18 @@ const AdminDashboard: React.FC = () => {
               outline: 'none',
               borderBottom: '2px solid transparent',
               cursor: 'pointer',
-              background: 'none',
+              background: 'transparent',
               border: 'none',
               position: 'relative' as const,
             }
             const activeStyle: React.CSSProperties = {
               color: 'transparent',
               backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-                WebkitBackgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
             }
             const inactiveStyle: React.CSSProperties = {
               color: '#A0A0A0',
+              background: 'transparent',
             }
             return (
               <button

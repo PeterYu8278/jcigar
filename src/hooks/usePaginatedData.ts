@@ -100,8 +100,9 @@ export function usePaginatedData<T>(
     setError(null)
 
     try {
-      // 如果请求的是第一页或筛选条件变化，重置状态
-      if (page === 1 || JSON.stringify(filters) !== JSON.stringify(currentFilters)) {
+      // 如果筛选条件变化，重置状态
+      const filtersChanged = JSON.stringify(filters) !== JSON.stringify(currentFilters)
+      if (filtersChanged) {
         setData([])
         setLastDoc(null)
         setPageDocs(new Map())
@@ -111,11 +112,41 @@ export function usePaginatedData<T>(
           return newMap
         })
         setCurrentFilters(filters)
+        // 如果筛选条件变化，强制从第1页开始
+        if (page !== 1) {
+          // 如果请求的不是第1页但筛选条件变化，改为加载第1页
+          const result = await fetchFunction(pageSize, null, filters)
+          setData(result.data)
+          setCurrentPage(1)
+          setHasMore(result.hasMore)
+          setLastDoc(result.lastDoc)
+          if (result.lastDoc) {
+            setPageDocs(prev => {
+              const newMap = new Map(prev)
+              newMap.set(1, result.lastDoc)
+              return newMap
+            })
+          }
+          return
+        }
       }
 
       // 获取上一页的最后一个文档作为起始点
-      const prevPage = page - 1
-      const startAfterDoc = pageDocs.get(prevPage) || null
+      let startAfterDoc: QueryDocumentSnapshot | null = null
+      if (page > 1) {
+        // 从第2页开始，需要使用上一页的最后一个文档
+        // 优先使用 pageDocs 中保存的上一页文档，如果没有则使用 lastDoc
+        const prevPage = page - 1
+        startAfterDoc = pageDocs.get(prevPage) || lastDoc
+        
+        // 如果仍然没有，说明可能有问题，记录警告
+        if (!startAfterDoc) {
+          console.warn(`[usePaginatedData] 无法找到第${prevPage}页的文档引用，可能无法正确加载第${page}页`)
+        }
+      } else {
+        // 第1页不需要 startAfter
+        startAfterDoc = null
+      }
 
       // 执行查询
       const result = await fetchFunction(pageSize, startAfterDoc, filters)
@@ -126,11 +157,18 @@ export function usePaginatedData<T>(
       setHasMore(result.hasMore)
       setLastDoc(result.lastDoc)
 
-      // 保存当前页的最后一个文档
+      // 保存当前页的最后一个文档（用于后续分页）
       if (result.lastDoc) {
         setPageDocs(prev => {
           const newMap = new Map(prev)
           newMap.set(page, result.lastDoc)
+          return newMap
+        })
+      } else if (page === 1) {
+        // 第1页如果没有数据，也要记录
+        setPageDocs(prev => {
+          const newMap = new Map(prev)
+          newMap.set(1, null)
           return newMap
         })
       }

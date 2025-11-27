@@ -450,17 +450,20 @@ const AdminInventory: React.FC = () => {
         <Space size="small" style={{ justifyContent: 'center', width: '100%' }}>
           <Button type="link" icon={<EditOutlined />} size="small" onClick={() => {
             setEditing(record)
-            form.setFieldsValue({
-              name: record.name,
-              brand: record.brand,
-              origin: record.origin,
-              size: record.size,
-              strength: record.strength,
-              price: record.price,
-              stock: getComputedStock((record as any)?.id) ?? 0,
-              minStock: (record as any)?.inventory?.minStock ?? 0,
-              reserved: (record as any)?.inventory?.reserved ?? 0,
-            })
+            // 使用 setTimeout 确保 Modal 已经打开，Form 已经渲染
+            setTimeout(() => {
+              form.setFieldsValue({
+                name: record.name,
+                brand: record.brand,
+                origin: record.origin,
+                size: record.size,
+                strength: record.strength,
+                price: record.price,
+                stock: getComputedStock((record as any)?.id) ?? 0,
+                minStock: (record as any)?.inventory?.minStock ?? 0,
+                reserved: (record as any)?.inventory?.reserved ?? 0,
+              })
+            }, 0)
           }}>
           </Button>
           <Button type="link" icon={<SearchOutlined />} size="small" onClick={() => {
@@ -3553,9 +3556,11 @@ const AdminInventory: React.FC = () => {
                 onCancel={() => setOutModalOpen(false)}
                 footer={null}
                 {...getResponsiveModalConfig(isMobile, true, 720)}
-                bodyStyle={{ 
-                  overflowX: 'hidden',
-                  paddingBottom: 16
+                styles={{ 
+                  body: {
+                    overflowX: 'hidden',
+                    paddingBottom: 16
+                  }
                 }}
               >
                 <Form form={outForm} layout="vertical" className="dark-theme-form" onFinish={async (values: { referenceNo?: string; reason?: string; items: { cigarId: string; quantity: number }[] }) => {
@@ -3829,7 +3834,11 @@ const AdminInventory: React.FC = () => {
       <Modal
         title={editing ? t('common.edit') : t('common.add')}
         open={creating || !!editing}
-        onCancel={() => { setCreating(false); setEditing(null) }}
+        onCancel={() => { 
+          setCreating(false); 
+          setEditing(null);
+          form.resetFields();
+        }}
         {...getResponsiveModalConfig(isMobile, true, 600)}
         footer={isMobile ? (
           <div style={{ padding: '8px 0' }}>
@@ -3885,6 +3894,7 @@ const AdminInventory: React.FC = () => {
                             setItems(await getCigars())
                             setSelectedRowKeys([])
                             setEditing(null)
+                            form.resetFields()
                           } else {
                             message.error(t('common.deleteFailed'))
                           }
@@ -3900,92 +3910,16 @@ const AdminInventory: React.FC = () => {
               )}
             </Space>
             <Space>
-              <Button onClick={() => { setCreating(false); setEditing(null) }}>{t('common.cancel')}</Button>
+              <Button onClick={() => { 
+                setCreating(false); 
+                setEditing(null);
+                form.resetFields();
+              }}>{t('common.cancel')}</Button>
               <button disabled={loading} onClick={() => form.submit()} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease', opacity: loading ? 0.6 : 1 }}>{t('common.confirm')}</button>
             </Space>
           </div>
         )}
       >
-        <div style={{ maxWidth: isMobile ? 520 : 'unset', margin: isMobile ? '0 auto' : undefined }}>
-          {/* 图片上传占位 */}
-          {isMobile && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-              <ImageUpload
-                value={(() => {
-                  const imgs = (form.getFieldValue('images') || []) as string[]
-                  if (imgs && imgs.length > 0) return imgs[0]
-                  const existing = (editing as any)?.images
-                  return existing && existing.length > 0 ? existing[0] : undefined
-                })()}
-                onChange={async (url) => {
-                  const next = url ? [url] : []
-                  try { form.setFieldsValue({ images: next }) } catch {}
-                  if (editing) {
-                    setLoading(true)
-                    try {
-                      const res = await updateDocument<Cigar>(COLLECTIONS.CIGARS, (editing as any).id, { images: next, updatedAt: new Date() } as any)
-                      if (res.success) {
-                        message.success(t('common.saved'))
-                        const list = await getCigars()
-                        setItems(list)
-                      } else {
-                        message.error(t('common.saveFailed'))
-                      }
-                    } finally {
-                      setLoading(false)
-                    }
-                  }
-                }}
-                folder="products"
-                showPreview={true}
-                width={100}
-                height={100}
-              />
-              <div style={{ fontSize: 12, color: 'rgba(244,175,37,0.8)' }}>{t('common.uploadProductImage')}</div>
-            </div>
-          )}
-          
-          {/* 桌面端图片上传 */}
-          {!isMobile && (
-            <div style={{ marginBottom: 16 }}>
-              <Form.Item label={t('common.productImage')} name="images">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <ImageUpload
-                    value={(() => {
-                      const imgs = (form.getFieldValue('images') || []) as string[]
-                      if (imgs && imgs.length > 0) return imgs[0]
-                      const existing = (editing as any)?.images
-                      return existing && existing.length > 0 ? existing[0] : undefined
-                    })()}
-                    onChange={async (url) => {
-                      const next = url ? [url] : []
-                      try { form.setFieldsValue({ images: next }) } catch {}
-                      if (editing) {
-                        setLoading(true)
-                        try {
-                          const res = await updateDocument<Cigar>(COLLECTIONS.CIGARS, (editing as any).id, { images: next, updatedAt: new Date() } as any)
-                          if (res.success) {
-                            message.success(t('common.saved'))
-                            const list = await getCigars()
-                            setItems(list)
-                          } else {
-                            message.error(t('common.saveFailed'))
-                          }
-                        } finally {
-                          setLoading(false)
-                        }
-                      }
-                    }}
-                    folder="products"
-                    showPreview={true}
-                    width={100}
-                    height={100}
-                  />
-                </div>
-              </Form.Item>
-            </div>
-          )}
-        </div>
         <Form form={form} layout="horizontal" labelCol={{ flex: '100px' }} wrapperCol={{ flex: 'auto' }} className="dark-theme-form" onFinish={async (values: any) => {
           setLoading(true)
           try {
@@ -4018,6 +3952,7 @@ const AdminInventory: React.FC = () => {
             setItems(list)
             setCreating(false)
             setEditing(null)
+            form.resetFields()
           } finally {
             setLoading(false)
           }
@@ -5309,110 +5244,113 @@ const AdminInventory: React.FC = () => {
                   </Button>
                 </div>
                 
-                {fields.map((field, index) => (
-                  <div
-                    key={field.key}
-                    style={{
-                      marginBottom: 8
-                    }}
-                  >
-                    <Form.Item
-                      {...field}
-                      name={[field.name, 'cigarName']}
-                      hidden
+                {fields.map((field, index) => {
+                  const { key, ...restField } = field
+                  return (
+                    <div
+                      key={key}
+                      style={{
+                        marginBottom: 8
+                      }}
                     >
-                      <Input />
-                    </Form.Item>
-                    
-                    <Form.Item
-                      {...field}
-                      name={[field.name, 'itemType']}
-                      hidden
-                      initialValue="cigar"
-                    >
-                      <Input />
-                    </Form.Item>
-                    
-                    {/* 产品标题、产品选择、数量、单价、删除按钮 - 全部同行显示 */}
-                    <Row gutter={12} align="middle">
-                      <Col flex="80px">
-                        <span style={{ fontWeight: 600, color: 'rgba(255, 255, 255, 0.6)' }}>产品 {index + 1}</span>
-                      </Col>
-                      <Col flex="auto">
-                        <Form.Item
-                          {...field}
-                          name={[field.name, 'cigarId']}
-                          rules={[{ required: true, message: '请选择产品' }]}
-                          style={{ marginBottom: 0 }}
-                        >
-                          <Select
-                            showSearch
-                            placeholder="选择雪茄产品"
-                            optionFilterProp="children"
-                            onChange={(value) => {
-                              const cigar = items.find(c => c.id === value)
-                              if (cigar) {
-                                const currentItems = orderEditForm.getFieldValue('items') || []
-                                currentItems[index] = {
-                                  ...currentItems[index],
-                                  cigarId: value,
-                                  cigarName: cigar.name,
-                                  itemType: 'cigar'
-                                }
-                                orderEditForm.setFieldsValue({ items: currentItems })
-                              }
-                            }}
+                      <Form.Item
+                        {...restField}
+                        name={[field.name, 'cigarName']}
+                        hidden
+                      >
+                        <Input />
+                      </Form.Item>
+                      
+                      <Form.Item
+                        {...restField}
+                        name={[field.name, 'itemType']}
+                        hidden
+                        initialValue="cigar"
+                      >
+                        <Input />
+                      </Form.Item>
+                      
+                      {/* 产品标题、产品选择、数量、单价、删除按钮 - 全部同行显示 */}
+                      <Row gutter={12} align="middle">
+                        <Col flex="80px">
+                          <span style={{ fontWeight: 600, color: 'rgba(255, 255, 255, 0.6)' }}>产品 {index + 1}</span>
+                        </Col>
+                        <Col flex="auto">
+                          <Form.Item
+                            {...restField}
+                            name={[field.name, 'cigarId']}
+                            rules={[{ required: true, message: '请选择产品' }]}
+                            style={{ marginBottom: 0 }}
                           >
-                            {items.map((cigar: any) => (
-                              <Select.Option key={cigar.id} value={cigar.id}>
-                                {cigar.name}
-                              </Select.Option>
-                            ))}
-                          </Select>
-                        </Form.Item>
-                      </Col>
-                      <Col flex="100px">
-                        <Form.Item
-                          {...field}
-                          name={[field.name, 'quantity']}
-                          rules={[{ required: true, message: '请输入数量' }]}
-                          style={{ marginBottom: 0 }}
-                        >
-                          <InputNumber
-                            placeholder="数量"
-                            min={1}
-                            style={{ width: '100%' }}
-                          />
-                        </Form.Item>
-                      </Col>
-                      <Col flex="100px">
-                        <Form.Item
-                          {...field}
-                          name={[field.name, 'unitPrice']}
-                          style={{ marginBottom: 0 }}
-                        >
-                          <InputNumber
-                            placeholder="单价"
-                            min={0}
-                            precision={2}
-                            style={{ width: '100%' }}
-                          />
-                        </Form.Item>
-                      </Col>
-                      <Col flex="60px">
-                        <Button
-                          type="link"
-                          danger
-                          size="small"
-                          onClick={() => remove(field.name)}
-                          style={{ padding: 0 }}
-                        >
-                          删除
-                        </Button>
-                      </Col>
-                    </Row>
-                  </div>
-                ))}
+                            <Select
+                              showSearch
+                              placeholder="选择雪茄产品"
+                              optionFilterProp="children"
+                              onChange={(value) => {
+                                const cigar = items.find(c => c.id === value)
+                                if (cigar) {
+                                  const currentItems = orderEditForm.getFieldValue('items') || []
+                                  currentItems[index] = {
+                                    ...currentItems[index],
+                                    cigarId: value,
+                                    cigarName: cigar.name,
+                                    itemType: 'cigar'
+                                  }
+                                  orderEditForm.setFieldsValue({ items: currentItems })
+                                }
+                              }}
+                            >
+                              {items.map((cigar: any) => (
+                                <Select.Option key={cigar.id} value={cigar.id}>
+                                  {cigar.name}
+                                </Select.Option>
+                              ))}
+                            </Select>
+                          </Form.Item>
+                        </Col>
+                        <Col flex="100px">
+                          <Form.Item
+                            {...restField}
+                            name={[field.name, 'quantity']}
+                            rules={[{ required: true, message: '请输入数量' }]}
+                            style={{ marginBottom: 0 }}
+                          >
+                            <InputNumber
+                              placeholder="数量"
+                              min={1}
+                              style={{ width: '100%' }}
+                            />
+                          </Form.Item>
+                        </Col>
+                        <Col flex="100px">
+                          <Form.Item
+                            {...restField}
+                            name={[field.name, 'unitPrice']}
+                            style={{ marginBottom: 0 }}
+                          >
+                            <InputNumber
+                              placeholder="单价"
+                              min={0}
+                              precision={2}
+                              style={{ width: '100%' }}
+                            />
+                          </Form.Item>
+                        </Col>
+                        <Col flex="60px">
+                          <Button
+                            type="link"
+                            danger
+                            size="small"
+                            onClick={() => remove(field.name)}
+                            style={{ padding: 0 }}
+                          >
+                            删除
+                          </Button>
+                        </Col>
+                      </Row>
+                    </div>
+                  )
+                })}
               </>
             )}
           </Form.List>

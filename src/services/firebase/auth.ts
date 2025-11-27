@@ -11,7 +11,7 @@ import {
   getRedirectResult
 } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { doc, setDoc, getDoc, collection, getDocs, query, where, limit, updateDoc, arrayUnion, increment } from 'firebase/firestore';
+import { doc, setDoc, getDoc, getDocFromCache, collection, getDocs, query, where, limit, updateDoc, arrayUnion, increment } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
 import type { User } from '../../types';
 import { normalizePhoneNumber, identifyInputType } from '../../utils/phoneNormalization';
@@ -281,11 +281,19 @@ export const findUserByEmail = async (email: string): Promise<{ id: string; data
     }
     
     const userDoc = snap.docs[0];
+    const rawData = userDoc.data();
+    const data = convertFirestoreTimestamps(rawData);
     return {
       id: userDoc.id,
-      data: { id: userDoc.id, ...userDoc.data() } as User
+      data: { id: userDoc.id, ...data } as User
     };
-  } catch (error) {
+  } catch (error: any) {
+    // 策略2: 错误处理
+    if (error?.code === 'resource-exhausted') {
+      console.warn('[Auth Service] ⚠️ Firestore 配额超限，无法通过邮箱查找用户');
+    } else {
+      console.error('[Auth Service] findUserByEmail 错误:', error);
+    }
     return null;
   }
 };
@@ -862,17 +870,51 @@ export const convertFirestoreTimestamps = (value: any): any => {
   return value;
 };
 
-export const getUserData = async (uid: string): Promise<User | null> => {
+export const getUserData = async (uid: string, useCache: boolean = true): Promise<User | null> => {
+  const userDocRef = doc(db, 'users', uid);
+  
   try {
-    const userDoc = await getDoc(doc(db, 'users', uid));
+    let userDoc;
+    
+    // 策略5: 优先使用 Firestore 离线缓存
+    if (useCache) {
+      try {
+        // 尝试从缓存读取（不消耗配额）
+        userDoc = await getDocFromCache(userDocRef);
+      } catch (cacheError) {
+        // 缓存不存在，从服务器读取
+        userDoc = await getDoc(userDocRef);
+      }
+    } else {
+      // 强制从服务器读取
+      userDoc = await getDoc(userDocRef);
+    }
+    
     if (userDoc.exists()) {
       const rawData = userDoc.data();
       const data = convertFirestoreTimestamps(rawData);
       return { id: uid, ...data } as User;
     }
     return null;
-  } catch (error) {
-    console.error('[Auth Service] ❌ getUserData 错误:', error)
+  } catch (error: any) {
+    // 策略2: 错误处理与降级
+    if (error?.code === 'resource-exhausted') {
+      console.warn('[Auth Service] ⚠️ Firestore 配额超限，尝试使用缓存数据');
+      // 尝试从缓存读取作为降级方案
+      try {
+        const cachedDoc = await getDocFromCache(userDocRef);
+        if (cachedDoc.exists()) {
+          const rawData = cachedDoc.data();
+          const data = convertFirestoreTimestamps(rawData);
+          console.info('[Auth Service] ✅ 使用缓存数据作为降级方案');
+          return { id: uid, ...data } as User;
+        }
+      } catch (cacheError) {
+        // 缓存也不存在，返回 null
+      }
+      return null;
+    }
+    console.error('[Auth Service] ❌ getUserData 错误:', error);
     return null;
   }
 };

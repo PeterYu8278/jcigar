@@ -16,6 +16,11 @@ interface AuthState {
   isDeveloper: boolean
   initialized: boolean
   
+  // 策略1: 内存缓存
+  cachedUserData: User | null
+  cacheTimestamp: number
+  cacheValidDuration: number // 缓存有效期（毫秒），默认5分钟
+  
   // Actions
   setUser: (user: User | null) => void
   setFirebaseUser: (user: any | null) => void
@@ -30,6 +35,63 @@ interface AuthState {
 let authUnsubscribe: (() => void) | null = null
 let userDocUnsubscribe: Unsubscribe | null = null
 
+// 策略2: sessionStorage 缓存键名
+const SESSION_STORAGE_KEYS = {
+  FIRESTORE_USER_ID: 'firestoreUserId',
+  USER_DATA: 'auth_userData',
+  CACHE_TIMESTAMP: 'auth_cacheTimestamp',
+} as const;
+
+// 缓存有效期：5分钟
+const CACHE_VALID_DURATION = 5 * 60 * 1000;
+
+// 策略1: 从 sessionStorage 读取缓存的用户数据
+const getCachedUserDataFromStorage = (): { userData: User; timestamp: number } | null => {
+  try {
+    const cachedData = sessionStorage.getItem(SESSION_STORAGE_KEYS.USER_DATA);
+    const cachedTimestamp = sessionStorage.getItem(SESSION_STORAGE_KEYS.CACHE_TIMESTAMP);
+    
+    if (cachedData && cachedTimestamp) {
+      const userData = JSON.parse(cachedData) as User;
+      const timestamp = parseInt(cachedTimestamp, 10);
+      const now = Date.now();
+      
+      // 检查缓存是否有效（5分钟内）
+      if (now - timestamp < CACHE_VALID_DURATION) {
+        return { userData, timestamp };
+      } else {
+        // 缓存过期，清除
+        sessionStorage.removeItem(SESSION_STORAGE_KEYS.USER_DATA);
+        sessionStorage.removeItem(SESSION_STORAGE_KEYS.CACHE_TIMESTAMP);
+      }
+    }
+  } catch (error) {
+    console.warn('[Auth Store] 读取 sessionStorage 缓存失败:', error);
+  }
+  return null;
+};
+
+// 策略1: 保存用户数据到 sessionStorage
+const saveUserDataToStorage = (userData: User) => {
+  try {
+    sessionStorage.setItem(SESSION_STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
+    sessionStorage.setItem(SESSION_STORAGE_KEYS.CACHE_TIMESTAMP, Date.now().toString());
+  } catch (error) {
+    console.warn('[Auth Store] 保存 sessionStorage 缓存失败:', error);
+  }
+};
+
+// 策略1: 检查内存缓存是否有效
+const isMemoryCacheValid = (cachedUser: User | null, cacheTimestamp: number, firebaseUid: string): boolean => {
+  if (!cachedUser || !cacheTimestamp) return false;
+  
+  const now = Date.now();
+  const isExpired = now - cacheTimestamp >= CACHE_VALID_DURATION;
+  
+  // 检查缓存是否过期，以及是否匹配当前用户
+  return !isExpired && cachedUser.id === firebaseUid;
+};
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   firebaseUser: null,
@@ -38,8 +100,32 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAdmin: false,
   isDeveloper: false,
   initialized: false,
+  
+  // 策略1: 内存缓存
+  cachedUserData: null,
+  cacheTimestamp: 0,
+  cacheValidDuration: CACHE_VALID_DURATION,
 
-  setUser: (user) => set({ user }),
+  setUser: (user) => {
+    set({ user });
+    // 策略1: 同时更新内存缓存
+    if (user) {
+      set({ 
+        cachedUserData: user,
+        cacheTimestamp: Date.now()
+      });
+      // 策略2: 同时保存到 sessionStorage
+      saveUserDataToStorage(user);
+    } else {
+      set({ 
+        cachedUserData: null,
+        cacheTimestamp: 0
+      });
+      // 清除 sessionStorage 缓存
+      sessionStorage.removeItem(SESSION_STORAGE_KEYS.USER_DATA);
+      sessionStorage.removeItem(SESSION_STORAGE_KEYS.CACHE_TIMESTAMP);
+    }
+  },
   
   setFirebaseUser: (firebaseUser) => set({ firebaseUser }),
   
@@ -74,38 +160,59 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       if (firebaseUser) {
         try {
-          // ✅ 优先使用 sessionStorage 中的 firestoreUserId（Google 登录后设置）
-          let firestoreUserId = sessionStorage.getItem('firestoreUserId');
-          let userData = null;
+          const { cachedUserData, cacheTimestamp } = get();
+          let firestoreUserId: string | null = null;
+          let userData: User | null = null;
           
-          if (firestoreUserId) {
-            // 场景 1: 有 sessionStorage 中的 ID（Google 登录）
-            userData = await getUserData(firestoreUserId);
+          // 策略1: 检查内存缓存
+          if (isMemoryCacheValid(cachedUserData, cacheTimestamp, firebaseUser.uid)) {
+            console.info('[Auth Store] ✅ 使用内存缓存数据');
+            userData = cachedUserData;
+            firestoreUserId = cachedUserData.id;
           } else {
-            // 场景 2: 没有 sessionStorage（邮箱登录），通过邮箱查找用户文档
-            const { findUserByEmail } = await import('../../services/firebase/auth')
-            const normalizedEmail = firebaseUser.email?.toLowerCase().trim();
-            
-            if (normalizedEmail) {
-              const existingUser = await findUserByEmail(normalizedEmail);
-              if (existingUser) {
-                firestoreUserId = existingUser.id;
-                userData = existingUser.data;
-                // 保存到 sessionStorage，以便后续使用
-                sessionStorage.setItem('firestoreUserId', firestoreUserId);
+            // 策略2: 检查 sessionStorage 缓存
+            const storageCache = getCachedUserDataFromStorage();
+            if (storageCache && storageCache.userData.id === firebaseUser.uid) {
+              console.info('[Auth Store] ✅ 使用 sessionStorage 缓存数据');
+              userData = storageCache.userData;
+              firestoreUserId = storageCache.userData.id;
+              // 更新内存缓存
+              set({ 
+                cachedUserData: userData,
+                cacheTimestamp: storageCache.timestamp
+              });
+            } else {
+              // 缓存无效，需要从 Firestore 读取
+              // 策略4: 优先使用 sessionStorage 中的 firestoreUserId
+              firestoreUserId = sessionStorage.getItem(SESSION_STORAGE_KEYS.FIRESTORE_USER_ID);
+              
+              if (firestoreUserId) {
+                // 场景 1: 有 sessionStorage 中的 ID（Google 登录）
+                userData = await getUserData(firestoreUserId, true); // 使用缓存
               } else {
-                // 场景 3: 通过邮箱找不到，尝试使用 Firebase UID（兼容旧用户）
+                // 策略4: 优化查询路径 - 优先使用 Firebase UID（减少查询）
+                // 大多数情况下，Firestore 文档 ID 就是 Firebase UID
                 firestoreUserId = firebaseUser.uid;
-                userData = await getUserData(firestoreUserId);
-                if (userData) {
-                  // 找到后也保存到 sessionStorage
-                  sessionStorage.setItem('firestoreUserId', firestoreUserId);
+                userData = await getUserData(firestoreUserId, true); // 使用缓存
+                
+                if (!userData) {
+                  // 如果使用 UID 找不到，再尝试通过邮箱查找（兼容旧数据）
+                  const normalizedEmail = firebaseUser.email?.toLowerCase().trim();
+                  if (normalizedEmail) {
+                    const { findUserByEmail } = await import('../../services/firebase/auth');
+                    const existingUser = await findUserByEmail(normalizedEmail);
+                    if (existingUser) {
+                      firestoreUserId = existingUser.id;
+                      userData = existingUser.data;
+                    }
+                  }
+                }
+                
+                // 保存 firestoreUserId 到 sessionStorage
+                if (firestoreUserId) {
+                  sessionStorage.setItem(SESSION_STORAGE_KEYS.FIRESTORE_USER_ID, firestoreUserId);
                 }
               }
-            } else {
-              // 场景 4: 没有邮箱，使用 Firebase UID
-              firestoreUserId = firebaseUser.uid;
-              userData = await getUserData(firestoreUserId);
             }
           }
           
@@ -123,37 +230,92 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               console.warn('[Auth] Failed to initialize push notifications:', error)
             })
             
-            // 开始实时监听用户文档变化（自动更新用户状态和会员状态）
-            if (firestoreUserId) {
-            const userDocRef = doc(db, 'users', firestoreUserId)
-            userDocUnsubscribe = onSnapshot(userDocRef, (userDocSnap) => {
-              if (userDocSnap.exists()) {
-                // 转换 Firestore 时间戳
-                const rawData = userDocSnap.data()
-                const data = convertFirestoreTimestamps(rawData)
-                const updatedUser = { id: firestoreUserId, ...data } as User
-                setUser(updatedUser)
-                  set({ 
-                    isAdmin: updatedUser.role === 'admin' || updatedUser.role === 'developer',
-                    isDeveloper: updatedUser.role === 'developer'
-                  })
+            // 策略3: 开始实时监听用户文档变化（自动更新用户状态和会员状态）
+            // 仅在成功获取用户数据后启用监听
+            if (firestoreUserId && userData) {
+              const userDocRef = doc(db, 'users', firestoreUserId);
+              userDocUnsubscribe = onSnapshot(
+                userDocRef,
+                (userDocSnap) => {
+                  if (userDocSnap.exists()) {
+                    // 转换 Firestore 时间戳
+                    const rawData = userDocSnap.data();
+                    const data = convertFirestoreTimestamps(rawData);
+                    const updatedUser = { id: firestoreUserId, ...data } as User;
+                    setUser(updatedUser);
+                    set({ 
+                      isAdmin: updatedUser.role === 'admin' || updatedUser.role === 'developer',
+                      isDeveloper: updatedUser.role === 'developer'
+                    });
                   }
-                }, (error) => {
-                  // 监听错误不影响主流程
-                  console.warn('[Auth] User document snapshot error:', error)
-                })
+                },
+                (error: any) => {
+                  // 策略2: 错误处理与降级
+                  if (error?.code === 'resource-exhausted') {
+                    console.warn('[Auth] ⚠️ Firestore 配额超限，禁用实时监听');
+                    // 取消监听，使用缓存数据
+                    if (userDocUnsubscribe) {
+                      userDocUnsubscribe();
+                      userDocUnsubscribe = null;
+                    }
+                    // 显示友好提示（可选）
+                    console.info('[Auth] 使用缓存数据，实时更新已禁用');
+                  } else {
+                    console.warn('[Auth] User document snapshot error:', error);
+                  }
+                }
+              );
             }
           }
-        } catch (error) {
-          console.error('[Auth Store] ❌ 获取用户数据失败:', error)
-          set({ error: '获取用户数据失败' })
+        } catch (error: any) {
+          // 策略2: 错误处理与降级
+          if (error?.code === 'resource-exhausted') {
+            console.warn('[Auth Store] ⚠️ Firestore 配额超限，尝试使用缓存数据');
+            
+            // 尝试使用缓存数据作为降级方案
+            const { cachedUserData } = get();
+            const storageCache = getCachedUserDataFromStorage();
+            
+            if (cachedUserData) {
+              console.info('[Auth Store] ✅ 使用内存缓存作为降级方案');
+              setUser(cachedUserData);
+              setFirebaseUser(firebaseUser);
+              set({ 
+                isAdmin: cachedUserData.role === 'admin' || cachedUserData.role === 'developer',
+                isDeveloper: cachedUserData.role === 'developer',
+                error: '网络繁忙，使用缓存数据'
+              });
+            } else if (storageCache) {
+              console.info('[Auth Store] ✅ 使用 sessionStorage 缓存作为降级方案');
+              setUser(storageCache.userData);
+              setFirebaseUser(firebaseUser);
+              set({ 
+                isAdmin: storageCache.userData.role === 'admin' || storageCache.userData.role === 'developer',
+                isDeveloper: storageCache.userData.role === 'developer',
+                error: '网络繁忙，使用缓存数据'
+              });
+            } else {
+              console.error('[Auth Store] ❌ 无可用缓存数据');
+              set({ error: '获取用户数据失败，请稍后重试' });
+            }
+          } else {
+            console.error('[Auth Store] ❌ 获取用户数据失败:', error);
+            set({ error: '获取用户数据失败' });
+          }
         }
       } else {
-        setUser(null)
-        setFirebaseUser(null)
-        set({ isAdmin: false, isDeveloper: false })
-        // 清除 sessionStorage 中的 firestoreUserId
-        sessionStorage.removeItem('firestoreUserId')
+        setUser(null);
+        setFirebaseUser(null);
+        set({ 
+          isAdmin: false, 
+          isDeveloper: false,
+          cachedUserData: null,
+          cacheTimestamp: 0
+        });
+        // 清除 sessionStorage 缓存
+        sessionStorage.removeItem(SESSION_STORAGE_KEYS.FIRESTORE_USER_ID);
+        sessionStorage.removeItem(SESSION_STORAGE_KEYS.USER_DATA);
+        sessionStorage.removeItem(SESSION_STORAGE_KEYS.CACHE_TIMESTAMP);
       }
       
       setLoading(false)
@@ -166,10 +328,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: () => {
     // 取消用户文档监听
     if (userDocUnsubscribe) {
-      userDocUnsubscribe()
-      userDocUnsubscribe = null
+      userDocUnsubscribe();
+      userDocUnsubscribe = null;
     }
-    set({ user: null, firebaseUser: null, isAdmin: false, isDeveloper: false })
+    set({ 
+      user: null, 
+      firebaseUser: null, 
+      isAdmin: false, 
+      isDeveloper: false,
+      cachedUserData: null,
+      cacheTimestamp: 0
+    });
+    // 清除 sessionStorage 缓存
+    sessionStorage.removeItem(SESSION_STORAGE_KEYS.FIRESTORE_USER_ID);
+    sessionStorage.removeItem(SESSION_STORAGE_KEYS.USER_DATA);
+    sessionStorage.removeItem(SESSION_STORAGE_KEYS.CACHE_TIMESTAMP);
   },
 
   hasPermission: (permission: keyof Permission) => {

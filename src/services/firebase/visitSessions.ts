@@ -579,15 +579,19 @@ export const getPendingVisitSession = async (userId: string): Promise<VisitSessi
  */
 export const getUserVisitSessions = async (
   userId: string,
-  limitCount: number = 50
+  limitCount?: number
 ): Promise<VisitSession[]> => {
   try {
-    const q = query(
+    let q = query(
       collection(db, GLOBAL_COLLECTIONS.VISIT_SESSIONS),
       where('userId', '==', userId),
-      orderBy('checkInAt', 'desc'),
-      limit(limitCount)
+      orderBy('checkInAt', 'desc')
     );
+    
+    // 如果指定了 limitCount，则应用限制；否则加载所有数据
+    if (limitCount !== undefined && limitCount > 0) {
+      q = query(q, limit(limitCount));
+    }
 
     const snapshot = await getDocs(q);
     const sessions = snapshot.docs.map(doc => processVisitSessionData(doc.data(), doc.id));
@@ -640,13 +644,17 @@ export const getAllPendingVisitSessions = async (): Promise<VisitSession[]> => {
 /**
  * 获取所有驻店记录（包括所有状态）
  */
-export const getAllVisitSessions = async (limitCount: number = 100): Promise<VisitSession[]> => {
+export const getAllVisitSessions = async (limitCount?: number): Promise<VisitSession[]> => {
   try {
-    const q = query(
+    let q = query(
       collection(db, GLOBAL_COLLECTIONS.VISIT_SESSIONS),
-      orderBy('checkInAt', 'desc'),
-      limit(limitCount)
+      orderBy('checkInAt', 'desc')
     );
+    
+    // 如果指定了 limitCount，则应用限制；否则加载所有数据
+    if (limitCount !== undefined && limitCount > 0) {
+      q = query(q, limit(limitCount));
+    }
 
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => processVisitSessionData(doc.data(), doc.id));

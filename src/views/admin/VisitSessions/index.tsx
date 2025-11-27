@@ -10,8 +10,7 @@ import {
   completeVisitSession,
   addRedemptionToSession
 } from '../../../services/firebase/visitSessions';
-import { getVisitSessionsPaginated } from '../../../services/firebase/paginatedQueries';
-import { usePaginatedData } from '../../../hooks/usePaginatedData';
+// 不再使用服务端分页，改为加载所有数据并使用客户端分页
 import { getCigars } from '../../../services/firebase/firestore';
 import { createRedemptionRecord, updateRedemptionRecord, getRedemptionRecordsBySession } from '../../../services/firebase/redemption';
 import { useAuthStore } from '../../../store/modules/auth';
@@ -30,25 +29,7 @@ const VisitSessionsPage: React.FC = () => {
   const [sessions, setSessions] = useState<VisitSession[]>([]); // 保留用于搜索
   const [searchUserId, setSearchUserId] = useState<string>('');
   
-  // 服务端分页
-  const {
-    data: paginatedSessions,
-    loading: paginatedLoading,
-    hasMore,
-    currentPage,
-    loadPage,
-    refresh: refreshPaginated
-  } = usePaginatedData(
-    async (pageSize, lastDoc, filters) => {
-      const result = await getVisitSessionsPaginated(pageSize, lastDoc, filters)
-      return result
-    },
-    {
-      pageSize: 20, // 桌面端20条/页
-      mobilePageSize: 10, // 移动端10条/页
-      initialLoad: false // 手动控制加载
-    }
-  )
+  // 不再使用服务端分页，改为加载所有数据并使用客户端分页
   const [qrScannerVisible, setQrScannerVisible] = useState(false);
   const [qrScannerMode, setQrScannerMode] = useState<'checkin' | 'checkout'>('checkin');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'expired'>('all');
@@ -66,13 +47,20 @@ const VisitSessionsPage: React.FC = () => {
 
   useEffect(() => {
     loadCigars();
-    // 初始加载
-    const filters: any = {}
-    if (statusFilter && statusFilter !== 'all') {
-      filters.status = statusFilter
-    }
-    loadPage(1, Object.keys(filters).length > 0 ? filters : undefined)
+    // 初始加载所有数据
+    loadAllSessions();
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 监听筛选条件变化，重新加载数据
+  useEffect(() => {
+    if (searchUserId) {
+      // 如果搜索用户ID，加载该用户的记录
+      loadUserSessions(searchUserId);
+    } else {
+      // 否则加载所有记录
+      loadAllSessions();
+    }
+  }, [statusFilter, searchUserId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadCigars = async () => {
     try {
@@ -107,7 +95,8 @@ const VisitSessionsPage: React.FC = () => {
         allSessions = await getAllPendingVisitSessions();
       } else {
         // 加载所有记录，然后根据筛选器过滤
-        allSessions = await getAllVisitSessions(200);
+        // 移除数量限制，加载所有数据
+        allSessions = await getAllVisitSessions();
         if (statusFilter !== 'all') {
           allSessions = allSessions.filter(session => session.status === statusFilter);
         }
@@ -125,8 +114,14 @@ const VisitSessionsPage: React.FC = () => {
   const loadUserSessions = async (userId: string) => {
     setLoading(true);
     try {
-      const userSessions = await getUserVisitSessions(userId, 100);
-      setSessions(userSessions);
+      // 移除数量限制，加载该用户的所有记录
+      const userSessions = await getUserVisitSessions(userId);
+      // 根据状态筛选
+      let filteredSessions = userSessions;
+      if (statusFilter !== 'all') {
+        filteredSessions = userSessions.filter(session => session.status === statusFilter);
+      }
+      setSessions(filteredSessions);
     } catch (error) {
       message.error('加载用户驻店记录失败');
     } finally {
@@ -160,7 +155,8 @@ const VisitSessionsPage: React.FC = () => {
             const result = await completeVisitSession(sessionId, user.id, forceHours);
             if (result.success) {
               message.success(`结算成功，扣除积分: ${result.pointsDeducted || 0}`);
-              await refreshPaginated();
+              // 重新加载所有数据
+              await loadAllSessions();
             } else {
               message.error(result.error || '结算失败');
             }
@@ -388,15 +384,9 @@ const VisitSessionsPage: React.FC = () => {
               
               <Button
                 icon={<ReloadOutlined />}
-                onClick={() => {
-                  const filters: any = {}
-                  if (statusFilter && statusFilter !== 'all') {
-                    filters.status = statusFilter
-                  }
-                  if (searchUserId) {
-                    filters.userId = searchUserId
-                  }
-                  loadPage(1, Object.keys(filters).length > 0 ? filters : undefined)
+                onClick={async () => {
+                  // 重新加载所有数据
+                  await loadAllSessions()
                 }}
                 loading={loading}
                 style={{
@@ -480,30 +470,18 @@ const VisitSessionsPage: React.FC = () => {
             columns={columns}
             dataSource={sessions}
             rowKey="id"
-            loading={loading || paginatedLoading}
+            loading={loading}
             scroll={{
               y: 'calc(100vh - 350px)', // 启用虚拟滚动
               x: 'max-content'
             }}
             pagination={{
-              current: searchUserId ? undefined : currentPage, // 有搜索时使用客户端分页
               pageSize: isMobile ? 10 : 20,
-              total: searchUserId ? sessions.length : undefined, // 有搜索时显示总数
-              showSizeChanger: false, // 服务端分页不支持动态改变pageSize
-              showQuickJumper: !searchUserId, // 有搜索时不显示快速跳转
-              onChange: (page) => {
-                if (searchUserId) {
-                  // 客户端分页（搜索时）
-                  return
-                }
-                // 服务端分页
-                const filters: any = {}
-                if (statusFilter && statusFilter !== 'all') {
-                  filters.status = statusFilter
-                }
-                loadPage(page, Object.keys(filters).length > 0 ? filters : undefined)
-              },
-              onShowSizeChange: undefined, // 服务端分页不支持
+              total: sessions.length,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+              pageSizeOptions: ['10', '20', '50', '100'],
             }}
                 style={{
                   background: 'transparent'

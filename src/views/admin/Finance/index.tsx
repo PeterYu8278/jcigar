@@ -4,8 +4,7 @@ import { Table, Card, Row, Col, Statistic, Typography, DatePicker, Select, Butto
 import { DollarOutlined, ShoppingOutlined, CalendarOutlined, ArrowUpOutlined, ArrowDownOutlined, PlusOutlined, EyeOutlined, BarChartOutlined, PieChartOutlined, DeleteOutlined, CheckOutlined } from '@ant-design/icons'
 import type { Transaction, User, InboundOrder, OutboundOrder, InventoryMovement } from '../../../types'
 import { getAllTransactions, getAllOrders, createTransaction, COLLECTIONS, getAllUsers, updateDocument, deleteDocument, getCigars, getAllInboundOrders, getAllOutboundOrders, getAllInventoryMovements } from '../../../services/firebase/firestore'
-import { getTransactionsPaginated } from '../../../services/firebase/paginatedQueries'
-import { usePaginatedData } from '../../../hooks/usePaginatedData'
+// 不再使用服务端分页，改为加载所有数据并使用客户端分页
 import dayjs from 'dayjs'
 import { useTranslation } from 'react-i18next'
 import { getModalThemeStyles, getModalWidth, getModalTheme, getResponsiveModalConfig } from '../../../config/modalTheme'
@@ -34,6 +33,8 @@ const AdminFinance: React.FC = () => {
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null)
   const [editForm] = Form.useForm()
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
+
+  // 不再使用服务端分页，改为加载所有数据并使用客户端分页
   const [mobileTxTab, setMobileTxTab] = useState<'details' | 'matching'>('details')
   const theme = getModalTheme(true) // 使用暗色主题
   const [selectedDateRange, setSelectedDateRange] = useState<'week' | 'month' | 'year' | null>(null)
@@ -265,26 +266,34 @@ const AdminFinance: React.FC = () => {
 
   // 加载数据
   useEffect(() => {
-    // 初始加载交易数据
-    loadPage(1)
     ;(async () => {
-      const [inOrders, outOrders, movements, orderList, userList, cigarList] = await Promise.all([
-        getAllInboundOrders(),
-        getAllOutboundOrders(),
-        getAllInventoryMovements(),
-        getAllOrders(),
-        getAllUsers(),
-        getCigars()
-      ])
-      
-      setInboundOrders(inOrders)
-      setOutboundOrders(outOrders)
-      setInventoryMovements(movements)
-      setOrders(orderList || [])
-      setUsers(userList || [])
-      setCigars(cigarList || [])
+      setLoading(true)
+      try {
+        // 加载所有交易数据（用于显示和筛选）
+        const [allTransactions, inOrders, outOrders, movements, orderList, userList, cigarList] = await Promise.all([
+          getAllTransactions(),
+          getAllInboundOrders(),
+          getAllOutboundOrders(),
+          getAllInventoryMovements(),
+          getAllOrders(),
+          getAllUsers(),
+          getCigars()
+        ])
+        
+        setTransactions(allTransactions)
+        setInboundOrders(inOrders)
+        setOutboundOrders(outOrders)
+        setInventoryMovements(movements)
+        setOrders(orderList || [])
+        setUsers(userList || [])
+        setCigars(cigarList || [])
+      } catch (error) {
+        message.error(t('financeAdmin.loadTransactionsFailed'))
+      } finally {
+        setLoading(false)
+      }
     })()
-  }, [])
+  }, []) // 只在组件挂载时加载一次
 
   const loadTransactions = async () => {
     setLoading(true)
@@ -312,8 +321,9 @@ const AdminFinance: React.FC = () => {
           const result = await deleteDocument(COLLECTIONS.TRANSACTIONS, transaction.id)
           if (result.success) {
             message.success(t('financeAdmin.transactionDeleted'))
-            // 初始加载交易数据
-    loadPage(1)
+            // 重新加载所有交易数据
+            const data = await getAllTransactions()
+            setTransactions(data)
           } else {
             message.error(t('financeAdmin.deleteFailed'))
           }
@@ -1018,7 +1028,7 @@ const AdminFinance: React.FC = () => {
           columns={columns}
           dataSource={enriched}
           rowKey="id"
-          loading={loading || paginatedLoading}
+          loading={loading}
           style={{
             background: 'transparent'
           }}
@@ -1027,30 +1037,12 @@ const AdminFinance: React.FC = () => {
             x: 'max-content'
           }}
           pagination={{
-            current: currentPage,
             pageSize: isMobile ? 10 : 20,
-            total: undefined, // 服务端分页不显示总数
-            showSizeChanger: false, // 服务端分页不支持动态改变pageSize
+            total: enriched.length,
+            showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: undefined,
-            onChange: (page) => {
-              const filters: any = {}
-              if (selectedDateRange) {
-                const now = new Date()
-                if (selectedDateRange === 'week') {
-                  filters.startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-                  filters.endDate = now
-                } else if (selectedDateRange === 'month') {
-                  filters.startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-                  filters.endDate = now
-                } else if (selectedDateRange === 'year') {
-                  filters.startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
-                  filters.endDate = now
-                }
-              }
-              loadPage(page, Object.keys(filters).length > 0 ? filters : undefined)
-            },
-            onShowSizeChange: undefined, // 服务端分页不支持
+            showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
+            pageSizeOptions: ['10', '20', '50', '100'],
           }}
         />
       </div>
@@ -1259,7 +1251,9 @@ const AdminFinance: React.FC = () => {
                 setIsEditing(false)
                 setViewing(null)
                 
-                await refreshPaginated()
+                // 重新加载所有交易数据
+                const data = await getAllTransactions()
+                setTransactions(data)
               } catch (error) {
                 console.error('❌ [Finance] Save error:', error)
                 message.error(t('common.updateFailed'))
@@ -1581,8 +1575,9 @@ const AdminFinance: React.FC = () => {
             const result = await createTransaction(transactionData)
             if (result.success) {
               message.success(t('financeAdmin.transactionAdded'))
-              // 初始加载交易数据
-    loadPage(1)
+              // 重新加载所有交易数据
+              const data = await getAllTransactions()
+              setTransactions(data)
               setCreating(false)
               form.resetFields()
             } else {
@@ -1680,8 +1675,9 @@ const AdminFinance: React.FC = () => {
           setImporting(false)
           
           setImportRows([])
-          // 初始加载交易数据
-    loadPage(1)
+          // 重新加载所有交易数据
+          const data = await getAllTransactions()
+          setTransactions(data)
         }}
         confirmLoading={loading}
       >

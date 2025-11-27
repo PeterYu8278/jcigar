@@ -78,7 +78,10 @@ const AdminUsers: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string | undefined>()
   const [statusMap, setStatusMap] = useState<Record<string, 'active' | 'inactive'>>({})
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
-  const [isMobile, setIsMobile] = useState<boolean>(false)
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    return window.innerWidth < 768
+  })
   const [visibleCols, setVisibleCols] = useState<Record<string, boolean>>(() => {
     const saved = localStorage.getItem('users.visibleCols')
     if (saved) {
@@ -105,36 +108,24 @@ const AdminUsers: React.FC = () => {
   const [showBubble, setShowBubble] = useState(false) // 字母气泡显示
   const [bubbleLetter, setBubbleLetter] = useState('') // 气泡字母
 
-  // 筛选条件变化时重新加载分页数据
-  useEffect(() => {
-    const filters: any = {}
-    if (roleFilter) filters.role = roleFilter
-    if (statusFilter) filters.status = statusFilter
-    if (levelFilter) filters.level = levelFilter
-    
-    loadPage(1, Object.keys(filters).length > 0 ? filters : undefined)
-  }, [roleFilter, statusFilter, levelFilter]) // eslint-disable-line react-hooks/exhaustive-deps
+  // 筛选条件变化时不需要重新加载数据（因为现在使用客户端筛选）
+  // 数据加载已在下面的 useEffect 中处理
 
-  // 保留原有的getUsers用于搜索（客户端搜索）
+  // 加载所有用户数据（用于显示和搜索）
   useEffect(() => {
     ;(async () => {
       try {
-        // 只在需要搜索时加载所有用户（用于客户端搜索）
-        if (keyword.trim()) {
-          setLoading(true)
-          const list = await getUsers()
-          setUsers(list)
-        } else {
-          // 没有搜索关键词时，使用分页数据
-          setUsers(paginatedUsers)
-        }
+        setLoading(true)
+        // 始终加载所有用户数据，以便显示完整列表和进行客户端搜索/筛选
+        const list = await getUsers()
+        setUsers(list)
       } catch (e) {
         message.error(t('messages.dataLoadFailed'))
       } finally {
         setLoading(false)
       }
     })()
-  }, [keyword, paginatedUsers])
+  }, []) // 只在组件挂载时加载一次
 
   useEffect(() => {
     const update = () => setIsMobile(window.innerWidth < 768)
@@ -434,8 +425,13 @@ const AdminUsers: React.FC = () => {
       const status = statusMap[u.id] || (u as any).status || 'active'
       const passStatus = !statusFilter || status === statusFilter
       
-      // role和level已经在服务端筛选，这里不需要再筛选
-      return passKw && passStatus
+      // role筛选（客户端）
+      const passRole = !roleFilter || u.role === roleFilter
+      
+      // level筛选（客户端）
+      const passLevel = !levelFilter || u.membership?.level === levelFilter
+      
+      return passKw && passStatus && passRole && passLevel
     })
     // 按字母顺序排序（按displayName）
     return filtered.sort((a, b) => {
@@ -443,7 +439,7 @@ const AdminUsers: React.FC = () => {
       const nameB = (b.displayName || '').toLowerCase()
       return nameA.localeCompare(nameB)
     })
-  }, [users, keyword, statusFilter, statusMap, currentUser?.role])
+  }, [users, keyword, statusFilter, roleFilter, levelFilter, statusMap, currentUser?.role])
 
   const groupedByInitial = useMemo(() => {
     const groups: Record<string, User[]> = {}
@@ -774,9 +770,9 @@ const AdminUsers: React.FC = () => {
       <div className="points-config-form">
       <Table
         columns={columns}
-          dataSource={keyword.trim() ? filteredUsers : paginatedUsers}
+        dataSource={filteredUsers}
         rowKey="id"
-        loading={loading || paginatedLoading}
+        loading={loading}
         rowSelection={{
           selectedRowKeys,
           onChange: setSelectedRowKeys,
@@ -786,27 +782,12 @@ const AdminUsers: React.FC = () => {
           x: 'max-content' // 水平滚动
         }}
         pagination={{
-          current: keyword.trim() ? undefined : currentPage, // 有搜索时使用客户端分页
           pageSize: isMobile ? 10 : 20,
-          total: keyword.trim() ? filteredUsers.length : undefined, // 有搜索时显示总数，否则不显示
-          showSizeChanger: false, // 服务端分页不支持动态改变pageSize
-          showQuickJumper: !keyword.trim(), // 有搜索时不显示快速跳转
-          showTotal: keyword.trim() 
-            ? (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total })
-            : undefined,
-          onChange: (page) => {
-            if (keyword.trim()) {
-              // 客户端分页（搜索时）
-              return
-            }
-            // 服务端分页
-            const filters: any = {}
-            if (roleFilter) filters.role = roleFilter
-            if (statusFilter) filters.status = statusFilter
-            if (levelFilter) filters.level = levelFilter
-            loadPage(page, Object.keys(filters).length > 0 ? filters : undefined)
-          },
-          onShowSizeChange: undefined, // 服务端分页不支持
+          total: filteredUsers.length,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
+          pageSizeOptions: ['10', '20', '50', '100'],
         }}
           style={{
             background: 'transparent'
@@ -947,7 +928,7 @@ const AdminUsers: React.FC = () => {
               zIndex: 1
             }}
           >
-            {loading ? (
+            {(loading || paginatedLoading) ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
                 <Spin />
               </div>
