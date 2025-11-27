@@ -1,7 +1,7 @@
 /**
  * 应用配置服务
  */
-import { doc, getDoc, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, getDocFromCache, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { GLOBAL_COLLECTIONS } from '../../config/globalCollections';
 import type { AppConfig, ColorThemeConfig } from '../../types';
@@ -63,7 +63,20 @@ const CONFIG_ID = 'default';
 export const getAppConfig = async (): Promise<AppConfig | null> => {
   try {
     const docRef = doc(db, GLOBAL_COLLECTIONS.APP_CONFIG, CONFIG_ID);
-    const docSnap = await getDoc(docRef);
+    let docSnap = await getDoc(docRef);
+    
+    // 如果文档不存在，尝试从缓存读取（可能是离线状态）
+    if (!docSnap.exists()) {
+      try {
+        docSnap = await getDocFromCache(docRef);
+        if (docSnap.exists()) {
+          console.log('[getAppConfig] 使用缓存数据（离线模式）');
+        }
+      } catch (cacheError) {
+        // 缓存中也没有数据，继续使用默认配置逻辑
+        // 静默处理，不输出警告
+      }
+    }
     
     if (!docSnap.exists()) {
       // 如果不存在，创建默认配置
@@ -144,8 +157,76 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
       updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
       updatedBy: data.updatedBy || '',
     };
-  } catch (error) {
-    console.error('[getAppConfig] 获取配置失败:', error);
+  } catch (error: any) {
+    // 如果是离线错误，尝试从缓存读取
+    if (error?.code === 'unavailable' || error?.message?.includes('offline')) {
+      try {
+        const docRef = doc(db, GLOBAL_COLLECTIONS.APP_CONFIG, CONFIG_ID);
+        const docSnap = await getDocFromCache(docRef);
+        
+        if (docSnap.exists()) {
+          console.log('[getAppConfig] 使用缓存数据（离线模式）');
+          const data = docSnap.data();
+          
+          // 处理配置数据（复用现有逻辑）
+          const whapiConfig: WhapiConfig | undefined = data.whapi ? {
+            apiToken: data.whapi.apiToken,
+            channelId: data.whapi.channelId,
+            baseUrl: data.whapi.baseUrl,
+            enabled: data.whapi.enabled ?? false,
+          } : undefined;
+
+          const whapiTemplates: MessageTemplate[] = data.whapiTemplates 
+            ? data.whapiTemplates.map((t: any) => ({
+                id: t.id || '',
+                name: t.name,
+                type: t.type,
+                template: t.template,
+                variables: t.variables || [],
+                enabled: t.enabled ?? true,
+                createdAt: t.createdAt?.toDate?.() || new Date(t.createdAt),
+                updatedAt: t.updatedAt?.toDate?.() || new Date(t.updatedAt),
+              }))
+            : DEFAULT_MESSAGE_TEMPLATES.map((t, index) => ({
+                id: `default_${index}`,
+                ...t,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              }));
+
+          return {
+            id: docSnap.id,
+            logoUrl: data.logoUrl || undefined,
+            appName: data.appName || undefined,
+            hideFooter: data.hideFooter ?? false,
+            colorTheme: data.colorTheme ? {
+              primaryButton: data.colorTheme.primaryButton || DEFAULT_COLOR_THEME.primaryButton,
+              secondaryButton: data.colorTheme.secondaryButton || DEFAULT_COLOR_THEME.secondaryButton,
+              warningButton: data.colorTheme.warningButton || DEFAULT_COLOR_THEME.warningButton,
+              border: data.colorTheme.border || DEFAULT_COLOR_THEME.border,
+              tag: data.colorTheme.tag || DEFAULT_COLOR_THEME.tag,
+              text: data.colorTheme.text || DEFAULT_COLOR_THEME.text,
+              icon: data.colorTheme.icon || DEFAULT_COLOR_THEME.icon,
+            } : DEFAULT_COLOR_THEME,
+            whapi: whapiConfig,
+            whapiTemplates,
+            auth: data.auth ? {
+              disableGoogleLogin: data.auth.disableGoogleLogin ?? true,
+              disableEmailLogin: data.auth.disableEmailLogin ?? true,
+            } : {
+              disableGoogleLogin: true,
+              disableEmailLogin: true,
+            },
+            updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
+            updatedBy: data.updatedBy || '',
+          };
+        }
+      } catch (cacheError) {
+        console.warn('[getAppConfig] 缓存读取也失败:', cacheError);
+      }
+    } else {
+      console.error('[getAppConfig] 获取配置失败:', error);
+    }
     return null;
   }
 };

@@ -1,6 +1,6 @@
 // Firebase配置文件
 import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
 
@@ -49,6 +49,21 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const storage = getStorage(app);
+
+// 启用 Firestore 离线持久化（仅在浏览器环境中）
+if (typeof window !== 'undefined') {
+  enableIndexedDbPersistence(db).catch((err) => {
+    // 如果启用失败（例如多标签页冲突），静默处理
+    // 多标签页场景下，只有第一个标签页可以启用持久化
+    if (err.code === 'failed-precondition') {
+      console.warn('[Firebase] 离线持久化启用失败：多个标签页正在使用 Firestore');
+    } else if (err.code === 'unimplemented') {
+      console.warn('[Firebase] 离线持久化不支持：浏览器不支持 IndexedDB');
+    } else {
+      console.warn('[Firebase] 离线持久化启用失败:', err);
+    }
+  });
+}
 
 // Messaging 服务延迟初始化（需要在 Service Worker 注册后）
 export const getMessagingInstance = async () => {

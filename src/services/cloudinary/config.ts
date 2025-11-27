@@ -1,6 +1,18 @@
 // Cloudinary 配置服务
 
 /**
+ * Cloudinary 全局对象类型声明
+ */
+declare global {
+  interface Window {
+    cloudinary?: {
+      setCloudName: (cloudName: string) => void;
+      [key: string]: any;
+    };
+  }
+}
+
+/**
  * Cloudinary 配置接口
  */
 export interface CloudinaryConfig {
@@ -122,12 +134,16 @@ const loadCloudinary = async () => {
     
     return new Promise((resolve) => {
       script.onload = () => {
-        window.cloudinary.setCloudName(cloudinaryConfig.cloud_name)
-        resolve(window.cloudinary)
+        if (window.cloudinary) {
+          window.cloudinary.setCloudName(cloudinaryConfig.cloud_name)
+          resolve(window.cloudinary)
+        } else {
+          resolve(null)
+        }
       }
     })
   }
-  return window.cloudinary
+  return window.cloudinary || null
 }
 
 export { cloudinaryConfig, loadCloudinary }
