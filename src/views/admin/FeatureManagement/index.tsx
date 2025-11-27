@@ -1693,9 +1693,20 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               </Text>
               <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 16 }}>
                 提供以下任一认证信息以启用 Firestore 索引的自动部署：
-                <br />• <strong>Service Account JSON</strong>：在 <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Firebase 控制台</a> 的项目设置 &gt; 服务账号中生成
-                <br />• <strong>Access Token</strong>：通过 <code style={{ background: 'rgba(255, 255, 255, 0.1)', padding: '2px 4px', borderRadius: '4px' }}>firebase login:ci</code> 命令获取
-                <br />如果不提供，系统将返回手动部署链接和命令。
+                <br />
+                <br /><strong>方法 1：Service Account JSON（推荐）</strong>
+                <br />1. 访问 <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Firebase 控制台</a>
+                <br />2. 选择项目 → 项目设置（齿轮图标）→ 服务账号
+                <br />3. 点击"生成新的私钥"按钮
+                <br />4. 下载 JSON 文件，将内容粘贴到下方输入框
+                <br />
+                <br /><strong>方法 2：Access Token</strong>
+                <br />1. 安装 Firebase CLI：<code style={{ background: 'rgba(255, 255, 255, 0.1)', padding: '2px 4px', borderRadius: '4px' }}>npm install -g firebase-tools</code>
+                <br />2. 运行命令：<code style={{ background: 'rgba(255, 255, 255, 0.1)', padding: '2px 4px', borderRadius: '4px' }}>firebase login:ci</code>
+                <br />3. 在浏览器中登录 Firebase 账户
+                <br />4. 复制命令行输出的 token，粘贴到下方输入框
+                <br />
+                <br />如果不提供认证信息，系统将返回手动部署链接和命令。
               </Text>
               
               <Form.Item
