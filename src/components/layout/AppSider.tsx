@@ -237,7 +237,7 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
               fontSize: '16px',
               letterSpacing: '1px'
             }}>
-              {appConfig?.appName || 'Gentlemen Club'}
+              {appConfig?.appName || 'Cigar Club'}
             </Text>
           </div>
         )}

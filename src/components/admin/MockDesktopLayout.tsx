@@ -65,7 +65,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
               title="点击编辑图标颜色"
             />
             <Text style={{ color: colorTheme.text.primary, fontSize: 16, fontWeight: 600 }}>
-              Gentlemen Club
+              Cigar Club
             </Text>
           </Space>
           <Space size="middle" align="center">
@@ -690,7 +690,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
             onClick={() => onElementClick('text')}
             title="点击编辑次要文字颜色"
           >
-            © 2024 Gentlemen Club. All rights reserved.
+            © 2024 Cigar Club. All rights reserved.
           </Text>
         </Footer>
       </Layout>

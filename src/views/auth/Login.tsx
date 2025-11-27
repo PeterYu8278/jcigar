@@ -406,7 +406,7 @@ const Login: React.FC = () => {
               fontWeight: 700,
               letterSpacing: '2px'
             }}>
-              {appConfig?.appName || 'Gentlemen Club'}
+              {appConfig?.appName || 'Cigar Club'}
             </Title>
             <Text style={{ color: '#c0c0c0', fontSize: '16px' }}>
               {t('auth.welcomeBack')}

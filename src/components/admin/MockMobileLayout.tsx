@@ -65,7 +65,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
               title="点击编辑图标颜色"
             />
             <Text style={{ color: colorTheme.text.primary, fontSize: 16, fontWeight: 600 }}>
-              Gentlemen Club
+              Cigar Club
             </Text>
           </Space>
           <Space size="small" align="center">

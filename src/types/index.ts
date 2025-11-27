@@ -355,7 +355,7 @@ export interface FeatureVisibilityConfig {
 export interface AppConfig {
   id: string; // 'default'
   logoUrl?: string;        // Logo URL
-  appName?: string;        // 应用名称（例如：Gentlemen Club）
+  appName?: string;        // 应用名称（例如：Cigar Club）
   hideFooter?: boolean;    // 是否隐藏 Footer
   colorTheme?: ColorThemeConfig;  // 颜色主题配置
   whapi?: import('./whapi').WhapiConfig;  // Whapi.Cloud WhatsApp 配置

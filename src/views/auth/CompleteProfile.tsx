@@ -168,7 +168,7 @@ const CompleteProfile: React.FC = () => {
 
       if (result.success) {
         // ✅ 如果是账户合并，显示特殊消息
-        const appName = appConfig?.appName || 'Gentlemen Club'
+        const appName = appConfig?.appName || 'Cigar Club'
         const successMessage = (result as any).mergedUserId 
           ? '账户已成功关联到现有账户，欢迎回来！'
           : `账户信息已完善，欢迎加入 ${appName}！`;

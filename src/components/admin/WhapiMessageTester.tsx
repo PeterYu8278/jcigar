@@ -25,7 +25,7 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
   const [loading, setLoading] = useState(false);
   const [healthStatus, setHealthStatus] = useState<{ success: boolean; error?: string; data?: any } | null>(null);
   const [lastResult, setLastResult] = useState<SendMessageResponse | null>(null);
-  const [appName, setAppName] = useState<string>('Gentlemen Club');
+  const [appName, setAppName] = useState<string>('Cigar Club');
   const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches;
 
   // 加载应用名称

@@ -977,7 +977,7 @@ export const resetPasswordByPhone = async (phone: string) => {
       const { sendPasswordReset } = await import('../whapi');
       const { getAppConfig } = await import('./appConfig');
       const appConfig = await getAppConfig();
-      const appName = appConfig?.appName || 'Gentlemen Club';
+      const appName = appConfig?.appName || 'Cigar Club';
 
       const message = `[${appName}] 重置密码
 您好 ${userData.displayName || '用户'}，您的密码已重置。

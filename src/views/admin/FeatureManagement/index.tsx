@@ -967,7 +967,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               rules={[{ required: true, message: '请输入应用名称' }]}
             >
               <Input
-                placeholder="例如：Gentlemen Club"
+                placeholder="例如：Cigar Club"
                 style={{
                   background: 'rgba(255, 255, 255, 0.05)',
                   border: '1px solid rgba(255, 255, 255, 0.1)',
