@@ -18,6 +18,7 @@ import 'react-image-crop/dist/ReactCrop.css'
   maxWidth?: number // 最大宽度
   maxHeight?: number // 最大高度
   title?: string
+  originalFileType?: string // 原始文件类型，如 'image/png' 或 'image/jpeg'
 }
 
 const ImageCrop: React.FC<ImageCropProps> = ({
@@ -30,7 +31,8 @@ const ImageCrop: React.FC<ImageCropProps> = ({
   minHeight = 100,
   maxWidth = 800,
   maxHeight = 800,
-  title = '图片裁剪'
+  title = '图片裁剪',
+  originalFileType
 }) => {
   const { t } = useTranslation()
   const [crop, setCrop] = useState<Crop>()
@@ -70,7 +72,7 @@ const ImageCrop: React.FC<ImageCropProps> = ({
   }, [aspectRatio])
 
   // 将裁剪后的图片转换为Blob
-  const getCroppedImg = (image: HTMLImageElement, crop: PixelCrop, imageSrc: string): Promise<Blob> => {
+  const getCroppedImg = (image: HTMLImageElement, crop: PixelCrop, imageSrc: string, originalFileType?: string): Promise<Blob> => {
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')
     
@@ -105,7 +107,14 @@ const ImageCrop: React.FC<ImageCropProps> = ({
 
     return new Promise((resolve) => {
       // 检测原始图片格式，如果是 PNG 则保持 PNG，否则使用 JPEG
-      const imageFormat = imageSrc.toLowerCase().includes('.png') ? 'image/png' : 'image/jpeg'
+      // 优先使用传入的 originalFileType，否则从 imageSrc 检测（兼容旧代码）
+      let imageFormat = 'image/jpeg' // 默认 JPEG
+      if (originalFileType === 'image/png') {
+        imageFormat = 'image/png'
+      } else if (imageSrc.toLowerCase().includes('.png')) {
+        imageFormat = 'image/png'
+      }
+      
       canvas.toBlob(
         (blob) => {
           if (!blob) {
@@ -139,7 +148,7 @@ const ImageCrop: React.FC<ImageCropProps> = ({
 
     setLoading(true)
     try {
-      const croppedImageBlob = await getCroppedImg(imgRef.current, completedCrop, src)
+      const croppedImageBlob = await getCroppedImg(imgRef.current, completedCrop, src, originalFileType)
       const croppedImageUrl = URL.createObjectURL(croppedImageBlob)
       onConfirm(croppedImageUrl)
       message.success(t('crop.success'))

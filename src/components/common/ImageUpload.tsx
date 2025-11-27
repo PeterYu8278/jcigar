@@ -126,10 +126,13 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       const originalFile = tempImageFile
       const isPng = originalFile?.type === 'image/png' || originalFile?.name.toLowerCase().endsWith('.png')
       const fileExtension = isPng ? 'png' : 'jpg'
+      // 使用 blob 的实际类型，如果 blob 是 PNG 则保持 PNG，否则使用检测到的类型
+      const blobType = blob.type || (isPng ? 'image/png' : 'image/jpeg')
       const mimeType = isPng ? 'image/png' : 'image/jpeg'
-      const fileName = `cropped-image.${fileExtension}`
+      const fileName = `cropped-image_${Date.now()}.${fileExtension}`
       
-      const file = new File([blob], fileName, { type: mimeType })
+      // 确保 File 对象的类型与 blob 的实际类型一致
+      const file = new File([blob], fileName, { type: blobType || mimeType })
 
       // 上传裁剪后的图片，明确指定格式以保持 PNG 透明背景
       const result: UploadResult = await upload(file, {
@@ -391,6 +394,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           maxWidth={cropMaxWidth}
           maxHeight={cropMaxHeight}
           title={t('upload.cropImage', { defaultValue: '图片裁剪' })}
+          originalFileType={tempImageFile?.type}
         />
       )}
     </div>
