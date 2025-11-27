@@ -127,6 +127,23 @@ const FeatureManagement: React.FC = () => {
     loadAppConfig();
   }, []);
 
+  // 当 appConfig 加载完成且切换到应用配置标签页时，设置表单值
+  useEffect(() => {
+    if (activeTab === 'app' && appConfig) {
+      try {
+        appConfigForm.setFieldsValue({
+          logoUrl: appConfig.logoUrl,
+          appName: appConfig.appName,
+          hideFooter: appConfig.hideFooter ?? false,
+          disableGoogleLogin: appConfig.auth?.disableGoogleLogin ?? false,
+          disableEmailLogin: appConfig.auth?.disableEmailLogin ?? false,
+        });
+      } catch (err) {
+        // Form 可能还未渲染，忽略错误
+      }
+    }
+  }, [activeTab, appConfig, appConfigForm]);
+
   // 当切换到 whapi 标签页时，设置表单值
   useEffect(() => {
     if (activeTab === 'whapi' && appConfig) {
@@ -184,13 +201,6 @@ const FeatureManagement: React.FC = () => {
           },
         };
         setAppConfig(configWithTheme as AppConfig);
-        appConfigForm.setFieldsValue({
-          logoUrl: config.logoUrl,
-          appName: config.appName,
-          hideFooter: config.hideFooter ?? false,
-          disableGoogleLogin: config.auth?.disableGoogleLogin ?? false,
-          disableEmailLogin: config.auth?.disableEmailLogin ?? false,
-        });
       }
     } catch (error) {
       message.error('加载应用配置失败');

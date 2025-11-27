@@ -27,6 +27,8 @@ import { MemberProfileCard } from '../../../components/common/MemberProfileCard'
 import { VisitTimerRedemption } from '../../../components/home/VisitTimerRedemption'
 import { MysteryGiftBanner } from '../../../components/home/MysteryGiftBanner'
 import { isFeatureVisible } from '../../../services/firebase/featureVisibility'
+import { getAppConfig } from '../../../services/firebase/appConfig'
+import type { AppConfig } from '../../../types'
 
 const Home: React.FC = () => {
   const navigate = useNavigate()
@@ -43,6 +45,7 @@ const Home: React.FC = () => {
   const [swiperInstance, setSwiperInstance] = useState<any>(null)
   const [eventsFeatureVisible, setEventsFeatureVisible] = useState<boolean>(true)
   const [shopFeatureVisible, setShopFeatureVisible] = useState<boolean>(true)
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
   
   // 会员等级文本获取函数
   const getMembershipText = (level: string) => {
@@ -115,6 +118,17 @@ const Home: React.FC = () => {
       })
     }
   }
+
+  // 加载应用配置
+  useEffect(() => {
+    const loadAppConfig = async () => {
+      const config = await getAppConfig()
+      if (config) {
+        setAppConfig(config)
+      }
+    }
+    loadAppConfig()
+  }, [])
 
   useEffect(() => {
     // Dynamically import Swiper CSS
@@ -265,7 +279,7 @@ const Home: React.FC = () => {
             padding: 0,
             lineHeight: 1.8
           }}>
-            {t('home.welcomeTitle')}
+            {t('home.welcomeTitle')} {appConfig?.appName || 'Cigar Club'}
           </h1>
           
           {/* 副标题和火焰图标 - 并排显示 */}
