@@ -399,7 +399,11 @@ const Login: React.FC = () => {
           <div style={{ textAlign: 'center', paddingTop: '20px' }}>
             {/* 应用 Logo */}
             {appConfig?.logoUrl && (
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'center',
+                background: 'transparent'
+              }}>
                 <img
                   src={appConfig.logoUrl}
                   alt={appConfig?.appName || 'App Logo'}
@@ -408,7 +412,9 @@ const Login: React.FC = () => {
                     height: '50px',
                     maxWidth: '100%',
                     objectFit: 'contain',
-                    borderRadius: '8px'
+                    borderRadius: '8px',
+                    background: 'transparent',
+                    mixBlendMode: 'normal'
                   }}
                 />
               </div>
