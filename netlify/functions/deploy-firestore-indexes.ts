@@ -1,11 +1,5 @@
 // Netlify Function: 部署 Firebase Firestore 索引
 import { Handler } from '@netlify/functions';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import * as fs from 'fs';
-import * as path from 'path';
-
-const execAsync = promisify(exec);
 
 const corsHeaders = {
   'Content-Type': 'application/json',
@@ -79,44 +73,115 @@ export const handler: Handler = async (event, context) => {
       };
     }
 
-    // 读取 firestore.indexes.json 文件
-    // 在 Netlify Function 中，文件路径需要相对于项目根目录
-    // process.cwd() 在 Netlify Function 中指向项目根目录
-    const indexesPath = path.join(process.cwd(), 'firestore.indexes.json');
+    // 读取索引定义
+    // 优先从请求体读取，否则使用内置的默认索引定义
     let indexesData: any;
     
-    try {
-      // 尝试多个可能的路径
-      const possiblePaths = [
-        indexesPath,
-        path.join(process.cwd(), '..', 'firestore.indexes.json'),
-        path.join(__dirname, '..', '..', 'firestore.indexes.json'),
-      ];
-      
-      let fileContent: string | null = null;
-      for (const filePath of possiblePaths) {
-        try {
-          if (fs.existsSync(filePath)) {
-            fileContent = fs.readFileSync(filePath, 'utf-8');
-            break;
+    if (body.indexes && Array.isArray(body.indexes)) {
+      indexesData = { indexes: body.indexes };
+    } else {
+      // 使用内置的默认索引定义（从 firestore.indexes.json）
+      indexesData = {
+        indexes: [
+          {
+            collectionGroup: "visitSessions",
+            queryScope: "COLLECTION",
+            fields: [
+              { fieldPath: "userId", order: "ASCENDING" },
+              { fieldPath: "status", order: "ASCENDING" },
+              { fieldPath: "checkInAt", order: "DESCENDING" }
+            ]
+          },
+          {
+            collectionGroup: "visitSessions",
+            queryScope: "COLLECTION",
+            fields: [
+              { fieldPath: "status", order: "ASCENDING" },
+              { fieldPath: "checkInAt", order: "DESCENDING" }
+            ]
+          },
+          {
+            collectionGroup: "visitSessions",
+            queryScope: "COLLECTION",
+            fields: [
+              { fieldPath: "status", order: "ASCENDING" },
+              { fieldPath: "checkInAt", order: "ASCENDING" }
+            ]
+          },
+          {
+            collectionGroup: "visitSessions",
+            queryScope: "COLLECTION",
+            fields: [
+              { fieldPath: "userId", order: "ASCENDING" },
+              { fieldPath: "checkInAt", order: "DESCENDING" }
+            ]
+          },
+          {
+            collectionGroup: "redemptionRecords",
+            queryScope: "COLLECTION",
+            fields: [
+              { fieldPath: "userId", order: "ASCENDING" },
+              { fieldPath: "dayKey", order: "ASCENDING" },
+              { fieldPath: "redeemedAt", order: "ASCENDING" }
+            ]
+          },
+          {
+            collectionGroup: "redemptionRecords",
+            queryScope: "COLLECTION",
+            fields: [
+              { fieldPath: "userId", order: "ASCENDING" },
+              { fieldPath: "hourKey", order: "ASCENDING" },
+              { fieldPath: "redeemedAt", order: "ASCENDING" }
+            ]
+          },
+          {
+            collectionGroup: "redemptionRecords",
+            queryScope: "COLLECTION",
+            fields: [
+              { fieldPath: "userId", order: "ASCENDING" },
+              { fieldPath: "redeemedAt", order: "ASCENDING" }
+            ]
+          },
+          {
+            collectionGroup: "reloadRecords",
+            queryScope: "COLLECTION",
+            fields: [
+              { fieldPath: "status", order: "ASCENDING" },
+              { fieldPath: "createdAt", order: "DESCENDING" }
+            ]
+          },
+          {
+            collectionGroup: "reloadRecords",
+            queryScope: "COLLECTION",
+            fields: [
+              { fieldPath: "createdAt", order: "DESCENDING" }
+            ]
+          },
+          {
+            collectionGroup: "membershipFeeRecords",
+            queryScope: "COLLECTION",
+            fields: [
+              { fieldPath: "status", order: "ASCENDING" },
+              { fieldPath: "dueDate", order: "ASCENDING" }
+            ]
+          },
+          {
+            collectionGroup: "pointsRecords",
+            queryScope: "COLLECTION",
+            fields: [
+              { fieldPath: "userId", order: "ASCENDING" },
+              { fieldPath: "createdAt", order: "DESCENDING" }
+            ]
+          },
+          {
+            collectionGroup: "pointsRecords",
+            queryScope: "COLLECTION",
+            fields: [
+              { fieldPath: "createdAt", order: "DESCENDING" }
+            ]
           }
-        } catch (e) {
-          // 继续尝试下一个路径
-        }
-      }
-      
-      if (!fileContent) {
-        throw new Error('无法找到 firestore.indexes.json 文件');
-      }
-      
-      indexesData = JSON.parse(fileContent);
-    } catch (fileError: any) {
-      // 如果文件不存在，尝试从请求体读取
-      if (body.indexes) {
-        indexesData = { indexes: body.indexes };
-      } else {
-        throw new Error(`无法读取 firestore.indexes.json: ${fileError.message}`);
-      }
+        ]
+      };
     }
 
     if (!indexesData.indexes || !Array.isArray(indexesData.indexes)) {
