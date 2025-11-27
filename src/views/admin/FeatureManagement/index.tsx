@@ -1,6 +1,7 @@
 // 功能管理页面
 import React, { useState, useEffect } from 'react';
 import { Card, Switch, Button, Space, Typography, message, Spin, Tabs, Input, Checkbox, Form, Divider, Alert } from 'antd';
+const { TextArea } = Input;
 import { SaveOutlined, ReloadOutlined, EyeOutlined, EyeInvisibleOutlined, SearchOutlined, SettingOutlined, CopyOutlined, DownloadOutlined, FileTextOutlined, RocketOutlined, CheckCircleOutlined, LoadingOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../../store/modules/auth';
 import { useTranslation } from 'react-i18next';
@@ -90,6 +91,7 @@ const FeatureManagement: React.FC = () => {
     deployId?: string;
     deployUrl?: string;
   }>({ state: 'idle', message: '' });
+  const [firebaseConfigCode, setFirebaseConfigCode] = useState<string>('');
 
   // 检查是否为开发者
   useEffect(() => {
@@ -339,6 +341,68 @@ const FeatureManagement: React.FC = () => {
     }
   };
 
+  // 解析 Firebase 配置代码
+  const parseFirebaseConfig = (code: string): Partial<{
+    firebaseApiKey: string;
+    firebaseAuthDomain: string;
+    firebaseProjectId: string;
+    firebaseStorageBucket: string;
+    firebaseMessagingSenderId: string;
+    firebaseAppId: string;
+    firebaseMeasurementId: string;
+  }> => {
+    const config: any = {};
+    
+    // 提取 apiKey
+    const apiKeyMatch = code.match(/apiKey:\s*["']([^"']+)["']/);
+    if (apiKeyMatch) config.firebaseApiKey = apiKeyMatch[1];
+    
+    // 提取 authDomain
+    const authDomainMatch = code.match(/authDomain:\s*["']([^"']+)["']/);
+    if (authDomainMatch) config.firebaseAuthDomain = authDomainMatch[1];
+    
+    // 提取 projectId
+    const projectIdMatch = code.match(/projectId:\s*["']([^"']+)["']/);
+    if (projectIdMatch) config.firebaseProjectId = projectIdMatch[1];
+    
+    // 提取 storageBucket
+    const storageBucketMatch = code.match(/storageBucket:\s*["']([^"']+)["']/);
+    if (storageBucketMatch) config.firebaseStorageBucket = storageBucketMatch[1];
+    
+    // 提取 messagingSenderId
+    const messagingSenderIdMatch = code.match(/messagingSenderId:\s*["']([^"']+)["']/);
+    if (messagingSenderIdMatch) config.firebaseMessagingSenderId = messagingSenderIdMatch[1];
+    
+    // 提取 appId
+    const appIdMatch = code.match(/appId:\s*["']([^"']+)["']/);
+    if (appIdMatch) config.firebaseAppId = appIdMatch[1];
+    
+    // 提取 measurementId（可选）
+    const measurementIdMatch = code.match(/measurementId:\s*["']([^"']+)["']/);
+    if (measurementIdMatch) config.firebaseMeasurementId = measurementIdMatch[1];
+    
+    return config;
+  };
+
+  // 处理 Firebase 配置代码粘贴
+  const handlePasteFirebaseConfig = (code: string) => {
+    try {
+      const config = parseFirebaseConfig(code);
+      const extractedKeys = Object.keys(config);
+      
+      if (extractedKeys.length === 0) {
+        message.error('未能从粘贴的代码中提取到配置信息，请检查代码格式');
+        return;
+      }
+      
+      // 填充表单字段
+      envForm.setFieldsValue(config);
+      message.success(`已自动填充 ${extractedKeys.length} 个配置项`);
+    } catch (error) {
+      message.error('解析配置代码失败，请检查代码格式');
+    }
+  };
+
   // 生成 .env 文件内容
   const generateEnvFile = (values: {
     firebaseApiKey: string;
@@ -347,22 +411,30 @@ const FeatureManagement: React.FC = () => {
     firebaseStorageBucket: string;
     firebaseMessagingSenderId: string;
     firebaseAppId: string;
+    firebaseMeasurementId?: string;
     cloudinaryCloudName: string;
     cloudinaryApiKey: string;
     cloudinaryApiSecret: string;
     cloudinaryUploadPreset: string;
     cloudinaryBaseFolder: string;
     appName: string;
-    fcmVapidKey: string;
+    fcmVapidKey?: string;
   }): string => {
+    const measurementIdLine = values.firebaseMeasurementId 
+      ? `VITE_FIREBASE_MEASUREMENT_ID=${values.firebaseMeasurementId}\n`
+      : '';
+    
+    const fcmVapidKeyLine = values.fcmVapidKey
+      ? `# FCM 配置\nVITE_FCM_VAPID_KEY=${values.fcmVapidKey}`
+      : '';
+    
     return `# Firebase配置
 VITE_FIREBASE_API_KEY=${values.firebaseApiKey}
 VITE_FIREBASE_AUTH_DOMAIN=${values.firebaseAuthDomain}
 VITE_FIREBASE_PROJECT_ID=${values.firebaseProjectId}
 VITE_FIREBASE_STORAGE_BUCKET=${values.firebaseStorageBucket}
 VITE_FIREBASE_MESSAGING_SENDER_ID=${values.firebaseMessagingSenderId}
-VITE_FIREBASE_APP_ID=${values.firebaseAppId}
-
+VITE_FIREBASE_APP_ID=${values.firebaseAppId}${measurementIdLine ? '\n' + measurementIdLine : ''}
 # Cloudinary配置
 VITE_CLOUDINARY_CLOUD_NAME=${values.cloudinaryCloudName}
 VITE_CLOUDINARY_API_KEY=${values.cloudinaryApiKey}
@@ -371,10 +443,7 @@ VITE_CLOUDINARY_UPLOAD_PRESET=${values.cloudinaryUploadPreset}
 VITE_CLOUDINARY_BASE_FOLDER=${values.cloudinaryBaseFolder}
 
 # 应用配置
-VITE_APP_NAME=${values.appName}
-
-# FCM 配置
-VITE_FCM_VAPID_KEY=${values.fcmVapidKey}`;
+VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''}`;
   };
 
   // 部署到 Netlify
@@ -384,7 +453,7 @@ VITE_FCM_VAPID_KEY=${values.fcmVapidKey}`;
       const { netlifyAccessToken, netlifySiteId } = values;
 
       if (!netlifyAccessToken || !netlifySiteId) {
-        message.error('请填写 Netlify Access Token 和 Site ID');
+        message.error('请填写 Netlify Access Token 和 Site ID 以进行部署');
         return;
       }
 
@@ -405,8 +474,17 @@ VITE_FCM_VAPID_KEY=${values.fcmVapidKey}`;
         { key: 'VITE_CLOUDINARY_UPLOAD_PRESET', value: values.cloudinaryUploadPreset, scopes: ['all'] },
         { key: 'VITE_CLOUDINARY_BASE_FOLDER', value: values.cloudinaryBaseFolder, scopes: ['all'] },
         { key: 'VITE_APP_NAME', value: values.appName, scopes: ['all'] },
-        { key: 'VITE_FCM_VAPID_KEY', value: values.fcmVapidKey, scopes: ['all'] },
       ];
+
+      // 如果提供了 Measurement ID，添加到环境变量数组
+      if (values.firebaseMeasurementId) {
+        envVars.push({ key: 'VITE_FIREBASE_MEASUREMENT_ID', value: values.firebaseMeasurementId, scopes: ['all'] });
+      }
+
+      // 如果提供了 FCM VAPID Key，添加到环境变量数组
+      if (values.fcmVapidKey) {
+        envVars.push({ key: 'VITE_FCM_VAPID_KEY', value: values.fcmVapidKey, scopes: ['all'] });
+      }
 
       // 调用 Netlify Function
       const response = await fetch('/.netlify/functions/update-netlify-env', {
@@ -1137,8 +1215,49 @@ VITE_FCM_VAPID_KEY=${values.fcmVapidKey}`;
                 Firebase 配置
               </Text>
               <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 16 }}>
-                可在 <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Firebase 控制台</a> 的项目设置中找到这些配置信息。进入项目设置 &gt; 常规 &gt; 您的应用，即可查看所有配置值。
+                可在 <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Firebase 控制台</a> 的项目设置中找到这些配置信息。进入项目设置 &gt; 常规 &gt; 您的应用，即可查看所有配置值。Measurement ID（可选）用于 Google Analytics，可在项目设置 &gt; 集成 &gt; Google Analytics 中找到。
               </Text>
+              
+              {/* Firebase 配置代码粘贴区域 */}
+              <div style={{ marginBottom: 16 }}>
+                <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 8 }}>
+                  快速填充：粘贴 Firebase 配置代码（从 Firebase 控制台复制的代码）
+                </Text>
+                <TextArea
+                  placeholder="粘贴 Firebase 配置代码，例如：const firebaseConfig = { apiKey: '...', authDomain: '...', ... }"
+                  rows={4}
+                  value={firebaseConfigCode}
+                  onChange={(e) => setFirebaseConfigCode(e.target.value)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#f8f8f8',
+                    fontFamily: 'monospace',
+                    fontSize: '12px',
+                    marginBottom: 8,
+                  }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button
+                    type="primary"
+                    onClick={() => {
+                      if (firebaseConfigCode.trim()) {
+                        handlePasteFirebaseConfig(firebaseConfigCode);
+                        setFirebaseConfigCode('');
+                      } else {
+                        message.warning('请先粘贴 Firebase 配置代码');
+                      }
+                    }}
+                    style={{
+                      background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                      border: 'none',
+                      color: '#000',
+                    }}
+                  >
+                    解析并填充
+                  </Button>
+                </div>
+              </div>
               
               <Form.Item
                 label={<span style={{ color: '#c0c0c0' }}>API Key</span>}
@@ -1231,6 +1350,21 @@ VITE_FCM_VAPID_KEY=${values.fcmVapidKey}`;
               >
                 <Input
                   placeholder="1:123456789012:web:abc123"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#f8f8f8',
+                  }}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={<span style={{ color: '#c0c0c0' }}>Measurement ID</span>}
+                name="firebaseMeasurementId"
+                rules={[{ required: false, message: '请输入 Firebase Measurement ID' }]}
+              >
+                <Input
+                  placeholder="G-XXXXXXXXXX"
                   style={{
                     background: 'rgba(255, 255, 255, 0.05)',
                     border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -1374,16 +1508,16 @@ VITE_FCM_VAPID_KEY=${values.fcmVapidKey}`;
             {/* FCM 配置 */}
             <div style={{ marginBottom: 24 }}>
               <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600, display: 'block', marginBottom: 16 }}>
-                FCM 配置
+                FCM 配置（可选）
               </Text>
               <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 16 }}>
-                可在 <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Firebase 控制台</a> 的项目设置中找到 VAPID Key。进入项目设置 &gt; 云消息传递 &gt; Web 配置，即可查看 VAPID 密钥。
+                可在 <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Firebase 控制台</a> 的项目设置中找到 VAPID Key。进入项目设置 &gt; 云消息传递 &gt; Web 配置，即可查看 VAPID 密钥。此配置为可选，仅在使用推送通知功能时需要。
               </Text>
               
               <Form.Item
                 label={<span style={{ color: '#c0c0c0' }}>VAPID Key</span>}
                 name="fcmVapidKey"
-                rules={[{ required: true, message: '请输入 FCM VAPID Key' }]}
+                rules={[{ required: false, message: '请输入 FCM VAPID Key' }]}
               >
                 <Input
                   type={showSecrets.fcmVapidKey ? 'text' : 'password'}
@@ -1410,16 +1544,16 @@ VITE_FCM_VAPID_KEY=${values.fcmVapidKey}`;
             {/* Netlify 配置 */}
             <div style={{ marginBottom: 24 }}>
               <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600, display: 'block', marginBottom: 16 }}>
-                Netlify 配置
+                Netlify 配置（可选）
               </Text>
               <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 16 }}>
-                  用于将环境变量部署到 Netlify。Access Token 可在 <a href="https://app.netlify.com/user/applications" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Netlify 用户设置</a> 中生成，Site ID 可在站点设置中找到。
+                  用于将环境变量部署到 Netlify。Access Token 可在 <a href="https://app.netlify.com/user/applications" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Netlify 用户设置</a> 中生成，Site ID 可在站点设置中找到。此配置为可选，仅在需要部署到 Netlify 时需要。
                 </Text>
               
               <Form.Item
                 label={<span style={{ color: '#c0c0c0' }}>Access Token</span>}
                 name="netlifyAccessToken"
-                rules={[{ required: true, message: '请输入 Netlify Access Token' }]}
+                rules={[{ required: false, message: '请输入 Netlify Access Token' }]}
               >
                 <Input
                   type={showSecrets.netlifyAccessToken ? 'text' : 'password'}
@@ -1443,7 +1577,7 @@ VITE_FCM_VAPID_KEY=${values.fcmVapidKey}`;
               <Form.Item
                 label={<span style={{ color: '#c0c0c0' }}>Site ID</span>}
                 name="netlifySiteId"
-                rules={[{ required: true, message: '请输入 Netlify Site ID' }]}
+                rules={[{ required: false, message: '请输入 Netlify Site ID' }]}
               >
                 <Input
                   placeholder="your-site-id"

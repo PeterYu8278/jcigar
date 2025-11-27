@@ -11,15 +11,35 @@ const firebaseConfig = {
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // 运行时校验：避免无效/缺失配置导致难以定位的问题
-const missingKeys = Object.entries(firebaseConfig)
+// measurementId 是可选的，不参与验证
+const requiredConfig = {
+  apiKey: firebaseConfig.apiKey,
+  authDomain: firebaseConfig.authDomain,
+  projectId: firebaseConfig.projectId,
+  storageBucket: firebaseConfig.storageBucket,
+  messagingSenderId: firebaseConfig.messagingSenderId,
+  appId: firebaseConfig.appId
+};
+
+const missingKeys = Object.entries(requiredConfig)
   .filter(([_, v]) => !v)
-  .map(([k]) => k);
+  .map(([k]) => {
+    // 将 camelCase 转换为 UPPER_SNAKE_CASE
+    const envKey = `VITE_FIREBASE_${k.replace(/([A-Z])/g, '_$1').toUpperCase()}`;
+    return envKey;
+  });
+
 if (missingKeys.length > 0) {
-  throw new Error('Firebase 配置缺失，请检查环境变量 VITE_FIREBASE_*');
+  throw new Error(
+    `Firebase 配置缺失，请检查环境变量: ${missingKeys.join(', ')}\n` +
+    `请确保在项目根目录创建 .env.local 文件并配置这些变量。\n` +
+    `可以参考 env.example 文件。`
+  );
 }
 
 // 初始化Firebase
