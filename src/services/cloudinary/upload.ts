@@ -85,9 +85,9 @@ export const uploadFile = async (
         formData.append('upload_preset', config.uploadPreset)
         formData.append('folder', folder)
         
-        // 如果明确指定了格式，传递 format 参数以保持原始格式
+        // 如果明确指定了格式，通过 transformation 参数传递（未签名上传不支持直接使用 format 参数）
         if (fileFormat) {
-          formData.append('format', fileFormat)
+          formData.append('transformation', `f_${fileFormat}`)
         }
         
         fetch(`https://api.cloudinary.com/v1_1/${config.cloudName}/image/upload`, {
@@ -112,9 +112,9 @@ export const uploadFile = async (
         formData.append('upload_preset', config.uploadPreset)
         formData.append('folder', folder)
         
-        // 如果明确指定了格式，传递 format 参数
+        // 如果明确指定了格式，通过 transformation 参数传递（未签名上传不支持直接使用 format 参数）
         if (fileFormat) {
-          formData.append('format', fileFormat)
+          formData.append('transformation', `f_${fileFormat}`)
         }
         
         fetch(`https://api.cloudinary.com/v1_1/${config.cloudName}/image/upload`, {

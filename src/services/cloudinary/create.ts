@@ -86,15 +86,12 @@ const buildUploadFormData = (
     formData.append('unique_filename', String(options.uniqueFilename))
   }
   
-  // 明确指定格式，用于保持原始格式（特别是 PNG 透明背景）
-  if (options.format) {
-    formData.append('format', options.format)
-  }
-  
   // 转换参数（如果提供）
+  // 注意：未签名上传不支持直接使用 format 参数，必须通过 transformation 指定
+  const transformations: string[] = []
+  
   if (options.transformation) {
     const transformation = options.transformation
-    const transformations: string[] = []
     
     if (transformation.width) transformations.push(`w_${transformation.width}`)
     if (transformation.height) transformations.push(`h_${transformation.height}`)
@@ -104,17 +101,27 @@ const buildUploadFormData = (
       const quality = transformation.quality === 'auto' ? 'auto' : transformation.quality
       transformations.push(`q_${quality}`)
     }
-    if (transformation.format) transformations.push(`f_${transformation.format}`)
-    if (transformation.fetchFormat) transformations.push(`f_${transformation.fetchFormat}`)
+    // 优先使用 fetchFormat，如果没有则使用 format
+    if (transformation.fetchFormat) {
+      transformations.push(`f_${transformation.fetchFormat}`)
+    } else if (transformation.format) {
+      transformations.push(`f_${transformation.format}`)
+    }
     if (transformation.angle) transformations.push(`a_${transformation.angle}`)
     if (transformation.opacity) transformations.push(`o_${transformation.opacity}`)
     if (transformation.radius) transformations.push(`r_${transformation.radius}`)
     if (transformation.effect) transformations.push(`e_${transformation.effect}`)
     if (transformation.background) transformations.push(`b_${transformation.background}`)
-    
-    if (transformations.length > 0) {
-      formData.append('transformation', transformations.join(','))
-    }
+  }
+  
+  // 如果 options.format 存在但 transformation 中没有指定格式，通过 transformation 添加
+  if (options.format && !transformations.some(t => t.startsWith('f_'))) {
+    transformations.push(`f_${options.format}`)
+  }
+  
+  // 如果有转换参数，添加到表单数据
+  if (transformations.length > 0) {
+    formData.append('transformation', transformations.join(','))
   }
   
   return formData
