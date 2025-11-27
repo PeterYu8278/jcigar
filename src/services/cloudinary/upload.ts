@@ -85,10 +85,8 @@ export const uploadFile = async (
         formData.append('upload_preset', config.uploadPreset)
         formData.append('folder', folder)
         
-        // 如果明确指定了格式，通过 transformation 参数传递（未签名上传不支持直接使用 format 参数）
-        if (fileFormat) {
-          formData.append('transformation', `f_${fileFormat}`)
-        }
+        // 注意：未签名上传不支持 transformation 和 format 参数
+        // Cloudinary 会自动保持上传文件的原始格式（PNG 透明背景会自动保留）
         
         fetch(`https://api.cloudinary.com/v1_1/${config.cloudName}/image/upload`, {
           method: 'POST',
@@ -112,10 +110,8 @@ export const uploadFile = async (
         formData.append('upload_preset', config.uploadPreset)
         formData.append('folder', folder)
         
-        // 如果明确指定了格式，通过 transformation 参数传递（未签名上传不支持直接使用 format 参数）
-        if (fileFormat) {
-          formData.append('transformation', `f_${fileFormat}`)
-        }
+        // 注意：未签名上传不支持 transformation 和 format 参数
+        // Cloudinary 会自动保持上传文件的原始格式（PNG 透明背景会自动保留）
         
         fetch(`https://api.cloudinary.com/v1_1/${config.cloudName}/image/upload`, {
           method: 'POST',

@@ -86,43 +86,9 @@ const buildUploadFormData = (
     formData.append('unique_filename', String(options.uniqueFilename))
   }
   
-  // 转换参数（如果提供）
-  // 注意：未签名上传不支持直接使用 format 参数，必须通过 transformation 指定
-  const transformations: string[] = []
-  
-  if (options.transformation) {
-    const transformation = options.transformation
-    
-    if (transformation.width) transformations.push(`w_${transformation.width}`)
-    if (transformation.height) transformations.push(`h_${transformation.height}`)
-    if (transformation.crop) transformations.push(`c_${transformation.crop}`)
-    if (transformation.gravity) transformations.push(`g_${transformation.gravity}`)
-    if (transformation.quality) {
-      const quality = transformation.quality === 'auto' ? 'auto' : transformation.quality
-      transformations.push(`q_${quality}`)
-    }
-    // 优先使用 fetchFormat，如果没有则使用 format
-    if (transformation.fetchFormat) {
-      transformations.push(`f_${transformation.fetchFormat}`)
-    } else if (transformation.format) {
-      transformations.push(`f_${transformation.format}`)
-    }
-    if (transformation.angle) transformations.push(`a_${transformation.angle}`)
-    if (transformation.opacity) transformations.push(`o_${transformation.opacity}`)
-    if (transformation.radius) transformations.push(`r_${transformation.radius}`)
-    if (transformation.effect) transformations.push(`e_${transformation.effect}`)
-    if (transformation.background) transformations.push(`b_${transformation.background}`)
-  }
-  
-  // 如果 options.format 存在但 transformation 中没有指定格式，通过 transformation 添加
-  if (options.format && !transformations.some(t => t.startsWith('f_'))) {
-    transformations.push(`f_${options.format}`)
-  }
-  
-  // 如果有转换参数，添加到表单数据
-  if (transformations.length > 0) {
-    formData.append('transformation', transformations.join(','))
-  }
+  // 注意：未签名上传不支持 transformation 和 format 参数
+  // Cloudinary 会自动保持上传文件的原始格式（PNG 透明背景会自动保留）
+  // 如果需要格式转换，应该在上传预设中配置，或通过 URL 转换参数实现
   
   return formData
 }
