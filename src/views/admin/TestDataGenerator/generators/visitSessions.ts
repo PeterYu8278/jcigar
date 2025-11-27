@@ -3,6 +3,7 @@ import { collection, addDoc, Timestamp, getDocs, query, limit } from 'firebase/f
 import { db } from '../../../../config/firebase'
 import { GLOBAL_COLLECTIONS } from '../../../../config/globalCollections'
 import type { VisitSession, User, Cigar } from '../../../../types'
+import { removeUndefined } from './utils'
 
 /**
  * 生成随机日期（过去18个月）
@@ -189,7 +190,7 @@ export async function generateVisitSessions(
       for (let i = 0; i < userCount && generated < count; i++) {
         const sessionData = generateVisitSessionData(user, cigars, dailyRedemptions)
         
-        await addDoc(collection(db, GLOBAL_COLLECTIONS.VISIT_SESSIONS), {
+        const data = removeUndefined({
           ...sessionData,
           checkInAt: Timestamp.fromDate(sessionData.checkInAt),
           checkOutAt: sessionData.checkOutAt ? Timestamp.fromDate(sessionData.checkOutAt) : undefined,
@@ -201,6 +202,7 @@ export async function generateVisitSessions(
           createdAt: Timestamp.fromDate(sessionData.createdAt),
           updatedAt: Timestamp.fromDate(sessionData.updatedAt)
         })
+        await addDoc(collection(db, GLOBAL_COLLECTIONS.VISIT_SESSIONS), data)
 
         generated++
         

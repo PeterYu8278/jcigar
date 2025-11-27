@@ -3,6 +3,7 @@ import { collection, addDoc, Timestamp, getDocs, query, limit } from 'firebase/f
 import { db } from '../../../../config/firebase'
 import { GLOBAL_COLLECTIONS } from '../../../../config/globalCollections'
 import type { User } from '../../../../types'
+import { removeUndefined } from './utils'
 
 const FIRST_NAMES = [
   'John', 'Jane', 'Michael', 'Sarah', 'David', 'Emily', 'James', 'Emma',
@@ -119,8 +120,7 @@ function generateUserData(
       totalVisitHours: 0
     },
     profile: {
-      phone: generatePhoneNumber(),
-      avatar: undefined
+      phone: generatePhoneNumber()
     },
     createdAt,
     updatedAt: createdAt
@@ -144,8 +144,12 @@ export async function generateUsers(
 
       for (let j = 0; j < currentBatchSize; j++) {
         const userData = generateUserData(i + j, referrers)
+        
+        // 清理 undefined 值
+        const cleanUserData = removeUndefined(userData)
+        
         const docRef = await addDoc(collection(db, GLOBAL_COLLECTIONS.USERS), {
-          ...userData,
+          ...cleanUserData,
           createdAt: Timestamp.fromDate(userData.createdAt),
           updatedAt: Timestamp.fromDate(userData.updatedAt)
         })

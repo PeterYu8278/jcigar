@@ -3,6 +3,7 @@ import { doc, setDoc, updateDoc, Timestamp, getDocs, query, limit, where, collec
 import { db } from '../../../../config/firebase'
 import { GLOBAL_COLLECTIONS } from '../../../../config/globalCollections'
 import type { Order, Event, VisitSession, Cigar } from '../../../../types'
+import { removeUndefined } from './utils'
 
 /**
  * 生成订单编号
@@ -118,7 +119,7 @@ async function generateEventOrders(
           updatedAt: status === 'completed' ? new Date(createdAt.getTime() + 7 * 24 * 60 * 60 * 1000) : createdAt
         }
 
-        await setDoc(doc(db, GLOBAL_COLLECTIONS.ORDERS, orderNo), {
+        const data = removeUndefined({
           ...orderData,
           items: orderData.items.map(item => ({
             ...item
@@ -130,6 +131,7 @@ async function generateEventOrders(
           createdAt: Timestamp.fromDate(orderData.createdAt),
           updatedAt: Timestamp.fromDate(orderData.updatedAt)
         })
+        await setDoc(doc(db, GLOBAL_COLLECTIONS.ORDERS, orderNo), data)
 
         generated++
 
@@ -232,7 +234,7 @@ async function generateRedemptionOrders(
         updatedAt: createdAt
       }
 
-      await setDoc(doc(db, COLLECTIONS.ORDERS, orderNo), {
+      const data = removeUndefined({
         ...orderData,
         payment: {
           ...orderData.payment,
@@ -241,6 +243,7 @@ async function generateRedemptionOrders(
         createdAt: Timestamp.fromDate(orderData.createdAt),
         updatedAt: Timestamp.fromDate(orderData.updatedAt)
       })
+      await setDoc(doc(db, GLOBAL_COLLECTIONS.ORDERS, orderNo), data)
 
       // 更新驻店记录的 orderId
       await updateDoc(doc(db, GLOBAL_COLLECTIONS.VISIT_SESSIONS, session.id), {

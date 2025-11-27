@@ -3,6 +3,7 @@ import { doc, addDoc, Timestamp, getDocs, query, limit, where, collection } from
 import { db } from '../../../../config/firebase'
 import { GLOBAL_COLLECTIONS } from '../../../../config/globalCollections'
 import type { OutboundOrder, Order, InventoryMovement } from '../../../../types'
+import { removeUndefined } from './utils'
 
 /**
  * 批量生成出库订单
@@ -66,11 +67,12 @@ export async function generateOutboundOrders(
         updatedAt: createdAt
       }
 
-      const orderRef = await addDoc(collection(db, GLOBAL_COLLECTIONS.OUTBOUND_ORDERS), {
+      const data = removeUndefined({
         ...orderData,
         createdAt: Timestamp.fromDate(createdAt),
         updatedAt: Timestamp.fromDate(createdAt)
       })
+      const orderRef = await addDoc(collection(db, GLOBAL_COLLECTIONS.OUTBOUND_ORDERS), data)
 
       // 创建 inventory_movements 记录
       for (const item of outboundItems) {

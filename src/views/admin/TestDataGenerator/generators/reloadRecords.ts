@@ -3,6 +3,7 @@ import { collection, addDoc, Timestamp, getDocs, query, limit } from 'firebase/f
 import { db } from '../../../../config/firebase'
 import { GLOBAL_COLLECTIONS } from '../../../../config/globalCollections'
 import type { ReloadRecord, User } from '../../../../types'
+import { removeUndefined } from './utils'
 
 const RELOAD_EXCHANGE_RATE = 1 // 1 RM = 1 积分
 
@@ -86,12 +87,13 @@ export async function generateReloadRecords(
       for (let j = 0; j < currentBatchSize; j++) {
         const user = selectedUsers[i + j]
         const recordData = generateReloadRecordData(user)
-        batch.push({
+        const data = removeUndefined({
           ...recordData,
           verifiedAt: recordData.verifiedAt ? Timestamp.fromDate(recordData.verifiedAt) : undefined,
           createdAt: Timestamp.fromDate(recordData.createdAt),
           updatedAt: Timestamp.fromDate(recordData.updatedAt)
         })
+        batch.push(data)
       }
 
       // 批量写入

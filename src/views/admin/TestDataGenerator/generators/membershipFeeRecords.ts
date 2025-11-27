@@ -3,6 +3,7 @@ import { collection, addDoc, Timestamp, getDocs, query, limit } from 'firebase/f
 import { db } from '../../../../config/firebase'
 import { GLOBAL_COLLECTIONS } from '../../../../config/globalCollections'
 import type { MembershipFeeRecord, User } from '../../../../types'
+import { removeUndefined } from './utils'
 
 /**
  * 生成随机日期（过去18个月）
@@ -88,7 +89,7 @@ export async function generateMembershipFeeRecords(
       for (let j = 0; j < currentBatchSize; j++) {
         const user = selectedUsers[i + j]
         const recordData = generateMembershipFeeRecordData(user)
-        batch.push({
+        const data = removeUndefined({
           ...recordData,
           dueDate: Timestamp.fromDate(recordData.dueDate),
           deductedAt: recordData.deductedAt ? Timestamp.fromDate(recordData.deductedAt) : undefined,
@@ -96,6 +97,7 @@ export async function generateMembershipFeeRecords(
           createdAt: Timestamp.fromDate(recordData.createdAt),
           updatedAt: Timestamp.fromDate(recordData.updatedAt)
         })
+        batch.push(data)
       }
 
       // 批量写入
