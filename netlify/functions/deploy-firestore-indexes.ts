@@ -51,11 +51,25 @@ async function deployIndexesViaCLI(
     };
     fs.writeFileSync(firebaseJsonPath, JSON.stringify(firebaseJson, null, 2));
     
-    // 设置认证环境变量
+    // 创建 npm 缓存目录
+    const npmCacheDir = path.join(tempDir, '.npm-cache');
+    const npmHomeDir = path.join(tempDir, '.npm-home');
+    fs.mkdirSync(npmCacheDir, { recursive: true });
+    fs.mkdirSync(npmHomeDir, { recursive: true });
+    
+    // 设置认证环境变量和 npm 缓存目录
     const env: Record<string, string> = {
       ...process.env,
       FIREBASE_PROJECT: projectId,
-      CI: 'true' // 设置为 CI 模式，避免交互式提示
+      CI: 'true', // 设置为 CI 模式，避免交互式提示
+      // 设置 npm 缓存目录到临时目录，避免权限问题
+      NPM_CONFIG_CACHE: npmCacheDir,
+      NPM_CONFIG_PREFIX: npmHomeDir,
+      HOME: npmHomeDir, // 设置 HOME 到临时目录
+      USERPROFILE: npmHomeDir, // Windows 兼容
+      // 禁用 npm 更新检查，加快执行速度
+      NPM_CONFIG_UPDATE_NOTIFIER: 'false',
+      NPM_CONFIG_FUND: 'false',
     };
     
     if (serviceAccount) {
@@ -89,7 +103,8 @@ async function deployIndexesViaCLI(
     // 执行 Firebase CLI 命令
     // 注意：在 Netlify Function 环境中，Firebase CLI 可能不可用
     // 我们尝试使用 npx firebase-tools，如果失败则返回手动部署说明
-    const deployCommand = `npx -y firebase-tools@latest deploy --only firestore:indexes --project ${projectId} --cwd ${tempDir} --non-interactive`;
+    // 使用 --cache 参数指定缓存目录，避免权限问题
+    const deployCommand = `npx --yes --cache=${npmCacheDir} firebase-tools@latest deploy --only firestore:indexes --project ${projectId} --cwd ${tempDir} --non-interactive`;
     
     console.log('[deployIndexesViaCLI] Executing command:', deployCommand);
     console.log('[deployIndexesViaCLI] Environment variables:', {
@@ -351,6 +366,13 @@ export const handler: Handler = async (event, context) => {
       } else {
         // 如果 CLI 部署失败，返回错误和手动创建链接
         const consoleUrl = `https://console.firebase.google.com/project/${projectId}/firestore/indexes`;
+        
+        // 检查是否是 npm 相关错误
+        const isNpmError = deployResult.error?.includes('npm') || deployResult.error?.includes('ENOENT');
+        const errorMessage = isNpmError 
+          ? '由于 Netlify Function 环境限制，无法使用 Firebase CLI 自动部署。请使用以下方法之一：\n1. 在本地执行：firebase deploy --only firestore:indexes\n2. 通过 Firebase Console 手动创建索引'
+          : deployResult.message || '自动部署失败，请手动创建索引';
+        
         return {
           statusCode: 200,
           headers: corsHeaders,
@@ -358,10 +380,12 @@ export const handler: Handler = async (event, context) => {
             success: false,
             projectId,
             indexCount: indexesData.indexes.length,
-            message: deployResult.message || '自动部署失败，请手动创建索引',
+            message: errorMessage,
             error: deployResult.error,
+            output: deployResult.output,
             links: [consoleUrl],
-            manualDeployCommand: `firebase deploy --only firestore:indexes --project ${projectId}`
+            manualDeployCommand: `firebase deploy --only firestore:indexes --project ${projectId}`,
+            indexesData: indexesData // 返回索引数据，方便用户查看
           })
         };
       }
