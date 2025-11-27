@@ -350,6 +350,8 @@ const FeatureManagement: React.FC = () => {
     cloudinaryCloudName: string;
     cloudinaryApiKey: string;
     cloudinaryApiSecret: string;
+    cloudinaryUploadPreset: string;
+    cloudinaryBaseFolder: string;
     appName: string;
     fcmVapidKey: string;
   }): string => {
@@ -365,6 +367,8 @@ VITE_FIREBASE_APP_ID=${values.firebaseAppId}
 VITE_CLOUDINARY_CLOUD_NAME=${values.cloudinaryCloudName}
 VITE_CLOUDINARY_API_KEY=${values.cloudinaryApiKey}
 VITE_CLOUDINARY_API_SECRET=${values.cloudinaryApiSecret}
+VITE_CLOUDINARY_UPLOAD_PRESET=${values.cloudinaryUploadPreset}
+VITE_CLOUDINARY_BASE_FOLDER=${values.cloudinaryBaseFolder}
 
 # 应用配置
 VITE_APP_NAME=${values.appName}
@@ -398,6 +402,8 @@ VITE_FCM_VAPID_KEY=${values.fcmVapidKey}`;
         { key: 'VITE_CLOUDINARY_CLOUD_NAME', value: values.cloudinaryCloudName, scopes: ['all'] },
         { key: 'VITE_CLOUDINARY_API_KEY', value: values.cloudinaryApiKey, scopes: ['all'] },
         { key: 'VITE_CLOUDINARY_API_SECRET', value: values.cloudinaryApiSecret, scopes: ['all'] },
+        { key: 'VITE_CLOUDINARY_UPLOAD_PRESET', value: values.cloudinaryUploadPreset, scopes: ['all'] },
+        { key: 'VITE_CLOUDINARY_BASE_FOLDER', value: values.cloudinaryBaseFolder, scopes: ['all'] },
         { key: 'VITE_APP_NAME', value: values.appName, scopes: ['all'] },
         { key: 'VITE_FCM_VAPID_KEY', value: values.fcmVapidKey, scopes: ['all'] },
       ];
@@ -1242,7 +1248,7 @@ VITE_FCM_VAPID_KEY=${values.fcmVapidKey}`;
                 Cloudinary 配置
               </Text>
               <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 16 }}>
-                可在 <a href="https://console.cloudinary.com" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Cloudinary 控制台</a> 的仪表板中找到这些配置信息。登录后，在仪表板页面即可查看 Cloud Name、API Key 和 API Secret。
+                可在 <a href="https://console.cloudinary.com" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Cloudinary 控制台</a> 的仪表板中找到这些配置信息。登录后，在仪表板页面即可查看 Cloud Name、API Key 和 API Secret。Upload Preset 可在设置 &gt; 上传预设中创建或查看，Base Folder 是上传文件的默认文件夹路径。
               </Text>
               
               <Form.Item
@@ -1300,6 +1306,36 @@ VITE_FCM_VAPID_KEY=${values.fcmVapidKey}`;
                       style={{ border: 'none', color: '#ffd700' }}
                     />
                   }
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#f8f8f8',
+                  }}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={<span style={{ color: '#c0c0c0' }}>Upload Preset</span>}
+                name="cloudinaryUploadPreset"
+                rules={[{ required: true, message: '请输入 Cloudinary Upload Preset' }]}
+              >
+                <Input
+                  placeholder="jep-cigar"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#f8f8f8',
+                  }}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={<span style={{ color: '#c0c0c0' }}>Base Folder</span>}
+                name="cloudinaryBaseFolder"
+                rules={[{ required: true, message: '请输入 Cloudinary Base Folder' }]}
+              >
+                <Input
+                  placeholder="jep-cigar"
                   style={{
                     background: 'rgba(255, 255, 255, 0.05)',
                     border: '1px solid rgba(255, 255, 255, 0.1)',

@@ -16,11 +16,11 @@ export interface CloudinaryConfig {
  * 从环境变量获取 Cloudinary 配置
  */
 export const getCloudinaryConfig = (): CloudinaryConfig => {
-  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'dy2zb1n41'
-  const apiKey = import.meta.env.VITE_CLOUDINARY_API_KEY || '867921412147783'
-  const apiSecret = import.meta.env.VITE_CLOUDINARY_API_SECRET || '5bk_PKCezGP1CADvS2MHegxW4-E'
-  const uploadPreset = 'jep-cigar'
-  const baseFolder = 'jep-cigar'
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
+  const apiKey = import.meta.env.VITE_CLOUDINARY_API_KEY
+  const apiSecret = import.meta.env.VITE_CLOUDINARY_API_SECRET
+  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'jep-cigar'
+  const baseFolder = import.meta.env.VITE_CLOUDINARY_BASE_FOLDER || 'jep-cigar'
   const secure = true
 
   if (!cloudName || !apiKey || !apiSecret) {
