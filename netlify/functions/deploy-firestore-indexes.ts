@@ -338,14 +338,8 @@ export const handler: Handler = async (event, context) => {
             collectionGroup: "reloadRecords",
             queryScope: "COLLECTION",
             fields: [
+              { fieldPath: "userId", order: "ASCENDING" },
               { fieldPath: "status", order: "ASCENDING" },
-              { fieldPath: "createdAt", order: "DESCENDING" }
-            ]
-          },
-          {
-            collectionGroup: "reloadRecords",
-            queryScope: "COLLECTION",
-            fields: [
               { fieldPath: "createdAt", order: "DESCENDING" }
             ]
           },
@@ -362,13 +356,6 @@ export const handler: Handler = async (event, context) => {
             queryScope: "COLLECTION",
             fields: [
               { fieldPath: "userId", order: "ASCENDING" },
-              { fieldPath: "createdAt", order: "DESCENDING" }
-            ]
-          },
-          {
-            collectionGroup: "pointsRecords",
-            queryScope: "COLLECTION",
-            fields: [
               { fieldPath: "createdAt", order: "DESCENDING" }
             ]
           }
