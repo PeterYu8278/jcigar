@@ -31,6 +31,7 @@ import PointsConfigPage from './views/admin/PointsConfig'
 import VisitSessionsPage from './views/admin/VisitSessions'
 import OrphanedUserCleanup from './views/admin/OrphanedUserCleanup'
 import FeatureManagement from './views/admin/FeatureManagement'
+import TestDataGenerator from './views/admin/TestDataGenerator'
 
 // 认证页面
 import Login from './views/auth/Login'
@@ -228,6 +229,7 @@ const AppContent: React.FC = () => {
                   <Route path="/admin/feature-management" element={<ProtectedRoute roles={['developer']}><FeatureManagement /></ProtectedRoute>} />
                   <Route path="/admin/cloudinary-test" element={<ProtectedRoute roles={['developer']}><CloudinaryTestPage /></ProtectedRoute>} />
                   <Route path="/admin/debug-orders" element={<ProtectedRoute roles={['developer']}><EventOrderDebug /></ProtectedRoute>} />
+                  <Route path="/admin/test-data-generator" element={<ProtectedRoute roles={['developer']}><TestDataGenerator /></ProtectedRoute>} />
                   
                   {/* 默认重定向 */}
                   <Route path="*" element={<Navigate to="/" replace />} />

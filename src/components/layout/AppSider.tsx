@@ -167,6 +167,11 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
         icon: <SettingOutlined />,
         label: t('navigation.featureManagement', { defaultValue: '功能管理' }),
       })
+      items.push({
+        key: '/admin/test-data-generator',
+        icon: <SyncOutlined />,
+        label: '测试数据生成器',
+      })
       return items
     }
     const items = adminMenuItemsBase.filter(item => {
