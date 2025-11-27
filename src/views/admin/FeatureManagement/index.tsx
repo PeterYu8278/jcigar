@@ -952,10 +952,10 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
             >
               <ImageUpload
                 folder="app-config"
-                value={appConfigForm.getFieldValue('logoUrl')}
-                onChange={(url) => appConfigForm.setFieldsValue({ logoUrl: url || '' })}
+                maxSize={2 * 1024 * 1024} // 2MB
                 width={200}
                 height={200}
+                showPreview={true}
                 enableCrop={true}
                 cropAspectRatio={1}
               />
