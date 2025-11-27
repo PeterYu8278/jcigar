@@ -1,5 +1,12 @@
 // Netlify Function: 部署 Firebase Firestore 索引
 import { Handler } from '@netlify/functions';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
+
+const execAsync = promisify(exec);
 
 const corsHeaders = {
   'Content-Type': 'application/json',
@@ -9,34 +16,98 @@ const corsHeaders = {
 };
 
 /**
- * 使用 Firebase Management REST API 创建索引
- * 注意：这需要 OAuth token，实现较复杂
- * 更实用的方案是返回索引定义和 Firebase Console 链接
+ * 使用 Firebase CLI 部署索引
+ * 需要 Firebase Service Account 或 Access Token
  */
-async function createIndexesViaAPI(
+async function deployIndexesViaCLI(
   projectId: string,
-  indexes: any[],
+  indexesData: any,
+  serviceAccount?: string,
   accessToken?: string
-): Promise<{ success: boolean; message: string; links?: string[] }> {
-  // 由于 Firebase Management REST API 需要 OAuth token，实现较复杂
-  // 我们返回索引定义和 Firebase Console 链接，让用户手动创建
-  // 或者提供创建链接
-  
-  const links: string[] = [];
-  
-  // 为每个索引生成 Firebase Console 创建链接
-  indexes.forEach((index) => {
-    // 构建索引创建 URL（需要 base64 编码的索引定义）
-    // 由于 URL 编码复杂，我们提供通用的索引管理页面链接
-    const consoleUrl = `https://console.firebase.google.com/project/${projectId}/firestore/indexes`;
-    links.push(consoleUrl);
-  });
-
-  return {
-    success: true,
-    message: `已准备 ${indexes.length} 个索引定义。请通过 Firebase Console 创建索引。`,
-    links: [...new Set(links)] // 去重
-  };
+): Promise<{ success: boolean; message: string; output?: string; error?: string }> {
+  try {
+    // 创建临时目录和文件
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'firebase-indexes-'));
+    const indexesFilePath = path.join(tempDir, 'firestore.indexes.json');
+    const firebaseJsonPath = path.join(tempDir, 'firebase.json');
+    
+    // 写入索引文件
+    fs.writeFileSync(indexesFilePath, JSON.stringify(indexesData, null, 2));
+    
+    // 创建 firebase.json
+    const firebaseJson = {
+      firestore: {
+        indexes: 'firestore.indexes.json'
+      }
+    };
+    fs.writeFileSync(firebaseJsonPath, JSON.stringify(firebaseJson, null, 2));
+    
+    // 设置认证环境变量
+    const env: Record<string, string> = {
+      ...process.env,
+      FIREBASE_PROJECT: projectId,
+      CI: 'true' // 设置为 CI 模式，避免交互式提示
+    };
+    
+    if (serviceAccount) {
+      // 使用 Service Account
+      const serviceAccountPath = path.join(tempDir, 'serviceAccount.json');
+      fs.writeFileSync(serviceAccountPath, serviceAccount);
+      env.GOOGLE_APPLICATION_CREDENTIALS = serviceAccountPath;
+    } else if (accessToken) {
+      // 使用 Access Token
+      env.FIREBASE_TOKEN = accessToken;
+    }
+    
+    // 执行 Firebase CLI 命令
+    // 注意：在 Netlify Function 环境中，Firebase CLI 可能不可用
+    // 我们尝试使用 npx firebase-tools，如果失败则返回手动部署说明
+    const deployCommand = `npx -y firebase-tools@latest deploy --only firestore:indexes --project ${projectId} --cwd ${tempDir} --non-interactive`;
+    
+    let stdout = '';
+    let stderr = '';
+    
+    try {
+      const result = await execAsync(deployCommand, {
+        cwd: tempDir,
+        env,
+        timeout: 120000 // 120秒超时（Firebase CLI 可能需要更长时间）
+      });
+      stdout = result.stdout;
+      stderr = result.stderr;
+    } catch (execError: any) {
+      // 如果执行失败，返回错误信息
+      stderr = execError.stderr || execError.message || String(execError);
+      stdout = execError.stdout || '';
+    }
+    
+    // 清理临时文件
+    try {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    } catch (e) {
+      // 忽略清理错误
+    }
+    
+    if (stderr && !stdout.includes('Deploy complete')) {
+      return {
+        success: false,
+        message: '索引部署失败',
+        error: stderr
+      };
+    }
+    
+    return {
+      success: true,
+      message: `成功部署 ${indexesData.indexes.length} 个索引`,
+      output: stdout
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: '索引部署失败',
+      error: error.message || String(error)
+    };
+  }
 }
 
 export const handler: Handler = async (event, context) => {
@@ -60,7 +131,7 @@ export const handler: Handler = async (event, context) => {
 
   try {
     const body = JSON.parse(event.body || '{}');
-    const { projectId, accessToken } = body;
+    const { projectId, accessToken, serviceAccount, useCLI } = body;
 
     // 验证必需参数
     if (!projectId) {
@@ -194,9 +265,48 @@ export const handler: Handler = async (event, context) => {
       };
     }
 
-    // 创建索引（通过 API 或返回链接）
-    const result = await createIndexesViaAPI(projectId, indexesData.indexes, accessToken);
-
+    // 如果提供了认证信息且要求使用 CLI，则尝试自动部署
+    if (useCLI && (serviceAccount || accessToken)) {
+      const deployResult = await deployIndexesViaCLI(
+        projectId,
+        indexesData,
+        serviceAccount,
+        accessToken
+      );
+      
+      if (deployResult.success) {
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify({
+            success: true,
+            projectId,
+            indexCount: indexesData.indexes.length,
+            message: deployResult.message,
+            output: deployResult.output
+          })
+        };
+      } else {
+        // 如果 CLI 部署失败，返回错误和手动创建链接
+        const consoleUrl = `https://console.firebase.google.com/project/${projectId}/firestore/indexes`;
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify({
+            success: false,
+            projectId,
+            indexCount: indexesData.indexes.length,
+            message: deployResult.message || '自动部署失败，请手动创建索引',
+            error: deployResult.error,
+            links: [consoleUrl],
+            manualDeployCommand: `firebase deploy --only firestore:indexes --project ${projectId}`
+          })
+        };
+      }
+    }
+    
+    // 如果没有提供认证信息，返回 Firebase Console 链接
+    const consoleUrl = `https://console.firebase.google.com/project/${projectId}/firestore/indexes`;
     return {
       statusCode: 200,
       headers: corsHeaders,
@@ -204,7 +314,9 @@ export const handler: Handler = async (event, context) => {
         success: true,
         projectId,
         indexCount: indexesData.indexes.length,
-        ...result
+        message: `已准备 ${indexesData.indexes.length} 个索引定义。请提供 Firebase Service Account 或 Access Token 以启用自动部署，或通过 Firebase Console 手动创建。`,
+        links: [consoleUrl],
+        manualDeployCommand: `firebase deploy --only firestore:indexes --project ${projectId}`
       })
     };
   } catch (error: any) {

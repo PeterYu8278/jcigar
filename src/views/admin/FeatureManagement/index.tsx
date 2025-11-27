@@ -560,6 +560,26 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
       setIndexDeploying(true);
       setIndexDeployStatus({ state: 'deploying', message: '正在部署 Firestore 索引...' });
 
+      // 获取可选的认证信息
+      const allValues = envForm.getFieldsValue();
+      let { firebaseServiceAccount, firebaseAccessToken } = allValues;
+      
+      // 处理 Service Account JSON（确保是字符串格式）
+      if (firebaseServiceAccount) {
+        // 如果是对象，转换为字符串
+        if (typeof firebaseServiceAccount === 'object') {
+          firebaseServiceAccount = JSON.stringify(firebaseServiceAccount);
+        }
+        // 验证 JSON 格式
+        try {
+          JSON.parse(firebaseServiceAccount);
+        } catch (e) {
+          message.error('Firebase Service Account JSON 格式无效');
+          setIndexDeploying(false);
+          return;
+        }
+      }
+      
       // 调用 Netlify Function 部署索引（Function 会读取 firestore.indexes.json）
       const deployResponse = await fetch(`/.netlify/functions/deploy-firestore-indexes`, {
         method: 'POST',
@@ -568,6 +588,9 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
         },
         body: JSON.stringify({
           projectId: firebaseProjectId,
+          serviceAccount: firebaseServiceAccount,
+          accessToken: firebaseAccessToken,
+          useCLI: !!(firebaseServiceAccount || firebaseAccessToken), // 如果提供了认证信息，则使用 CLI
         }),
       });
 
@@ -584,9 +607,19 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
           message: result.message || '索引部署成功！',
           links: result.links,
         });
-        message.success('索引部署成功！');
+        message.success(result.message || '索引部署成功！');
       } else {
-        throw new Error(result.message || '部署失败');
+        // 即使部署失败，也显示手动部署选项
+        setIndexDeployStatus({
+          state: 'error',
+          message: result.message || '自动部署失败',
+          links: result.links,
+        });
+        if (result.manualDeployCommand) {
+          message.warning('自动部署失败，请使用手动部署命令或通过 Firebase Console 创建索引');
+        } else {
+          message.error(result.message || '部署失败');
+        }
       }
     } catch (error: any) {
       console.error('[handleDeployFirestoreIndexes] Error:', error);
@@ -1651,6 +1684,63 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               </Form.Item>
             </div>
 
+            <Divider style={{ borderColor: 'rgba(244, 175, 37, 0.2)', margin: '24px 0' }} />
+
+            {/* Firebase 认证配置（用于自动部署索引） */}
+            <div style={{ marginBottom: 24 }}>
+              <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600, display: 'block', marginBottom: 16 }}>
+                Firebase 认证配置（用于自动部署索引，可选）
+              </Text>
+              <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 16 }}>
+                提供以下任一认证信息以启用 Firestore 索引的自动部署：
+                <br />• <strong>Service Account JSON</strong>：在 <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Firebase 控制台</a> 的项目设置 &gt; 服务账号中生成
+                <br />• <strong>Access Token</strong>：通过 <code style={{ background: 'rgba(255, 255, 255, 0.1)', padding: '2px 4px', borderRadius: '4px' }}>firebase login:ci</code> 命令获取
+                <br />如果不提供，系统将返回手动部署链接和命令。
+              </Text>
+              
+              <Form.Item
+                label={<span style={{ color: '#c0c0c0' }}>Service Account JSON</span>}
+                name="firebaseServiceAccount"
+                rules={[{ required: false, message: '请输入 Firebase Service Account JSON' }]}
+              >
+                <Input.TextArea
+                  rows={4}
+                  placeholder='{"type": "service_account", "project_id": "...", ...}'
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#f8f8f8',
+                    fontFamily: 'monospace',
+                    fontSize: '12px',
+                  }}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={<span style={{ color: '#c0c0c0' }}>Access Token</span>}
+                name="firebaseAccessToken"
+                rules={[{ required: false, message: '请输入 Firebase Access Token' }]}
+              >
+                <Input
+                  type={showSecrets.firebaseAccessToken ? 'text' : 'password'}
+                  placeholder="your_firebase_access_token"
+                  suffix={
+                    <Button
+                      type="text"
+                      icon={showSecrets.firebaseAccessToken ? <EyeOutlined style={{ color: '#ffd700' }} /> : <EyeInvisibleOutlined style={{ color: '#ffd700' }} />}
+                      onClick={() => setShowSecrets(prev => ({ ...prev, firebaseAccessToken: !prev.firebaseAccessToken }))}
+                      style={{ border: 'none', color: '#ffd700' }}
+                    />
+                  }
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#f8f8f8',
+                  }}
+                />
+              </Form.Item>
+            </div>
+
             {/* 部署状态显示 */}
             {deployStatus.state !== 'idle' && (
               <div style={{ marginBottom: 24 }}>
@@ -1854,25 +1944,42 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                            '1px solid rgba(24, 144, 255, 0.3)',
                   }}
                   description={
-                    indexDeployStatus.links && indexDeployStatus.links.length > 0 ? (
-                      <div style={{ marginTop: 8 }}>
-                        <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 8 }}>
-                          请通过以下链接在 Firebase Console 中创建索引：
+                    <div style={{ marginTop: 8 }}>
+                      {indexDeployStatus.links && indexDeployStatus.links.length > 0 && (
+                        <>
+                          <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 8 }}>
+                            请通过以下链接在 Firebase Console 中创建索引：
+                          </Text>
+                          {indexDeployStatus.links.map((link, idx) => (
+                            <div key={idx} style={{ marginTop: 4 }}>
+                              <a
+                                href={link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ color: '#ffd700' }}
+                              >
+                                {link}
+                              </a>
+                            </div>
+                          ))}
+                        </>
+                      )}
+                      {indexDeployStatus.state === 'error' && (
+                        <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginTop: 8 }}>
+                          提示：您也可以使用 Firebase CLI 命令手动部署：
+                          <br />
+                          <code style={{ 
+                            background: 'rgba(255, 255, 255, 0.1)', 
+                            padding: '4px 8px', 
+                            borderRadius: '4px',
+                            display: 'inline-block',
+                            marginTop: 4
+                          }}>
+                            firebase deploy --only firestore:indexes
+                          </code>
                         </Text>
-                        {indexDeployStatus.links.map((link, idx) => (
-                          <div key={idx} style={{ marginTop: 4 }}>
-                            <a
-                              href={link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{ color: '#ffd700' }}
-                            >
-                              {link}
-                            </a>
-                          </div>
-                        ))}
-                      </div>
-                    ) : null
+                      )}
+                    </div>
                   }
                 />
               </div>
