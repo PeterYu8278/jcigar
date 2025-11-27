@@ -547,10 +547,11 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
 
   // 部署 Firebase 索引
   const handleDeployFirestoreIndexes = async () => {
+    let firebaseProjectId: string | undefined;
     try {
       // 使用 getFieldsValue 获取值，避免验证错误
       const values = envForm.getFieldsValue(['firebaseProjectId']);
-      const { firebaseProjectId } = values;
+      firebaseProjectId = values.firebaseProjectId;
 
       if (!firebaseProjectId) {
         message.error('请填写 Firebase Project ID');
@@ -609,25 +610,32 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
         });
         message.success(result.message || '索引部署成功！');
       } else {
-        // 即使部署失败，也显示手动部署选项
+        // 即使部署失败，也显示手动部署选项和详细错误信息
+        const errorMessage = result.error 
+          ? `${result.message || '自动部署失败'}\n\n错误详情：\n${result.error}`
+          : result.message || '自动部署失败';
+        
         setIndexDeployStatus({
           state: 'error',
-          message: result.message || '自动部署失败',
+          message: errorMessage,
           links: result.links,
         });
+        
         if (result.manualDeployCommand) {
-          message.warning('自动部署失败，请使用手动部署命令或通过 Firebase Console 创建索引');
+          message.warning('自动部署失败，请使用手动部署命令或通过 Firebase Console 创建索引', 10);
         } else {
-          message.error(result.message || '部署失败');
+          message.error(result.message || '部署失败', 10);
         }
       }
     } catch (error: any) {
       console.error('[handleDeployFirestoreIndexes] Error:', error);
+      const errorMessage = error.message || '部署失败，请检查配置';
       setIndexDeployStatus({
         state: 'error',
-        message: error.message || '部署失败，请检查配置',
+        message: errorMessage,
+        links: [`https://console.firebase.google.com/project/${firebaseProjectId}/firestore/indexes`],
       });
-      message.error(error.message || '部署失败');
+      message.error(errorMessage, 10);
     } finally {
       setIndexDeploying(false);
     }
@@ -1956,6 +1964,19 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                   }}
                   description={
                     <div style={{ marginTop: 8 }}>
+                      {indexDeployStatus.state === 'error' && indexDeployStatus.message && (
+                        <div style={{ 
+                          background: 'rgba(255, 77, 79, 0.1)', 
+                          border: '1px solid rgba(255, 77, 79, 0.3)',
+                          borderRadius: '4px',
+                          padding: '12px',
+                          marginBottom: 12
+                        }}>
+                          <Text style={{ color: '#ff4d4f', fontSize: '12px', whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
+                            {indexDeployStatus.message}
+                          </Text>
+                        </div>
+                      )}
                       {indexDeployStatus.links && indexDeployStatus.links.length > 0 && (
                         <>
                           <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 8 }}>

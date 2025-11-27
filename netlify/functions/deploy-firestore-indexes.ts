@@ -25,14 +25,23 @@ async function deployIndexesViaCLI(
   serviceAccount?: string,
   accessToken?: string
 ): Promise<{ success: boolean; message: string; output?: string; error?: string }> {
+  let tempDir: string | null = null;
   try {
+    console.log('[deployIndexesViaCLI] Starting deployment for project:', projectId);
+    console.log('[deployIndexesViaCLI] Has serviceAccount:', !!serviceAccount);
+    console.log('[deployIndexesViaCLI] Has accessToken:', !!accessToken);
+    console.log('[deployIndexesViaCLI] Indexes count:', indexesData.indexes?.length || 0);
+    
     // 创建临时目录和文件
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'firebase-indexes-'));
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'firebase-indexes-'));
+    console.log('[deployIndexesViaCLI] Temp directory:', tempDir);
+    
     const indexesFilePath = path.join(tempDir, 'firestore.indexes.json');
     const firebaseJsonPath = path.join(tempDir, 'firebase.json');
     
     // 写入索引文件
     fs.writeFileSync(indexesFilePath, JSON.stringify(indexesData, null, 2));
+    console.log('[deployIndexesViaCLI] Indexes file written:', indexesFilePath);
     
     // 创建 firebase.json
     const firebaseJson = {
@@ -51,8 +60,26 @@ async function deployIndexesViaCLI(
     
     if (serviceAccount) {
       // 使用 Service Account
+      // 确保 serviceAccount 是字符串格式
+      let serviceAccountJson: string;
+      if (typeof serviceAccount === 'string') {
+        // 验证 JSON 格式
+        try {
+          JSON.parse(serviceAccount);
+          serviceAccountJson = serviceAccount;
+        } catch (e) {
+          return {
+            success: false,
+            message: 'Service Account JSON 格式无效',
+            error: '无法解析 Service Account JSON: ' + (e as Error).message
+          };
+        }
+      } else {
+        serviceAccountJson = JSON.stringify(serviceAccount);
+      }
+      
       const serviceAccountPath = path.join(tempDir, 'serviceAccount.json');
-      fs.writeFileSync(serviceAccountPath, serviceAccount);
+      fs.writeFileSync(serviceAccountPath, serviceAccountJson);
       env.GOOGLE_APPLICATION_CREDENTIALS = serviceAccountPath;
     } else if (accessToken) {
       // 使用 Access Token
@@ -63,6 +90,14 @@ async function deployIndexesViaCLI(
     // 注意：在 Netlify Function 环境中，Firebase CLI 可能不可用
     // 我们尝试使用 npx firebase-tools，如果失败则返回手动部署说明
     const deployCommand = `npx -y firebase-tools@latest deploy --only firestore:indexes --project ${projectId} --cwd ${tempDir} --non-interactive`;
+    
+    console.log('[deployIndexesViaCLI] Executing command:', deployCommand);
+    console.log('[deployIndexesViaCLI] Environment variables:', {
+      GOOGLE_APPLICATION_CREDENTIALS: env.GOOGLE_APPLICATION_CREDENTIALS ? 'SET' : 'NOT SET',
+      FIREBASE_TOKEN: env.FIREBASE_TOKEN ? 'SET' : 'NOT SET',
+      FIREBASE_PROJECT: env.FIREBASE_PROJECT,
+      CI: env.CI
+    });
     
     let stdout = '';
     let stderr = '';
@@ -75,24 +110,42 @@ async function deployIndexesViaCLI(
       });
       stdout = result.stdout;
       stderr = result.stderr;
+      console.log('[deployIndexesViaCLI] Command stdout:', stdout.substring(0, 500));
+      console.log('[deployIndexesViaCLI] Command stderr:', stderr.substring(0, 500));
     } catch (execError: any) {
       // 如果执行失败，返回错误信息
       stderr = execError.stderr || execError.message || String(execError);
       stdout = execError.stdout || '';
+      console.error('[deployIndexesViaCLI] Command failed:', stderr);
+      console.error('[deployIndexesViaCLI] Command stdout:', stdout);
     }
     
     // 清理临时文件
-    try {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    } catch (e) {
-      // 忽略清理错误
+    if (tempDir) {
+      try {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+        console.log('[deployIndexesViaCLI] Temp directory cleaned');
+      } catch (e) {
+        console.warn('[deployIndexesViaCLI] Failed to clean temp directory:', e);
+      }
     }
     
-    if (stderr && !stdout.includes('Deploy complete')) {
+    // 检查部署是否成功
+    // Firebase CLI 成功时会输出 "Deploy complete!" 或类似信息
+    const isSuccess = stdout.includes('Deploy complete') || 
+                     stdout.includes('deployed successfully') ||
+                     stdout.includes('All indexes deployed') ||
+                     (stdout.length > 0 && stderr.length === 0);
+    
+    if (!isSuccess) {
+      // 组合错误信息
+      const errorMsg = stderr || stdout || '未知错误';
+      console.error('[deployIndexesViaCLI] Deployment failed:', errorMsg);
       return {
         success: false,
         message: '索引部署失败',
-        error: stderr
+        error: errorMsg,
+        output: stdout // 也返回 stdout，可能包含有用信息
       };
     }
     
@@ -102,6 +155,15 @@ async function deployIndexesViaCLI(
       output: stdout
     };
   } catch (error: any) {
+    console.error('[deployIndexesViaCLI] Unexpected error:', error);
+    // 清理临时文件
+    if (tempDir) {
+      try {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      } catch (e) {
+        // 忽略清理错误
+      }
+    }
     return {
       success: false,
       message: '索引部署失败',
