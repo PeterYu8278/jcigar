@@ -1,12 +1,6 @@
 // Netlify Function: 部署 Firebase Firestore 索引
 import { Handler } from '@netlify/functions';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
-
-const execAsync = promisify(exec);
+import { GoogleAuth } from 'google-auth-library';
 
 const corsHeaders = {
   'Content-Type': 'application/json',
@@ -15,176 +9,201 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS'
 };
 
+interface IndexDefinition {
+  collectionGroup: string;
+  queryScope: string;
+  fields: Array<{
+    fieldPath: string;
+    order: string;
+  }>;
+}
+
+interface IndexDeploymentResult {
+  index: IndexDefinition;
+  success: boolean;
+  message: string;
+  operationName?: string;
+  error?: string;
+}
+
 /**
- * 使用 Firebase CLI 部署索引
- * 需要 Firebase Service Account 或 Access Token
+ * 获取 OAuth Access Token
  */
-async function deployIndexesViaCLI(
+async function getAccessToken(serviceAccount: any): Promise<string> {
+  const auth = new GoogleAuth({
+    credentials: serviceAccount,
+    scopes: ['https://www.googleapis.com/auth/cloud-platform']
+  });
+  
+  const client = await auth.getClient();
+  const accessToken = await client.getAccessToken();
+  
+  if (!accessToken) {
+    throw new Error('Failed to get access token');
+  }
+  
+  return accessToken.token || accessToken as string;
+}
+
+/**
+ * 创建单个 Firestore 索引
+ */
+async function createIndex(
   projectId: string,
-  indexesData: any,
-  serviceAccount?: string,
-  accessToken?: string
-): Promise<{ success: boolean; message: string; output?: string; error?: string }> {
-  let tempDir: string | null = null;
+  collectionGroup: string,
+  indexDefinition: IndexDefinition,
+  accessToken: string
+): Promise<{ success: boolean; operationName?: string; error?: string }> {
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/collectionGroups/${collectionGroup}/indexes`;
+  
+  // 转换索引定义格式以匹配 API 要求
+  const apiPayload = {
+    queryScope: indexDefinition.queryScope,
+    fields: indexDefinition.fields.map(field => ({
+      fieldPath: field.fieldPath,
+      order: field.order
+    }))
+  };
+  
   try {
-    console.log('[deployIndexesViaCLI] Starting deployment for project:', projectId);
-    console.log('[deployIndexesViaCLI] Has serviceAccount:', !!serviceAccount);
-    console.log('[deployIndexesViaCLI] Has accessToken:', !!accessToken);
-    console.log('[deployIndexesViaCLI] Indexes count:', indexesData.indexes?.length || 0);
-    
-    // 创建临时目录和文件
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'firebase-indexes-'));
-    console.log('[deployIndexesViaCLI] Temp directory:', tempDir);
-    
-    const indexesFilePath = path.join(tempDir, 'firestore.indexes.json');
-    const firebaseJsonPath = path.join(tempDir, 'firebase.json');
-    
-    // 写入索引文件
-    fs.writeFileSync(indexesFilePath, JSON.stringify(indexesData, null, 2));
-    console.log('[deployIndexesViaCLI] Indexes file written:', indexesFilePath);
-    
-    // 创建 firebase.json
-    const firebaseJson = {
-      firestore: {
-        indexes: 'firestore.indexes.json'
-      }
-    };
-    fs.writeFileSync(firebaseJsonPath, JSON.stringify(firebaseJson, null, 2));
-    
-    // 创建 npm 缓存目录
-    const npmCacheDir = path.join(tempDir, '.npm-cache');
-    const npmHomeDir = path.join(tempDir, '.npm-home');
-    fs.mkdirSync(npmCacheDir, { recursive: true });
-    fs.mkdirSync(npmHomeDir, { recursive: true });
-    
-    // 设置认证环境变量和 npm 缓存目录
-    const env: Record<string, string> = {
-      ...process.env,
-      FIREBASE_PROJECT: projectId,
-      CI: 'true', // 设置为 CI 模式，避免交互式提示
-      // 设置 npm 缓存目录到临时目录，避免权限问题
-      NPM_CONFIG_CACHE: npmCacheDir,
-      NPM_CONFIG_PREFIX: npmHomeDir,
-      HOME: npmHomeDir, // 设置 HOME 到临时目录
-      USERPROFILE: npmHomeDir, // Windows 兼容
-      // 禁用 npm 更新检查，加快执行速度
-      NPM_CONFIG_UPDATE_NOTIFIER: 'false',
-      NPM_CONFIG_FUND: 'false',
-    };
-    
-    if (serviceAccount) {
-      // 使用 Service Account
-      // 确保 serviceAccount 是字符串格式
-      let serviceAccountJson: string;
-      if (typeof serviceAccount === 'string') {
-        // 验证 JSON 格式
-        try {
-          JSON.parse(serviceAccount);
-          serviceAccountJson = serviceAccount;
-        } catch (e) {
-          return {
-            success: false,
-            message: 'Service Account JSON 格式无效',
-            error: '无法解析 Service Account JSON: ' + (e as Error).message
-          };
-        }
-      } else {
-        serviceAccountJson = JSON.stringify(serviceAccount);
-      }
-      
-      const serviceAccountPath = path.join(tempDir, 'serviceAccount.json');
-      fs.writeFileSync(serviceAccountPath, serviceAccountJson);
-      env.GOOGLE_APPLICATION_CREDENTIALS = serviceAccountPath;
-    } else if (accessToken) {
-      // 使用 Access Token
-      env.FIREBASE_TOKEN = accessToken;
-    }
-    
-    // 执行 Firebase CLI 命令
-    // 注意：在 Netlify Function 环境中，Firebase CLI 可能不可用
-    // 我们尝试使用 npx firebase-tools，如果失败则返回手动部署说明
-    // 使用 --cache 参数指定缓存目录，避免权限问题
-    const deployCommand = `npx --yes --cache=${npmCacheDir} firebase-tools@latest deploy --only firestore:indexes --project ${projectId} --cwd ${tempDir} --non-interactive`;
-    
-    console.log('[deployIndexesViaCLI] Executing command:', deployCommand);
-    console.log('[deployIndexesViaCLI] Environment variables:', {
-      GOOGLE_APPLICATION_CREDENTIALS: env.GOOGLE_APPLICATION_CREDENTIALS ? 'SET' : 'NOT SET',
-      FIREBASE_TOKEN: env.FIREBASE_TOKEN ? 'SET' : 'NOT SET',
-      FIREBASE_PROJECT: env.FIREBASE_PROJECT,
-      CI: env.CI
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(apiPayload)
     });
     
-    let stdout = '';
-    let stderr = '';
+    const responseData = await response.json();
     
-    try {
-      const result = await execAsync(deployCommand, {
-        cwd: tempDir,
-        env,
-        timeout: 120000 // 120秒超时（Firebase CLI 可能需要更长时间）
-      });
-      stdout = result.stdout;
-      stderr = result.stderr;
-      console.log('[deployIndexesViaCLI] Command stdout:', stdout.substring(0, 500));
-      console.log('[deployIndexesViaCLI] Command stderr:', stderr.substring(0, 500));
-    } catch (execError: any) {
-      // 如果执行失败，返回错误信息
-      stderr = execError.stderr || execError.message || String(execError);
-      stdout = execError.stdout || '';
-      console.error('[deployIndexesViaCLI] Command failed:', stderr);
-      console.error('[deployIndexesViaCLI] Command stdout:', stdout);
-    }
-    
-    // 清理临时文件
-    if (tempDir) {
-      try {
-        fs.rmSync(tempDir, { recursive: true, force: true });
-        console.log('[deployIndexesViaCLI] Temp directory cleaned');
-      } catch (e) {
-        console.warn('[deployIndexesViaCLI] Failed to clean temp directory:', e);
+    if (!response.ok) {
+      // 检查是否是因为索引已存在
+      if (response.status === 409 || responseData.error?.message?.includes('already exists')) {
+        return {
+          success: true,
+          operationName: 'already_exists',
+          error: 'Index already exists'
+        };
       }
+      
+      // 检查权限错误
+      if (response.status === 403) {
+        const errorMsg = responseData.error?.message || 'Permission denied';
+        return {
+          success: false,
+          error: `${errorMsg}. 请确保 Service Account 具有 'Cloud Datastore Index Admin' 权限。`
+        };
+      }
+      
+      // 检查认证错误
+      if (response.status === 401) {
+        return {
+          success: false,
+          error: 'Authentication failed. 请检查 FIREBASE_SERVICE_ACCOUNT 环境变量是否正确配置。'
+        };
+      }
+      
+      throw new Error(responseData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
     }
     
-    // 检查部署是否成功
-    // Firebase CLI 成功时会输出 "Deploy complete!" 或类似信息
-    const isSuccess = stdout.includes('Deploy complete') || 
-                     stdout.includes('deployed successfully') ||
-                     stdout.includes('All indexes deployed') ||
-                     (stdout.length > 0 && stderr.length === 0);
-    
-    if (!isSuccess) {
-      // 组合错误信息
-      const errorMsg = stderr || stdout || '未知错误';
-      console.error('[deployIndexesViaCLI] Deployment failed:', errorMsg);
-      return {
-        success: false,
-        message: '索引部署失败',
-        error: errorMsg,
-        output: stdout // 也返回 stdout，可能包含有用信息
-      };
-    }
-    
+    // API 返回操作名称（索引创建是异步的）
     return {
       success: true,
-      message: `成功部署 ${indexesData.indexes.length} 个索引`,
-      output: stdout
+      operationName: responseData.name
     };
   } catch (error: any) {
-    console.error('[deployIndexesViaCLI] Unexpected error:', error);
-    // 清理临时文件
-    if (tempDir) {
-      try {
-        fs.rmSync(tempDir, { recursive: true, force: true });
-      } catch (e) {
-        // 忽略清理错误
-      }
-    }
     return {
       success: false,
-      message: '索引部署失败',
-      error: error.message || String(error)
+      error: error.message || 'Unknown error'
     };
   }
+}
+
+/**
+ * 部署所有 Firestore 索引
+ */
+async function deployIndexes(
+  projectId: string,
+  indexes: IndexDefinition[],
+  serviceAccount: any
+): Promise<{
+  success: boolean;
+  message: string;
+  results: IndexDeploymentResult[];
+  summary: {
+    total: number;
+    succeeded: number;
+    failed: number;
+    skipped: number;
+  };
+}> {
+  // 获取 OAuth Access Token
+  const accessToken = await getAccessToken(serviceAccount);
+  
+  const results: IndexDeploymentResult[] = [];
+  let succeeded = 0;
+  let failed = 0;
+  let skipped = 0;
+  
+  // 逐个创建索引
+  for (const index of indexes) {
+    const result = await createIndex(
+      projectId,
+      index.collectionGroup,
+      index,
+      accessToken
+    );
+    
+    if (result.success) {
+      if (result.operationName === 'already_exists') {
+        skipped++;
+        results.push({
+          index,
+          success: true,
+          message: '索引已存在，跳过',
+          operationName: result.operationName
+        });
+      } else {
+        succeeded++;
+        results.push({
+          index,
+          success: true,
+          message: '索引创建请求已提交',
+          operationName: result.operationName
+        });
+      }
+    } else {
+      failed++;
+      results.push({
+        index,
+        success: false,
+        message: '索引创建失败',
+        error: result.error
+      });
+    }
+  }
+  
+  const summary = {
+    total: indexes.length,
+    succeeded,
+    failed,
+    skipped
+  };
+  
+  let message = '';
+  if (failed === 0) {
+    message = `成功部署 ${succeeded} 个索引${skipped > 0 ? `，跳过 ${skipped} 个已存在的索引` : ''}`;
+  } else {
+    message = `部署完成：成功 ${succeeded} 个，失败 ${failed} 个${skipped > 0 ? `，跳过 ${skipped} 个` : ''}`;
+  }
+  
+  return {
+    success: failed === 0,
+    message,
+    results,
+    summary
+  };
 }
 
 export const handler: Handler = async (event, context) => {
@@ -208,7 +227,7 @@ export const handler: Handler = async (event, context) => {
 
   try {
     const body = JSON.parse(event.body || '{}');
-    const { projectId, accessToken, serviceAccount, useCLI } = body;
+    const { projectId } = body;
 
     // 验证必需参数
     if (!projectId) {
@@ -221,9 +240,34 @@ export const handler: Handler = async (event, context) => {
       };
     }
 
+    // 获取 Service Account
+    const serviceAccountStr = process.env.FIREBASE_SERVICE_ACCOUNT;
+    if (!serviceAccountStr) {
+      return {
+        statusCode: 500,
+        headers: corsHeaders,
+        body: JSON.stringify({ 
+          error: 'FIREBASE_SERVICE_ACCOUNT environment variable is not set. Please configure it in Netlify environment variables.' 
+        })
+      };
+    }
+
+    let serviceAccount: any;
+    try {
+      serviceAccount = JSON.parse(serviceAccountStr);
+    } catch (e) {
+      return {
+        statusCode: 500,
+        headers: corsHeaders,
+        body: JSON.stringify({ 
+          error: 'Invalid FIREBASE_SERVICE_ACCOUNT format. It should be a valid JSON string.' 
+        })
+      };
+    }
+
     // 读取索引定义
     // 优先从请求体读取，否则使用内置的默认索引定义
-    let indexesData: any;
+    let indexesData: { indexes: IndexDefinition[] };
     
     if (body.indexes && Array.isArray(body.indexes)) {
       indexesData = { indexes: body.indexes };
@@ -342,67 +386,25 @@ export const handler: Handler = async (event, context) => {
       };
     }
 
-    // 如果提供了认证信息且要求使用 CLI，则尝试自动部署
-    if (useCLI && (serviceAccount || accessToken)) {
-      const deployResult = await deployIndexesViaCLI(
-        projectId,
-        indexesData,
-        serviceAccount,
-        accessToken
-      );
-      
-      if (deployResult.success) {
-        return {
-          statusCode: 200,
-          headers: corsHeaders,
-          body: JSON.stringify({
-            success: true,
-            projectId,
-            indexCount: indexesData.indexes.length,
-            message: deployResult.message,
-            output: deployResult.output
-          })
-        };
-      } else {
-        // 如果 CLI 部署失败，返回错误和手动创建链接
-        const consoleUrl = `https://console.firebase.google.com/project/${projectId}/firestore/indexes`;
-        
-        // 检查是否是 npm 相关错误
-        const isNpmError = deployResult.error?.includes('npm') || deployResult.error?.includes('ENOENT');
-        const errorMessage = isNpmError 
-          ? '由于 Netlify Function 环境限制，无法使用 Firebase CLI 自动部署。请使用以下方法之一：\n1. 在本地执行：firebase deploy --only firestore:indexes\n2. 通过 Firebase Console 手动创建索引'
-          : deployResult.message || '自动部署失败，请手动创建索引';
-        
-        return {
-          statusCode: 200,
-          headers: corsHeaders,
-          body: JSON.stringify({
-            success: false,
-            projectId,
-            indexCount: indexesData.indexes.length,
-            message: errorMessage,
-            error: deployResult.error,
-            output: deployResult.output,
-            links: [consoleUrl],
-            manualDeployCommand: `firebase deploy --only firestore:indexes --project ${projectId}`,
-            indexesData: indexesData // 返回索引数据，方便用户查看
-          })
-        };
-      }
-    }
-    
-    // 如果没有提供认证信息，返回 Firebase Console 链接
-    const consoleUrl = `https://console.firebase.google.com/project/${projectId}/firestore/indexes`;
+    // 部署索引
+    const deploymentResult = await deployIndexes(
+      projectId,
+      indexesData.indexes,
+      serviceAccount
+    );
+
     return {
       statusCode: 200,
       headers: corsHeaders,
       body: JSON.stringify({
-        success: true,
+        success: deploymentResult.success,
         projectId,
         indexCount: indexesData.indexes.length,
-        message: `已准备 ${indexesData.indexes.length} 个索引定义。请提供 Firebase Service Account 或 Access Token 以启用自动部署，或通过 Firebase Console 手动创建。`,
-        links: [consoleUrl],
-        manualDeployCommand: `firebase deploy --only firestore:indexes --project ${projectId}`
+        message: deploymentResult.message,
+        summary: deploymentResult.summary,
+        results: deploymentResult.results,
+        // 保留 Firebase Console 链接作为备用
+        consoleUrl: `https://console.firebase.google.com/project/${projectId}/firestore/indexes`
       })
     };
   } catch (error: any) {
@@ -416,4 +418,3 @@ export const handler: Handler = async (event, context) => {
     };
   }
 };
-

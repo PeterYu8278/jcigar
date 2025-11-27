@@ -96,8 +96,20 @@ const FeatureManagement: React.FC = () => {
     state: 'idle' | 'deploying' | 'success' | 'error';
     message: string;
     links?: string[];
-    manualDeployCommand?: string;
-    indexesData?: any;
+    summary?: {
+      total: number;
+      succeeded: number;
+      failed: number;
+      skipped: number;
+    };
+    results?: Array<{
+      index: any;
+      success: boolean;
+      message: string;
+      operationName?: string;
+      error?: string;
+    }>;
+    consoleUrl?: string;
   }>({ state: 'idle', message: '' });
   const [firebaseConfigCode, setFirebaseConfigCode] = useState<string>('');
 
@@ -549,11 +561,10 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
 
   // 部署 Firebase 索引
   const handleDeployFirestoreIndexes = async () => {
-    let firebaseProjectId: string | undefined;
     try {
       // 使用 getFieldsValue 获取值，避免验证错误
       const values = envForm.getFieldsValue(['firebaseProjectId']);
-      firebaseProjectId = values.firebaseProjectId;
+      const { firebaseProjectId } = values;
 
       if (!firebaseProjectId) {
         message.error('请填写 Firebase Project ID');
@@ -563,119 +574,56 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
       setIndexDeploying(true);
       setIndexDeployStatus({ state: 'deploying', message: '正在部署 Firestore 索引...' });
 
-      // 获取可选的认证信息
-      const allValues = envForm.getFieldsValue();
-      let { firebaseServiceAccount, firebaseAccessToken } = allValues;
-      
-      // 处理 Service Account JSON（确保是字符串格式）
-      if (firebaseServiceAccount) {
-        // 如果是对象，转换为字符串
-        if (typeof firebaseServiceAccount === 'object') {
-          firebaseServiceAccount = JSON.stringify(firebaseServiceAccount);
-        }
-        // 验证 JSON 格式
-        try {
-          JSON.parse(firebaseServiceAccount);
-        } catch (e) {
-          message.error('Firebase Service Account JSON 格式无效');
-          setIndexDeploying(false);
-          return;
-        }
-      }
-      
       // 调用 Netlify Function 部署索引（Function 会读取 firestore.indexes.json）
-      // 注意：确保 Netlify Function 已正确部署
-      const functionUrl = `/.netlify/functions/deploy-firestore-indexes`;
-      console.log('[handleDeployFirestoreIndexes] Calling function:', functionUrl);
-      
-      const deployResponse = await fetch(functionUrl, {
+      const deployResponse = await fetch(`/.netlify/functions/deploy-firestore-indexes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           projectId: firebaseProjectId,
-          serviceAccount: firebaseServiceAccount,
-          accessToken: firebaseAccessToken,
-          useCLI: !!(firebaseServiceAccount || firebaseAccessToken), // 如果提供了认证信息，则使用 CLI
         }),
       });
 
-      // 检查响应内容类型
-      const contentType = deployResponse.headers.get('content-type');
-      const isJson = contentType && contentType.includes('application/json');
-      
-      let result: any;
-      let errorText: string = '';
-
       if (!deployResponse.ok) {
-        // 如果响应不是 JSON，读取文本内容
-        if (!isJson) {
-          errorText = await deployResponse.text();
-          throw new Error(`部署失败 (${deployResponse.status}): ${errorText.substring(0, 200)}`);
-        }
-        try {
-          const errorData = await deployResponse.json();
-          throw new Error(errorData.error || '部署失败');
-        } catch (parseError: any) {
-          // 如果 JSON 解析失败，使用文本内容
-          if (!errorText) {
-            errorText = await deployResponse.text();
-          }
-          throw new Error(`部署失败 (${deployResponse.status}): ${errorText.substring(0, 200)}`);
-        }
+        const errorData = await deployResponse.json();
+        throw new Error(errorData.error || '部署失败');
       }
 
-      // 解析响应
-      if (isJson) {
-        try {
-          result = await deployResponse.json();
-        } catch (parseError: any) {
-          // 如果 JSON 解析失败，尝试读取文本
-          errorText = await deployResponse.text();
-          throw new Error(`响应解析失败: ${errorText.substring(0, 200)}`);
-        }
-      } else {
-        errorText = await deployResponse.text();
-        throw new Error(`意外的响应格式: ${errorText.substring(0, 200)}`);
-      }
+      const result = await deployResponse.json();
 
-      if (result.success) {
+      // 即使部分失败，也显示结果
+      if (result.success || (result.summary && result.summary.succeeded > 0)) {
         setIndexDeployStatus({
-          state: 'success',
-          message: result.message || '索引部署成功！',
+          state: result.success ? 'success' : 'error',
+          message: result.message || (result.success ? '索引部署成功！' : '部分索引部署失败'),
           links: result.links,
+          summary: result.summary,
+          results: result.results,
+          consoleUrl: result.consoleUrl,
         });
-        message.success(result.message || '索引部署成功！');
+        if (result.success) {
+          message.success(result.message || '索引部署成功！');
+        } else {
+          message.warning(result.message || '部分索引部署失败');
+        }
       } else {
-        // 即使部署失败，也显示手动部署选项和详细错误信息
-        const errorMessage = result.error 
-          ? `${result.message || '自动部署失败'}\n\n错误详情：\n${result.error}`
-          : result.message || '自动部署失败';
-        
         setIndexDeployStatus({
           state: 'error',
-          message: errorMessage,
-          links: result.links,
-          manualDeployCommand: result.manualDeployCommand,
-          indexesData: result.indexesData,
+          message: result.message || '部署失败',
+          summary: result.summary,
+          results: result.results,
+          consoleUrl: result.consoleUrl,
         });
-        
-        if (result.manualDeployCommand) {
-          message.warning('自动部署失败，请使用手动部署命令或通过 Firebase Console 创建索引', 10);
-        } else {
-          message.error(result.message || '部署失败', 10);
-        }
+        message.error(result.message || '部署失败');
       }
     } catch (error: any) {
       console.error('[handleDeployFirestoreIndexes] Error:', error);
-      const errorMessage = error.message || '部署失败，请检查配置';
       setIndexDeployStatus({
         state: 'error',
-        message: errorMessage,
-        links: [`https://console.firebase.google.com/project/${firebaseProjectId}/firestore/indexes`],
+        message: error.message || '部署失败，请检查配置',
       });
-      message.error(errorMessage, 10);
+      message.error(error.message || '部署失败');
     } finally {
       setIndexDeploying(false);
     }
@@ -1444,6 +1392,11 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                 label={<span style={{ color: '#c0c0c0' }}>Project ID</span>}
                 name="firebaseProjectId"
                 rules={[{ required: true, message: '请输入 Firebase Project ID' }]}
+                extra={
+                  <Text style={{ color: '#999', fontSize: '12px' }}>
+                    用于部署 Firestore 索引。需要配置 FIREBASE_SERVICE_ACCOUNT 环境变量，并确保 Service Account 具有 'Cloud Datastore Index Admin' 权限。
+                  </Text>
+                }
               >
                 <Input
                   placeholder="your-project-id"
@@ -1732,74 +1685,6 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               </Form.Item>
             </div>
 
-            <Divider style={{ borderColor: 'rgba(244, 175, 37, 0.2)', margin: '24px 0' }} />
-
-            {/* Firebase 认证配置（用于自动部署索引） */}
-            <div style={{ marginBottom: 24 }}>
-              <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600, display: 'block', marginBottom: 16 }}>
-                Firebase 认证配置（用于自动部署索引，可选）
-              </Text>
-              <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 16 }}>
-                提供以下任一认证信息以启用 Firestore 索引的自动部署：
-                <br />
-                <br /><strong>方法 1：Service Account JSON（推荐）</strong>
-                <br />1. 访问 <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Firebase 控制台</a>
-                <br />2. 选择项目 → 项目设置（齿轮图标）→ 服务账号
-                <br />3. 点击"生成新的私钥"按钮
-                <br />4. 下载 JSON 文件，将内容粘贴到下方输入框
-                <br />
-                <br /><strong>方法 2：Access Token</strong>
-                <br />1. 安装 Firebase CLI：<code style={{ background: 'rgba(255, 255, 255, 0.1)', padding: '2px 4px', borderRadius: '4px' }}>npm install -g firebase-tools</code>
-                <br />2. 运行命令：<code style={{ background: 'rgba(255, 255, 255, 0.1)', padding: '2px 4px', borderRadius: '4px' }}>firebase login:ci</code>
-                <br />3. 在浏览器中登录 Firebase 账户
-                <br />4. 复制命令行输出的 token，粘贴到下方输入框
-                <br />
-                <br />如果不提供认证信息，系统将返回手动部署链接和命令。
-              </Text>
-              
-              <Form.Item
-                label={<span style={{ color: '#c0c0c0' }}>Service Account JSON</span>}
-                name="firebaseServiceAccount"
-                rules={[{ required: false, message: '请输入 Firebase Service Account JSON' }]}
-              >
-                <Input.TextArea
-                  rows={4}
-                  placeholder='{"type": "service_account", "project_id": "...", ...}'
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    color: '#f8f8f8',
-                    fontFamily: 'monospace',
-                    fontSize: '12px',
-                  }}
-                />
-              </Form.Item>
-
-              <Form.Item
-                label={<span style={{ color: '#c0c0c0' }}>Access Token</span>}
-                name="firebaseAccessToken"
-                rules={[{ required: false, message: '请输入 Firebase Access Token' }]}
-              >
-                <Input
-                  type={showSecrets.firebaseAccessToken ? 'text' : 'password'}
-                  placeholder="your_firebase_access_token"
-                  suffix={
-                    <Button
-                      type="text"
-                      icon={showSecrets.firebaseAccessToken ? <EyeOutlined style={{ color: '#ffd700' }} /> : <EyeInvisibleOutlined style={{ color: '#ffd700' }} />}
-                      onClick={() => setShowSecrets(prev => ({ ...prev, firebaseAccessToken: !prev.firebaseAccessToken }))}
-                      style={{ border: 'none', color: '#ffd700' }}
-                    />
-                  }
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    color: '#f8f8f8',
-                  }}
-                />
-              </Form.Item>
-            </div>
-
             {/* 部署状态显示 */}
             {deployStatus.state !== 'idle' && (
               <div style={{ marginBottom: 24 }}>
@@ -2004,21 +1889,117 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                   }}
                   description={
                     <div style={{ marginTop: 8 }}>
-                      {indexDeployStatus.state === 'error' && indexDeployStatus.message && (
-                        <div style={{ 
-                          background: 'rgba(255, 77, 79, 0.1)', 
-                          border: '1px solid rgba(255, 77, 79, 0.3)',
-                          borderRadius: '4px',
-                          padding: '12px',
-                          marginBottom: 12
-                        }}>
-                          <Text style={{ color: '#ff4d4f', fontSize: '12px', whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
-                            {indexDeployStatus.message}
+                      {/* 部署摘要 */}
+                      {indexDeployStatus.summary && (
+                        <div style={{ marginBottom: 12 }}>
+                          <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 4 }}>
+                            部署摘要：
                           </Text>
+                          <div style={{ 
+                            display: 'flex', 
+                            gap: 16, 
+                            flexWrap: 'wrap',
+                            fontSize: '12px',
+                            color: '#c0c0c0'
+                          }}>
+                            <span>总计: <strong style={{ color: '#f8f8f8' }}>{indexDeployStatus.summary.total}</strong></span>
+                            <span style={{ color: '#52c41a' }}>
+                              成功: <strong>{indexDeployStatus.summary.succeeded}</strong>
+                            </span>
+                            {indexDeployStatus.summary.failed > 0 && (
+                              <span style={{ color: '#ff4d4f' }}>
+                                失败: <strong>{indexDeployStatus.summary.failed}</strong>
+                              </span>
+                            )}
+                            {indexDeployStatus.summary.skipped > 0 && (
+                              <span style={{ color: '#faad14' }}>
+                                跳过: <strong>{indexDeployStatus.summary.skipped}</strong>
+                              </span>
+                            )}
+                          </div>
                         </div>
                       )}
-                      {indexDeployStatus.links && indexDeployStatus.links.length > 0 && (
-                        <>
+                      
+                      {/* 详细结果 */}
+                      {indexDeployStatus.results && indexDeployStatus.results.length > 0 && (
+                        <div style={{ marginBottom: 12 }}>
+                          <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 8 }}>
+                            详细结果：
+                          </Text>
+                          <div style={{
+                            maxHeight: '200px',
+                            overflowY: 'auto',
+                            background: 'rgba(0, 0, 0, 0.2)',
+                            padding: '8px',
+                            borderRadius: '4px',
+                            fontSize: '11px'
+                          }}>
+                            {indexDeployStatus.results.map((result, idx) => (
+                              <div 
+                                key={idx} 
+                                style={{ 
+                                  marginBottom: 4,
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  background: result.success 
+                                    ? 'rgba(82, 196, 26, 0.1)' 
+                                    : 'rgba(255, 77, 79, 0.1)',
+                                  border: `1px solid ${result.success ? 'rgba(82, 196, 26, 0.3)' : 'rgba(255, 77, 79, 0.3)'}`
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  {result.success ? (
+                                    <CheckCircleOutlined style={{ color: '#52c41a', fontSize: '12px' }} />
+                                  ) : (
+                                    <span style={{ color: '#ff4d4f' }}>✕</span>
+                                  )}
+                                  <span style={{ color: '#f8f8f8', fontWeight: 500 }}>
+                                    {result.index.collectionGroup}
+                                  </span>
+                                  <span style={{ color: '#c0c0c0' }}>
+                                    ({result.index.fields.map((f: any) => `${f.fieldPath}(${f.order})`).join(', ')})
+                                  </span>
+                                  <span style={{ 
+                                    color: result.success ? '#52c41a' : '#ff4d4f',
+                                    marginLeft: 'auto',
+                                    fontSize: '10px'
+                                  }}>
+                                    {result.message}
+                                  </span>
+                                </div>
+                                {result.error && (
+                                  <div style={{ 
+                                    color: '#ff4d4f', 
+                                    fontSize: '10px', 
+                                    marginTop: 4,
+                                    marginLeft: 20
+                                  }}>
+                                    错误: {result.error}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Firebase Console 链接 */}
+                      {indexDeployStatus.consoleUrl && (
+                        <div>
+                          <a
+                            href={indexDeployStatus.consoleUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: '#ffd700', fontSize: '12px' }}
+                          >
+                            在 Firebase Console 中查看索引状态 →
+                          </a>
+                        </div>
+                      )}
+                      
+                      {/* 备用链接（如果没有 consoleUrl） */}
+                      {indexDeployStatus.links && indexDeployStatus.links.length > 0 && !indexDeployStatus.consoleUrl && (
+                        <div style={{ marginTop: 8 }}>
                           <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 8 }}>
                             请通过以下链接在 Firebase Console 中创建索引：
                           </Text>
@@ -2034,56 +2015,6 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                               </a>
                             </div>
                           ))}
-                        </>
-                      )}
-                      {indexDeployStatus.state === 'error' && (
-                        <div style={{ marginTop: 8 }}>
-                          <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 8 }}>
-                            提示：由于 Netlify Function 环境限制，无法自动部署。请使用以下方法之一：
-                          </Text>
-                          {indexDeployStatus.manualDeployCommand && (
-                            <div style={{ marginBottom: 8 }}>
-                              <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 4 }}>
-                                <strong>方法 1：使用 Firebase CLI（推荐）</strong>
-                              </Text>
-                              <div style={{ 
-                                background: 'rgba(255, 255, 255, 0.1)', 
-                                padding: '8px 12px', 
-                                borderRadius: '4px',
-                                marginTop: 4
-                              }}>
-                                <code style={{ 
-                                  color: '#ffd700',
-                                  fontSize: '12px',
-                                  fontFamily: 'monospace',
-                                  wordBreak: 'break-all'
-                                }}>
-                                  {indexDeployStatus.manualDeployCommand}
-                                </code>
-                                <Button
-                                  type="text"
-                                  size="small"
-                                  icon={<CopyOutlined />}
-                                  onClick={async () => {
-                                    try {
-                                      await navigator.clipboard.writeText(indexDeployStatus.manualDeployCommand || '');
-                                      message.success('命令已复制到剪贴板');
-                                    } catch (error) {
-                                      message.error('复制失败');
-                                    }
-                                  }}
-                                  style={{ color: '#ffd700', marginLeft: 8 }}
-                                >
-                                  复制
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                          <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block' }}>
-                            <strong>方法 2：通过 Firebase Console 手动创建</strong>
-                            <br />
-                            点击上方的链接，在 Firebase Console 中手动创建索引。
-                          </Text>
                         </div>
                       )}
                     </div>
