@@ -1,7 +1,7 @@
 // 功能管理页面
 import React, { useState, useEffect } from 'react';
 import { Card, Switch, Button, Space, Typography, message, Spin, Tabs, Input, Checkbox, Form, Divider, Alert } from 'antd';
-import { SaveOutlined, ReloadOutlined, EyeOutlined, EyeInvisibleOutlined, SearchOutlined, SettingOutlined, CopyOutlined, DownloadOutlined, FileTextOutlined } from '@ant-design/icons';
+import { SaveOutlined, ReloadOutlined, EyeOutlined, EyeInvisibleOutlined, SearchOutlined, SettingOutlined, CopyOutlined, DownloadOutlined, FileTextOutlined, RocketOutlined, CheckCircleOutlined, LoadingOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../../store/modules/auth';
 import { useTranslation } from 'react-i18next';
 import {
@@ -83,6 +83,13 @@ const FeatureManagement: React.FC = () => {
   const [pendingColorChanges, setPendingColorChanges] = useState<Partial<ColorThemeConfig>>({});
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [generatedEnv, setGeneratedEnv] = useState<string>('');
+  const [deploying, setDeploying] = useState(false);
+  const [deployStatus, setDeployStatus] = useState<{
+    state: 'idle' | 'updating' | 'deploying' | 'success' | 'error';
+    message: string;
+    deployId?: string;
+    deployUrl?: string;
+  }>({ state: 'idle', message: '' });
 
   // 检查是否为开发者
   useEffect(() => {
@@ -364,6 +371,174 @@ VITE_APP_NAME=${values.appName}
 
 # FCM 配置
 VITE_FCM_VAPID_KEY=${values.fcmVapidKey}`;
+  };
+
+  // 部署到 Netlify
+  const handleDeployToNetlify = async () => {
+    try {
+      const values = await envForm.validateFields();
+      const { netlifyAccessToken, netlifySiteId } = values;
+
+      if (!netlifyAccessToken || !netlifySiteId) {
+        message.error('请填写 Netlify Access Token 和 Site ID');
+        return;
+      }
+
+      setDeploying(true);
+      setDeployStatus({ state: 'updating', message: '正在更新环境变量...' });
+
+      // 构建环境变量数组
+      const envVars = [
+        { key: 'VITE_FIREBASE_API_KEY', value: values.firebaseApiKey, scopes: ['all'] },
+        { key: 'VITE_FIREBASE_AUTH_DOMAIN', value: values.firebaseAuthDomain, scopes: ['all'] },
+        { key: 'VITE_FIREBASE_PROJECT_ID', value: values.firebaseProjectId, scopes: ['all'] },
+        { key: 'VITE_FIREBASE_STORAGE_BUCKET', value: values.firebaseStorageBucket, scopes: ['all'] },
+        { key: 'VITE_FIREBASE_MESSAGING_SENDER_ID', value: values.firebaseMessagingSenderId, scopes: ['all'] },
+        { key: 'VITE_FIREBASE_APP_ID', value: values.firebaseAppId, scopes: ['all'] },
+        { key: 'VITE_CLOUDINARY_CLOUD_NAME', value: values.cloudinaryCloudName, scopes: ['all'] },
+        { key: 'VITE_CLOUDINARY_API_KEY', value: values.cloudinaryApiKey, scopes: ['all'] },
+        { key: 'VITE_CLOUDINARY_API_SECRET', value: values.cloudinaryApiSecret, scopes: ['all'] },
+        { key: 'VITE_APP_NAME', value: values.appName, scopes: ['all'] },
+        { key: 'VITE_FCM_VAPID_KEY', value: values.fcmVapidKey, scopes: ['all'] },
+      ];
+
+      // 调用 Netlify Function
+      const response = await fetch('/.netlify/functions/update-netlify-env', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          accessToken: netlifyAccessToken,
+          siteId: netlifySiteId,
+          envVars,
+          triggerDeploy: true,
+          clearCache: true,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || '部署失败');
+      }
+
+      if (result.success) {
+        setDeployStatus({
+          state: 'deploying',
+          message: '环境变量已更新，正在触发部署...',
+          deployId: result.deploy?.id,
+          deployUrl: result.deploy?.url,
+        });
+
+        message.success('环境变量已更新，部署已触发');
+        
+        // 轮询部署状态
+        if (result.deploy?.id) {
+          pollDeployStatus(netlifyAccessToken, netlifySiteId, result.deploy.id);
+        } else {
+          setDeployStatus({
+            state: 'success',
+            message: '部署已触发，请前往 Netlify 控制台查看进度',
+          });
+          setDeploying(false);
+        }
+      }
+    } catch (error: any) {
+      console.error('[Deploy to Netlify] Error:', error);
+      setDeployStatus({
+        state: 'error',
+        message: error.message || '部署失败，请检查配置',
+      });
+      message.error(error.message || '部署失败');
+      setDeploying(false);
+    }
+  };
+
+  // 轮询部署状态
+  const pollDeployStatus = async (accessToken: string, siteId: string, deployId: string) => {
+    const maxAttempts = 60; // 最多轮询 60 次（5分钟）
+    let attempts = 0;
+
+    const poll = async () => {
+      try {
+        const response = await fetch(`/.netlify/functions/update-netlify-env`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            accessToken,
+            siteId,
+            action: 'getDeployStatus',
+            deployId,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to get deploy status');
+        }
+
+        const result = await response.json();
+
+        if (!result.success || !result.deploy) {
+          throw new Error('Invalid response from server');
+        }
+
+        const deployState = result.deploy.state;
+
+        if (deployState === 'ready') {
+          setDeployStatus({
+            state: 'success',
+            message: '部署成功！',
+            deployId: result.deploy.id,
+            deployUrl: result.deploy.url,
+          });
+          message.success('部署成功！');
+          setDeploying(false);
+          return;
+        } else if (deployState === 'error' || deployState === 'failed') {
+          setDeployStatus({
+            state: 'error',
+            message: '部署失败，请查看 Netlify 控制台',
+            deployId: result.deploy.id,
+            deployUrl: result.deploy.url,
+          });
+          message.error('部署失败');
+          setDeploying(false);
+          return;
+        } else if (deployState === 'building' || deployState === 'new' || deployState === 'enqueued') {
+          // 继续轮询
+          setDeployStatus({
+            state: 'deploying',
+            message: `部署中... (状态: ${deployState})`,
+            deployId: result.deploy.id,
+            deployUrl: result.deploy.url,
+          });
+        }
+
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 5000); // 每 5 秒轮询一次
+        } else {
+          setDeployStatus({
+            state: 'success',
+            message: '部署已触发，请前往 Netlify 控制台查看进度',
+            deployId,
+          });
+          setDeploying(false);
+        }
+      } catch (error) {
+        console.error('[Poll Deploy Status] Error:', error);
+        setDeployStatus({
+          state: 'error',
+          message: '无法获取部署状态',
+        });
+        setDeploying(false);
+      }
+    };
+
+    poll();
   };
 
   // 处理颜色更改（暂存，不立即保存）
@@ -930,7 +1105,7 @@ VITE_FCM_VAPID_KEY=${values.fcmVapidKey}`;
         }}>
           <Alert
             message="重要提示"
-            description="此配置仅用于生成 .env 文件，不会保存到数据库。页面刷新后表单将清空。"
+            description="此配置不会保存到数据库。您可以生成 .env 文件下载，或直接部署到 Netlify 环境变量。页面刷新后表单将清空。"
             type="warning"
             showIcon
             style={{
@@ -954,6 +1129,9 @@ VITE_FCM_VAPID_KEY=${values.fcmVapidKey}`;
             <div style={{ marginBottom: 24 }}>
               <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600, display: 'block', marginBottom: 16 }}>
                 Firebase 配置
+              </Text>
+              <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 16 }}>
+                可在 <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Firebase 控制台</a> 的项目设置中找到这些配置信息。进入项目设置 &gt; 常规 &gt; 您的应用，即可查看所有配置值。
               </Text>
               
               <Form.Item
@@ -1063,6 +1241,9 @@ VITE_FCM_VAPID_KEY=${values.fcmVapidKey}`;
               <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600, display: 'block', marginBottom: 16 }}>
                 Cloudinary 配置
               </Text>
+              <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 16 }}>
+                可在 <a href="https://console.cloudinary.com" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Cloudinary 控制台</a> 的仪表板中找到这些配置信息。登录后，在仪表板页面即可查看 Cloud Name、API Key 和 API Secret。
+              </Text>
               
               <Form.Item
                 label={<span style={{ color: '#c0c0c0' }}>Cloud Name</span>}
@@ -1159,6 +1340,9 @@ VITE_FCM_VAPID_KEY=${values.fcmVapidKey}`;
               <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600, display: 'block', marginBottom: 16 }}>
                 FCM 配置
               </Text>
+              <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 16 }}>
+                可在 <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Firebase 控制台</a> 的项目设置中找到 VAPID Key。进入项目设置 &gt; 云消息传递 &gt; Web 配置，即可查看 VAPID 密钥。
+              </Text>
               
               <Form.Item
                 label={<span style={{ color: '#c0c0c0' }}>VAPID Key</span>}
@@ -1184,6 +1368,105 @@ VITE_FCM_VAPID_KEY=${values.fcmVapidKey}`;
                 />
               </Form.Item>
             </div>
+
+            <Divider style={{ borderColor: 'rgba(244, 175, 37, 0.2)', margin: '24px 0' }} />
+
+            {/* Netlify 配置 */}
+            <div style={{ marginBottom: 24 }}>
+              <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600, display: 'block', marginBottom: 16 }}>
+                Netlify 配置
+              </Text>
+              <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 16 }}>
+                  用于将环境变量部署到 Netlify。Access Token 可在 <a href="https://app.netlify.com/user/applications" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Netlify 用户设置</a> 中生成，Site ID 可在站点设置中找到。
+                </Text>
+              
+              <Form.Item
+                label={<span style={{ color: '#c0c0c0' }}>Access Token</span>}
+                name="netlifyAccessToken"
+                rules={[{ required: true, message: '请输入 Netlify Access Token' }]}
+              >
+                <Input
+                  type={showSecrets.netlifyAccessToken ? 'text' : 'password'}
+                  placeholder="your_netlify_access_token"
+                  suffix={
+                    <Button
+                      type="text"
+                      icon={showSecrets.netlifyAccessToken ? <EyeOutlined style={{ color: '#ffd700' }} /> : <EyeInvisibleOutlined style={{ color: '#ffd700' }} />}
+                      onClick={() => setShowSecrets(prev => ({ ...prev, netlifyAccessToken: !prev.netlifyAccessToken }))}
+                      style={{ border: 'none', color: '#ffd700' }}
+                    />
+                  }
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#f8f8f8',
+                  }}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={<span style={{ color: '#c0c0c0' }}>Site ID</span>}
+                name="netlifySiteId"
+                rules={[{ required: true, message: '请输入 Netlify Site ID' }]}
+              >
+                <Input
+                  placeholder="your-site-id"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#f8f8f8',
+                  }}
+                />
+              </Form.Item>
+            </div>
+
+            {/* 部署状态显示 */}
+            {deployStatus.state !== 'idle' && (
+              <div style={{ marginBottom: 24 }}>
+                <Alert
+                  message={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {deployStatus.state === 'updating' || deployStatus.state === 'deploying' ? (
+                        <LoadingOutlined style={{ color: '#1890ff' }} />
+                      ) : deployStatus.state === 'success' ? (
+                        <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                      ) : (
+                        <span style={{ color: '#ff4d4f' }}>✕</span>
+                      )}
+                      <span>{deployStatus.message}</span>
+                    </div>
+                  }
+                  type={
+                    deployStatus.state === 'success' ? 'success' :
+                    deployStatus.state === 'error' ? 'error' : 'info'
+                  }
+                  showIcon={false}
+                  style={{
+                    marginBottom: 16,
+                    background: deployStatus.state === 'success' ? 'rgba(82, 196, 26, 0.1)' :
+                               deployStatus.state === 'error' ? 'rgba(255, 77, 79, 0.1)' :
+                               'rgba(24, 144, 255, 0.1)',
+                    border: deployStatus.state === 'success' ? '1px solid rgba(82, 196, 26, 0.3)' :
+                           deployStatus.state === 'error' ? '1px solid rgba(255, 77, 79, 0.3)' :
+                           '1px solid rgba(24, 144, 255, 0.3)',
+                  }}
+                  description={
+                    deployStatus.deployUrl ? (
+                      <div style={{ marginTop: 8 }}>
+                        <a
+                          href={deployStatus.deployUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: '#ffd700' }}
+                        >
+                          查看部署详情
+                        </a>
+                      </div>
+                    ) : null
+                  }
+                />
+              </div>
+            )}
 
             {/* 生成的配置文件预览 */}
             {generatedEnv && (
@@ -1220,7 +1503,9 @@ VITE_FCM_VAPID_KEY=${values.fcmVapidKey}`;
                 onClick={() => {
                   envForm.resetFields();
                   setGeneratedEnv('');
+                  setDeployStatus({ state: 'idle', message: '' });
                 }}
+                disabled={deploying}
               >
                 清空表单
               </Button>
@@ -1236,6 +1521,7 @@ VITE_FCM_VAPID_KEY=${values.fcmVapidKey}`;
                     message.error('请填写所有必填字段');
                   }
                 }}
+                disabled={deploying}
               >
                 生成配置文件
               </Button>
@@ -1251,6 +1537,7 @@ VITE_FCM_VAPID_KEY=${values.fcmVapidKey}`;
                         message.error('复制失败');
                       }
                     }}
+                    disabled={deploying}
                   >
                     复制到剪贴板
                   </Button>
@@ -1267,6 +1554,7 @@ VITE_FCM_VAPID_KEY=${values.fcmVapidKey}`;
                       URL.revokeObjectURL(url);
                       message.success('文件已下载');
                     }}
+                    disabled={deploying}
                     style={{
                       background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
                       border: 'none',
@@ -1276,6 +1564,19 @@ VITE_FCM_VAPID_KEY=${values.fcmVapidKey}`;
                   </Button>
                 </>
               )}
+              <Button
+                type="primary"
+                icon={<RocketOutlined />}
+                onClick={handleDeployToNetlify}
+                loading={deploying}
+                disabled={deploying}
+                style={{
+                  background: 'linear-gradient(to right,#1890ff,#096dd9)',
+                  border: 'none',
+                }}
+              >
+                {deploying ? '部署中...' : '部署到 Netlify'}
+              </Button>
             </div>
           </Form>
         </Card>
