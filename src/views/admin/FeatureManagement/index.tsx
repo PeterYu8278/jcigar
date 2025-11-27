@@ -548,7 +548,8 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
   // 部署 Firebase 索引
   const handleDeployFirestoreIndexes = async () => {
     try {
-      const values = await envForm.validateFields(['firebaseProjectId']);
+      // 使用 getFieldsValue 获取值，避免验证错误
+      const values = envForm.getFieldsValue(['firebaseProjectId']);
       const { firebaseProjectId } = values;
 
       if (!firebaseProjectId) {
