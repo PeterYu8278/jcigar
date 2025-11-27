@@ -16,8 +16,8 @@ interface ImageUploadProps {
   folder?: CloudinaryFolderName | string // Cloudinary文件夹名称或自定义路径
   maxSize?: number // 最大文件大小（字节）
   accept?: string // 接受的文件类型
-  width?: number // 预览图片宽度
-  height?: number // 预览图片高度
+  width?: number | 'auto' // 预览图片宽度
+  height?: number | 'auto' // 预览图片高度
   showPreview?: boolean // 是否显示预览
   disabled?: boolean // 是否禁用
   enableCrop?: boolean // 是否启用裁剪功能
@@ -58,8 +58,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   const folderConfig = isValidFolderName(folder) ? getUploadConfig(folder) : null
   const finalFolder = isValidFolderName(folder) ? getFullFolderPath(folder) : folder
   const finalMaxSize = maxSize || folderConfig?.maxSize || 5 * 1024 * 1024
-  const finalWidth = width || folderConfig?.width || 120
-  const finalHeight = height || folderConfig?.height || 120
+  const finalWidth = width === 'auto' ? 'auto' : (width || folderConfig?.width || 120)
+  const finalHeight = height === 'auto' ? 'auto' : (height || folderConfig?.height || 120)
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -205,9 +205,11 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             src={value}
             alt="预览"
             style={{
-              width: `${finalWidth}px`,
-              height: `${finalHeight}px`,
-              objectFit: 'cover',
+              width: finalWidth === 'auto' ? 'auto' : `${finalWidth}px`,
+              height: finalHeight === 'auto' ? 'auto' : `${finalHeight}px`,
+              maxWidth: finalWidth === 'auto' ? '200px' : undefined,
+              maxHeight: finalHeight === 'auto' ? '200px' : undefined,
+              objectFit: 'contain',
               borderRadius: '8px',
               border: folder === 'app-config' ? '2px solid #ffd700' : '1px solid rgba(255, 215, 0, 0.3)',
               cursor: showPreview ? 'pointer' : 'default',
@@ -242,8 +244,12 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       ) : (
         <div
           style={{
-            width: `${finalWidth}px`,
-            height: `${finalHeight}px`,
+            width: finalWidth === 'auto' ? 'auto' : `${finalWidth}px`,
+            height: finalHeight === 'auto' ? 'auto' : `${finalHeight}px`,
+            minWidth: finalWidth === 'auto' ? '120px' : undefined,
+            minHeight: finalHeight === 'auto' ? '120px' : undefined,
+            maxWidth: finalWidth === 'auto' ? '200px' : undefined,
+            maxHeight: finalHeight === 'auto' ? '200px' : undefined,
             border: folder === 'app-config' ? '2px dashed #ffd700' : '2px dashed rgba(255, 215, 0, 0.3)',
             borderRadius: '8px',
             display: 'flex',

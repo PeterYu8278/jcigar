@@ -963,9 +963,9 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               <ImageUpload
                 folder="app-config"
                 maxSize={2 * 1024 * 1024} // 2MB
-                width={200}
-                height={200}
-                showPreview={true}
+                width="auto"
+                height="auto"
+                showPreview={false}
                 enableCrop={true}
                 accept="image/png,image/jpeg,image/jpg,image/webp"
               />

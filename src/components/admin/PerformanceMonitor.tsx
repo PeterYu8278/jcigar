@@ -421,98 +421,61 @@ const PerformanceMonitor: React.FC = () => {
             key: 'metrics',
             label: <span style={{ color: '#ffd700', fontWeight: 600 }}>{t(PERFORMANCE_KEYS.DETAILED_METRICS)}</span>,
             children: (
-              <>
-          <Card
-            style={{
-              background: 'rgba(15, 15, 15, 0.6)',
-              borderColor: 'rgba(255, 215, 0, 0.2)',
-              borderRadius: '8px'
-            }}
-            bodyStyle={{
-              background: 'transparent'
-            }}
-          >
-            <Table
-              dataSource={metrics.map((m, i) => ({ ...m, key: i }))}
-              columns={[
-                {
-                  title: <span style={{ color: '#ffd700', fontWeight: 600 }}>{t(PERFORMANCE_KEYS.METRIC_NAME)}</span>,
-                  dataIndex: 'name',
-                  key: 'name',
-                  render: (text) => <span style={{ color: '#f8f8f8' }}>{text}</span>
-                },
-                {
-                  title: <span style={{ color: '#ffd700', fontWeight: 600 }}>{t(PERFORMANCE_KEYS.VALUE)}</span>,
-                  dataIndex: 'value',
-                  key: 'value',
-                  render: (value, record) => (
-                    <span style={{ color: '#f8f8f8' }}>
-                      {formatNumber(value, { maximumFractionDigits: 2 })} {record.unit}
-                    </span>
-                  )
-                },
-                {
-                  title: <span style={{ color: '#ffd700', fontWeight: 600 }}>{t(PERFORMANCE_KEYS.CATEGORY)}</span>,
-                  dataIndex: 'category',
-                  key: 'category',
-                  render: (category) => {
-                    const colors: Record<string, string> = {
-                      navigation: '#1890ff',
-                      resource: '#52c41a',
-                      mark: '#faad14',
-                      measure: '#722ed1',
-                      custom: '#13c2c2'
+              <div className="points-config-form">
+                <Table
+                  dataSource={metrics.map((m, i) => ({ ...m, key: i }))}
+                  columns={[
+                    {
+                      title: t(PERFORMANCE_KEYS.METRIC_NAME),
+                      dataIndex: 'name',
+                      key: 'name',
+                      render: (text) => <span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{text}</span>
+                    },
+                    {
+                      title: t(PERFORMANCE_KEYS.VALUE),
+                      dataIndex: 'value',
+                      key: 'value',
+                      render: (value, record) => (
+                        <span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>
+                          {formatNumber(value, { maximumFractionDigits: 2 })} {record.unit}
+                        </span>
+                      )
+                    },
+                    {
+                      title: t(PERFORMANCE_KEYS.CATEGORY),
+                      dataIndex: 'category',
+                      key: 'category',
+                      render: (category) => {
+                        const colors: Record<string, string> = {
+                          navigation: '#1890ff',
+                          resource: '#52c41a',
+                          mark: '#faad14',
+                          measure: '#722ed1',
+                          custom: '#13c2c2'
+                        }
+                        return <Tag color={colors[category]}>{category}</Tag>
+                      }
+                    },
+                    {
+                      title: t(PERFORMANCE_KEYS.TIMESTAMP),
+                      dataIndex: 'timestamp',
+                      key: 'timestamp',
+                      render: (timestamp) => (
+                        <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                          {new Date(timestamp).toLocaleTimeString()}
+                        </span>
+                      )
                     }
-                    return <Tag color={colors[category]} style={{ 
-                      background: `${colors[category]}20`,
-                      borderColor: colors[category],
-                      color: colors[category]
-                    }}>{category}</Tag>
-                  }
-                },
-                {
-                  title: <span style={{ color: '#ffd700', fontWeight: 600 }}>{t(PERFORMANCE_KEYS.TIMESTAMP)}</span>,
-                  dataIndex: 'timestamp',
-                  key: 'timestamp',
-                  render: (timestamp) => (
-                    <span style={{ color: '#c0c0c0' }}>
-                      {new Date(timestamp).toLocaleTimeString()}
-                    </span>
-                  )
-                }
-              ]}
-              pagination={{ 
-                pageSize: 20,
-                style: { color: '#ffd700' },
-                showSizeChanger: true,
-                showTotal: (total) => <span style={{ color: '#ffd700' }}>共 {total} 条</span>
-              }}
-              scroll={{ y: 600 }}
-              style={{
-                background: 'transparent'
-              }}
-              rowClassName={(record, index) => {
-                return index % 2 === 0 ? 'performance-table-row-even' : 'performance-table-row-odd'
-              }}
-              components={{
-                body: {
-                  row: (props: any) => (
-                    <tr
-                      {...props}
-                      style={{
-                        ...props.style,
-                        background: props['data-row-key'] % 2 === 0 
-                          ? 'rgba(26, 26, 26, 0.3)' 
-                          : 'rgba(15, 15, 15, 0.5)',
-                        borderBottom: '1px solid rgba(255, 215, 0, 0.1)'
-                      }}
-                    />
-                  )
-                }
-              }}
-            />
-          </Card>
-              </>
+                  ]}
+                  pagination={{
+                    pageSize: 20,
+                    showSizeChanger: true
+                  }}
+                  style={{
+                    background: 'transparent'
+                  }}
+                />
+              </div>
             )
           }
         ]}
