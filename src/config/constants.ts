@@ -5,7 +5,7 @@
 
 // 应用信息
 export const APP_INFO = {
-  NAME: 'Gentleman Club',
+  NAME: 'Cigar Club',
   VERSION: '1.0.0',
   DESCRIPTION: 'Premium Cigar Club Management Platform',
   AUTHOR: 'JEP Ventures',

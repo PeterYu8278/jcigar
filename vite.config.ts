@@ -59,8 +59,8 @@ export default defineConfig({
       strategies: 'generateSW',
       filename: 'sw.js',
       manifest: {
-        name: 'Gentleman Club - Cigar World',
-        short_name: 'Gentleman Club',
+        name: 'Cigar Club - Cigar World',
+        short_name: 'Cigar Club',
         description: 'Premium cigar club management platform',
         theme_color: '#D4AF37',
         background_color: '#1A1A1A',

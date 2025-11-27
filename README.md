@@ -1,6 +1,6 @@
-# Gentleman Club管理平台
+# Cigar Club管理平台
 
-一个基于 React + TypeScript + Firebase + Ant Design 的现代化Gentleman Club社区管理平台。
+一个基于 React + TypeScript + Firebase + Ant Design 的现代化Cigar Club社区管理平台。
 
 ## 🚀 技术栈
 

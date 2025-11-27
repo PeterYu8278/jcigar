@@ -2,7 +2,7 @@
 
 ## 概述
 
-Gentleman Club 管理平台现在支持基于会员账号ID自动生成QR Code，并显示在会员卡上。这个功能允许系统自动为每个会员生成唯一的QR Code，包含会员信息和俱乐部标识。
+Cigar Club 管理平台现在支持基于会员账号ID自动生成QR Code，并显示在会员卡上。这个功能允许系统自动为每个会员生成唯一的QR Code，包含会员信息和俱乐部标识。
 
 ## 功能特性
 
@@ -106,7 +106,7 @@ const MyComponent = () => {
   "type": "member_card",
   "memberId": "member-123",
   "memberName": "John Doe",
-  "club": "Gentleman Club",
+  "club": "Cigar Club",
   "generatedAt": "2024-01-01T00:00:00.000Z"
 }
 ```
@@ -228,4 +228,4 @@ console.log('QR Code状态:', { qrCodeDataURL, loading, error })
 
 ---
 
-**注意**: 此功能已完全集成到Gentleman Club管理平台中，无需额外配置即可使用。
+**注意**: 此功能已完全集成到Cigar Club管理平台中，无需额外配置即可使用。

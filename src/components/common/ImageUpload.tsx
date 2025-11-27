@@ -21,7 +21,7 @@ interface ImageUploadProps {
   showPreview?: boolean // 是否显示预览
   disabled?: boolean // 是否禁用
   enableCrop?: boolean // 是否启用裁剪功能
-  cropAspectRatio?: number // 裁剪宽高比
+  cropAspectRatio?: number // 裁剪宽高比，undefined 表示自由裁剪
   cropMinWidth?: number // 裁剪最小宽度
   cropMinHeight?: number // 裁剪最小高度
   cropMaxWidth?: number // 裁剪最大宽度
@@ -39,7 +39,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   showPreview = true,
   disabled = false,
   enableCrop = false,
-  cropAspectRatio = 1,
+  cropAspectRatio,
   cropMinWidth = 100,
   cropMinHeight = 100,
   cropMaxWidth = 800,
@@ -209,8 +209,9 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               height: `${finalHeight}px`,
               objectFit: 'cover',
               borderRadius: '8px',
-              border: '1px solid #d9d9d9',
-              cursor: showPreview ? 'pointer' : 'default'
+              border: folder === 'app-config' ? '2px solid #ffd700' : '1px solid rgba(255, 215, 0, 0.3)',
+              cursor: showPreview ? 'pointer' : 'default',
+              boxShadow: folder === 'app-config' ? '0 4px 12px rgba(255, 215, 0, 0.2)' : '0 2px 8px rgba(0, 0, 0, 0.15)'
             }}
             onClick={showPreview ? handlePreview : undefined}
           />
@@ -229,8 +230,10 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                 minWidth: '24px',
                 height: '24px',
                 borderRadius: '50%',
-                background: '#fff',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                background: folder === 'app-config' ? 'rgba(15, 15, 15, 0.9)' : '#fff',
+                border: folder === 'app-config' ? '1px solid #ffd700' : 'none',
+                color: folder === 'app-config' ? '#ffd700' : undefined,
+                boxShadow: folder === 'app-config' ? '0 2px 8px rgba(255, 215, 0, 0.3)' : '0 2px 8px rgba(0,0,0,0.15)'
               }}
               onClick={handleDelete}
             />
@@ -241,24 +244,37 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           style={{
             width: `${finalWidth}px`,
             height: `${finalHeight}px`,
-            border: '2px dashed #d9d9d9',
+            border: folder === 'app-config' ? '2px dashed #ffd700' : '2px dashed rgba(255, 215, 0, 0.3)',
             borderRadius: '8px',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            background: '#fafafa',
+            background: folder === 'app-config' ? 'rgba(15, 15, 15, 0.5)' : 'rgba(26, 26, 26, 0.3)',
             cursor: disabled ? 'not-allowed' : 'pointer',
-            opacity: disabled ? 0.6 : 1
+            opacity: disabled ? 0.6 : 1,
+            transition: 'all 0.3s ease'
           }}
           onClick={() => !disabled && fileInputRef.current?.click()}
+          onMouseEnter={(e) => {
+            if (!disabled && folder === 'app-config') {
+              e.currentTarget.style.borderColor = '#ffd700'
+              e.currentTarget.style.background = 'rgba(15, 15, 15, 0.7)'
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (folder === 'app-config') {
+              e.currentTarget.style.borderColor = '#ffd700'
+              e.currentTarget.style.background = 'rgba(15, 15, 15, 0.5)'
+            }
+          }}
         >
           {uploading ? (
-            <LoadingOutlined style={{ fontSize: '24px', color: '#1890ff' }} />
+            <LoadingOutlined style={{ fontSize: '24px', color: folder === 'app-config' ? '#ffd700' : '#1890ff' }} />
           ) : (
-            <PlusOutlined style={{ fontSize: '24px', color: '#999' }} />
+            <PlusOutlined style={{ fontSize: '24px', color: folder === 'app-config' ? '#ffd700' : '#999' }} />
           )}
-          <div style={{ marginTop: '8px', fontSize: '12px', color: '#999' }}>
+          <div style={{ marginTop: '8px', fontSize: '12px', color: folder === 'app-config' ? '#ffd700' : '#999' }}>
             {uploading ? t('upload.uploading') : t('upload.clickToUpload')}
           </div>
         </div>
@@ -284,20 +300,46 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       {/* 图片预览模态框 */}
       <Modal
         open={previewVisible}
-        title={t('upload.imagePreview')}
+        title={<span style={{ color: '#ffd700', fontWeight: 600 }}>{t('upload.imagePreview')}</span>}
         footer={null}
         onCancel={() => setPreviewVisible(false)}
         width="auto"
+        style={{
+          background: 'rgba(15, 15, 15, 0.95)'
+        }}
+        styles={{
+          content: {
+            background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%)',
+            border: '1px solid rgba(255, 215, 0, 0.3)',
+            borderRadius: '8px'
+          },
+          header: {
+            background: 'rgba(15, 15, 15, 0.8)',
+            borderBottom: '1px solid rgba(255, 215, 0, 0.2)',
+            borderRadius: '8px 8px 0 0'
+          }
+        }}
       >
-        <img
-          src={value}
-          alt="预览"
-          style={{
-            maxWidth: '100%',
-            maxHeight: '80vh',
-            objectFit: 'contain'
-          }}
-        />
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          background: 'rgba(15, 15, 15, 0.5)',
+          borderRadius: '8px',
+          padding: '20px'
+        }}>
+          <img
+            src={value}
+            alt="预览"
+            style={{
+              maxWidth: '100%',
+              maxHeight: '80vh',
+              objectFit: 'contain',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(255, 215, 0, 0.2)'
+            }}
+          />
+        </div>
       </Modal>
 
       {/* 删除确认对话框 */}

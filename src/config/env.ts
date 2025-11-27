@@ -100,7 +100,7 @@ const defaultConfig: AppConfig = {
   },
   
   app: {
-    name: 'Gentleman Club',
+    name: 'Cigar Club',
     version: '1.0.0',
     description: 'Premium Cigar Club Management Platform',
     author: 'JEP Ventures'

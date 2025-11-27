@@ -967,7 +967,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                 height={200}
                 showPreview={true}
                 enableCrop={true}
-                cropAspectRatio={1}
+                accept="image/png,image/jpeg,image/jpg,image/webp"
               />
             </Form.Item>
 
@@ -1598,7 +1598,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                 rules={[{ required: true, message: '请输入应用名称' }]}
               >
                 <Input
-                  placeholder="Gentleman Club管理平台"
+                  placeholder="Cigar Club管理平台"
                   style={{
                     background: 'rgba(255, 255, 255, 0.05)',
                     border: '1px solid rgba(255, 255, 255, 0.1)',

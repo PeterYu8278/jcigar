@@ -397,7 +397,23 @@ const Login: React.FC = () => {
         ) : (
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
           <div style={{ textAlign: 'center', paddingTop: '20px' }}>
+            {/* 应用 Logo */}
+            {appConfig?.logoUrl && (
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <img
+                  src={appConfig.logoUrl}
+                  alt={appConfig?.appName || 'App Logo'}
+                  style={{
+                    width: '80px',
+                    height: '80px',
+                    objectFit: 'contain',
+                    borderRadius: '8px'
+                  }}
+                />
+              </div>
+            )}
             <Title level={2} style={{ 
+              marginTop: 0,
               marginBottom: 8,
               background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
               WebkitBackgroundClip: 'text',

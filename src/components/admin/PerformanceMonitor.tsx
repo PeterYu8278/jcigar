@@ -114,32 +114,81 @@ const PerformanceMonitor: React.FC = () => {
   }
 
   return (
-    <div style={{ padding: '24px', background: 'var(--cigar-black-primary)' }}>
+    <div style={{ 
+      padding: '24px', 
+      background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%)',
+      minHeight: '100vh'
+    }}>
       {/* 头部操作栏 */}
-      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ margin: 0, color: 'var(--cigar-text-primary)', fontSize: '16px' }}>
-          <DashboardOutlined /> {t(PERFORMANCE_KEYS.TITLE)}
+      <div style={{ 
+        marginBottom: 24, 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        padding: '16px',
+        background: 'rgba(15, 15, 15, 0.6)',
+        border: '1px solid rgba(255, 215, 0, 0.2)',
+        borderRadius: '8px',
+        backdropFilter: 'blur(10px)'
+      }}>
+        <h2 style={{ 
+          margin: 0, 
+          color: '#ffd700', 
+          fontSize: '20px',
+          fontWeight: 700,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <DashboardOutlined style={{ color: '#ffd700' }} /> {t(PERFORMANCE_KEYS.TITLE)}
         </h2>
         <Space>
           <Button
             icon={<ReloadOutlined />}
             onClick={loadPerformanceData}
+            style={{
+              background: 'rgba(255, 215, 0, 0.1)',
+              borderColor: 'rgba(255, 215, 0, 0.3)',
+              color: '#ffd700'
+            }}
           >
             {t(COMMON_ACTIONS.REFRESH)}
           </Button>
           <Button
             type={autoRefresh ? 'primary' : 'default'}
             onClick={() => setAutoRefresh(!autoRefresh)}
+            style={autoRefresh ? {
+              background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+              borderColor: '#ffd700',
+              color: '#000'
+            } : {
+              background: 'rgba(255, 215, 0, 0.1)',
+              borderColor: 'rgba(255, 215, 0, 0.3)',
+              color: '#ffd700'
+            }}
           >
             {autoRefresh ? t(PERFORMANCE_KEYS.AUTO_REFRESH_OFF) : t(PERFORMANCE_KEYS.AUTO_REFRESH_ON)}
           </Button>
           <Button
             icon={<DownloadOutlined />}
             onClick={handleExport}
+            style={{
+              background: 'rgba(255, 215, 0, 0.1)',
+              borderColor: 'rgba(255, 215, 0, 0.3)',
+              color: '#ffd700'
+            }}
           >
             {t(COMMON_ACTIONS.EXPORT_REPORT)}
           </Button>
-          <Button danger onClick={handleClear}>
+          <Button 
+            danger 
+            onClick={handleClear}
+            style={{
+              background: 'rgba(255, 77, 79, 0.1)',
+              borderColor: 'rgba(255, 77, 79, 0.3)',
+              color: '#ff4d4f'
+            }}
+          >
             {t(COMMON_ACTIONS.CLEAR_DATA)}
           </Button>
         </Space>
@@ -147,10 +196,16 @@ const PerformanceMonitor: React.FC = () => {
 
       <Tabs 
         defaultActiveKey="overview"
+        style={{
+          background: 'rgba(15, 15, 15, 0.4)',
+          padding: '16px',
+          borderRadius: '8px',
+          border: '1px solid rgba(255, 215, 0, 0.1)'
+        }}
         items={[
           {
             key: 'overview',
-            label: t(PERFORMANCE_KEYS.OVERVIEW),
+            label: <span style={{ color: '#ffd700', fontWeight: 600 }}>{t(PERFORMANCE_KEYS.OVERVIEW)}</span>,
             children: (
               <>
           {/* Web Vitals 核心指标 */}
@@ -364,62 +419,97 @@ const PerformanceMonitor: React.FC = () => {
           },
           {
             key: 'metrics',
-            label: t(PERFORMANCE_KEYS.DETAILED_METRICS),
+            label: <span style={{ color: '#ffd700', fontWeight: 600 }}>{t(PERFORMANCE_KEYS.DETAILED_METRICS)}</span>,
             children: (
               <>
           <Card
             style={{
-              background: 'var(--cigar-black-secondary)',
-              borderColor: 'var(--cigar-border-primary)'
+              background: 'rgba(15, 15, 15, 0.6)',
+              borderColor: 'rgba(255, 215, 0, 0.2)',
+              borderRadius: '8px'
+            }}
+            bodyStyle={{
+              background: 'transparent'
             }}
           >
             <Table
               dataSource={metrics.map((m, i) => ({ ...m, key: i }))}
               columns={[
                 {
-                  title: t(PERFORMANCE_KEYS.METRIC_NAME),
+                  title: <span style={{ color: '#ffd700', fontWeight: 600 }}>{t(PERFORMANCE_KEYS.METRIC_NAME)}</span>,
                   dataIndex: 'name',
                   key: 'name',
-                  render: (text) => <span style={{ color: 'var(--cigar-text-primary)' }}>{text}</span>
+                  render: (text) => <span style={{ color: '#f8f8f8' }}>{text}</span>
                 },
                 {
-                  title: t(PERFORMANCE_KEYS.VALUE),
+                  title: <span style={{ color: '#ffd700', fontWeight: 600 }}>{t(PERFORMANCE_KEYS.VALUE)}</span>,
                   dataIndex: 'value',
                   key: 'value',
                   render: (value, record) => (
-                    <span style={{ color: 'var(--cigar-text-primary)' }}>
+                    <span style={{ color: '#f8f8f8' }}>
                       {formatNumber(value, { maximumFractionDigits: 2 })} {record.unit}
                     </span>
                   )
                 },
                 {
-                  title: t(PERFORMANCE_KEYS.CATEGORY),
+                  title: <span style={{ color: '#ffd700', fontWeight: 600 }}>{t(PERFORMANCE_KEYS.CATEGORY)}</span>,
                   dataIndex: 'category',
                   key: 'category',
                   render: (category) => {
                     const colors: Record<string, string> = {
-                      navigation: 'blue',
-                      resource: 'green',
-                      mark: 'orange',
-                      measure: 'purple',
-                      custom: 'cyan'
+                      navigation: '#1890ff',
+                      resource: '#52c41a',
+                      mark: '#faad14',
+                      measure: '#722ed1',
+                      custom: '#13c2c2'
                     }
-                    return <Tag color={colors[category]}>{category}</Tag>
+                    return <Tag color={colors[category]} style={{ 
+                      background: `${colors[category]}20`,
+                      borderColor: colors[category],
+                      color: colors[category]
+                    }}>{category}</Tag>
                   }
                 },
                 {
-                  title: t(PERFORMANCE_KEYS.TIMESTAMP),
+                  title: <span style={{ color: '#ffd700', fontWeight: 600 }}>{t(PERFORMANCE_KEYS.TIMESTAMP)}</span>,
                   dataIndex: 'timestamp',
                   key: 'timestamp',
                   render: (timestamp) => (
-                    <span style={{ color: 'var(--cigar-text-secondary)' }}>
+                    <span style={{ color: '#c0c0c0' }}>
                       {new Date(timestamp).toLocaleTimeString()}
                     </span>
                   )
                 }
               ]}
-              pagination={{ pageSize: 20 }}
+              pagination={{ 
+                pageSize: 20,
+                style: { color: '#ffd700' },
+                showSizeChanger: true,
+                showTotal: (total) => <span style={{ color: '#ffd700' }}>共 {total} 条</span>
+              }}
               scroll={{ y: 600 }}
+              style={{
+                background: 'transparent'
+              }}
+              rowClassName={(record, index) => {
+                return index % 2 === 0 ? 'performance-table-row-even' : 'performance-table-row-odd'
+              }}
+              components={{
+                body: {
+                  row: (props: any) => (
+                    <tr
+                      {...props}
+                      style={{
+                        ...props.style,
+                        background: props['data-row-key'] % 2 === 0 
+                          ? 'rgba(26, 26, 26, 0.3)' 
+                          : 'rgba(15, 15, 15, 0.5)',
+                        borderBottom: '1px solid rgba(255, 215, 0, 0.1)'
+                      }}
+                    />
+                  )
+                }
+              }}
             />
           </Card>
               </>

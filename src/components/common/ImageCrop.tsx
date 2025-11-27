@@ -7,12 +7,12 @@ import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop'
 import type { Crop, PixelCrop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 
-interface ImageCropProps {
+  interface ImageCropProps {
   src: string // 原始图片URL
   visible: boolean
   onCancel: () => void
   onConfirm: (croppedImageUrl: string) => void
-  aspectRatio?: number // 宽高比，如 1 表示正方形
+  aspectRatio?: number // 宽高比，如 1 表示正方形，undefined 表示自由裁剪
   minWidth?: number // 最小宽度
   minHeight?: number // 最小高度
   maxWidth?: number // 最大宽度
@@ -25,7 +25,7 @@ const ImageCrop: React.FC<ImageCropProps> = ({
   visible,
   onCancel,
   onConfirm,
-  aspectRatio = 1,
+  aspectRatio,
   minWidth = 100,
   minHeight = 100,
   maxWidth = 800,
@@ -42,24 +42,35 @@ const ImageCrop: React.FC<ImageCropProps> = ({
   // 初始化裁剪区域
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const { width, height } = e.currentTarget
-    const crop = centerCrop(
-      makeAspectCrop(
-        {
-          unit: '%',
-          width: 90,
-        },
-        aspectRatio,
+    if (aspectRatio) {
+      const crop = centerCrop(
+        makeAspectCrop(
+          {
+            unit: '%',
+            width: 90,
+          },
+          aspectRatio,
+          width,
+          height
+        ),
         width,
         height
-      ),
-      width,
-      height
-    )
-    setCrop(crop)
+      )
+      setCrop(crop)
+    } else {
+      // 自由裁剪：不限制宽高比
+      setCrop({
+        unit: '%',
+        x: 5,
+        y: 5,
+        width: 90,
+        height: 90
+      })
+    }
   }, [aspectRatio])
 
   // 将裁剪后的图片转换为Blob
-  const getCroppedImg = (image: HTMLImageElement, crop: PixelCrop): Promise<Blob> => {
+  const getCroppedImg = (image: HTMLImageElement, crop: PixelCrop, imageSrc: string): Promise<Blob> => {
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')
     
@@ -90,6 +101,8 @@ const ImageCrop: React.FC<ImageCropProps> = ({
     )
 
     return new Promise((resolve) => {
+      // 检测原始图片格式，如果是 PNG 则保持 PNG，否则使用 JPEG
+      const imageFormat = imageSrc.toLowerCase().includes('.png') ? 'image/png' : 'image/jpeg'
       canvas.toBlob(
         (blob) => {
           if (!blob) {
@@ -97,7 +110,7 @@ const ImageCrop: React.FC<ImageCropProps> = ({
           }
           resolve(blob)
         },
-        'image/jpeg',
+        imageFormat,
         0.9
       )
     })
@@ -123,7 +136,7 @@ const ImageCrop: React.FC<ImageCropProps> = ({
 
     setLoading(true)
     try {
-      const croppedImageBlob = await getCroppedImg(imgRef.current, completedCrop)
+      const croppedImageBlob = await getCroppedImg(imgRef.current, completedCrop, src)
       const croppedImageUrl = URL.createObjectURL(croppedImageBlob)
       onConfirm(croppedImageUrl)
       message.success(t('crop.success'))
@@ -138,35 +151,80 @@ const ImageCrop: React.FC<ImageCropProps> = ({
   const handleReset = () => {
     if (imgRef.current) {
       const { width, height } = imgRef.current
-      const crop = centerCrop(
-        makeAspectCrop(
-          {
-            unit: '%',
-            width: 90,
-          },
-          aspectRatio,
+      if (aspectRatio) {
+        const crop = centerCrop(
+          makeAspectCrop(
+            {
+              unit: '%',
+              width: 90,
+            },
+            aspectRatio,
+            width,
+            height
+          ),
           width,
           height
-        ),
-        width,
-        height
-      )
-      setCrop(crop)
+        )
+        setCrop(crop)
+      } else {
+        // 自由裁剪：不限制宽高比
+        setCrop({
+          unit: '%',
+          x: 5,
+          y: 5,
+          width: 90,
+          height: 90
+        })
+      }
     }
   }
 
   return (
     <Modal
-      title={title}
+      title={<span style={{ color: '#ffd700', fontWeight: 600 }}>{title}</span>}
       open={visible}
       onCancel={onCancel}
       width="90%"
       style={{ maxWidth: '800px' }}
+      styles={{
+        content: {
+          background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%)',
+          border: '1px solid rgba(255, 215, 0, 0.3)',
+          borderRadius: '8px'
+        },
+        header: {
+          background: 'rgba(15, 15, 15, 0.8)',
+          borderBottom: '1px solid rgba(255, 215, 0, 0.2)',
+          borderRadius: '8px 8px 0 0'
+        },
+        footer: {
+          background: 'rgba(15, 15, 15, 0.8)',
+          borderTop: '1px solid rgba(255, 215, 0, 0.2)',
+          borderRadius: '0 0 8px 8px'
+        }
+      }}
       footer={[
-        <Button key="cancel" onClick={onCancel} icon={<CloseOutlined />}>
+        <Button 
+          key="cancel" 
+          onClick={onCancel} 
+          icon={<CloseOutlined />}
+          style={{
+            background: 'rgba(255, 77, 79, 0.1)',
+            borderColor: 'rgba(255, 77, 79, 0.3)',
+            color: '#ff4d4f'
+          }}
+        >
           {t('common.cancel')}
         </Button>,
-        <Button key="reset" onClick={handleReset}>
+        <Button 
+          key="reset" 
+          onClick={handleReset}
+          style={{
+            background: 'rgba(255, 215, 0, 0.1)',
+            borderColor: 'rgba(255, 215, 0, 0.3)',
+            color: '#ffd700'
+          }}
+        >
           {t('common.reset')}
         </Button>,
         <Button
@@ -175,6 +233,11 @@ const ImageCrop: React.FC<ImageCropProps> = ({
           loading={loading}
           onClick={handleConfirm}
           icon={<CheckOutlined />}
+          style={{
+            background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+            borderColor: '#ffd700',
+            color: '#000'
+          }}
         >
           {t('crop.confirm')}
         </Button>
@@ -185,14 +248,15 @@ const ImageCrop: React.FC<ImageCropProps> = ({
         <div style={{ 
           marginBottom: '16px', 
           padding: '12px', 
-          background: '#f6f8fa', 
+          background: 'rgba(15, 15, 15, 0.6)', 
+          border: '1px solid rgba(255, 215, 0, 0.2)',
           borderRadius: '6px',
           fontSize: '14px',
-          color: '#666'
+          color: '#ffd700'
         }}>
-          <p style={{ margin: '0 0 8px 0', fontWeight: '600' }}>裁剪要求：</p>
-          <p style={{ margin: '0' }}>
-            宽高比: {aspectRatio}:1 | 最小尺寸: {minWidth}x{minHeight} | 最大尺寸: {maxWidth}x{maxHeight}
+          <p style={{ margin: '0 0 8px 0', fontWeight: '600', color: '#ffd700' }}>裁剪要求：</p>
+          <p style={{ margin: '0', color: '#c0c0c0' }}>
+            {aspectRatio ? `宽高比: ${aspectRatio}:1 | ` : '自由裁剪 | '}最小尺寸: {minWidth}x{minHeight} | 最大尺寸: {maxWidth}x{maxHeight}
           </p>
         </div>
 
@@ -202,7 +266,8 @@ const ImageCrop: React.FC<ImageCropProps> = ({
           justifyContent: 'center', 
           alignItems: 'center',
           minHeight: '400px',
-          background: '#f5f5f5',
+          background: 'rgba(15, 15, 15, 0.4)',
+          border: '1px solid rgba(255, 215, 0, 0.1)',
           borderRadius: '8px',
           padding: '20px'
         }}>
@@ -210,7 +275,7 @@ const ImageCrop: React.FC<ImageCropProps> = ({
             crop={crop}
             onChange={(_, percentCrop) => setCrop(percentCrop)}
             onComplete={(c) => setCompletedCrop(c)}
-            aspect={aspectRatio}
+            aspect={aspectRatio || undefined}
             minWidth={minWidth}
             minHeight={minHeight}
             maxWidth={maxWidth}
@@ -229,14 +294,16 @@ const ImageCrop: React.FC<ImageCropProps> = ({
         {/* 预览区域 */}
         {completedCrop && (
           <div style={{ marginTop: '20px' }}>
-            <h4 style={{ margin: '0 0 10px 0', color: '#333', fontSize: '16px' }}>预览：</h4>
+            <h4 style={{ margin: '0 0 10px 0', color: '#ffd700', fontSize: '16px', fontWeight: 600 }}>预览：</h4>
             <canvas
               ref={previewCanvasRef}
               style={{
-                border: '1px solid #d9d9d9',
+                border: '2px solid rgba(255, 215, 0, 0.3)',
                 borderRadius: '4px',
                 maxWidth: '200px',
-                maxHeight: '200px'
+                maxHeight: '200px',
+                background: 'rgba(15, 15, 15, 0.5)',
+                boxShadow: '0 2px 8px rgba(255, 215, 0, 0.2)'
               }}
             />
           </div>

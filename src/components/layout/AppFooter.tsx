@@ -1,4 +1,4 @@
-// 应用底部组件 - Gentleman Club黑金主题
+// 应用底部组件 - Cigar Club黑金主题
 import React, { useState, useEffect } from 'react'
 import { Layout, Typography, Space, Divider } from 'antd'
 import { HeartOutlined, GithubOutlined, MailOutlined } from '@ant-design/icons'

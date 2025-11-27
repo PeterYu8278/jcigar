@@ -1,4 +1,4 @@
-// 手机端底部导航组件 - Gentleman Club黑金主题
+// 手机端底部导航组件 - Cigar Club黑金主题
 import React, { useState, useEffect, useMemo } from 'react'
 import { Layout, Button, Badge } from 'antd'
 import { useNavigate, useLocation } from 'react-router-dom'

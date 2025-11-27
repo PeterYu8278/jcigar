@@ -1,4 +1,4 @@
-// 应用侧边栏组件 - Gentleman Club黑金主题
+// 应用侧边栏组件 - Cigar Club黑金主题
 import React, { useState, useEffect, useMemo } from 'react'
 import { Layout, Menu, Button, Typography, Divider } from 'antd'
 import { useNavigate, useLocation } from 'react-router-dom'

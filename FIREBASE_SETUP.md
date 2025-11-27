@@ -25,7 +25,7 @@ VITE_CLOUDINARY_API_KEY=your_api_key_here
 VITE_CLOUDINARY_UPLOAD_PRESET=your_upload_preset_here
 
 # 应用配置
-VITE_APP_NAME=Gentleman Club管理平台
+VITE_APP_NAME=Cigar Club管理平台
 VITE_APP_VERSION=1.0.0
 VITE_APP_ENV=development
 ```

@@ -32,7 +32,7 @@ export const generateMemberQRCode = async (
     const qrContent = JSON.stringify({
       type: 'gentleman_club_member',
       memberId: memberId,
-      club: 'Gentleman Club',
+      club: 'Cigar Club',
       timestamp: new Date().toISOString(),
       version: '1.0'
     })

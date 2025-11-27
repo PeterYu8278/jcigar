@@ -1,4 +1,4 @@
-// 首页组件 - Gentleman Club黑金主题
+// 首页组件 - Cigar Club黑金主题
 import React, { useEffect, useState } from 'react'
 import { Row, Col, Card, Typography, Button, Space, Statistic, Badge, Spin, message } from 'antd'
 import { 

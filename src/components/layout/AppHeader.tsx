@@ -129,7 +129,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ siderCollapsed = false, isDesktop
         {appConfig?.logoUrl && (
         <img
             src={appConfig.logoUrl}
-            alt={appConfig.appName || 'Gentleman Club'}
+            alt={appConfig.appName || 'Cigar Club'}
           style={{
             height: 28,
             display: 'block'

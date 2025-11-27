@@ -25,7 +25,7 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   console.log('[FCM Service Worker] Background message received:', payload);
 
-  const notificationTitle = payload.notification?.title || 'Gentleman Club';
+  const notificationTitle = payload.notification?.title || 'Cigar Club';
   const notificationOptions = {
     body: payload.notification?.body || '',
     icon: '/icons/icon-192x192.svg',
