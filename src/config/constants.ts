@@ -9,8 +9,8 @@ export const APP_INFO = {
   VERSION: '1.0.0',
   DESCRIPTION: 'Premium Cigar Club Management Platform',
   AUTHOR: 'JEP Ventures',
-  WEBSITE: 'https://gentlemanclub.com',
-  SUPPORT_EMAIL: 'support@gentlemanclub.com'
+  WEBSITE: 'https://cigarclub.com',
+  SUPPORT_EMAIL: 'support@cigarclub.com'
 } as const
 
 // 用户角色

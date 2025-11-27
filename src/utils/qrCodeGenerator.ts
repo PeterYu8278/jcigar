@@ -30,7 +30,7 @@ export const generateMemberQRCode = async (
 
     // 构建QR Code内容 - 包含会员ID和俱乐部信息
     const qrContent = JSON.stringify({
-      type: 'gentleman_club_member',
+      type: 'cigar_club_member',
       memberId: memberId,
       club: 'Cigar Club',
       timestamp: new Date().toISOString(),

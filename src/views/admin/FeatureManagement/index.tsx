@@ -442,6 +442,7 @@ const FeatureManagement: React.FC = () => {
     firebaseMessagingSenderId: string;
     firebaseAppId: string;
     firebaseMeasurementId?: string;
+    firebaseServiceAccount?: string;
     cloudinaryCloudName: string;
     cloudinaryApiKey: string;
     cloudinaryApiSecret: string;
@@ -458,13 +459,29 @@ const FeatureManagement: React.FC = () => {
       ? `# FCM 配置\nVITE_FCM_VAPID_KEY=${values.fcmVapidKey}`
       : '';
     
+    // FIREBASE_SERVICE_ACCOUNT 是服务器端环境变量，需要单独处理（JSON 格式）
+    const serviceAccountLine = values.firebaseServiceAccount
+      ? (() => {
+          try {
+            // 尝试解析并压缩 JSON
+            const parsed = JSON.parse(values.firebaseServiceAccount.trim());
+            const compressed = JSON.stringify(parsed);
+            return `\n# Firebase Service Account (用于 Netlify Functions)\n# 注意：这是服务器端环境变量，不会自动部署到 Netlify\n# 需要在 Netlify 控制台的 Environment variables 中手动设置 FIREBASE_SERVICE_ACCOUNT\n# 值为以下 JSON 内容（已压缩为单行）：\nFIREBASE_SERVICE_ACCOUNT=${compressed}`;
+          } catch {
+            // 如果解析失败，使用原始值（压缩空格和换行）
+            const compressed = values.firebaseServiceAccount.trim().replace(/\s+/g, ' ').replace(/\n/g, '');
+            return `\n# Firebase Service Account (用于 Netlify Functions)\n# 注意：这是服务器端环境变量，不会自动部署到 Netlify\n# 需要在 Netlify 控制台的 Environment variables 中手动设置 FIREBASE_SERVICE_ACCOUNT\n# 值为以下 JSON 内容（已压缩为单行）：\nFIREBASE_SERVICE_ACCOUNT=${compressed}`;
+          }
+        })()
+      : '';
+    
     return `# Firebase配置
 VITE_FIREBASE_API_KEY=${values.firebaseApiKey}
 VITE_FIREBASE_AUTH_DOMAIN=${values.firebaseAuthDomain}
 VITE_FIREBASE_PROJECT_ID=${values.firebaseProjectId}
 VITE_FIREBASE_STORAGE_BUCKET=${values.firebaseStorageBucket}
 VITE_FIREBASE_MESSAGING_SENDER_ID=${values.firebaseMessagingSenderId}
-VITE_FIREBASE_APP_ID=${values.firebaseAppId}${measurementIdLine ? '\n' + measurementIdLine : ''}
+VITE_FIREBASE_APP_ID=${values.firebaseAppId}${measurementIdLine ? '\n' + measurementIdLine : ''}${serviceAccountLine}
 # Cloudinary配置
 VITE_CLOUDINARY_CLOUD_NAME=${values.cloudinaryCloudName}
 VITE_CLOUDINARY_API_KEY=${values.cloudinaryApiKey}
@@ -514,6 +531,23 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
       // 如果提供了 FCM VAPID Key，添加到环境变量数组
       if (values.fcmVapidKey) {
         envVars.push({ key: 'VITE_FCM_VAPID_KEY', value: values.fcmVapidKey, scopes: ['all'] });
+      }
+
+      // 如果提供了 Firebase Service Account，添加到环境变量数组（服务器端变量，不使用 VITE_ 前缀）
+      if (values.firebaseServiceAccount) {
+        // Service Account JSON 需要压缩为单行（移除所有换行和多余空格）
+        try {
+          // 先尝试解析 JSON 以确保格式正确
+          const parsed = JSON.parse(values.firebaseServiceAccount.trim());
+          // 压缩为单行 JSON
+          const serviceAccountJson = JSON.stringify(parsed);
+          envVars.push({ key: 'FIREBASE_SERVICE_ACCOUNT', value: serviceAccountJson, scopes: ['functions'] });
+        } catch (error) {
+          message.warning('Firebase Service Account JSON 格式不正确，将使用原始值。请确保 JSON 格式正确。');
+          // 如果解析失败，使用压缩后的原始值
+          const serviceAccountJson = values.firebaseServiceAccount.trim().replace(/\s+/g, ' ').replace(/\n/g, '');
+          envVars.push({ key: 'FIREBASE_SERVICE_ACCOUNT', value: serviceAccountJson, scopes: ['functions'] });
+        }
       }
 
       // 调用 Netlify Function
@@ -1476,6 +1510,45 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                     color: '#f8f8f8',
                   }}
                 />
+              </Form.Item>
+
+              <Form.Item
+                label={<span style={{ color: '#c0c0c0' }}>Service Account</span>}
+                name="firebaseServiceAccount"
+                rules={[{ required: false, message: '请输入 Firebase Service Account JSON' }]}
+                extra={
+                  <Text style={{ color: '#999', fontSize: '12px' }}>
+                    用于 Netlify Functions（如重置密码、部署索引等）。在 <a href="https://console.firebase.google.com/project/_/settings/serviceaccounts/adminsdk" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Firebase 控制台</a> 生成新的私钥，将 JSON 内容粘贴到此处。注意：这是服务器端环境变量，不会包含在 VITE_ 前缀中。
+                  </Text>
+                }
+              >
+                <div style={{ position: 'relative' }}>
+                  <Input.TextArea
+                    placeholder='{"type":"service_account","project_id":"...","private_key_id":"...","private_key":"...",...}'
+                    rows={6}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      color: '#f8f8f8',
+                      fontFamily: 'monospace',
+                      fontSize: '12px',
+                      paddingRight: '40px',
+                    }}
+                  />
+                  <Button
+                    type="text"
+                    icon={showSecrets.firebaseServiceAccount ? <EyeOutlined style={{ color: '#ffd700' }} /> : <EyeInvisibleOutlined style={{ color: '#ffd700' }} />}
+                    onClick={() => setShowSecrets(prev => ({ ...prev, firebaseServiceAccount: !prev.firebaseServiceAccount }))}
+                    style={{ 
+                      position: 'absolute', 
+                      right: 8, 
+                      top: 8,
+                      border: 'none', 
+                      color: '#ffd700',
+                      zIndex: 1
+                    }}
+                  />
+                </div>
               </Form.Item>
             </div>
 
