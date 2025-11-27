@@ -1,7 +1,7 @@
 // 功能管理页面
 import React, { useState, useEffect } from 'react';
-import { Card, Switch, Button, Space, Typography, message, Spin, Tabs, Input, Checkbox, Form, Divider } from 'antd';
-import { SaveOutlined, ReloadOutlined, EyeOutlined, EyeInvisibleOutlined, SearchOutlined, SettingOutlined } from '@ant-design/icons';
+import { Card, Switch, Button, Space, Typography, message, Spin, Tabs, Input, Checkbox, Form, Divider, Alert } from 'antd';
+import { SaveOutlined, ReloadOutlined, EyeOutlined, EyeInvisibleOutlined, SearchOutlined, SettingOutlined, CopyOutlined, DownloadOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../../store/modules/auth';
 import { useTranslation } from 'react-i18next';
 import {
@@ -71,8 +71,9 @@ const FeatureManagement: React.FC = () => {
   const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'frontend' | 'admin' | 'app' | 'whapi'>('frontend');
+  const [activeTab, setActiveTab] = useState<'frontend' | 'admin' | 'app' | 'whapi' | 'env'>('frontend');
   const [whapiForm] = Form.useForm();
+  const [envForm] = Form.useForm();
   const [searchText, setSearchText] = useState('');
   const [config, setConfig] = useState<FeatureVisibilityConfig | null>(null);
   const [localFeatures, setLocalFeatures] = useState<Record<string, boolean>>({});
@@ -80,6 +81,8 @@ const FeatureManagement: React.FC = () => {
   const [appConfigForm] = Form.useForm();
   const [savingAppConfig, setSavingAppConfig] = useState(false);
   const [pendingColorChanges, setPendingColorChanges] = useState<Partial<ColorThemeConfig>>({});
+  const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
+  const [generatedEnv, setGeneratedEnv] = useState<string>('');
 
   // 检查是否为开发者
   useEffect(() => {
@@ -329,6 +332,40 @@ const FeatureManagement: React.FC = () => {
     }
   };
 
+  // 生成 .env 文件内容
+  const generateEnvFile = (values: {
+    firebaseApiKey: string;
+    firebaseAuthDomain: string;
+    firebaseProjectId: string;
+    firebaseStorageBucket: string;
+    firebaseMessagingSenderId: string;
+    firebaseAppId: string;
+    cloudinaryCloudName: string;
+    cloudinaryApiKey: string;
+    cloudinaryApiSecret: string;
+    appName: string;
+    fcmVapidKey: string;
+  }): string => {
+    return `# Firebase配置
+VITE_FIREBASE_API_KEY=${values.firebaseApiKey}
+VITE_FIREBASE_AUTH_DOMAIN=${values.firebaseAuthDomain}
+VITE_FIREBASE_PROJECT_ID=${values.firebaseProjectId}
+VITE_FIREBASE_STORAGE_BUCKET=${values.firebaseStorageBucket}
+VITE_FIREBASE_MESSAGING_SENDER_ID=${values.firebaseMessagingSenderId}
+VITE_FIREBASE_APP_ID=${values.firebaseAppId}
+
+# Cloudinary配置
+VITE_CLOUDINARY_CLOUD_NAME=${values.cloudinaryCloudName}
+VITE_CLOUDINARY_API_KEY=${values.cloudinaryApiKey}
+VITE_CLOUDINARY_API_SECRET=${values.cloudinaryApiSecret}
+
+# 应用配置
+VITE_APP_NAME=${values.appName}
+
+# FCM 配置
+VITE_FCM_VAPID_KEY=${values.fcmVapidKey}`;
+  };
+
   // 处理颜色更改（暂存，不立即保存）
   const handleColorChange = (colors: Partial<ColorThemeConfig>) => {
     setPendingColorChanges(prev => ({
@@ -469,7 +506,7 @@ const FeatureManagement: React.FC = () => {
           borderBottom: '1px solid rgba(244,175,37,0.2)',
           marginBottom: 16
         }}>
-          {(['frontend', 'admin', 'app', 'whapi'] as const).map((tabKey) => {
+          {(['frontend', 'admin', 'app', 'whapi', 'env'] as const).map((tabKey) => {
             const isActive = activeTab === tabKey;
             const baseStyle: React.CSSProperties = {
               flex: 1,
@@ -508,7 +545,9 @@ const FeatureManagement: React.FC = () => {
                   ? t('featureManagement.adminFeatures', { defaultValue: '管理后台功能' })
                   : tabKey === 'app'
                   ? t('featureManagement.appSettings', { defaultValue: '应用配置' })
-                  : t('featureManagement.whapiSettings', { defaultValue: 'WhatsApp 管理' })}
+                  : tabKey === 'whapi'
+                  ? t('featureManagement.whapiSettings', { defaultValue: 'WhatsApp 管理' })
+                  : t('featureManagement.envSettings', { defaultValue: '环境配置' })}
               </button>
             );
           })}
@@ -516,7 +555,7 @@ const FeatureManagement: React.FC = () => {
       </div>
 
       {/* 搜索和批量操作（仅功能标签页显示） */}
-      {activeTab !== 'app' && activeTab !== 'whapi' && (
+      {activeTab !== 'app' && activeTab !== 'whapi' && activeTab !== 'env' && (
         <div style={{ marginBottom: 16, display: 'flex', gap: 12, alignItems: 'center' }}>
           <Search
             placeholder={t('featureManagement.searchPlaceholder', { defaultValue: '搜索功能...' })}
@@ -880,7 +919,369 @@ const FeatureManagement: React.FC = () => {
         </>
       ) : null}
 
-      {activeTab !== 'app' && activeTab !== 'whapi' && (
+      {/* 环境配置标签页 */}
+      {activeTab === 'env' ? (
+        <Card style={{
+          background: 'rgba(255, 255, 255, 0.05)',
+          borderRadius: 12,
+          border: '1px solid rgba(244, 175, 37, 0.6)',
+          backdropFilter: 'blur(10px)',
+          marginBottom: 16,
+        }}>
+          <Alert
+            message="重要提示"
+            description="此配置仅用于生成 .env 文件，不会保存到数据库。页面刷新后表单将清空。"
+            type="warning"
+            showIcon
+            style={{
+              marginBottom: 24,
+              background: 'rgba(255, 193, 7, 0.1)',
+              border: '1px solid rgba(255, 193, 7, 0.3)',
+            }}
+          />
+
+          <Form
+            form={envForm}
+            layout="horizontal"
+            labelCol={{ span: 6 }}
+            wrapperCol={{ span: 18 }}
+            onFinish={(values) => {
+              const envContent = generateEnvFile(values);
+              setGeneratedEnv(envContent);
+            }}
+          >
+            {/* Firebase 配置 */}
+            <div style={{ marginBottom: 24 }}>
+              <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600, display: 'block', marginBottom: 16 }}>
+                Firebase 配置
+              </Text>
+              
+              <Form.Item
+                label={<span style={{ color: '#c0c0c0' }}>API Key</span>}
+                name="firebaseApiKey"
+                rules={[{ required: true, message: '请输入 Firebase API Key' }]}
+              >
+                <Input
+                  type={showSecrets.firebaseApiKey ? 'text' : 'password'}
+                  placeholder="AIzaSy..."
+                  suffix={
+                    <Button
+                      type="text"
+                      icon={showSecrets.firebaseApiKey ? <EyeOutlined style={{ color: '#ffd700' }} /> : <EyeInvisibleOutlined style={{ color: '#ffd700' }} />}
+                      onClick={() => setShowSecrets(prev => ({ ...prev, firebaseApiKey: !prev.firebaseApiKey }))}
+                      style={{ border: 'none', color: '#ffd700' }}
+                    />
+                  }
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#f8f8f8',
+                  }}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={<span style={{ color: '#c0c0c0' }}>Auth Domain</span>}
+                name="firebaseAuthDomain"
+                rules={[{ required: true, message: '请输入 Firebase Auth Domain' }]}
+              >
+                <Input
+                  placeholder="project.firebaseapp.com"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#f8f8f8',
+                  }}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={<span style={{ color: '#c0c0c0' }}>Project ID</span>}
+                name="firebaseProjectId"
+                rules={[{ required: true, message: '请输入 Firebase Project ID' }]}
+              >
+                <Input
+                  placeholder="your-project-id"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#f8f8f8',
+                  }}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={<span style={{ color: '#c0c0c0' }}>Storage Bucket</span>}
+                name="firebaseStorageBucket"
+                rules={[{ required: true, message: '请输入 Firebase Storage Bucket' }]}
+              >
+                <Input
+                  placeholder="project.firebasestorage.app"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#f8f8f8',
+                  }}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={<span style={{ color: '#c0c0c0' }}>Messaging Sender ID</span>}
+                name="firebaseMessagingSenderId"
+                rules={[{ required: true, message: '请输入 Firebase Messaging Sender ID' }]}
+              >
+                <Input
+                  placeholder="123456789012"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#f8f8f8',
+                  }}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={<span style={{ color: '#c0c0c0' }}>App ID</span>}
+                name="firebaseAppId"
+                rules={[{ required: true, message: '请输入 Firebase App ID' }]}
+              >
+                <Input
+                  placeholder="1:123456789012:web:abc123"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#f8f8f8',
+                  }}
+                />
+              </Form.Item>
+            </div>
+
+            <Divider style={{ borderColor: 'rgba(244, 175, 37, 0.2)', margin: '24px 0' }} />
+
+            {/* Cloudinary 配置 */}
+            <div style={{ marginBottom: 24 }}>
+              <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600, display: 'block', marginBottom: 16 }}>
+                Cloudinary 配置
+              </Text>
+              
+              <Form.Item
+                label={<span style={{ color: '#c0c0c0' }}>Cloud Name</span>}
+                name="cloudinaryCloudName"
+                rules={[{ required: true, message: '请输入 Cloudinary Cloud Name' }]}
+              >
+                <Input
+                  placeholder="your-cloud-name"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#f8f8f8',
+                  }}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={<span style={{ color: '#c0c0c0' }}>API Key</span>}
+                name="cloudinaryApiKey"
+                rules={[{ required: true, message: '请输入 Cloudinary API Key' }]}
+              >
+                <Input
+                  type={showSecrets.cloudinaryApiKey ? 'text' : 'password'}
+                  placeholder="123456789012345"
+                  suffix={
+                    <Button
+                      type="text"
+                      icon={showSecrets.cloudinaryApiKey ? <EyeOutlined style={{ color: '#ffd700' }} /> : <EyeInvisibleOutlined style={{ color: '#ffd700' }} />}
+                      onClick={() => setShowSecrets(prev => ({ ...prev, cloudinaryApiKey: !prev.cloudinaryApiKey }))}
+                      style={{ border: 'none', color: '#ffd700' }}
+                    />
+                  }
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#f8f8f8',
+                  }}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={<span style={{ color: '#c0c0c0' }}>API Secret</span>}
+                name="cloudinaryApiSecret"
+                rules={[{ required: true, message: '请输入 Cloudinary API Secret' }]}
+              >
+                <Input
+                  type={showSecrets.cloudinaryApiSecret ? 'text' : 'password'}
+                  placeholder="your-api-secret"
+                  suffix={
+                    <Button
+                      type="text"
+                      icon={showSecrets.cloudinaryApiSecret ? <EyeOutlined style={{ color: '#ffd700' }} /> : <EyeInvisibleOutlined style={{ color: '#ffd700' }} />}
+                      onClick={() => setShowSecrets(prev => ({ ...prev, cloudinaryApiSecret: !prev.cloudinaryApiSecret }))}
+                      style={{ border: 'none', color: '#ffd700' }}
+                    />
+                  }
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#f8f8f8',
+                  }}
+                />
+              </Form.Item>
+            </div>
+
+            <Divider style={{ borderColor: 'rgba(244, 175, 37, 0.2)', margin: '24px 0' }} />
+
+            {/* 应用配置 */}
+            <div style={{ marginBottom: 24 }}>
+              <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600, display: 'block', marginBottom: 16 }}>
+                应用配置
+              </Text>
+              
+              <Form.Item
+                label={<span style={{ color: '#c0c0c0' }}>App Name</span>}
+                name="appName"
+                rules={[{ required: true, message: '请输入应用名称' }]}
+              >
+                <Input
+                  placeholder="Gentleman Club管理平台"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#f8f8f8',
+                  }}
+                />
+              </Form.Item>
+            </div>
+
+            <Divider style={{ borderColor: 'rgba(244, 175, 37, 0.2)', margin: '24px 0' }} />
+
+            {/* FCM 配置 */}
+            <div style={{ marginBottom: 24 }}>
+              <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600, display: 'block', marginBottom: 16 }}>
+                FCM 配置
+              </Text>
+              
+              <Form.Item
+                label={<span style={{ color: '#c0c0c0' }}>VAPID Key</span>}
+                name="fcmVapidKey"
+                rules={[{ required: true, message: '请输入 FCM VAPID Key' }]}
+              >
+                <Input
+                  type={showSecrets.fcmVapidKey ? 'text' : 'password'}
+                  placeholder="your_vapid_key_here"
+                  suffix={
+                    <Button
+                      type="text"
+                      icon={showSecrets.fcmVapidKey ? <EyeOutlined style={{ color: '#ffd700' }} /> : <EyeInvisibleOutlined style={{ color: '#ffd700' }} />}
+                      onClick={() => setShowSecrets(prev => ({ ...prev, fcmVapidKey: !prev.fcmVapidKey }))}
+                      style={{ border: 'none', color: '#ffd700' }}
+                    />
+                  }
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#f8f8f8',
+                  }}
+                />
+              </Form.Item>
+            </div>
+
+            {/* 生成的配置文件预览 */}
+            {generatedEnv && (
+              <div style={{ marginBottom: 24 }}>
+                <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600, display: 'block', marginBottom: 16 }}>
+                  生成的配置文件
+                </Text>
+                <div style={{
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '8px',
+                  padding: '16px',
+                  maxHeight: '300px',
+                  overflow: 'auto',
+                }}>
+                  <pre style={{
+                    color: '#c0c0c0',
+                    fontSize: '12px',
+                    fontFamily: 'monospace',
+                    margin: 0,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-all',
+                  }}>
+                    {generatedEnv}
+                  </pre>
+                </div>
+              </div>
+            )}
+
+            {/* 操作按钮 */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={() => {
+                  envForm.resetFields();
+                  setGeneratedEnv('');
+                }}
+              >
+                清空表单
+              </Button>
+              <Button
+                icon={<FileTextOutlined />}
+                onClick={async () => {
+                  try {
+                    const values = await envForm.validateFields();
+                    const envContent = generateEnvFile(values);
+                    setGeneratedEnv(envContent);
+                    message.success('配置文件已生成');
+                  } catch (error) {
+                    message.error('请填写所有必填字段');
+                  }
+                }}
+              >
+                生成配置文件
+              </Button>
+              {generatedEnv && (
+                <>
+                  <Button
+                    icon={<CopyOutlined />}
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(generatedEnv);
+                        message.success('已复制到剪贴板');
+                      } catch (error) {
+                        message.error('复制失败');
+                      }
+                    }}
+                  >
+                    复制到剪贴板
+                  </Button>
+                  <Button
+                    type="primary"
+                    icon={<DownloadOutlined />}
+                    onClick={() => {
+                      const blob = new Blob([generatedEnv], { type: 'text/plain' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = '.env';
+                      a.click();
+                      URL.revokeObjectURL(url);
+                      message.success('文件已下载');
+                    }}
+                    style={{
+                      background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                      border: 'none',
+                    }}
+                  >
+                    下载 .env
+                  </Button>
+                </>
+              )}
+            </div>
+          </Form>
+        </Card>
+      ) : null}
+
+      {activeTab !== 'app' && activeTab !== 'whapi' && activeTab !== 'env' && (
         <>
           <Card style={{
             background: 'rgba(255, 255, 255, 0.05)',
