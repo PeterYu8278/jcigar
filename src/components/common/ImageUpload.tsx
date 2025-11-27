@@ -50,6 +50,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   const [previewVisible, setPreviewVisible] = useState(false)
   const [cropVisible, setCropVisible] = useState(false)
   const [tempImageUrl, setTempImageUrl] = useState<string>('')
+  const [tempImageFile, setTempImageFile] = useState<File | null>(null)
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -89,6 +90,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     if (enableCrop) {
       const imageUrl = URL.createObjectURL(file)
       setTempImageUrl(imageUrl)
+      setTempImageFile(file) // 保存原始文件以便后续检测格式
       setCropVisible(true)
     } else {
       // 直接上传
@@ -116,7 +118,15 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       // 将裁剪后的图片 URL 转换为 File 对象
       const response = await fetch(croppedImageUrl)
       const blob = await response.blob()
-      const file = new File([blob], 'cropped-image.jpg', { type: 'image/jpeg' })
+      
+      // 检测原始文件格式，保持 PNG 透明背景
+      const originalFile = tempImageFile
+      const isPng = originalFile?.type === 'image/png' || originalFile?.name.toLowerCase().endsWith('.png')
+      const fileExtension = isPng ? 'png' : 'jpg'
+      const mimeType = isPng ? 'image/png' : 'image/jpeg'
+      const fileName = `cropped-image.${fileExtension}`
+      
+      const file = new File([blob], fileName, { type: mimeType })
 
       // 上传裁剪后的图片
       const result: UploadResult = await upload(file, {
@@ -131,6 +141,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       URL.revokeObjectURL(tempImageUrl)
       setCropVisible(false)
       setTempImageUrl('')
+      setTempImageFile(null)
     } catch (err) {
       console.error('上传裁剪后的图片失败:', err)
       message.error(t('upload.fail'))
@@ -145,6 +156,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     }
     setCropVisible(false)
     setTempImageUrl('')
+    setTempImageFile(null)
   }
 
   const handleDelete = () => {

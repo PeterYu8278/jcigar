@@ -404,8 +404,9 @@ const Login: React.FC = () => {
                   src={appConfig.logoUrl}
                   alt={appConfig?.appName || 'App Logo'}
                   style={{
-                    width: '80px',
-                    height: '80px',
+                    width: 'auto',
+                    height: '50px',
+                    maxWidth: '100%',
                     objectFit: 'contain',
                     borderRadius: '8px'
                   }}
@@ -413,7 +414,7 @@ const Login: React.FC = () => {
               </div>
             )}
             <Title level={2} style={{ 
-              marginTop: 0,
+              marginTop: 10,
               marginBottom: 8,
               background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
               WebkitBackgroundClip: 'text',
