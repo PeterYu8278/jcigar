@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Switch, Button, Space, Typography, message, Spin, Tabs, Input, Checkbox, Form, Divider, Alert } from 'antd';
 const { TextArea } = Input;
-import { SaveOutlined, ReloadOutlined, EyeOutlined, EyeInvisibleOutlined, SearchOutlined, SettingOutlined, CopyOutlined, DownloadOutlined, FileTextOutlined, RocketOutlined, CheckCircleOutlined, LoadingOutlined } from '@ant-design/icons';
+import { SaveOutlined, ReloadOutlined, EyeOutlined, EyeInvisibleOutlined, SearchOutlined, SettingOutlined, CopyOutlined, DownloadOutlined, FileTextOutlined, RocketOutlined, CheckCircleOutlined, LoadingOutlined, DatabaseOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../../store/modules/auth';
 import { useTranslation } from 'react-i18next';
 import {
@@ -90,6 +90,12 @@ const FeatureManagement: React.FC = () => {
     message: string;
     deployId?: string;
     deployUrl?: string;
+  }>({ state: 'idle', message: '' });
+  const [indexDeploying, setIndexDeploying] = useState(false);
+  const [indexDeployStatus, setIndexDeployStatus] = useState<{
+    state: 'idle' | 'deploying' | 'success' | 'error';
+    message: string;
+    links?: string[];
   }>({ state: 'idle', message: '' });
   const [firebaseConfigCode, setFirebaseConfigCode] = useState<string>('');
 
@@ -536,6 +542,60 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
       });
       message.error(error.message || '部署失败');
       setDeploying(false);
+    }
+  };
+
+  // 部署 Firebase 索引
+  const handleDeployFirestoreIndexes = async () => {
+    try {
+      const values = await envForm.validateFields(['firebaseProjectId']);
+      const { firebaseProjectId } = values;
+
+      if (!firebaseProjectId) {
+        message.error('请填写 Firebase Project ID');
+        return;
+      }
+
+      setIndexDeploying(true);
+      setIndexDeployStatus({ state: 'deploying', message: '正在部署 Firestore 索引...' });
+
+      // 调用 Netlify Function 部署索引（Function 会读取 firestore.indexes.json）
+      const deployResponse = await fetch(`/.netlify/functions/deploy-firestore-indexes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          projectId: firebaseProjectId,
+        }),
+      });
+
+      if (!deployResponse.ok) {
+        const errorData = await deployResponse.json();
+        throw new Error(errorData.error || '部署失败');
+      }
+
+      const result = await deployResponse.json();
+
+      if (result.success) {
+        setIndexDeployStatus({
+          state: 'success',
+          message: result.message || '索引部署成功！',
+          links: result.links,
+        });
+        message.success('索引部署成功！');
+      } else {
+        throw new Error(result.message || '部署失败');
+      }
+    } catch (error: any) {
+      console.error('[handleDeployFirestoreIndexes] Error:', error);
+      setIndexDeployStatus({
+        state: 'error',
+        message: error.message || '部署失败，请检查配置',
+      });
+      message.error(error.message || '部署失败');
+    } finally {
+      setIndexDeploying(false);
     }
   };
 
@@ -1747,7 +1807,75 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               >
                 {deploying ? '部署中...' : '部署到 Netlify'}
               </Button>
+              <Button
+                type="primary"
+                icon={<DatabaseOutlined />}
+                onClick={handleDeployFirestoreIndexes}
+                loading={indexDeploying}
+                disabled={indexDeploying}
+                style={{
+                  background: 'linear-gradient(to right,#52c41a,#389e0d)',
+                  border: 'none',
+                }}
+              >
+                {indexDeploying ? '部署中...' : '部署 Firestore 索引'}
+              </Button>
             </div>
+
+            {/* Firestore 索引部署状态 */}
+            {indexDeployStatus.state !== 'idle' && (
+              <div style={{ marginTop: 16 }}>
+                <Alert
+                  message={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {indexDeployStatus.state === 'deploying' ? (
+                        <LoadingOutlined style={{ color: '#1890ff' }} />
+                      ) : indexDeployStatus.state === 'success' ? (
+                        <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                      ) : (
+                        <span style={{ color: '#ff4d4f' }}>✕</span>
+                      )}
+                      <span>{indexDeployStatus.message}</span>
+                    </div>
+                  }
+                  type={
+                    indexDeployStatus.state === 'success' ? 'success' :
+                    indexDeployStatus.state === 'error' ? 'error' : 'info'
+                  }
+                  showIcon={false}
+                  style={{
+                    marginBottom: 16,
+                    background: indexDeployStatus.state === 'success' ? 'rgba(82, 196, 26, 0.1)' :
+                               indexDeployStatus.state === 'error' ? 'rgba(255, 77, 79, 0.1)' :
+                               'rgba(24, 144, 255, 0.1)',
+                    border: indexDeployStatus.state === 'success' ? '1px solid rgba(82, 196, 26, 0.3)' :
+                           indexDeployStatus.state === 'error' ? '1px solid rgba(255, 77, 79, 0.3)' :
+                           '1px solid rgba(24, 144, 255, 0.3)',
+                  }}
+                  description={
+                    indexDeployStatus.links && indexDeployStatus.links.length > 0 ? (
+                      <div style={{ marginTop: 8 }}>
+                        <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 8 }}>
+                          请通过以下链接在 Firebase Console 中创建索引：
+                        </Text>
+                        {indexDeployStatus.links.map((link, idx) => (
+                          <div key={idx} style={{ marginTop: 4 }}>
+                            <a
+                              href={link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: '#ffd700' }}
+                            >
+                              {link}
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null
+                  }
+                />
+              </div>
+            )}
           </Form>
         </Card>
       ) : null}

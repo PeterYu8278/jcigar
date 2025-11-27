@@ -47,6 +47,20 @@
       ]
     },
     {
+      "collectionGroup": "visitSessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "checkInAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "redemptionRecords",
       "queryScope": "COLLECTION",
       "fields": [
