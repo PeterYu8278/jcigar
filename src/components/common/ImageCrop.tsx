@@ -85,6 +85,9 @@ const ImageCrop: React.FC<ImageCropProps> = ({
     canvas.width = crop.width * pixelRatio * scaleX
     canvas.height = crop.height * pixelRatio * scaleY
 
+    // 清除 Canvas，确保透明背景保持透明（修复 PNG 透明背景被填充黑色的问题）
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    
     ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
     ctx.imageSmoothingQuality = 'high'
 
