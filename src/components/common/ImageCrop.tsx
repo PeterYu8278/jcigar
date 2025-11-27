@@ -184,8 +184,7 @@ const ImageCrop: React.FC<ImageCropProps> = ({
       title={<span style={{ color: '#ffd700', fontWeight: 600 }}>{title}</span>}
       open={visible}
       onCancel={onCancel}
-      width="90%"
-      style={{ maxWidth: '800px' }}
+      style={{ width: '300px' }}
       styles={{
         content: {
           background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%)',
@@ -210,6 +209,7 @@ const ImageCrop: React.FC<ImageCropProps> = ({
           icon={<CloseOutlined />}
           style={{
             background: 'rgba(255, 77, 79, 0.1)',
+            marginTop: '10px',
             borderColor: 'rgba(255, 77, 79, 0.3)',
             color: '#ff4d4f'
           }}
@@ -266,7 +266,7 @@ const ImageCrop: React.FC<ImageCropProps> = ({
           justifyContent: 'center', 
           alignItems: 'center',
           minHeight: '400px',
-          background: 'rgba(15, 15, 15, 0.4)',
+          background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2d2d2d 100%)',
           border: '1px solid rgba(255, 215, 0, 0.1)',
           borderRadius: '8px',
           padding: '20px'
@@ -290,24 +290,6 @@ const ImageCrop: React.FC<ImageCropProps> = ({
             />
           </ReactCrop>
         </div>
-
-        {/* 预览区域 */}
-        {completedCrop && (
-          <div style={{ marginTop: '20px' }}>
-            <h4 style={{ margin: '0 0 10px 0', color: '#ffd700', fontSize: '16px', fontWeight: 600 }}>预览：</h4>
-            <canvas
-              ref={previewCanvasRef}
-              style={{
-                border: '2px solid rgba(255, 215, 0, 0.3)',
-                borderRadius: '4px',
-                maxWidth: '200px',
-                maxHeight: '200px',
-                background: 'rgba(15, 15, 15, 0.5)',
-                boxShadow: '0 2px 8px rgba(255, 215, 0, 0.2)'
-              }}
-            />
-          </div>
-        )}
       </div>
     </Modal>
   )

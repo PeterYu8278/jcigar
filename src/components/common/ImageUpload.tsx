@@ -95,8 +95,11 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     } else {
       // 直接上传
       try {
+        // 检测文件格式，明确指定格式以保持 PNG 透明背景
+        const isPng = file.type === 'image/png' || file.name.toLowerCase().endsWith('.png')
         const result: UploadResult = await upload(file, {
-          folder: finalFolder
+          folder: finalFolder,
+          format: isPng ? 'png' : 'jpg' // 明确指定格式，防止 Cloudinary 自动转换
         })
         
         onChange?.(result.secure_url)
@@ -128,9 +131,10 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       
       const file = new File([blob], fileName, { type: mimeType })
 
-      // 上传裁剪后的图片
+      // 上传裁剪后的图片，明确指定格式以保持 PNG 透明背景
       const result: UploadResult = await upload(file, {
-        folder: finalFolder
+        folder: finalFolder,
+        format: isPng ? 'png' : 'jpg' // 明确指定格式，防止 Cloudinary 自动转换
       })
       
       onChange?.(result.secure_url)

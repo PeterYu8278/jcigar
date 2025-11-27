@@ -86,6 +86,11 @@ const buildUploadFormData = (
     formData.append('unique_filename', String(options.uniqueFilename))
   }
   
+  // 明确指定格式，用于保持原始格式（特别是 PNG 透明背景）
+  if (options.format) {
+    formData.append('format', options.format)
+  }
+  
   // 转换参数（如果提供）
   if (options.transformation) {
     const transformation = options.transformation

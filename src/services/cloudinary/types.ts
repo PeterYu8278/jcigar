@@ -49,6 +49,8 @@ export interface UploadOptions {
   useFilename?: boolean
   /** 唯一文件名 */
   uniqueFilename?: boolean
+  /** 明确指定输出格式，如 'png', 'jpg', 'webp' 等，用于保持原始格式（特别是 PNG 透明背景） */
+  format?: string
 }
 
 /**

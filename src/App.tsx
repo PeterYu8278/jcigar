@@ -92,7 +92,7 @@ const AppContent: React.FC = () => {
   
   // 侧边栏显示逻辑：手机端商城页面隐藏，电脑端商城页面显示
   // 逻辑：已登录 AND (是电脑端 OR 不是商城页面)
-  const showSider = user && (isDesktop || location.pathname !== '/shop')
+  const showSider = !!(user && (isDesktop || location.pathname !== '/shop'))
 
   // 设置实际视口高度（适配移动设备地址栏）
   useEffect(() => {

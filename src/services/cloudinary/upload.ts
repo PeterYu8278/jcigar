@@ -1,5 +1,5 @@
 // Cloudinary 上传服务
-import { cloudinaryConfig, loadCloudinary } from './config'
+import { cloudinaryConfig, loadCloudinary, getCloudinaryConfig } from './config'
 
 export interface UploadResult {
   public_id: string
@@ -16,6 +16,7 @@ export interface UploadOptions {
   resource_type?: 'image' | 'video' | 'raw' | 'auto'
   allowed_formats?: string[]
   max_bytes?: number
+  format?: string // 明确指定输出格式，如 'png', 'jpg', 'webp' 等
 }
 
 /**
@@ -59,21 +60,48 @@ export const uploadFile = async (
       }
     }
 
+    // 获取 Cloudinary 配置（包括 uploadPreset）
+    const config = getCloudinaryConfig()
+    
+    // 检测文件格式
+    let fileFormat: string | undefined = options.format
+    if (!fileFormat && file instanceof File) {
+      // 从文件类型或文件名检测格式
+      if (file.type === 'image/png' || file.name.toLowerCase().endsWith('.png')) {
+        fileFormat = 'png'
+      } else if (file.type === 'image/jpeg' || file.type === 'image/jpg' || file.name.toLowerCase().match(/\.(jpg|jpeg)$/)) {
+        fileFormat = 'jpg'
+      } else if (file.type === 'image/webp' || file.name.toLowerCase().endsWith('.webp')) {
+        fileFormat = 'webp'
+      }
+    }
+    
     let result
     if (file instanceof File) {
       // 上传 File 对象 - 使用 Cloudinary 的 upload 方法
       result = await new Promise((resolve, reject) => {
         const formData = new FormData()
         formData.append('file', file)
-        formData.append('upload_preset', 'ml_default') // 需要创建无签名上传预设
+        formData.append('upload_preset', config.uploadPreset)
         formData.append('folder', folder)
         
-        fetch(`https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloud_name}/image/upload`, {
+        // 如果明确指定了格式，传递 format 参数以保持原始格式
+        if (fileFormat) {
+          formData.append('format', fileFormat)
+        }
+        
+        fetch(`https://api.cloudinary.com/v1_1/${config.cloudName}/image/upload`, {
           method: 'POST',
           body: formData
         })
         .then(response => response.json())
-        .then(data => resolve(data))
+        .then(data => {
+          if (data.error) {
+            reject(new Error(data.error.message || '上传失败'))
+          } else {
+            resolve(data)
+          }
+        })
         .catch(error => reject(error))
       })
     } else {
@@ -81,15 +109,26 @@ export const uploadFile = async (
       result = await new Promise((resolve, reject) => {
         const formData = new FormData()
         formData.append('file', file)
-        formData.append('upload_preset', 'ml_default')
+        formData.append('upload_preset', config.uploadPreset)
         formData.append('folder', folder)
         
-        fetch(`https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloud_name}/image/upload`, {
+        // 如果明确指定了格式，传递 format 参数
+        if (fileFormat) {
+          formData.append('format', fileFormat)
+        }
+        
+        fetch(`https://api.cloudinary.com/v1_1/${config.cloudName}/image/upload`, {
           method: 'POST',
           body: formData
         })
         .then(response => response.json())
-        .then(data => resolve(data))
+        .then(data => {
+          if (data.error) {
+            reject(new Error(data.error.message || '上传失败'))
+          } else {
+            resolve(data)
+          }
+        })
         .catch(error => reject(error))
       })
     }
