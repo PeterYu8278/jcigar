@@ -517,7 +517,8 @@ export const initializePushNotifications = async (user: User): Promise<boolean> 
   try {
     // 检查 VAPID KEY
     if (!VAPID_KEY) {
-      console.error('[FCM] ❌ VAPID_KEY 未配置，请检查环境变量 VITE_FCM_VAPID_KEY');
+      // FCM 配置是选填的，使用 warn 而不是 error
+      console.warn('[FCM] ⚠️ VAPID_KEY 未配置，推送通知功能将不可用。如需使用，请配置环境变量 VITE_FCM_VAPID_KEY');
       return false;
     }
     
