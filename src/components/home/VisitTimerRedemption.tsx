@@ -874,7 +874,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                             <div style={{ 
                               height: '12px', 
                               width: '1px', 
-                              backgroundColor: '#2D2D2D',
+                              backgroundColor: 'transparent',
                               marginBottom: '4px'
                             }} />
                             <Text style={{ 
