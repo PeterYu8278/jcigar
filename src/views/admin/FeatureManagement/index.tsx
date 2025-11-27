@@ -584,7 +584,11 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
       }
       
       // 调用 Netlify Function 部署索引（Function 会读取 firestore.indexes.json）
-      const deployResponse = await fetch(`/.netlify/functions/deploy-firestore-indexes`, {
+      // 注意：确保 Netlify Function 已正确部署
+      const functionUrl = `/.netlify/functions/deploy-firestore-indexes`;
+      console.log('[handleDeployFirestoreIndexes] Calling function:', functionUrl);
+      
+      const deployResponse = await fetch(functionUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -597,12 +601,44 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
         }),
       });
 
+      // 检查响应内容类型
+      const contentType = deployResponse.headers.get('content-type');
+      const isJson = contentType && contentType.includes('application/json');
+      
+      let result: any;
+      let errorText: string = '';
+
       if (!deployResponse.ok) {
-        const errorData = await deployResponse.json();
-        throw new Error(errorData.error || '部署失败');
+        // 如果响应不是 JSON，读取文本内容
+        if (!isJson) {
+          errorText = await deployResponse.text();
+          throw new Error(`部署失败 (${deployResponse.status}): ${errorText.substring(0, 200)}`);
+        }
+        try {
+          const errorData = await deployResponse.json();
+          throw new Error(errorData.error || '部署失败');
+        } catch (parseError: any) {
+          // 如果 JSON 解析失败，使用文本内容
+          if (!errorText) {
+            errorText = await deployResponse.text();
+          }
+          throw new Error(`部署失败 (${deployResponse.status}): ${errorText.substring(0, 200)}`);
+        }
       }
 
-      const result = await deployResponse.json();
+      // 解析响应
+      if (isJson) {
+        try {
+          result = await deployResponse.json();
+        } catch (parseError: any) {
+          // 如果 JSON 解析失败，尝试读取文本
+          errorText = await deployResponse.text();
+          throw new Error(`响应解析失败: ${errorText.substring(0, 200)}`);
+        }
+      } else {
+        errorText = await deployResponse.text();
+        throw new Error(`意外的响应格式: ${errorText.substring(0, 200)}`);
+      }
 
       if (result.success) {
         setIndexDeployStatus({
