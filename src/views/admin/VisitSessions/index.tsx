@@ -10,6 +10,8 @@ import {
   completeVisitSession,
   addRedemptionToSession
 } from '../../../services/firebase/visitSessions';
+import { getVisitSessionsPaginated } from '../../../services/firebase/paginatedQueries';
+import { usePaginatedData } from '../../../hooks/usePaginatedData';
 import { getCigars } from '../../../services/firebase/firestore';
 import { createRedemptionRecord, updateRedemptionRecord, getRedemptionRecordsBySession } from '../../../services/firebase/redemption';
 import { useAuthStore } from '../../../store/modules/auth';
@@ -25,8 +27,28 @@ const VisitSessionsPage: React.FC = () => {
   const { modal } = App.useApp(); // 使用 App.useApp() 获取 modal 实例以支持 React 19
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [sessions, setSessions] = useState<VisitSession[]>([]);
+  const [sessions, setSessions] = useState<VisitSession[]>([]); // 保留用于搜索
   const [searchUserId, setSearchUserId] = useState<string>('');
+  
+  // 服务端分页
+  const {
+    data: paginatedSessions,
+    loading: paginatedLoading,
+    hasMore,
+    currentPage,
+    loadPage,
+    refresh: refreshPaginated
+  } = usePaginatedData(
+    async (pageSize, lastDoc, filters) => {
+      const result = await getVisitSessionsPaginated(pageSize, lastDoc, filters)
+      return result
+    },
+    {
+      pageSize: 20, // 桌面端20条/页
+      mobilePageSize: 10, // 移动端10条/页
+      initialLoad: false // 手动控制加载
+    }
+  )
   const [qrScannerVisible, setQrScannerVisible] = useState(false);
   const [qrScannerMode, setQrScannerMode] = useState<'checkin' | 'checkout'>('checkin');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'expired'>('all');
@@ -43,9 +65,14 @@ const VisitSessionsPage: React.FC = () => {
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false;
 
   useEffect(() => {
-    loadAllSessions();
     loadCigars();
-  }, [statusFilter]);
+    // 初始加载
+    const filters: any = {}
+    if (statusFilter && statusFilter !== 'all') {
+      filters.status = statusFilter
+    }
+    loadPage(1, Object.keys(filters).length > 0 ? filters : undefined)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadCigars = async () => {
     try {
@@ -133,7 +160,7 @@ const VisitSessionsPage: React.FC = () => {
             const result = await completeVisitSession(sessionId, user.id, forceHours);
             if (result.success) {
               message.success(`结算成功，扣除积分: ${result.pointsDeducted || 0}`);
-              await loadAllSessions();
+              await refreshPaginated();
             } else {
               message.error(result.error || '结算失败');
             }
@@ -361,7 +388,16 @@ const VisitSessionsPage: React.FC = () => {
               
               <Button
                 icon={<ReloadOutlined />}
-                onClick={loadAllSessions}
+                onClick={() => {
+                  const filters: any = {}
+                  if (statusFilter && statusFilter !== 'all') {
+                    filters.status = statusFilter
+                  }
+                  if (searchUserId) {
+                    filters.userId = searchUserId
+                  }
+                  loadPage(1, Object.keys(filters).length > 0 ? filters : undefined)
+                }}
                 loading={loading}
                 style={{
                   background: 'rgba(255, 255, 255, 0.1)',
@@ -382,13 +418,8 @@ const VisitSessionsPage: React.FC = () => {
               size="large"
               style={{ flex: 1, minWidth: 300 }}
               onSearch={(value) => {
-                if (value) {
-                  setSearchUserId(value);
-                  loadUserSessions(value);
-                } else {
-                  setSearchUserId('');
-                  loadAllSessions();
-                }
+                setSearchUserId(value || '');
+                // useEffect会自动处理数据加载
               }}
               className="points-config-form"
             />
@@ -449,10 +480,30 @@ const VisitSessionsPage: React.FC = () => {
             columns={columns}
             dataSource={sessions}
             rowKey="id"
-            loading={loading}
+            loading={loading || paginatedLoading}
+            scroll={{
+              y: 'calc(100vh - 350px)', // 启用虚拟滚动
+              x: 'max-content'
+            }}
             pagination={{
-              pageSize: 20,
-              showSizeChanger: true
+              current: searchUserId ? undefined : currentPage, // 有搜索时使用客户端分页
+              pageSize: isMobile ? 10 : 20,
+              total: searchUserId ? sessions.length : undefined, // 有搜索时显示总数
+              showSizeChanger: false, // 服务端分页不支持动态改变pageSize
+              showQuickJumper: !searchUserId, // 有搜索时不显示快速跳转
+              onChange: (page) => {
+                if (searchUserId) {
+                  // 客户端分页（搜索时）
+                  return
+                }
+                // 服务端分页
+                const filters: any = {}
+                if (statusFilter && statusFilter !== 'all') {
+                  filters.status = statusFilter
+                }
+                loadPage(page, Object.keys(filters).length > 0 ? filters : undefined)
+              },
+              onShowSizeChange: undefined, // 服务端分页不支持
             }}
                 style={{
                   background: 'transparent'

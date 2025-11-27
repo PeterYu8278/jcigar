@@ -11,6 +11,8 @@ const { Search } = Input
 const { Option } = Select
 
 import { getUsers, createDocument, updateDocument, deleteDocument, COLLECTIONS, getEventsByUser, getOrdersByUser } from '../../../services/firebase/firestore'
+import { getUsersPaginated } from '../../../services/firebase/paginatedQueries'
+import { usePaginatedData } from '../../../hooks/usePaginatedData'
 import type { User, Event, Order } from '../../../types'
 import { sendPasswordResetEmailFor } from '../../../services/firebase/auth'
 import { useTranslation } from 'react-i18next'
@@ -44,8 +46,28 @@ const AdminUsers: React.FC = () => {
   const { t } = useTranslation()
   const { modal } = App.useApp() // 使用 App.useApp() 获取 modal 实例以支持 React 19
   const { user: currentUser } = useAuthStore()
-  const [users, setUsers] = useState<User[]>([])
+  const [users, setUsers] = useState<User[]>([]) // 保留用于搜索和筛选
   const [loading, setLoading] = useState(false)
+  
+  // 服务端分页
+  const {
+    data: paginatedUsers,
+    loading: paginatedLoading,
+    hasMore,
+    currentPage,
+    loadPage,
+    refresh: refreshPaginated
+  } = usePaginatedData(
+    async (pageSize, lastDoc, filters) => {
+      const result = await getUsersPaginated(pageSize, lastDoc, filters)
+      return result
+    },
+    {
+      pageSize: 20, // 桌面端20条/页
+      mobilePageSize: 10, // 移动端10条/页
+      initialLoad: false // 手动控制加载
+    }
+  )
   const [editing, setEditing] = useState<null | User>(null)
   const [creating, setCreating] = useState(false)
   const [deleting, setDeleting] = useState<null | User>(null)
@@ -83,19 +105,36 @@ const AdminUsers: React.FC = () => {
   const [showBubble, setShowBubble] = useState(false) // 字母气泡显示
   const [bubbleLetter, setBubbleLetter] = useState('') // 气泡字母
 
+  // 筛选条件变化时重新加载分页数据
+  useEffect(() => {
+    const filters: any = {}
+    if (roleFilter) filters.role = roleFilter
+    if (statusFilter) filters.status = statusFilter
+    if (levelFilter) filters.level = levelFilter
+    
+    loadPage(1, Object.keys(filters).length > 0 ? filters : undefined)
+  }, [roleFilter, statusFilter, levelFilter]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 保留原有的getUsers用于搜索（客户端搜索）
   useEffect(() => {
     ;(async () => {
-    setLoading(true)
-    try {
-        const list = await getUsers()
-      setUsers(list)
+      try {
+        // 只在需要搜索时加载所有用户（用于客户端搜索）
+        if (keyword.trim()) {
+          setLoading(true)
+          const list = await getUsers()
+          setUsers(list)
+        } else {
+          // 没有搜索关键词时，使用分页数据
+          setUsers(paginatedUsers)
+        }
       } catch (e) {
-      message.error(t('messages.dataLoadFailed'))
-    } finally {
-      setLoading(false)
-    }
+        message.error(t('messages.dataLoadFailed'))
+      } finally {
+        setLoading(false)
+      }
     })()
-  }, [])
+  }, [keyword, paginatedUsers])
 
   useEffect(() => {
     const update = () => setIsMobile(window.innerWidth < 768)
@@ -327,8 +366,7 @@ const AdminUsers: React.FC = () => {
                 if (res.success) {
                   message.success(t('usersAdmin.statusUpdated'))
                   // 刷新用户列表以显示角色变化
-                  const list = await getUsers()
-                  setUsers(list)
+                  await refreshPaginated()
                 }
               }}
               size="small"
@@ -379,27 +417,33 @@ const AdminUsers: React.FC = () => {
   const columns = allColumns.filter(c => visibleCols[c.key as string] !== false)
 
   const filteredUsers = useMemo(() => {
-                      const kw = keyword.trim().toLowerCase()
+    const kw = keyword.trim().toLowerCase()
     const filtered = users.filter(u => {
       // 如果不是开发者，过滤掉开发者角色的用户
       if (currentUser?.role !== 'developer' && u.role === 'developer') {
         return false
       }
-      const passKw = !kw || u.displayName?.toLowerCase().includes(kw) || (u.email || '').toLowerCase().includes(kw) || ((u as any)?.profile?.phone || '').includes(keyword.trim()) || (u.memberId || '').toLowerCase().includes(kw)
-                      const passRole = !roleFilter || u.role === roleFilter
-                      const passLevel = !levelFilter || u.membership?.level === levelFilter
+      // 关键词搜索（客户端）
+      const passKw = !kw || 
+        u.displayName?.toLowerCase().includes(kw) || 
+        (u.email || '').toLowerCase().includes(kw) || 
+        ((u as any)?.profile?.phone || '').includes(keyword.trim()) || 
+        (u.memberId || '').toLowerCase().includes(kw)
+      
+      // 状态筛选（客户端，因为statusMap是动态的）
       const status = statusMap[u.id] || (u as any).status || 'active'
       const passStatus = !statusFilter || status === statusFilter
-      return passKw && passRole && passLevel && passStatus
+      
+      // role和level已经在服务端筛选，这里不需要再筛选
+      return passKw && passStatus
     })
-    
     // 按字母顺序排序（按displayName）
     return filtered.sort((a, b) => {
       const nameA = (a.displayName || '').toLowerCase()
       const nameB = (b.displayName || '').toLowerCase()
       return nameA.localeCompare(nameB)
     })
-  }, [users, keyword, roleFilter, levelFilter, statusFilter, statusMap, currentUser?.role])
+  }, [users, keyword, statusFilter, statusMap, currentUser?.role])
 
   const groupedByInitial = useMemo(() => {
     const groups: Record<string, User[]> = {}
@@ -573,8 +617,7 @@ const AdminUsers: React.FC = () => {
                       return updateDocument<User>(COLLECTIONS.USERS, String(id), updateData as any)
                     }))
                   message.success(t('usersAdmin.batchDisabled'))
-                  const list = await getUsers()
-                  setUsers(list)
+                  await refreshPaginated()
                   setSelectedRowKeys([])
                 } finally {
                   setLoading(false)
@@ -609,8 +652,7 @@ const AdminUsers: React.FC = () => {
                         }
                         
                         if (successCount > 0) {
-                      const list = await getUsers()
-                      setUsers(list)
+                      await refreshPaginated()
                       setSelectedRowKeys([])
                         }
                       } catch (error: any) {
@@ -732,19 +774,39 @@ const AdminUsers: React.FC = () => {
       <div className="points-config-form">
       <Table
         columns={columns}
-          dataSource={filteredUsers}
+          dataSource={keyword.trim() ? filteredUsers : paginatedUsers}
         rowKey="id"
-        loading={loading}
+        loading={loading || paginatedLoading}
         rowSelection={{
           selectedRowKeys,
           onChange: setSelectedRowKeys,
         }}
+        scroll={{
+          y: 'calc(100vh - 300px)', // 启用虚拟滚动，设置固定高度
+          x: 'max-content' // 水平滚动
+        }}
         pagination={{
-            total: filteredUsers.length,
-          pageSize: 10,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
+          current: keyword.trim() ? undefined : currentPage, // 有搜索时使用客户端分页
+          pageSize: isMobile ? 10 : 20,
+          total: keyword.trim() ? filteredUsers.length : undefined, // 有搜索时显示总数，否则不显示
+          showSizeChanger: false, // 服务端分页不支持动态改变pageSize
+          showQuickJumper: !keyword.trim(), // 有搜索时不显示快速跳转
+          showTotal: keyword.trim() 
+            ? (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total })
+            : undefined,
+          onChange: (page) => {
+            if (keyword.trim()) {
+              // 客户端分页（搜索时）
+              return
+            }
+            // 服务端分页
+            const filters: any = {}
+            if (roleFilter) filters.role = roleFilter
+            if (statusFilter) filters.status = statusFilter
+            if (levelFilter) filters.level = levelFilter
+            loadPage(page, Object.keys(filters).length > 0 ? filters : undefined)
+          },
+          onShowSizeChange: undefined, // 服务端分页不支持
         }}
           style={{
             background: 'transparent'
@@ -1238,8 +1300,7 @@ const AdminUsers: React.FC = () => {
                 message.error(t('messages.dataLoadFailed'))
               }
             }
-            const list = await getUsers()
-            setUsers(list)
+            await refreshPaginated()
             setCreating(false)
             setEditing(null)
           } finally {
@@ -1422,8 +1483,7 @@ const AdminUsers: React.FC = () => {
             const res = await deleteDocument(COLLECTIONS.USERS, deleting.id)
             if (res.success) {
               message.success(t('common.deleted'))
-              const list = await getUsers()
-              setUsers(list)
+              await refreshPaginated()
             }
           } finally {
             setLoading(false)

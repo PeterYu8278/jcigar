@@ -10,6 +10,8 @@ import CreateOrderForm from './CreateOrderForm'
 import { useOrderColumns } from './useOrderColumns'
 import type { Order, User, Cigar, Transaction, OutboundOrder, InventoryMovement, AppConfig } from '../../../types'
 import { getAllOrders, getUsers, getCigars, updateDocument, deleteDocument, COLLECTIONS, getAllTransactions, getAllOutboundOrders, getAllInventoryMovements, deleteOutboundOrder } from '../../../services/firebase/firestore'
+import { getOrdersPaginated } from '../../../services/firebase/paginatedQueries'
+import { usePaginatedData } from '../../../hooks/usePaginatedData'
 import { useTranslation } from 'react-i18next'
 import { filterOrders, sortOrders, getStatusColor, getStatusText, getUserName, getUserPhone } from './helpers'
 import { getModalThemeStyles, getModalWidth, getResponsiveModalConfig } from '../../../config/modalTheme'
@@ -20,8 +22,29 @@ const { Option } = Select
 
 const AdminOrders: React.FC = () => {
   const { t } = useTranslation()
-  const [orders, setOrders] = useState<Order[]>([])
+  const [orders, setOrders] = useState<Order[]>([]) // 保留用于搜索和筛选
   const [loading, setLoading] = useState(false)
+  const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
+  
+  // 服务端分页
+  const {
+    data: paginatedOrders,
+    loading: paginatedLoading,
+    hasMore,
+    currentPage,
+    loadPage,
+    refresh: refreshPaginated
+  } = usePaginatedData(
+    async (pageSize, lastDoc, filters) => {
+      const result = await getOrdersPaginated(pageSize, lastDoc, filters)
+      return result
+    },
+    {
+      pageSize: 20, // 桌面端20条/页
+      mobilePageSize: 10, // 移动端10条/页
+      initialLoad: false // 手动控制加载
+    }
+  )
   const [viewing, setViewing] = useState<Order | null>(null)
   const [isEditingInView, setIsEditingInView] = useState(false)
   const [users, setUsers] = useState<User[]>([])
@@ -50,8 +73,17 @@ const AdminOrders: React.FC = () => {
   
 
   useEffect(() => {
-    loadData()
+    loadData() // 加载关联数据
     loadAppConfig()
+    // 初始加载订单数据
+    const filters: any = {}
+    if (statusFilter) filters.status = statusFilter
+    if (paymentFilter) filters.paymentMethod = paymentFilter
+    if (dateRange && dateRange[0] && dateRange[1]) {
+      filters.startDate = dateRange[0].toDate()
+      filters.endDate = dateRange[1].toDate()
+    }
+    loadPage(1, Object.keys(filters).length > 0 ? filters : undefined)
   }, [])
 
   const loadAppConfig = async () => {
@@ -65,21 +97,28 @@ const AdminOrders: React.FC = () => {
     }
   }
 
-  // 筛选条件变化时重置分页到第一页
+  // 筛选条件变化时重新加载分页数据
   useEffect(() => {
-    setPagination((prev: any) => ({ ...prev, current: 1 }))
-  }, [keyword, statusFilter, paymentFilter, dateRange, matchStatusTab])
+    const filters: any = {}
+    if (statusFilter) filters.status = statusFilter
+    if (paymentFilter) filters.paymentMethod = paymentFilter
+    if (dateRange && dateRange[0] && dateRange[1]) {
+      filters.startDate = dateRange[0].toDate()
+      filters.endDate = dateRange[1].toDate()
+    }
+    
+    loadPage(1, Object.keys(filters).length > 0 ? filters : undefined)
+  }, [statusFilter, paymentFilter, dateRange]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // 加载关联数据（用户、雪茄、交易）- 这些数据量较小，可以一次性加载
   const loadData = async () => {
     setLoading(true)
     try {
-      const [ordersData, usersData, cigarsData, transactionsData] = await Promise.all([
-        getAllOrders(),
+      const [usersData, cigarsData, transactionsData] = await Promise.all([
         getUsers(),
         getCigars(),
         getAllTransactions()
       ])
-      setOrders(ordersData)
       setUsers(usersData)
       setCigars(cigarsData)
       setTransactions(transactionsData)
@@ -89,6 +128,27 @@ const AdminOrders: React.FC = () => {
       setLoading(false)
     }
   }
+
+  // 处理搜索和数据源
+  useEffect(() => {
+    if (keyword.trim()) {
+      // 有搜索关键词时，需要加载所有订单进行客户端搜索
+      setLoading(true)
+      getAllOrders()
+        .then(ordersData => {
+          setOrders(ordersData)
+        })
+        .catch(e => {
+          message.error(t('messages.dataLoadFailed'))
+        })
+        .finally(() => {
+          setLoading(false)
+        })
+    } else {
+      // 没有搜索关键词时，使用分页数据
+      setOrders(paginatedOrders)
+    }
+  }, [keyword, paginatedOrders, t])
 
   // 分页处理函数
   const handlePaginationChange = (page: number, pageSize?: number) => {
@@ -197,7 +257,6 @@ const AdminOrders: React.FC = () => {
     }
   }
 
-  const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
   const [sortDesc, setSortDesc] = useState<boolean>(true)
 
   // 计算订单匹配状态（需要在filtered之前定义）
@@ -233,23 +292,43 @@ const AdminOrders: React.FC = () => {
   }
 
   const filtered = useMemo(() => {
-    let result = filterOrders(orders, users, keyword, statusFilter, paymentFilter, dateRange, cigars)
-    
-    // 按匹配状态筛选
-    if (matchStatusTab === 'matched') {
-      result = result.filter(order => {
-        const matchStatus = getOrderMatchStatus(order.id)
-        return matchStatus.status === 'fully'
-      })
-    } else if (matchStatusTab === 'unmatched') {
-      result = result.filter(order => {
-        const matchStatus = getOrderMatchStatus(order.id)
-        return matchStatus.status !== 'fully'
-      })
+    // 如果有搜索关键词，使用客户端筛选
+    if (keyword.trim()) {
+      let result = filterOrders(orders, users, keyword, undefined, undefined, undefined, cigars) // 服务端已处理status和payment筛选
+      
+      // 按匹配状态筛选
+      if (matchStatusTab === 'matched') {
+        result = result.filter(order => {
+          const matchStatus = getOrderMatchStatus(order.id)
+          return matchStatus.status === 'fully'
+        })
+      } else if (matchStatusTab === 'unmatched') {
+        result = result.filter(order => {
+          const matchStatus = getOrderMatchStatus(order.id)
+          return matchStatus.status !== 'fully'
+        })
+      }
+      
+      return result
+    } else {
+      // 没有搜索关键词时，使用分页数据，只处理匹配状态筛选
+      let result = paginatedOrders
+      
+      if (matchStatusTab === 'matched') {
+        result = result.filter(order => {
+          const matchStatus = getOrderMatchStatus(order.id)
+          return matchStatus.status === 'fully'
+        })
+      } else if (matchStatusTab === 'unmatched') {
+        result = result.filter(order => {
+          const matchStatus = getOrderMatchStatus(order.id)
+          return matchStatus.status !== 'fully'
+        })
+      }
+      
+      return result
     }
-    
-    return result
-  }, [orders, users, keyword, statusFilter, paymentFilter, dateRange, cigars, matchStatusTab, transactions])
+  }, [orders, paginatedOrders, users, keyword, cigars, matchStatusTab, transactions])
 
   const columns = useOrderColumns({
     users,
@@ -268,7 +347,9 @@ const AdminOrders: React.FC = () => {
       // 删除订单
       return await deleteDocument(COLLECTIONS.ORDERS, id)
     },
-    onOrderUpdate: loadData
+    onOrderUpdate: async () => {
+      await refreshPaginated()
+    }
   })
 
   const filteredSorted = useMemo(() => {
@@ -548,8 +629,12 @@ const AdminOrders: React.FC = () => {
         columns={columns}
           dataSource={filteredSorted}
         rowKey="id"
-        loading={loading}
+        loading={loading || paginatedLoading}
         rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
+        scroll={{
+          y: 'calc(100vh - 350px)', // 启用虚拟滚动
+          x: 'max-content'
+        }}
         title={() => (
           <Space>
               <button 
@@ -560,7 +645,7 @@ const AdminOrders: React.FC = () => {
               try {
                 await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'confirmed' } as any)))
                   message.success(t('ordersAdmin.batchConfirmed'))
-                loadData()
+                await refreshPaginated()
                 setSelectedRowKeys([])
               } finally {
                 setLoading(false)
@@ -586,7 +671,7 @@ const AdminOrders: React.FC = () => {
                 try {
                   await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'delivered' } as any)))
                   message.success(t('ordersAdmin.batchDelivered'))
-                loadData()
+                await refreshPaginated()
                 setSelectedRowKeys([])
               } finally {
                 setLoading(false)
@@ -610,9 +695,9 @@ const AdminOrders: React.FC = () => {
                 onClick={async () => {
               setLoading(true)
               try {
-                await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'cancelled' } as any)))
+                  await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'cancelled' } as any)))
                   message.success(t('ordersAdmin.batchCancelled'))
-                loadData()
+                await refreshPaginated()
                 setSelectedRowKeys([])
               } finally {
                 setLoading(false)
@@ -643,8 +728,8 @@ const AdminOrders: React.FC = () => {
                 await Promise.all(ids.map(id => deleteDocument(COLLECTIONS.ORDERS, id)))
                 return { success: true }
               }}
-              onSuccess={() => {
-                    loadData()
+              onSuccess={async () => {
+                    await refreshPaginated()
                     setSelectedRowKeys([])
               }}
               itemTypeName="订单"
@@ -785,7 +870,9 @@ const AdminOrders: React.FC = () => {
             isEditingInView={isEditingInView}
             onClose={() => { setViewing(null); setIsEditingInView(false) }}
             onEditToggle={() => setIsEditingInView(v => !v)}
-            onOrderUpdate={loadData}
+            onOrderUpdate={async () => {
+              await refreshPaginated()
+            }}
           />
         )}
       </Modal>
@@ -868,10 +955,10 @@ const AdminOrders: React.FC = () => {
         <CreateOrderForm
           users={users}
           cigars={cigars}
-          onCreateSuccess={() => {
+          onCreateSuccess={async () => {
               message.success(t('ordersAdmin.created'))
               setCreating(false)
-              loadData()
+              await refreshPaginated()
           }}
           onCreateError={(error) => {
             message.error(error)
