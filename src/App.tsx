@@ -42,7 +42,11 @@ const { Content } = Layout
 const AppContent: React.FC = () => {
   const { user, isAdmin, initializeAuth } = useAuthStore()
   const location = useLocation()
-  const isDesktop = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(min-width: 992px)').matches : true
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window === 'undefined') return true
+    if (typeof window.matchMedia !== 'function') return true
+    return window.matchMedia('(min-width: 992px)').matches
+  })
   const [siderCollapsed, setSiderCollapsed] = useState(false)
   const [viewportHeight, setViewportHeight] = useState('100vh')
 
@@ -50,6 +54,33 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     initializeAuth()
   }, [initializeAuth])
+
+  // 响应式更新 isDesktop（监听窗口大小变化）
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+
+    const mediaQuery = window.matchMedia('(min-width: 992px)')
+    const handleChange = (e: MediaQueryListEvent | MediaQueryList) => {
+      setIsDesktop(e.matches)
+    }
+
+    // 初始化
+    handleChange(mediaQuery)
+
+    // 监听变化
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleChange)
+      return () => {
+        mediaQuery.removeEventListener('change', handleChange)
+      }
+    } else {
+      // 兼容旧版浏览器
+      mediaQuery.addListener(handleChange)
+      return () => {
+        mediaQuery.removeListener(handleChange)
+      }
+    }
+  }, [])
 
   // 无需 padding 的页面（认证页面 + 商城页面）
   const noPaddingPages = ['/login', '/register', '/auth/complete-profile', '/shop']
@@ -126,7 +157,7 @@ const AppContent: React.FC = () => {
           zIndex: -1
         }} />
         
-        {user && !isAuthPage && <AppHeader />}
+        {user && !isAuthPage && <AppHeader siderCollapsed={siderCollapsed} isDesktop={isDesktop} showSider={showSider} />}
         <Layout style={{ 
           background: 'transparent',
           flex: 1

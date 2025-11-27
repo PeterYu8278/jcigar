@@ -110,6 +110,43 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     }
   }
 
+  // 处理裁剪完成
+  const handleCropComplete = async (croppedImageUrl: string) => {
+    try {
+      // 将裁剪后的图片 URL 转换为 File 对象
+      const response = await fetch(croppedImageUrl)
+      const blob = await response.blob()
+      const file = new File([blob], 'cropped-image.jpg', { type: 'image/jpeg' })
+
+      // 上传裁剪后的图片
+      const result: UploadResult = await upload(file, {
+        folder: finalFolder
+      })
+      
+      onChange?.(result.secure_url)
+      message.success(t('upload.success'))
+      
+      // 清理临时 URL
+      URL.revokeObjectURL(croppedImageUrl)
+      URL.revokeObjectURL(tempImageUrl)
+      setCropVisible(false)
+      setTempImageUrl('')
+    } catch (err) {
+      console.error('上传裁剪后的图片失败:', err)
+      message.error(t('upload.fail'))
+    }
+  }
+
+  // 处理裁剪取消
+  const handleCropCancel = () => {
+    // 清理临时 URL
+    if (tempImageUrl) {
+      URL.revokeObjectURL(tempImageUrl)
+    }
+    setCropVisible(false)
+    setTempImageUrl('')
+  }
+
   const handleDelete = () => {
     setDeleteConfirmVisible(true)
   }
@@ -276,6 +313,22 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       >
         <p>{t('upload.confirmDeleteImage')}</p>
       </Modal>
+
+      {/* 图片裁剪对话框 */}
+      {enableCrop && (
+        <ImageCrop
+          src={tempImageUrl}
+          visible={cropVisible}
+          onCancel={handleCropCancel}
+          onConfirm={handleCropComplete}
+          aspectRatio={cropAspectRatio}
+          minWidth={cropMinWidth}
+          minHeight={cropMinHeight}
+          maxWidth={cropMaxWidth}
+          maxHeight={cropMaxHeight}
+          title={t('upload.cropImage', { defaultValue: '图片裁剪' })}
+        />
+      )}
     </div>
   )
 }

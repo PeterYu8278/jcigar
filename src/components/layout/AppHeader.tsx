@@ -12,6 +12,12 @@ import type { AppConfig } from '../../types'
 const { Header } = Layout
 const { Text } = Typography
 
+interface AppHeaderProps {
+  siderCollapsed?: boolean
+  isDesktop?: boolean
+  showSider?: boolean
+}
+
 /**
  * 应用顶部栏
  * - 语言切换
@@ -20,7 +26,7 @@ const { Text } = Typography
  * - 用户信息（头像、昵称、角色标签）
  * - 管理台/首页切换
  */
-const AppHeader: React.FC = () => {
+const AppHeader: React.FC<AppHeaderProps> = ({ siderCollapsed = false, isDesktop = true, showSider = false }) => {
   const { user, isAdmin } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
@@ -83,6 +89,9 @@ const AppHeader: React.FC = () => {
     }
   ]
 
+  // 根据侧边栏状态计算 marginLeft
+  const headerMarginLeft = showSider && isDesktop ? (siderCollapsed ? 64 : 240) : 0
+
   return (
     <Header
       style={{
@@ -98,7 +107,9 @@ const AppHeader: React.FC = () => {
         position: 'sticky',
         top: 0,
         zIndex: 1000,
-        overflow: 'hidden'
+        overflow: 'hidden',
+        marginLeft: headerMarginLeft,
+        transition: 'margin-left 0.2s ease'
       }}
       className="ant-layout-header"
     >
