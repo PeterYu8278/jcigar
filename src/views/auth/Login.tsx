@@ -31,6 +31,7 @@ const Login: React.FC = () => {
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
   const [configLoading, setConfigLoading] = useState(true)
   const [resetPasswordCooldown, setResetPasswordCooldown] = useState<number | null>(null) // 剩余冷却时间（秒）
+  const [logoError, setLogoError] = useState(false) // Logo 加载错误状态
 
   const from = location.state?.from?.pathname || '/'
 
@@ -398,7 +399,7 @@ const Login: React.FC = () => {
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
           <div style={{ textAlign: 'center', paddingTop: '20px' }}>
             {/* 应用 Logo */}
-            {appConfig?.logoUrl && (
+            {appConfig?.logoUrl && !logoError && (
               <div style={{ 
                 display: 'flex', 
                 justifyContent: 'center',
@@ -407,6 +408,10 @@ const Login: React.FC = () => {
                 <img
                   src={appConfig.logoUrl}
                   alt={appConfig?.appName || 'App Logo'}
+                  onError={() => {
+                    console.warn('[Login] Logo 加载失败:', appConfig.logoUrl)
+                    setLogoError(true)
+                  }}
                   style={{
                     width: 'auto',
                     height: '50px',

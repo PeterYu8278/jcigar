@@ -140,6 +140,11 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         format: isPng ? 'png' : 'jpg' // 明确指定格式，防止 Cloudinary 自动转换
       })
       
+      // 验证上传结果
+      if (!result?.secure_url) {
+        throw new Error('上传失败：未返回有效的图片 URL')
+      }
+      
       onChange?.(result.secure_url)
       message.success(t('upload.success'))
       
