@@ -417,7 +417,6 @@ const Login: React.FC = () => {
                     height: '50px',
                     maxWidth: '100%',
                     objectFit: 'contain',
-                    borderRadius: '8px',
                     background: 'transparent',
                     mixBlendMode: 'normal'
                   }}

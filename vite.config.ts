@@ -56,8 +56,13 @@ export default defineConfig({
       injectRegister: 'auto',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       selfDestroying: true, // 允许Service Worker自毁
-      strategies: 'generateSW',
-      filename: 'sw.js',
+      strategies: 'injectManifest', // 使用 injectManifest 策略以支持自定义 Service Worker
+      srcDir: 'src',
+      filename: 'sw.ts',
+      injectManifest: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
+        maximumFileSizeToCacheInBytes: 3000000, // 3MB
+      },
       manifest: {
         name: 'Cigar Club - Cigar World',
         short_name: 'Cigar Club',
@@ -111,16 +116,8 @@ export default defineConfig({
           }
         ]
       },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
-        maximumFileSizeToCacheInBytes: 3000000, // 3MB
-        cleanupOutdatedCaches: true,
-        clientsClaim: true,
-        skipWaiting: true,
-        // 禁用所有Service Worker日志
-        navigateFallback: null,
-        runtimeCaching: []
-      },
+      // 注意：使用 injectManifest 策略时，workbox 配置在 injectManifest 中
+      // 自定义逻辑在 src/sw.ts 中实现
       devOptions: {
         enabled: false, // 开发环境禁用PWA
         type: 'module'

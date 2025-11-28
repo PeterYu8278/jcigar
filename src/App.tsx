@@ -10,6 +10,7 @@ import ProtectedRoute from './components/common/ProtectedRoute'
 import { useAuthStore } from './store/modules/auth'
 import { getAppConfig } from './services/firebase/appConfig'
 import { applyDynamicIcons } from './utils/dynamicManifest'
+import { saveAppConfigToIndexedDB } from './utils/indexedDB'
 
 // 前端页面
 import Home from './views/frontend/Home'
@@ -144,6 +145,15 @@ const AppContent: React.FC = () => {
         const config = await getAppConfig()
         const appName = config?.appName || 'Cigar Club'
         
+        // 存储 appConfig 到 IndexedDB（供 Service Worker 使用）
+        if (config) {
+          try {
+            await saveAppConfigToIndexedDB(config)
+          } catch (error) {
+            console.warn('[App] 保存 appConfig 到 IndexedDB 失败:', error)
+          }
+        }
+        
         // 更新 document.title
         document.title = `${appName}管理平台`
         
@@ -176,6 +186,7 @@ const AppContent: React.FC = () => {
         updateMetaTag('twitter:description', '高端雪茄俱乐部会员管理平台')
 
         // 应用动态图标更新（包括 manifest、favicon、apple-touch-icon）
+        // 注意：manifest 现在由 Service Worker 动态生成，这里只更新图标
         cleanupManifest = applyDynamicIcons(config)
       } catch (error) {
         console.warn('[App] 更新文档 meta 标签和图标失败:', error)
@@ -184,7 +195,7 @@ const AppContent: React.FC = () => {
     
     updateDocumentMeta()
 
-    // 清理函数：释放 blob URL
+    // 清理函数：释放 blob URL（如果使用）
     return () => {
       if (cleanupManifest) {
         cleanupManifest()

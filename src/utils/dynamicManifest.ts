@@ -135,9 +135,10 @@ export const createManifestBlobUrl = (manifest: DynamicManifest): string => {
 
 /**
  * 更新 manifest link
- * @param manifestUrl Manifest URL（可以是 blob URL 或普通 URL）
+ * 方案A：使用静态 manifest URL，由 Service Worker 动态生成
+ * @param manifestUrl Manifest URL（现在固定为 /manifest.json）
  */
-export const updateManifestLink = (manifestUrl: string): void => {
+export const updateManifestLink = (manifestUrl?: string): void => {
   // 查找现有的 manifest link
   let manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement
 
@@ -148,8 +149,8 @@ export const updateManifestLink = (manifestUrl: string): void => {
     document.head.appendChild(manifestLink)
   }
 
-  // 更新 href
-  manifestLink.href = manifestUrl
+  // 方案A：始终使用静态 URL，由 Service Worker 拦截并动态生成
+  manifestLink.href = '/manifest.json'
 }
 
 /**
@@ -204,15 +205,14 @@ export const updateAppleTouchIcons = (iconUrl: string): void => {
 
 /**
  * 应用动态图标更新
+ * 方案A：manifest 由 Service Worker 动态生成，这里只更新 favicon 和 apple-touch-icon
  * @param appConfig 应用配置
- * @returns 清理函数（用于清理 blob URL）
+ * @returns 清理函数（现在不需要清理，因为不使用 blob URL）
  */
 export const applyDynamicIcons = (appConfig: AppConfig | null): (() => void) => {
-  const manifest = generateDynamicManifest(appConfig)
-  const manifestBlobUrl = createManifestBlobUrl(manifest)
-
-  // 更新 manifest link
-  updateManifestLink(manifestBlobUrl)
+  // 方案A：manifest 由 Service Worker 拦截 /manifest.json 请求并动态生成
+  // 这里只更新 manifest link 为静态 URL
+  updateManifestLink('/manifest.json')
 
   // 如果有自定义 logo，更新图标
   if (appConfig?.logoUrl) {
@@ -220,9 +220,9 @@ export const applyDynamicIcons = (appConfig: AppConfig | null): (() => void) => 
     updateAppleTouchIcons(appConfig.logoUrl)
   }
 
-  // 返回清理函数
+  // 返回空的清理函数（不再需要清理 blob URL）
   return () => {
-    URL.revokeObjectURL(manifestBlobUrl)
+    // 无需清理
   }
 }
 
