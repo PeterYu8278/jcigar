@@ -8,6 +8,8 @@ import AppFooter from './components/layout/AppFooter'
 import MobileBottomNav from './components/layout/MobileBottomNav'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import { useAuthStore } from './store/modules/auth'
+import { getAppConfig } from './services/firebase/appConfig'
+import { applyDynamicIcons } from './utils/dynamicManifest'
 
 // 前端页面
 import Home from './views/frontend/Home'
@@ -132,6 +134,63 @@ const AppContent: React.FC = () => {
       document.documentElement.style.overflow = 'auto'
     }
   }, [isAuthPage])
+
+  // 动态更新页面标题、meta 标签和 PWA 图标
+  useEffect(() => {
+    let cleanupManifest: (() => void) | null = null
+
+    const updateDocumentMeta = async () => {
+      try {
+        const config = await getAppConfig()
+        const appName = config?.appName || 'Cigar Club'
+        
+        // 更新 document.title
+        document.title = `${appName}管理平台`
+        
+        // 更新 meta 标签
+        const updateMetaTag = (name: string, content: string, attribute: string = 'name') => {
+          let meta = document.querySelector(`meta[${attribute}="${name}"]`) as HTMLMetaElement
+          if (!meta) {
+            meta = document.createElement('meta')
+            meta.setAttribute(attribute, name)
+            document.head.appendChild(meta)
+          }
+          meta.content = content
+        }
+        
+        // 更新 description
+        updateMetaTag('description', `${appName} - 高端雪茄俱乐部管理平台`)
+        
+        // 更新 author
+        updateMetaTag('author', appName)
+        
+        // 更新 apple-mobile-web-app-title
+        updateMetaTag('apple-mobile-web-app-title', appName)
+        
+        // 更新 Open Graph
+        updateMetaTag('og:title', `${appName} - 雪茄俱乐部管理平台`, 'property')
+        updateMetaTag('og:description', '高端雪茄俱乐部会员管理平台', 'property')
+        
+        // 更新 Twitter Card
+        updateMetaTag('twitter:title', `${appName} - 雪茄俱乐部管理平台`)
+        updateMetaTag('twitter:description', '高端雪茄俱乐部会员管理平台')
+
+        // 应用动态图标更新（包括 manifest、favicon、apple-touch-icon）
+        cleanupManifest = applyDynamicIcons(config)
+      } catch (error) {
+        console.warn('[App] 更新文档 meta 标签和图标失败:', error)
+      }
+    }
+    
+    updateDocumentMeta()
+
+    // 清理函数：释放 blob URL
+    return () => {
+      if (cleanupManifest) {
+        cleanupManifest()
+      }
+    }
+  }, [])
 
   return (
       <Layout style={{ 

@@ -23,11 +23,13 @@ interface MockMobileLayoutProps {
   onElementClick: (
     type: 'primaryButton' | 'secondaryButton' | 'warningButton' | 'border' | 'tag' | 'text' | 'icon'
   ) => void;
+  appName?: string;
 }
 
 const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
   colorTheme,
   onElementClick,
+  appName = '',
 }) => {
   return (
     <div
@@ -65,7 +67,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
               title="点击编辑图标颜色"
             />
             <Text style={{ color: colorTheme.text.primary, fontSize: 16, fontWeight: 600 }}>
-              Cigar Club
+              {appName || 'App Name'}
             </Text>
           </Space>
           <Space size="small" align="center">

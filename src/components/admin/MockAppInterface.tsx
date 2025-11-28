@@ -2,7 +2,7 @@
  * 模拟应用界面组件
  * 用于颜色主题管理的可视化预览和编辑
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, Button, Space } from 'antd';
 import { FullscreenOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +10,7 @@ import type { ColorThemeConfig } from '../../types';
 import MockDesktopLayout from './MockDesktopLayout';
 import MockMobileLayout from './MockMobileLayout';
 import ColorPickerModal from './ColorPickerModal';
+import { getAppConfig } from '../../services/firebase/appConfig';
 
 export interface MockAppInterfaceProps {
   colorTheme: ColorThemeConfig;
@@ -33,6 +34,16 @@ const MockAppInterface: React.FC<MockAppInterfaceProps> = ({
     'primaryButton' | 'secondaryButton' | 'warningButton' | 'border' | 'tag' | 'text' | 'icon' | null
   >(null);
   const [localColorTheme, setLocalColorTheme] = useState<ColorThemeConfig>(colorTheme);
+  const [appName, setAppName] = useState<string>('');
+
+  // 加载应用名称
+  useEffect(() => {
+    const loadAppName = async () => {
+      const config = await getAppConfig();
+      setAppName(config?.appName || '');
+    };
+    loadAppName();
+  }, []);
 
   // 当外部 colorTheme 变化时更新本地状态
   React.useEffect(() => {
@@ -116,6 +127,7 @@ const MockAppInterface: React.FC<MockAppInterfaceProps> = ({
               <MockDesktopLayout
                 colorTheme={localColorTheme}
                 onElementClick={handleOpenColorPicker}
+                appName={appName}
               />
             ),
           },
@@ -126,6 +138,7 @@ const MockAppInterface: React.FC<MockAppInterfaceProps> = ({
               <MockMobileLayout
                 colorTheme={localColorTheme}
                 onElementClick={handleOpenColorPicker}
+                appName={appName}
               />
             ),
           },

@@ -188,7 +188,7 @@
     "registerFailed": "Registration failed",
     "registerFailedRetry": "Registration failed, please try again",
     "resetPassword": "Reset Password",
-    "createAccountSubtitle": "Create your account and join the Cigar Club community",
+    "createAccountSubtitle": "Create your account and join the community",
     "emailOptional": "Email address (optional)",
     "passwordMinLength": "Password must be at least 6 characters",
     "confirmPasswordRequired": "Please confirm password",

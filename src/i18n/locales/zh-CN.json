@@ -186,7 +186,7 @@
     "registerFailed": "注册失败",
     "registerFailedRetry": "注册失败，请重试",
     "resetPassword": "重置密码",
-    "createAccountSubtitle": "创建您的账户，加入Cigar Club社区",
+    "createAccountSubtitle": "创建您的账户，加入社区",
     "emailOptional": "邮箱地址（选填）",
     "passwordMinLength": "密码至少6位",
     "confirmPasswordRequired": "请确认密码",

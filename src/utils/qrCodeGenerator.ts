@@ -16,6 +16,7 @@ export const generateMemberQRCode = async (
       dark?: string
       light?: string
     }
+    appName?: string
   } = {}
 ): Promise<string> => {
   try {
@@ -25,14 +26,15 @@ export const generateMemberQRCode = async (
       color = {
         dark: '#000000',
         light: '#FFFFFF'
-      }
+      },
+      appName = ''
     } = options
 
     // 构建QR Code内容 - 包含会员ID和俱乐部信息
     const qrContent = JSON.stringify({
       type: 'cigar_club_member',
       memberId: memberId,
-      club: 'Cigar Club',
+      club: appName || 'Cigar Club',
       timestamp: new Date().toISOString(),
       version: '1.0'
     })

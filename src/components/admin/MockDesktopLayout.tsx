@@ -24,11 +24,13 @@ interface MockDesktopLayoutProps {
   onElementClick: (
     type: 'primaryButton' | 'secondaryButton' | 'warningButton' | 'border' | 'tag' | 'text' | 'icon'
   ) => void;
+  appName?: string;
 }
 
 const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
   colorTheme,
   onElementClick,
+  appName = '',
 }) => {
   return (
     <div
@@ -65,7 +67,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
               title="点击编辑图标颜色"
             />
             <Text style={{ color: colorTheme.text.primary, fontSize: 16, fontWeight: 600 }}>
-              Cigar Club
+              {appName || 'App Name'}
             </Text>
           </Space>
           <Space size="middle" align="center">
@@ -690,7 +692,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
             onClick={() => onElementClick('text')}
             title="点击编辑次要文字颜色"
           >
-            © 2024 Cigar Club. All rights reserved.
+            © 2024 {appName || 'App Name'}. All rights reserved.
           </Text>
         </Footer>
       </Layout>
