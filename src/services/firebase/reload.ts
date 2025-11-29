@@ -520,33 +520,33 @@ export const getAllReloadRecords = async (
     
     // 如果指定了 limit，直接查询
     if (limitCount !== undefined && limitCount > 0) {
-      let q;
-      if (statusFilter) {
-        q = query(
-          collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
-          where('status', '==', statusFilter),
-          orderBy('createdAt', 'desc'),
-          limit(limitCount)
-        );
-      } else {
-        q = query(
-          collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
-          orderBy('createdAt', 'desc'),
-          limit(limitCount)
-        );
-      }
+    let q;
+    if (statusFilter) {
+      q = query(
+        collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
+        where('status', '==', statusFilter),
+        orderBy('createdAt', 'desc'),
+        limit(limitCount)
+      );
+    } else {
+      q = query(
+        collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
+        orderBy('createdAt', 'desc'),
+        limit(limitCount)
+      );
+    }
 
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          verifiedAt: data.verifiedAt?.toDate?.() || data.verifiedAt,
-          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
-          updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt)
-        } as ReloadRecord;
-      });
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        verifiedAt: data.verifiedAt?.toDate?.() || data.verifiedAt,
+        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+        updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt)
+      } as ReloadRecord;
+    });
     }
     
     // 如果没有限制，使用分页查询获取所有记录
@@ -619,32 +619,32 @@ export const getAllReloadRecords = async (
       const batchSize = 1000;
       
       if (limitCount !== undefined && limitCount > 0) {
-        let q;
-        if (statusFilter) {
-          q = query(
-            collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
-            where('status', '==', statusFilter),
-            limit(limitCount)
-          );
-        } else {
-          q = query(
-            collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
-            limit(limitCount)
-          );
-        }
-        const snapshot = await getDocs(q);
-        const records = snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            verifiedAt: data.verifiedAt?.toDate?.() || data.verifiedAt,
-            createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
-            updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt)
-          } as ReloadRecord;
-        });
-        // 手动排序
-        return records.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      let q;
+      if (statusFilter) {
+        q = query(
+          collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
+          where('status', '==', statusFilter),
+          limit(limitCount)
+        );
+      } else {
+        q = query(
+          collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
+          limit(limitCount)
+        );
+      }
+      const snapshot = await getDocs(q);
+      const records = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          verifiedAt: data.verifiedAt?.toDate?.() || data.verifiedAt,
+          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+          updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt)
+        } as ReloadRecord;
+      });
+      // 手动排序
+      return records.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
       }
       
       // 分页获取所有记录

@@ -741,6 +741,16 @@ button + button { margin-left: 8px; }
   background-clip: text !important;
 }
 
+/* Active tab 图标颜色 - 使用渐变起始色以匹配文字渐变效果 */
+.ant-tabs-tab.ant-tabs-tab-active .anticon {
+  color: #FDE08D !important;
+}
+
+/* Active tab 图标 SVG 填充颜色 */
+.ant-tabs-tab.ant-tabs-tab-active .anticon svg {
+  fill: #FDE08D !important;
+}
+
 .ant-tabs-ink-bar {
   height: 2px !important;
   background: linear-gradient(to right, #FDE08D, #C48D3A) !important;

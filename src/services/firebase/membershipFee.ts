@@ -528,23 +528,23 @@ export const getAllMembershipFeeRecords = async (
     
     // 如果指定了 limit，直接查询
     if (limitCount !== undefined && limitCount > 0) {
-      let q;
-      if (statusFilter) {
-        q = query(
-          collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
-          where('status', '==', statusFilter),
-          orderBy('dueDate', 'desc'),
-          limit(limitCount)
-        );
-      } else {
-        q = query(
-          collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
-          orderBy('dueDate', 'desc'),
-          limit(limitCount)
-        );
-      }
+    let q;
+    if (statusFilter) {
+      q = query(
+        collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
+        where('status', '==', statusFilter),
+        orderBy('dueDate', 'desc'),
+        limit(limitCount)
+      );
+    } else {
+      q = query(
+        collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
+        orderBy('dueDate', 'desc'),
+        limit(limitCount)
+      );
+    }
 
-      const snapshot = await getDocs(q);
+    const snapshot = await getDocs(q);
       return snapshot.docs.map(mapDocToMembershipFeeRecord);
     }
     
@@ -590,7 +590,7 @@ export const getAllMembershipFeeRecords = async (
 
       const snapshot = await getDocs(q);
       const batch = snapshot.docs.map(mapDocToMembershipFeeRecord);
-      
+    
       allRecords.push(...batch);
       
       if (snapshot.docs.length < batchSize) {
@@ -607,22 +607,22 @@ export const getAllMembershipFeeRecords = async (
       const batchSize = 1000;
       
       if (limitCount !== undefined && limitCount > 0) {
-        let q;
-        if (statusFilter) {
-          q = query(
-            collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
-            where('status', '==', statusFilter),
-            limit(limitCount)
-          );
-        } else {
-          q = query(
-            collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
-            limit(limitCount)
-          );
-        }
-        const snapshot = await getDocs(q);
-        const records = snapshot.docs.map(mapDocToMembershipFeeRecord);
-        return records.sort((a, b) => b.dueDate.getTime() - a.dueDate.getTime());
+      let q;
+      if (statusFilter) {
+        q = query(
+          collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
+          where('status', '==', statusFilter),
+          limit(limitCount)
+        );
+      } else {
+        q = query(
+          collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
+          limit(limitCount)
+        );
+      }
+      const snapshot = await getDocs(q);
+      const records = snapshot.docs.map(mapDocToMembershipFeeRecord);
+      return records.sort((a, b) => b.dueDate.getTime() - a.dueDate.getTime());
       }
       
       // 分页获取所有记录
