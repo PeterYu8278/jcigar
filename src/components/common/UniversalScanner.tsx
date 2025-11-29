@@ -17,18 +17,30 @@ export const UniversalScanner: React.FC<UniversalScannerProps> = ({
     onClose,
     defaultTab = 'ai' // Default to AI for members
 }) => {
-    const { isAdmin } = useAuthStore();
+    const { isAdmin, isDeveloper } = useAuthStore();
     const [activeTab, setActiveTab] = useState<string>(defaultTab);
     const [qrMode, setQrMode] = useState<'checkin' | 'checkout'>('checkin');
+    
+    // 只有管理员和开发者可以访问扫码功能
+    const canAccessQR = isAdmin || isDeveloper;
 
     // Reset tab when opening
     useEffect(() => {
         if (visible) {
-            setActiveTab(defaultTab);
+            // 如果用户没有权限访问扫码，且默认标签是 qr，则切换到 ai
+            const initialTab = (!canAccessQR && defaultTab === 'qr') ? 'ai' : defaultTab;
+            setActiveTab(initialTab);
         }
-    }, [visible, defaultTab]);
+    }, [visible, defaultTab, canAccessQR]);
 
-    const items = [
+    // 如果用户切换到没有权限的标签，自动切换回 ai
+    useEffect(() => {
+        if (activeTab === 'qr' && !canAccessQR) {
+            setActiveTab('ai');
+        }
+    }, [activeTab, canAccessQR]);
+
+    const allItems = [
         {
             key: 'ai',
             label: (
@@ -38,7 +50,7 @@ export const UniversalScanner: React.FC<UniversalScannerProps> = ({
                 </span>
             ),
             children: (
-                <div style={{ height: '600px', overflowY: 'auto' }}>
+                <div style={{ height: 'auto', overflowY: 'auto' }}>
                     {/* Only mount camera when tab is active to save resources */}
                     {activeTab === 'ai' && visible && <AICigarScanner />}
                 </div>
@@ -53,8 +65,8 @@ export const UniversalScanner: React.FC<UniversalScannerProps> = ({
                 </span>
             ),
             children: (
-                <div style={{ height: '500px', display: 'flex', flexDirection: 'column' }}>
-                    {isAdmin ? (
+                <div style={{ height: 'auto', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    {canAccessQR ? (
                         <QRScannerView
                             active={activeTab === 'qr' && visible}
                             mode={qrMode}
@@ -71,6 +83,14 @@ export const UniversalScanner: React.FC<UniversalScannerProps> = ({
             ),
         },
     ];
+
+    // 根据权限过滤标签页
+    const items = allItems.filter(item => {
+        if (item.key === 'qr') {
+            return canAccessQR;
+        }
+        return true;
+    });
 
     const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false;
 

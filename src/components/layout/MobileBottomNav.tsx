@@ -29,6 +29,9 @@ const MobileBottomNav: React.FC = () => {
   const { t } = useTranslation()
   const [scannerVisible, setScannerVisible] = useState(false)
   const [featuresVisibility, setFeaturesVisibility] = useState<Record<string, boolean>>({})
+  
+  // 只有管理员和开发者可以访问扫码功能
+  const canAccessQR = isAdmin || isDeveloper
 
   // 加载功能可见性配置
   useEffect(() => {
@@ -315,7 +318,7 @@ const MobileBottomNav: React.FC = () => {
       <UniversalScanner
         visible={scannerVisible}
         onClose={() => setScannerVisible(false)}
-        defaultTab={isAdmin ? 'qr' : 'ai'} // 管理员默认扫码(checkin)，普通用户默认AI
+        defaultTab={canAccessQR ? 'qr' : 'ai'} // 管理员和开发者默认扫码(checkin)，普通用户默认AI
       />
     </Footer>
   )

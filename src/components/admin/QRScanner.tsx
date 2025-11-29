@@ -52,7 +52,7 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
         { facingMode }, // 使用指定的摄像头
         {
           fps: 10,
-          qrbox: { width: 250, height: 250 }
+          qrbox: { width: 200, height: 200 }
         },
         (decodedText) => {
           // 扫描成功
@@ -338,7 +338,7 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
   };
 
   return (
-    <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Check-in 错误提示 */}
       {checkInError && (
         <div style={{
@@ -357,7 +357,7 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
         </div>
       )}
       
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         {processing ? (
           <div>
             <CheckCircleOutlined style={{ fontSize: 48, color: '#52c41a' }} />
@@ -385,7 +385,7 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
           </div>
         ) : (
           <div>
-            <div id="qr-reader-view" style={{ width: '100%', maxWidth: '400px', margin: '0 auto' }}></div>
+            <div id="qr-reader-view" style={{ width: '100%', maxWidth: '350px', margin: '0 auto' }}></div>
             <Text type="secondary" style={{ display: 'block', marginTop: 16, color: 'rgba(255, 255, 255, 0.6)' }}>
               请将QR码对准扫描框
             </Text>
@@ -393,7 +393,7 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
         )}
       </div>
 
-      <div style={{ marginTop: 20, padding: '0 20px' }}>
+      <div style={{ marginTop: 20}}>
         <Space wrap style={{ justifyContent: 'center' }}>
           <Button 
             onClick={() => {

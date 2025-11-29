@@ -797,7 +797,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                   Complimentary Cigars
                 </Title>
               </div>
-              <button
+              <div
                 type="button"
                 onClick={() => navigate('/profile')}
                 style={{
@@ -811,7 +811,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                 }}
               >
                 History &gt;
-              </button>
+              </div>
             </div>
 
             {/* 合并的进度条显示 */}

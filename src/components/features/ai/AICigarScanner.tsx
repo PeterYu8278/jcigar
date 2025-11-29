@@ -175,9 +175,14 @@ export const AICigarScanner: React.FC = () => {
                         <Button
                             type="primary"
                             shape="circle"
-                            icon={<CameraOutlined style={{ fontSize: '24px' }} />}
+                            icon={<CameraOutlined style={{color:'#111', fontSize: '24px' }} />}
                             size="large"
-                            style={{ width: '64px', height: '64px', border: '4px solid rgba(255,255,255,0.5)' }}
+                            style={{ 
+                                width: '64px', 
+                                height: '64px', 
+                                background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
+                                boxShadow: '0 4px 16px rgba(255, 215, 0, 0.3)'
+                            }}
                             onClick={capture}
                         />
                         <Upload
@@ -353,7 +358,17 @@ export const AICigarScanner: React.FC = () => {
                             {result.description}
                         </Paragraph>
 
-                        <Button block icon={<ReloadOutlined />} onClick={reset}>
+                        <Button 
+                            block 
+                            icon={<ReloadOutlined />} 
+                            onClick={reset}
+                            style={{
+                                background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
+                                color: '#111',
+                                fontWeight: 600,
+                                boxShadow: '0 4px 16px rgba(255, 215, 0, 0.3)'
+                            }}
+                        >
                             重新拍摄
                         </Button>
                     </Space>
@@ -361,7 +376,19 @@ export const AICigarScanner: React.FC = () => {
             )}
 
             {imgSrc && !result && !analyzing && (
-                <Button block icon={<ReloadOutlined />} onClick={reset} style={{ marginTop: 16 }}>
+                <Button 
+                    block 
+                    icon={<ReloadOutlined />} 
+                    onClick={reset} 
+                    style={{ 
+                        marginTop: 16,
+                        background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
+                        border: 'none',
+                        color: '#111',
+                        fontWeight: 600,
+                        boxShadow: '0 4px 16px rgba(255, 215, 0, 0.3)'
+                    }}
+                >
                     重新拍摄
                 </Button>
             )}
