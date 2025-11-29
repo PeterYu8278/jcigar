@@ -798,7 +798,6 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                 </Title>
               </div>
               <div
-                type="button"
                 onClick={() => navigate('/profile')}
                 style={{
                   background: 'none',

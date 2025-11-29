@@ -63,6 +63,17 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     icon: 'UserOutlined',
     defaultVisible: true,
   },
+  {
+    key: 'ai-cigar',
+    name: 'AI识茄',
+    nameEn: 'AI Cigar Recognition',
+    description: '使用AI识别雪茄信息',
+    descriptionEn: 'Use AI to recognize cigar information',
+    route: '/scanner',
+    category: 'frontend',
+    icon: 'EyeOutlined',
+    defaultVisible: true,
+  },
   // 管理后台功能
   {
     key: 'dashboard',

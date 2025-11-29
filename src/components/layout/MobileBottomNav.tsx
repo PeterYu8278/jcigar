@@ -42,6 +42,13 @@ const MobileBottomNav: React.FC = () => {
     loadVisibility()
   }, [])
 
+  // 检查 AI识茄 功能是否可见
+  const aiCigarVisible = isDeveloper ? true : (featuresVisibility['ai-cigar'] ?? true)
+  
+  // 普通会员：如果 AI识茄 功能被隐藏，则隐藏扫码按钮
+  // 管理员/开发者：始终显示扫码按钮
+  const showScannerButton = canAccessQR || aiCigarVisible
+
   // 普通用户导航项
   const frontendNavItemsBase = [
     {
@@ -147,7 +154,7 @@ const MobileBottomNav: React.FC = () => {
   }
 
   const { leftItems, rightItems } = getDisplayItems()
-  const totalItemsCount = navItems.length + 1 // +1 for scanner button
+  const totalItemsCount = navItems.length + (showScannerButton ? 1 : 0) // +1 for scanner button if visible
   const itemWidth = `${100 / totalItemsCount}%`
 
   const handleNavClick = (path: string) => {
@@ -268,48 +275,50 @@ const MobileBottomNav: React.FC = () => {
       {/* 左侧导航项 */}
       {leftItems.map(renderNavItem)}
 
-      {/* 中间的扫描按钮 */}
-      <div
-        style={{
-          width: itemWidth,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-          zIndex: 10
-        }}
-        className="mobile-nav-item"
-      >
-        <button
-          onClick={handleScanClick}
+      {/* 中间的扫描按钮（仅在显示时渲染） */}
+      {showScannerButton && (
+        <div
           style={{
-            position: 'relative',
-            top: '-14px',
-            width: '80px', // QR按钮大小
-            height: '80px', // QR按钮大小
-            borderRadius: '50%',
-            border: '4px solid rgba(26, 26, 26, 0.95)',
-            background: 'linear-gradient(135deg, #FDE08D 0%, #FDD017 100%)',
+            width: itemWidth,
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 4px 16px rgba(255, 215, 0, 0.3)',
-            transition: 'all 0.3s ease',
-            cursor: 'pointer',
-            padding: 0,
-            outline: 'none'
+            position: 'relative',
+            zIndex: 10
           }}
+          className="mobile-nav-item"
         >
-          <QrcodeOutlined
-            className="qr-icon-large"
+          <button
+            onClick={handleScanClick}
             style={{
-              fontSize: '50px',
-              color: '#111',
+              position: 'relative',
+              top: '-14px',
+              width: '80px', // QR按钮大小
+              height: '80px', // QR按钮大小
+              borderRadius: '50%',
+              border: '4px solid rgba(26, 26, 26, 0.95)',
+              background: 'linear-gradient(135deg, #FDE08D 0%, #FDD017 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 16px rgba(255, 215, 0, 0.3)',
+              transition: 'all 0.3s ease',
+              cursor: 'pointer',
+              padding: 0,
+              outline: 'none'
             }}
-          />
-        </button>
-      </div>
+          >
+            <QrcodeOutlined
+              className="qr-icon-large"
+              style={{
+                fontSize: '50px',
+                color: '#111',
+              }}
+            />
+          </button>
+        </div>
+      )}
 
       {/* 右侧导航项 */}
       {rightItems.map(renderNavItem)}

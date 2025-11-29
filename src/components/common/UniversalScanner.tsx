@@ -5,6 +5,7 @@ import { QRScannerView } from '../admin/QRScanner';
 import { AICigarScanner } from '../features/ai/AICigarScanner';
 import { useAuthStore } from '../../store/modules/auth';
 import { getModalThemeStyles } from '../../config/modalTheme';
+import { getFeaturesVisibility } from '../../services/firebase/featureVisibility';
 
 interface UniversalScannerProps {
     visible: boolean;
@@ -20,25 +21,59 @@ export const UniversalScanner: React.FC<UniversalScannerProps> = ({
     const { isAdmin, isDeveloper } = useAuthStore();
     const [activeTab, setActiveTab] = useState<string>(defaultTab);
     const [qrMode, setQrMode] = useState<'checkin' | 'checkout'>('checkin');
+    const [aiCigarVisible, setAiCigarVisible] = useState<boolean>(true);
     
     // 只有管理员和开发者可以访问扫码功能
     const canAccessQR = isAdmin || isDeveloper;
 
+    // 加载 AI识茄 功能可见性
+    useEffect(() => {
+        const loadAICigarVisibility = async () => {
+            if (isDeveloper) {
+                setAiCigarVisible(true);
+                return;
+            }
+            try {
+                const visibility = await getFeaturesVisibility();
+                setAiCigarVisible(visibility['ai-cigar'] ?? true);
+            } catch (error) {
+                console.error('[UniversalScanner] 加载功能可见性失败:', error);
+                setAiCigarVisible(true); // 默认可见
+            }
+        };
+        loadAICigarVisibility();
+    }, [isDeveloper]);
+
     // Reset tab when opening
     useEffect(() => {
         if (visible) {
-            // 如果用户没有权限访问扫码，且默认标签是 qr，则切换到 ai
-            const initialTab = (!canAccessQR && defaultTab === 'qr') ? 'ai' : defaultTab;
+            // 根据权限和功能可见性确定初始标签
+            let initialTab = defaultTab;
+            if (defaultTab === 'qr' && !canAccessQR) {
+                initialTab = 'ai';
+            }
+            if (defaultTab === 'ai' && !aiCigarVisible) {
+                initialTab = canAccessQR ? 'qr' : 'ai'; // 如果 AI 不可见，尝试切换到 QR
+            }
             setActiveTab(initialTab);
         }
-    }, [visible, defaultTab, canAccessQR]);
+    }, [visible, defaultTab, canAccessQR, aiCigarVisible]);
 
     // 如果用户切换到没有权限的标签，自动切换回 ai
     useEffect(() => {
         if (activeTab === 'qr' && !canAccessQR) {
             setActiveTab('ai');
         }
-    }, [activeTab, canAccessQR]);
+        // 如果 AI识茄 功能被隐藏，且当前在 ai 标签，切换到 qr（如果有权限）或其他
+        if (activeTab === 'ai' && !aiCigarVisible) {
+            if (canAccessQR) {
+                setActiveTab('qr');
+            } else {
+                // 如果两个功能都不可用，关闭弹窗
+                onClose();
+            }
+        }
+    }, [activeTab, canAccessQR, aiCigarVisible, onClose]);
 
     const allItems = [
         {
@@ -84,10 +119,13 @@ export const UniversalScanner: React.FC<UniversalScannerProps> = ({
         },
     ];
 
-    // 根据权限过滤标签页
+    // 根据权限和功能可见性过滤标签页
     const items = allItems.filter(item => {
         if (item.key === 'qr') {
             return canAccessQR;
+        }
+        if (item.key === 'ai') {
+            return aiCigarVisible;
         }
         return true;
     });
