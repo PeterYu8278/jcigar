@@ -33,7 +33,7 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
     setLoading(true);
     try {
       const filter = statusFilter === 'all' ? undefined : statusFilter;
-      const allRecords = await getAllReloadRecords(filter, 100);
+      const allRecords = await getAllReloadRecords(filter);
       setRecords(allRecords);
       if (allRecords.length === 0) {
         if (statusFilter === 'pending') {

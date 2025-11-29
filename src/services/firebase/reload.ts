@@ -12,6 +12,7 @@ import {
   where, 
   orderBy, 
   limit,
+  startAfter,
   Timestamp
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
@@ -511,55 +512,32 @@ export const getUserPendingReloadRecord = async (
  */
 export const getAllReloadRecords = async (
   statusFilter?: 'pending' | 'completed' | 'rejected',
-  limitCount: number = 100
+  limitCount?: number
 ): Promise<ReloadRecord[]> => {
   try {
-    let q;
-    if (statusFilter) {
-      q = query(
-        collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
-        where('status', '==', statusFilter),
-        orderBy('createdAt', 'desc'),
-        limit(limitCount)
-      );
-    } else {
-      q = query(
-        collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
-        orderBy('createdAt', 'desc'),
-        limit(limitCount)
-      );
-    }
-
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-        verifiedAt: data.verifiedAt?.toDate?.() || data.verifiedAt,
-        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
-        updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt)
-      } as ReloadRecord;
-    });
-  } catch (error: any) {
-    // 如果查询失败（可能是缺少索引），尝试不使用orderBy
-    console.error('[getAllReloadRecords] 查询失败，尝试不使用orderBy:', error);
-    try {
+    const allRecords: ReloadRecord[] = [];
+    const batchSize = 1000; // 每次查询1000条
+    
+    // 如果指定了 limit，直接查询
+    if (limitCount !== undefined && limitCount > 0) {
       let q;
       if (statusFilter) {
         q = query(
           collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
           where('status', '==', statusFilter),
+          orderBy('createdAt', 'desc'),
           limit(limitCount)
         );
       } else {
         q = query(
           collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
+          orderBy('createdAt', 'desc'),
           limit(limitCount)
         );
       }
+
       const snapshot = await getDocs(q);
-      const records = snapshot.docs.map(doc => {
+      return snapshot.docs.map(doc => {
         const data = doc.data();
         return {
           id: doc.id,
@@ -569,8 +547,165 @@ export const getAllReloadRecords = async (
           updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt)
         } as ReloadRecord;
       });
+    }
+    
+    // 如果没有限制，使用分页查询获取所有记录
+    let lastDoc = null;
+    let hasMore = true;
+    
+    while (hasMore) {
+      let q;
+      if (statusFilter) {
+        if (lastDoc) {
+          q = query(
+            collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
+            where('status', '==', statusFilter),
+            orderBy('createdAt', 'desc'),
+            startAfter(lastDoc),
+            limit(batchSize)
+          );
+        } else {
+          q = query(
+            collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
+            where('status', '==', statusFilter),
+            orderBy('createdAt', 'desc'),
+            limit(batchSize)
+          );
+        }
+      } else {
+        if (lastDoc) {
+          q = query(
+            collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
+            orderBy('createdAt', 'desc'),
+            startAfter(lastDoc),
+            limit(batchSize)
+          );
+        } else {
+          q = query(
+            collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
+            orderBy('createdAt', 'desc'),
+            limit(batchSize)
+          );
+        }
+      }
+
+      const snapshot = await getDocs(q);
+      const batch = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          verifiedAt: data.verifiedAt?.toDate?.() || data.verifiedAt,
+          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+          updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt)
+        } as ReloadRecord;
+      });
+      
+      allRecords.push(...batch);
+      
+      if (snapshot.docs.length < batchSize) {
+        hasMore = false;
+      } else {
+        lastDoc = snapshot.docs[snapshot.docs.length - 1];
+      }
+    }
+    
+    return allRecords;
+  } catch (error: any) {
+    // 如果查询失败（可能是缺少索引），尝试不使用orderBy
+    console.error('[getAllReloadRecords] 查询失败，尝试不使用orderBy:', error);
+    try {
+      const allRecords: ReloadRecord[] = [];
+      const batchSize = 1000;
+      
+      if (limitCount !== undefined && limitCount > 0) {
+        let q;
+        if (statusFilter) {
+          q = query(
+            collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
+            where('status', '==', statusFilter),
+            limit(limitCount)
+          );
+        } else {
+          q = query(
+            collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
+            limit(limitCount)
+          );
+        }
+        const snapshot = await getDocs(q);
+        const records = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            verifiedAt: data.verifiedAt?.toDate?.() || data.verifiedAt,
+            createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+            updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt)
+          } as ReloadRecord;
+        });
+        // 手动排序
+        return records.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      }
+      
+      // 分页获取所有记录
+      let lastDoc = null;
+      let hasMore = true;
+      
+      while (hasMore) {
+        let q;
+        if (statusFilter) {
+          if (lastDoc) {
+            q = query(
+              collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
+              where('status', '==', statusFilter),
+              startAfter(lastDoc),
+              limit(batchSize)
+            );
+          } else {
+            q = query(
+              collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
+              where('status', '==', statusFilter),
+              limit(batchSize)
+            );
+          }
+        } else {
+          if (lastDoc) {
+            q = query(
+              collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
+              startAfter(lastDoc),
+              limit(batchSize)
+            );
+          } else {
+            q = query(
+              collection(db, GLOBAL_COLLECTIONS.RELOAD_RECORDS),
+              limit(batchSize)
+            );
+          }
+        }
+        
+        const snapshot = await getDocs(q);
+        const batch = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            verifiedAt: data.verifiedAt?.toDate?.() || data.verifiedAt,
+            createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+            updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt)
+          } as ReloadRecord;
+        });
+        
+        allRecords.push(...batch);
+        
+        if (snapshot.docs.length < batchSize) {
+          hasMore = false;
+        } else {
+          lastDoc = snapshot.docs[snapshot.docs.length - 1];
+        }
+      }
+      
       // 手动排序
-      return records.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      return allRecords.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     } catch (retryError) {
       console.error('[getAllReloadRecords] 重试查询也失败:', retryError);
       return [];

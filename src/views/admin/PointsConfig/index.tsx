@@ -260,7 +260,7 @@ const PointsConfigPage: React.FC = () => {
     try {
       const filter = membershipFeeStatusFilter === 'all' ? undefined : membershipFeeStatusFilter;
       
-      const records = await getAllMembershipFeeRecords(filter, 200);
+      const records = await getAllMembershipFeeRecords(filter);
       
       setMembershipFeeRecords(records);
     } catch (error) {

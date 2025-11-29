@@ -10,6 +10,7 @@ import {
   where, 
   orderBy,
   limit,
+  startAfter,
   updateDoc,
   Timestamp
 } from 'firebase/firestore';
@@ -519,49 +520,161 @@ export const getUserMembershipFeeRecords = async (
  */
 export const getAllMembershipFeeRecords = async (
   statusFilter?: 'pending' | 'paid' | 'failed' | 'cancelled',
-  limitCount: number = 100
+  limitCount?: number
 ): Promise<MembershipFeeRecord[]> => {
   try {
+    const allRecords: MembershipFeeRecord[] = [];
+    const batchSize = 1000; // 每次查询1000条
     
-    let q;
-    if (statusFilter) {
-      q = query(
-        collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
-        where('status', '==', statusFilter),
-        orderBy('dueDate', 'desc'),
-        limit(limitCount)
-      );
-    } else {
-      q = query(
-        collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
-        orderBy('dueDate', 'desc'),
-        limit(limitCount)
-      );
-    }
-
-    const snapshot = await getDocs(q);
-    const records = snapshot.docs.map(mapDocToMembershipFeeRecord);
-    
-    
-    return records;
-  } catch (error: any) {
-    try {
+    // 如果指定了 limit，直接查询
+    if (limitCount !== undefined && limitCount > 0) {
       let q;
       if (statusFilter) {
         q = query(
           collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
           where('status', '==', statusFilter),
+          orderBy('dueDate', 'desc'),
           limit(limitCount)
         );
       } else {
         q = query(
           collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
+          orderBy('dueDate', 'desc'),
           limit(limitCount)
         );
       }
+
       const snapshot = await getDocs(q);
-      const records = snapshot.docs.map(mapDocToMembershipFeeRecord);
-      return records.sort((a, b) => b.dueDate.getTime() - a.dueDate.getTime());
+      return snapshot.docs.map(mapDocToMembershipFeeRecord);
+    }
+    
+    // 如果没有限制，使用分页查询获取所有记录
+    let lastDoc = null;
+    let hasMore = true;
+    
+    while (hasMore) {
+      let q;
+      if (statusFilter) {
+        if (lastDoc) {
+          q = query(
+            collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
+            where('status', '==', statusFilter),
+            orderBy('dueDate', 'desc'),
+            startAfter(lastDoc),
+            limit(batchSize)
+          );
+        } else {
+          q = query(
+            collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
+            where('status', '==', statusFilter),
+            orderBy('dueDate', 'desc'),
+            limit(batchSize)
+          );
+        }
+      } else {
+        if (lastDoc) {
+          q = query(
+            collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
+            orderBy('dueDate', 'desc'),
+            startAfter(lastDoc),
+            limit(batchSize)
+          );
+        } else {
+          q = query(
+            collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
+            orderBy('dueDate', 'desc'),
+            limit(batchSize)
+          );
+        }
+      }
+
+      const snapshot = await getDocs(q);
+      const batch = snapshot.docs.map(mapDocToMembershipFeeRecord);
+      
+      allRecords.push(...batch);
+      
+      if (snapshot.docs.length < batchSize) {
+        hasMore = false;
+      } else {
+        lastDoc = snapshot.docs[snapshot.docs.length - 1];
+      }
+    }
+    
+    return allRecords;
+  } catch (error: any) {
+    try {
+      const allRecords: MembershipFeeRecord[] = [];
+      const batchSize = 1000;
+      
+      if (limitCount !== undefined && limitCount > 0) {
+        let q;
+        if (statusFilter) {
+          q = query(
+            collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
+            where('status', '==', statusFilter),
+            limit(limitCount)
+          );
+        } else {
+          q = query(
+            collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
+            limit(limitCount)
+          );
+        }
+        const snapshot = await getDocs(q);
+        const records = snapshot.docs.map(mapDocToMembershipFeeRecord);
+        return records.sort((a, b) => b.dueDate.getTime() - a.dueDate.getTime());
+      }
+      
+      // 分页获取所有记录
+      let lastDoc = null;
+      let hasMore = true;
+      
+      while (hasMore) {
+        let q;
+        if (statusFilter) {
+          if (lastDoc) {
+            q = query(
+              collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
+              where('status', '==', statusFilter),
+              startAfter(lastDoc),
+              limit(batchSize)
+            );
+          } else {
+            q = query(
+              collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
+              where('status', '==', statusFilter),
+              limit(batchSize)
+            );
+          }
+        } else {
+          if (lastDoc) {
+            q = query(
+              collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
+              startAfter(lastDoc),
+              limit(batchSize)
+            );
+          } else {
+            q = query(
+              collection(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS),
+              limit(batchSize)
+            );
+          }
+        }
+        
+        const snapshot = await getDocs(q);
+        const batch = snapshot.docs.map(mapDocToMembershipFeeRecord);
+        
+        allRecords.push(...batch);
+        
+        if (snapshot.docs.length < batchSize) {
+          hasMore = false;
+        } else {
+          lastDoc = snapshot.docs[snapshot.docs.length - 1];
+        }
+      }
+      
+      // 手动排序
+      return allRecords.sort((a, b) => b.dueDate.getTime() - a.dueDate.getTime());
     } catch (retryError) {
       return [];
     }
