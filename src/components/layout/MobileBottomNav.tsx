@@ -299,8 +299,9 @@ const MobileBottomNav: React.FC = () => {
           }}
         >
           <QrcodeOutlined
+            className="qr-icon-large"
             style={{
-              fontSize: '28px',
+              fontSize: '50px',
               color: '#111',
             }}
           />

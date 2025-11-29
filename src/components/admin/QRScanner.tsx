@@ -123,7 +123,7 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
     try {
       const scanner = scannerRef.current;
       
-      // Check if scanner is running before stopping
+        // Check if scanner is running before stopping
       if (scanner.isScanning) {
         try {
           await scanner.stop();
@@ -146,7 +146,7 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
             console.warn('Scanner clear warning:', clearError);
           }
         }
-      }
+        }
     } catch (error: any) {
       // 忽略状态转换相关的错误
       if (!error?.message?.includes('already under transition') && 
@@ -244,14 +244,14 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
           const errorMsg = result.error || 'Check-in 失败';
           // 只在开发环境或非预期错误时输出日志
           if (process.env.NODE_ENV === 'development' || !errorMsg.includes('已有未完成的驻店记录')) {
-            console.error('[QRScanner] Check-in失败:', errorMsg);
+          console.error('[QRScanner] Check-in失败:', errorMsg);
           }
           
           // 如果是"用户已有未完成的驻店记录"错误，在弹窗UI中显示
           if (errorMsg.includes('已有未完成的驻店记录') || errorMsg.includes('请先check-out')) {
             setCheckInError('用户已有未完成的驻店记录，请先check-out');
           } else {
-            message.error(errorMsg);
+          message.error(errorMsg);
           }
           
           setProcessing(false);
