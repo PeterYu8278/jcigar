@@ -580,9 +580,9 @@ export const AICigarScanner: React.FC = () => {
 
                         {(result.wrapper || result.binder || result.filler) && (
                             <>
-                                <Divider style={{ margin: '12px 0', borderColor: '#333' }} />
+                                <Divider style={{ margin: '6px 0', borderColor: '#333' }} />
                                 <div style={{ 
-                                    marginTop: '8px', 
+                                    marginTop: '4px', 
                                     background: 'rgba(0,0,0,0.2)', 
                                     padding: '12px', 
                                     borderRadius: '8px',
@@ -623,9 +623,9 @@ export const AICigarScanner: React.FC = () => {
 
                         {(result.footTasteNotes?.length || result.bodyTasteNotes?.length || result.headTasteNotes?.length) && (
                             <>
-                                <Divider style={{ margin: '12px 0', borderColor: '#333' }} />
+                                <Divider style={{ margin: '6px 0', borderColor: '#333' }} />
                                 <div style={{ 
-                                    marginTop: '8px', 
+                                    marginTop: '4px', 
                                     background: 'rgba(0,0,0,0.2)', 
                                     padding: '12px', 
                                     borderRadius: '8px',
@@ -682,7 +682,7 @@ export const AICigarScanner: React.FC = () => {
                             </>
                         )}
 
-                        <Paragraph style={{ color: '#aaa', marginTop: '12px', background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '4px' }}>
+                        <Paragraph style={{ color: '#aaa', marginTop: '6px', background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '4px' }}>
                             {result.description}
                         </Paragraph>
 
