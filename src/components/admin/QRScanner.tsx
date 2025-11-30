@@ -1,5 +1,5 @@
 // QR码扫描组件 - 用于管理员check-in/check-out
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Modal, Button, message, Space, Typography } from 'antd';
 import { QrcodeOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { Html5Qrcode } from 'html5-qrcode';
@@ -21,11 +21,16 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
   const { user: adminUser } = useAuthStore();
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const isStoppingRef = useRef<boolean>(false);
+  const videoTrackRef = useRef<MediaStreamTrack | null>(null);
+  const videoElementRef = useRef<HTMLVideoElement | null>(null);
   const [processing, setProcessing] = useState(false);
   const [scannedData, setScannedData] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
   const [checkInError, setCheckInError] = useState<string | null>(null);
+  const [focusSupported, setFocusSupported] = useState(false);
+  const [focusing, setFocusing] = useState(false);
+  const [focusPoint, setFocusPoint] = useState<{ x: number; y: number } | null>(null);
 
   // 启动扫描
   const startScanning = async (facingMode: 'environment' | 'user' = 'environment') => {
@@ -62,6 +67,34 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
           // 扫描错误（忽略，继续扫描）
         }
       );
+
+      // 获取视频元素和视频轨道用于聚焦
+      setTimeout(() => {
+        try {
+          const videoElement = document.querySelector('#qr-reader-view video') as HTMLVideoElement;
+          if (videoElement) {
+            videoElementRef.current = videoElement;
+            const stream = videoElement.srcObject as MediaStream;
+            if (stream) {
+              const videoTrack = stream.getVideoTracks()[0];
+              videoTrackRef.current = videoTrack;
+              
+              // 检查是否支持聚焦
+              if (videoTrack) {
+                try {
+                  const capabilities = (videoTrack as any).getCapabilities?.();
+                  const hasFocus = capabilities?.focusMode || capabilities?.focusDistance !== undefined || false;
+                  setFocusSupported(hasFocus);
+                } catch (error) {
+                  setFocusSupported(false);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to get video element for focus:', error);
+        }
+      }, 500);
     } catch (error: any) {
       console.error('Scanner start error:', error);
       
@@ -155,8 +188,13 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
         console.error('Scanner stop error:', error);
       }
     } finally {
+      // 清理引用
+      videoTrackRef.current = null;
+      videoElementRef.current = null;
       scannerRef.current = null;
       isStoppingRef.current = false;
+      setFocusPoint(null);
+      setFocusing(false);
     }
   };
 
@@ -300,6 +338,82 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
     }
   };
 
+  // 点击屏幕聚焦
+  const handleFocus = useCallback(async (event: React.MouseEvent<HTMLDivElement>) => {
+    const videoTrack = videoTrackRef.current;
+    if (!videoTrack || !focusSupported || focusing || processing) return;
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = ((event.clientX - rect.left) / rect.width) * 100;
+    const y = ((event.clientY - rect.top) / rect.height) * 100;
+    
+    // 标准化坐标到 [0, 1] 范围
+    const normalizedX = Math.max(0, Math.min(1, x / 100));
+    const normalizedY = Math.max(0, Math.min(1, y / 100));
+
+    setFocusPoint({ x: normalizedX * 100, y: normalizedY * 100 });
+    setFocusing(true);
+
+    try {
+      // 尝试使用 ImageCapture API 的 setFocusPoint（如果支持）
+      const videoElement = videoElementRef.current;
+      if (videoElement && 'ImageCapture' in window) {
+        try {
+          const imageCapture = new (window as any).ImageCapture(videoTrack);
+          if (imageCapture.setFocusPoint) {
+            await imageCapture.setFocusPoint(normalizedX, normalizedY);
+            // 成功后清除焦点指示器
+            setTimeout(() => {
+              setFocusPoint(null);
+            }, 1000);
+            setFocusing(false);
+            return;
+          }
+        } catch (error) {
+          // ImageCapture 不支持，继续尝试其他方法
+        }
+      }
+
+      // 备用方案：使用 applyConstraints 设置焦点
+      if ('applyConstraints' in videoTrack) {
+        try {
+          const constraints = {
+            advanced: [
+              { focusMode: 'manual' as any },
+              { pointsOfInterest: [{ x: normalizedX, y: normalizedY }] as any }
+            ] as any
+          } as unknown as MediaTrackConstraints;
+
+          await videoTrack.applyConstraints(constraints);
+          
+          // 成功后清除焦点指示器
+          setTimeout(() => {
+            setFocusPoint(null);
+          }, 1000);
+        } catch (error) {
+          // 如果失败，尝试简单的自动对焦
+          try {
+            await videoTrack.applyConstraints({
+              advanced: [{ focusMode: 'auto' as any }] as any
+            } as unknown as MediaTrackConstraints);
+          } catch (autoFocusError) {
+            console.warn('Focus not supported:', autoFocusError);
+            setFocusSupported(false);
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error('Focus error:', error);
+      if (error?.name === 'NotSupportedError' || error?.name === 'NotReadableError') {
+        setFocusSupported(false);
+      }
+    } finally {
+      setTimeout(() => {
+        setFocusing(false);
+      }, 500);
+    }
+  }, [focusSupported, focusing, processing]);
+
   // 手动输入memberId
   const handleManualInput = () => {
     const memberId = prompt('请输入会员编号:');
@@ -384,10 +498,71 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
             </Space>
           </div>
         ) : (
-          <div>
-            <div id="qr-reader-view" style={{ width: '100%', maxWidth: '350px', margin: '0 auto' }}></div>
+          <div
+            onClick={handleFocus}
+            style={{
+              position: 'relative',
+              width: '100%',
+              maxWidth: '350px',
+              margin: '0 auto',
+              cursor: focusSupported ? 'crosshair' : 'default'
+            }}
+          >
+            <div id="qr-reader-view" style={{ width: '100%' }}></div>
+            {focusPoint && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: `${focusPoint.x}%`,
+                  top: `${focusPoint.y}%`,
+                  transform: 'translate(-50%, -50%)',
+                  width: '80px',
+                  height: '80px',
+                  border: '2px solid #ffd700',
+                  borderRadius: '8px',
+                  pointerEvents: 'none',
+                  boxShadow: '0 0 20px rgba(255, 215, 0, 0.6)',
+                  transition: 'all 0.3s ease',
+                  opacity: focusing ? 1 : 0.7,
+                  zIndex: 10
+                }}
+              >
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: '50%',
+                    top: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: '4px',
+                    height: '4px',
+                    background: '#ffd700',
+                    borderRadius: '50%',
+                    boxShadow: '0 0 10px rgba(255, 215, 0, 0.8)'
+                  }}
+                />
+              </div>
+            )}
+            {focusing && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '10px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  background: 'rgba(0, 0, 0, 0.7)',
+                  color: '#ffd700',
+                  padding: '4px 12px',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  pointerEvents: 'none',
+                  zIndex: 10
+                }}
+              >
+                对焦中...
+              </div>
+            )}
             <Text type="secondary" style={{ display: 'block', marginTop: 16, color: 'rgba(255, 255, 255, 0.6)' }}>
-              请将QR码对准扫描框
+              请将QR码对准扫描框{focusSupported ? '（点击屏幕可对焦）' : ''}
             </Text>
           </div>
         )}
