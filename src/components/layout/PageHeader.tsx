@@ -4,10 +4,11 @@
  */
 
 import React from 'react'
-import { PageHeader as AntPageHeader, Breadcrumb, Space, Button } from 'antd'
+import { Breadcrumb, Space, Button, Typography } from 'antd'
 import { ArrowLeftOutlined, HomeOutlined } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
-import type { PageHeaderProps as AntPageHeaderProps } from 'antd'
+
+const { Title, Text } = Typography
 
 export interface BreadcrumbItem {
   title: string
@@ -26,7 +27,7 @@ export interface PageHeaderAction {
   loading?: boolean
 }
 
-export interface PageHeaderProps extends Omit<AntPageHeaderProps, 'onBack'> {
+export interface PageHeaderProps {
   /** 标题 */
   title: string
   /** 副标题 */
@@ -102,8 +103,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
   extra,
   tags,
   footer,
-  className,
-  ...restProps
+  className
 }) => {
   const navigate = useNavigate()
   const location = useLocation()
@@ -183,22 +183,33 @@ const PageHeader: React.FC<PageHeaderProps> = ({
   }
 
   return (
-    <div className={className}>
+    <div className={className} style={{ padding: '16px 0', background: 'transparent' }}>
       {renderBreadcrumb()}
-      <AntPageHeader
-        title={title}
-        subTitle={subTitle}
-        onBack={showBack ? handleBack : undefined}
-        backIcon={showBack ? <ArrowLeftOutlined /> : false}
-        extra={renderActions()}
-        tags={tags}
-        footer={footer}
-        style={{
-          padding: '16px 0',
-          background: 'transparent'
-        }}
-        {...restProps}
-      />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8 }}>
+            {showBack && (
+              <Button
+                type="text"
+                icon={<ArrowLeftOutlined />}
+                onClick={handleBack}
+                style={{ padding: 0, height: 'auto' }}
+              />
+            )}
+            <Title level={4} style={{ margin: 0 }}>
+              {title}
+            </Title>
+            {tags && <div>{tags}</div>}
+          </div>
+          {subTitle && (
+            <Text type="secondary" style={{ marginLeft: showBack ? 32 : 0 }}>
+              {subTitle}
+            </Text>
+          )}
+        </div>
+        {renderActions() && <div>{renderActions()}</div>}
+      </div>
+      {footer && <div>{footer}</div>}
     </div>
   )
 }

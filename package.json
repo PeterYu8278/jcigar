@@ -21,6 +21,7 @@
     "@types/node": "^24.5.2",
     "@types/react": "^19.1.15",
     "@types/react-dom": "^19.1.9",
+    "@types/xlsx": "^0.0.35",
     "@vitejs/plugin-react": "^5.0.4",
     "jsdom": "^27.2.0",
     "typescript": "^5.9.2",
@@ -30,7 +31,8 @@
     "vitest": "^4.0.14",
     "workbox-precaching": "^7.4.0",
     "workbox-routing": "^7.4.0",
-    "workbox-window": "^7.3.0"
+    "workbox-window": "^7.3.0",
+    "xlsx": "^0.18.5"
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.0",

@@ -11,7 +11,7 @@ import type { Brand } from '../../types'
  */
 export const getBrandList = (config?: ApiConfig) => {
   return apiCall(
-    () => firestoreService.getAllBrands(),
+    () => firestoreService.getBrands(),
     config
   )
 }
@@ -31,7 +31,7 @@ export const getBrandById = (brandId: string, config?: ApiConfig) => {
  */
 export const createBrand = (brandData: Omit<Brand, 'id'>, config?: ApiConfig) => {
   return apiCall(
-    () => firestoreService.createBrand(brandData),
+    () => firestoreService.createDocument<Brand>(firestoreService.COLLECTIONS.BRANDS, brandData),
     {
       showSuccess: true,
       successMessage: '品牌创建成功',
@@ -45,7 +45,7 @@ export const createBrand = (brandData: Omit<Brand, 'id'>, config?: ApiConfig) =>
  */
 export const updateBrand = (brandId: string, brandData: Partial<Brand>, config?: ApiConfig) => {
   return apiCall(
-    () => firestoreService.updateBrand(brandId, brandData),
+    () => firestoreService.updateDocument<Brand>(firestoreService.COLLECTIONS.BRANDS, brandId, brandData),
     {
       showSuccess: true,
       successMessage: '品牌更新成功',
@@ -59,7 +59,7 @@ export const updateBrand = (brandId: string, brandData: Partial<Brand>, config?:
  */
 export const deleteBrand = (brandId: string, config?: ApiConfig) => {
   return apiCall(
-    () => firestoreService.deleteBrand(brandId),
+    () => firestoreService.deleteDocument(firestoreService.COLLECTIONS.BRANDS, brandId),
     {
       showSuccess: true,
       successMessage: '品牌删除成功',
@@ -75,7 +75,7 @@ export const batchDeleteBrands = (brandIds: string[], config?: ApiConfig) => {
   return apiCall(
     async () => {
       const results = await Promise.all(
-        brandIds.map(id => firestoreService.deleteBrand(id))
+        brandIds.map(id => firestoreService.deleteDocument(firestoreService.COLLECTIONS.BRANDS, id))
       )
       return results
     },
@@ -93,7 +93,7 @@ export const batchDeleteBrands = (brandIds: string[], config?: ApiConfig) => {
 export const searchBrands = (keyword: string, config?: ApiConfig) => {
   return apiCall(
     async () => {
-      const brands = await firestoreService.getAllBrands()
+      const brands = await firestoreService.getBrands()
       
       if (!keyword) return brands
 

@@ -4,7 +4,6 @@
 export type {
   ResourceType,
   CloudinaryResource,
-  UploadOptions,
   TransformationOptions,
   DeleteOptions,
   DeleteResult,

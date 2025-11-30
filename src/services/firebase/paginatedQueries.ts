@@ -100,7 +100,7 @@ export const getOrdersPaginated = async (
     endDate?: Date
   }
 ): Promise<{
-  orders: Order[]
+  data: Order[]
   lastDoc: QueryDocumentSnapshot | null
   hasMore: boolean
 }> => {
@@ -173,7 +173,7 @@ export const getTransactionsPaginated = async (
     endDate?: Date
   }
 ): Promise<{
-  transactions: Transaction[]
+  data: Transaction[]
   lastDoc: QueryDocumentSnapshot | null
   hasMore: boolean
 }> => {

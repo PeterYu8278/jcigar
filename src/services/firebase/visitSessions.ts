@@ -13,7 +13,8 @@ import {
   limit,
   Timestamp,
   arrayUnion,
-  runTransaction
+  runTransaction,
+  type Query
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { GLOBAL_COLLECTIONS } from '../../config/globalCollections';
@@ -602,11 +603,13 @@ export const getUserVisitSessions = async (
     // 如果是索引错误，尝试不使用orderBy
     if (error.code === 'failed-precondition' || error.message?.includes('index')) {
       try {
-        const q = query(
+        let q: Query = query(
           collection(db, GLOBAL_COLLECTIONS.VISIT_SESSIONS),
-          where('userId', '==', userId),
-          limit(limitCount)
+          where('userId', '==', userId)
         );
+        if (limitCount !== undefined && limitCount > 0) {
+          q = query(q, limit(limitCount));
+        }
         const snapshot = await getDocs(q);
         const sessions = snapshot.docs.map(doc => processVisitSessionData(doc.data(), doc.id));
         // 手动排序

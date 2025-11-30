@@ -37,7 +37,9 @@ class MemoryCache {
     if (this.cache.size >= this.maxItems) {
       // 删除最旧的项
       const firstKey = this.cache.keys().next().value
-      this.cache.delete(firstKey)
+      if (firstKey) {
+        this.cache.delete(firstKey)
+      }
     }
 
     this.cache.set(key, {

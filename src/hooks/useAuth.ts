@@ -146,7 +146,7 @@ export const useAuth = (): UseAuthReturn => {
       setLoading(true)
       setError(null)
       
-      await registerUser(email, password, userData.displayName || '', userData.profile?.phone)
+      await registerUser(email, password, userData.displayName || '', userData.profile?.phone || '')
       
       // 认证状态会由 onAuthStateChange 自动更新
       await new Promise(resolve => setTimeout(resolve, 500))

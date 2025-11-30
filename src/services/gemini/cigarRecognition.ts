@@ -105,7 +105,9 @@ async function getAvailableModels(): Promise<string[]> {
 
 export interface CigarAnalysisResult {
     brand: string;
-    name: string;
+    brandDescription?: string;  // 品牌简介
+    brandFoundedYear?: number;  // 品牌成立年份
+    name: string;              // 完整名称，包含尺寸（如 "Cohiba Robusto"）
     origin: string;
     flavorProfile: string[];
     strength: 'Mild' | 'Medium' | 'Full' | 'Unknown';
@@ -117,6 +119,7 @@ export interface CigarAnalysisResult {
     headTasteNotes?: string[];  // 头部（后1/3）品吸笔记
     description: string;
     confidence: number; // 0-1
+    possibleSizes?: string[];  // 该品牌可能的其他尺寸（如 ["Robusto", "Torpedo", "Churchill"]）
 }
 
 export async function analyzeCigarImage(imageBase64: string): Promise<CigarAnalysisResult> {
@@ -132,8 +135,10 @@ export async function analyzeCigarImage(imageBase64: string): Promise<CigarAnaly
     const prompt = `
     Analyze this image of a cigar. Identify the brand, specific name (vitola if possible), origin, flavor profile, strength, construction details, and expected tasting notes for different sections.
     Return the result strictly as a JSON object with the following keys:
-    - brand: string
-    - name: string (the specific cigar name)
+    - brand: string (brand name only, e.g., "Cohiba", "Montecristo")
+    - brandDescription: string (a brief description of the brand's history and characteristics, in Chinese, 2-3 sentences. If you cannot determine, use empty string "")
+    - brandFoundedYear: number (the year the brand was founded. If you cannot determine, use null or omit this field)
+    - name: string (the full cigar name including size/vitola, e.g., "Cohiba Robusto", "Montecristo No.2")
     - origin: string (country)
     - flavorProfile: array of strings (e.g., ["Earth", "Leather"])
     - strength: "Mild" | "Medium" | "Full" | "Unknown"
@@ -143,14 +148,20 @@ export async function analyzeCigarImage(imageBase64: string): Promise<CigarAnaly
     - footTasteNotes: array of strings (expected tasting notes for the foot/first third, e.g., ["Pepper", "Wood", "Light Spice"])
     - bodyTasteNotes: array of strings (expected tasting notes for the body/middle third, e.g., ["Coffee", "Chocolate", "Cedar"])
     - headTasteNotes: array of strings (expected tasting notes for the head/final third, e.g., ["Leather", "Earth", "Spice"])
-    - description: string (a short 2-sentence description in Chinese)
+    - description: string (a short 2-sentence description of this specific cigar in Chinese)
     - confidence: number (0.0 to 1.0, how sure are you?)
+    - possibleSizes: array of strings (other common sizes/vitolas for this brand, e.g., ["Robusto", "Torpedo", "Churchill", "Corona", "No.2", "No.4"]. Include the identified size if applicable, and add 3-5 other common sizes for this brand. If you cannot determine, use empty array [])
 
     Note: 
+    - The "name" field should include the full name with size/vitola (e.g., "Cohiba Robusto", not just "Cohiba")
+    - The "brand" field should be only the brand name without size (e.g., "Cohiba")
+    - brandDescription should provide information about the brand's history, reputation, and characteristics
+    - brandFoundedYear should be the year the brand was established (e.g., 1966 for Cohiba, 1935 for Montecristo)
     - wrapper, binder, and filler can be identified by the color, texture, and appearance of the cigar.
     - footTasteNotes, bodyTasteNotes, and headTasteNotes should be predicted based on the cigar's construction, wrapper color, and typical flavor progression for similar cigars.
     - Foot (first third) typically starts lighter and spicier, Body (middle third) develops complexity, Head (final third) becomes richer and more intense.
-    - If you cannot determine these details, you can use empty arrays [] or leave them out.
+    - possibleSizes should include common vitolas for the identified brand (e.g., for Cohiba: ["Robusto", "Torpedo", "Churchill", "Esplendido", "Siglo"])
+    - If you cannot determine these details, you can use empty arrays [], empty strings "", or null values.
     If you cannot identify it as a cigar, return confidence 0 and empty strings.
     Output ONLY valid JSON. Do not include markdown formatting like \`\`\`json.
   `;

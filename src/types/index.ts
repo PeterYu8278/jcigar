@@ -130,6 +130,16 @@ export interface Cigar {
   price: number;
   images: string[];
   description: string;
+  construction?: {
+    wrapper?: string;  // 茄衣（最外层烟叶）
+    binder?: string;   // 茄套（中间层烟叶）
+    filler?: string;   // 茄芯（填充烟叶）
+  };
+  tastingNotes?: {
+    foot?: string[];   // 脚部（前1/3）品吸笔记
+    body?: string[];   // 主体（中1/3）品吸笔记
+    head?: string[];   // 头部（后1/3）品吸笔记
+  };
   inventory: {
     stock: number;
     reserved: number;

@@ -31,7 +31,7 @@ export const getOrdersByUser = (userId: string, config?: ApiConfig) => {
  */
 export const getOrderById = (orderId: string, config?: ApiConfig) => {
   return apiCall(
-    () => firestoreService.getOrderById(orderId),
+    () => firestoreService.getDocument<Order>(firestoreService.COLLECTIONS.ORDERS, orderId),
     config
   )
 }
@@ -41,7 +41,7 @@ export const getOrderById = (orderId: string, config?: ApiConfig) => {
  */
 export const createOrder = (orderData: Omit<Order, 'id'>, config?: ApiConfig) => {
   return apiCall(
-    () => firestoreService.createOrder(orderData),
+    () => firestoreService.createDocument<Order>(firestoreService.COLLECTIONS.ORDERS, orderData),
     {
       showSuccess: true,
       successMessage: '订单创建成功',
@@ -55,7 +55,7 @@ export const createOrder = (orderData: Omit<Order, 'id'>, config?: ApiConfig) =>
  */
 export const updateOrder = (orderId: string, orderData: Partial<Order>, config?: ApiConfig) => {
   return apiCall(
-    () => firestoreService.updateOrder(orderId, orderData),
+    () => firestoreService.updateDocument<Order>(firestoreService.COLLECTIONS.ORDERS, orderId, orderData),
     {
       showSuccess: true,
       successMessage: '订单更新成功',
@@ -69,7 +69,7 @@ export const updateOrder = (orderId: string, orderData: Partial<Order>, config?:
  */
 export const deleteOrder = (orderId: string, config?: ApiConfig) => {
   return apiCall(
-    () => firestoreService.deleteOrder(orderId),
+    () => firestoreService.deleteDocument(firestoreService.COLLECTIONS.ORDERS, orderId),
     {
       showSuccess: true,
       successMessage: '订单删除成功',
@@ -85,7 +85,7 @@ export const batchDeleteOrders = (orderIds: string[], config?: ApiConfig) => {
   return apiCall(
     async () => {
       const results = await Promise.all(
-        orderIds.map(id => firestoreService.deleteOrder(id))
+        orderIds.map(id => firestoreService.deleteDocument(firestoreService.COLLECTIONS.ORDERS, id))
       )
       return results
     },
@@ -102,11 +102,11 @@ export const batchDeleteOrders = (orderIds: string[], config?: ApiConfig) => {
  */
 export const updateOrderStatus = (
   orderId: string,
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled',
+  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'completed' | 'cancelled',
   config?: ApiConfig
 ) => {
   return apiCall(
-    () => firestoreService.updateOrder(orderId, { status }),
+    () => firestoreService.updateDocument<Order>(firestoreService.COLLECTIONS.ORDERS, orderId, { status }),
     {
       showSuccess: true,
       successMessage: '订单状态更新成功',
@@ -124,7 +124,9 @@ export const updatePaymentStatus = (
   config?: ApiConfig
 ) => {
   return apiCall(
-    () => firestoreService.updateOrder(orderId, { paymentStatus }),
+    () => firestoreService.updateDocument<Order>(firestoreService.COLLECTIONS.ORDERS, orderId, { 
+      payment: { method: 'credit' as const, paidAt: paymentStatus === 'paid' ? new Date() : undefined }
+    }),
     {
       showSuccess: true,
       successMessage: '支付状态更新成功',
@@ -138,10 +140,8 @@ export const updatePaymentStatus = (
  */
 export const cancelOrder = (orderId: string, reason?: string, config?: ApiConfig) => {
   return apiCall(
-    () => firestoreService.updateOrder(orderId, {
-      status: 'cancelled',
-      cancelReason: reason,
-      cancelledAt: new Date()
+    () => firestoreService.updateDocument<Order>(firestoreService.COLLECTIONS.ORDERS, orderId, {
+      status: 'cancelled' as const
     }),
     {
       showSuccess: true,
@@ -164,8 +164,8 @@ export const searchOrders = (keyword: string, config?: ApiConfig) => {
       const lowerKeyword = keyword.toLowerCase()
       return orders.filter((order: Order) =>
         order.id?.toLowerCase().includes(lowerKeyword) ||
-        order.userName?.toLowerCase().includes(lowerKeyword) ||
-        order.userPhone?.includes(keyword)
+        order.orderNo?.toLowerCase().includes(lowerKeyword) ||
+        order.userId?.toLowerCase().includes(lowerKeyword)
       )
     },
     config
@@ -176,7 +176,7 @@ export const searchOrders = (keyword: string, config?: ApiConfig) => {
  * 根据状态筛选订单
  */
 export const getOrdersByStatus = (
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled',
+  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'completed' | 'cancelled',
   config?: ApiConfig
 ) => {
   return apiCall(
@@ -198,7 +198,15 @@ export const getOrdersByPaymentStatus = (
   return apiCall(
     async () => {
       const orders = await firestoreService.getAllOrders()
-      return orders.filter((order: Order) => order.paymentStatus === paymentStatus)
+      return orders.filter((order: Order) => {
+        if (paymentStatus === 'paid') {
+          return order.payment?.paidAt !== undefined
+        } else if (paymentStatus === 'unpaid') {
+          return order.payment?.paidAt === undefined
+        }
+        // For refunded/partial_refund, we'd need additional fields
+        return false
+      })
     },
     config
   )

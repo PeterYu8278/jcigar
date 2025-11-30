@@ -221,7 +221,7 @@ export function importFromExcel(
           }
 
           const jsonData = XLSX.utils.sheet_to_json(worksheet, {
-            skipRows: options?.skipRows || 0
+            range: options?.skipRows ? options.skipRows : undefined
           })
 
           resolve(jsonData)

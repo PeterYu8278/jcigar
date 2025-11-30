@@ -1,7 +1,7 @@
 // 库存管理页面
 import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Table, Button, Tag, Space, Typography, Input, Select, Modal, Form, InputNumber, message, Dropdown, Checkbox, Upload, Row, Col, App } from 'antd'
+import { Table, Button, Tag, Space, Typography, Input, Select, Modal, Form, InputNumber, message, Dropdown, Checkbox, Upload, Row, Col, App, Divider } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, WarningOutlined, UploadOutlined, DownloadOutlined, MinusCircleOutlined, FilePdfOutlined, FileImageOutlined, EyeOutlined } from '@ant-design/icons'
 import type { Cigar, Brand, InboundOrder, OutboundOrder, InventoryMovement, Event } from '../../../types'
 import type { UploadFile } from 'antd'
@@ -43,6 +43,7 @@ const AdminInventory: React.FC = () => {
   const [viewingProductLogs, setViewingProductLogs] = useState<string | null>(null)
   const [imageList, setImageList] = useState<any[]>([])
   const [pagination, setPagination] = useState<{ current: number; pageSize: number }>({ current: 1, pageSize: 10 })
+  const [cigarImages, setCigarImages] = useState<string[]>([]) // 雪茄图片列表
   const [inModalOpen, setInModalOpen] = useState(false)
   const [inStatsOpen, setInStatsOpen] = useState(false)
   const [outStatsOpen, setOutStatsOpen] = useState(false)
@@ -462,7 +463,16 @@ const AdminInventory: React.FC = () => {
                 stock: getComputedStock((record as any)?.id) ?? 0,
                 minStock: (record as any)?.inventory?.minStock ?? 0,
                 reserved: (record as any)?.inventory?.reserved ?? 0,
+                description: record.description || '',
+                wrapper: record.construction?.wrapper || '',
+                binder: record.construction?.binder || '',
+                filler: record.construction?.filler || '',
+                footTasteNotes: record.tastingNotes?.foot || [],
+                bodyTasteNotes: record.tastingNotes?.body || [],
+                headTasteNotes: record.tastingNotes?.head || [],
+                tags: record.metadata?.tags || [],
               })
+              setCigarImages(record.images || [])
             }, 0)
           }}>
           </Button>
@@ -1312,7 +1322,7 @@ const AdminInventory: React.FC = () => {
            >
              {t('common.resetFilters')}
            </Button>
-           <button onClick={() => { setCreating(true); form.resetFields() }} style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 8, padding: '8px 16px', background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, cursor: 'pointer' }}>
+           <button onClick={() => { setCreating(true); form.resetFields(); setCigarImages([]); }} style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 8, padding: '8px 16px', background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, cursor: 'pointer' }}>
              <PlusOutlined />
              {t('inventory.addProduct')}
            </button>
@@ -1346,7 +1356,7 @@ const AdminInventory: React.FC = () => {
                       className="points-config-form"
                     />
                     <button 
-                      onClick={() => { setCreating(true); form.resetFields() }} 
+                      onClick={() => { setCreating(true); form.resetFields(); setCigarImages([]); }} 
                       style={{ 
                         display: 'flex', 
                         alignItems: 'center', 
@@ -1510,7 +1520,16 @@ const AdminInventory: React.FC = () => {
                                 stock: getComputedStock((record as any)?.id) ?? 0,
                                 minStock: (record as any)?.inventory?.minStock ?? 0,
                                 reserved: (record as any)?.inventory?.reserved ?? 0,
+                                description: (record as any).description || '',
+                                wrapper: (record as any).construction?.wrapper || '',
+                                binder: (record as any).construction?.binder || '',
+                                filler: (record as any).construction?.filler || '',
+                                footTasteNotes: (record as any).tastingNotes?.foot || [],
+                                bodyTasteNotes: (record as any).tastingNotes?.body || [],
+                                headTasteNotes: (record as any).tastingNotes?.head || [],
+                                tags: (record as any).metadata?.tags || [],
                               })
+                              setCigarImages((record as any).images || [])
                                     }}
                                   >
                               {t('common.edit')}
@@ -3914,6 +3933,7 @@ const AdminInventory: React.FC = () => {
                 setCreating(false); 
                 setEditing(null);
                 form.resetFields();
+                setCigarImages([]);
               }}>{t('common.cancel')}</Button>
               <button disabled={loading} onClick={() => form.submit()} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease', opacity: loading ? 0.6 : 1 }}>{t('common.confirm')}</button>
             </Space>
@@ -3926,6 +3946,31 @@ const AdminInventory: React.FC = () => {
             // 根据品牌名称找到对应的品牌ID
             const selectedBrand = brandList.find(brand => brand.name === values.brand)
             
+            // 构建构造信息
+            const construction: any = {};
+            if (values.wrapper) construction.wrapper = values.wrapper;
+            if (values.binder) construction.binder = values.binder;
+            if (values.filler) construction.filler = values.filler;
+            
+            // 构建品吸笔记
+            const tastingNotes: any = {};
+            if (values.footTasteNotes && values.footTasteNotes.length > 0) {
+              tastingNotes.foot = Array.isArray(values.footTasteNotes) ? values.footTasteNotes : [];
+            }
+            if (values.bodyTasteNotes && values.bodyTasteNotes.length > 0) {
+              tastingNotes.body = Array.isArray(values.bodyTasteNotes) ? values.bodyTasteNotes : [];
+            }
+            if (values.headTasteNotes && values.headTasteNotes.length > 0) {
+              tastingNotes.head = Array.isArray(values.headTasteNotes) ? values.headTasteNotes : [];
+            }
+            
+            // 构建元数据
+            const metadata: any = {
+              rating: editing?.metadata?.rating ?? 0,
+              reviews: editing?.metadata?.reviews ?? 0,
+              tags: Array.isArray(values.tags) ? values.tags : [],
+            };
+            
             const payload: Partial<Cigar> = {
               name: values.name,
               brand: values.brand,
@@ -3935,17 +3980,32 @@ const AdminInventory: React.FC = () => {
               strength: values.strength,
               price: values.price,
               sku: values.sku,
+              description: values.description || '',
+              images: cigarImages,
               inventory: {
                 // 库存实时由日志计算，不写入 stock 字段
                 minStock: values.minStock ?? 0,
+                reserved: editing?.inventory?.reserved ?? 0,
+                stock: editing?.inventory?.stock ?? 0,
               } as any,
+              metadata,
               updatedAt: new Date(),
-            } as any
+            } as any;
+            
+            // 添加构造信息（如果有）
+            if (Object.keys(construction).length > 0) {
+              payload.construction = construction;
+            }
+            
+            // 添加品吸笔记（如果有）
+            if (Object.keys(tastingNotes).length > 0) {
+              payload.tastingNotes = tastingNotes;
+            }
             if (editing) {
               const res = await updateDocument<Cigar>(COLLECTIONS.CIGARS, editing.id, payload)
               if (res.success) message.success(t('common.saved'))
             } else {
-              await createDocument<Cigar>(COLLECTIONS.CIGARS, { ...payload, createdAt: new Date(), images: [], description: '', metadata: { rating: 0, reviews: 0, tags: [] } } as any)
+              await createDocument<Cigar>(COLLECTIONS.CIGARS, { ...payload, createdAt: new Date() } as any)
               message.success(t('common.created'))
             }
             const list = await getCigars()
@@ -3953,6 +4013,7 @@ const AdminInventory: React.FC = () => {
             setCreating(false)
             setEditing(null)
             form.resetFields()
+            setCigarImages([])
           } finally {
             setLoading(false)
           }
@@ -4026,6 +4087,105 @@ const AdminInventory: React.FC = () => {
           </Form.Item>
           <Form.Item label={t('inventory.minStock')} name="minStock">
             <InputNumber min={0} style={{ width: '100%' }} />
+          </Form.Item>
+          
+          <Form.Item label={t('common.description') || '描述'} name="description">
+            <Input.TextArea rows={3} placeholder="请输入雪茄描述" />
+          </Form.Item>
+          
+          <Form.Item label="图片" name="images">
+            <div>
+              <Upload
+                listType="picture-card"
+                fileList={cigarImages.map((url, idx) => ({
+                  uid: `image-${idx}`,
+                  name: `image-${idx + 1}.jpg`,
+                  status: 'done' as const,
+                  url: url
+                }))}
+                beforeUpload={async (file) => {
+                  try {
+                    const result = await cloudinaryUpload(file, { folder: 'cigars' });
+                    setCigarImages(prev => [...prev, result.secure_url]);
+                    return false; // 阻止自动上传
+                  } catch (error) {
+                    message.error('图片上传失败');
+                    return false;
+                  }
+                }}
+                onRemove={(file) => {
+                  const index = cigarImages.findIndex((url, idx) => `image-${idx}` === file.uid);
+                  if (index !== -1) {
+                    setCigarImages(prev => prev.filter((_, i) => i !== index));
+                  }
+                }}
+                accept="image/*"
+              >
+                {cigarImages.length < 5 && (
+                  <div>
+                    <PlusOutlined />
+                    <div style={{ marginTop: 8 }}>上传</div>
+                  </div>
+                )}
+              </Upload>
+              <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 8 }}>
+                最多上传 5 张图片
+              </div>
+            </div>
+          </Form.Item>
+          
+          <Divider style={{ margin: '16px 0', borderColor: '#333' }}>构造信息</Divider>
+          
+          <Form.Item label="茄衣 (Wrapper)" name="wrapper">
+            <Input placeholder="例如: Habano, Connecticut, Maduro" />
+          </Form.Item>
+          
+          <Form.Item label="茄套 (Binder)" name="binder">
+            <Input placeholder="例如: Nicaraguan, Ecuadorian" />
+          </Form.Item>
+          
+          <Form.Item label="茄芯 (Filler)" name="filler">
+            <Input placeholder="例如: Cuban, Nicaraguan, Dominican" />
+          </Form.Item>
+          
+          <Divider style={{ margin: '16px 0', borderColor: '#333' }}>品吸笔记</Divider>
+          
+          <Form.Item label="脚部 (Foot) - 前1/3" name="footTasteNotes">
+            <Select
+              mode="tags"
+              placeholder="输入品吸笔记，按回车添加"
+              style={{ width: '100%' }}
+              tokenSeparators={[',']}
+            />
+          </Form.Item>
+          
+          <Form.Item label="主体 (Body) - 中1/3" name="bodyTasteNotes">
+            <Select
+              mode="tags"
+              placeholder="输入品吸笔记，按回车添加"
+              style={{ width: '100%' }}
+              tokenSeparators={[',']}
+            />
+          </Form.Item>
+          
+          <Form.Item label="头部 (Head) - 后1/3" name="headTasteNotes">
+            <Select
+              mode="tags"
+              placeholder="输入品吸笔记，按回车添加"
+              style={{ width: '100%' }}
+              tokenSeparators={[',']}
+            />
+          </Form.Item>
+          
+          <Divider style={{ margin: '16px 0', borderColor: '#333' }}>其他信息</Divider>
+          
+          <Form.Item label="标签/风味特征" name="tags">
+            <Select
+              mode="tags"
+              placeholder="输入标签，按回车添加"
+              style={{ width: '100%' }}
+              tokenSeparators={[',']}
+            />
           </Form.Item>
         </Form>
       </Modal>

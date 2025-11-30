@@ -1,8 +1,10 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { Button, Spin, Card, Typography, Space, message, Tag, Divider, Upload } from 'antd';
-import { CameraOutlined, ReloadOutlined, ThunderboltFilled, LoadingOutlined, UploadOutlined, SwapOutlined } from '@ant-design/icons';
+import { Button, Spin, Card, Typography, Space, message, Tag, Divider, Upload, Modal } from 'antd';
+import { CameraOutlined, ReloadOutlined, ThunderboltFilled, LoadingOutlined, UploadOutlined, SwapOutlined, SaveOutlined } from '@ant-design/icons';
 import Webcam from 'react-webcam';
 import { analyzeCigarImage, CigarAnalysisResult } from '../../../services/gemini/cigarRecognition';
+import { processAICigarRecognition } from '../../../services/aiCigarStorage';
+import { uploadBase64 } from '../../../services/cloudinary/create';
 import type { UploadProps } from 'antd';
 
 const { Title, Text, Paragraph } = Typography;
@@ -14,6 +16,12 @@ export const AICigarScanner: React.FC = () => {
     const [result, setResult] = useState<CigarAnalysisResult | null>(null);
     const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
     const [cameraError, setCameraError] = useState<string | null>(null);
+    const [saving, setSaving] = useState(false);
+    const [saveStatus, setSaveStatus] = useState<{
+        matched: boolean;
+        dataComplete: boolean;
+        cigarIds: string[];
+    } | null>(null);
 
     const handleAnalyze = useCallback(async (imageSrc: string) => {
         setAnalyzing(true);
@@ -46,7 +54,53 @@ export const AICigarScanner: React.FC = () => {
     const reset = () => {
         setImgSrc(null);
         setResult(null);
+        setSaveStatus(null);
     };
+
+    const handleSave = useCallback(async () => {
+        if (!result || !imgSrc) {
+            message.warning('没有可保存的识别结果');
+            return;
+        }
+
+        setSaving(true);
+        try {
+            // 先上传图片到 Cloudinary
+            let imageUrl: string | undefined;
+            try {
+                const uploadResult = await uploadBase64(imgSrc, {
+                    folder: 'jep-cigar/cigars',
+                    publicId: `cigar-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+                });
+                imageUrl = uploadResult.secure_url;
+            } catch (uploadError) {
+                console.warn('图片上传失败，将使用 base64:', uploadError);
+                // 如果上传失败，继续使用 base64（但数据库可能不支持，所以最好还是上传）
+                message.warning('图片上传失败，但将继续保存数据');
+            }
+
+            // 处理识别结果并保存到数据库
+            const saveResult = await processAICigarRecognition(result, imageUrl);
+            setSaveStatus(saveResult);
+
+            // 显示成功消息
+            if (saveResult.matched) {
+                if (saveResult.dataComplete) {
+                    message.success(`✅ 找到匹配记录（数据完整）`);
+                } else {
+                    message.success(`⚠️ 找到匹配记录，已补充数据`);
+                }
+            } else {
+                const sizeCount = saveResult.cigarIds.length;
+                message.success(`🆕 已创建 ${sizeCount} 条雪茄记录（包含所有可能的尺寸）`);
+            }
+        } catch (error) {
+            console.error('Save failed', error);
+            message.error(`保存失败: ${error instanceof Error ? error.message : '未知错误'}`);
+        } finally {
+            setSaving(false);
+        }
+    }, [result, imgSrc]);
 
     const toggleCamera = () => {
         setFacingMode(prev => prev === 'environment' ? 'user' : 'environment');
@@ -358,19 +412,69 @@ export const AICigarScanner: React.FC = () => {
                             {result.description}
                         </Paragraph>
 
-                        <Button 
-                            block 
-                            icon={<ReloadOutlined />} 
-                            onClick={reset}
-                            style={{
-                                background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
-                                color: '#111',
-                                fontWeight: 600,
-                                boxShadow: '0 4px 16px rgba(255, 215, 0, 0.3)'
-                            }}
-                        >
-                            重新拍摄
-                        </Button>
+                        {saveStatus && (
+                            <div style={{ 
+                                marginTop: '12px', 
+                                padding: '12px', 
+                                background: saveStatus.matched 
+                                    ? (saveStatus.dataComplete ? 'rgba(82, 196, 26, 0.1)' : 'rgba(250, 173, 20, 0.1)')
+                                    : 'rgba(24, 144, 255, 0.1)',
+                                border: `1px solid ${saveStatus.matched 
+                                    ? (saveStatus.dataComplete ? '#52c41a' : '#faad14')
+                                    : '#1890ff'}`,
+                                borderRadius: '8px'
+                            }}>
+                                <Text style={{ 
+                                    color: saveStatus.matched 
+                                        ? (saveStatus.dataComplete ? '#52c41a' : '#faad14')
+                                        : '#1890ff',
+                                    fontSize: '13px',
+                                    fontWeight: 500
+                                }}>
+                                    {saveStatus.matched 
+                                        ? (saveStatus.dataComplete 
+                                            ? '✅ 找到匹配记录（数据完整）'
+                                            : '⚠️ 找到匹配记录，已补充数据')
+                                        : `🆕 已创建 ${saveStatus.cigarIds.length} 条记录`}
+                                </Text>
+                            </div>
+                        )}
+
+                        <Space direction="vertical" style={{ width: '100%', marginTop: '12px' }} size="middle">
+                            <Button 
+                                block 
+                                type="primary"
+                                icon={<SaveOutlined />} 
+                                onClick={handleSave}
+                                loading={saving}
+                                disabled={saving || !!saveStatus}
+                                style={{
+                                    background: saveStatus 
+                                        ? 'rgba(255,255,255,0.1)' 
+                                        : 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)',
+                                    border: 'none',
+                                    color: '#fff',
+                                    fontWeight: 600,
+                                    height: '44px'
+                                }}
+                            >
+                                {saving ? '保存中...' : saveStatus ? '已保存' : '保存到数据库'}
+                            </Button>
+                            
+                            <Button 
+                                block 
+                                icon={<ReloadOutlined />} 
+                                onClick={reset}
+                                style={{
+                                    background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
+                                    color: '#111',
+                                    fontWeight: 600,
+                                    boxShadow: '0 4px 16px rgba(255, 215, 0, 0.3)'
+                                }}
+                            >
+                                重新拍摄
+                            </Button>
+                        </Space>
                     </Space>
                 </Card>
             )}

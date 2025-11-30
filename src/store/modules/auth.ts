@@ -165,7 +165,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           let userData: User | null = null;
           
           // 策略1: 检查内存缓存
-          if (isMemoryCacheValid(cachedUserData, cacheTimestamp, firebaseUser.uid)) {
+          if (cachedUserData && isMemoryCacheValid(cachedUserData, cacheTimestamp, firebaseUser.uid)) {
             console.info('[Auth Store] ✅ 使用内存缓存数据');
             userData = cachedUserData;
             firestoreUserId = cachedUserData.id;

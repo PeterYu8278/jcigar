@@ -29,7 +29,7 @@ const MobileBottomNav: React.FC = () => {
   const { t } = useTranslation()
   const [scannerVisible, setScannerVisible] = useState(false)
   const [featuresVisibility, setFeaturesVisibility] = useState<Record<string, boolean>>({})
-  
+
   // 只有管理员和开发者可以访问扫码功能
   const canAccessQR = isAdmin || isDeveloper
 
@@ -277,47 +277,47 @@ const MobileBottomNav: React.FC = () => {
 
       {/* 中间的扫描按钮（仅在显示时渲染） */}
       {showScannerButton && (
-        <div
+      <div
+        style={{
+          width: itemWidth,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          zIndex: 10
+        }}
+        className="mobile-nav-item"
+      >
+        <button
+          onClick={handleScanClick}
           style={{
-            width: itemWidth,
+            position: 'relative',
+            top: '-14px',
+            width: '80px', // QR按钮大小
+            height: '80px', // QR按钮大小
+            borderRadius: '50%',
+            border: '4px solid rgba(26, 26, 26, 0.95)',
+            background: 'linear-gradient(135deg, #FDE08D 0%, #FDD017 100%)',
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            position: 'relative',
-            zIndex: 10
+            boxShadow: '0 4px 16px rgba(255, 215, 0, 0.3)',
+            transition: 'all 0.3s ease',
+            cursor: 'pointer',
+            padding: 0,
+            outline: 'none'
           }}
-          className="mobile-nav-item"
         >
-          <button
-            onClick={handleScanClick}
-            style={{
-              position: 'relative',
-              top: '-14px',
-              width: '80px', // QR按钮大小
-              height: '80px', // QR按钮大小
-              borderRadius: '50%',
-              border: '4px solid rgba(26, 26, 26, 0.95)',
-              background: 'linear-gradient(135deg, #FDE08D 0%, #FDD017 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 16px rgba(255, 215, 0, 0.3)',
-              transition: 'all 0.3s ease',
-              cursor: 'pointer',
-              padding: 0,
-              outline: 'none'
-            }}
-          >
-            <QrcodeOutlined
+          <QrcodeOutlined
               className="qr-icon-large"
-              style={{
+            style={{
                 fontSize: '50px',
-                color: '#111',
-              }}
-            />
-          </button>
-        </div>
+              color: '#111',
+            }}
+          />
+        </button>
+      </div>
       )}
 
       {/* 右侧导航项 */}

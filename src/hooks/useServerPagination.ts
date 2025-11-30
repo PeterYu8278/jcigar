@@ -17,7 +17,7 @@ export interface ServerPaginationResult<T> {
   error: FirestoreError | null
   hasMore: boolean
   currentPage: number
-  totalPages: number
+  totalPages: number | null
   total: number | null // null 表示未知总数
   loadPage: (page: number) => Promise<void>
   loadNext: () => Promise<void>
