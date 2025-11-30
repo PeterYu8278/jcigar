@@ -23,6 +23,48 @@ export const AICigarScanner: React.FC = () => {
         cigarIds: string[];
     } | null>(null);
 
+    // 保存识别结果到数据库（内部函数，不暴露给用户）
+    // 必须在 handleAnalyze 之前定义，避免依赖循环
+    const saveRecognitionResult = useCallback(async (recognitionResult: CigarAnalysisResult, imageSource: string) => {
+        setSaving(true);
+        try {
+            // 先上传图片到 Cloudinary
+            let imageUrl: string | undefined;
+            try {
+                const uploadResult = await uploadBase64(imageSource, {
+                    folder: 'jep-cigar/cigars',
+                    publicId: `cigar-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+                });
+                imageUrl = uploadResult.secure_url;
+            } catch (uploadError) {
+                console.warn('图片上传失败，将使用 base64:', uploadError);
+                // 如果上传失败，继续使用 base64（但数据库可能不支持，所以最好还是上传）
+                message.warning('图片上传失败，但将继续保存数据');
+            }
+
+            // 处理识别结果并保存到数据库
+            const saveResult = await processAICigarRecognition(recognitionResult, imageUrl);
+            setSaveStatus(saveResult);
+
+            // 显示成功消息
+            if (saveResult.matched) {
+                if (saveResult.dataComplete) {
+                    message.success(`✅ 找到匹配记录（数据完整）`);
+                } else {
+                    message.success(`⚠️ 找到匹配记录，已补充数据`);
+                }
+            } else {
+                const sizeCount = saveResult.cigarIds.length;
+                message.success(`🆕 已创建 ${sizeCount} 条雪茄记录（包含所有可能的尺寸）`);
+            }
+        } catch (error) {
+            console.error('Save failed', error);
+            message.error(`保存失败: ${error instanceof Error ? error.message : '未知错误'}`);
+        } finally {
+            setSaving(false);
+        }
+    }, []);
+
     const handleAnalyze = useCallback(async (imageSrc: string) => {
         setAnalyzing(true);
         setResult(null);
@@ -65,47 +107,6 @@ export const AICigarScanner: React.FC = () => {
         setResult(null);
         setSaveStatus(null);
     };
-
-    // 保存识别结果到数据库（内部函数，不暴露给用户）
-    const saveRecognitionResult = useCallback(async (recognitionResult: CigarAnalysisResult, imageSource: string) => {
-        setSaving(true);
-        try {
-            // 先上传图片到 Cloudinary
-            let imageUrl: string | undefined;
-            try {
-                const uploadResult = await uploadBase64(imageSource, {
-                    folder: 'jep-cigar/cigars',
-                    publicId: `cigar-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
-                });
-                imageUrl = uploadResult.secure_url;
-            } catch (uploadError) {
-                console.warn('图片上传失败，将使用 base64:', uploadError);
-                // 如果上传失败，继续使用 base64（但数据库可能不支持，所以最好还是上传）
-                message.warning('图片上传失败，但将继续保存数据');
-            }
-
-            // 处理识别结果并保存到数据库
-            const saveResult = await processAICigarRecognition(recognitionResult, imageUrl);
-            setSaveStatus(saveResult);
-
-            // 显示成功消息
-            if (saveResult.matched) {
-                if (saveResult.dataComplete) {
-                    message.success(`✅ 找到匹配记录（数据完整）`);
-                } else {
-                    message.success(`⚠️ 找到匹配记录，已补充数据`);
-                }
-            } else {
-                const sizeCount = saveResult.cigarIds.length;
-                message.success(`🆕 已创建 ${sizeCount} 条雪茄记录（包含所有可能的尺寸）`);
-            }
-        } catch (error) {
-            console.error('Save failed', error);
-            message.error(`保存失败: ${error instanceof Error ? error.message : '未知错误'}`);
-        } finally {
-            setSaving(false);
-        }
-    }, []);
 
     const toggleCamera = () => {
         setFacingMode(prev => prev === 'environment' ? 'user' : 'environment');
