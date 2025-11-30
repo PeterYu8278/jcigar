@@ -193,7 +193,7 @@ export async function analyzeCigarImage(imageBase64: string): Promise<CigarAnaly
     - footTasteNotes: array of strings (expected tasting notes for the foot/first third, e.g., ["Pepper", "Wood", "Light Spice"])
     - bodyTasteNotes: array of strings (expected tasting notes for the body/middle third, e.g., ["Coffee", "Chocolate", "Cedar"])
     - headTasteNotes: array of strings (expected tasting notes for the head/final third, e.g., ["Leather", "Earth", "Spice"])
-    - description: string (a short 2-sentence description of this specific cigar in Chinese)
+    - description: string (a short 2-sentence description of this specific cigar in English)
     - confidence: number (0.0 to 1.0, how sure are you?)
     - possibleSizes: array of strings (other common sizes/vitolas for this brand, e.g., ["Robusto", "Torpedo", "Churchill", "Corona", "No.2", "No.4"]. Include the identified size if applicable, and add 3-5 other common sizes for this brand. If you cannot determine, use empty array [])
 
