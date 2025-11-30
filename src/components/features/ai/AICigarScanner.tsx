@@ -1,6 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { Button, Spin, Card, Typography, Space, message, Tag, Divider, Upload, Modal } from 'antd';
-import { CameraOutlined, ReloadOutlined, ThunderboltFilled, LoadingOutlined, UploadOutlined, SwapOutlined, SaveOutlined } from '@ant-design/icons';
+import { CameraOutlined, ReloadOutlined, ThunderboltFilled, LoadingOutlined, UploadOutlined, SwapOutlined } from '@ant-design/icons';
 import Webcam from 'react-webcam';
 import { analyzeCigarImage, CigarAnalysisResult } from '../../../services/gemini/cigarRecognition';
 import { processAICigarRecognition } from '../../../services/aiCigarStorage';
@@ -26,11 +26,20 @@ export const AICigarScanner: React.FC = () => {
     const handleAnalyze = useCallback(async (imageSrc: string) => {
         setAnalyzing(true);
         setResult(null);
+        setSaveStatus(null); // 重置保存状态
         try {
             const data = await analyzeCigarImage(imageSrc);
             setResult(data);
+            
+            // 根据可信度显示提示
             if (data.confidence < 0.5) {
                 message.warning('识别可信度较低，建议重新拍摄');
+            } else if (data.confidence >= 0.9) {
+                // 可信度超过 90%，自动保存到数据库
+                message.info(`识别可信度 ${Math.round(data.confidence * 100)}%，正在自动保存...`);
+                await saveRecognitionResult(data, imageSrc);
+            } else {
+                message.info(`识别可信度 ${Math.round(data.confidence * 100)}%，未达到自动保存阈值（90%）`);
             }
         } catch (error) {
             console.error('Analysis failed', error);
@@ -39,7 +48,7 @@ export const AICigarScanner: React.FC = () => {
         } finally {
             setAnalyzing(false);
         }
-    }, []);
+    }, [saveRecognitionResult]);
 
     const capture = useCallback(() => {
         if (webcamRef.current) {
@@ -57,18 +66,14 @@ export const AICigarScanner: React.FC = () => {
         setSaveStatus(null);
     };
 
-    const handleSave = useCallback(async () => {
-        if (!result || !imgSrc) {
-            message.warning('没有可保存的识别结果');
-            return;
-        }
-
+    // 保存识别结果到数据库（内部函数，不暴露给用户）
+    const saveRecognitionResult = useCallback(async (recognitionResult: CigarAnalysisResult, imageSource: string) => {
         setSaving(true);
         try {
             // 先上传图片到 Cloudinary
             let imageUrl: string | undefined;
             try {
-                const uploadResult = await uploadBase64(imgSrc, {
+                const uploadResult = await uploadBase64(imageSource, {
                     folder: 'jep-cigar/cigars',
                     publicId: `cigar-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
                 });
@@ -80,7 +85,7 @@ export const AICigarScanner: React.FC = () => {
             }
 
             // 处理识别结果并保存到数据库
-            const saveResult = await processAICigarRecognition(result, imageUrl);
+            const saveResult = await processAICigarRecognition(recognitionResult, imageUrl);
             setSaveStatus(saveResult);
 
             // 显示成功消息
@@ -100,7 +105,7 @@ export const AICigarScanner: React.FC = () => {
         } finally {
             setSaving(false);
         }
-    }, [result, imgSrc]);
+    }, []);
 
     const toggleCamera = () => {
         setFacingMode(prev => prev === 'environment' ? 'user' : 'environment');
@@ -441,30 +446,25 @@ export const AICigarScanner: React.FC = () => {
                         )}
 
                         <Space direction="vertical" style={{ width: '100%', marginTop: '12px' }} size="middle">
-                            <Button 
-                                block 
-                                type="primary"
-                                icon={<SaveOutlined />} 
-                                onClick={handleSave}
-                                loading={saving}
-                                disabled={saving || !!saveStatus}
-                                style={{
-                                    background: saveStatus 
-                                        ? 'rgba(255,255,255,0.1)' 
-                                        : 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)',
-                                    border: 'none',
-                                    color: '#fff',
-                                    fontWeight: 600,
-                                    height: '44px'
-                                }}
-                            >
-                                {saving ? '保存中...' : saveStatus ? '已保存' : '保存到数据库'}
-                            </Button>
+                            {saving && (
+                                <div style={{
+                                    padding: '12px',
+                                    background: 'rgba(24, 144, 255, 0.1)',
+                                    border: '1px solid #1890ff',
+                                    borderRadius: '8px',
+                                    textAlign: 'center'
+                                }}>
+                                    <Spin size="small" style={{ marginRight: 8 }} />
+                                    <Text style={{ color: '#1890ff', fontSize: '13px' }}>正在保存到数据库...</Text>
+                                </div>
+                            )}
                             
                             <Button 
                                 block 
                                 icon={<ReloadOutlined />} 
                                 onClick={reset}
+                                loading={saving}
+                                disabled={saving}
                                 style={{
                                     background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
                                     color: '#111',
