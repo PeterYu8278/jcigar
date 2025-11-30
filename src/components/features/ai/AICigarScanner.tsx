@@ -1,6 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { Button, Spin, Card, Typography, Space, message, Tag, Divider, Upload, Modal } from 'antd';
-import { CameraOutlined, ReloadOutlined, ThunderboltFilled, LoadingOutlined, UploadOutlined, SwapOutlined } from '@ant-design/icons';
+import { CameraOutlined, ReloadOutlined, ThunderboltFilled, ThunderboltOutlined, LoadingOutlined, UploadOutlined, SwapOutlined } from '@ant-design/icons';
 import Webcam from 'react-webcam';
 import { analyzeCigarImage, CigarAnalysisResult } from '../../../services/gemini/cigarRecognition';
 import { processAICigarRecognition } from '../../../services/aiCigarStorage';
@@ -11,11 +11,18 @@ const { Title, Text, Paragraph } = Typography;
 
 export const AICigarScanner: React.FC = () => {
     const webcamRef = useRef<Webcam>(null);
+    const streamRef = useRef<MediaStream | null>(null);
+    const videoTrackRef = useRef<MediaStreamTrack | null>(null);
     const [imgSrc, setImgSrc] = useState<string | null>(null);
     const [analyzing, setAnalyzing] = useState(false);
     const [result, setResult] = useState<CigarAnalysisResult | null>(null);
     const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
     const [cameraError, setCameraError] = useState<string | null>(null);
+    const [flashEnabled, setFlashEnabled] = useState(false);
+    const [flashSupported, setFlashSupported] = useState(false);
+    const [focusSupported, setFocusSupported] = useState(false);
+    const [focusing, setFocusing] = useState(false);
+    const [focusPoint, setFocusPoint] = useState<{ x: number; y: number } | null>(null);
     const [saving, setSaving] = useState(false);
     const [saveStatus, setSaveStatus] = useState<{
         matched: boolean;
@@ -102,16 +109,163 @@ export const AICigarScanner: React.FC = () => {
         }
     }, [handleAnalyze]);
 
+    // 点击屏幕聚焦
+    const handleFocus = useCallback(async (event: React.MouseEvent<HTMLDivElement>) => {
+        const videoTrack = videoTrackRef.current;
+        if (!videoTrack || !focusSupported || focusing) return;
+
+        const rect = event.currentTarget.getBoundingClientRect();
+        const x = ((event.clientX - rect.left) / rect.width) * 100;
+        const y = ((event.clientY - rect.top) / rect.height) * 100;
+        
+        // 标准化坐标到 [0, 1] 范围
+        const normalizedX = Math.max(0, Math.min(1, x / 100));
+        const normalizedY = Math.max(0, Math.min(1, y / 100));
+
+        setFocusPoint({ x: normalizedX * 100, y: normalizedY * 100 });
+        setFocusing(true);
+
+        try {
+            // 尝试使用 ImageCapture API 的 setFocusPoint（如果支持）
+            const videoElement = webcamRef.current?.video;
+            if (videoElement && 'ImageCapture' in window) {
+                try {
+                    const imageCapture = new (window as any).ImageCapture(videoTrack);
+                    if (imageCapture.setFocusPoint) {
+                        await imageCapture.setFocusPoint(normalizedX, normalizedY);
+                        // 成功后清除焦点指示器
+                        setTimeout(() => {
+                            setFocusPoint(null);
+                        }, 1000);
+                        setFocusing(false);
+                        return;
+                    }
+                } catch (error) {
+                    // ImageCapture 不支持，继续尝试其他方法
+                }
+            }
+
+            // 备用方案：使用 applyConstraints 设置焦点
+            if ('applyConstraints' in videoTrack) {
+                try {
+                    const constraints = {
+                        advanced: [
+                            { focusMode: 'manual' as any },
+                            { pointsOfInterest: [{ x: normalizedX, y: normalizedY }] as any }
+                        ] as any
+                    } as unknown as MediaTrackConstraints;
+
+                    await videoTrack.applyConstraints(constraints);
+                    
+                    // 成功后清除焦点指示器
+                    setTimeout(() => {
+                        setFocusPoint(null);
+                    }, 1000);
+                } catch (error) {
+                    // 如果失败，尝试简单的自动对焦
+                    try {
+                        await videoTrack.applyConstraints({
+                            advanced: [{ focusMode: 'auto' as any }] as any
+                        } as unknown as MediaTrackConstraints);
+                    } catch (autoFocusError) {
+                        console.warn('Focus not supported:', autoFocusError);
+                        setFocusSupported(false);
+                    }
+                }
+            }
+        } catch (error: any) {
+            console.error('Focus error:', error);
+            if (error?.name === 'NotSupportedError' || error?.name === 'NotReadableError') {
+                setFocusSupported(false);
+            }
+        } finally {
+            setTimeout(() => {
+                setFocusing(false);
+            }, 500);
+        }
+    }, [focusSupported, focusing]);
+
+    // 切换闪光灯（必须在 reset 和 toggleCamera 之前定义）
+    const toggleFlash = useCallback(async (forceState?: boolean) => {
+        const videoTrack = videoTrackRef.current;
+        if (!videoTrack) return;
+
+        const newState = forceState !== undefined ? forceState : !flashEnabled;
+        
+        try {
+            // 优先使用 MediaStreamTrack 的 torch 方法（现代浏览器支持）
+            if ('torch' in videoTrack && typeof (videoTrack as any).torch === 'function') {
+                await (videoTrack as any).torch(newState);
+                setFlashEnabled(newState);
+            } else if ('applyConstraints' in videoTrack) {
+                // 备用方案：尝试使用 applyConstraints
+                try {
+                    const constraints = {
+                        advanced: [{ torch: newState } as any]
+                    } as unknown as MediaTrackConstraints;
+                    
+                    await videoTrack.applyConstraints(constraints);
+                    setFlashEnabled(newState);
+                } catch {
+                    // 如果 applyConstraints 不支持 torch，尝试直接设置属性
+                    if ((videoTrack as any).torch !== undefined) {
+                        (videoTrack as any).torch = newState;
+                        setFlashEnabled(newState);
+                    } else {
+                        message.warning('当前设备不支持闪光灯控制');
+                        setFlashSupported(false);
+                    }
+                }
+            } else {
+                message.warning('当前设备不支持闪光灯控制');
+                setFlashSupported(false);
+            }
+        } catch (error: any) {
+            console.error('Flash toggle error:', error);
+            // 如果错误是因为不支持，隐藏闪光灯按钮
+            if (error?.name === 'NotSupportedError' || error?.name === 'NotReadableError') {
+                setFlashSupported(false);
+                message.warning('当前设备不支持闪光灯控制');
+            } else {
+                message.error('切换闪光灯失败');
+            }
+        }
+    }, [flashEnabled]);
+
+    const toggleCamera = () => {
+        // 切换摄像头前先关闭闪光灯
+        if (flashEnabled) {
+            toggleFlash(false);
+        }
+        setFacingMode(prev => prev === 'environment' ? 'user' : 'environment');
+        setCameraError(null);
+        setFlashSupported(false); // 重置支持状态，等摄像头启动后重新检测
+    };
+
     const reset = () => {
+        // 重置时关闭闪光灯
+        if (flashEnabled) {
+            toggleFlash(false);
+        }
         setImgSrc(null);
         setResult(null);
         setSaveStatus(null);
     };
 
-    const toggleCamera = () => {
-        setFacingMode(prev => prev === 'environment' ? 'user' : 'environment');
-        setCameraError(null);
-    };
+    // 组件卸载时清理
+    useEffect(() => {
+        return () => {
+            // 清理时关闭闪光灯和停止视频流
+            if (flashEnabled && videoTrackRef.current) {
+                toggleFlash(false);
+            }
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop());
+                streamRef.current = null;
+            }
+            videoTrackRef.current = null;
+        };
+    }, [flashEnabled, toggleFlash]);
 
     const handleFileUpload: UploadProps['beforeUpload'] = (file) => {
         // 验证文件类型
@@ -157,10 +311,43 @@ export const AICigarScanner: React.FC = () => {
         }
     }, [facingMode]);
 
-    const handleUserMedia = useCallback(() => {
+    const handleUserMedia = useCallback((stream: MediaStream) => {
         // 摄像头成功启动，清除错误
         setCameraError(null);
-    }, []);
+        
+        // 保存 stream 引用以便控制闪光灯和对焦
+        streamRef.current = stream;
+        const videoTrack = stream.getVideoTracks()[0];
+        videoTrackRef.current = videoTrack;
+        
+        if (videoTrack) {
+            try {
+                const capabilities = (videoTrack as any).getCapabilities?.();
+                
+                // 检查是否支持闪光灯（需要后置摄像头且支持 torch 模式）
+                if (facingMode === 'environment') {
+                    const hasTorch = capabilities?.torch || false;
+                    setFlashSupported(hasTorch);
+                    if (!hasTorch) {
+                        setFlashEnabled(false);
+                    }
+                } else {
+                    // 前置摄像头不支持闪光灯
+                    setFlashSupported(false);
+                    setFlashEnabled(false);
+                }
+                
+                // 检查是否支持对焦（检查 focusMode 或 focusDistance 能力）
+                const hasFocus = capabilities?.focusMode || capabilities?.focusDistance !== undefined || false;
+                setFocusSupported(hasFocus);
+            } catch (error) {
+                // 如果获取 capabilities 失败，假设不支持
+                setFlashSupported(false);
+                setFlashEnabled(false);
+                setFocusSupported(false);
+            }
+        }
+    }, [facingMode]);
 
     // 视频约束配置
     const videoConstraints = facingMode === 'environment' 
@@ -197,15 +384,75 @@ export const AICigarScanner: React.FC = () => {
                             </Button>
                         </div>
                     ) : (
-                        <Webcam
-                            audio={false}
-                            ref={webcamRef}
-                            screenshotFormat="image/jpeg"
-                            videoConstraints={videoConstraints}
-                            onUserMedia={handleUserMedia}
-                            onUserMediaError={handleUserMediaError}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
+                        <div
+                            onClick={handleFocus}
+                            style={{ 
+                                width: '100%', 
+                                height: '100%', 
+                                position: 'relative',
+                                cursor: focusSupported ? 'crosshair' : 'default'
+                            }}
+                        >
+                            <Webcam
+                                audio={false}
+                                ref={webcamRef}
+                                screenshotFormat="image/jpeg"
+                                videoConstraints={videoConstraints}
+                                onUserMedia={handleUserMedia}
+                                onUserMediaError={handleUserMediaError}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                            {focusPoint && (
+                                <div
+                                    style={{
+                                        position: 'absolute',
+                                        left: `${focusPoint.x}%`,
+                                        top: `${focusPoint.y}%`,
+                                        transform: 'translate(-50%, -50%)',
+                                        width: '80px',
+                                        height: '80px',
+                                        border: '2px solid #ffd700',
+                                        borderRadius: '8px',
+                                        pointerEvents: 'none',
+                                        boxShadow: '0 0 20px rgba(255, 215, 0, 0.6)',
+                                        transition: 'all 0.3s ease',
+                                        opacity: focusing ? 1 : 0.7
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            position: 'absolute',
+                                            left: '50%',
+                                            top: '50%',
+                                            transform: 'translate(-50%, -50%)',
+                                            width: '4px',
+                                            height: '4px',
+                                            background: '#ffd700',
+                                            borderRadius: '50%',
+                                            boxShadow: '0 0 10px rgba(255, 215, 0, 0.8)'
+                                        }}
+                                    />
+                                </div>
+                            )}
+                            {focusing && (
+                                <div
+                                    style={{
+                                        position: 'absolute',
+                                        top: '10px',
+                                        left: '50%',
+                                        transform: 'translateX(-50%)',
+                                        background: 'rgba(0, 0, 0, 0.7)',
+                                        color: '#ffd700',
+                                        padding: '4px 12px',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        pointerEvents: 'none'
+                                    }}
+                                >
+                                    对焦中...
+                                </div>
+                            )}
+                        </div>
                     )}
                     <div style={{
                         position: 'absolute',
@@ -232,6 +479,27 @@ export const AICigarScanner: React.FC = () => {
                             onClick={toggleCamera}
                             title={facingMode === 'environment' ? '切换到前置摄像头' : '切换到后置摄像头'}
                         />
+                        {flashSupported && facingMode === 'environment' && (
+                            <Button
+                                type={flashEnabled ? 'primary' : 'default'}
+                                shape="circle"
+                                icon={flashEnabled ? <ThunderboltFilled style={{ fontSize: '20px' }} /> : <ThunderboltOutlined style={{ fontSize: '20px' }} />}
+                                size="large"
+                                style={{ 
+                                    width: '48px', 
+                                    height: '48px', 
+                                    background: flashEnabled 
+                                        ? 'rgba(255, 215, 0, 0.8)' 
+                                        : 'rgba(0,0,0,0.6)',
+                                    border: flashEnabled 
+                                        ? '2px solid rgba(255, 215, 0, 0.9)' 
+                                        : '2px solid rgba(255,255,255,0.3)',
+                                    color: flashEnabled ? '#111' : '#fff'
+                                }}
+                                onClick={() => toggleFlash()}
+                                title={flashEnabled ? '关闭闪光灯' : '打开闪光灯'}
+                            />
+                        )}
                         <Button
                             type="primary"
                             shape="circle"
