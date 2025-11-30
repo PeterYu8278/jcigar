@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { getAppConfig } from "../firebase/appConfig";
 
 // Initialize Gemini
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
@@ -176,36 +177,71 @@ export async function analyzeCigarImage(imageBase64: string): Promise<CigarAnaly
         },
     };
 
-    // 首先尝试获取可用模型列表
+    // 获取模型列表的优先级：
+    // 1. AppConfig 中配置的模型（最高优先级）
+    // 2. 从 API 动态获取的可用模型
+    // 3. 硬编码的默认模型（最低优先级）
+    
+    let configModels: string[] = [];
+    try {
+        const appConfig = await getAppConfig();
+        if (appConfig?.gemini?.models && appConfig.gemini.models.length > 0) {
+            configModels = appConfig.gemini.models;
+            console.log('✅ 从 AppConfig 获取配置的模型:', configModels);
+        }
+    } catch (error) {
+        console.warn('获取 AppConfig 失败，跳过配置的模型列表:', error);
+    }
+    
     let availableModels: string[] = [];
     try {
         availableModels = await getAvailableModels();
         if (availableModels.length > 0) {
-            console.log('✅ 找到可用模型:', availableModels);
+            console.log('✅ 从 API 获取可用模型:', availableModels);
         }
     } catch (error) {
-        console.warn('获取模型列表失败，使用默认模型列表');
+        console.warn('获取 API 模型列表失败，跳过动态模型列表');
     }
     
-    // 构建模型列表：优先使用从 API 获取的模型，然后使用默认列表
+    // 默认模型列表（作为最后的回退）
     const defaultModels = [
         "gemini-1.5-flash",     // 快速模型，通常最稳定
         "gemini-1.5-pro",       // 较新的模型
         "gemini-pro",           // 经典模型
     ];
     
-    // 合并列表，去重，优先使用 API 返回的模型
-    const modelsToTry = [
-        ...availableModels,
-        ...defaultModels.filter(m => !availableModels.includes(m))
-    ];
+    // 构建最终模型列表：按优先级合并
+    let modelsToTry: string[] = [];
     
-    // 如果列表为空，使用默认模型
-    if (modelsToTry.length === 0) {
-        modelsToTry.push(...defaultModels);
+    if (configModels.length > 0) {
+        // 如果 AppConfig 中有配置，优先使用配置的模型
+        // 同时补充 API 获取的模型和默认模型（去重）
+        modelsToTry = [
+            ...configModels,
+            ...availableModels.filter(m => !configModels.includes(m)),
+            ...defaultModels.filter(m => !configModels.includes(m) && !availableModels.includes(m))
+        ];
+        console.log('📋 使用 AppConfig 配置的模型列表（优先级最高）');
+    } else if (availableModels.length > 0) {
+        // 如果没有 AppConfig 配置，使用 API 获取的模型，补充默认模型
+        modelsToTry = [
+            ...availableModels,
+            ...defaultModels.filter(m => !availableModels.includes(m))
+        ];
+        console.log('📋 使用 API 获取的模型列表');
+    } else {
+        // 如果都没有，使用默认模型
+        modelsToTry = [...defaultModels];
+        console.log('📋 使用默认模型列表');
     }
     
-    console.log('🧪 尝试模型列表:', modelsToTry);
+    // 确保列表不为空
+    if (modelsToTry.length === 0) {
+        modelsToTry = [...defaultModels];
+        console.warn('⚠️ 模型列表为空，使用默认模型');
+    }
+    
+    console.log('🧪 最终尝试模型列表（按优先级）:', modelsToTry);
     
     let lastError: any = null;
     
