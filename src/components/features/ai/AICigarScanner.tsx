@@ -4,7 +4,6 @@ import { CameraOutlined, ReloadOutlined, ThunderboltFilled, ThunderboltOutlined,
 import Webcam from 'react-webcam';
 import { analyzeCigarImage, CigarAnalysisResult } from '../../../services/gemini/cigarRecognition';
 import { processAICigarRecognition } from '../../../services/aiCigarStorage';
-import { uploadBase64 } from '../../../services/cloudinary/create';
 import type { UploadProps } from 'antd';
 
 const { Title, Text, Paragraph } = Typography;
@@ -35,22 +34,8 @@ export const AICigarScanner: React.FC = () => {
     const saveRecognitionResult = useCallback(async (recognitionResult: CigarAnalysisResult, imageSource: string) => {
         setSaving(true);
         try {
-            // 先上传图片到 Cloudinary
-            let imageUrl: string | undefined;
-            try {
-                const uploadResult = await uploadBase64(imageSource, {
-                    folder: 'jep-cigar/cigars',
-                    publicId: `cigar-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
-                });
-                imageUrl = uploadResult.secure_url;
-            } catch (uploadError) {
-                console.warn('图片上传失败，将使用 base64:', uploadError);
-                // 如果上传失败，继续使用 base64（但数据库可能不支持，所以最好还是上传）
-                message.warning('图片上传失败，但将继续保存数据');
-            }
-
-            // 处理识别结果并保存到数据库
-            const saveResult = await processAICigarRecognition(recognitionResult, imageUrl);
+            // 不保存图片，直接保存识别结果
+            const saveResult = await processAICigarRecognition(recognitionResult, undefined);
             setSaveStatus(saveResult);
 
             // 显示成功消息
