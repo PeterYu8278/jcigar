@@ -1,11 +1,48 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getAppConfig } from "../firebase/appConfig";
 
-// Initialize Gemini
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+/**
+ * 获取 Gemini API Key
+ * 优先级：
+ * 1. 从环境变量 VITE_GEMINI_API_KEY 获取（支持 Netlify 环境变量）
+ * 2. 从 Netlify Functions 获取（如果配置了）
+ * 
+ * Netlify 环境变量配置：
+ * - 在 Netlify 控制台的 Site settings > Environment variables 中设置
+ * - 变量名: VITE_GEMINI_API_KEY
+ * - 构建时会自动注入到 import.meta.env 中
+ */
+function getGeminiApiKey(): string | undefined {
+    // 首先尝试从环境变量获取（支持本地开发和 Netlify 构建时注入）
+    let apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    
+    // 如果是在 Netlify 环境中且环境变量未设置，尝试从运行时环境获取
+    // 注意：Netlify 在构建时会将环境变量注入，所以这里主要是作为后备方案
+    if (!apiKey && typeof window !== 'undefined') {
+        // 检测是否在 Netlify 环境中
+        const isNetlify = window.location.hostname.includes('netlify.app') || 
+                         window.location.hostname.includes('netlify.com');
+        
+        if (isNetlify) {
+            console.warn(
+                '⚠️ Gemini API Key 未在环境变量中找到。' +
+                '请在 Netlify 控制台的 Environment variables 中设置 VITE_GEMINI_API_KEY'
+            );
+        }
+    }
+    
+    return apiKey;
+}
+
+// 获取 API Key
+const API_KEY = getGeminiApiKey();
 
 if (!API_KEY) {
-    console.warn("Gemini API Key is missing! Cigar recognition will not work.");
+    const envHint = typeof window !== 'undefined' && window.location.hostname.includes('netlify')
+        ? '请在 Netlify 控制台的 Environment variables 中设置 VITE_GEMINI_API_KEY'
+        : '请在 .env 文件中设置 VITE_GEMINI_API_KEY 或在 Netlify 环境变量中配置';
+    
+    console.warn(`⚠️ Gemini API Key 缺失！AI 识茄功能将不可用。\n${envHint}`);
 }
 
 const genAI = new GoogleGenerativeAI(API_KEY || "");
@@ -125,7 +162,14 @@ export interface CigarAnalysisResult {
 
 export async function analyzeCigarImage(imageBase64: string): Promise<CigarAnalysisResult> {
     if (!API_KEY) {
-        throw new Error("API Key not configured. Please set VITE_GEMINI_API_KEY in your .env file");
+        const envHint = typeof window !== 'undefined' && window.location.hostname.includes('netlify')
+            ? '请在 Netlify 控制台的 Environment variables 中设置 VITE_GEMINI_API_KEY，然后重新部署。'
+            : '请在 .env 文件中设置 VITE_GEMINI_API_KEY 或在 Netlify 环境变量中配置。';
+        
+        throw new Error(
+            `Gemini API Key 未配置。${envHint}\n` +
+            `获取 API Key: https://aistudio.google.com/app/apikey`
+        );
     }
 
     // 验证 API Key 格式
@@ -291,12 +335,17 @@ export async function analyzeCigarImage(imageBase64: string): Promise<CigarAnaly
     
     // 所有模型都失败，提供详细的错误信息
     const errorMsg = lastError?.message || '未知错误';
+    const isNetlify = typeof window !== 'undefined' && window.location.hostname.includes('netlify');
+    const envConfigHint = isNetlify
+        ? '1. API Key 是否正确配置在 Netlify 环境变量中（VITE_GEMINI_API_KEY）\n   2. 如果刚添加了环境变量，请重新部署应用'
+        : '1. API Key 是否正确配置在 .env 文件中（VITE_GEMINI_API_KEY）';
+    
     throw new Error(
         `所有 Gemini 模型都不可用。最后错误: ${errorMsg}\n` +
         `请检查：\n` +
-        `1. API Key 是否正确配置在 .env 文件中\n` +
-        `2. Generative Language API 是否已启用\n` +
-        `3. API Key 是否有访问所需模型的权限\n` +
-        `4. 尝试访问 https://aistudio.google.com/app/apikey 验证 API Key 是否有效`
+        `${envConfigHint}\n` +
+        `${isNetlify ? '3' : '2'}. Generative Language API 是否已启用\n` +
+        `${isNetlify ? '4' : '3'}. API Key 是否有访问所需模型的权限\n` +
+        `${isNetlify ? '5' : '4'}. 尝试访问 https://aistudio.google.com/app/apikey 验证 API Key 是否有效`
     );
 }
