@@ -686,34 +686,6 @@ export const AICigarScanner: React.FC = () => {
                             {result.description}
                         </Paragraph>
 
-                        {saveStatus && (
-                            <div style={{ 
-                                marginTop: '12px', 
-                                padding: '12px', 
-                                background: saveStatus.matched 
-                                    ? (saveStatus.dataComplete ? 'rgba(82, 196, 26, 0.1)' : 'rgba(250, 173, 20, 0.1)')
-                                    : 'rgba(24, 144, 255, 0.1)',
-                                border: `1px solid ${saveStatus.matched 
-                                    ? (saveStatus.dataComplete ? '#52c41a' : '#faad14')
-                                    : '#1890ff'}`,
-                                borderRadius: '8px'
-                            }}>
-                                <Text style={{ 
-                                    color: saveStatus.matched 
-                                        ? (saveStatus.dataComplete ? '#52c41a' : '#faad14')
-                                        : '#1890ff',
-                                    fontSize: '13px',
-                                    fontWeight: 500
-                                }}>
-                                    {saveStatus.matched 
-                                        ? (saveStatus.dataComplete 
-                                            ? '✅ 找到匹配记录（数据完整）'
-                                            : '⚠️ 找到匹配记录，已补充数据')
-                                        : `🆕 已创建 ${saveStatus.cigarIds.length} 条记录`}
-                                </Text>
-                            </div>
-                        )}
-
                         <Space direction="vertical" style={{ width: '100%', marginTop: '12px' }} size="middle">
                             {saving && (
                                 <div style={{
