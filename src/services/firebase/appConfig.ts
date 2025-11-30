@@ -154,6 +154,9 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
         disableGoogleLogin: true,
         disableEmailLogin: true,
       },
+      gemini: data.gemini ? {
+        models: data.gemini.models || [],
+      } : undefined,
       updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
       updatedBy: data.updatedBy || '',
     };
@@ -217,6 +220,9 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
               disableGoogleLogin: true,
               disableEmailLogin: true,
             },
+            gemini: data.gemini ? {
+              models: data.gemini.models || [],
+            } : undefined,
             updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
             updatedBy: data.updatedBy || '',
           };
@@ -235,7 +241,7 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
  * 更新应用配置
  */
 export const updateAppConfig = async (
-  updates: Partial<Pick<AppConfig, 'logoUrl' | 'appName' | 'hideFooter' | 'colorTheme' | 'whapi' | 'whapiTemplates' | 'auth'>>,
+  updates: Partial<Pick<AppConfig, 'logoUrl' | 'appName' | 'hideFooter' | 'colorTheme' | 'whapi' | 'whapiTemplates' | 'auth' | 'gemini'>>,
   updatedBy: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {

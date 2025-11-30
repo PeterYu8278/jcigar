@@ -936,3 +936,22 @@ button + button { margin-left: 8px; }
 .points-config-form .ant-select-item:hover:not(.ant-select-item-option-disabled) {
   background: rgba(255, 255, 255, 0.1) !important;
 }
+
+/* Gemini 模型下拉菜单样式 */
+.gemini-models-dropdown .ant-select-item {
+  color: #FFFFFF !important;
+}
+
+.gemini-models-dropdown .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+  background: rgba(244, 175, 37, 0.6) !important;
+  color: #FFFFFF !important;
+}
+
+.gemini-models-dropdown .ant-select-item:hover:not(.ant-select-item-option-disabled) {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #FFFFFF !important;
+}
+
+.gemini-models-dropdown .ant-select-item-option-content {
+  color: #FFFFFF !important;
+}

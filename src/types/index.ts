@@ -374,6 +374,9 @@ export interface AppConfig {
     disableGoogleLogin?: boolean;  // 禁用 Google 登录
     disableEmailLogin?: boolean;   // 禁用电邮登录
   };
+  gemini?: {
+    models?: string[];  // Gemini API 模型列表
+  };
   updatedAt: Date;
   updatedBy: string;       // 最后更新的开发者ID
 }

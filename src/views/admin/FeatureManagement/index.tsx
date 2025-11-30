@@ -1,6 +1,6 @@
 // 功能管理页面
 import React, { useState, useEffect } from 'react';
-import { Card, Switch, Button, Space, Typography, message, Spin, Tabs, Input, Checkbox, Form, Divider, Alert } from 'antd';
+import { Card, Switch, Button, Space, Typography, message, Spin, Tabs, Input, Checkbox, Form, Divider, Alert, Select } from 'antd';
 const { TextArea } = Input;
 import { SaveOutlined, ReloadOutlined, EyeOutlined, EyeInvisibleOutlined, SearchOutlined, SettingOutlined, CopyOutlined, DownloadOutlined, FileTextOutlined, RocketOutlined, CheckCircleOutlined, LoadingOutlined, DatabaseOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../../store/modules/auth';
@@ -137,6 +137,7 @@ const FeatureManagement: React.FC = () => {
           hideFooter: appConfig.hideFooter ?? false,
           disableGoogleLogin: appConfig.auth?.disableGoogleLogin ?? false,
           disableEmailLogin: appConfig.auth?.disableEmailLogin ?? false,
+          geminiModels: appConfig.gemini?.models || [],
         });
       } catch (err) {
         // Form 可能还未渲染，忽略错误
@@ -325,6 +326,10 @@ const FeatureManagement: React.FC = () => {
         disableEmailLogin: Boolean(values.disableEmailLogin),
       };
       
+      const geminiConfig = values.geminiModels && values.geminiModels.length > 0
+        ? { models: values.geminiModels }
+        : undefined;
+      
       const result = await updateAppConfig(
         {
           logoUrl: values.logoUrl,
@@ -332,6 +337,7 @@ const FeatureManagement: React.FC = () => {
           hideFooter: values.hideFooter ?? false,
           colorTheme: finalColorTheme, // 使用合并后的颜色主题
           auth: authConfig,
+          gemini: geminiConfig,
         },
         user.id
       );
@@ -450,6 +456,7 @@ const FeatureManagement: React.FC = () => {
     cloudinaryBaseFolder: string;
     appName: string;
     fcmVapidKey?: string;
+    geminiApiKey?: string;
   }): string => {
     const measurementIdLine = values.firebaseMeasurementId 
       ? `VITE_FIREBASE_MEASUREMENT_ID=${values.firebaseMeasurementId}\n`
@@ -457,6 +464,10 @@ const FeatureManagement: React.FC = () => {
     
     const fcmVapidKeyLine = values.fcmVapidKey
       ? `# FCM 配置\nVITE_FCM_VAPID_KEY=${values.fcmVapidKey}`
+      : '';
+    
+    const geminiApiKeyLine = values.geminiApiKey
+      ? `\n# Gemini API 配置\nVITE_GEMINI_API_KEY=${values.geminiApiKey}`
       : '';
     
     // FIREBASE_SERVICE_ACCOUNT 是服务器端环境变量，需要单独处理（JSON 格式）
@@ -490,7 +501,7 @@ VITE_CLOUDINARY_UPLOAD_PRESET=${values.cloudinaryUploadPreset}
 VITE_CLOUDINARY_BASE_FOLDER=${values.cloudinaryBaseFolder}
 
 # 应用配置
-VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''}`;
+VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''}${geminiApiKeyLine}`;
   };
 
   // 部署到 Netlify
@@ -531,6 +542,11 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
       // 如果提供了 FCM VAPID Key，添加到环境变量数组
       if (values.fcmVapidKey) {
         envVars.push({ key: 'VITE_FCM_VAPID_KEY', value: values.fcmVapidKey, scopes: ['all'] });
+      }
+
+      // 如果提供了 Gemini API Key，添加到环境变量数组
+      if (values.geminiApiKey) {
+        envVars.push({ key: 'VITE_GEMINI_API_KEY', value: values.geminiApiKey, scopes: ['all'] });
       }
 
       // 如果提供了 Firebase Service Account，添加到环境变量数组（服务器端变量，不使用 VITE_ 前缀）
@@ -1067,6 +1083,50 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                 unCheckedChildren={<span style={{ color: '#000' }}>启用</span>}
               />
             </Form.Item>
+
+            <Divider style={{ borderColor: 'rgba(244, 175, 37, 0.2)', margin: '24px 0' }} />
+
+            {/* Gemini API 模型设定 */}
+            <div style={{ marginBottom: 24 }}>
+              <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600 }}>
+                Gemini API 模型设定
+              </Text>
+              <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginTop: 8, marginBottom: 16 }}>
+                选择用于 AI 雪茄识别的 Gemini 模型列表。系统会按顺序尝试这些模型，直到找到一个可用的模型。
+              </Text>
+              
+              <Form.Item
+                label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>可用模型</span>}
+                name="geminiModels"
+                extra={<Text style={{ color: '#999', fontSize: '12px' }}>按住 Ctrl/Cmd 键可多选</Text>}
+              >
+                <Select
+                  mode="multiple"
+                  placeholder="选择 Gemini 模型"
+                  allowClear
+                  popupClassName="gemini-models-dropdown"
+                  style={{
+                    width: '100%',
+                  }}
+                  options={[
+                    { label: 'gemini-2.5-flash', value: 'gemini-2.5-flash' },
+                    { label: 'gemini-2.5-pro', value: 'gemini-2.5-pro' },
+                    { label: 'gemini-2.5-flash-lite', value: 'gemini-2.5-flash-lite' },
+                    { label: 'gemini-2.0-flash', value: 'gemini-2.0-flash' },
+                    { label: 'gemini-2.0-flash-001', value: 'gemini-2.0-flash-001' },
+                    { label: 'gemini-2.0-flash-lite', value: 'gemini-2.0-flash-lite' },
+                    { label: 'gemini-2.0-flash-lite-001', value: 'gemini-2.0-flash-lite-001' },
+                    { label: 'gemini-1.5-flash', value: 'gemini-1.5-flash' },
+                    { label: 'gemini-1.5-pro', value: 'gemini-1.5-pro' },
+                    { label: 'gemini-pro', value: 'gemini-pro' },
+                  ]}
+                  dropdownStyle={{
+                    background: 'rgba(26, 26, 26, 0.95)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                  }}
+                />
+              </Form.Item>
+            </div>
 
             {/* 颜色主题管理 */}
             <div style={{ marginTop: 32 }}>
@@ -1705,6 +1765,42 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                       type="text"
                       icon={showSecrets.fcmVapidKey ? <EyeOutlined style={{ color: '#ffd700' }} /> : <EyeInvisibleOutlined style={{ color: '#ffd700' }} />}
                       onClick={() => setShowSecrets(prev => ({ ...prev, fcmVapidKey: !prev.fcmVapidKey }))}
+                      style={{ border: 'none', color: '#ffd700' }}
+                    />
+                  }
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#f8f8f8',
+                  }}
+                />
+              </Form.Item>
+            </div>
+
+            <Divider style={{ borderColor: 'rgba(244, 175, 37, 0.2)', margin: '24px 0' }} />
+
+            {/* Gemini 配置 */}
+            <div style={{ marginBottom: 24 }}>
+              <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600, display: 'block', marginBottom: 16 }}>
+                Gemini API 配置（可选）
+              </Text>
+              <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 16 }}>
+                可在 <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Google AI Studio</a> 中获取 Gemini API Key。此配置用于 AI 雪茄识别功能。
+              </Text>
+              
+              <Form.Item
+                label={<span style={{ color: '#c0c0c0' }}>API Key</span>}
+                name="geminiApiKey"
+                rules={[{ required: false, message: '请输入 Gemini API Key' }]}
+              >
+                <Input
+                  type={showSecrets.geminiApiKey ? 'text' : 'password'}
+                  placeholder="AIzaSy..."
+                  suffix={
+                    <Button
+                      type="text"
+                      icon={showSecrets.geminiApiKey ? <EyeOutlined style={{ color: '#ffd700' }} /> : <EyeInvisibleOutlined style={{ color: '#ffd700' }} />}
+                      onClick={() => setShowSecrets(prev => ({ ...prev, geminiApiKey: !prev.geminiApiKey }))}
                       style={{ border: 'none', color: '#ffd700' }}
                     />
                   }
