@@ -377,6 +377,9 @@ export interface AppConfig {
   gemini?: {
     models?: string[];  // Gemini API 模型列表
   };
+  aiCigar?: {
+    enableDataStorage?: boolean;  // AI识茄是否启用数据存储（默认 true）
+  };
   updatedAt: Date;
   updatedBy: string;       // 最后更新的开发者ID
 }

@@ -160,7 +160,10 @@ export interface CigarAnalysisResult {
     possibleSizes?: string[];  // 该品牌可能的其他尺寸（如 ["Robusto", "Torpedo", "Churchill"]）
 }
 
-export async function analyzeCigarImage(imageBase64: string): Promise<CigarAnalysisResult> {
+export async function analyzeCigarImage(
+    imageBase64: string,
+    userHint?: string
+): Promise<CigarAnalysisResult> {
     if (!API_KEY) {
         const envHint = typeof window !== 'undefined' && window.location.hostname.includes('netlify')
             ? '请在 Netlify 控制台的 Environment variables 中设置 VITE_GEMINI_API_KEY，然后重新部署。'
@@ -177,8 +180,13 @@ export async function analyzeCigarImage(imageBase64: string): Promise<CigarAnaly
         console.warn('⚠️  API Key 格式可能不正确。Gemini API Key 通常以 "AIza" 开头');
     }
 
+    // 构建提示词，如果用户提供了提示，则加入
+    const userHintSection = userHint 
+        ? `\n\nIMPORTANT USER HINT: The user has provided the following information about this cigar: "${userHint}". Please use this information to improve your identification accuracy. If the user's hint matches what you see in the image, prioritize the user's information. If there's a conflict, note it in the confidence score.`
+        : '';
+
     const prompt = `
-    Analyze this image of a cigar. Identify the brand, specific name (vitola if possible), origin, flavor profile, strength, construction details, and expected tasting notes for different sections.
+    Analyze this image of a cigar. Identify the brand, specific name (vitola if possible), origin, flavor profile, strength, construction details, and expected tasting notes for different sections.${userHintSection}
     Return the result strictly as a JSON object with the following keys:
     - brand: string (brand name only, e.g., "Cohiba", "Montecristo")
     - brandDescription: string (a brief description of the brand's history and characteristics, in Chinese, 2-3 sentences. If you cannot determine, use empty string "")

@@ -1,10 +1,14 @@
-import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { Button, Spin, Card, Typography, Space, message, Tag, Divider, Upload, Modal } from 'antd';
-import { CameraOutlined, ReloadOutlined, ThunderboltFilled, ThunderboltOutlined, LoadingOutlined, UploadOutlined, SwapOutlined } from '@ant-design/icons';
+import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
+import { Button, Spin, Card, Typography, Space, message, Tag, Divider, Upload, AutoComplete, Image } from 'antd';
+import { CameraOutlined, ReloadOutlined, ThunderboltFilled, ThunderboltOutlined, LoadingOutlined, UploadOutlined, SwapOutlined, EditOutlined } from '@ant-design/icons';
 import Webcam from 'react-webcam';
 import { analyzeCigarImage, CigarAnalysisResult } from '../../../services/gemini/cigarRecognition';
 import { processAICigarRecognition } from '../../../services/aiCigarStorage';
+import { getCigars, getBrands } from '../../../services/firebase/firestore';
+import { findCigarByBrandAndName } from '../../../services/aiCigarStorage';
+import { getAppConfig } from '../../../services/firebase/appConfig';
 import type { UploadProps } from 'antd';
+import type { Cigar, Brand } from '../../../types';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -27,11 +31,24 @@ export const AICigarScanner: React.FC = () => {
         matched: boolean;
         dataComplete: boolean;
         cigarIds: string[];
+        cigars?: Cigar[];
     } | null>(null);
+    const [userHint, setUserHint] = useState<string>('');
+    const [cigars, setCigars] = useState<Cigar[]>([]);
+    const [brands, setBrands] = useState<Brand[]>([]);
+    const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+    const [matchedCigars, setMatchedCigars] = useState<Cigar[]>([]);
+    const [dataStorageEnabled, setDataStorageEnabled] = useState<boolean>(true);
 
     // 保存识别结果到数据库（内部函数，不暴露给用户）
     // 必须在 handleAnalyze 之前定义，避免依赖循环
     const saveRecognitionResult = useCallback(async (recognitionResult: CigarAnalysisResult, imageSource: string) => {
+        // 检查是否启用数据存储
+        if (!dataStorageEnabled) {
+            message.info('数据存储已禁用，识别结果不会保存到数据库');
+            return;
+        }
+
         setSaving(true);
         try {
             // 不保存图片，直接保存识别结果
@@ -55,15 +72,105 @@ export const AICigarScanner: React.FC = () => {
         } finally {
             setSaving(false);
         }
+    }, [dataStorageEnabled]);
+
+    // 加载品牌和雪茄列表用于自动完成
+    useEffect(() => {
+        const loadSuggestions = async () => {
+            setLoadingSuggestions(true);
+            try {
+                const [cigarsData, brandsData] = await Promise.all([
+                    getCigars(),
+                    getBrands()
+                ]);
+                setCigars(cigarsData);
+                setBrands(brandsData);
+            } catch (error) {
+                console.error('Failed to load suggestions:', error);
+            } finally {
+                setLoadingSuggestions(false);
+            }
+        };
+        loadSuggestions();
     }, []);
+
+    // 加载 AI识茄 数据存储配置
+    useEffect(() => {
+        const loadConfig = async () => {
+            try {
+                const config = await getAppConfig();
+                if (config) {
+                    setDataStorageEnabled(config.aiCigar?.enableDataStorage ?? true);
+                }
+            } catch (error) {
+                console.error('Failed to load AI Cigar config:', error);
+            }
+        };
+        loadConfig();
+    }, []);
+
+    // 生成自动完成选项
+    const autocompleteOptions = useMemo(() => {
+        const options: Array<{ value: string; label: string }> = [];
+        
+        // 添加品牌选项
+        brands.forEach(brand => {
+            options.push({
+                value: brand.name,
+                label: `品牌: ${brand.name}${brand.country ? ` (${brand.country})` : ''}`
+            });
+        });
+        
+        // 添加雪茄选项（品牌 + 名称）
+        cigars.forEach(cigar => {
+            const fullName = cigar.brand && cigar.name 
+                ? `${cigar.brand} ${cigar.name}`
+                : cigar.name || '';
+            if (fullName) {
+                options.push({
+                    value: fullName,
+                    label: `雪茄: ${fullName}${cigar.size ? ` (${cigar.size})` : ''}`
+                });
+            }
+        });
+        
+        // 去重并按字母排序
+        const uniqueOptions = Array.from(
+            new Map(options.map(opt => [opt.value, opt])).values()
+        ).sort((a, b) => a.value.localeCompare(b.value));
+        
+        return uniqueOptions;
+    }, [brands, cigars]);
+
+    // 过滤自动完成选项
+    const filterOptions = (inputValue: string) => {
+        if (!inputValue) return autocompleteOptions;
+        const lowerInput = inputValue.toLowerCase();
+        return autocompleteOptions.filter(opt => 
+            opt.value.toLowerCase().includes(lowerInput) ||
+            opt.label.toLowerCase().includes(lowerInput)
+        );
+    };
 
     const handleAnalyze = useCallback(async (imageSrc: string) => {
         setAnalyzing(true);
         setResult(null);
         setSaveStatus(null); // 重置保存状态
+        setMatchedCigars([]); // 重置匹配的雪茄
         try {
-            const data = await analyzeCigarImage(imageSrc);
+            // 如果用户提供了提示，传递给识别函数
+            const data = await analyzeCigarImage(imageSrc, userHint || undefined);
             setResult(data);
+            
+            // 尝试查找匹配的雪茄以获取图片
+            try {
+                const matchedCigar = await findCigarByBrandAndName(data.brand, data.name);
+                if (matchedCigar) {
+                    setMatchedCigars([matchedCigar]);
+                }
+            } catch (error) {
+                console.warn('Failed to find matched cigar for images:', error);
+            }
             
             // 根据可信度显示提示
             if (data.confidence < 0.5) {
@@ -82,7 +189,7 @@ export const AICigarScanner: React.FC = () => {
         } finally {
             setAnalyzing(false);
         }
-    }, [saveRecognitionResult]);
+    }, [saveRecognitionResult, userHint]);
 
     const capture = useCallback(() => {
         if (webcamRef.current) {
@@ -235,6 +342,8 @@ export const AICigarScanner: React.FC = () => {
         setImgSrc(null);
         setResult(null);
         setSaveStatus(null);
+        setUserHint(''); // 重置用户提示
+        setMatchedCigars([]); // 重置匹配的雪茄
     };
 
     // 组件卸载时清理
@@ -341,6 +450,44 @@ export const AICigarScanner: React.FC = () => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', alignItems: 'center' }}>
+            {/* 手动输入雪茄型号（可选） */}
+            {!imgSrc && (
+                <Card 
+                    style={{ 
+                        width: '100%', 
+                        marginBottom: '16px', 
+                        background: 'rgba(255,255,255,0.05)', 
+                        border: '1px solid #333' 
+                    }}
+                    size="small"
+                >
+                    <Space direction="vertical" style={{ width: '100%' }} size="small">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <EditOutlined style={{ color: '#ffd700' }} />
+                            <Text style={{ color: '#fff', fontSize: '14px', fontWeight: 500 }}>
+                                手动输入雪茄型号（可选，可提高识别准确性）
+                            </Text>
+                        </div>
+                        <AutoComplete
+                            style={{ width: '100%' }}
+                            placeholder="输入品牌或雪茄名称，例如：Cohiba Robusto"
+                            value={userHint}
+                            onChange={setUserHint}
+                            options={filterOptions(userHint)}
+                            filterOption={false}
+                            allowClear
+                            disabled={analyzing || loadingSuggestions}
+                            notFoundContent={loadingSuggestions ? <Spin size="small" /> : null}
+                        />
+                        {userHint && (
+                            <Text type="secondary" style={{ fontSize: '12px', color: '#aaa' }}>
+                                提示：已输入 "{userHint}"，识别时将优先考虑此信息
+                            </Text>
+                        )}
+                    </Space>
+                </Card>
+            )}
+            
             {!imgSrc ? (
                 <div style={{ position: 'relative', width: '100%', height: '300px', background: '#000', borderRadius: '12px', overflow: 'hidden' }}>
                     {cameraError ? (
@@ -670,6 +817,106 @@ export const AICigarScanner: React.FC = () => {
                         <Paragraph style={{ color: '#aaa', marginTop: '6px', background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '4px' }}>
                             {result.description}
                         </Paragraph>
+
+                        {/* 显示匹配雪茄的图片 */}
+                        {(() => {
+                            // 优先使用 saveStatus 中的 cigars，否则使用 matchedCigars
+                            const cigarsToShow = saveStatus?.cigars && saveStatus.cigars.length > 0 
+                                ? saveStatus.cigars 
+                                : matchedCigars;
+                            
+                            if (!cigarsToShow || cigarsToShow.length === 0) {
+                                return null;
+                            }
+                            
+                            // 收集所有雪茄的图片（最多5张）
+                            // 过滤掉无效的图片 URL（如 404 的 Cloudinary 图片）
+                            const allImages: string[] = [];
+                            cigarsToShow.forEach(cigar => {
+                                if (cigar.images && cigar.images.length > 0) {
+                                    cigar.images.forEach(img => {
+                                        if (img && 
+                                            typeof img === 'string' && 
+                                            img.trim().length > 0 &&
+                                            !allImages.includes(img) && 
+                                            allImages.length < 5) {
+                                            // 基本验证：确保是有效的 URL
+                                            try {
+                                                new URL(img);
+                                                allImages.push(img);
+                                            } catch {
+                                                // 如果不是完整 URL，可能是相对路径，也允许
+                                                if (img.startsWith('http') || img.startsWith('//') || img.startsWith('/')) {
+                                                    allImages.push(img);
+                                                }
+                                            }
+                                        }
+                                    });
+                                }
+                            });
+
+                            if (allImages.length > 0) {
+                                return (
+                                    <>
+                                        <Divider style={{ margin: '12px 0', borderColor: '#333' }} />
+                                        <div style={{ 
+                                            marginTop: '4px', 
+                                            background: 'rgba(0,0,0,0.2)', 
+                                            padding: '12px', 
+                                            borderRadius: '8px',
+                                            border: '1px solid rgba(255,255,255,0.1)'
+                                        }}>
+                                            <Text type="secondary" style={{ 
+                                                fontSize: '13px', 
+                                                display: 'block', 
+                                                marginBottom: '12px',
+                                                fontWeight: 500,
+                                                color: '#ffd700'
+                                            }}>
+                                                雪茄图片 ({allImages.length} 张)
+                                            </Text>
+                                            <Image.PreviewGroup>
+                                                <div style={{ 
+                                                    display: 'grid', 
+                                                    gridTemplateColumns: `repeat(${Math.min(allImages.length, 3)}, 1fr)`,
+                                                    gap: '8px'
+                                                }}>
+                                                    {allImages.map((imgUrl, index) => (
+                                                        <div 
+                                                            key={index}
+                                                            style={{
+                                                                position: 'relative',
+                                                                width: '100%',
+                                                                aspectRatio: '1',
+                                                                borderRadius: '8px',
+                                                                overflow: 'hidden',
+                                                                background: '#000',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            <Image
+                                                                src={imgUrl}
+                                                                alt={`雪茄图片 ${index + 1}`}
+                                                                style={{
+                                                                    width: '100%',
+                                                                    height: '100%',
+                                                                    objectFit: 'cover'
+                                                                }}
+                                                                preview={{
+                                                                    mask: '预览'
+                                                                }}
+                                                                fallback="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzMzMzMzMyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM2NjY2NjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7lm77niYfliqDovb3lpLHotKU8L3RleHQ+PC9zdmc+"
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </Image.PreviewGroup>
+                                        </div>
+                                    </>
+                                );
+                            }
+                            return null;
+                        })()}
 
                         <Space direction="vertical" style={{ width: '100%', marginTop: '12px' }} size="middle">
                             {saving && (

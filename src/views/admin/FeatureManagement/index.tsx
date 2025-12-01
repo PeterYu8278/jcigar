@@ -81,6 +81,7 @@ const FeatureManagement: React.FC = () => {
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   const [appConfigForm] = Form.useForm();
   const [savingAppConfig, setSavingAppConfig] = useState(false);
+  const [aiCigarStorageEnabled, setAiCigarStorageEnabled] = useState<boolean>(true);
   const [pendingColorChanges, setPendingColorChanges] = useState<Partial<ColorThemeConfig>>({});
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [generatedEnv, setGeneratedEnv] = useState<string>('');
@@ -144,6 +145,13 @@ const FeatureManagement: React.FC = () => {
       }
     }
   }, [activeTab, appConfig, appConfigForm]);
+
+  // 加载 AI识茄 存储数据配置
+  useEffect(() => {
+    if (appConfig) {
+      setAiCigarStorageEnabled(appConfig.aiCigar?.enableDataStorage ?? true);
+    }
+  }, [appConfig]);
 
   // 当切换到 whapi 标签页时，设置表单值
   useEffect(() => {
@@ -2263,6 +2271,51 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                           }}>
                             {feature.route}
                           </div>
+                          {/* AI识茄功能的存储数据开关 */}
+                          {feature.key === 'ai-cigar' && activeTab === 'frontend' && (
+                            <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <Text style={{ color: '#c0c0c0', fontSize: '13px' }}>
+                                  启用数据存储
+                                </Text>
+                                <Switch
+                                  checked={aiCigarStorageEnabled}
+                                  onChange={async (checked) => {
+                                    setAiCigarStorageEnabled(checked);
+                                    // 立即保存配置
+                                    if (user?.id) {
+                                      try {
+                                        const result = await updateAppConfig(
+                                          {
+                                            aiCigar: {
+                                              enableDataStorage: checked,
+                                            },
+                                          },
+                                          user.id
+                                        );
+                                        if (result.success) {
+                                          message.success('配置已保存');
+                                          await loadAppConfig();
+                                        } else {
+                                          message.error(result.error || '保存失败');
+                                          setAiCigarStorageEnabled(!checked); // 恢复原值
+                                        }
+                                      } catch (error) {
+                                        message.error('保存失败');
+                                        setAiCigarStorageEnabled(!checked); // 恢复原值
+                                      }
+                                    }
+                                  }}
+                                  checkedChildren="启用"
+                                  unCheckedChildren="禁用"
+                                  size="small"
+                                />
+                              </div>
+                              <Text style={{ color: '#999', fontSize: '12px', display: 'block', marginTop: '4px' }}>
+                                控制AI识茄功能是否将识别结果保存到数据库
+                              </Text>
+                            </div>
+                          )}
                         </div>
                         <Space>
                           <Button

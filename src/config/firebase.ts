@@ -1,6 +1,6 @@
 // Firebase配置文件
 import { initializeApp } from 'firebase/app';
-import { getFirestore, initializeFirestore, persistentLocalCache } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
 
@@ -47,9 +47,12 @@ const app = initializeApp(firebaseConfig);
 
 // 初始化Firebase服务
 // 使用新的 FirestoreSettings.cache API 替代已弃用的 enableIndexedDbPersistence
+// 启用多标签页同步以避免持久化缓存错误
 export const db = typeof window !== 'undefined'
   ? initializeFirestore(app, {
-      localCache: persistentLocalCache()
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager() // 启用多标签页同步
+      })
     })
   : getFirestore(app);
 export const auth = getAuth(app);
