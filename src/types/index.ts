@@ -126,7 +126,7 @@ export interface Cigar {
   brandId?: string; // 关联品牌ID
   origin: string;
   size: string;
-  strength: 'mild' | 'medium' | 'full';
+  strength: 'mild' | 'mild-medium' | 'medium' | 'medium-full' | 'full';
   price: number;
   images: string[];
   description: string;

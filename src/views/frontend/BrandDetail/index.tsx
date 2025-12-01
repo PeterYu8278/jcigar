@@ -275,7 +275,9 @@ const BrandDetail: React.FC = () => {
                   // 强度翻译
                   const strengthMap: Record<string, string> = {
                     'mild': t('inventory.mild') || '温和',
+                    'mild-medium': t('inventory.mildMedium') || '温和-中等',
                     'medium': t('inventory.medium') || '中等',
+                    'medium-full': t('inventory.mediumFull') || '中等-浓郁',
                     'full': t('inventory.full') || '浓郁'
                   };
                   

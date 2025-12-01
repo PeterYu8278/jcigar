@@ -2,17 +2,20 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Table, Button, Tag, Space, Typography, Input, Select, Modal, Form, InputNumber, message, Dropdown, Checkbox, Upload, Row, Col, App, Divider } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, WarningOutlined, UploadOutlined, DownloadOutlined, MinusCircleOutlined, FilePdfOutlined, FileImageOutlined, EyeOutlined } from '@ant-design/icons'
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, WarningOutlined, UploadOutlined, DownloadOutlined, MinusCircleOutlined, FilePdfOutlined, FileImageOutlined, EyeOutlined, ThunderboltOutlined, LoadingOutlined } from '@ant-design/icons'
 import type { Cigar, Brand, InboundOrder, OutboundOrder, InventoryMovement, Event } from '../../../types'
 import type { UploadFile } from 'antd'
 import { getCigars, createDocument, updateDocument, deleteDocument, COLLECTIONS, getAllOrders, getUsers, getBrands, getBrandById, getAllTransactions, getAllInboundOrders, getAllOutboundOrders, getAllInventoryMovements, createInboundOrder, deleteInboundOrder, updateInboundOrder, getInboundOrdersByReferenceNo, createOutboundOrder, deleteOutboundOrder, getEvents } from '../../../services/firebase/firestore'
 import ImageUpload from '../../../components/common/ImageUpload'
 import { getModalTheme, getResponsiveModalConfig, getModalThemeStyles } from '../../../config/modalTheme'
 import { useCloudinary } from '../../../hooks/useCloudinary'
+import { analyzeCigarByName } from '../../../services/gemini/cigarRecognition'
 
 const { Title } = Typography
 const { Search } = Input
 const { Option } = Select
+
+const DEFAULT_CIGAR_IMAGE = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQwIiB5PSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Q2lnYXI8L3RleHQ+Cjwvc3ZnPgo='
 
 const AdminInventory: React.FC = () => {
   const { t } = useTranslation()
@@ -44,6 +47,7 @@ const AdminInventory: React.FC = () => {
   const [imageList, setImageList] = useState<any[]>([])
   const [pagination, setPagination] = useState<{ current: number; pageSize: number }>({ current: 1, pageSize: 10 })
   const [cigarImages, setCigarImages] = useState<string[]>([]) // 雪茄图片列表
+  const [aiRecognizing, setAiRecognizing] = useState(false) // AI识别状态
   const [inModalOpen, setInModalOpen] = useState(false)
   const [inStatsOpen, setInStatsOpen] = useState(false)
   const [outStatsOpen, setOutStatsOpen] = useState(false)
@@ -172,7 +176,9 @@ const AdminInventory: React.FC = () => {
   const getStrengthColor = (strength: string) => {
     switch (strength) {
       case 'mild': return 'green'
+      case 'mild-medium': return 'lime'
       case 'medium': return 'orange'
+      case 'medium-full': return 'volcano'
       case 'full': return 'red'
       default: return 'default'
     }
@@ -181,7 +187,9 @@ const AdminInventory: React.FC = () => {
   const getStrengthText = (strength: string) => {
     switch (strength) {
       case 'mild': return t('shop.mild')
+      case 'mild-medium': return t('shop.mildMedium')
       case 'medium': return t('shop.medium')
+      case 'medium-full': return t('shop.mediumFull')
       case 'full': return t('shop.full')
       default: return t('profile.unknown')
     }
@@ -325,22 +333,32 @@ const AdminInventory: React.FC = () => {
       render: (name: string, record: any) => {
         // 根据品牌名称找到对应的品牌信息
         const brandInfo = brandList.find(brand => brand.name === record.brand)
+        const productImage = record.images && record.images.length > 0 ? record.images[0] : DEFAULT_CIGAR_IMAGE
         return (
-          <div>
-            <div style={{ fontWeight: 'bold' }}>{name}</div>
-            <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', display: 'flex', alignItems: 'center', gap: 4 }}>
-              {brandInfo?.logo && (
-                <img 
-                  src={brandInfo.logo} 
-                  alt={record.brand} 
-                  style={{ width: 16, height: 16, borderRadius: 2 }}
-                />
-              )}
-              <span>{record.brand}</span>
-              {brandInfo?.country && (
-                <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>- {brandInfo.country}</span>
-              )}
-              <span>- {record.origin}</span>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+            {/* 产品图像 */}
+            <img 
+              src={productImage} 
+              alt={name} 
+              style={{ 
+                width: '60px', 
+                height: '100px', 
+                objectFit: 'cover',
+                borderRadius: '8px',
+                border: '2px solid rgba(244, 175, 37, 0.3)',
+                flexShrink: 0,
+                background: 'rgba(255, 255, 255, 0.05)'
+              }}
+            />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 'bold' }}>{name}</div>
+              <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span>{record.brand}</span>
+                {brandInfo?.country && (
+                  <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>- {brandInfo.country}</span>
+                )}
+                <span>- {record.origin}</span>
+              </div>
             </div>
           </div>
         )
@@ -460,8 +478,6 @@ const AdminInventory: React.FC = () => {
                 size: record.size,
                 strength: record.strength,
                 price: record.price,
-                stock: getComputedStock((record as any)?.id) ?? 0,
-                minStock: (record as any)?.inventory?.minStock ?? 0,
                 reserved: (record as any)?.inventory?.reserved ?? 0,
                 description: record.description || '',
                 wrapper: record.construction?.wrapper || '',
@@ -1297,7 +1313,9 @@ const AdminInventory: React.FC = () => {
                      className="points-config-form"
                    >
              <Option value="mild">{t('inventory.mild')} </Option>
+             <Option value="mild-medium">{t('inventory.mildMedium')}</Option>
              <Option value="medium">{t('inventory.medium')}</Option>
+             <Option value="medium-full">{t('inventory.mediumFull')}</Option>
              <Option value="full">{t('inventory.full')}</Option>
                   </Select>
                    <Select 
@@ -1476,8 +1494,15 @@ const AdminInventory: React.FC = () => {
                             {/* 图片、信息和按钮（水平布局） */}
                             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                             <div style={{ width: 80, height: 80, borderRadius: 10, overflow: 'hidden', background: 'rgba(255,255,255,0.08)', flexShrink: 0 }}>
-                              {/* 占位图，可接入真实图片字段 */}
-                              <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))' }} />
+                              <img 
+                                src={(record as any).images && (record as any).images.length > 0 ? (record as any).images[0] : DEFAULT_CIGAR_IMAGE}
+                                alt={record.name}
+                                style={{ 
+                                  width: '100%', 
+                                  height: '100%', 
+                                  objectFit: 'cover'
+                                }}
+                              />
                             </div>
                             <div style={{ flex: 1 }}>
                               <div style={{ fontSize: 12, color: 'rgba(224,214,196,0.6)' }}>{record.size || ''} {record.size ? '|' : ''} SKU: {(record as any)?.sku || record.id}</div>
@@ -1517,8 +1542,6 @@ const AdminInventory: React.FC = () => {
                                 size: (record as any).size,
                                 strength: (record as any).strength,
                                 price: (record as any).price,
-                                stock: getComputedStock((record as any)?.id) ?? 0,
-                                minStock: (record as any)?.inventory?.minStock ?? 0,
                                 reserved: (record as any)?.inventory?.reserved ?? 0,
                                 description: (record as any).description || '',
                                 wrapper: (record as any).construction?.wrapper || '',
@@ -2749,14 +2772,6 @@ const AdminInventory: React.FC = () => {
                       }
                     },
                     {
-                      title: t('inventory.productTypes'),
-                      dataIndex: 'productCount',
-                      key: 'productCount',
-                      render: (count: number) => (
-                        <span>{count} {t('inventory.types')}</span>
-                      )
-                    },
-                    {
                       title: t('inventory.totalQuantity'),
                       dataIndex: 'totalQuantity',
                       key: 'totalQuantity',
@@ -3940,7 +3955,7 @@ const AdminInventory: React.FC = () => {
           </div>
         )}
       >
-        <Form form={form} layout="horizontal" labelCol={{ flex: '100px' }} wrapperCol={{ flex: 'auto' }} className="dark-theme-form" onFinish={async (values: any) => {
+        <Form form={form} layout="horizontal" labelCol={{ flex: isMobile ? '100px' : '150px' }} wrapperCol={{ flex: 'auto' }} className="dark-theme-form" onFinish={async (values: any) => {
           setLoading(true)
           try {
             // 根据品牌名称找到对应的品牌ID
@@ -3979,12 +3994,12 @@ const AdminInventory: React.FC = () => {
               size: values.size,
               strength: values.strength,
               price: values.price,
-              sku: values.sku,
+              sku: (editing as any)?.sku, // 保留原有SKU值
               description: values.description || '',
               images: cigarImages,
               inventory: {
                 // 库存实时由日志计算，不写入 stock 字段
-                minStock: values.minStock ?? 0,
+                minStock: editing?.inventory?.minStock ?? 0, // 保留原有最小库存值
                 reserved: editing?.inventory?.reserved ?? 0,
                 stock: editing?.inventory?.stock ?? 0,
               } as any,
@@ -4018,11 +4033,163 @@ const AdminInventory: React.FC = () => {
             setLoading(false)
           }
         }}>
-          <Form.Item label={isMobile ? t('inventory.productName') : t('common.name')} name="name" rules={[{ required: true, message: t('common.pleaseInputName') }]}> 
-            <Input />
+          <Form.Item label="图片" name="images">
+            <div>
+              <Upload
+                listType="picture-card"
+                fileList={cigarImages.map((url, idx) => ({
+                  uid: `image-${idx}`,
+                  name: `image-${idx + 1}.jpg`,
+                  status: 'done' as const,
+                  url: url
+                }))}
+                beforeUpload={async (file) => {
+                  try {
+                    const result = await cloudinaryUpload(file, { folder: 'cigars' });
+                    setCigarImages(prev => [...prev, result.secure_url]);
+                    return false; // 阻止自动上传
+                  } catch (error) {
+                    message.error('图片上传失败');
+                    return false;
+                  }
+                }}
+                onRemove={(file) => {
+                  const index = cigarImages.findIndex((url, idx) => `image-${idx}` === file.uid);
+                  if (index !== -1) {
+                    setCigarImages(prev => prev.filter((_, i) => i !== index));
+                  }
+                }}
+                accept="image/*"
+              >
+                {cigarImages.length < 5 && (
+                  <div>
+                    <PlusOutlined style={{ color: '#FFFFFF' }} />
+                    <div style={{ marginTop: 8, color: '#FFFFFF' }}>上传</div>
+                  </div>
+                )}
+              </Upload>
+              <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 8 }}>
+                最多上传 5 张图片
+              </div>
+            </div>
           </Form.Item>
-          <Form.Item label="SKU" name="sku">
-            <Input />
+          <Form.Item label={t('inventory.productName')} name="name" rules={[{ required: true, message: t('common.pleaseInputName') }]}> 
+            <Input 
+              addonAfter={
+                <Button
+                  type="text"
+                  icon={aiRecognizing ? <LoadingOutlined /> : <ThunderboltOutlined />}
+                  loading={aiRecognizing}
+                  onClick={async (e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    const productName = form.getFieldValue('name')
+                    if (!productName || !productName.trim()) {
+                      message.warning('请先输入产品名称')
+                      return
+                    }
+                    
+                    setAiRecognizing(true)
+                    try {
+                      const result = await analyzeCigarByName(productName.trim())
+                      
+                      // 填充表单字段
+                      const updates: any = {}
+                      
+                      // 规格（从name中提取尺寸，或使用result中的size信息）
+                      if (result.name) {
+                        // 尝试从完整名称中提取尺寸
+                        const brandMatch = result.name.match(new RegExp(`^${result.brand}\\s+(.+)`, 'i'))
+                        if (brandMatch && brandMatch[1]) {
+                          updates.size = brandMatch[1].trim()
+                        } else if (result.name.includes(' ')) {
+                          const parts = result.name.split(' ')
+                          if (parts.length > 1) {
+                            updates.size = parts.slice(1).join(' ')
+                          }
+                        }
+                      }
+                      
+                      // 强度（转换格式）
+                      const strengthMap: Record<string, string> = {
+                        'Mild': 'mild',
+                        'Mild-Medium': 'mild-medium',
+                        'Medium': 'medium',
+                        'Medium-Full': 'medium-full',
+                        'Full': 'full',
+                        'Unknown': 'medium'
+                      }
+                      if (result.strength) {
+                        updates.strength = strengthMap[result.strength] || 'medium'
+                      }
+                      
+                      // 描述
+                      if (result.description) {
+                        updates.description = result.description
+                      }
+                      
+                      // 构造信息
+                      if (result.wrapper) {
+                        updates.wrapper = result.wrapper
+                      }
+                      if (result.binder) {
+                        updates.binder = result.binder
+                      }
+                      if (result.filler) {
+                        updates.filler = result.filler
+                      }
+                      
+                      // 品吸笔记
+                      if (result.footTasteNotes && result.footTasteNotes.length > 0) {
+                        updates.footTasteNotes = result.footTasteNotes
+                      }
+                      if (result.bodyTasteNotes && result.bodyTasteNotes.length > 0) {
+                        updates.bodyTasteNotes = result.bodyTasteNotes
+                      }
+                      if (result.headTasteNotes && result.headTasteNotes.length > 0) {
+                        updates.headTasteNotes = result.headTasteNotes
+                      }
+                      
+                      // 风味特征（标签）
+                      if (result.flavorProfile && result.flavorProfile.length > 0) {
+                        updates.tags = result.flavorProfile
+                      }
+                      
+                      // 品牌（如果表单中没有）
+                      if (result.brand && !form.getFieldValue('brand')) {
+                        updates.brand = result.brand
+                      }
+                      
+                      // 产地（如果表单中没有）
+                      if (result.origin && !form.getFieldValue('origin')) {
+                        updates.origin = result.origin
+                      }
+                      
+                      // 批量设置表单值
+                      form.setFieldsValue(updates)
+                      
+                      message.success(`AI识别完成！可信度: ${Math.round(result.confidence * 100)}%`)
+                    } catch (error: any) {
+                      console.error('AI识别失败:', error)
+                      message.error(`AI识别失败: ${error.message || '未知错误'}`)
+                    } finally {
+                      setAiRecognizing(false)
+                    }
+                  }}
+                  style={{ 
+                    background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                    color: '#111',
+                    fontWeight: 600,
+                    border: 'none',
+                    padding: '0 12px',
+                    height: '100%'
+                  }}
+                  title="AI识笳"
+                >
+                  {isMobile ? '' : 'AI识笳'}
+                </Button>
+              }
+            />
           </Form.Item>
           <Form.Item label={t('inventory.brand')} name="brand" rules={[{ required: true, message: t('common.pleaseInputBrand') }]}>
             <Select
@@ -4075,17 +4242,13 @@ const AdminInventory: React.FC = () => {
           <Form.Item label={t('inventory.strength')} name="strength" rules={[{ required: true, message: t('common.pleaseSelectStrength') }]}>
             <Select>
               <Option value="mild">{t('inventory.mild')}</Option>
+              <Option value="mild-medium">{t('inventory.mildMedium')}</Option>
               <Option value="medium">{t('inventory.medium')}</Option>
+              <Option value="medium-full">{t('inventory.mediumFull')}</Option>
               <Option value="full">{t('inventory.full')}</Option>
             </Select>
           </Form.Item>
           <Form.Item label={t('inventory.price')} name="price" rules={[{ required: true, message: t('common.pleaseInputPrice') }]}> 
-            <InputNumber min={0} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item label={isMobile ? t('inventory.stock') : t('inventory.currentStock')} name="stock"> 
-            <InputNumber min={0} style={{ width: '100%' }} disabled readOnly />
-          </Form.Item>
-          <Form.Item label={t('inventory.minStock')} name="minStock">
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
           
@@ -4093,64 +4256,82 @@ const AdminInventory: React.FC = () => {
             <Input.TextArea rows={3} placeholder="请输入雪茄描述" />
           </Form.Item>
           
-          <Form.Item label="图片" name="images">
-            <div>
-              <Upload
-                listType="picture-card"
-                fileList={cigarImages.map((url, idx) => ({
-                  uid: `image-${idx}`,
-                  name: `image-${idx + 1}.jpg`,
-                  status: 'done' as const,
-                  url: url
-                }))}
-                beforeUpload={async (file) => {
-                  try {
-                    const result = await cloudinaryUpload(file, { folder: 'cigars' });
-                    setCigarImages(prev => [...prev, result.secure_url]);
-                    return false; // 阻止自动上传
-                  } catch (error) {
-                    message.error('图片上传失败');
-                    return false;
-                  }
-                }}
-                onRemove={(file) => {
-                  const index = cigarImages.findIndex((url, idx) => `image-${idx}` === file.uid);
-                  if (index !== -1) {
-                    setCigarImages(prev => prev.filter((_, i) => i !== index));
-                  }
-                }}
-                accept="image/*"
-              >
-                {cigarImages.length < 5 && (
-                  <div>
-                    <PlusOutlined />
-                    <div style={{ marginTop: 8 }}>上传</div>
-                  </div>
-                )}
-              </Upload>
-              <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 8 }}>
-                最多上传 5 张图片
-              </div>
-            </div>
-          </Form.Item>
+          <div style={{ 
+            margin: '16px 0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '12px'
+          }}>
+            <div style={{
+              flex: 1,
+              height: '1px',
+              background: 'linear-gradient(to right, transparent, #FDE08D, #C48D3A)'
+            }} />
+            <span style={{ 
+              background: 'linear-gradient(to right, #FDE08D, #C48D3A)', 
+              WebkitBackgroundClip: 'text', 
+              backgroundClip: 'text',
+              color: 'transparent',
+              fontWeight: 600,
+              whiteSpace: 'nowrap'
+            }}>
+              构造信息
+            </span>
+            <div style={{
+              flex: 1,
+              height: '1px',
+              background: 'linear-gradient(to left, transparent, #FDE08D, #C48D3A)'
+            }} />
+          </div>
           
-          <Divider style={{ margin: '16px 0', borderColor: '#333' }}>构造信息</Divider>
-          
-          <Form.Item label="茄衣 (Wrapper)" name="wrapper">
+          <Form.Item label="茄衣" name="wrapper">
             <Input placeholder="例如: Habano, Connecticut, Maduro" />
           </Form.Item>
           
-          <Form.Item label="茄套 (Binder)" name="binder">
+          <Form.Item label="茄套" name="binder">
             <Input placeholder="例如: Nicaraguan, Ecuadorian" />
           </Form.Item>
           
-          <Form.Item label="茄芯 (Filler)" name="filler">
+          <Form.Item label="茄芯" name="filler">
             <Input placeholder="例如: Cuban, Nicaraguan, Dominican" />
           </Form.Item>
           
-          <Divider style={{ margin: '16px 0', borderColor: '#333' }}>品吸笔记</Divider>
+          <div style={{ 
+            margin: '16px 0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '12px'
+          }}>
+            <div style={{
+              flex: 1,
+              height: '1px',
+              background: 'linear-gradient(to right, transparent, #FDE08D, #C48D3A)'
+            }} />
+            <span style={{ 
+              background: 'linear-gradient(to right, #FDE08D, #C48D3A)', 
+              WebkitBackgroundClip: 'text', 
+              backgroundClip: 'text',
+              color: 'transparent',
+              fontWeight: 600,
+              whiteSpace: 'nowrap'
+            }}>
+              品吸笔记
+            </span>
+            <div style={{
+              flex: 1,
+              height: '1px',
+              background: 'linear-gradient(to left, transparent, #FDE08D, #C48D3A)'
+            }} />
+          </div>
           
-          <Form.Item label="脚部 (Foot) - 前1/3" name="footTasteNotes">
+          <Form.Item 
+            label="脚部 (Foot) - 前1/3" 
+            name="footTasteNotes"
+            labelCol={isMobile ? { span: 24 } : undefined}
+            wrapperCol={isMobile ? { span: 24 } : undefined}
+          >
             <Select
               mode="tags"
               placeholder="输入品吸笔记，按回车添加"
@@ -4159,7 +4340,12 @@ const AdminInventory: React.FC = () => {
             />
           </Form.Item>
           
-          <Form.Item label="主体 (Body) - 中1/3" name="bodyTasteNotes">
+          <Form.Item 
+            label="主体 (Body) - 中1/3" 
+            name="bodyTasteNotes"
+            labelCol={isMobile ? { span: 24 } : undefined}
+            wrapperCol={isMobile ? { span: 24 } : undefined}
+          >
             <Select
               mode="tags"
               placeholder="输入品吸笔记，按回车添加"
@@ -4168,7 +4354,12 @@ const AdminInventory: React.FC = () => {
             />
           </Form.Item>
           
-          <Form.Item label="头部 (Head) - 后1/3" name="headTasteNotes">
+          <Form.Item 
+            label="头部 (Head) - 后1/3" 
+            name="headTasteNotes"
+            labelCol={isMobile ? { span: 24 } : undefined}
+            wrapperCol={isMobile ? { span: 24 } : undefined}
+          >
             <Select
               mode="tags"
               placeholder="输入品吸笔记，按回车添加"
@@ -4177,9 +4368,41 @@ const AdminInventory: React.FC = () => {
             />
           </Form.Item>
           
-          <Divider style={{ margin: '16px 0', borderColor: '#333' }}>其他信息</Divider>
+          <div style={{ 
+            margin: '16px 0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '12px'
+          }}>
+            <div style={{
+              flex: 1,
+              height: '1px',
+              background: 'linear-gradient(to right, transparent, #FDE08D, #C48D3A)'
+            }} />
+            <span style={{ 
+              background: 'linear-gradient(to right, #FDE08D, #C48D3A)', 
+              WebkitBackgroundClip: 'text', 
+              backgroundClip: 'text',
+              color: 'transparent',
+              fontWeight: 600,
+              whiteSpace: 'nowrap'
+            }}>
+              其他信息
+            </span>
+            <div style={{
+              flex: 1,
+              height: '1px',
+              background: 'linear-gradient(to left, transparent, #FDE08D, #C48D3A)'
+            }} />
+          </div>
           
-          <Form.Item label="标签/风味特征" name="tags">
+          <Form.Item 
+            label="标签/风味特征" 
+            name="tags"
+            labelCol={isMobile ? { span: 24 } : undefined}
+            wrapperCol={isMobile ? { span: 24 } : undefined}
+          >
             <Select
               mode="tags"
               placeholder="输入标签，按回车添加"

@@ -595,26 +595,28 @@ const Shop: React.FC = () => {
                     
                     // 强度翻译
                     const strengthMap: Record<string, string> = {
-                      'mild': t('inventory.mild') || '温和',
-                      'medium': t('inventory.medium') || '中等',
-                      'full': t('inventory.full') || '浓郁'
+                      'mild': t('shop.mild') || '温和',
+                      'mild-medium': t('shop.mildMedium') || '温和-中等',
+                      'medium': t('shop.medium') || '中等',
+                      'medium-full': t('shop.mediumFull') || '中等-浓郁',
+                      'full': t('shop.full') || '浓郁'
                     };
 
                     return (
-                      <React.Fragment key={cigar.id}>
-                        <div 
-                          style={{ 
-                            display: 'flex',
+                    <React.Fragment key={cigar.id}>
+                      <div 
+                        style={{ 
+                          display: 'flex',
                             flexDirection: 'column',
                             gap: '12px',
-                            padding: '12px',
-                            cursor: 'pointer',
-                            transition: 'background 0.2s ease'
-                          }}
-                          onClick={() => {
-                            // 点击跳转到商品详情
-                          }}
-                        >
+                          padding: '12px',
+                          cursor: 'pointer',
+                          transition: 'background 0.2s ease'
+                        }}
+                        onClick={() => {
+                          // 点击跳转到商品详情
+                        }}
+                      >
                           {/* 产品名称 */}
                           <Title level={5} style={{ color: '#ffffff', margin: 0 }}>
                             {cigar.name}
@@ -626,21 +628,21 @@ const Shop: React.FC = () => {
                             alignItems: 'flex-start',
                             gap: '16px'
                           }}>
-                            {/* 左侧图片 */}
+                        {/* 左侧图片 */}
                             <img 
                               alt={cigar.name}
                               src={cigar.images?.[0] || DEFAULT_CIGAR_IMAGE}
-                              style={{
+                          style={{
                                 width: '60px',
                                 height: '100px',
                                 objectFit: 'cover',
                                 borderRadius: '8px',
                                 border: '2px solid #B8860B',
                                 flexShrink: 0
-                              }}
-                            />
+                          }}
+                        />
 
-                            {/* 右侧信息 */}
+                        {/* 右侧信息 */}
                             <div style={{ flex: 1 }}>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                 {/* 产地 */}
@@ -665,7 +667,7 @@ const Shop: React.FC = () => {
                                         {strengthMap[cigar.strength] || cigar.strength}
                                       </Text>
                                     )}
-                                  </div>
+        </div>
                                 )}
                                 {/* 风味特征 */}
                                 {flavorNotes.length > 0 && (
@@ -673,19 +675,19 @@ const Shop: React.FC = () => {
                                     {flavorNotes.join('、')}
                                   </Text>
                                 )}
-                              </div>
-                              
+                    </div>
+                    
                               {/* 价格和数量控制器 */}
-                              <div style={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
+                          <div style={{
+          display: 'flex',
+          alignItems: 'center',
                                 justifyContent: 'space-between',
-                                marginTop: '8px'
-                              }}>
+                            marginTop: '8px'
+        }}>
                                 <div style={{ color: '#FFD700', fontWeight: 'bold' }}>
                                   RM{cigar.price || 0}
                                 </div>
-                                <div style={{ 
+                            <div style={{ 
                                   display: 'flex', 
                                   alignItems: 'center', 
                                   gap: '4px',
@@ -732,19 +734,19 @@ const Shop: React.FC = () => {
                                     minWidth: '24px', 
                                     textAlign: 'center',
                                     lineHeight: '24px'
-                                  }}>
+                            }}>
                                     {quantities[cigar.id] || 0}
                                   </span>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      addToCart(cigar.id)
-                                    }}
-                                    style={{
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                addToCart(cigar.id)
+                              }}
+                              style={{
                                       background: 'transparent',
                                       border: 'none',
                                       color: '#FFD700',
-                                      cursor: 'pointer',
+                                cursor: 'pointer',
                                       padding: '4px 8px',
                                       fontSize: '16px',
                                       lineHeight: 1,
@@ -753,15 +755,15 @@ const Shop: React.FC = () => {
                                       justifyContent: 'center',
                                       minWidth: '24px',
                                       height: '24px'
-                                    }}
-                                  >
-                                    +
-                                  </button>
+                              }}
+                            >
+                              +
+                            </button>
                                 </div>
                               </div>
-                            </div>
                           </div>
                         </div>
+                      </div>
                       
                       {/* 分割线（最后一个商品不显示） */}
                       {index < brandCigars.length - 1 && (
@@ -1007,7 +1009,7 @@ const Shop: React.FC = () => {
         removeFromCart={removeFromCart}
         isMobile={isMobile}
         t={t}
-      />
+                    />
 
       {/* 确认移除对话框 */}
       <Modal
@@ -1028,10 +1030,10 @@ const Shop: React.FC = () => {
         zIndex={3000}
         okButtonProps={{
           style: {
-            background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
-            border: 'none',
-            color: '#000',
-            fontWeight: 'bold'
+                  background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
+                  border: 'none',
+                  color: '#000',
+                  fontWeight: 'bold'
           }
         }}
         cancelButtonProps={{

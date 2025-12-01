@@ -246,7 +246,7 @@ function mergeCigarData(
 }
 
 /**
- * 创建或更新雪茄记录（处理所有可能的尺寸）
+ * 创建或更新雪茄记录（只处理识别到的尺寸，不创建所有可能的尺寸）
  */
 export async function createOrUpdateCigarsWithAllSizes(
   aiResult: CigarAnalysisResult,
@@ -260,19 +260,8 @@ export async function createOrUpdateCigarsWithAllSizes(
     const mainName = aiResult.name.trim();
     const brandBase = aiResult.brand.trim();
     
-    // 生成所有可能的完整名称
-    const allNames: string[] = [mainName]; // 包含主识别结果
-    
-    // 如果有可能的尺寸列表，生成其他尺寸的完整名称
-    if (aiResult.possibleSizes && aiResult.possibleSizes.length > 0) {
-      for (const size of aiResult.possibleSizes) {
-        const fullName = `${brandBase} ${size.trim()}`;
-        // 避免重复（如果主识别结果已经包含该尺寸）
-        if (fullName !== mainName && !allNames.includes(fullName)) {
-          allNames.push(fullName);
-        }
-      }
-    }
+    // 只使用主识别结果，不生成所有可能的尺寸
+    const allNames: string[] = [mainName];
     
     // 转换强度格式
     const strengthMap: Record<string, 'mild' | 'medium' | 'full'> = {

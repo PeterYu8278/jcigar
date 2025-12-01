@@ -357,3 +357,143 @@ export async function analyzeCigarImage(
         `${isNetlify ? '5' : '4'}. 尝试访问 https://aistudio.google.com/app/apikey 验证 API Key 是否有效`
     );
 }
+
+/**
+ * 根据产品名称识别雪茄信息（不需要图像）
+ */
+export async function analyzeCigarByName(
+    cigarName: string
+): Promise<CigarAnalysisResult> {
+    if (!API_KEY) {
+        const envHint = typeof window !== 'undefined' && window.location.hostname.includes('netlify')
+            ? '请在 Netlify 控制台的 Environment variables 中设置 VITE_GEMINI_API_KEY，然后重新部署。'
+            : '请在 .env 文件中设置 VITE_GEMINI_API_KEY 或在 Netlify 环境变量中配置。';
+        
+        throw new Error(
+            `Gemini API Key 未配置。${envHint}\n` +
+            `获取 API Key: https://aistudio.google.com/app/apikey`
+        );
+    }
+
+    if (!cigarName || !cigarName.trim()) {
+        throw new Error('产品名称不能为空');
+    }
+
+    const prompt = `
+    Based on the cigar name "${cigarName}", provide detailed information about this cigar.
+    Return the result strictly as a JSON object with the following keys:
+    - brand: string (brand name only, e.g., "Cohiba", "Montecristo")
+    - brandDescription: string (a brief description of the brand's history and characteristics, in Chinese, 2-3 sentences. If you cannot determine, use empty string "")
+    - brandFoundedYear: number (the year the brand was founded. If you cannot determine, use null or omit this field)
+    - name: string (the full cigar name including size/vitola, e.g., "Cohiba Robusto", "Montecristo No.2")
+    - origin: string (country)
+    - flavorProfile: array of strings (e.g., ["Earth", "Leather"])
+    - strength: "Mild" | "Medium" | "Full" | "Unknown"
+    - wrapper: string (the outer leaf/wrapper tobacco, e.g., "Connecticut", "Maduro", "Habano", "Corojo", or country of origin)
+    - binder: string (the binder leaf tobacco, e.g., "Nicaraguan", "Ecuadorian", or country of origin)
+    - filler: string (the filler tobacco blend, e.g., "Nicaraguan", "Dominican", "Cuban", or country/blend description)
+    - footTasteNotes: array of strings (expected tasting notes for the foot/first third, e.g., ["Pepper", "Wood", "Light Spice"])
+    - bodyTasteNotes: array of strings (expected tasting notes for the body/middle third, e.g., ["Coffee", "Chocolate", "Cedar"])
+    - headTasteNotes: array of strings (expected tasting notes for the head/final third, e.g., ["Leather", "Earth", "Spice"])
+    - description: string (a short 2-sentence description of this specific cigar in English)
+    - confidence: number (0.0 to 1.0, how sure are you? Use 0.8-0.9 for well-known cigars, 0.6-0.7 for less common ones)
+    - possibleSizes: array of strings (other common sizes/vitolas for this brand, e.g., ["Robusto", "Torpedo", "Churchill", "Corona", "No.2", "No.4"]. If you cannot determine, use empty array [])
+
+    Note: 
+    - The "name" field should include the full name with size/vitola (e.g., "Cohiba Robusto", not just "Cohiba")
+    - The "brand" field should be only the brand name without size (e.g., "Cohiba")
+    - Extract the size/vitola from the name if present (e.g., "Robusto", "No.2", "Torpedo")
+    - brandDescription should provide information about the brand's history, reputation, and characteristics
+    - brandFoundedYear should be the year the brand was established (e.g., 1966 for Cohiba, 1935 for Montecristo)
+    - wrapper, binder, and filler should be based on typical construction for this specific cigar model
+    - footTasteNotes, bodyTasteNotes, and headTasteNotes should be predicted based on the cigar's typical flavor progression
+    - Foot (first third) typically starts lighter and spicier, Body (middle third) develops complexity, Head (final third) becomes richer and more intense
+    - If you cannot determine these details, you can use empty arrays [], empty strings "", or null values
+    - If you cannot identify it as a cigar, return confidence 0 and empty strings
+    Output ONLY valid JSON. Do not include markdown formatting like \`\`\`json.
+  `;
+
+    // 获取模型列表（复用相同的逻辑）
+    let configModels: string[] = [];
+    try {
+        const appConfig = await getAppConfig();
+        if (appConfig?.gemini?.models && appConfig.gemini.models.length > 0) {
+            configModels = appConfig.gemini.models;
+        }
+    } catch (error) {
+        console.warn('获取 AppConfig 失败，跳过配置的模型列表:', error);
+    }
+    
+    let availableModels: string[] = [];
+    try {
+        availableModels = await getAvailableModels();
+    } catch (error) {
+        console.warn('获取 API 模型列表失败，跳过动态模型列表');
+    }
+    
+    const defaultModels = [
+        "gemini-1.5-flash",
+        "gemini-1.5-pro",
+        "gemini-pro",
+    ];
+    
+    let modelsToTry: string[] = [];
+    if (configModels.length > 0) {
+        modelsToTry = [
+            ...configModels,
+            ...availableModels.filter(m => !configModels.includes(m)),
+            ...defaultModels.filter(m => !configModels.includes(m) && !availableModels.includes(m))
+        ];
+    } else if (availableModels.length > 0) {
+        modelsToTry = [
+            ...availableModels,
+            ...defaultModels.filter(m => !availableModels.includes(m))
+        ];
+    } else {
+        modelsToTry = [...defaultModels];
+    }
+    
+    if (modelsToTry.length === 0) {
+        modelsToTry = [...defaultModels];
+    }
+    
+    let lastError: any = null;
+    
+    // 尝试使用 SDK（文本生成，不需要图像）
+    for (const modelName of modelsToTry) {
+        try {
+            const model = genAI.getGenerativeModel({ model: modelName });
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            const text = response.text();
+
+            // Clean up markdown code blocks if present
+            const jsonStr = text.replace(/```json/g, "").replace(/```/g, "").trim();
+
+            return JSON.parse(jsonStr) as CigarAnalysisResult;
+        } catch (error: any) {
+            lastError = error;
+            const errorMessage = error?.message || error?.toString() || '';
+            const errorString = errorMessage.toLowerCase();
+            
+            // 如果是模型不支持的错误，尝试下一个模型
+            if (errorString.includes('not found') || 
+                errorString.includes('404') || 
+                errorString.includes('is not found for api version') ||
+                errorString.includes('not supported')) {
+                console.warn(`模型 ${modelName} 不可用，尝试下一个模型...`);
+                continue;
+            }
+            // 其他错误直接抛出
+            console.error(`Gemini analysis failed with model ${modelName}:`, error);
+            throw error;
+        }
+    }
+    
+    // 所有模型都失败
+    const errorMsg = lastError?.message || '未知错误';
+    throw new Error(
+        `所有 Gemini 模型都不可用。最后错误: ${errorMsg}\n` +
+        `请检查 API Key 配置和模型权限。`
+    );
+}
