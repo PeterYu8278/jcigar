@@ -1,20 +1,22 @@
 // 品牌详情页面组件
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Card, Typography, Button, Space, Rate, Avatar, Spin, message } from 'antd'
+import { Card, Typography, Button, Space, Rate, Avatar, Spin, message, Modal } from 'antd'
 import { 
   ArrowLeftOutlined, 
-  PlusOutlined, 
-  MinusOutlined,
   ShoppingCartOutlined,
   StarFilled
 } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import { getBrandById, getCigarsByBrand } from '../../../services/firebase/firestore'
+import { useCartStore } from '../../../store/modules'
+import { CartModal } from '../../../components/common/CartModal'
+import { getModalThemeStyles } from '../../../config/modalTheme'
 import type { Brand, Cigar } from '../../../types'
 
 const { Title, Paragraph, Text } = Typography
 
+const DEFAULT_CIGAR_IMAGE = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQwIiB5PSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Q2lnYXI8L3RleHQ+Cjwvc3ZnPgo='
 
 const BrandDetail: React.FC = () => {
   const navigate = useNavigate()
@@ -24,7 +26,18 @@ const BrandDetail: React.FC = () => {
   const [brand, setBrand] = useState<Brand | null>(null)
   const [products, setProducts] = useState<Cigar[]>([])
   const [loading, setLoading] = useState(true)
-  const [cartItems, setCartItems] = useState<Record<string, number>>({})
+  const [cartModalVisible, setCartModalVisible] = useState(false)
+  const [confirmRemove, setConfirmRemove] = useState<{
+    visible: boolean
+    itemId: string | null
+    itemName: string | null
+  }>({
+    visible: false,
+    itemId: null,
+    itemName: null
+  })
+  const { addToCart, quantities, setQuantity, removeFromCart, clearCart } = useCartStore()
+  const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
   
 
 
@@ -58,27 +71,21 @@ const BrandDetail: React.FC = () => {
     loadBrandData()
   }, [brandId])
 
-  const handleQuantityChange = (productId: string, delta: number) => {
-    setCartItems(prev => ({
-      ...prev,
-      [productId]: Math.max(0, (prev[productId] || 0) + delta)
-    }))
-  }
+  // 计算购物车总数量和总价
+  const cartItemCount = Object.values(quantities).reduce((sum, qty) => sum + qty, 0)
+  const cartTotal = Object.entries(quantities).reduce((sum, [id, qty]) => {
+    const cigar = products.find(c => c.id === id)
+    return sum + (cigar ? cigar.price * qty : 0)
+  }, 0)
 
-  const getTotalCartItems = () => {
-    return Object.values(cartItems).reduce((sum, qty) => sum + qty, 0)
-  }
-
-  const handleAddToCart = () => {
-    const totalItems = getTotalCartItems()
-    if (totalItems === 0) {
-      message.warning(t('inventory.pleaseSelectQuantity'))
-      return
-    }
-    
-    message.success(t('inventory.addedToCart', { count: totalItems }))
-    // 这里可以添加实际的购物车逻辑
-  }
+  // 购物车商品列表
+  const cartItems = Object.entries(quantities)
+    .filter(([_, qty]) => qty > 0)
+    .map(([id, qty]) => {
+      const cigar = products.find(c => c.id === id)
+      return cigar ? { ...cigar, quantity: qty } : null
+    })
+    .filter(Boolean) as (Cigar & { quantity: number })[]
 
   if (loading) {
     return (
@@ -132,20 +139,21 @@ const BrandDetail: React.FC = () => {
 
   return (
     <div style={{ 
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 100%)',
-      color: '#ffffff'
+      display: 'flex',
+      flexDirection: 'column',
+      height: '85vh',
+      overflow: 'hidden'
     }}>
       {/* 顶部导航栏 */}
       <div style={{
         position: 'sticky',
         top: 0,
         zIndex: 20,
-        background: 'rgba(0, 0, 0, 0.5)',
         backdropFilter: 'blur(10px)',
-        padding: '16px',
+        paddingBottom: '16px',
         display: 'flex',
-        alignItems: 'center'
+        alignItems: 'center',
+        flexShrink: 0
       }}>
         <Button 
           type="text" 
@@ -170,62 +178,68 @@ const BrandDetail: React.FC = () => {
         <div style={{ width: '32px' }} />
       </div>
 
-      {/* 主要内容 */}
-      <div style={{ paddingTop: '16px', paddingRight: '16px', paddingBottom: '24px', paddingLeft: '16px' }}>
-        {/* 品牌横幅 */}
-        <div style={{
-          position: 'relative',
-          height: '256px',
-          borderRadius: '12px',
-          overflow: 'hidden',
-          marginBottom: '24px'
-        }}>
-          <img 
-            alt={`${brand?.name || '高希霸'}雪茄`}
-            src={brand?.logo || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgdmlld0JveD0iMCAwIDI1NiAyNTYiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyNTYiIGhlaWdodD0iMjU2IiBmaWxsPSIjMzMzMzMzIi8+CjxjaXJjbGUgY3g9IjEyOCIgY3k9IjEyOCIgcj0iODAiIGZpbGw9IiM2NjY2NjYiLz4KPHN2ZyB4PSI4OCIgeT0iODgiIHdpZHRoPSI4MCIgaGVpZ2h0PSI4MCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjOTk5OTk5Ij4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIi8+Cjwvc3ZnPgo8L3N2Zz4K'}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-          <div style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.4)'
-          }} />
-          <div style={{
-            position: 'absolute',
-            bottom: '16px',
-            left: '16px'
-          }}>
-            <Title level={2} style={{ color: '#ffffff', margin: 0 }}>
-              {brand?.name?.toUpperCase() || 'COHIBA'}
-            </Title>
-            {/*<Text style={{ color: '#f0e68c', fontSize: '14px' }}>*}
-              {/*{brand?.description || '古巴雪茄的巅峰之作'}*/}
-            {/*</Text>*/}
-          </div>
-        </div>
-
+      {/* 主要内容 - 可滚动区域 */}
+      <div style={{ 
+        flex: 1,
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        paddingBottom: '140px'
+      }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {/* 品牌历史 */}
+          {/* 品牌Logo和历史信息合并卡片 */}
           <Card style={{
             background: 'rgba(255, 255, 255, 0.1)',
             border: '1px solid rgba(255, 255, 255, 0.2)',
             borderRadius: '12px',
             backdropFilter: 'blur(10px)'
           }}
-          bodyStyle={{ padding: '12px 16px' }}>
-            <Title level={4} style={{
-              marginTop: 0,
-              marginBottom: '8px',
-              background: 'linear-gradient(to right, #FFD700, #B8860B)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
+          bodyStyle={{ padding: '16px' }}>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'row',
+              gap: '20px',
+              alignItems: 'flex-start'
             }}>
-              {t('inventory.brandHistory')}
-            </Title>
-            <Paragraph style={{ color: '#d1d5db', lineHeight: 1.6, margin: 0 }}>
-              {brand?.description || `${brand?.name || '该品牌'}成立于${brand?.foundedYear || '未知年份'}，来自${brand?.country || '未知国家'}。${brand?.metadata?.tags?.length ? `标签：${brand.metadata.tags.join('、')}` : ''}`}
-            </Paragraph>
+              {/* 左侧：品牌Logo */}
+              <div style={{
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <div style={{
+                  width: isMobile ? '60px' : '160px',
+                  height: isMobile ? '60px' : '160px',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <img 
+                    alt={`${brand?.name || '品牌'} Logo`}
+                    src={brand?.logo || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYwIiBoZWlnaHQ9IjE2MCIgdmlld0JveD0iMCAwIDE2MCAxNjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxNjAiIGhlaWdodD0iMTYwIiBmaWxsPSIjMzMzMzMzIi8+CjxjaXJjbGUgY3g9IjgwIiBjeT0iODAiIHI9IjUwIiBmaWxsPSIjNjY2NjY2Ii8+Cjx0ZXh0IHg9IjgwIiB5PSI4NSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjOTk5OTk5IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+TG9nbzwvdGV4dD4KPC9zdmc+'}
+                    style={{ 
+                      width: '100%', 
+                      height: '100%', 
+                      objectFit: 'contain'
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* 右侧：品牌历史信息 */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <Paragraph style={{ 
+                  color: '#d1d5db', 
+                  lineHeight: 1.6, 
+                  margin: 0,
+                  fontSize: '14px'
+                }}>
+                  {brand?.description || `${brand?.name || '该品牌'}成立于${brand?.foundedYear || '未知年份'}，来自${brand?.country || '未知国家'}。${brand?.metadata?.tags?.length ? `标签：${brand.metadata.tags.join('、')}` : ''}`}
+                </Paragraph>
+              </div>
+            </div>
           </Card>
 
           {/* 代表性产品 */}
@@ -248,78 +262,170 @@ const BrandDetail: React.FC = () => {
             </Title>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {products.length > 0 ? (
-                products.map(cigar => ({
-                  id: cigar.id,
-                  name: cigar.name,
-                  description: cigar.description || '优质雪茄产品',
-                  image: cigar.images?.[0] || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQwIiB5PSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Q2lnYXI8L3RleHQ+Cjwvc3ZnPgo=',
-                  price: cigar.price || 1000,
-                  quantity: 0
-                })).map((product) => (
-                <div key={product.id} style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '16px'
-                }}>
-                  <img 
-                    alt={product.name}
-                    src={product.image}
-                    style={{
-                      width: '80px',
-                      height: '80px',
-                      objectFit: 'cover',
-                      borderRadius: '8px',
-                      border: '2px solid #B8860B'
-                    }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <Title level={5} style={{ color: '#ffffff', margin: 0 }}>
-                      {product.name}
-                    </Title>
-                    <Text style={{ color: '#9ca3af', fontSize: '12px' }}>
-                      {product.description}
-                    </Text>
-                    <div style={{ color: '#FFD700', fontWeight: 'bold', marginTop: '4px' }}>
-                      RM{product.price}
+                products.map((cigar) => {
+                  // 获取风味特征（合并所有品吸笔记）
+                  const flavorNotes = cigar.tastingNotes 
+                    ? [
+                        ...(cigar.tastingNotes.foot || []),
+                        ...(cigar.tastingNotes.body || []),
+                        ...(cigar.tastingNotes.head || [])
+                      ].filter(Boolean)
+                    : [];
+                  
+                  // 强度翻译
+                  const strengthMap: Record<string, string> = {
+                    'mild': t('inventory.mild') || '温和',
+                    'medium': t('inventory.medium') || '中等',
+                    'full': t('inventory.full') || '浓郁'
+                  };
+                  
+                  return (
+                    <div key={cigar.id} style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px'
+                    }}>
+                      <Title level={5} style={{ color: '#ffffff', margin: 0 }}>
+                        {cigar.name}
+                      </Title>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '16px'
+                      }}>
+                        <img 
+                          alt={cigar.name}
+                          src={cigar.images?.[0] || DEFAULT_CIGAR_IMAGE}
+                          style={{
+                            width: '60px',
+                            height: '100px',
+                            objectFit: 'cover',
+                            borderRadius: '8px',
+                            border: '2px solid #B8860B',
+                            flexShrink: 0
+                          }}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          {/* 产地 */}
+                          {cigar.origin && (
+                            <Text style={{ color: '#9ca3af', fontSize: '12px' }}>
+                              {cigar.origin}
+                            </Text>
+                          )}
+                          {/* 规格和强度同排 */}
+                          {(cigar.size || cigar.strength) && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              {cigar.size && (
+                                <Text style={{ color: '#9ca3af', fontSize: '12px' }}>
+                                  {cigar.size}
+                                </Text>
+                              )}
+                              {cigar.size && cigar.strength && (
+                                <Text style={{ color: '#9ca3af', fontSize: '12px' }}>•</Text>
+                              )}
+                              {cigar.strength && (
+                                <Text style={{ color: '#9ca3af', fontSize: '12px' }}>
+                                  {strengthMap[cigar.strength] || cigar.strength}
+                                </Text>
+                              )}
+                            </div>
+                          )}
+                          {/* 风味特征 */}
+                          {flavorNotes.length > 0 && (
+                            <Text style={{ color: '#9ca3af', fontSize: '12px' }}>
+                              {flavorNotes.join('、')}
+                            </Text>
+                          )}
+                        </div>
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'space-between',
+                          marginTop: '8px'
+                        }}>
+                          <div style={{ color: '#FFD700', fontWeight: 'bold' }}>
+                            RM{cigar.price || 0}
+                          </div>
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '4px',
+                            border: '1px solid rgba(255, 215, 0, 0.3)',
+                            borderRadius: '6px',
+                            padding: '2px 4px'
+                          }}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                const currentQty = quantities[cigar.id] || 0
+                                if (currentQty > 1) {
+                                  setQuantity(cigar.id, currentQty - 1)
+                                } else if (currentQty === 1) {
+                                  // 当数量为1时，点击减号提示确认移除
+                                  setConfirmRemove({
+                                    visible: true,
+                                    itemId: cigar.id,
+                                    itemName: cigar.name
+                                  })
+                                }
+                              }}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: '#FFD700',
+                                cursor: 'pointer',
+                                padding: '4px 8px',
+                                fontSize: '16px',
+                                lineHeight: 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minWidth: '24px',
+                                height: '24px'
+                              }}
+                            >
+                              −
+                            </button>
+                            <span style={{ 
+                              color: '#ffffff', 
+                              fontSize: '14px',
+                              fontWeight: '500',
+                              minWidth: '24px', 
+                              textAlign: 'center',
+                              lineHeight: '24px'
+                            }}>
+                              {quantities[cigar.id] || 0}
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                addToCart(cigar.id)
+                              }}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: '#FFD700',
+                                cursor: 'pointer',
+                                padding: '4px 8px',
+                                fontSize: '16px',
+                                lineHeight: 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minWidth: '24px',
+                                height: '24px'
+                              }}
+                            >
+                              +
+                            </button>
+                          </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Button
-                      type="text"
-                      icon={<MinusOutlined />}
-                      onClick={() => handleQuantityChange(product.id, -1)}
-                      style={{
-                        background: 'linear-gradient(to right, #FFD700, #B8860B)',
-                        color: '#000000',
-                        borderRadius: '50%',
-                        width: '32px',
-                        height: '32px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    />
-                    <span style={{ color: '#ffffff', fontWeight: 'bold', minWidth: '20px', textAlign: 'center' }}>
-                      {cartItems[product.id] || 0}
-                    </span>
-                    <Button
-                      type="text"
-                      icon={<PlusOutlined />}
-                      onClick={() => handleQuantityChange(product.id, 1)}
-                      style={{
-                        background: 'linear-gradient(to right, #FFD700, #B8860B)',
-                        color: '#000000',
-                        borderRadius: '50%',
-                        width: '32px',
-                        height: '32px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    />
-                  </div>
-                </div>
-                ))
+                  );
+                })
               ) : (
                 <div style={{ 
                   textAlign: 'center', 
@@ -399,61 +505,155 @@ const BrandDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* 底部购物车按钮 */}
-      <div style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        padding: '16px',
-        background: 'linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0.5), transparent)',
-        zIndex: 10
-      }}>
-        <Button
-          type="primary"
-          size="large"
-          onClick={handleAddToCart}
-          style={{
-            width: '100%',
-            height: '48px',
-            background: 'linear-gradient(to right, #FFD700, #B8860B)',
-            border: 'none',
-            borderRadius: '24px',
-            color: '#000000',
-            fontWeight: 'bold',
-            fontSize: '16px',
-            boxShadow: '0 4px 15px 0 rgba(255, 215, 0, 0.3)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px'
-          }}
-        >
-          <span>{t('inventory.addToCart')}</span>
-          <div style={{ position: 'relative' }}>
-            <ShoppingCartOutlined />
-            {getTotalCartItems() > 0 && (
-              <span style={{
-                position: 'absolute',
-                top: '-8px',
-                right: '-8px',
-                background: '#ef4444',
-                color: '#ffffff',
-                fontSize: '12px',
-                borderRadius: '50%',
-                height: '20px',
-                width: '20px',
+      {/* 底部购物车操作栏 - 仅手机端显示 */}
+      {isMobile && (
+        <div style={{
+          position: 'fixed',
+          bottom: '60px',
+          left: 0,
+          right: 0,
+          padding: '12px 16px',
+          zIndex: 100,
+          pointerEvents: 'none'
+        }}>
+          {cartItemCount === 0 ? (
+            // 空状态：显示购物车图标按钮
+            <div style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              pointerEvents: 'auto'
+            }}>
+              <Button
+                style={{
+                  background: 'rgba(100, 100, 100, 0.8)',
+                  backdropFilter: 'blur(8px)',
+                  border: 'none',
+                  borderRadius: '24px',
+                  padding: '12px 24px',
+                  height: 'auto',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+                }}
+                onClick={() => setCartModalVisible(true)}
+              >
+                <ShoppingCartOutlined style={{ fontSize: '18px', color: '#fff' }} />
+                <span style={{ color: '#fff', fontSize: '14px', fontWeight: '600' }}>
+                  0 item
+                </span>
+              </Button>
+            </div>
+          ) : (
+            // 有商品状态：显示完整购物车底栏
+            <button
+              onClick={() => setCartModalVisible(true)}
+              style={{
+                padding: '16px 20px',
+                borderRadius: 16,
+                background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                color: '#221c10',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                width: '100%',
+                boxShadow: '0 8px 24px rgba(244, 175, 37, 0.6)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                pointerEvents: 'auto',
+                border: 'none'
+              }}
+            >
+              {/* 左侧：购物车图标和数量 */}
+              <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                border: '2px solid #000000'
+                gap: '12px'
               }}>
-                {getTotalCartItems()}
-              </span>
-            )}
-          </div>
-        </Button>
-      </div>
+                <ShoppingCartOutlined style={{ fontSize: '24px' }} />
+                <span style={{ fontSize: '16px', fontWeight: '600' }}>
+                  {cartItemCount} {cartItemCount === 1 ? 'item' : 'items'}
+                </span>
+              </div>
+
+              {/* 右侧：总价 */}
+              <div style={{ fontSize: '18px', fontWeight: 'bold' }}>
+                RM {cartTotal.toFixed(2)}
+              </div>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* 购物车弹窗 */}
+      <CartModal
+        open={cartModalVisible}
+        onClose={() => setCartModalVisible(false)}
+        cartItems={cartItems}
+        quantities={quantities}
+        cartItemCount={cartItemCount}
+        cartTotal={cartTotal}
+        setQuantity={setQuantity}
+        addToCart={addToCart}
+        removeFromCart={removeFromCart}
+        isMobile={isMobile}
+        t={t}
+      />
+
+      {/* 确认移除对话框 */}
+      <Modal
+        title="确认移除商品？"
+        open={confirmRemove.visible}
+        onOk={() => {
+          if (confirmRemove.itemId) {
+            removeFromCart(confirmRemove.itemId)
+          }
+          setConfirmRemove({ visible: false, itemId: null, itemName: null })
+        }}
+        onCancel={() => {
+          setConfirmRemove({ visible: false, itemId: null, itemName: null })
+        }}
+        okText="确认"
+        cancelText="取消"
+        centered
+        zIndex={3000}
+        okButtonProps={{
+          style: {
+            background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
+            border: 'none',
+            color: '#000',
+            fontWeight: 'bold'
+          }
+        }}
+        cancelButtonProps={{
+          style: {
+            border: '1px solid rgba(244, 175, 37, 0.6)',
+            background: 'rgba(255, 255, 255, 0.1)',
+            color: '#ffffff'
+          }
+        }}
+        styles={{
+          ...getModalThemeStyles(isMobile, true),
+          mask: {
+            ...(getModalThemeStyles(isMobile, true)?.mask || {}),
+            zIndex: 2999
+          },
+          wrapper: {
+            zIndex: 3000
+          }
+        }}
+        getContainer={document.body}
+      >
+        <p style={{ 
+          color: '#FFFFFF', 
+          fontSize: '14px',
+          margin: 0,
+          lineHeight: '1.6'
+        }}>
+          确定要从购物车中移除 <span style={{ color: '#F4AF25', fontWeight: '600' }}>"{confirmRemove.itemName}"</span> 吗？
+        </p>
+      </Modal>
     </div>
   )
 }

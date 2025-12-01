@@ -1,7 +1,9 @@
 import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
-import { Button, Spin, Card, Typography, Space, message, Tag, Divider, Upload, AutoComplete, Image } from 'antd';
-import { CameraOutlined, ReloadOutlined, ThunderboltFilled, ThunderboltOutlined, LoadingOutlined, UploadOutlined, SwapOutlined, EditOutlined } from '@ant-design/icons';
+import { Button, Spin, Card, Typography, Space, message, Tag, Divider, Upload, AutoComplete, Image, Modal } from 'antd';
+import { CameraOutlined, ReloadOutlined, ThunderboltFilled, ThunderboltOutlined, LoadingOutlined, UploadOutlined, SwapOutlined, EditOutlined, DownloadOutlined, ShareAltOutlined } from '@ant-design/icons';
 import Webcam from 'react-webcam';
+import html2canvas from 'html2canvas';
+import { useTranslation } from 'react-i18next';
 import { analyzeCigarImage, CigarAnalysisResult } from '../../../services/gemini/cigarRecognition';
 import { processAICigarRecognition } from '../../../services/aiCigarStorage';
 import { getCigars, getBrands } from '../../../services/firebase/firestore';
@@ -13,9 +15,12 @@ import type { Cigar, Brand } from '../../../types';
 const { Title, Text, Paragraph } = Typography;
 
 export const AICigarScanner: React.FC = () => {
+    const { t } = useTranslation();
     const webcamRef = useRef<Webcam>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const videoTrackRef = useRef<MediaStreamTrack | null>(null);
+    const resultCardRef = useRef<HTMLDivElement>(null);
+    const [savingScreenshot, setSavingScreenshot] = useState(false);
     const [imgSrc, setImgSrc] = useState<string | null>(null);
     const [analyzing, setAnalyzing] = useState(false);
     const [result, setResult] = useState<CigarAnalysisResult | null>(null);
