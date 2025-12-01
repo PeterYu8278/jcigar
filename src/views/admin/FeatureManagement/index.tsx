@@ -2281,6 +2281,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                                 <Switch
                                   checked={aiCigarStorageEnabled}
                                   onChange={async (checked) => {
+                                    const previousValue = aiCigarStorageEnabled;
                                     setAiCigarStorageEnabled(checked);
                                     // 立即保存配置
                                     if (user?.id) {
@@ -2295,15 +2296,30 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                                         );
                                         if (result.success) {
                                           message.success('配置已保存');
-                                          await loadAppConfig();
+                                          // 直接更新本地 appConfig 状态，避免重新加载导致的状态回退
+                                          if (appConfig) {
+                                            setAppConfig({
+                                              ...appConfig,
+                                              aiCigar: {
+                                                enableDataStorage: checked,
+                                              },
+                                            });
+                                          }
+                                          // 延迟重新加载配置以确保数据库已更新
+                                          setTimeout(async () => {
+                                            await loadAppConfig();
+                                          }, 500);
                                         } else {
                                           message.error(result.error || '保存失败');
-                                          setAiCigarStorageEnabled(!checked); // 恢复原值
+                                          setAiCigarStorageEnabled(previousValue); // 恢复原值
                                         }
                                       } catch (error) {
                                         message.error('保存失败');
-                                        setAiCigarStorageEnabled(!checked); // 恢复原值
+                                        setAiCigarStorageEnabled(previousValue); // 恢复原值
                                       }
+                                    } else {
+                                      // 如果没有用户ID，恢复原值
+                                      setAiCigarStorageEnabled(previousValue);
                                     }
                                   }}
                                   checkedChildren="启用"

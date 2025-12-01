@@ -157,6 +157,9 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
       gemini: data.gemini ? {
         models: data.gemini.models || [],
       } : undefined,
+      aiCigar: data.aiCigar ? {
+        enableDataStorage: data.aiCigar.enableDataStorage ?? true,
+      } : undefined,
       updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
       updatedBy: data.updatedBy || '',
     };
@@ -223,6 +226,9 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
             gemini: data.gemini ? {
               models: data.gemini.models || [],
             } : undefined,
+            aiCigar: data.aiCigar ? {
+              enableDataStorage: data.aiCigar.enableDataStorage ?? true,
+            } : undefined,
             updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
             updatedBy: data.updatedBy || '',
           };
@@ -241,20 +247,29 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
  * 更新应用配置
  */
 export const updateAppConfig = async (
-  updates: Partial<Pick<AppConfig, 'logoUrl' | 'appName' | 'hideFooter' | 'colorTheme' | 'whapi' | 'whapiTemplates' | 'auth' | 'gemini'>>,
+  updates: Partial<Pick<AppConfig, 'logoUrl' | 'appName' | 'hideFooter' | 'colorTheme' | 'whapi' | 'whapiTemplates' | 'auth' | 'gemini' | 'aiCigar'>>,
   updatedBy: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     const docRef = doc(db, GLOBAL_COLLECTIONS.APP_CONFIG, CONFIG_ID);
     const docSnap = await getDoc(docRef);
     
+    // 构建更新数据，确保嵌套对象（如 aiCigar）被正确保存
     const updateData: any = {
-      ...updates,
       updatedAt: Timestamp.fromDate(new Date()),
       updatedBy,
     };
     
+    // 处理所有更新字段
+    Object.keys(updates).forEach(key => {
+      const value = (updates as any)[key];
+      if (value !== undefined) {
+        updateData[key] = value;
+      }
+    });
+    
     if (docSnap.exists()) {
+      // 使用 updateDoc 更新，Firestore 会自动合并嵌套对象
       await updateDoc(docRef, updateData);
     } else {
       // 如果不存在，创建新文档
