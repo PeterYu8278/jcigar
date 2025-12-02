@@ -78,7 +78,6 @@ export async function searchGoogleImages(
             `searchType=image&` +
             `num=${Math.min(maxResults, 10)}&` + // Google API 限制每次最多 10 个结果
             `safe=active&` +
-            `imgSize=large&` + // 优先大尺寸图片
             `imgType=photo&` + // 只搜索照片类型
             `fileType=jpg,png,webp`; // 指定文件类型
 
