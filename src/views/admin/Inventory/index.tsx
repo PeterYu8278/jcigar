@@ -4227,6 +4227,7 @@ const AdminInventory: React.FC = () => {
             >
               {brandList
                 .filter(brand => brand.status === 'active')
+                .sort((a, b) => a.name.localeCompare(b.name))
                 .map(brand => (
                   <Option key={brand.id} value={brand.name}>
                     <Space align="center">
