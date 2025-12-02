@@ -1,6 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import { Button, Spin, Card, Typography, Space, message, Tag, Divider, Upload, AutoComplete, Image, Modal } from 'antd';
-import { CameraOutlined, ReloadOutlined, ThunderboltFilled, ThunderboltOutlined, LoadingOutlined, UploadOutlined, SwapOutlined, EditOutlined, DownloadOutlined, ShareAltOutlined } from '@ant-design/icons';
+import { CameraOutlined, ReloadOutlined, ThunderboltFilled, ThunderboltOutlined, LoadingOutlined, UploadOutlined, SwapOutlined, EditOutlined, DownloadOutlined, ShareAltOutlined, CrownOutlined } from '@ant-design/icons';
 import Webcam from 'react-webcam';
 import html2canvas from 'html2canvas';
 import { useTranslation } from 'react-i18next';
@@ -648,9 +648,27 @@ export const AICigarScanner: React.FC = () => {
                         >
                             <Space direction="vertical" style={{ width: '100%' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                            <div>
+                            <div style={{ flex: 1 }}>
                                 <Title level={4} style={{ margin: 0, color: '#ffd700' }}>{result.brand}</Title>
-                                <Text style={{ fontSize: '16px', color: '#fff' }}>{result.name}</Text>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                    <Text style={{ fontSize: '16px', color: '#fff' }}>{result.name}</Text>
+                                    {result.rating && (
+                                        <Tag 
+                                            icon={<CrownOutlined />}
+                                            color="gold"
+                                            style={{ 
+                                                margin: 0,
+                                                background: 'linear-gradient(135deg, #FDE08D, #C48D3A)',
+                                                border: '1px solid rgba(184, 134, 11, 0.6)',
+                                                color: '#1a1a1a',
+                                                fontWeight: 600,
+                                                fontSize: '12px'
+                                            }}
+                                        >
+                                            {result.rating}
+                                        </Tag>
+                                    )}
+                                </div>
                             </div>
                             <Tag color={result.strength === 'Full' ? 'red' : result.strength === 'Medium' ? 'orange' : 'green'}>
                                 {result.strength}
