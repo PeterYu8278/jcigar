@@ -48,6 +48,7 @@ export async function searchGoogleImages(
         // 优先搜索可信的雪茄网站（零售商、评测网站、官方网站）
         const trustedSites = [
             // 权威评测网站
+            'google.com',
             'cigaraficionado.com',
             'halfwheel.com',
             'cigar-coop.com',
