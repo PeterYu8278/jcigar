@@ -270,6 +270,26 @@ export const CigarDatabase: React.FC = () => {
           <Tag icon={<CloseCircleOutlined />} color="default">未验证</Tag>
     },
     {
+      title: 'AI识别统计',
+      dataIndex: 'aiRecognitionStats',
+      key: 'aiRecognitionStats',
+      width: 150,
+      render: (stats: any) => {
+        if (!stats || stats.totalScans === 0) {
+          return <Tag color="default">未扫描</Tag>;
+        }
+        const successRate = (stats.successfulScans / stats.totalScans * 100).toFixed(0);
+        const avgConfidence = (stats.averageConfidence * 100).toFixed(0);
+        return (
+          <Space direction="vertical" size="small">
+            <Tag color="blue">扫描: {stats.totalScans}次</Tag>
+            <Tag color="green">成功率: {successRate}%</Tag>
+            <Tag color="cyan">置信度: {avgConfidence}%</Tag>
+          </Space>
+        );
+      }
+    },
+    {
       title: '创建时间',
       dataIndex: 'createdAt',
       key: 'createdAt',

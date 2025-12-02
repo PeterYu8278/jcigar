@@ -174,13 +174,6 @@ brand,name,wrapper,binder,filler,strength,flavorProfile,footTasteNotes,bodyTaste
 Cohiba,Cohiba Robusto,Havana,Havana,Havana,medium-full,"木质,香料,皮革,可可","胡椒,雪松,淡淡的香料","浓郁的可可,咖啡,烤坚果","皮革,泥土,持久的香料",Cohiba Robusto 是古巴雪茄的标志性产品...,94,Cigar Aficionado 2020,2020-03-15,https://www.habanos.com/images/cohiba-robusto.jpg,true
 ```
 
-**注意：** 系统会自动计算并保存 `dataQuality` 字段：
-- 烟叶信息（wrapper, binder, filler）完整 → `tobaccoComposition: 'verified'`
-- 有风味特征 → `flavorProfile: 'verified'`
-- 有品鉴笔记 → `tastingNotes: 'verified'`
-- 有评分和来源 → `rating: 'verified'`
-- 标记为已验证 → `overall: 'verified'`
-
 ### 手动录入表单字段
 
 **基础信息：**

@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getAppConfig } from "../firebase/appConfig";
 import { searchCigarImageWithGoogle } from "./googleImageSearch";
 import { getCigarDetails } from "../cigar/cigarDatabase";
+import { updateRecognitionStats } from "../cigar/cigarRecognitionStats";
 
 /**
  * 获取 Gemini API Key
@@ -512,8 +513,9 @@ export async function analyzeCigarImage(
                     const detailedInfo = await getCigarDetails(analysisResult.brand, analysisResult.name);
                     if (detailedInfo) {
                         console.log(`[analyzeCigarImage] ✅ 数据库找到匹配项，合并详细信息`);
+                        
                         // 合并详细信息到分析结果
-                        return {
+                        const finalResult = {
                             ...analysisResult,
                             wrapper: detailedInfo.wrapper,
                             binder: detailedInfo.binder,
@@ -530,6 +532,19 @@ export async function analyzeCigarImage(
                             hasDetailedInfo: true,
                             databaseId: detailedInfo.id
                         } as CigarAnalysisResult;
+                        
+                        // 异步更新 AI 识别统计
+                        updateRecognitionStats({
+                            brand: analysisResult.brand,
+                            name: analysisResult.name,
+                            confidence: analysisResult.confidence,
+                            imageUrlFound: !!analysisResult.imageUrl,
+                            hasDetailedInfo: true
+                        }).catch(error => {
+                            console.warn('[analyzeCigarImage] ⚠️ 更新识别统计失败（不影响主流程）:', error);
+                        });
+                        
+                        return finalResult;
             } else {
                         console.log(`[analyzeCigarImage] ℹ️ 数据库未找到匹配项`);
                     }
@@ -541,11 +556,25 @@ export async function analyzeCigarImage(
                 console.log(`[analyzeCigarImage] 跳过图片搜索和数据库查询 - 品牌: ${analysisResult.brand}, 名称: ${analysisResult.name}, 可信度: ${analysisResult.confidence}`);
             }
             
-            // 返回基础识别结果（没有详细信息）
-            return {
+            // 更新 AI 识别统计（异步，不阻塞返回）
+            const finalResult = {
                 ...analysisResult,
                 hasDetailedInfo: false
             } as CigarAnalysisResult;
+            
+            // 异步更新统计信息
+            updateRecognitionStats({
+                brand: analysisResult.brand,
+                name: analysisResult.name,
+                confidence: analysisResult.confidence,
+                imageUrlFound: !!analysisResult.imageUrl,
+                hasDetailedInfo: false
+            }).catch(error => {
+                console.warn('[analyzeCigarImage] ⚠️ 更新识别统计失败（不影响主流程）:', error);
+            });
+            
+            // 返回基础识别结果（没有详细信息）
+            return finalResult;
         } catch (error: any) {
             lastError = error;
             const errorMessage = error?.message || error?.toString() || '';
@@ -584,8 +613,9 @@ export async function analyzeCigarImage(
                                 const detailedInfo = await getCigarDetails(restResult.brand, restResult.name);
                                 if (detailedInfo) {
                                     console.log(`[analyzeCigarImage] [REST API] ✅ 数据库找到匹配项，合并详细信息`);
+                                    
                                     // 合并详细信息到分析结果
-                                    return {
+                                    const finalResult = {
                                         ...restResult,
                                         wrapper: detailedInfo.wrapper,
                                         binder: detailedInfo.binder,
@@ -602,6 +632,19 @@ export async function analyzeCigarImage(
                                         hasDetailedInfo: true,
                                         databaseId: detailedInfo.id
                                     } as CigarAnalysisResult;
+                                    
+                                    // 异步更新 AI 识别统计
+                                    updateRecognitionStats({
+                                        brand: restResult.brand,
+                                        name: restResult.name,
+                                        confidence: restResult.confidence,
+                                        imageUrlFound: !!restResult.imageUrl,
+                                        hasDetailedInfo: true
+                                    }).catch(error => {
+                                        console.warn('[analyzeCigarImage] [REST API] ⚠️ 更新识别统计失败（不影响主流程）:', error);
+                                    });
+                                    
+                                    return finalResult;
                                 } else {
                                     console.log(`[analyzeCigarImage] [REST API] ℹ️ 数据库未找到匹配项`);
                                 }
@@ -610,10 +653,24 @@ export async function analyzeCigarImage(
                                 // 不抛出错误，继续返回基础识别结果
                             }
                         }
-                        return {
+                        
+                        // 异步更新 AI 识别统计
+                        const finalRestResult = {
                             ...restResult,
                             hasDetailedInfo: false
                         } as CigarAnalysisResult;
+                        
+                        updateRecognitionStats({
+                            brand: restResult.brand,
+                            name: restResult.name,
+                            confidence: restResult.confidence,
+                            imageUrlFound: !!restResult.imageUrl,
+                            hasDetailedInfo: false
+                        }).catch(error => {
+                            console.warn('[analyzeCigarImage] [REST API] ⚠️ 更新识别统计失败（不影响主流程）:', error);
+                        });
+                        
+                        return finalRestResult;
                     }
                 } catch (restError) {
                     // REST API 也失败，继续尝试下一个模型
@@ -1288,7 +1345,7 @@ STEP 6: DESCRIPTION
 7. ❌ NEVER infer tasting notes without verified reviews
 8. ❌ NEVER estimate ratings
 
-Output ONLY valid JSON. Do not include markdown formatting like \`\`\`json.
+    Output ONLY valid JSON. Do not include markdown formatting like \`\`\`json.
   `;
 
     // 获取模型列表（复用相同的逻辑）
