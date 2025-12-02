@@ -157,6 +157,7 @@ export interface CigarAnalysisResult {
     bodyTasteNotes?: string[];  // 主体（中1/3）品吸笔记
     headTasteNotes?: string[];  // 头部（后1/3）品吸笔记
     description: string;
+    rating?: number;       // 评分（0-100，来自权威网站的评分）
     confidence: number; // 0-1
     possibleSizes?: string[];  // 该品牌可能的其他尺寸（如 ["Robusto", "Torpedo", "Churchill"]）
 }
@@ -188,12 +189,30 @@ export async function analyzeCigarImage(
 
     const prompt = `
     Analyze this image of a cigar. Identify the brand, specific name (model/ vitola if possible), origin, flavor profile, strength, construction details, and expected tasting notes for different sections.${userHintSection}
+    
+    IMPORTANT: You should reference information from authoritative cigar websites and databases to ensure accuracy. 
+    Consider searching and referencing information from these reputable sources:
+    - https://cigar-coop.com/
+    - https://cigardojo.com/ and https://cigardojo.com/cigar-review-archives/
+    - https://cigarsratings.com/
+    - https://halfwheel.com/ and https://halfwheel.com/cigar-reviews/
+    - https://www.cigaraficionado.com/ and https://www.cigaraficionado.com/ratingsandreviews
+    - https://www.cigarinspector.com/
+    - https://www.cigarjournal.com/ and https://www.cigarjournal.com/ratings-and-awards/ratings/
+    - https://www.famous-smoke.com/ and https://www.famous-smoke.com/cigaradvisor
+    - https://www.habanos.com/en/ (for Cuban cigars)
+    - https://www.leafenthusiast.com/
+    - https://www.neptunecigar.com/ and https://www.neptunecigar.com/cigars
+    
+    Use information from these sources to provide accurate details about the cigar's specifications, ratings, reviews, and characteristics.
+    
     Return the result strictly as a JSON object with the following keys:
     - brand: string (brand name only, e.g., "Cohiba", "Montecristo")
     - brandDescription: string (a brief description of the brand's history and characteristics, in English, 2-3 sentences. If you cannot determine, use empty string "")
     - brandFoundedYear: number (the year the brand was founded. If you cannot determine, use null or omit this field)
     - name: string (the full cigar name including model or size/vitola, e.g., "Cohiba Robusto", "Montecristo No.2")
     - origin: string (country)
+    - size: string (vitola - MUST be a standard cigar size name. Common standard sizes include: Robusto, Torpedo, Churchill, Corona, Cigarillo, Petit Corona, Toro, Gordo, Lancero, Panatela, Belicoso, Pyramid, Perfecto, Culebra, etc. Extract ONLY the standard size name, not descriptive text. For example, if the name is "Placensia Reserva Original Robusto", the size should be "Robusto", not "Reserva Original Robusto".)
     - flavorProfile: array of strings (e.g., ["Earth", "Leather"])
     - strength: "Mild" | "Medium" | "Full" | "Unknown"
     - wrapper: string (the outer leaf/wrapper tobacco, e.g., "Connecticut", "Maduro", "Habano", "Corojo", or country of origin)
@@ -203,11 +222,13 @@ export async function analyzeCigarImage(
     - bodyTasteNotes: array of strings (expected tasting notes for the body/middle third, e.g., ["Coffee", "Chocolate", "Cedar"])
     - headTasteNotes: array of strings (expected tasting notes for the head/final third, e.g., ["Leather", "Earth", "Spice"])
     - description: string (a short 2-sentence description of this specific cigar in English)
+    - rating: number (cigar rating from 0 to 100, based on ratings from authoritative sources like Cigar Aficionado, Cigar Journal, Halfwheel, etc. If multiple ratings are available, use the average or most recent rating. If no rating is found, use null or omit this field)
     - confidence: number (0.0 to 1.0, how sure are you?)
 
     Note: 
     - The "name" field should include the full name with model or size/vitola (e.g., "Cohiba Robusto", not just "Cohiba")
     - The "brand" field should be only the brand name without size (e.g., "Cohiba")
+    - The "size" field MUST contain ONLY the standard cigar vitola name (e.g., "Robusto", "Torpedo", "Cigarillo", "Churchill"). Do NOT include descriptive text, series names, or model names in the size field.
     - brandDescription should provide information about the brand's history, reputation, and characteristics
     - brandFoundedYear should be the year the brand was established (e.g., 1966 for Cohiba, 1935 for Montecristo)
     - wrapper, binder, and filler can be identified by the color, texture, and appearance of the cigar.
@@ -388,6 +409,23 @@ export async function analyzeCigarByName(
     
     const prompt = `
     Based on the cigar name "${brandInfo} ${cigarName}", provide detailed information about this cigar.
+    
+    IMPORTANT: You should reference information from authoritative cigar websites and databases to ensure accuracy. 
+    Consider searching and referencing information from these reputable sources:
+    - https://cigar-coop.com/
+    - https://cigardojo.com/ and https://cigardojo.com/cigar-review-archives/
+    - https://cigarsratings.com/
+    - https://halfwheel.com/ and https://halfwheel.com/cigar-reviews/
+    - https://www.cigaraficionado.com/ and https://www.cigaraficionado.com/ratingsandreviews
+    - https://www.cigarinspector.com/
+    - https://www.cigarjournal.com/ and https://www.cigarjournal.com/ratings-and-awards/ratings/
+    - https://www.famous-smoke.com/ and https://www.famous-smoke.com/cigaradvisor
+    - https://www.habanos.com/en/ (for Cuban cigars)
+    - https://www.leafenthusiast.com/
+    - https://www.neptunecigar.com/ and https://www.neptunecigar.com/cigars
+    
+    Use information from these sources to provide accurate details about the cigar's specifications, ratings, reviews, and characteristics.
+    
     Return the result strictly as a JSON object with the following keys:
     - brand: string (brand name only, e.g., "Cohiba", "Montecristo", "Placensia")
     - brandDescription: string (a brief description of the brand's history and characteristics, in English, 2-3 sentences. If you cannot determine, use empty string "")
@@ -404,6 +442,7 @@ export async function analyzeCigarByName(
     - bodyTasteNotes: array of strings (expected tasting notes for the body/middle third, e.g., ["Coffee", "Chocolate", "Cedar"])
     - headTasteNotes: array of strings (expected tasting notes for the head/final third, e.g., ["Leather", "Earth", "Spice"])
     - description: string (a short 2-sentence description of this specific cigar in English)
+    - rating: number (cigar rating from 0 to 100, based on ratings from authoritative sources like Cigar Aficionado, Cigar Journal, Halfwheel, etc. If multiple ratings are available, use the average or most recent rating. If no rating is found, use null or omit this field)
     - confidence: number (0.0 to 1.0, how sure are you? Use 0.8-0.9 for well-known cigars, 0.6-0.7 for less common ones)
 
     CRITICAL INSTRUCTIONS FOR SIZE/VITOLA EXTRACTION:

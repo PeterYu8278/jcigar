@@ -10,6 +10,7 @@ import ImageUpload from '../../../components/common/ImageUpload'
 import { getModalTheme, getResponsiveModalConfig, getModalThemeStyles } from '../../../config/modalTheme'
 import { useCloudinary } from '../../../hooks/useCloudinary'
 import { analyzeCigarByName } from '../../../services/gemini/cigarRecognition'
+import { CigarRatingBadge } from '../../../components/common/CigarRatingBadge'
 
 const { Title } = Typography
 const { Search } = Input
@@ -48,6 +49,7 @@ const AdminInventory: React.FC = () => {
   const [pagination, setPagination] = useState<{ current: number; pageSize: number }>({ current: 1, pageSize: 10 })
   const [cigarImages, setCigarImages] = useState<string[]>([]) // 雪茄图片列表
   const [aiRecognizing, setAiRecognizing] = useState(false) // AI识别状态
+  const [aiRating, setAiRating] = useState<number | null>(null) // AI识别的评分
   const [inModalOpen, setInModalOpen] = useState(false)
   const [inStatsOpen, setInStatsOpen] = useState(false)
   const [outStatsOpen, setOutStatsOpen] = useState(false)
@@ -379,19 +381,21 @@ const AdminInventory: React.FC = () => {
         return (
           <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
             {/* 产品图像 */}
-            <img 
-              src={productImage} 
-              alt={name} 
-              style={{ 
-                width: '60px', 
-                height: '100px', 
-                objectFit: 'cover',
-                borderRadius: '8px',
-                border: '2px solid rgba(244, 175, 37, 0.3)',
-                flexShrink: 0,
-                background: 'rgba(255, 255, 255, 0.05)'
-              }}
-            />
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <img 
+                src={productImage} 
+                alt={name} 
+                style={{ 
+                  width: '60px', 
+                  height: '100px', 
+                  objectFit: 'cover',
+                  borderRadius: '8px',
+                  border: '2px solid rgba(244, 175, 37, 0.3)',
+                  background: 'rgba(255, 255, 255, 0.05)'
+                }}
+              />
+              <CigarRatingBadge rating={record.metadata?.rating} size="small" />
+            </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 'bold' }}>{name}</div>
               <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -531,6 +535,7 @@ const AdminInventory: React.FC = () => {
                 tags: record.metadata?.tags || [],
               })
               setCigarImages(record.images || [])
+              setAiRating(null) // 重置AI识别的rating
             }, 0)
           }}>
           </Button>
@@ -1416,7 +1421,7 @@ const AdminInventory: React.FC = () => {
                       className="points-config-form"
                     />
                     <button 
-                      onClick={() => { setCreating(true); form.resetFields(); setCigarImages([]); }} 
+                      onClick={() => { setCreating(true); form.resetFields(); setCigarImages([]); setAiRating(null); }} 
                       style={{ 
                         display: 'flex', 
                         alignItems: 'center', 
@@ -3922,6 +3927,7 @@ const AdminInventory: React.FC = () => {
           setCreating(false); 
           setEditing(null);
           form.resetFields();
+          setAiRating(null); // 重置AI识别的rating
         }}
         {...getResponsiveModalConfig(isMobile, true, 600)}
         footer={isMobile ? (
@@ -3999,6 +4005,7 @@ const AdminInventory: React.FC = () => {
                 setEditing(null);
                 form.resetFields();
                 setCigarImages([]);
+                setAiRating(null); // 重置AI识别的rating
               }}>{t('common.cancel')}</Button>
               <button disabled={loading} onClick={() => form.submit()} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease', opacity: loading ? 0.6 : 1 }}>{t('common.confirm')}</button>
             </Space>
@@ -4029,9 +4036,9 @@ const AdminInventory: React.FC = () => {
               tastingNotes.head = Array.isArray(values.headTasteNotes) ? values.headTasteNotes : [];
             }
             
-            // 构建元数据
+            // 构建元数据（优先使用AI识别的rating，否则使用原有的rating）
             const metadata: any = {
-              rating: editing?.metadata?.rating ?? 0,
+              rating: aiRating !== null ? aiRating : (editing?.metadata?.rating ?? 0),
               reviews: editing?.metadata?.reviews ?? 0,
               tags: Array.isArray(values.tags) ? values.tags : [],
             };
@@ -4079,6 +4086,7 @@ const AdminInventory: React.FC = () => {
             setEditing(null)
             form.resetFields()
             setCigarImages([])
+            setAiRating(null) // 重置AI识别的rating
           } finally {
             setLoading(false)
           }
@@ -4093,6 +4101,16 @@ const AdminInventory: React.FC = () => {
                   status: 'done' as const,
                   url: url
                 }))}
+                itemRender={(originNode, file, fileList, actions) => {
+                  return (
+                    <div style={{ position: 'relative' }}>
+                      {originNode}
+                      {editing?.metadata?.rating && file.status === 'done' && (
+                        <CigarRatingBadge rating={editing.metadata.rating} size="small" />
+                      )}
+                    </div>
+                  )
+                }}
                 beforeUpload={async (file) => {
                   try {
                     const result = await cloudinaryUpload(file, { folder: 'cigars' });
@@ -4260,6 +4278,13 @@ const AdminInventory: React.FC = () => {
                     // 产地（直接填充识别到的产地）
                     if (result.origin) {
                       updates.origin = result.origin
+                    }
+                    
+                    // 评分（存储到状态中，在表单提交时使用）
+                    if (result.rating !== undefined && result.rating !== null) {
+                      setAiRating(result.rating)
+                    } else {
+                      setAiRating(null)
                     }
                     
                     // 批量设置表单值

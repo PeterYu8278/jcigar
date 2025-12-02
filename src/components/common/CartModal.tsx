@@ -4,6 +4,7 @@ import { Modal, Button, List, Typography } from 'antd'
 import { ShoppingCartOutlined } from '@ant-design/icons'
 import { getModalThemeStyles, getModalWidth } from '../../config/modalTheme'
 import type { Cigar } from '../../types'
+import { CigarRatingBadge } from './CigarRatingBadge'
 
 const { Title, Text } = Typography
 
@@ -195,18 +196,20 @@ export const CartModal: React.FC<CartModalProps> = ({
                         gap: '16px'
                       }}>
                         {/* 左侧图片 */}
-                        <img 
-                          alt={item.name}
-                          src={item.images?.[0] || DEFAULT_CIGAR_IMAGE}
+                        <div style={{ position: 'relative', flexShrink: 0 }}>
+                          <img 
+                            alt={item.name}
+                            src={item.images?.[0] || DEFAULT_CIGAR_IMAGE}
                           style={{
                             width: '60px',
                             height: '100px',
                             objectFit: 'cover',
-                            borderRadius: '8px',
-                            border: '2px solid #B8860B',
-                            flexShrink: 0
-                          }}
-                        />
+                              borderRadius: '8px',
+                              border: '2px solid #B8860B'
+                            }}
+                          />
+                          <CigarRatingBadge rating={item.metadata?.rating} size="small" />
+                        </div>
 
                         {/* 右侧信息 */}
                         <div style={{ flex: 1 }}>

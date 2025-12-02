@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { CartModal } from '../../../components/common/CartModal'
 import { getModalThemeStyles } from '../../../config/modalTheme'
+import { CigarRatingBadge } from '../../../components/common/CigarRatingBadge'
 
 const { Title, Text } = Typography
 
@@ -662,18 +663,20 @@ const Shop: React.FC = () => {
                             gap: '16px'
                           }}>
                         {/* 左侧图片 */}
-                            <img 
-                              alt={cigar.name}
-                              src={cigar.images?.[0] || DEFAULT_CIGAR_IMAGE}
-                          style={{
-                                width: '60px',
-                                height: '100px',
-                                objectFit: 'cover',
-                                borderRadius: '8px',
-                                border: '2px solid #B8860B',
-                                flexShrink: 0
-                          }}
-                        />
+                            <div style={{ position: 'relative', flexShrink: 0 }}>
+                              <img 
+                                alt={cigar.name}
+                                src={cigar.images?.[0] || DEFAULT_CIGAR_IMAGE}
+                                style={{
+                                  width: '60px',
+                                  height: '100px',
+                                  objectFit: 'cover',
+                                  borderRadius: '8px',
+                                  border: '2px solid #B8860B'
+                                }}
+                              />
+                              <CigarRatingBadge rating={cigar.metadata?.rating} size="small" />
+                            </div>
 
                         {/* 右侧信息 */}
                             <div style={{ flex: 1 }}>
@@ -864,8 +867,10 @@ const Shop: React.FC = () => {
               // 电脑端：网格布局
         <div style={{ 
           display: 'grid', 
-                gridTemplateColumns: 'repeat(8, 1fr)', 
-                gap: '16px'
+          gridTemplateColumns: 'repeat(8, 1fr)', 
+          gridAutoRows: '1fr',
+          gap: '16px',
+          alignItems: 'stretch'
         }}>
                 {filteredCigars.map((cigar) => (
               <div 
@@ -874,9 +879,14 @@ const Shop: React.FC = () => {
                   background: 'rgba(255, 255, 255, 0.05)',
                   borderRadius: '16px',
                   border: '1px solid rgba(255, 255, 255, 0.1)',
-                  overflow: 'hidden',
+                  overflow: 'visible',
                   transition: 'all 0.3s ease',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  height: '100%',
+                  width: '100%',
+                  minWidth: 0
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'
@@ -894,14 +904,18 @@ const Shop: React.FC = () => {
                 {/* 商品图片 */}
                 <div 
                   style={{
+                    position: 'relative',
                     width: '100%',
                     aspectRatio: '1',
                     backgroundImage: `url(${cigar.images?.[0] || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQwIiB5PSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEwIiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Q2lnYXI8L3RleHQ+Cjwvc3ZnPgo='})`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
-                    position: 'relative'
+                    overflow: 'visible',
+                    borderRadius: '16px 16px 0 0',
+                    flexShrink: 0
                   }}
                 >
+                  <CigarRatingBadge rating={cigar.metadata?.rating} size="medium" />
                   {/* 品牌标签 */}
                     <div style={{ 
                     position: 'absolute',
@@ -920,7 +934,7 @@ const Shop: React.FC = () => {
                 </div>
 
                 {/* 商品信息 */}
-                <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: 0, width: '100%' }}>
                   {/* 第一行：产品名称 */}
                   <h3 style={{ 
                     fontSize: '16px', 

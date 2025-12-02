@@ -29,6 +29,7 @@ import { MysteryGiftBanner } from '../../../components/home/MysteryGiftBanner'
 import { isFeatureVisible } from '../../../services/firebase/featureVisibility'
 import { getAppConfig } from '../../../services/firebase/appConfig'
 import type { AppConfig } from '../../../types'
+import { CigarRatingBadge } from '../../../components/common/CigarRatingBadge'
 
 const Home: React.FC = () => {
   const navigate = useNavigate()
@@ -540,6 +541,7 @@ const Home: React.FC = () => {
               >
                     <div 
                       style={{
+                        position: 'relative',
                         width: '80px',
                         height: '80px',
                         borderRadius: '8px',
@@ -548,7 +550,9 @@ const Home: React.FC = () => {
                         backgroundPosition: 'center',
                         border: '2px solid rgba(244, 175, 37, 0.6)'
                       }}
-                    />
+                    >
+                      <CigarRatingBadge rating={cigar.metadata?.rating} size="small" />
+                    </div>
                     <div style={{ width: '100%', textAlign: 'center' }}>
                       <h3 style={{ 
                         fontSize: '11px', 

@@ -13,6 +13,7 @@ import { useCartStore } from '../../../store/modules'
 import { CartModal } from '../../../components/common/CartModal'
 import { getModalThemeStyles } from '../../../config/modalTheme'
 import type { Brand, Cigar } from '../../../types'
+import { CigarRatingBadge } from '../../../components/common/CigarRatingBadge'
 
 const { Title, Paragraph, Text } = Typography
 
@@ -295,18 +296,20 @@ const BrandDetail: React.FC = () => {
                         alignItems: 'flex-start',
                         gap: '16px'
                       }}>
-                        <img 
-                          alt={cigar.name}
-                          src={cigar.images?.[0] || DEFAULT_CIGAR_IMAGE}
-                          style={{
-                            width: '60px',
-                            height: '100px',
-                            objectFit: 'cover',
-                            borderRadius: '8px',
-                            border: '2px solid #B8860B',
-                            flexShrink: 0
-                          }}
-                        />
+                        <div style={{ position: 'relative', flexShrink: 0 }}>
+                          <img 
+                            alt={cigar.name}
+                            src={cigar.images?.[0] || DEFAULT_CIGAR_IMAGE}
+                            style={{
+                              width: '60px',
+                              height: '100px',
+                              objectFit: 'cover',
+                              borderRadius: '8px',
+                              border: '2px solid #B8860B'
+                            }}
+                          />
+                          <CigarRatingBadge rating={cigar.metadata?.rating} size="small" />
+                        </div>
                         <div style={{ flex: 1 }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           {/* 产地 */}
