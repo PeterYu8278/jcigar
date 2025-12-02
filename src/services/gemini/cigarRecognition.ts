@@ -86,15 +86,16 @@ const ALL_GEMINI_MODELS = [
 
 /**
  * 默认模型列表（作为回退，优先使用稳定且快速的模型）
+ * 注意：只包含实际可用的模型，已移除不存在的模型（如 gemini-2.5-flash-live, gemini-1.5-flash, gemini-1.5-pro, gemini-pro）
  */
 const DEFAULT_MODELS = [
-    "gemini-2.5-flash-live", 
     "gemini-2.5-flash",     // 最新快速模型
-    "gemini-2.0-flash",     // 稳定快速模型
-    "gemini-1.5-flash",     // 经典快速模型
     "gemini-2.5-pro",       // 最新专业模型
-    "gemini-1.5-pro",       // 稳定专业模型
-    "gemini-pro",           // 经典模型
+    "gemini-2.0-flash",     // 稳定快速模型
+    "gemini-2.0-flash-001", // 稳定快速模型（带版本号）
+    "gemini-2.0-flash-lite-001", // 轻量快速模型（带版本号）
+    "gemini-2.0-flash-lite", // 轻量快速模型
+    "gemini-2.5-flash-lite", // 最新轻量快速模型
 ];
 
 // 辅助函数：直接使用 REST API 调用 Gemini (v1 API)
@@ -330,35 +331,39 @@ export async function analyzeCigarImage(
     // 使用全局默认模型列表
     const defaultModels = DEFAULT_MODELS;
     
-    // 构建最终模型列表：按优先级合并
+    // 构建最终模型列表：按优先级合并，但只包含可用的模型
     let modelsToTry: string[] = [];
     
+    // 如果 API 返回了可用模型列表，优先使用它来过滤
+    const validModels = availableModels.length > 0 
+        ? availableModels 
+        : defaultModels; // 如果没有 API 列表，使用默认模型
+    
     if (configModels.length > 0) {
-        // 如果 AppConfig 中有配置，优先使用配置的模型
-        // 同时补充 API 获取的模型和默认模型（去重）
+        // 如果 AppConfig 中有配置，优先使用配置的模型（但只保留可用的）
+        const validConfigModels = configModels.filter(m => validModels.includes(m));
+        const invalidConfigModels = configModels.filter(m => !validModels.includes(m));
+        
+        if (invalidConfigModels.length > 0) {
+            console.warn(`⚠️ AppConfig 中配置的以下模型不可用，将被跳过:`, invalidConfigModels);
+        }
+        
+        // 优先使用配置的模型（已验证可用），然后补充其他可用模型
         modelsToTry = [
-            ...configModels,
-            ...availableModels.filter(m => !configModels.includes(m)),
-            ...defaultModels.filter(m => !configModels.includes(m) && !availableModels.includes(m))
+            ...validConfigModels,
+            ...validModels.filter(m => !validConfigModels.includes(m))
         ];
-        console.log('📋 使用 AppConfig 配置的模型列表（优先级最高）');
-    } else if (availableModels.length > 0) {
-        // 如果没有 AppConfig 配置，使用 API 获取的模型，补充默认模型
-        modelsToTry = [
-            ...availableModels,
-            ...defaultModels.filter(m => !availableModels.includes(m))
-        ];
-        console.log('📋 使用 API 获取的模型列表');
+        console.log('📋 使用 AppConfig 配置的模型列表（优先级最高，已过滤不可用模型）');
     } else {
-        // 如果都没有，使用默认模型
-        modelsToTry = [...defaultModels];
-        console.log('📋 使用默认模型列表');
+        // 如果没有 AppConfig 配置，直接使用可用模型列表
+        modelsToTry = [...validModels];
+        console.log('📋 使用 API 获取的可用模型列表');
     }
     
     // 确保列表不为空
     if (modelsToTry.length === 0) {
         modelsToTry = [...defaultModels];
-        console.warn('⚠️ 模型列表为空，使用默认模型');
+        console.warn('⚠️ 模型列表为空，使用默认模型（可能部分不可用）');
     }
     
     console.log('🧪 最终尝试模型列表（按优先级）:', modelsToTry);
@@ -470,13 +475,9 @@ export async function analyzeCigarImage(
  * @returns 图片 URL 或 null
  */
 /**
- * 验证图片 URL 是否可访问（使用 Image 对象）
- * 注意：由于 CSP 限制，某些网站可能无法验证，验证失败不会影响 URL 返回
- */
-/**
  * 验证图片 URL 是否可访问
  * 使用 Image 对象加载图片，通过 onload/onerror 事件判断 URL 是否有效
- * 设置 crossOrigin 属性以允许跨域图片验证
+ * 注意：由于 CORS 限制，某些网站可能无法验证，验证失败会继续尝试下一个模型
  */
 async function validateImageUrl(url: string): Promise<boolean> {
     return new Promise((resolve) => {
@@ -484,7 +485,7 @@ async function validateImageUrl(url: string): Promise<boolean> {
             const img = new Image();
             const timeout = setTimeout(() => {
                 resolve(false);
-            }, 3000); // 3秒超时
+            }, 2000); // 2秒超时（缩短超时时间，更快失败以尝试下一个模型）
             
             img.onload = () => {
                 clearTimeout(timeout);
@@ -496,9 +497,8 @@ async function validateImageUrl(url: string): Promise<boolean> {
                 resolve(false);
             };
             
-            // 设置 crossOrigin 属性以允许跨域图片加载验证
-            // 即使服务器不支持 CORS，onerror 也会触发，可以判断 URL 是否有效
-            img.crossOrigin = 'anonymous';
+            // 先尝试不使用 crossOrigin（某些服务器可能不支持 CORS 但图片可访问）
+            // 如果失败，浏览器会触发 onerror，我们继续尝试下一个模型
             img.src = url;
         } catch (error) {
             // 如果创建 Image 对象失败，返回 false
@@ -555,25 +555,35 @@ IMPORTANT:
     // 使用全局默认模型列表
     const defaultModels = DEFAULT_MODELS;
     
-    // 构建模型列表（与主识别函数相同的优先级）
+    // 构建模型列表（与主识别函数相同的优先级，但只包含可用的模型）
+    // 如果 API 返回了可用模型列表，优先使用它来过滤
+    const validModels = availableModels.length > 0 
+        ? availableModels 
+        : defaultModels; // 如果没有 API 列表，使用默认模型
+    
     if (configModels.length > 0) {
+        // 如果 AppConfig 中有配置，优先使用配置的模型（但只保留可用的）
+        const validConfigModels = configModels.filter(m => validModels.includes(m));
+        const invalidConfigModels = configModels.filter(m => !validModels.includes(m));
+        
+        if (invalidConfigModels.length > 0) {
+            console.warn(`[searchCigarImageUrl] ⚠️ AppConfig 中配置的以下模型不可用，将被跳过:`, invalidConfigModels);
+        }
+        
+        // 优先使用配置的模型（已验证可用），然后补充其他可用模型
         modelsToTry = [
-            ...configModels,
-            ...availableModels.filter(m => !configModels.includes(m)),
-            ...defaultModels.filter(m => !configModels.includes(m) && !availableModels.includes(m))
-        ];
-    } else if (availableModels.length > 0) {
-        modelsToTry = [
-            ...availableModels,
-            ...defaultModels.filter(m => !availableModels.includes(m))
+            ...validConfigModels,
+            ...validModels.filter(m => !validConfigModels.includes(m))
         ];
     } else {
-        modelsToTry = [...defaultModels];
+        // 如果没有 AppConfig 配置，直接使用可用模型列表
+        modelsToTry = [...validModels];
     }
     
     // 确保列表不为空
     if (modelsToTry.length === 0) {
         modelsToTry = [...defaultModels];
+        console.warn('[searchCigarImageUrl] ⚠️ 模型列表为空，使用默认模型（可能部分不可用）');
     }
     
     console.log(`[searchCigarImageUrl] 搜索 "${brand} ${name}" 的图片URL，尝试模型:`, modelsToTry);
@@ -644,8 +654,10 @@ IMPORTANT:
             
             console.log(`[searchCigarImageUrl] [${modelName}] Gemini 原始响应:`, rawResponse);
 
-            // 清理响应文本（移除可能的引号、换行等）
+            // 清理响应文本（移除可能的引号、换行、markdown 代码块等）
             let imageUrl = rawResponse
+                .replace(/^```[\w]*\n?/g, '') // 移除开头的 markdown 代码块标记
+                .replace(/\n?```$/g, '') // 移除结尾的 markdown 代码块标记
                 .replace(/^["']|["']$/g, '') // 移除首尾引号
                 .replace(/\n/g, '') // 移除换行
                 .trim();
@@ -764,9 +776,12 @@ IMPORTANT:
                     
                     console.log(`[searchCigarImageUrl] [REST API ${modelName}] Gemini 原始响应:`, rawResponse);
                     
+                    // 清理响应文本（移除可能的引号、换行、markdown 代码块等）
                     let imageUrl = rawResponse
-                        .replace(/^["']|["']$/g, '')
-                        .replace(/\n/g, '')
+                        .replace(/^```[\w]*\n?/g, '') // 移除开头的 markdown 代码块标记
+                        .replace(/\n?```$/g, '') // 移除结尾的 markdown 代码块标记
+                        .replace(/^["']|["']$/g, '') // 移除首尾引号
+                        .replace(/\n/g, '') // 移除换行
                         .trim();
                     
                     if (imageUrl && imageUrl.toLowerCase() !== 'null' && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
