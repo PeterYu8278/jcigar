@@ -236,9 +236,9 @@ function mergeCigarData(
   if (aiResult.footTasteNotes || aiResult.bodyTasteNotes || aiResult.headTasteNotes) {
     const existingTastingNotes = existing.tastingNotes || {};
     updates.tastingNotes = {
-      foot: existingTastingNotes.foot || aiResult.footTasteNotes || undefined,
-      body: existingTastingNotes.body || aiResult.bodyTasteNotes || undefined,
-      head: existingTastingNotes.head || aiResult.headTasteNotes || undefined
+      foot: existingTastingNotes.foot || (Array.isArray(aiResult.footTasteNotes) ? aiResult.footTasteNotes : undefined),
+      body: existingTastingNotes.body || (Array.isArray(aiResult.bodyTasteNotes) ? aiResult.bodyTasteNotes : undefined),
+      head: existingTastingNotes.head || (Array.isArray(aiResult.headTasteNotes) ? aiResult.headTasteNotes : undefined)
     };
   }
   
@@ -270,7 +270,7 @@ export async function createOrUpdateCigarsWithAllSizes(
       'Full': 'full',
       'Unknown': 'medium' // 默认值
     };
-    const strength = strengthMap[aiResult.strength] || 'medium';
+    const strength = aiResult.strength ? (strengthMap[aiResult.strength] || 'medium') : 'medium';
     
     // 为每个完整名称创建/更新记录
     for (const fullName of allNames) {
@@ -338,9 +338,9 @@ export async function createOrUpdateCigarsWithAllSizes(
         // 添加品吸笔记（独立字段）
         if (aiResult.footTasteNotes || aiResult.bodyTasteNotes || aiResult.headTasteNotes) {
           newCigarData.tastingNotes = {
-            foot: aiResult.footTasteNotes || undefined,
-            body: aiResult.bodyTasteNotes || undefined,
-            head: aiResult.headTasteNotes || undefined
+            foot: Array.isArray(aiResult.footTasteNotes) ? aiResult.footTasteNotes : undefined,
+            body: Array.isArray(aiResult.bodyTasteNotes) ? aiResult.bodyTasteNotes : undefined,
+            head: Array.isArray(aiResult.headTasteNotes) ? aiResult.headTasteNotes : undefined
           };
         }
         

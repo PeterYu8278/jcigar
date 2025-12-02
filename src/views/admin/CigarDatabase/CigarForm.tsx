@@ -22,7 +22,7 @@ import {
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { GLOBAL_COLLECTIONS } from '@/config/globalCollections';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore } from '@/store/modules/auth';
 import { normalizeName, generateSearchKeywords } from '@/services/cigar/cigarDatabase';
 import type { CigarDetailedInfoFormData, CigarStrength } from '@/types/cigar';
 import dayjs from 'dayjs';
@@ -85,7 +85,7 @@ export const CigarForm: React.FC<CigarFormProps> = ({
     }
   }, [initialValues, form]);
 
-  const handleSubmit = async (values: CigarDetailedInfoFormData) => {
+  const handleSubmit = async (values: any) => {
     if (!user) {
       message.error('请先登录');
       return;
@@ -114,7 +114,7 @@ export const CigarForm: React.FC<CigarFormProps> = ({
         description: values.description || null,
         rating: values.rating || null,
         ratingSource: values.ratingSource || null,
-        ratingDate: values.ratingDate ? values.ratingDate.toDate() : null,
+        ratingDate: values.ratingDate ? (values.ratingDate as any).toDate() : null,
         imageUrl: values.imageUrl || null,
         verified: values.verified || false,
         normalizedBrand,
