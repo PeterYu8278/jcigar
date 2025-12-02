@@ -419,12 +419,13 @@ async function searchCigarImageUrl(brand: string, name: string): Promise<string 
 
     try {
         const searchPrompt = `
-Search for a publicly accessible image URL of the cigar band/label for "${brand} ${name}".
+Search for a publicly accessible image (without left and right margin) URL of the single stick of cigar with band/label for "${brand} ${name}".
 
 Requirements:
 1. The URL must be a direct link to an image file (e.g., .jpg, .png, .webp), not a webpage
 2. The image should show the cigar band/label clearly
-3. Prefer images from authoritative cigar websites like:
+3. The image should show a single stick of cigar without left and right margins
+4. Prefer images from authoritative cigar websites like:
    - cigaraficionado.com
    - halfwheel.com
    - cigardojo.com
