@@ -162,6 +162,13 @@ export const AICigarScanner: React.FC = () => {
         try {
             // 如果用户提供了提示，传递给识别函数
             const data = await analyzeCigarImage(imageSrc, userHint || undefined);
+            console.log('[AICigarScanner] 识别结果:', {
+                brand: data.brand,
+                name: data.name,
+                confidence: data.confidence,
+                imageUrl: data.imageUrl,
+                hasImageUrl: !!data.imageUrl
+            });
             setResult(data);
             
             // 尝试查找匹配的雪茄以获取图片
@@ -676,52 +683,61 @@ export const AICigarScanner: React.FC = () => {
                         </div>
 
                         {/* 雪茄茄标图像 - 优先使用 Gemini 返回的图片，否则使用用户拍摄的图片 */}
-                        {(result.imageUrl || imgSrc) && (
-                            <div style={{ 
-                                marginTop: '12px',
-                                background: 'rgba(0,0,0,0.2)', 
-                                padding: '12px', 
-                                borderRadius: '8px',
-                                border: '1px solid rgba(255,255,255,0.1)'
-                            }}>
-                                <Text type="secondary" style={{ 
-                                    fontSize: '13px', 
-                                    display: 'block', 
-                                    marginBottom: '12px',
-                                    fontWeight: 500,
-                                    color: '#ffd700'
-                                }}>
-                                    雪茄茄标图像
-                                </Text>
-                                <div style={{
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    width: '100%',
-                                    maxHeight: '200px',
+                        {(result.imageUrl || imgSrc) && (() => {
+                            const displayImageUrl = result.imageUrl || imgSrc;
+                            console.log('[AICigarScanner] 显示图片 - result.imageUrl:', result.imageUrl, 'imgSrc:', imgSrc, '最终使用:', displayImageUrl);
+                            return (
+                                <div style={{ 
+                                    marginTop: '12px',
+                                    background: 'rgba(0,0,0,0.2)', 
+                                    padding: '12px', 
                                     borderRadius: '8px',
-                                    overflow: 'hidden',
-                                    background: '#000'
+                                    border: '1px solid rgba(255,255,255,0.1)'
                                 }}>
-                                    <img 
-                                        src={result.imageUrl || imgSrc || ''} 
-                                        alt="雪茄茄标" 
-                                        style={{ 
-                                            width: '100%', 
-                                            maxHeight: '200px', 
-                                            objectFit: 'contain',
-                                            borderRadius: '8px'
-                                        }}
-                                        onError={(e) => {
-                                            // 如果 Gemini 返回的图片加载失败，回退到用户拍摄的图片
-                                            if (result.imageUrl && imgSrc && e.currentTarget.src !== imgSrc) {
-                                                e.currentTarget.src = imgSrc;
-                                            }
-                                        }}
-                                    />
+                                    <Text type="secondary" style={{ 
+                                        fontSize: '13px', 
+                                        display: 'block', 
+                                        marginBottom: '12px',
+                                        fontWeight: 500,
+                                        color: '#ffd700'
+                                    }}>
+                                        雪茄茄标图像
+                                    </Text>
+                                    <div style={{
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        width: '100%',
+                                        maxHeight: '200px',
+                                        borderRadius: '8px',
+                                        overflow: 'hidden',
+                                        background: '#000'
+                                    }}>
+                                        <img 
+                                            src={displayImageUrl || ''} 
+                                            alt="雪茄茄标" 
+                                            style={{ 
+                                                width: '100%', 
+                                                maxHeight: '200px', 
+                                                objectFit: 'contain',
+                                                borderRadius: '8px'
+                                            }}
+                                            onError={(e) => {
+                                                // 如果 Gemini 返回的图片加载失败，回退到用户拍摄的图片
+                                                console.warn('[AICigarScanner] 图片加载失败，尝试回退:', e.currentTarget.src);
+                                                if (result.imageUrl && imgSrc && e.currentTarget.src !== imgSrc) {
+                                                    console.log('[AICigarScanner] 回退到用户拍摄的图片:', imgSrc);
+                                                    e.currentTarget.src = imgSrc;
+                                                }
+                                            }}
+                                            onLoad={() => {
+                                                console.log('[AICigarScanner] 图片加载成功:', displayImageUrl);
+                                            }}
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            );
+                        })()}
 
                         <Divider style={{ margin: '12px 0', borderColor: '#333' }} />
 

@@ -193,6 +193,7 @@ export async function analyzeCigarImage(
     
     IMPORTANT: You should reference information from authoritative cigar websites and databases to ensure accuracy. 
     Consider searching and referencing information from these reputable sources:
+    - https://www.cigaraficionado.com/ and https://www.cigaraficionado.com/ratingsandreviews
     - https://cigar-coop.com/
     - https://cigardojo.com/ and https://cigardojo.com/cigar-review-archives/
     - https://cigarsratings.com/
@@ -333,15 +334,21 @@ export async function analyzeCigarImage(
             
             // 根据品牌和产品名称搜索图片 URL
             if (analysisResult.brand && analysisResult.name && analysisResult.confidence > 0.5) {
+                console.log(`[analyzeCigarImage] 开始搜索图片URL - 品牌: ${analysisResult.brand}, 名称: ${analysisResult.name}, 可信度: ${analysisResult.confidence}`);
                 try {
                     const imageUrl = await searchCigarImageUrl(analysisResult.brand, analysisResult.name);
                     if (imageUrl) {
+                        console.log(`[analyzeCigarImage] ✅ 成功获取图片URL:`, imageUrl);
                         analysisResult.imageUrl = imageUrl;
+                    } else {
+                        console.warn(`[analyzeCigarImage] ⚠️ 未找到图片URL`);
                     }
                 } catch (error) {
-                    console.warn('搜索雪茄图片 URL 失败:', error);
+                    console.error('搜索雪茄图片 URL 失败:', error);
                     // 不抛出错误，继续返回识别结果
                 }
+            } else {
+                console.log(`[analyzeCigarImage] 跳过图片搜索 - 品牌: ${analysisResult.brand}, 名称: ${analysisResult.name}, 可信度: ${analysisResult.confidence}`);
             }
             
             return analysisResult;
@@ -363,13 +370,17 @@ export async function analyzeCigarImage(
                     if (restResult) {
                         // 根据品牌和产品名称搜索图片 URL
                         if (restResult.brand && restResult.name && restResult.confidence > 0.5) {
+                            console.log(`[analyzeCigarImage] [REST API] 开始搜索图片URL - 品牌: ${restResult.brand}, 名称: ${restResult.name}, 可信度: ${restResult.confidence}`);
                             try {
                                 const imageUrl = await searchCigarImageUrl(restResult.brand, restResult.name);
                                 if (imageUrl) {
+                                    console.log(`[analyzeCigarImage] [REST API] ✅ 成功获取图片URL:`, imageUrl);
                                     restResult.imageUrl = imageUrl;
+                                } else {
+                                    console.warn(`[analyzeCigarImage] [REST API] ⚠️ 未找到图片URL`);
                                 }
                             } catch (error) {
-                                console.warn('搜索雪茄图片 URL 失败:', error);
+                                console.error('搜索雪茄图片 URL 失败:', error);
                                 // 不抛出错误，继续返回识别结果
                             }
                         }
@@ -417,51 +428,197 @@ async function searchCigarImageUrl(brand: string, name: string): Promise<string 
         return null;
     }
 
-    try {
-        const searchPrompt = `
-Search for a publicly accessible image (without left and right margin) URL of the single stick of cigar with band/label for "${brand} ${name}".
+    const searchPrompt = `
+Search for a publicly accessible image (without margin and blank background) URL of the single stick of cigar with band/label for "${brand} ${name}".
 
 Requirements:
 1. The URL must be a direct link to an image file (e.g., .jpg, .png, .webp), not a webpage
 2. The image should show the cigar band/label clearly
 3. The image should show a single stick of cigar without left and right margins
 4. Prefer images from authoritative cigar websites like:
-   - cigaraficionado.com
-   - halfwheel.com
-   - cigardojo.com
-   - famous-smoke.com
-   - neptunecigar.com
-   - habanos.com (for Cuban cigars)
+    - https://www.cigaraficionado.com/ and https://www.cigaraficionado.com/ratingsandreviews
+    - https://cigar-coop.com/
+    - https://cigardojo.com/ and https://cigardojo.com/cigar-review-archives/
+    - https://cigarsratings.com/
+    - https://halfwheel.com/ and https://halfwheel.com/cigar-reviews/
+    - https://www.cigaraficionado.com/ and https://www.cigaraficionado.com/ratingsandreviews
+    - https://www.cigarinspector.com/
+    - https://www.cigarjournal.com/ and https://www.cigarjournal.com/ratings-and-awards/ratings/
+    - https://www.famous-smoke.com/ and https://www.famous-smoke.com/cigaradvisor
+    - https://www.habanos.com/en/ (for Cuban cigars)
+    - https://www.leafenthusiast.com/
+    - https://www.neptunecigar.com/ and https://www.neptunecigar.com/cigars
 
 Return ONLY the image URL as a plain text string, nothing else. If you cannot find a suitable image URL, return "null".
-        `.trim();
+    `.trim();
 
-        // 使用 Gemini 来搜索图片 URL
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const result = await model.generateContent(searchPrompt);
-        const response = await result.response;
-        const imageUrl = response.text().trim();
-
-        // 验证返回的是有效的 URL
-        if (imageUrl && imageUrl !== 'null' && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
-            // 检查是否是图片 URL
-            const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
-            const isImageUrl = imageExtensions.some(ext => 
-                imageUrl.toLowerCase().includes(ext) || 
-                imageUrl.includes('image') ||
-                imageUrl.includes('photo')
-            );
-            
-            if (isImageUrl || imageUrl.includes('cloudinary') || imageUrl.includes('imgur')) {
-                return imageUrl;
-            }
+    // 获取可用模型列表（与主识别函数使用相同的策略）
+    let modelsToTry: string[] = [];
+    
+    // 尝试从 AppConfig 获取配置的模型
+    let configModels: string[] = [];
+    try {
+        const appConfig = await getAppConfig();
+        if (appConfig?.gemini?.models && appConfig.gemini.models.length > 0) {
+            configModels = appConfig.gemini.models;
         }
-
-        return null;
     } catch (error) {
-        console.warn('搜索雪茄图片 URL 时出错:', error);
-        return null;
+        // 忽略错误
     }
+    
+    // 尝试从 API 获取可用模型
+    let availableModels: string[] = [];
+    try {
+        availableModels = await getAvailableModels();
+    } catch (error) {
+        // 忽略错误
+    }
+    
+    // 默认模型列表
+    const defaultModels = [
+        "gemini-1.5-flash",
+        "gemini-1.5-pro",
+        "gemini-pro",
+    ];
+    
+    // 构建模型列表（与主识别函数相同的优先级）
+    if (configModels.length > 0) {
+        modelsToTry = [
+            ...configModels,
+            ...availableModels.filter(m => !configModels.includes(m)),
+            ...defaultModels.filter(m => !configModels.includes(m) && !availableModels.includes(m))
+        ];
+    } else if (availableModels.length > 0) {
+        modelsToTry = [
+            ...availableModels,
+            ...defaultModels.filter(m => !availableModels.includes(m))
+        ];
+    } else {
+        modelsToTry = [...defaultModels];
+    }
+    
+    // 确保列表不为空
+    if (modelsToTry.length === 0) {
+        modelsToTry = [...defaultModels];
+    }
+    
+    console.log(`[searchCigarImageUrl] 搜索 "${brand} ${name}" 的图片URL，尝试模型:`, modelsToTry);
+
+    // 尝试使用 SDK
+    for (const modelName of modelsToTry) {
+        try {
+            const model = genAI.getGenerativeModel({ model: modelName });
+            const result = await model.generateContent(searchPrompt);
+            const response = await result.response;
+            const rawResponse = response.text().trim();
+            
+            console.log(`[searchCigarImageUrl] [${modelName}] Gemini 原始响应:`, rawResponse);
+
+            // 清理响应文本（移除可能的引号、换行等）
+            let imageUrl = rawResponse
+                .replace(/^["']|["']$/g, '') // 移除首尾引号
+                .replace(/\n/g, '') // 移除换行
+                .trim();
+
+            // 验证返回的是有效的 URL
+            if (imageUrl && imageUrl.toLowerCase() !== 'null' && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
+                console.log(`[searchCigarImageUrl] [${modelName}] 找到有效URL:`, imageUrl);
+                
+                // 更宽松的验证：只要是http/https开头的URL就接受
+                // 因为很多图片URL可能不包含明显的图片扩展名（如CDN URL）
+                const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'];
+                const hasImageExtension = imageExtensions.some(ext => 
+                    imageUrl.toLowerCase().includes(ext)
+                );
+                
+                // 检查是否是图片相关的URL（包含图片关键词或常见图片服务）
+                const isImageRelated = imageUrl.includes('image') ||
+                    imageUrl.includes('photo') ||
+                    imageUrl.includes('picture') ||
+                    imageUrl.includes('img') ||
+                    imageUrl.includes('cloudinary') ||
+                    imageUrl.includes('imgur') ||
+                    imageUrl.includes('cdn') ||
+                    imageUrl.includes('static');
+                
+                if (hasImageExtension || isImageRelated) {
+                    console.log(`[searchCigarImageUrl] [${modelName}] ✅ URL验证通过，返回:`, imageUrl);
+                    return imageUrl;
+                } else {
+                    // 即使没有明显的图片标识，只要是有效URL也尝试返回
+                    // 让浏览器尝试加载，如果失败会在组件中回退
+                    console.log(`[searchCigarImageUrl] [${modelName}] ⚠️ URL没有明显的图片标识，但尝试返回:`, imageUrl);
+                    return imageUrl;
+                }
+            } else {
+                console.warn(`[searchCigarImageUrl] [${modelName}] ❌ 无效的URL响应:`, imageUrl);
+            }
+            
+            // 如果这个模型返回了无效响应，尝试下一个模型
+            continue;
+        } catch (error: any) {
+            const errorMessage = error?.message || error?.toString() || '';
+            const errorString = errorMessage.toLowerCase();
+            
+            // 如果是模型不支持的错误（404），尝试下一个模型或使用 REST API
+            if (errorString.includes('not found') || 
+                errorString.includes('404') || 
+                errorString.includes('is not found for api version') ||
+                errorString.includes('not supported')) {
+                console.warn(`[searchCigarImageUrl] 模型 ${modelName} 在 SDK 中不可用，尝试使用 REST API...`);
+                
+                // 尝试使用 REST API
+                try {
+                    const imagePart = { text: searchPrompt };
+                    const restResponse = await fetch(
+                        `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${API_KEY}`,
+                        {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                contents: [{
+                                    parts: [{ text: searchPrompt }]
+                                }]
+                            })
+                        }
+                    );
+                    
+                    if (restResponse.ok) {
+                        const data = await restResponse.json();
+                        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                        const rawResponse = text.trim();
+                        
+                        console.log(`[searchCigarImageUrl] [REST API ${modelName}] Gemini 原始响应:`, rawResponse);
+                        
+                        let imageUrl = rawResponse
+                            .replace(/^["']|["']$/g, '')
+                            .replace(/\n/g, '')
+                            .trim();
+                        
+                        if (imageUrl && imageUrl.toLowerCase() !== 'null' && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
+                            console.log(`[searchCigarImageUrl] [REST API ${modelName}] ✅ 找到有效URL:`, imageUrl);
+                            return imageUrl;
+                        }
+                    }
+                } catch (restError) {
+                    console.warn(`[searchCigarImageUrl] REST API 调用也失败，尝试下一个模型...`);
+                    continue;
+                }
+                
+                continue;
+            }
+            
+            // 其他错误（如权限、配额等）记录但继续尝试下一个模型
+            console.warn(`[searchCigarImageUrl] 模型 ${modelName} 调用失败:`, error);
+            continue;
+        }
+    }
+    
+    // 所有模型都失败
+    console.warn(`[searchCigarImageUrl] ❌ 所有模型都失败，无法搜索图片URL`);
+    return null;
 }
 
 /**
@@ -498,6 +655,7 @@ export async function analyzeCigarByName(
     
     IMPORTANT: You should reference information from authoritative cigar websites and databases to ensure accuracy. 
     Consider searching and referencing information from these reputable sources:
+    - https://www.cigaraficionado.com/ and https://www.cigaraficionado.com/ratingsandreviews
     - https://cigar-coop.com/
     - https://cigardojo.com/ and https://cigardojo.com/cigar-review-archives/
     - https://cigarsratings.com/
