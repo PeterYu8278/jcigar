@@ -469,33 +469,75 @@ export async function analyzeCigarImage(
  * @param name 产品名称
  * @returns 图片 URL 或 null
  */
+/**
+ * 验证图片 URL 是否可访问（使用 HEAD 请求）
+ * 注意：由于 CORS 限制，某些网站可能无法验证，但我们会尝试
+ */
+async function validateImageUrl(url: string): Promise<boolean> {
+    try {
+        // 使用 HEAD 请求检查 URL 是否可访问
+        const response = await fetch(url, {
+            method: 'HEAD',
+            mode: 'no-cors', // 使用 no-cors 避免 CORS 错误，但无法读取响应状态
+            cache: 'no-cache'
+        });
+        
+        // 由于 no-cors 模式，我们无法读取状态码
+        // 但我们可以尝试加载图片来验证
+        return new Promise((resolve) => {
+            const img = new Image();
+            const timeout = setTimeout(() => {
+                resolve(false);
+            }, 5000); // 5秒超时
+            
+            img.onload = () => {
+                clearTimeout(timeout);
+                resolve(true);
+            };
+            
+            img.onerror = () => {
+                clearTimeout(timeout);
+                resolve(false);
+            };
+            
+            img.src = url;
+        });
+    } catch (error) {
+        console.warn(`[validateImageUrl] URL验证失败:`, url, error);
+        return false;
+    }
+}
+
 async function searchCigarImageUrl(brand: string, name: string): Promise<string | null> {
     if (!API_KEY) {
         return null;
     }
 
     const searchPrompt = `
-Search for a publicly accessible image (without margin and blank background) URL of the single stick of cigar with band/label for "${brand} ${name}".
+Search for a publicly accessible, working image URL of a single stick of cigar with band/label for "${brand} ${name}".
 
-Requirements:
-1. The URL must be a direct link to an image file (e.g., .jpg, .png, .webp), not a webpage
-2. The image should show the cigar band/label clearly
-3. The image should show a single stick of cigar without left and right margins
-4. Prefer images from authoritative cigar websites like:
-    - https://www.cigaraficionado.com/ and https://www.cigaraficionado.com/ratingsandreviews
-    - https://cigar-coop.com/
-    - https://cigardojo.com/ and https://cigardojo.com/cigar-review-archives/
-    - https://cigarsratings.com/
-    - https://halfwheel.com/ and https://halfwheel.com/cigar-reviews/
-    - https://www.cigaraficionado.com/ and https://www.cigaraficionado.com/ratingsandreviews
-    - https://www.cigarinspector.com/
-    - https://www.cigarjournal.com/ and https://www.cigarjournal.com/ratings-and-awards/ratings/
-    - https://www.famous-smoke.com/ and https://www.famous-smoke.com/cigaradvisor
-    - https://www.habanos.com/en/ (for Cuban cigars)
-    - https://www.leafenthusiast.com/
-    - https://www.neptunecigar.com/ and https://www.neptunecigar.com/cigars
+CRITICAL REQUIREMENTS:
+1. The URL MUST be a direct link to an image file (e.g., .jpg, .png, .webp), NOT a webpage URL
+2. The URL MUST be accessible and return a valid image (not 404)
+3. The image should show the cigar band/label clearly
+4. The image should show a single stick of cigar without excessive margins
+5. Prefer images from these reliable sources (in order of preference):
+    - https://www.cigaraficionado.com/ (look for direct image URLs in their ratings/reviews)
+    - https://cigar-coop.com/ (direct image URLs)
+    - https://cigardojo.com/ (direct image URLs from reviews)
+    - https://halfwheel.com/ (direct image URLs from reviews)
+    - https://www.cigarjournal.com/ (direct image URLs)
+    - https://www.famous-smoke.com/ (product image URLs)
+    - https://www.neptunecigar.com/ (product image URLs - verify the URL exists)
+    - https://www.habanos.com/en/ (for Cuban cigars - direct image URLs)
+    - https://www.cigarsratings.com/ (direct image URLs)
+    - https://www.leafenthusiast.com/ (direct image URLs)
 
-Return ONLY the image URL as a plain text string, nothing else. If you cannot find a suitable image URL, return "null".
+IMPORTANT: 
+- Return ONLY a working, accessible image URL as plain text
+- Do NOT return URLs that might return 404 errors
+- If you cannot find a verified working image URL, return "null"
+- The URL should end with an image extension (.jpg, .jpeg, .png, .webp) or be a known image CDN URL
     `.trim();
 
     // 获取可用模型列表（与主识别函数使用相同的策略）
@@ -640,7 +682,19 @@ Return ONLY the image URL as a plain text string, nothing else. If you cannot fi
                     imageUrl.includes('static');
                 
                 if (hasImageExtension || isImageRelated) {
-                    console.log(`[searchCigarImageUrl] [${modelName}] ✅ URL验证通过，返回:`, imageUrl);
+                    console.log(`[searchCigarImageUrl] [${modelName}] ✅ URL格式验证通过，返回:`, imageUrl);
+                    
+                    // 异步验证 URL 可访问性（不阻塞返回，仅用于日志记录）
+                    validateImageUrl(imageUrl).then(isValid => {
+                        if (isValid) {
+                            console.log(`[searchCigarImageUrl] [${modelName}] ✅ URL可访问性验证通过:`, imageUrl);
+                        } else {
+                            console.warn(`[searchCigarImageUrl] [${modelName}] ⚠️ URL可访问性验证失败（可能404）:`, imageUrl);
+                        }
+                    }).catch(() => {
+                        // 验证失败不影响返回 URL
+                    });
+                    
                     return imageUrl;
                 } else {
                     // 即使没有明显的图片标识，只要是有效URL也尝试返回
@@ -718,7 +772,19 @@ Return ONLY the image URL as a plain text string, nothing else. If you cannot fi
                         .trim();
                     
                     if (imageUrl && imageUrl.toLowerCase() !== 'null' && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
-                        console.log(`[searchCigarImageUrl] [REST API ${modelName}] ✅ 找到有效URL:`, imageUrl);
+                        console.log(`[searchCigarImageUrl] [REST API ${modelName}] ✅ 找到有效URL，返回:`, imageUrl);
+                        
+                        // 异步验证 URL 可访问性（不阻塞返回，仅用于日志记录）
+                        validateImageUrl(imageUrl).then(isValid => {
+                            if (isValid) {
+                                console.log(`[searchCigarImageUrl] [REST API ${modelName}] ✅ URL可访问性验证通过:`, imageUrl);
+                            } else {
+                                console.warn(`[searchCigarImageUrl] [REST API ${modelName}] ⚠️ URL可访问性验证失败（可能404）:`, imageUrl);
+                            }
+                        }).catch(() => {
+                            // 验证失败不影响返回 URL
+                        });
+                        
                         return imageUrl;
                     } else {
                         console.warn(`[searchCigarImageUrl] [REST API ${modelName}] ❌ 无效的URL响应:`, imageUrl);
