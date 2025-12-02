@@ -616,36 +616,41 @@ async function validateImageUrl(url: string): Promise<boolean> {
  * @returns 可用的图片 URL 或 null
  */
 async function searchCigarImageUrl(brand: string, name: string): Promise<string | null> {
-    console.log(`[searchCigarImageUrl] 🚀 开始并行搜索图片: "${brand} ${name}" (优先使用 Google Search)`);
+    console.log(`[searchCigarImageUrl] 🚀 开始搜索图片: "${brand} ${name}" (优先执行 Google Image Search)`);
     
-    // 并行执行 Google Image Search 和 Gemini 搜索（优先 Google）
-    const [googleResult, geminiResult] = await Promise.allSettled([
-        searchCigarImageWithGoogle(brand, name),
-        searchCigarImageUrlWithGemini(brand, name)
-    ]);
-
-    // 优先检查 Google 结果
-    if (googleResult.status === 'fulfilled') {
-        if (googleResult.value) {
-            console.log(`[searchCigarImageUrl] ✅ Google 搜索成功（优先）:`, googleResult.value);
-            return googleResult.value;
+    // 优先执行 Google Image Search
+    try {
+        console.log(`[searchCigarImageUrl] 🔍 优先执行 Google Image Search...`);
+        const googleResult = await searchCigarImageWithGoogle(brand, name);
+        
+        if (googleResult) {
+            console.log(`[searchCigarImageUrl] ✅ Google Image Search 成功（优先）:`, googleResult);
+            return googleResult;
         } else {
-            console.log(`[searchCigarImageUrl] ℹ️ Google 搜索完成，但未找到可用图片 URL，尝试 Gemini...`);
+            console.log(`[searchCigarImageUrl] ℹ️ Google Image Search 未找到可用图片 URL，回退到 Gemini...`);
         }
-    } else if (googleResult.status === 'rejected') {
-        console.warn(`[searchCigarImageUrl] ⚠️ Google 搜索失败:`, googleResult.reason);
+    } catch (error) {
+        console.warn(`[searchCigarImageUrl] ⚠️ Google Image Search 失败:`, error);
+        console.log(`[searchCigarImageUrl] ℹ️ Google Image Search 失败，回退到 Gemini...`);
     }
 
-    // 如果 Google 搜索失败，回退到 Gemini
-    if (geminiResult.status === 'fulfilled' && geminiResult.value) {
-        console.log(`[searchCigarImageUrl] ✅ Gemini 搜索成功（回退）:`, geminiResult.value);
-        return geminiResult.value;
-    } else if (geminiResult.status === 'rejected') {
-        console.warn(`[searchCigarImageUrl] ⚠️ Gemini 搜索失败:`, geminiResult.reason);
+    // 如果 Google 搜索失败或未找到结果，回退到 Gemini
+    try {
+        console.log(`[searchCigarImageUrl] 🔍 执行 Gemini 搜索（回退）...`);
+        const geminiResult = await searchCigarImageUrlWithGemini(brand, name);
+        
+        if (geminiResult) {
+            console.log(`[searchCigarImageUrl] ✅ Gemini 搜索成功（回退）:`, geminiResult);
+            return geminiResult;
+        } else {
+            console.log(`[searchCigarImageUrl] ℹ️ Gemini 搜索未找到可用图片 URL`);
+        }
+    } catch (error) {
+        console.warn(`[searchCigarImageUrl] ⚠️ Gemini 搜索失败:`, error);
     }
 
     // 两个搜索都失败
-    console.warn(`[searchCigarImageUrl] ❌ 所有搜索方法都失败（Google 和 Gemini 都未找到可用图片）`);
+    console.warn(`[searchCigarImageUrl] ❌ 所有搜索方法都失败（Google Image Search 和 Gemini 都未找到可用图片）`);
     return null;
 }
 
