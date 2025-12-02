@@ -42,8 +42,6 @@ export const AICigarScanner: React.FC = () => {
     const [loadingSuggestions, setLoadingSuggestions] = useState(false);
     const [matchedCigars, setMatchedCigars] = useState<Cigar[]>([]);
     const [dataStorageEnabled, setDataStorageEnabled] = useState<boolean>(true);
-    const [searchMode, setSearchMode] = useState<'camera' | 'upload' | 'text'>('camera');
-    const [textSearchInput, setTextSearchInput] = useState<string>('');
 
     // 保存识别结果到数据库（内部函数，不暴露给用户）
     // 必须在 handleAnalyze 之前定义，避免依赖循环
@@ -421,22 +419,28 @@ export const AICigarScanner: React.FC = () => {
 
     // 处理文本搜索
     const handleTextSearch = async () => {
-        if (!textSearchInput || !textSearchInput.trim()) {
+        if (!userHint || !userHint.trim()) {
             message.warning('请输入雪茄品牌和名称');
             return;
         }
         
         setAnalyzing(true);
         setResult(null);
+        setImgSrc(null); // 清空图片
         
         try {
-            console.log(`[AICigarScanner] 文本搜索: "${textSearchInput}"`);
-            const searchResult = await searchCigarByText(textSearchInput);
+            console.log(`[AICigarScanner] 文本搜索: "${userHint}"`);
+            const searchResult = await searchCigarByText(userHint);
             
             if (searchResult) {
                 console.log('[AICigarScanner] 文本搜索结果:', searchResult);
                 setResult(searchResult);
                 message.success('搜索成功');
+                
+                // 如果找到图片URL，设置为显示图片
+                if (searchResult.imageUrl) {
+                    setImgSrc(searchResult.imageUrl);
+                }
                 
                 // 如果启用数据存储，保存结果
                 if (dataStorageEnabled && searchResult.hasDetailedInfo) {
@@ -521,17 +525,36 @@ export const AICigarScanner: React.FC = () => {
                     size="small"
                 >
                     <Space direction="vertical" style={{ width: '100%' }} size="small">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <EditOutlined style={{ color: '#ffd700' }} />
-                            <Text style={{ color: '#fff', fontSize: '14px', fontWeight: 500 }}>
-                                手动输入雪茄型号（可选，可提高准确性）
-                            </Text>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <EditOutlined style={{ color: '#ffd700' }} />
+                                <Text style={{ color: '#fff', fontSize: '14px', fontWeight: 500 }}>
+                                    输入雪茄型号
+                                </Text>
+                            </div>
+                            {userHint && userHint.trim() && (
+                                <Button
+                                    type="primary"
+                                    size="small"
+                                    icon={<SearchOutlined />}
+                                    onClick={handleTextSearch}
+                                    loading={analyzing}
+                                    style={{
+                                        background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
+                                        border: 'none',
+                                        color: '#111'
+                                    }}
+                                >
+                                    直接搜索
+                                </Button>
+                            )}
                         </div>
                         <AutoComplete
                             style={{ width: '100%' }}
-                            placeholder="输入品牌或雪茄名称，例如：Cohiba Robusto"
+                            placeholder="输入品牌或雪茄名称，例如：Cohiba Robusto（可直接搜索或辅助拍照识别）"
                             value={userHint}
                             onChange={setUserHint}
+                            onSelect={(value) => setUserHint(value)}
                             options={filterOptions(userHint)}
                             filterOption={false}
                             allowClear
@@ -540,7 +563,7 @@ export const AICigarScanner: React.FC = () => {
                         />
                         {userHint && (
                             <Text type="secondary" style={{ fontSize: '12px', color: '#aaa' }}>
-                                提示：已输入 "{userHint}"，识别时将优先考虑此信息
+                                💡 提示：可以直接点击"直接搜索"按钮查询，或拍照/上传图片时作为辅助信息
                             </Text>
                         )}
                     </Space>
@@ -657,74 +680,14 @@ export const AICigarScanner: React.FC = () => {
                                 style={{ 
                                     width: '48px', 
                                     height: '48px', 
-                                    background: searchMode === 'upload' ? 'rgba(255, 215, 0, 0.3)' : 'rgba(0,0,0,0.6)',
-                                    border: searchMode === 'upload' ? '2px solid rgba(255, 215, 0, 0.6)' : '2px solid rgba(255,255,255,0.3)',
+                                    background: 'rgba(0,0,0,0.6)',
+                                    border: '2px solid rgba(255,255,255,0.3)',
                                     color: '#fff'
                                 }}
                                 title="上传图片"
-                                onClick={() => setSearchMode('upload')}
                             />
                         </Upload>
-                        <Button
-                            type="default"
-                            shape="circle"
-                            icon={<SearchOutlined style={{ fontSize: '20px' }} />}
-                            size="large"
-                            style={{ 
-                                width: '48px', 
-                                height: '48px', 
-                                background: searchMode === 'text' ? 'rgba(255, 215, 0, 0.3)' : 'rgba(0,0,0,0.6)',
-                                border: searchMode === 'text' ? '2px solid rgba(255, 215, 0, 0.6)' : '2px solid rgba(255,255,255,0.3)',
-                                color: '#fff'
-                            }}
-                            onClick={() => {
-                                setSearchMode('text');
-                                setImgSrc(null);
-                                setResult(null);
-                            }}
-                            title="文本搜索"
-                        />
                     </div>
-                </div>
-            ) : searchMode === 'text' ? (
-                <div style={{ width: '100%', marginBottom: '16px', padding: '24px', background: 'rgba(0,0,0,0.3)', borderRadius: '12px' }}>
-                    <Space direction="vertical" style={{ width: '100%' }} size="large">
-                        <div>
-                            <Text style={{ color: '#fff', fontSize: '16px', display: 'block', marginBottom: '12px' }}>
-                                输入雪茄品牌和名称
-                            </Text>
-                            <Input.Search
-                                placeholder="例如：Cohiba Robusto, Macanudo Cafe Crystal"
-                                value={textSearchInput}
-                                onChange={(e) => setTextSearchInput(e.target.value)}
-                                onSearch={handleTextSearch}
-                                enterButton="搜索"
-                                size="large"
-                                loading={analyzing}
-                                disabled={analyzing}
-                                style={{ width: '100%' }}
-                            />
-                            <Text style={{ color: '#999', fontSize: '12px', display: 'block', marginTop: '8px' }}>
-                                提示：输入完整的品牌和型号，例如 "Cohiba Robusto" 或 "Macanudo Cafe Crystal"
-                            </Text>
-                        </div>
-                        <Button
-                            type="default"
-                            icon={<CameraOutlined />}
-                            onClick={() => {
-                                setSearchMode('camera');
-                                setTextSearchInput('');
-                                setResult(null);
-                            }}
-                            style={{ 
-                                background: 'rgba(0,0,0,0.6)',
-                                border: '1px solid rgba(255,255,255,0.3)',
-                                color: '#fff'
-                            }}
-                        >
-                            返回拍照模式
-                        </Button>
-                    </Space>
                 </div>
             ) : (
                 <div style={{ width: '100%', marginBottom: '16px' }}>
