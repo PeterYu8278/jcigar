@@ -138,8 +138,15 @@ export async function searchCigarByText(brandAndName: string): Promise<CigarAnal
       brand: geminiResult.brand,
       name: geminiResult.name,
       wrapper: geminiResult.wrapper,
+      binder: geminiResult.binder,
+      filler: geminiResult.filler,
       strength: geminiResult.strength,
+      flavorProfile: geminiResult.flavorProfile,
+      footTasteNotes: geminiResult.footTasteNotes,
+      bodyTasteNotes: geminiResult.bodyTasteNotes,
+      headTasteNotes: geminiResult.headTasteNotes,
       rating: geminiResult.rating,
+      ratingSource: geminiResult.ratingSource,
       confidence: geminiResult.confidence
     });
     
@@ -150,6 +157,7 @@ export async function searchCigarByText(brandAndName: string): Promise<CigarAnal
       confidence: geminiResult.confidence * 0.9 // 文本搜索的置信度略降低
     };
     
+    console.log(`[cigarTextSearch] 📊 最终结果:`, result);
     console.log(`[cigarTextSearch] 📊 最终结果置信度: ${(result.confidence * 100).toFixed(1)}%`);
     
     // 更新统计
