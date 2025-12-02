@@ -224,6 +224,15 @@ Macanudo,Cafe Crystal,Connecticut Shade,Mexican,"Dominican, Mexican, Jamaican",m
         for (const row of batchRows) {
           const docRef = doc(cigarsRef);
           
+          // 自动计算数据质量
+          const hasWrapper = !!row.wrapper;
+          const hasBinder = !!row.binder;
+          const hasFiller = !!row.filler;
+          const hasFlavorProfile = !!row.flavorProfile;
+          const hasTastingNotes = !!(row.footTasteNotes || row.bodyTasteNotes || row.headTasteNotes);
+          const hasRating = !!row.rating && !!row.ratingSource;
+          const isVerified = row.verified?.toLowerCase() === 'true';
+          
           const cigarData = {
             brand: row.brand,
             name: row.name,
@@ -240,7 +249,16 @@ Macanudo,Cafe Crystal,Connecticut Shade,Mexican,"Dominican, Mexican, Jamaican",m
             ratingSource: row.ratingSource || null,
             ratingDate: row.ratingDate ? new Date(row.ratingDate) : null,
             imageUrl: row.imageUrl || null,
-            verified: row.verified?.toLowerCase() === 'true',
+            verified: isVerified,
+            // 数据质量标注（导入数据默认为 high）
+            dataQuality: {
+              tobaccoComposition: (hasWrapper && hasBinder && hasFiller) ? 'high' : 
+                                 (hasWrapper || hasBinder || hasFiller) ? 'medium' : 'unknown',
+              flavorProfile: hasFlavorProfile ? 'high' : 'unknown',
+              tastingNotes: hasTastingNotes ? 'high' : 'unknown',
+              rating: hasRating ? 'high' : 'unknown',
+              overall: isVerified ? 'verified' : 'high'
+            },
             normalizedBrand: normalizeName(row.brand),
             normalizedName: normalizeName(row.name),
             searchKeywords: generateSearchKeywords(row.brand, row.name),

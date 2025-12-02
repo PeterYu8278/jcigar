@@ -17,7 +17,8 @@ import {
   Collapse,
   Row,
   Col,
-  Image
+  Image,
+  Alert
 } from 'antd';
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
@@ -99,6 +100,14 @@ export const CigarForm: React.FC<CigarFormProps> = ({
       const normalizedName = normalizeName(values.name);
       const searchKeywords = generateSearchKeywords(values.brand, values.name);
 
+      // 自动计算数据质量
+      const hasWrapper = !!values.wrapper;
+      const hasBinder = !!values.binder;
+      const hasFiller = !!values.filler;
+      const hasFlavorProfile = values.flavorProfile && values.flavorProfile.length > 0;
+      const hasTastingNotes = !!(values.footTasteNotes || values.bodyTasteNotes || values.headTasteNotes);
+      const hasRating = !!values.rating && !!values.ratingSource;
+
       // 准备保存的数据
       const cigarData = {
         brand: values.brand,
@@ -117,6 +126,15 @@ export const CigarForm: React.FC<CigarFormProps> = ({
         ratingDate: values.ratingDate ? (values.ratingDate as any).toDate() : null,
         imageUrl: values.imageUrl || null,
         verified: values.verified || false,
+        // 数据质量标注（手动录入默认为 verified）
+        dataQuality: {
+          tobaccoComposition: (hasWrapper && hasBinder && hasFiller) ? 'verified' : 
+                             (hasWrapper || hasBinder || hasFiller) ? 'high' : 'unknown',
+          flavorProfile: hasFlavorProfile ? 'verified' : 'unknown',
+          tastingNotes: hasTastingNotes ? 'verified' : 'unknown',
+          rating: hasRating ? 'verified' : 'unknown',
+          overall: values.verified ? 'verified' : 'high'
+        },
         normalizedBrand,
         normalizedName,
         searchKeywords,
@@ -332,6 +350,14 @@ export const CigarForm: React.FC<CigarFormProps> = ({
               </Form.Item>
             </Col>
           </Row>
+          
+          <Alert
+            message="数据质量说明"
+            description="系统会自动根据填写的字段计算数据质量。手动录入的数据默认标记为'已验证'或'高质量'。"
+            type="info"
+            showIcon
+            style={{ marginTop: 16 }}
+          />
         </Panel>
       </Collapse>
 

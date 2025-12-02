@@ -10,7 +10,12 @@ export type CigarStrength = 'mild' | 'medium-mild' | 'medium' | 'medium-full' | 
 /**
  * 数据来源类型
  */
-export type CigarDataSource = 'manual' | 'imported';
+export type CigarDataSource = 'manual' | 'imported' | 'scraped' | 'ai';
+
+/**
+ * 字段准确度/可信度级别
+ */
+export type FieldAccuracy = 'verified' | 'high' | 'medium' | 'low' | 'unknown';
 
 /**
  * 雪茄详细信息接口
@@ -52,6 +57,15 @@ export interface CigarDetailedInfo {
   updatedBy: string;                   // 更新人
   verified: boolean;                   // 是否已验证
   
+  // ===== 数据质量/准确度标注 =====
+  dataQuality?: {
+    tobaccoComposition?: FieldAccuracy;  // 烟叶信息准确度（wrapper, binder, filler）
+    flavorProfile?: FieldAccuracy;       // 风味特征准确度
+    tastingNotes?: FieldAccuracy;        // 品鉴笔记准确度
+    rating?: FieldAccuracy;              // 评分准确度
+    overall?: FieldAccuracy;             // 整体数据质量
+  };
+  
   // ===== 搜索优化 =====
   searchKeywords: string[];            // 搜索关键词（品牌+名称的变体）
   normalizedBrand: string;             // 标准化品牌名（小写、去空格）
@@ -78,6 +92,14 @@ export interface CigarDetailedInfoFormData {
   ratingDate?: Date;
   imageUrl?: string;
   verified?: boolean;
+  // 数据质量标注
+  dataQuality?: {
+    tobaccoComposition?: FieldAccuracy;
+    flavorProfile?: FieldAccuracy;
+    tastingNotes?: FieldAccuracy;
+    rating?: FieldAccuracy;
+    overall?: FieldAccuracy;
+  };
 }
 
 /**
