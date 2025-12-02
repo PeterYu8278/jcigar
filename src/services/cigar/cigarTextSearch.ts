@@ -73,18 +73,18 @@ export async function searchCigarByText(brandAndName: string): Promise<CigarAnal
         brandDescription: '',
         flavorProfile: dbResult.flavorProfile,
         strength: dbResult.strength as any,
-        wrapper: dbResult.wrapper,
-        binder: dbResult.binder,
-        filler: dbResult.filler,
-        footTasteNotes: dbResult.footTasteNotes,
-        bodyTasteNotes: dbResult.bodyTasteNotes,
-        headTasteNotes: dbResult.headTasteNotes,
+        wrapper: dbResult.wrapper || undefined,
+        binder: dbResult.binder || undefined,
+        filler: dbResult.filler || undefined,
+        footTasteNotes: dbResult.footTasteNotes || undefined,
+        bodyTasteNotes: dbResult.bodyTasteNotes || undefined,
+        headTasteNotes: dbResult.headTasteNotes || undefined,
         description: dbResult.description || '',
-        rating: dbResult.rating,
-        ratingSource: dbResult.ratingSource,
-        ratingDate: dbResult.ratingDate,
+        rating: dbResult.rating || undefined,
+        ratingSource: dbResult.ratingSource || undefined,
+        ratingDate: dbResult.ratingDate || undefined,
         confidence: 1.0, // 数据库数据，置信度100%
-        imageUrl: dbResult.imageUrl,
+        imageUrl: dbResult.imageUrl || undefined,
         hasDetailedInfo: true,
         databaseId: dbResult.id
       };
@@ -129,9 +129,19 @@ export async function searchCigarByText(brandAndName: string): Promise<CigarAnal
   console.log(`[cigarTextSearch] 🤖 数据库未找到，使用 Gemini API 推理详细信息...`);
   
   try {
+    console.log(`[cigarTextSearch] 📞 调用 Gemini API: analyzeCigarByName("${name}", "${brand}")`);
+    
     // 调用 Gemini API 根据品牌和名称获取详细信息
     const geminiResult = await analyzeCigarByName(name, brand);
-    console.log(`[cigarTextSearch] ✅ Gemini API 返回详细信息`);
+    
+    console.log(`[cigarTextSearch] ✅ Gemini API 返回详细信息:`, {
+      brand: geminiResult.brand,
+      name: geminiResult.name,
+      wrapper: geminiResult.wrapper,
+      strength: geminiResult.strength,
+      rating: geminiResult.rating,
+      confidence: geminiResult.confidence
+    });
     
     // 标注为 AI 推理结果（非数据库验证）
     const result: CigarAnalysisResult = {
@@ -139,6 +149,8 @@ export async function searchCigarByText(brandAndName: string): Promise<CigarAnal
       hasDetailedInfo: false, // 标注为非数据库数据
       confidence: geminiResult.confidence * 0.9 // 文本搜索的置信度略降低
     };
+    
+    console.log(`[cigarTextSearch] 📊 最终结果置信度: ${(result.confidence * 100).toFixed(1)}%`);
     
     // 更新统计
     updateRecognitionStats({
@@ -152,6 +164,10 @@ export async function searchCigarByText(brandAndName: string): Promise<CigarAnal
     return result;
   } catch (error) {
     console.error('[cigarTextSearch] ❌ Gemini API 调用失败:', error);
+    console.error('[cigarTextSearch] 错误详情:', {
+      message: (error as any)?.message,
+      stack: (error as any)?.stack
+    });
     
     // Gemini API 失败，返回基础信息
     console.log(`[cigarTextSearch] ℹ️ 返回基础识别结果（无详细信息）`);
