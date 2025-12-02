@@ -1493,7 +1493,7 @@ const AdminInventory: React.FC = () => {
                             
                             {/* 图片、信息和按钮（水平布局） */}
                             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                            <div style={{ width: 80, height: 80, borderRadius: 10, overflow: 'hidden', background: 'rgba(255,255,255,0.08)', flexShrink: 0 }}>
+                            <div style={{ width: 60, height: 80, borderRadius: 10, overflow: 'hidden', background: 'rgba(255,255,255,0.08)', flexShrink: 0 }}>
                               <img 
                                 src={(record as any).images && (record as any).images.length > 0 ? (record as any).images[0] : DEFAULT_CIGAR_IMAGE}
                                 alt={record.name}
@@ -1505,7 +1505,17 @@ const AdminInventory: React.FC = () => {
                               />
                             </div>
                             <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: 12, color: 'rgba(224,214,196,0.6)' }}>{record.size || ''} {record.size ? '|' : ''} SKU: {(record as any)?.sku || record.id}</div>
+                              <div style={{ fontSize: 12, color: 'rgba(224,214,196,0.6)', display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+                                {record.size && <span>{record.size}</span>}
+                                {record.size && record.origin && <span>|</span>}
+                                {record.origin && <span>{record.origin}</span>}
+                                {(record.size || record.origin) && record.strength && <span>|</span>}
+                                {record.strength && (
+                                  <Tag color={getStrengthColor(record.strength)} style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px' }}>
+                                    {getStrengthText(record.strength)}
+                                  </Tag>
+                                )}
+                              </div>
                               <div style={{ fontWeight: 700, color: '#f4af25', marginTop: 2 }}>RM{record.price?.toLocaleString?.() || record.price}</div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, marginTop: 4 }}>
                                 {(() => { const { totalIn, totalOut } = getTotals((record as any)?.id); return (
@@ -1557,29 +1567,27 @@ const AdminInventory: React.FC = () => {
                                   >
                               {t('common.edit')}
                                 </button>
-                                  <button 
-                                    style={{ 
-                                      padding: '4px 8px', 
-                                      borderRadius: 6, 
-                                      background: 'rgba(255,255,255,0.1)', 
-                                      color: '#fff', 
-                                      fontWeight: 600, 
-                                      fontSize: 12, 
-                                      cursor: 'pointer', 
-                                      transition: 'all 0.2s ease',
-                                      border: '1px solid rgba(255,255,255,0.2)',
-                                      whiteSpace: 'nowrap',
-                                      flexShrink: 0
-                                    }} 
-                                    onClick={() => {
-                                      setViewingProductLogs((record as any)?.id)
-                                    }}
-                                  >
-                                    {t('inventory.view')}
-                            </button>
                                 </div>
-                                {/* 库存数量（移到按钮下方，仅显示数量，用颜色表示状态，字体高度与价格+总入库/出库的总高度一致） */}
-                                <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', minHeight: 40 }}>
+                                {/* 库存数量（可点击查看详情，用颜色表示状态，字体高度与价格+总入库/出库的总高度一致） */}
+                                <div 
+                                  style={{ 
+                                    textAlign: 'right', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    minHeight: 40,
+                                    cursor: 'pointer',
+                                    transition: 'opacity 0.2s ease'
+                                  }}
+                                  onClick={() => {
+                                    setViewingProductLogs((record as any)?.id)
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.opacity = '0.8'
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.opacity = '1'
+                                  }}
+                                >
                                   {(() => {
                                     const computed = getComputedStock((record as any)?.id)
                                     const min = ((record as any)?.inventory?.minStock ?? 0)

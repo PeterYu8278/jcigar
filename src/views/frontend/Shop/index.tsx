@@ -1,7 +1,7 @@
 // 商品导航页面
 import React, { useEffect, useState, useRef } from 'react'
-import { Input, Slider, Button, Typography, Modal } from 'antd'
-import { SearchOutlined, ArrowLeftOutlined, ShoppingCartOutlined } from '@ant-design/icons'
+import { Input, Slider, Button, Typography, Modal, Tag } from 'antd'
+import { SearchOutlined, ArrowLeftOutlined, ShoppingCartOutlined, ReloadOutlined } from '@ant-design/icons'
 import type { Cigar, Brand } from '../../../types'
 import { getCigars, getBrands } from '../../../services/firebase/firestore'
 import { useCartStore } from '../../../store/modules'
@@ -31,6 +31,8 @@ const Shop: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [searchKeyword, setSearchKeyword] = useState('')
   const [selectedBrand, setSelectedBrand] = useState<string>('all')
+  const [selectedStrength, setSelectedStrength] = useState<string | null>(null)
+  const [selectedSize, setSelectedSize] = useState<string | null>(null)
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 2000])
   const [cartModalVisible, setCartModalVisible] = useState(false)
   const { addToCart, toggleWishlist, wishlist, quantities, setQuantity, removeFromCart, clearCart } = useCartStore()
@@ -132,7 +134,9 @@ const Shop: React.FC = () => {
     // 手机端不按品牌筛选，电脑端筛选
     const matchesBrand = isMobile || selectedBrand === 'all' || cigar.brand === selectedBrand
     const matchesPrice = cigar.price >= priceRange[0] && cigar.price <= priceRange[1]
-    return matchesSearch && matchesBrand && matchesPrice
+    const matchesStrength = !selectedStrength || cigar.strength === selectedStrength
+    const matchesSize = !selectedSize || cigar.size === selectedSize
+    return matchesSearch && matchesBrand && matchesPrice && matchesStrength && matchesSize
   })
 
   // 按产地分组品牌并排序 A-Z（仅显示有商品的品牌）
@@ -192,9 +196,10 @@ const Shop: React.FC = () => {
   return (
     <div style={{ 
       display: 'flex', 
-      height: '100%',
+      height: !isMobile ? 'calc(100vh - 64px)' : '100%',
       background: 'transparent',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      paddingTop: !isMobile ? '100px' : 0
     }}>
       {/* 左侧品牌导航栏 */}
       <div 
@@ -209,8 +214,8 @@ const Shop: React.FC = () => {
           paddingTop: '16px',
           paddingBottom: '80px',
           position: 'sticky',
-          top: 0,
-          height: '90vh'
+          top: !isMobile ? '64px' : 0,
+          height: !isMobile ? 'calc(100vh - 64px)' : '90vh'
         }}
       >
         {/* 全部分类 - 仅电脑端显示 */}
@@ -467,43 +472,71 @@ const Shop: React.FC = () => {
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        height: '90vh'
+        height: !isMobile ? '95vh' : '90vh'
       }}>
         {/* 顶部搜索栏 - 固定不滚动 */}
         <div style={{ 
           flexShrink: 0,
-          padding: isMobile ? '12px' : '20px',
-          paddingBottom: '16px',
-          borderBottom: '2px solid rgba(255, 215, 0, 0.3)'
+          padding: isMobile ? '12px' : '16px',
+          paddingBottom: '12px',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
         }}>
-        <div style={{ position: 'relative' }}>
-          <div style={{
-            position: 'absolute',
-            top: '50%',
-            left: '16px',
-            transform: 'translateY(-50%)',
-            color: '#999999',
-            pointerEvents: 'none'
-          }}>
-            <SearchOutlined />
-                </div>
-          <Input
-            placeholder={t('shop.searchBrand')}
-            value={searchKeyword}
-            onChange={(e) => setSearchKeyword(e.target.value)}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div style={{ position: 'relative', flex: 1 }}>
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '12px',
+              transform: 'translateY(-50%)',
+              color: 'rgba(255, 255, 255, 0.4)',
+              pointerEvents: 'none',
+              fontSize: '14px'
+            }}>
+              <SearchOutlined />
+            </div>
+            <Input
+              placeholder={t('shop.searchBrand')}
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              style={{
+                width: '100%',
+                height: '36px',
+                paddingLeft: '36px',
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '8px',
+                color: '#fff',
+                fontSize: '14px'
+              }}
+            />
+          </div>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={() => {
+              setSearchKeyword('')
+              setSelectedBrand('all')
+              setSelectedStrength(null)
+              setSelectedSize(null)
+              setPriceRange([0, 2000])
+            }}
             style={{
-              width: '100%',
-              height: '48px',
-              paddingLeft: '48px',
+              height: '36px',
               background: 'rgba(255, 255, 255, 0.05)',
               border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '24px',
-              color: '#fff',
-              fontSize: '16px'
+              color: 'rgba(255, 255, 255, 0.8)',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0 12px',
+              fontSize: '14px'
             }}
-          />
-                    </div>
-                    </div>
+            title="重置筛选"
+          >
+            {!isMobile && '重置'}
+          </Button>
+        </div>
+        </div>
         <div style={{
             position: 'sticky',
             top: 0,
@@ -655,17 +688,66 @@ const Shop: React.FC = () => {
                                 {(cigar.size || cigar.strength) && (
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     {cigar.size && (
-                                      <Text style={{ color: '#9ca3af', fontSize: '12px' }}>
+                                      <Tag
+                                        color="blue"
+                                        style={{
+                                          margin: 0,
+                                          cursor: 'pointer',
+                                          fontSize: '12px',
+                                          padding: '0 6px',
+                                          lineHeight: '20px',
+                                          border: selectedSize === cigar.size ? '2px solid #f4af25' : 'none',
+                                          boxShadow: selectedSize === cigar.size ? '0 0 8px rgba(244, 175, 37, 0.5)' : 'none',
+                                          transition: 'all 0.2s ease'
+                                        }}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          if (selectedSize === cigar.size) {
+                                            setSelectedSize(null)
+                                          } else {
+                                            setSelectedSize(cigar.size)
+                                          }
+                                        }}
+                                      >
                                         {cigar.size}
-                                      </Text>
+                                      </Tag>
                                     )}
                                     {cigar.size && cigar.strength && (
                                       <Text style={{ color: '#9ca3af', fontSize: '12px' }}>•</Text>
                                     )}
                                     {cigar.strength && (
-                                      <Text style={{ color: '#9ca3af', fontSize: '12px' }}>
+                                      <Tag
+                                        color={(() => {
+                                          const strengthColors: Record<string, string> = {
+                                            'mild': 'green',
+                                            'mild-medium': 'lime',
+                                            'medium': 'orange',
+                                            'medium-full': 'volcano',
+                                            'full': 'red'
+                                          }
+                                          return strengthColors[cigar.strength] || 'default'
+                                        })()}
+                                        style={{
+                                          margin: 0,
+                                          cursor: 'pointer',
+                                          fontSize: '12px',
+                                          padding: '0 6px',
+                                          lineHeight: '20px',
+                                          border: selectedStrength === cigar.strength ? '2px solid #f4af25' : 'none',
+                                          boxShadow: selectedStrength === cigar.strength ? '0 0 8px rgba(244, 175, 37, 0.5)' : 'none',
+                                          transition: 'all 0.2s ease'
+                                        }}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          if (selectedStrength === cigar.strength) {
+                                            setSelectedStrength(null)
+                                          } else {
+                                            setSelectedStrength(cigar.strength)
+                                          }
+                                        }}
+                                      >
                                         {strengthMap[cigar.strength] || cigar.strength}
-                                      </Text>
+                                      </Tag>
                                     )}
         </div>
                                 )}
@@ -782,7 +864,7 @@ const Shop: React.FC = () => {
               // 电脑端：网格布局
         <div style={{ 
           display: 'grid', 
-                gridTemplateColumns: 'repeat(5, 1fr)', 
+                gridTemplateColumns: 'repeat(8, 1fr)', 
                 gap: '16px'
         }}>
                 {filteredCigars.map((cigar) => (
@@ -838,38 +920,144 @@ const Shop: React.FC = () => {
                 </div>
 
                 {/* 商品信息 */}
-                <div style={{ padding: '12px' }}>
+                <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {/* 第一行：产品名称 */}
                   <h3 style={{ 
                     fontSize: '16px', 
                     fontWeight: '700', 
                     color: '#fff',
-                    margin: '0 0 6px 0',
+                    margin: 0,
                     lineHeight: '1.3',
                     minHeight: '36px',
                     display: '-webkit-box',
                     WebkitLineClamp: 2,
                     WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
+                    overflow: 'hidden',
                     textOverflow: 'ellipsis'
-                }}>
+                  }}>
                     {cigar.name}
                   </h3>
                   
-                <div style={{ 
-                  fontSize: '11px', 
-                  color: '#999',
-                    marginBottom: '8px'
-                }}>
-                    {cigar.origin} · {cigar.size}
-      </div>
+                  {/* 第二行：产地 */}
+                  {cigar.origin && (
+                    <div style={{ 
+                      fontSize: '11px', 
+                      color: '#999',
+                      lineHeight: '1.4'
+                    }}>
+                      {cigar.origin}
+                    </div>
+                  )}
 
+                  {/* 第三行：规格和强度tag */}
+                  {(cigar.size || cigar.strength) && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {cigar.size && (
+                        <Tag
+                          color="blue"
+                          style={{
+                            margin: 0,
+                            cursor: 'pointer',
+                            fontSize: '11px',
+                            padding: '0 6px',
+                            lineHeight: '18px',
+                            border: selectedSize === cigar.size ? '2px solid #f4af25' : 'none',
+                            boxShadow: selectedSize === cigar.size ? '0 0 8px rgba(244, 175, 37, 0.5)' : 'none',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (selectedSize === cigar.size) {
+                              setSelectedSize(null)
+                            } else {
+                              setSelectedSize(cigar.size)
+                            }
+                          }}
+                        >
+                          {cigar.size}
+                        </Tag>
+                      )}
+                      {cigar.strength && (
+                        <Tag
+                          color={(() => {
+                            const strengthColors: Record<string, string> = {
+                              'mild': 'green',
+                              'mild-medium': 'lime',
+                              'medium': 'orange',
+                              'medium-full': 'volcano',
+                              'full': 'red'
+                            }
+                            return strengthColors[cigar.strength] || 'default'
+                          })()}
+                          style={{
+                            margin: 0,
+                            cursor: 'pointer',
+                            fontSize: '11px',
+                            padding: '0 6px',
+                            lineHeight: '18px',
+                            border: selectedStrength === cigar.strength ? '2px solid #f4af25' : 'none',
+                            boxShadow: selectedStrength === cigar.strength ? '0 0 8px rgba(244, 175, 37, 0.5)' : 'none',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (selectedStrength === cigar.strength) {
+                              setSelectedStrength(null)
+                            } else {
+                              setSelectedStrength(cigar.strength)
+                            }
+                          }}
+                        >
+                          {(() => {
+                            const strengthMap: Record<string, string> = {
+                              'mild': t('shop.mild') || '温和',
+                              'mild-medium': t('shop.mildMedium') || '温和-中等',
+                              'medium': t('shop.medium') || '中等',
+                              'medium-full': t('shop.mediumFull') || '中等-浓郁',
+                              'full': t('shop.full') || '浓郁'
+                            }
+                            return strengthMap[cigar.strength] || cigar.strength
+                          })()}
+                        </Tag>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 第四行：风味特征 */}
+                  {(() => {
+                    const flavorNotes = cigar.tastingNotes 
+                      ? [
+                          ...(cigar.tastingNotes.foot || []),
+                          ...(cigar.tastingNotes.body || []),
+                          ...(cigar.tastingNotes.head || [])
+                        ].filter(Boolean)
+                      : [];
+                    const flavorProfile = cigar.metadata?.tags || [];
+                    const allFlavors = [...new Set([...flavorNotes, ...flavorProfile])].slice(0, 3);
+                    
+                    if (allFlavors.length > 0) {
+                      return (
+                        <div style={{ 
+                          fontSize: '10px', 
+                          color: 'rgba(255, 255, 255, 0.6)',
+                          lineHeight: '1.4'
+                        }}>
+                          {allFlavors.join(' · ')}
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+
+                  {/* 第五行：价格和按钮 */}
                   <div style={{
                     display: 'flex',
                     justifyContent: 'space-between',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    marginTop: 'auto'
                   }}>
                     <div style={{ 
-                      fontSize: isMobile ? '16px' : '18px', 
+                      fontSize: '18px', 
                       color: '#F4AF25',
                       fontWeight: 'bold'
                     }}>
@@ -895,7 +1083,7 @@ const Shop: React.FC = () => {
                     >
                       +
                     </button>
-            </div>
+                  </div>
                 </div>
                   </div>
                 ))}

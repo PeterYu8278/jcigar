@@ -412,9 +412,9 @@ const Home: React.FC = () => {
                           border: '2px solid rgba(244, 175, 37, 0.6)'
                         }}
                       />
-                      <div style={{ width: '100%', textAlign: 'center' }}>
+                      <div style={{ width: '90%', textAlign: 'center' }}>
                         <h3 style={{ 
-                          fontSize: '16px', 
+                          fontSize: '11px', 
                           fontWeight: '600', 
                           color: '#fff',
                           margin: '0 0 4px 0',
@@ -423,7 +423,7 @@ const Home: React.FC = () => {
                           lineHeight: '1.2',
                           minHeight: '28px',
                           display: 'flex',
-                          alignItems: 'top',
+                          alignItems: 'center',
                           justifyContent: 'center',
                           wordWrap: 'break-word',
                           overflowWrap: 'break-word'
@@ -551,7 +551,7 @@ const Home: React.FC = () => {
                     />
                     <div style={{ width: '100%', textAlign: 'center' }}>
                       <h3 style={{ 
-                        fontSize: '12px', 
+                        fontSize: '11px', 
                         fontWeight: '600', 
                         color: '#fff',
                         margin: '0 0 4px 0',
