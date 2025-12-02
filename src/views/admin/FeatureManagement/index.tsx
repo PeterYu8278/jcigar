@@ -82,6 +82,7 @@ const FeatureManagement: React.FC = () => {
   const [appConfigForm] = Form.useForm();
   const [savingAppConfig, setSavingAppConfig] = useState(false);
   const [aiCigarStorageEnabled, setAiCigarStorageEnabled] = useState<boolean>(true);
+  const [aiCigarImageSearchEnabled, setAiCigarImageSearchEnabled] = useState<boolean>(true);
   const [pendingColorChanges, setPendingColorChanges] = useState<Partial<ColorThemeConfig>>({});
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [generatedEnv, setGeneratedEnv] = useState<string>('');
@@ -146,10 +147,11 @@ const FeatureManagement: React.FC = () => {
     }
   }, [activeTab, appConfig, appConfigForm]);
 
-  // 加载 AI识茄 存储数据配置
+  // 加载 AI识茄 配置
   useEffect(() => {
     if (appConfig) {
       setAiCigarStorageEnabled(appConfig.aiCigar?.enableDataStorage ?? true);
+      setAiCigarImageSearchEnabled(appConfig.aiCigar?.enableImageSearch ?? true);
     }
   }, [appConfig]);
 
@@ -2348,6 +2350,69 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                               </div>
                               <Text style={{ color: '#999', fontSize: '12px', display: 'block', marginTop: '4px' }}>
                                 控制AI识茄功能是否将识别结果保存到数据库
+                              </Text>
+                            </div>
+                          )}
+                          {/* AI识茄功能的图片URL搜索开关 */}
+                          {feature.key === 'ai-cigar' && activeTab === 'frontend' && (
+                            <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <Text style={{ color: '#c0c0c0', fontSize: '13px' }}>
+                                  启用图片URL搜索
+                                </Text>
+                                <Switch
+                                  checked={aiCigarImageSearchEnabled}
+                                  onChange={async (checked) => {
+                                    const previousValue = aiCigarImageSearchEnabled;
+                                    setAiCigarImageSearchEnabled(checked);
+                                    // 立即保存配置
+                                    if (user?.id) {
+                                      try {
+                                        const result = await updateAppConfig(
+                                          {
+                                            aiCigar: {
+                                              enableDataStorage: aiCigarStorageEnabled,
+                                              enableImageSearch: checked,
+                                            },
+                                          },
+                                          user.id
+                                        );
+                                        if (result.success) {
+                                          message.success('配置已保存');
+                                          // 直接更新本地 appConfig 状态
+                                          if (appConfig) {
+                                            setAppConfig({
+                                              ...appConfig,
+                                              aiCigar: {
+                                                ...appConfig.aiCigar,
+                                                enableDataStorage: aiCigarStorageEnabled,
+                                                enableImageSearch: checked,
+                                              },
+                                            });
+                                          }
+                                          // 延迟重新加载配置
+                                          setTimeout(async () => {
+                                            await loadAppConfig();
+                                          }, 500);
+                                        } else {
+                                          message.error(result.error || '保存失败');
+                                          setAiCigarImageSearchEnabled(previousValue);
+                                        }
+                                      } catch (error) {
+                                        message.error('保存失败');
+                                        setAiCigarImageSearchEnabled(previousValue);
+                                      }
+                                    } else {
+                                      setAiCigarImageSearchEnabled(previousValue);
+                                    }
+                                  }}
+                                  checkedChildren="启用"
+                                  unCheckedChildren="禁用"
+                                  size="small"
+                                />
+                              </div>
+                              <Text style={{ color: '#999', fontSize: '12px', display: 'block', marginTop: '4px' }}>
+                                控制AI识茄功能是否自动搜索雪茄图片URL（Google + Gemini）
                               </Text>
                             </div>
                           )}

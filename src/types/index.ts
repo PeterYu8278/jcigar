@@ -379,6 +379,7 @@ export interface AppConfig {
   };
   aiCigar?: {
     enableDataStorage?: boolean;  // AI识茄是否启用数据存储（默认 true）
+    enableImageSearch?: boolean;  // AI识茄是否启用图片URL搜索（默认 true）
   };
   updatedAt: Date;
   updatedBy: string;       // 最后更新的开发者ID

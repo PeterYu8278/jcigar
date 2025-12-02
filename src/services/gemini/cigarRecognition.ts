@@ -491,20 +491,28 @@ export async function analyzeCigarImage(
 
             const analysisResult = JSON.parse(jsonStr) as CigarAnalysisResult;
             
-            // 根据品牌和产品名称搜索图片 URL
+            // 根据品牌和产品名称搜索图片 URL（检查配置是否启用）
             if (analysisResult.brand && analysisResult.name && analysisResult.confidence > 0.5) {
-                console.log(`[analyzeCigarImage] 开始搜索图片URL - 品牌: ${analysisResult.brand}, 名称: ${analysisResult.name}, 可信度: ${analysisResult.confidence}`);
-                try {
-                    const imageUrl = await searchCigarImageUrl(analysisResult.brand, analysisResult.name);
-                    if (imageUrl) {
-                        console.log(`[analyzeCigarImage] ✅ 成功获取图片URL:`, imageUrl);
-                        analysisResult.imageUrl = imageUrl;
-                    } else {
-                        console.warn(`[analyzeCigarImage] ⚠️ 未找到图片URL`);
+                // 检查是否启用图片搜索
+                const appConfig = await getAppConfig();
+                const imageSearchEnabled = appConfig?.aiCigar?.enableImageSearch ?? true;
+                
+                if (imageSearchEnabled) {
+                    console.log(`[analyzeCigarImage] 开始搜索图片URL - 品牌: ${analysisResult.brand}, 名称: ${analysisResult.name}, 可信度: ${analysisResult.confidence}`);
+                    try {
+                        const imageUrl = await searchCigarImageUrl(analysisResult.brand, analysisResult.name);
+                        if (imageUrl) {
+                            console.log(`[analyzeCigarImage] ✅ 成功获取图片URL:`, imageUrl);
+                            analysisResult.imageUrl = imageUrl;
+                        } else {
+                            console.warn(`[analyzeCigarImage] ⚠️ 未找到图片URL`);
+                        }
+                    } catch (error) {
+                        console.error('搜索雪茄图片 URL 失败:', error);
+                        // 不抛出错误，继续返回识别结果
                     }
-                } catch (error) {
-                    console.error('搜索雪茄图片 URL 失败:', error);
-                    // 不抛出错误，继续返回识别结果
+                } else {
+                    console.log(`[analyzeCigarImage] ℹ️ 图片URL搜索已禁用（通过AppConfig配置）`);
                 }
                 
                 // 查询数据库获取详细信息
@@ -591,20 +599,28 @@ export async function analyzeCigarImage(
                 try {
                     const restResult = await callGeminiRESTAPI(modelName, prompt, imagePart);
                     if (restResult) {
-                        // 根据品牌和产品名称搜索图片 URL
+                        // 根据品牌和产品名称搜索图片 URL（检查配置是否启用）
                         if (restResult.brand && restResult.name && restResult.confidence > 0.5) {
-                            console.log(`[analyzeCigarImage] [REST API] 开始搜索图片URL - 品牌: ${restResult.brand}, 名称: ${restResult.name}, 可信度: ${restResult.confidence}`);
-                            try {
-                                const imageUrl = await searchCigarImageUrl(restResult.brand, restResult.name);
-                                if (imageUrl) {
-                                    console.log(`[analyzeCigarImage] [REST API] ✅ 成功获取图片URL:`, imageUrl);
-                                    restResult.imageUrl = imageUrl;
-                                } else {
-                                    console.warn(`[analyzeCigarImage] [REST API] ⚠️ 未找到图片URL`);
+                            // 检查是否启用图片搜索
+                            const appConfig = await getAppConfig();
+                            const imageSearchEnabled = appConfig?.aiCigar?.enableImageSearch ?? true;
+                            
+                            if (imageSearchEnabled) {
+                                console.log(`[analyzeCigarImage] [REST API] 开始搜索图片URL - 品牌: ${restResult.brand}, 名称: ${restResult.name}, 可信度: ${restResult.confidence}`);
+                                try {
+                                    const imageUrl = await searchCigarImageUrl(restResult.brand, restResult.name);
+                                    if (imageUrl) {
+                                        console.log(`[analyzeCigarImage] [REST API] ✅ 成功获取图片URL:`, imageUrl);
+                                        restResult.imageUrl = imageUrl;
+                                    } else {
+                                        console.warn(`[analyzeCigarImage] [REST API] ⚠️ 未找到图片URL`);
+                                    }
+                                } catch (error) {
+                                    console.error('搜索雪茄图片 URL 失败:', error);
+                                    // 不抛出错误，继续返回识别结果
                                 }
-                            } catch (error) {
-                                console.error('搜索雪茄图片 URL 失败:', error);
-                                // 不抛出错误，继续返回识别结果
+                            } else {
+                                console.log(`[analyzeCigarImage] [REST API] ℹ️ 图片URL搜索已禁用（通过AppConfig配置）`);
                             }
                             
                             // 查询数据库获取详细信息
