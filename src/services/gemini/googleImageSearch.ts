@@ -35,8 +35,29 @@ export async function searchGoogleImages(
     }
 
     try {
-        // 构建搜索查询，添加图片搜索优化关键词
-        const searchQuery = `${query} cigar band label product image`;
+        // 优化搜索查询：
+        // 1. 使用引号强制精确匹配品牌和名称
+        // 2. 添加 "single stick" 确保是单支雪茄
+        // 3. 添加 "band" 确保显示茄标
+        // 4. 使用 site: 运算符优先搜索可信网站
+        const brandName = query.trim();
+        
+        // 构建优化的搜索查询
+        // 优先搜索可信的雪茄零售商网站
+        const trustedSites = [
+            'famous-smoke.com',
+            'holts.com',
+            'cigarsinternational.com',
+            'jrcigars.com',
+            'neptunecigar.com',
+            'cigaraficionado.com'
+        ];
+        
+        // 方案 A：优先搜索可信网站（使用 OR 运算符）
+        const siteQuery = trustedSites.map(site => `site:${site}`).join(' OR ');
+        const searchQuery = `"${brandName}" cigar single stick band (${siteQuery})`;
+        
+        console.log(`[GoogleImageSearch] 🔍 优化搜索: "${searchQuery}"`);
         
         // Google Custom Search API 端点
         const apiUrl = `https://www.googleapis.com/customsearch/v1?` +
@@ -47,9 +68,10 @@ export async function searchGoogleImages(
             `num=${Math.min(maxResults, 10)}&` + // Google API 限制每次最多 10 个结果
             `safe=active&` +
             `imgSize=large&` + // 优先大尺寸图片
-            `imgType=photo`; // 只搜索照片类型
+            `imgType=photo&` + // 只搜索照片类型
+            `fileType=jpg,png,webp`; // 指定文件类型
 
-        console.log(`[GoogleImageSearch] 🔍 搜索图片: "${query}"`);
+        console.log(`[GoogleImageSearch] 🔍 搜索图片: "${brandName}"`);
 
         const response = await fetch(apiUrl);
 
@@ -66,11 +88,18 @@ export async function searchGoogleImages(
             return [];
         }
 
-        // 提取图片 URL
-        const imageUrls = data.items
-            .map((item: any) => item.link)
-            .filter((url: string) => {
-                // 过滤掉无效的 URL
+        // 提取并评分图片 URL
+        const scoredUrls = data.items
+            .map((item: any) => ({
+                url: item.link,
+                title: item.title || '',
+                contextLink: item.image?.contextLink || '',
+                width: item.image?.width || 0,
+                height: item.image?.height || 0
+            }))
+            .filter((item: any) => {
+                const url = item.url;
+                // 基础过滤
                 if (!url || typeof url !== 'string') return false;
                 if (!url.startsWith('http://') && !url.startsWith('https://')) return false;
                 
@@ -81,28 +110,86 @@ export async function searchGoogleImages(
                     url.includes('google.com/search')) {
                     return false;
                 }
+                
+                // 排除低质量 URL 模式
+                if (url.includes('/cache/') || 
+                    url.includes('/temp/') || 
+                    url.includes('/resize/') ||
+                    url.includes('/thumb/')) {
+                    return false;
+                }
 
-                // 优先选择有图片扩展名的 URL
-                const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'];
-                const hasImageExtension = imageExtensions.some(ext => 
-                    url.toLowerCase().endsWith(ext) || url.toLowerCase().includes(ext + '?')
-                );
-
-                // 或者包含图片相关的关键词
-                const isImageRelated = url.includes('image') ||
-                    url.includes('photo') ||
-                    url.includes('picture') ||
-                    url.includes('img') ||
-                    url.includes('cdn') ||
-                    url.includes('static') ||
-                    url.includes('product') ||
-                    url.includes('media');
-
-                return hasImageExtension || isImageRelated;
+                return true;
+            })
+            .map((item: any) => {
+                // 计算 URL 质量分数（0-100）
+                let score = 0;
+                const url = item.url.toLowerCase();
+                
+                // 1. 可信网站加分（40分）
+                const trustedDomains = [
+                    'famous-smoke.com',
+                    'holts.com',
+                    'cigarsinternational.com',
+                    'jrcigars.com',
+                    'cigaraficionado.com',
+                    'halfwheel.com'
+                ];
+                if (trustedDomains.some(domain => url.includes(domain))) {
+                    score += 40;
+                }
+                
+                // 2. 直接图片 URL 加分（30分）
+                const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+                if (imageExtensions.some(ext => url.endsWith(ext) || url.includes(ext + '?'))) {
+                    score += 30;
+                }
+                
+                // 3. CDN/静态资源加分（20分）
+                if (url.includes('cdn.') || 
+                    url.includes('static.') || 
+                    url.includes('images.') ||
+                    url.includes('img.')) {
+                    score += 20;
+                }
+                
+                // 4. 简单路径加分（10分）
+                const pathSegments = url.split('/').length;
+                if (pathSegments <= 6) {
+                    score += 10;
+                }
+                
+                // 5. 图片尺寸加分（最多10分）
+                if (item.width >= 800 && item.height >= 800) {
+                    score += 10;
+                } else if (item.width >= 500 && item.height >= 500) {
+                    score += 5;
+                }
+                
+                // 6. 产品相关路径加分（5分）
+                if (url.includes('/product') || url.includes('/cigar')) {
+                    score += 5;
+                }
+                
+                // 减分项
+                // 复杂哈希路径减分
+                if (/[a-f0-9]{20,}/.test(url)) {
+                    score -= 15;
+                }
+                
+                return {
+                    ...item,
+                    score
+                };
+            })
+            .sort((a: any, b: any) => b.score - a.score) // 按分数降序排序
+            .map((item: any) => {
+                console.log(`[GoogleImageSearch]   - URL 评分 ${item.score}: ${item.url}`);
+                return item.url;
             });
 
-        console.log(`[GoogleImageSearch] ✅ 找到 ${imageUrls.length} 个有效图片 URL`);
-        return imageUrls;
+        console.log(`[GoogleImageSearch] ✅ 找到 ${scoredUrls.length} 个有效图片 URL（已按质量排序）`);
+        return scoredUrls;
     } catch (error: any) {
         console.warn(`[GoogleImageSearch] ❌ 搜索失败:`, error?.message || error);
         return [];
