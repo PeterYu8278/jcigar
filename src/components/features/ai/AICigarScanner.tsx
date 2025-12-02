@@ -526,11 +526,11 @@ export const AICigarScanner: React.FC = () => {
                 >
                     <Space direction="vertical" style={{ width: '100%' }} size="small">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <EditOutlined style={{ color: '#ffd700' }} />
-                                <Text style={{ color: '#fff', fontSize: '14px', fontWeight: 500 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <EditOutlined style={{ color: '#ffd700' }} />
+                            <Text style={{ color: '#fff', fontSize: '14px', fontWeight: 500 }}>
                                     输入雪茄型号
-                                </Text>
+                            </Text>
                             </div>
                             {userHint && userHint.trim() && (
                                 <Button

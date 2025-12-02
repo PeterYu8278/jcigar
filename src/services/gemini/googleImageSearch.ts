@@ -71,7 +71,7 @@ export async function searchGoogleImages(
         // 构建优化的搜索查询
         // 优先级：单支 + 茄标 + 无背景/白背景 + 排除多支装
         const siteQuery = trustedSites.map(site => `site:${site}`).join(' OR ');
-        const searchQuery = `${brandName} single stick cigar label white background or no background (${siteQuery})`;
+        const searchQuery = `${brandName} `;
         
         console.log(`[GoogleImageSearch] 🔍 优化搜索（单支+茄标+无背景）: "${searchQuery}"`);
         
