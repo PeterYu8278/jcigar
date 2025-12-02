@@ -181,6 +181,33 @@ const Shop: React.FC = () => {
     return brandA.localeCompare(brandB)
   })
 
+  // 电脑端产品排序：按品牌导航顺序排序，然后按产品名称字母排序
+  const sortedCigarsForDesktop = !isMobile ? (() => {
+    // 创建品牌顺序映射：Cuban 品牌优先，然后 New World 品牌，都按 A-Z 排序
+    const allBrandsInOrder = [...cubanBrands, ...newWorldBrands]
+    const brandOrderMap = new Map<string, number>()
+    allBrandsInOrder.forEach((brand, index) => {
+      brandOrderMap.set(brand.name, index)
+    })
+
+    return [...filteredCigars].sort((a, b) => {
+      const brandA = a.brand || ''
+      const brandB = b.brand || ''
+      
+      // 获取品牌在导航中的顺序
+      const orderA = brandOrderMap.get(brandA) ?? 9999
+      const orderB = brandOrderMap.get(brandB) ?? 9999
+      
+      // 先按品牌顺序排序
+      if (orderA !== orderB) {
+        return orderA - orderB
+      }
+      
+      // 如果品牌相同，按产品名称字母排序
+      return a.name.localeCompare(b.name)
+    })
+  })() : filteredCigars
+
   // 计算购物车总数量和总价
   const cartItemCount = Object.values(quantities).reduce((sum, qty) => sum + qty, 0)
   const cartTotal = Object.entries(quantities).reduce((sum, [id, qty]) => {
@@ -872,7 +899,7 @@ const Shop: React.FC = () => {
           gap: '16px',
           alignItems: 'stretch'
         }}>
-                {filteredCigars.map((cigar) => (
+                {sortedCigarsForDesktop.map((cigar) => (
               <div 
                 key={cigar.id} 
                 style={{ 

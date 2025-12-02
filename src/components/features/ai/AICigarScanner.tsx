@@ -19,7 +19,7 @@ export const AICigarScanner: React.FC = () => {
     const webcamRef = useRef<Webcam>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const videoTrackRef = useRef<MediaStreamTrack | null>(null);
-    const resultCardRef = useRef<HTMLDivElement>(null);
+    const screenshotContainerRef = useRef<HTMLDivElement>(null);
     const [savingScreenshot, setSavingScreenshot] = useState(false);
     const [imgSrc, setImgSrc] = useState<string | null>(null);
     const [analyzing, setAnalyzing] = useState(false);
@@ -28,9 +28,6 @@ export const AICigarScanner: React.FC = () => {
     const [cameraError, setCameraError] = useState<string | null>(null);
     const [flashEnabled, setFlashEnabled] = useState(false);
     const [flashSupported, setFlashSupported] = useState(false);
-    const [focusSupported, setFocusSupported] = useState(false);
-    const [focusing, setFocusing] = useState(false);
-    const [focusPoint, setFocusPoint] = useState<{ x: number; y: number } | null>(null);
     const [saving, setSaving] = useState(false);
     const [saveStatus, setSaveStatus] = useState<{
         matched: boolean;
@@ -206,81 +203,6 @@ export const AICigarScanner: React.FC = () => {
         }
     }, [handleAnalyze]);
 
-    // 点击屏幕聚焦
-    const handleFocus = useCallback(async (event: React.MouseEvent<HTMLDivElement>) => {
-        const videoTrack = videoTrackRef.current;
-        if (!videoTrack || !focusSupported || focusing) return;
-
-        const rect = event.currentTarget.getBoundingClientRect();
-        const x = ((event.clientX - rect.left) / rect.width) * 100;
-        const y = ((event.clientY - rect.top) / rect.height) * 100;
-        
-        // 标准化坐标到 [0, 1] 范围
-        const normalizedX = Math.max(0, Math.min(1, x / 100));
-        const normalizedY = Math.max(0, Math.min(1, y / 100));
-
-        setFocusPoint({ x: normalizedX * 100, y: normalizedY * 100 });
-        setFocusing(true);
-
-        try {
-            // 尝试使用 ImageCapture API 的 setFocusPoint（如果支持）
-            const videoElement = webcamRef.current?.video;
-            if (videoElement && 'ImageCapture' in window) {
-                try {
-                    const imageCapture = new (window as any).ImageCapture(videoTrack);
-                    if (imageCapture.setFocusPoint) {
-                        await imageCapture.setFocusPoint(normalizedX, normalizedY);
-                        // 成功后清除焦点指示器
-                        setTimeout(() => {
-                            setFocusPoint(null);
-                        }, 1000);
-                        setFocusing(false);
-                        return;
-                    }
-                } catch (error) {
-                    // ImageCapture 不支持，继续尝试其他方法
-                }
-            }
-
-            // 备用方案：使用 applyConstraints 设置焦点
-            if ('applyConstraints' in videoTrack) {
-                try {
-                    const constraints = {
-                        advanced: [
-                            { focusMode: 'manual' as any },
-                            { pointsOfInterest: [{ x: normalizedX, y: normalizedY }] as any }
-                        ] as any
-                    } as unknown as MediaTrackConstraints;
-
-                    await videoTrack.applyConstraints(constraints);
-                    
-                    // 成功后清除焦点指示器
-                    setTimeout(() => {
-                        setFocusPoint(null);
-                    }, 1000);
-                } catch (error) {
-                    // 如果失败，尝试简单的自动对焦
-                    try {
-                        await videoTrack.applyConstraints({
-                            advanced: [{ focusMode: 'auto' as any }] as any
-                        } as unknown as MediaTrackConstraints);
-                    } catch (autoFocusError) {
-                        console.warn('Focus not supported:', autoFocusError);
-                        setFocusSupported(false);
-                    }
-                }
-            }
-        } catch (error: any) {
-            console.error('Focus error:', error);
-            if (error?.name === 'NotSupportedError' || error?.name === 'NotReadableError') {
-                setFocusSupported(false);
-            }
-        } finally {
-            setTimeout(() => {
-                setFocusing(false);
-            }, 500);
-        }
-    }, [focusSupported, focusing]);
 
     // 切换闪光灯（必须在 reset 和 toggleCamera 之前定义）
     const toggleFlash = useCallback(async (forceState?: boolean) => {
@@ -353,14 +275,14 @@ export const AICigarScanner: React.FC = () => {
 
     // 保存截图功能
     const handleSaveScreenshot = async () => {
-        if (!resultCardRef.current) {
-            message.error('无法生成截图');
+        if (!screenshotContainerRef.current) {
+            message.error(t('common.screenshotSaveFailed'));
             return;
         }
 
         setSavingScreenshot(true);
         try {
-            const canvas = await html2canvas(resultCardRef.current, {
+            const canvas = await html2canvas(screenshotContainerRef.current, {
                 backgroundColor: '#1a1a1a',
                 scale: 2, // 提高清晰度
                 useCORS: true,
@@ -376,10 +298,10 @@ export const AICigarScanner: React.FC = () => {
             link.click();
             document.body.removeChild(link);
 
-            message.success('截图已保存');
+            message.success(t('common.screenshotSaved'));
         } catch (error) {
             console.error('Screenshot failed:', error);
-            message.error('保存截图失败，请重试');
+            message.error(t('common.screenshotSaveFailed'));
         } finally {
             setSavingScreenshot(false);
         }
@@ -387,14 +309,14 @@ export const AICigarScanner: React.FC = () => {
 
     // 分享截图功能
     const handleShareScreenshot = async () => {
-        if (!resultCardRef.current) {
-            message.error('无法生成截图');
+        if (!screenshotContainerRef.current) {
+            message.error(t('common.screenshotSaveFailed'));
             return;
         }
 
         setSavingScreenshot(true);
         try {
-            const canvas = await html2canvas(resultCardRef.current, {
+            const canvas = await html2canvas(screenshotContainerRef.current, {
                 backgroundColor: '#1a1a1a',
                 scale: 2,
                 useCORS: true,
@@ -404,7 +326,7 @@ export const AICigarScanner: React.FC = () => {
             // 将 canvas 转换为 blob
             canvas.toBlob(async (blob) => {
                 if (!blob) {
-                    message.error('生成截图失败');
+                    message.error(t('common.screenshotSaveFailed'));
                     setSavingScreenshot(false);
                     return;
                 }
@@ -420,7 +342,7 @@ export const AICigarScanner: React.FC = () => {
                             text: `识别结果：${result?.brand} ${result?.name}\n可信度：${Math.round((result?.confidence || 0) * 100)}%`,
                             files: [file],
                         });
-                        message.success('分享成功');
+                        message.success(t('common.shareSuccess'));
                     } catch (shareError: any) {
                         // 用户取消分享或其他错误
                         if (shareError.name !== 'AbortError') {
@@ -431,14 +353,14 @@ export const AICigarScanner: React.FC = () => {
                     }
                 } else {
                     // 不支持 Web Share API，回退到下载
-                    message.info('当前浏览器不支持分享功能，已保存到本地');
+                    message.info(t('common.shareNotSupported'));
                     handleSaveScreenshot();
                 }
                 setSavingScreenshot(false);
             }, 'image/png');
         } catch (error) {
             console.error('Share screenshot failed:', error);
-            message.error('分享失败，请重试');
+            message.error(t('common.shareFailed'));
             setSavingScreenshot(false);
         }
     };
@@ -528,14 +450,10 @@ export const AICigarScanner: React.FC = () => {
                     setFlashEnabled(false);
                 }
                 
-                // 检查是否支持对焦（检查 focusMode 或 focusDistance 能力）
-                const hasFocus = capabilities?.focusMode || capabilities?.focusDistance !== undefined || false;
-                setFocusSupported(hasFocus);
             } catch (error) {
                 // 如果获取 capabilities 失败，假设不支持
                 setFlashSupported(false);
                 setFlashEnabled(false);
-                setFocusSupported(false);
             }
         }
     }, [facingMode]);
@@ -562,7 +480,7 @@ export const AICigarScanner: React.FC = () => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <EditOutlined style={{ color: '#ffd700' }} />
                             <Text style={{ color: '#fff', fontSize: '14px', fontWeight: 500 }}>
-                                手动输入雪茄型号（可选，可提高识别准确性）
+                                手动输入雪茄型号（可选，可提高准确性）
                             </Text>
                         </div>
                         <AutoComplete
@@ -613,75 +531,15 @@ export const AICigarScanner: React.FC = () => {
                             </Button>
                         </div>
                     ) : (
-                        <div
-                            onClick={handleFocus}
-                            style={{ 
-                                width: '100%', 
-                                height: '100%', 
-                                position: 'relative',
-                                cursor: focusSupported ? 'crosshair' : 'default'
-                            }}
-                        >
-                            <Webcam
-                                audio={false}
-                                ref={webcamRef}
-                                screenshotFormat="image/jpeg"
-                                videoConstraints={videoConstraints}
-                                onUserMedia={handleUserMedia}
-                                onUserMediaError={handleUserMediaError}
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            />
-                            {focusPoint && (
-                                <div
-                                    style={{
-                                        position: 'absolute',
-                                        left: `${focusPoint.x}%`,
-                                        top: `${focusPoint.y}%`,
-                                        transform: 'translate(-50%, -50%)',
-                                        width: '80px',
-                                        height: '80px',
-                                        border: '2px solid #ffd700',
-                                        borderRadius: '8px',
-                                        pointerEvents: 'none',
-                                        boxShadow: '0 0 20px rgba(255, 215, 0, 0.6)',
-                                        transition: 'all 0.3s ease',
-                                        opacity: focusing ? 1 : 0.7
-                                    }}
-                                >
-                                    <div
-                                        style={{
-                                            position: 'absolute',
-                                            left: '50%',
-                                            top: '50%',
-                                            transform: 'translate(-50%, -50%)',
-                                            width: '4px',
-                                            height: '4px',
-                                            background: '#ffd700',
-                                            borderRadius: '50%',
-                                            boxShadow: '0 0 10px rgba(255, 215, 0, 0.8)'
-                                        }}
-                                    />
-                                </div>
-                            )}
-                            {focusing && (
-                                <div
-                                    style={{
-                                        position: 'absolute',
-                                        top: '10px',
-                                        left: '50%',
-                                        transform: 'translateX(-50%)',
-                                        background: 'rgba(0, 0, 0, 0.7)',
-                                        color: '#ffd700',
-                                        padding: '4px 12px',
-                                        borderRadius: '4px',
-                                        fontSize: '12px',
-                                        pointerEvents: 'none'
-                                    }}
-                                >
-                                    对焦中...
-                                </div>
-                            )}
-                        </div>
+                        <Webcam
+                            audio={false}
+                            ref={webcamRef}
+                            screenshotFormat="image/jpeg"
+                            videoConstraints={videoConstraints}
+                            onUserMedia={handleUserMedia}
+                            onUserMediaError={handleUserMediaError}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
                     )}
                     <div style={{
                         position: 'absolute',
@@ -782,11 +640,13 @@ export const AICigarScanner: React.FC = () => {
             )}
 
             {result && !analyzing && (
-                <Card 
-                    ref={resultCardRef}
-                    style={{ width: '100%', marginTop: '16px', background: 'rgba(255,255,255,0.05)', border: '1px solid #333' }}
-                >
-                    <Space direction="vertical" style={{ width: '100%' }}>
+                <>
+                    {/* 截图容器：包含图片和识别结果（不包括按钮） */}
+                    <div ref={screenshotContainerRef} style={{ width: '100%' }}>
+                        <Card 
+                            style={{ width: '100%', marginTop: '16px', background: 'rgba(255,255,255,0.05)', border: '1px solid #333' }}
+                        >
+                            <Space direction="vertical" style={{ width: '100%' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                             <div>
                                 <Title level={4} style={{ margin: 0, color: '#ffd700' }}>{result.brand}</Title>
@@ -918,6 +778,51 @@ export const AICigarScanner: React.FC = () => {
                             {result.description}
                         </Paragraph>
 
+                        {/* 雪茄茄标图像 */}
+                        {imgSrc && (
+                            <>
+                                <Divider style={{ margin: '12px 0', borderColor: '#333' }} />
+                                <div style={{ 
+                                    marginTop: '4px', 
+                                    background: 'rgba(0,0,0,0.2)', 
+                                    padding: '12px', 
+                                    borderRadius: '8px',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}>
+                                    <Text type="secondary" style={{ 
+                                        fontSize: '13px', 
+                                        display: 'block', 
+                                        marginBottom: '12px',
+                                        fontWeight: 500,
+                                        color: '#ffd700'
+                                    }}>
+                                        雪茄茄标图像
+                                    </Text>
+                                    <div style={{
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        width: '100%',
+                                        maxHeight: '200px',
+                                        borderRadius: '8px',
+                                        overflow: 'hidden',
+                                        background: '#000'
+                                    }}>
+                                        <img 
+                                            src={imgSrc} 
+                                            alt="雪茄茄标" 
+                                            style={{ 
+                                                width: '100%', 
+                                                maxHeight: '200px', 
+                                                objectFit: 'contain',
+                                                borderRadius: '8px'
+                                            }} 
+                                        />
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
                         {/* 显示匹配雪茄的图片 */}
                         {(() => {
                             // 优先使用 saveStatus 中的 cigars，否则使用 matchedCigars
@@ -1017,71 +922,84 @@ export const AICigarScanner: React.FC = () => {
                             }
                             return null;
                         })()}
-
-                        <Space direction="vertical" style={{ width: '100%', marginTop: '12px' }} size="middle">
-                            {saving && (
-                                <div style={{
-                                    padding: '12px',
-                                    background: 'rgba(24, 144, 255, 0.1)',
-                                    border: '1px solid #1890ff',
-                                    borderRadius: '8px',
-                                    textAlign: 'center'
-                                }}>
-                                    <Spin size="small" style={{ marginRight: 8 }} />
-                                    <Text style={{ color: '#1890ff', fontSize: '13px' }}>正在保存到数据库...</Text>
-                                </div>
-                            )}
-                            
-                            {/* 截图保存和分享按钮 */}
-                            <Space style={{ width: '100%' }} size="small">
-                                <Button 
-                                    icon={<DownloadOutlined />}
-                                    onClick={handleSaveScreenshot}
-                                    loading={savingScreenshot}
-                                    disabled={savingScreenshot || saving}
-                                    style={{
-                                        flex: 1,
-                                        background: 'rgba(255, 255, 255, 0.1)',
-                                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                                        color: '#fff'
-                                    }}
-                                >
-                                    保存截图
-                                </Button>
-                                <Button 
-                                    icon={<ShareAltOutlined />}
-                                    onClick={handleShareScreenshot}
-                                    loading={savingScreenshot}
-                                    disabled={savingScreenshot || saving}
-                                    style={{
-                                        flex: 1,
-                                        background: 'rgba(255, 255, 255, 0.1)',
-                                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                                        color: '#fff'
-                                    }}
-                                >
-                                    分享截图
-                                </Button>
                             </Space>
-                            
-                            <Button 
-                                block 
-                                icon={<ReloadOutlined />} 
-                                onClick={reset}
-                                loading={saving}
-                                disabled={saving}
-                                style={{
-                                    background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
-                                    color: '#111',
-                                    fontWeight: 600,
-                                    boxShadow: '0 4px 16px rgba(255, 215, 0, 0.3)'
-                                }}
-                            >
-                                重新拍摄
-                            </Button>
-                        </Space>
+                        </Card>
+                    </div>
+
+                    {/* 操作按钮区域：不在截图中 */}
+                    <Space direction="vertical" style={{ width: '100%', marginTop: '12px' }} size="middle">
+                        {saving && (
+                            <div style={{
+                                padding: '12px',
+                                background: 'rgba(24, 144, 255, 0.1)',
+                                border: '1px solid #1890ff',
+                                borderRadius: '8px',
+                                textAlign: 'center'
+                            }}>
+                                <Spin size="small" style={{ marginRight: 8 }} />
+                                <Text style={{ color: '#1890ff', fontSize: '13px' }}>正在保存到数据库...</Text>
+                            </div>
+                        )}
+                        {savingScreenshot && (
+                            <div style={{
+                                padding: '12px',
+                                background: 'rgba(24, 144, 255, 0.1)',
+                                border: '1px solid #1890ff',
+                                borderRadius: '8px',
+                                textAlign: 'center'
+                            }}>
+                                <Spin size="small" style={{ marginRight: 8 }} />
+                                <Text style={{ color: '#1890ff', fontSize: '13px' }}>正在生成截图...</Text>
+                            </div>
+                        )}
+                        
+                        {/* 截图保存和分享按钮 */}
+                        <Button 
+                            block
+                            icon={<DownloadOutlined />}
+                            onClick={handleSaveScreenshot}
+                            loading={savingScreenshot}
+                            disabled={savingScreenshot || saving}
+                            style={{
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                color: '#fff'
+                            }}
+                        >
+                            {t('common.saveScreenshot')}
+                        </Button>
+                        <Button 
+                            block
+                            icon={<ShareAltOutlined />}
+                            onClick={handleShareScreenshot}
+                            loading={savingScreenshot}
+                            disabled={savingScreenshot || saving}
+                            style={{
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                color: '#fff'
+                            }}
+                        >
+                            {t('common.shareScreenshot')}
+                        </Button>
+                        
+                        <Button 
+                            block 
+                            icon={<ReloadOutlined />} 
+                            onClick={reset}
+                            loading={saving}
+                            disabled={saving || savingScreenshot}
+                            style={{
+                                background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
+                                color: '#111',
+                                fontWeight: 600,
+                                boxShadow: '0 4px 16px rgba(255, 215, 0, 0.3)'
+                            }}
+                        >
+                            重新拍摄
+                        </Button>
                     </Space>
-                </Card>
+                </>
             )}
 
             {imgSrc && !result && !analyzing && (
