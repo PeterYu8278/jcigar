@@ -574,7 +574,7 @@ export const AICigarScanner: React.FC = () => {
                 </Card>
             )}
             
-            {!imgSrc ? (
+            {!imgSrc && !result ? (
                 <div style={{ position: 'relative', width: '100%', height: '300px', background: '#000', borderRadius: '12px', overflow: 'hidden' }}>
                     {cameraError ? (
                         <div style={{ 
