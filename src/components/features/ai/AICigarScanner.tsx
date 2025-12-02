@@ -821,40 +821,64 @@ export const AICigarScanner: React.FC = () => {
                                         品吸笔记
                                     </Text>
                                     <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                                        {result.footTasteNotes && result.footTasteNotes.length > 0 && (
+                                        {result.footTasteNotes && Array.isArray(result.footTasteNotes) && result.footTasteNotes.length > 0 && (
                                             <div>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: '4px', fontWeight: 500 }}>
                                                     脚部 (Foot) - 前1/3:
                                                 </Text>
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                                                    {result.footTasteNotes.map((note, index) => (
+                                                    {result.footTasteNotes.map((note: string, index: number) => (
                                                         <Tag key={index} color="cyan" style={{ fontSize: '11px', margin: 0 }}>{note}</Tag>
                                                     ))}
                                                 </div>
                                             </div>
                                         )}
-                                        {result.bodyTasteNotes && result.bodyTasteNotes.length > 0 && (
+                                        {result.footTasteNotes && typeof result.footTasteNotes === 'string' && (
+                                            <div>
+                                                <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: '4px', fontWeight: 500 }}>
+                                                    脚部 (Foot) - 前1/3:
+                                                </Text>
+                                                <Text style={{ fontSize: '13px', color: '#fff' }}>{result.footTasteNotes}</Text>
+                                            </div>
+                                        )}
+                                        {result.bodyTasteNotes && Array.isArray(result.bodyTasteNotes) && result.bodyTasteNotes.length > 0 && (
                                             <div>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: '4px', fontWeight: 500 }}>
                                                     主体 (Body) - 中1/3:
                                                 </Text>
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                                                    {result.bodyTasteNotes.map((note, index) => (
+                                                    {result.bodyTasteNotes.map((note: string, index: number) => (
                                                         <Tag key={index} color="blue" style={{ fontSize: '11px', margin: 0 }}>{note}</Tag>
                                                     ))}
                                                 </div>
                                             </div>
                                         )}
-                                        {result.headTasteNotes && result.headTasteNotes.length > 0 && (
+                                        {result.bodyTasteNotes && typeof result.bodyTasteNotes === 'string' && (
+                                            <div>
+                                                <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: '4px', fontWeight: 500 }}>
+                                                    主体 (Body) - 中1/3:
+                                                </Text>
+                                                <Text style={{ fontSize: '13px', color: '#fff' }}>{result.bodyTasteNotes}</Text>
+                                            </div>
+                                        )}
+                                        {result.headTasteNotes && Array.isArray(result.headTasteNotes) && result.headTasteNotes.length > 0 && (
                                             <div>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: '4px', fontWeight: 500 }}>
                                                     头部 (Head) - 后1/3:
                                                 </Text>
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                                                    {result.headTasteNotes.map((note, index) => (
+                                                    {result.headTasteNotes.map((note: string, index: number) => (
                                                         <Tag key={index} color="purple" style={{ fontSize: '11px', margin: 0 }}>{note}</Tag>
                                                     ))}
                                                 </div>
+                                            </div>
+                                        )}
+                                        {result.headTasteNotes && typeof result.headTasteNotes === 'string' && (
+                                            <div>
+                                                <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: '4px', fontWeight: 500 }}>
+                                                    头部 (Head) - 后1/3:
+                                                </Text>
+                                                <Text style={{ fontSize: '13px', color: '#fff' }}>{result.headTasteNotes}</Text>
                                             </div>
                                         )}
                                     </Space>
