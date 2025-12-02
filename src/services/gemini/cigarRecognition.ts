@@ -342,13 +342,43 @@ export async function analyzeCigarImage(
         console.warn('⚠️  API Key 格式可能不正确。Gemini API Key 通常以 "AIza" 开头');
     }
 
-    // 构建提示词，如果用户提供了提示，则加入
-    const userHintSection = userHint 
-        ? `\n\nIMPORTANT USER HINT: The user has provided the following information about this cigar: "${userHint}". Please use this information to improve your identification accuracy. If the user's hint matches what you see in the image, prioritize the user's information. If there's a conflict, note it in the confidence score.`
-        : '';
+    // 构建场景化的提示词
+    // 场景 1: 仅图片
+    // 场景 2: 图片 + 用户提示
+    const hasUserHint = userHint && userHint.trim();
+    
+    const scenarioContext = hasUserHint
+        ? `
+🎯 SCENARIO: Image Analysis with User Hint
+You are analyzing a cigar image AND the user has provided helpful information: "${userHint}"
+
+INSTRUCTIONS:
+1. First, analyze the image to identify the cigar from visual cues (band, label, wrapper color, size)
+2. Then, cross-reference with the user's hint: "${userHint}"
+3. If the image and hint match → High confidence (0.85-0.95)
+4. If the image is unclear but hint is specific → Medium-high confidence (0.75-0.85)
+5. If there's a conflict → Note it and use image as primary source, lower confidence (0.6-0.7)
+6. Use the hint to improve identification of subtle details (specific model, vitola, etc.)
+`
+        : `
+🎯 SCENARIO: Pure Image Analysis
+You are analyzing a cigar image WITHOUT any user hints.
+
+INSTRUCTIONS:
+1. Carefully examine the cigar band/label for brand name and model information
+2. Analyze wrapper color, texture, and construction details
+3. Identify the vitola (size/shape) from visual appearance
+4. Confidence levels:
+   - Clear band with readable text → High confidence (0.85-0.95)
+   - Partial band or unclear text → Medium confidence (0.7-0.8)
+   - No band or very unclear → Low confidence (0.5-0.65)
+`;
 
     const prompt = `
-    Analyze this image of a cigar. Identify the brand, specific name (model/ vitola if possible), origin, flavor profile, strength, construction details, and expected tasting notes for different sections.${userHintSection}
+${scenarioContext}
+
+📋 ANALYSIS TASK:
+Analyze this cigar image and provide detailed information.
     
     IMPORTANT: You should reference information from authoritative cigar websites and databases to ensure accuracy. 
     Consider searching and referencing information from these reputable sources:
@@ -1251,13 +1281,25 @@ export async function analyzeCigarByName(
         throw new Error('产品名称不能为空');
     }
 
-    // 构建包含品牌信息的提示
-    const brandInfo = brand && brand.trim() 
-        ? ` The brand is "${brand.trim()}". Use this brand information to improve identification accuracy.`
-        : '';
+    // 构建场景化的提示词
+    // 场景: 纯文本搜索（用户输入品牌和名称）
+    const brandInfo = brand && brand.trim() ? brand.trim() : '';
+    const fullName = brandInfo ? `${brandInfo} ${cigarName}` : cigarName;
     
     const prompt = `
-Analyze the cigar "${brandInfo} ${cigarName}" and provide detailed information.
+🎯 SCENARIO: Text-Based Cigar Search
+The user has provided the cigar name: "${fullName}"
+${brandInfo ? `Brand: "${brandInfo}"` : ''}
+Model/Name: "${cigarName}"
+
+INSTRUCTIONS:
+1. Search your training data for information about "${fullName}"
+2. This is a TEXT-BASED search, so you should rely on your knowledge base
+3. Confidence levels:
+   - Well-known cigar with verified specs in training data → High confidence (0.85-0.95)
+   - Common cigar but limited specs → Medium confidence (0.7-0.8)
+   - Rare/unknown cigar → Low confidence (0.5-0.65)
+4. Be honest about what you know vs. what you're inferring
 
 ⚠️ CRITICAL: You can ONLY use information from your training data. You CANNOT access external websites in real-time.
 
