@@ -657,6 +657,54 @@ export const AICigarScanner: React.FC = () => {
                             </Tag>
                         </div>
 
+                        {/* 雪茄茄标图像 - 优先使用 Gemini 返回的图片，否则使用用户拍摄的图片 */}
+                        {(result.imageUrl || imgSrc) && (
+                            <div style={{ 
+                                marginTop: '12px',
+                                background: 'rgba(0,0,0,0.2)', 
+                                padding: '12px', 
+                                borderRadius: '8px',
+                                border: '1px solid rgba(255,255,255,0.1)'
+                            }}>
+                                <Text type="secondary" style={{ 
+                                    fontSize: '13px', 
+                                    display: 'block', 
+                                    marginBottom: '12px',
+                                    fontWeight: 500,
+                                    color: '#ffd700'
+                                }}>
+                                    雪茄茄标图像
+                                </Text>
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    width: '100%',
+                                    maxHeight: '200px',
+                                    borderRadius: '8px',
+                                    overflow: 'hidden',
+                                    background: '#000'
+                                }}>
+                                    <img 
+                                        src={result.imageUrl || imgSrc || ''} 
+                                        alt="雪茄茄标" 
+                                        style={{ 
+                                            width: '100%', 
+                                            maxHeight: '200px', 
+                                            objectFit: 'contain',
+                                            borderRadius: '8px'
+                                        }}
+                                        onError={(e) => {
+                                            // 如果 Gemini 返回的图片加载失败，回退到用户拍摄的图片
+                                            if (result.imageUrl && imgSrc && e.currentTarget.src !== imgSrc) {
+                                                e.currentTarget.src = imgSrc;
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
                         <Divider style={{ margin: '12px 0', borderColor: '#333' }} />
 
                         <Space split={<Divider type="vertical" style={{ borderColor: '#555' }} />}>
@@ -777,51 +825,6 @@ export const AICigarScanner: React.FC = () => {
                         <Paragraph style={{ color: '#aaa', marginTop: '6px', background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '4px' }}>
                             {result.description}
                         </Paragraph>
-
-                        {/* 雪茄茄标图像 */}
-                        {imgSrc && (
-                            <>
-                                <Divider style={{ margin: '12px 0', borderColor: '#333' }} />
-                                <div style={{ 
-                                    marginTop: '4px', 
-                                    background: 'rgba(0,0,0,0.2)', 
-                                    padding: '12px', 
-                                    borderRadius: '8px',
-                                    border: '1px solid rgba(255,255,255,0.1)'
-                                }}>
-                                    <Text type="secondary" style={{ 
-                                        fontSize: '13px', 
-                                        display: 'block', 
-                                        marginBottom: '12px',
-                                        fontWeight: 500,
-                                        color: '#ffd700'
-                                    }}>
-                                        雪茄茄标图像
-                                    </Text>
-                                    <div style={{
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        alignItems: 'center',
-                                        width: '100%',
-                                        maxHeight: '200px',
-                                        borderRadius: '8px',
-                                        overflow: 'hidden',
-                                        background: '#000'
-                                    }}>
-                                        <img 
-                                            src={imgSrc} 
-                                            alt="雪茄茄标" 
-                                            style={{ 
-                                                width: '100%', 
-                                                maxHeight: '200px', 
-                                                objectFit: 'contain',
-                                                borderRadius: '8px'
-                                            }} 
-                                        />
-                                    </div>
-                                </div>
-                            </>
-                        )}
 
                         {/* 显示匹配雪茄的图片 */}
                         {(() => {

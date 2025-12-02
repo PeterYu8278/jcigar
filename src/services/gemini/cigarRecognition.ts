@@ -160,6 +160,7 @@ export interface CigarAnalysisResult {
     rating?: number;       // 评分（0-100，来自权威网站的评分）
     confidence: number; // 0-1
     possibleSizes?: string[];  // 该品牌可能的其他尺寸（如 ["Robusto", "Torpedo", "Churchill"]）
+    imageUrl?: string;     // 雪茄茄标图片 URL（如果可用）
 }
 
 export async function analyzeCigarImage(
@@ -224,6 +225,7 @@ export async function analyzeCigarImage(
     - description: string (a short 2-sentence description of this specific cigar in English)
     - rating: number (cigar rating from 0 to 100, based on ratings from authoritative sources like Cigar Aficionado, Cigar Journal, Halfwheel, etc. If multiple ratings are available, use the average or most recent rating. If no rating is found, use null or omit this field)
     - confidence: number (0.0 to 1.0, how sure are you?)
+    - imageUrl: string (optional, a publicly accessible URL to an image of this cigar's band/label. If you can find or reference a URL from authoritative cigar websites or databases, include it. If not available, use null or omit this field. The URL should be a direct link to an image file, not a webpage.)
 
     Note: 
     - The "name" field should include the full name with model or size/vitola (e.g., "Cohiba Robusto", not just "Cohiba")
