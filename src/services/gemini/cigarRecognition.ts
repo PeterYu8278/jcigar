@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getAppConfig } from "../firebase/appConfig";
+import { searchCigarImageWithGoogle } from "./googleImageSearch";
 
 /**
  * 获取 Gemini API Key
@@ -608,7 +609,53 @@ async function validateImageUrl(url: string): Promise<boolean> {
     });
 }
 
+/**
+ * 并行搜索雪茄图片 URL（Gemini + Google Image Search）
+ * @param brand 品牌名称
+ * @param name 雪茄名称
+ * @returns 可用的图片 URL 或 null
+ */
 async function searchCigarImageUrl(brand: string, name: string): Promise<string | null> {
+    console.log(`[searchCigarImageUrl] 🚀 开始并行搜索图片: "${brand} ${name}" (优先使用 Google Search)`);
+    
+    // 并行执行 Google Image Search 和 Gemini 搜索（优先 Google）
+    const [googleResult, geminiResult] = await Promise.allSettled([
+        searchCigarImageWithGoogle(brand, name),
+        searchCigarImageUrlWithGemini(brand, name)
+    ]);
+
+    // 优先检查 Google 结果
+    if (googleResult.status === 'fulfilled') {
+        if (googleResult.value) {
+            console.log(`[searchCigarImageUrl] ✅ Google 搜索成功（优先）:`, googleResult.value);
+            return googleResult.value;
+        } else {
+            console.log(`[searchCigarImageUrl] ℹ️ Google 搜索完成，但未找到可用图片 URL，尝试 Gemini...`);
+        }
+    } else if (googleResult.status === 'rejected') {
+        console.warn(`[searchCigarImageUrl] ⚠️ Google 搜索失败:`, googleResult.reason);
+    }
+
+    // 如果 Google 搜索失败，回退到 Gemini
+    if (geminiResult.status === 'fulfilled' && geminiResult.value) {
+        console.log(`[searchCigarImageUrl] ✅ Gemini 搜索成功（回退）:`, geminiResult.value);
+        return geminiResult.value;
+    } else if (geminiResult.status === 'rejected') {
+        console.warn(`[searchCigarImageUrl] ⚠️ Gemini 搜索失败:`, geminiResult.reason);
+    }
+
+    // 两个搜索都失败
+    console.warn(`[searchCigarImageUrl] ❌ 所有搜索方法都失败（Google 和 Gemini 都未找到可用图片）`);
+    return null;
+}
+
+/**
+ * 使用 Gemini 搜索雪茄图片 URL
+ * @param brand 品牌名称
+ * @param name 雪茄名称
+ * @returns 可用的图片 URL 或 null
+ */
+async function searchCigarImageUrlWithGemini(brand: string, name: string): Promise<string | null> {
     if (!API_KEY) {
         return null;
     }
@@ -680,7 +727,7 @@ IMPORTANT:
         const invalidConfigModels = configModels.filter(m => !validModels.includes(m));
         
         if (invalidConfigModels.length > 0) {
-            console.warn(`[searchCigarImageUrl] ⚠️ AppConfig 中配置的以下模型不可用，将被跳过:`, invalidConfigModels);
+            console.warn(`[searchCigarImageUrlWithGemini] ⚠️ AppConfig 中配置的以下模型不可用，将被跳过:`, invalidConfigModels);
         }
         
         // 优先使用配置的模型（已验证可用），然后补充其他可用模型
@@ -696,10 +743,10 @@ IMPORTANT:
     // 确保列表不为空
     if (modelsToTry.length === 0) {
         modelsToTry = [...defaultModels];
-        console.warn('[searchCigarImageUrl] ⚠️ 模型列表为空，使用默认模型（可能部分不可用）');
+        console.warn('[searchCigarImageUrlWithGemini] ⚠️ 模型列表为空，使用默认模型（可能部分不可用）');
     }
     
-    console.log(`[searchCigarImageUrl] 搜索 "${brand} ${name}" 的图片URL，尝试模型:`, modelsToTry);
+    console.log(`[searchCigarImageUrlWithGemini] 搜索 "${brand} ${name}" 的图片URL，尝试模型:`, modelsToTry);
 
     // 尝试使用 SDK
     for (const modelName of modelsToTry) {
@@ -710,12 +757,12 @@ IMPORTANT:
             
             // 检查响应是否有效
             if (!response) {
-                console.warn(`[searchCigarImageUrl] [${modelName}] ❌ 响应为空`);
+                console.warn(`[searchCigarImageUrlWithGemini] [${modelName}] ❌ 响应为空`);
                 continue;
             }
             
             // 调试：检查响应对象的完整结构
-            console.log(`[searchCigarImageUrl] [${modelName}] 响应对象结构:`, {
+            console.log(`[searchCigarImageUrlWithGemini] [${modelName}] 响应对象结构:`, {
                 hasText: typeof response.text === 'function',
                 responseType: typeof response,
                 responseKeys: Object.keys(response || {}),
@@ -730,7 +777,7 @@ IMPORTANT:
                 
                 // 如果 text() 返回 null 或 undefined，尝试从 result 中获取
                 if (!rawResponse) {
-                    console.warn(`[searchCigarImageUrl] [${modelName}] response.text() 返回空值，尝试从 result 获取`);
+                    console.warn(`[searchCigarImageUrlWithGemini] [${modelName}] response.text() 返回空值，尝试从 result 获取`);
                     const candidates = (result as any).response?.candidates;
                     if (candidates && candidates.length > 0) {
                         const content = candidates[0]?.content;
@@ -740,7 +787,7 @@ IMPORTANT:
                     }
                 }
             } catch (textError: any) {
-                console.warn(`[searchCigarImageUrl] [${modelName}] ❌ 无法获取文本响应:`, textError?.message || textError);
+                console.warn(`[searchCigarImageUrlWithGemini] [${modelName}] ❌ 无法获取文本响应:`, textError?.message || textError);
                 // 尝试从 candidates 中获取
                 const candidates = (result as any).response?.candidates;
                 if (candidates && candidates.length > 0) {
@@ -757,7 +804,7 @@ IMPORTANT:
             
             // 如果 rawResponse 为空或 null，记录并继续下一个模型
             if (!rawResponse || rawResponse === 'null' || rawResponse === '') {
-                console.warn(`[searchCigarImageUrl] [${modelName}] ❌ 响应为空或null，完整响应对象:`, {
+                console.warn(`[searchCigarImageUrlWithGemini] [${modelName}] ❌ 响应为空或null，完整响应对象:`, {
                     response: response,
                     result: result,
                     rawResponse: rawResponse
@@ -765,7 +812,7 @@ IMPORTANT:
                 continue;
             }
             
-            console.log(`[searchCigarImageUrl] [${modelName}] Gemini 原始响应:`, rawResponse);
+            console.log(`[searchCigarImageUrlWithGemini] [${modelName}] Gemini 原始响应:`, rawResponse);
 
             // 清理响应文本（移除可能的引号、换行、markdown 代码块、null 字符串等）
             let imageUrl = rawResponse
@@ -784,11 +831,11 @@ IMPORTANT:
                     imageUrl.includes('google.com/imgres') || 
                     imageUrl.includes('googleusercontent.com') ||
                     imageUrl.includes('google.com/search')) {
-                    console.warn(`[searchCigarImageUrl] [${modelName}] ❌ 跳过 Google 跳转链接:`, imageUrl);
+                    console.warn(`[searchCigarImageUrlWithGemini] [${modelName}] ❌ 跳过 Google 跳转链接:`, imageUrl);
                     continue;
                 }
                 
-                console.log(`[searchCigarImageUrl] [${modelName}] 找到有效URL:`, imageUrl);
+                console.log(`[searchCigarImageUrlWithGemini] [${modelName}] 找到有效URL:`, imageUrl);
                 
                 // 验证 URL 是否以图片扩展名结尾（优先）
                 const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'];
@@ -809,36 +856,36 @@ IMPORTANT:
                     imageUrl.includes('media');
                 
                 if (hasImageExtension || isImageRelated) {
-                    console.log(`[searchCigarImageUrl] [${modelName}] ✅ URL格式验证通过，开始验证可访问性:`, imageUrl);
+                    console.log(`[searchCigarImageUrlWithGemini] [${modelName}] ✅ URL格式验证通过，开始验证可访问性:`, imageUrl);
                     
                     // 同步验证 URL 可访问性（阻塞返回，确保只返回可用的 URL）
                     const isValid = await validateImageUrl(imageUrl);
                     
                     if (isValid) {
-                        console.log(`[searchCigarImageUrl] [${modelName}] ✅ URL可访问性验证通过，返回:`, imageUrl);
+                        console.log(`[searchCigarImageUrlWithGemini] [${modelName}] ✅ URL可访问性验证通过，返回:`, imageUrl);
                         return imageUrl;
                     } else {
-                        console.warn(`[searchCigarImageUrl] [${modelName}] ⚠️ URL可访问性验证失败（可能404），尝试下一个模型:`, imageUrl);
+                        console.warn(`[searchCigarImageUrlWithGemini] [${modelName}] ⚠️ URL可访问性验证失败（可能404），尝试下一个模型:`, imageUrl);
                         // 验证失败，继续尝试下一个模型
                         continue;
                     }
                 } else {
                     // 即使没有明显的图片标识，也验证可访问性
-                    console.log(`[searchCigarImageUrl] [${modelName}] ⚠️ URL没有明显的图片标识，验证可访问性:`, imageUrl);
+                    console.log(`[searchCigarImageUrlWithGemini] [${modelName}] ⚠️ URL没有明显的图片标识，验证可访问性:`, imageUrl);
                     
                     const isValid = await validateImageUrl(imageUrl);
                     
                     if (isValid) {
-                        console.log(`[searchCigarImageUrl] [${modelName}] ✅ URL可访问性验证通过，返回:`, imageUrl);
+                        console.log(`[searchCigarImageUrlWithGemini] [${modelName}] ✅ URL可访问性验证通过，返回:`, imageUrl);
                         return imageUrl;
                     } else {
-                        console.warn(`[searchCigarImageUrl] [${modelName}] ⚠️ URL可访问性验证失败，尝试下一个模型:`, imageUrl);
+                        console.warn(`[searchCigarImageUrlWithGemini] [${modelName}] ⚠️ URL可访问性验证失败，尝试下一个模型:`, imageUrl);
                         // 验证失败，继续尝试下一个模型
                         continue;
                     }
                 }
             } else {
-                console.warn(`[searchCigarImageUrl] [${modelName}] ❌ 无效的URL响应:`, imageUrl);
+                console.warn(`[searchCigarImageUrlWithGemini] [${modelName}] ❌ 无效的URL响应:`, imageUrl);
             }
             
             // 如果这个模型返回了无效响应，尝试下一个模型
@@ -852,7 +899,7 @@ IMPORTANT:
                 errorString.includes('404') || 
                 errorString.includes('is not found for api version') ||
                 errorString.includes('not supported')) {
-                console.warn(`[searchCigarImageUrl] 模型 ${modelName} 在 SDK 中不可用，尝试使用 REST API...`);
+                console.warn(`[searchCigarImageUrlWithGemini] 模型 ${modelName} 在 SDK 中不可用，尝试使用 REST API...`);
                 
                 // 尝试使用 REST API
                 try {
@@ -873,7 +920,7 @@ IMPORTANT:
                     
                     if (!restResponse.ok) {
                         const errorText = await restResponse.text();
-                        console.warn(`[searchCigarImageUrl] [REST API ${modelName}] HTTP错误 ${restResponse.status}:`, errorText);
+                        console.warn(`[searchCigarImageUrlWithGemini] [REST API ${modelName}] HTTP错误 ${restResponse.status}:`, errorText);
                         continue;
                     }
                     
@@ -881,13 +928,13 @@ IMPORTANT:
                     
                     // 检查响应结构
                     if (!data.candidates || data.candidates.length === 0) {
-                        console.warn(`[searchCigarImageUrl] [REST API ${modelName}] ❌ 响应中没有candidates:`, data);
+                        console.warn(`[searchCigarImageUrlWithGemini] [REST API ${modelName}] ❌ 响应中没有candidates:`, data);
                         continue;
                     }
                     
                     const candidate = data.candidates[0];
                     if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
-                        console.warn(`[searchCigarImageUrl] [REST API ${modelName}] ❌ 响应中没有content.parts:`, candidate);
+                        console.warn(`[searchCigarImageUrlWithGemini] [REST API ${modelName}] ❌ 响应中没有content.parts:`, candidate);
                         continue;
                     }
                     
@@ -895,11 +942,11 @@ IMPORTANT:
                     const rawResponse = text.trim();
                     
                     if (!rawResponse || rawResponse === 'null' || rawResponse === '') {
-                        console.warn(`[searchCigarImageUrl] [REST API ${modelName}] ❌ 响应文本为空:`, rawResponse);
+                        console.warn(`[searchCigarImageUrlWithGemini] [REST API ${modelName}] ❌ 响应文本为空:`, rawResponse);
                         continue;
                     }
                     
-                    console.log(`[searchCigarImageUrl] [REST API ${modelName}] Gemini 原始响应:`, rawResponse);
+                    console.log(`[searchCigarImageUrlWithGemini] [REST API ${modelName}] Gemini 原始响应:`, rawResponse);
                     
                     // 清理响应文本（移除可能的引号、换行、markdown 代码块、null 字符串等）
                     let imageUrl = rawResponse
@@ -917,7 +964,7 @@ IMPORTANT:
                             imageUrl.includes('google.com/imgres') || 
                             imageUrl.includes('googleusercontent.com') ||
                             imageUrl.includes('google.com/search')) {
-                            console.warn(`[searchCigarImageUrl] [REST API ${modelName}] ❌ 跳过 Google 跳转链接:`, imageUrl);
+                            console.warn(`[searchCigarImageUrlWithGemini] [REST API ${modelName}] ❌ 跳过 Google 跳转链接:`, imageUrl);
                             continue;
                         }
                         
@@ -939,28 +986,28 @@ IMPORTANT:
                             imageUrl.includes('media');
                         
                         if (hasImageExtension || isImageRelated) {
-                            console.log(`[searchCigarImageUrl] [REST API ${modelName}] ✅ 找到有效URL，开始验证可访问性:`, imageUrl);
+                            console.log(`[searchCigarImageUrlWithGemini] [REST API ${modelName}] ✅ 找到有效URL，开始验证可访问性:`, imageUrl);
                             
                             // 同步验证 URL 可访问性（阻塞返回，确保只返回可用的 URL）
                             const isValid = await validateImageUrl(imageUrl);
                             
                             if (isValid) {
-                                console.log(`[searchCigarImageUrl] [REST API ${modelName}] ✅ URL可访问性验证通过，返回:`, imageUrl);
+                                console.log(`[searchCigarImageUrlWithGemini] [REST API ${modelName}] ✅ URL可访问性验证通过，返回:`, imageUrl);
                                 return imageUrl;
                             } else {
-                                console.warn(`[searchCigarImageUrl] [REST API ${modelName}] ⚠️ URL可访问性验证失败（可能404），尝试下一个模型:`, imageUrl);
+                                console.warn(`[searchCigarImageUrlWithGemini] [REST API ${modelName}] ⚠️ URL可访问性验证失败（可能404），尝试下一个模型:`, imageUrl);
                                 // 验证失败，继续尝试下一个模型
                                 continue;
                             }
                         } else {
-                            console.warn(`[searchCigarImageUrl] [REST API ${modelName}] ❌ URL没有明显的图片标识，跳过:`, imageUrl);
+                            console.warn(`[searchCigarImageUrlWithGemini] [REST API ${modelName}] ❌ URL没有明显的图片标识，跳过:`, imageUrl);
                             continue;
                         }
                     } else {
-                        console.warn(`[searchCigarImageUrl] [REST API ${modelName}] ❌ 无效的URL响应:`, imageUrl);
+                        console.warn(`[searchCigarImageUrlWithGemini] [REST API ${modelName}] ❌ 无效的URL响应:`, imageUrl);
                     }
                 } catch (restError: any) {
-                    console.warn(`[searchCigarImageUrl] [REST API ${modelName}] 调用失败:`, restError?.message || restError);
+                    console.warn(`[searchCigarImageUrlWithGemini] [REST API ${modelName}] 调用失败:`, restError?.message || restError);
                     continue;
                 }
                 
@@ -968,13 +1015,13 @@ IMPORTANT:
             }
             
             // 其他错误（如权限、配额等）记录但继续尝试下一个模型
-            console.warn(`[searchCigarImageUrl] 模型 ${modelName} 调用失败:`, error);
+            console.warn(`[searchCigarImageUrlWithGemini] 模型 ${modelName} 调用失败:`, error);
             continue;
         }
     }
     
     // 所有模型都失败（可能是 API 调用失败，或所有返回的 URL 都验证失败）
-    console.warn(`[searchCigarImageUrl] ❌ 所有模型都失败，无法获取可用的图片URL。已尝试 ${modelsToTry.length} 个模型。`);
+    console.warn(`[searchCigarImageUrlWithGemini] ❌ 所有模型都失败，无法获取可用的图片URL。已尝试 ${modelsToTry.length} 个模型。`);
     return null;
 }
 
