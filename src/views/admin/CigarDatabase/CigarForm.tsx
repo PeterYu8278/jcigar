@@ -120,7 +120,7 @@ export const CigarForm: React.FC<CigarFormProps> = ({
         normalizedBrand,
         normalizedName,
         searchKeywords,
-        updatedBy: user.uid,
+        updatedBy: user.id || user.email || 'unknown',
         updatedAt: serverTimestamp()
       };
 
@@ -134,7 +134,7 @@ export const CigarForm: React.FC<CigarFormProps> = ({
         await addDoc(collection(db, GLOBAL_COLLECTIONS.CIGAR_DATABASE), {
           ...cigarData,
           dataSource: 'manual',
-          createdBy: user.uid,
+          createdBy: user.id || user.email || 'unknown',
           createdAt: serverTimestamp()
         });
         message.success('雪茄信息已添加');

@@ -245,9 +245,9 @@ Macanudo,Cafe Crystal,Connecticut Shade,Mexican,"Dominican, Mexican, Jamaican",m
             normalizedName: normalizeName(row.name),
             searchKeywords: generateSearchKeywords(row.brand, row.name),
             dataSource: 'imported',
-            createdBy: user.uid,
+            createdBy: user.id || user.email || 'unknown',
             createdAt: serverTimestamp(),
-            updatedBy: user.uid,
+            updatedBy: user.id || user.email || 'unknown',
             updatedAt: serverTimestamp()
           };
 
