@@ -225,7 +225,6 @@ export async function analyzeCigarImage(
     - description: string (a short 2-sentence description of this specific cigar in English)
     - rating: number (cigar rating from 0 to 100, based on ratings from authoritative sources like Cigar Aficionado, Cigar Journal, Halfwheel, etc. If multiple ratings are available, use the average or most recent rating. If no rating is found, use null or omit this field)
     - confidence: number (0.0 to 1.0, how sure are you?)
-    - imageUrl: string (optional, a publicly accessible URL to an image of this cigar's band/label. If you can find or reference a URL from authoritative cigar websites or databases, include it. If not available, use null or omit this field. The URL should be a direct link to an image file, not a webpage.)
 
     Note: 
     - The "name" field should include the full name with model or size/vitola (e.g., "Cohiba Robusto", not just "Cohiba")
@@ -323,14 +322,29 @@ export async function analyzeCigarImage(
     for (const modelName of modelsToTry) {
         try {
             const model = genAI.getGenerativeModel({ model: modelName });
-            const result = await model.generateContent([prompt, imagePart]);
-            const response = await result.response;
+            const generateResult = await model.generateContent([prompt, imagePart]);
+            const response = await generateResult.response;
             const text = response.text();
 
             // Clean up markdown code blocks if present (just in case)
             const jsonStr = text.replace(/```json/g, "").replace(/```/g, "").trim();
 
-            return JSON.parse(jsonStr) as CigarAnalysisResult;
+            const analysisResult = JSON.parse(jsonStr) as CigarAnalysisResult;
+            
+            // 根据品牌和产品名称搜索图片 URL
+            if (analysisResult.brand && analysisResult.name && analysisResult.confidence > 0.5) {
+                try {
+                    const imageUrl = await searchCigarImageUrl(analysisResult.brand, analysisResult.name);
+                    if (imageUrl) {
+                        analysisResult.imageUrl = imageUrl;
+                    }
+                } catch (error) {
+                    console.warn('搜索雪茄图片 URL 失败:', error);
+                    // 不抛出错误，继续返回识别结果
+                }
+            }
+            
+            return analysisResult;
         } catch (error: any) {
             lastError = error;
             const errorMessage = error?.message || error?.toString() || '';
@@ -347,6 +361,18 @@ export async function analyzeCigarImage(
                 try {
                     const restResult = await callGeminiRESTAPI(modelName, prompt, imagePart);
                     if (restResult) {
+                        // 根据品牌和产品名称搜索图片 URL
+                        if (restResult.brand && restResult.name && restResult.confidence > 0.5) {
+                            try {
+                                const imageUrl = await searchCigarImageUrl(restResult.brand, restResult.name);
+                                if (imageUrl) {
+                                    restResult.imageUrl = imageUrl;
+                                }
+                            } catch (error) {
+                                console.warn('搜索雪茄图片 URL 失败:', error);
+                                // 不抛出错误，继续返回识别结果
+                            }
+                        }
                         return restResult;
                     }
                 } catch (restError) {
@@ -378,6 +404,63 @@ export async function analyzeCigarImage(
         `${isNetlify ? '4' : '3'}. API Key 是否有访问所需模型的权限\n` +
         `${isNetlify ? '5' : '4'}. 尝试访问 https://aistudio.google.com/app/apikey 验证 API Key 是否有效`
     );
+}
+
+/**
+ * 根据品牌和产品名称搜索雪茄茄标图片 URL
+ * @param brand 品牌名称
+ * @param name 产品名称
+ * @returns 图片 URL 或 null
+ */
+async function searchCigarImageUrl(brand: string, name: string): Promise<string | null> {
+    if (!API_KEY) {
+        return null;
+    }
+
+    try {
+        const searchPrompt = `
+Search for a publicly accessible image URL of the cigar band/label for "${brand} ${name}".
+
+Requirements:
+1. The URL must be a direct link to an image file (e.g., .jpg, .png, .webp), not a webpage
+2. The image should show the cigar band/label clearly
+3. Prefer images from authoritative cigar websites like:
+   - cigaraficionado.com
+   - halfwheel.com
+   - cigardojo.com
+   - famous-smoke.com
+   - neptunecigar.com
+   - habanos.com (for Cuban cigars)
+
+Return ONLY the image URL as a plain text string, nothing else. If you cannot find a suitable image URL, return "null".
+        `.trim();
+
+        // 使用 Gemini 来搜索图片 URL
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const result = await model.generateContent(searchPrompt);
+        const response = await result.response;
+        const imageUrl = response.text().trim();
+
+        // 验证返回的是有效的 URL
+        if (imageUrl && imageUrl !== 'null' && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
+            // 检查是否是图片 URL
+            const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+            const isImageUrl = imageExtensions.some(ext => 
+                imageUrl.toLowerCase().includes(ext) || 
+                imageUrl.includes('image') ||
+                imageUrl.includes('photo')
+            );
+            
+            if (isImageUrl || imageUrl.includes('cloudinary') || imageUrl.includes('imgur')) {
+                return imageUrl;
+            }
+        }
+
+        return null;
+    } catch (error) {
+        console.warn('搜索雪茄图片 URL 时出错:', error);
+        return null;
+    }
 }
 
 /**
