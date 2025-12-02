@@ -520,18 +520,30 @@ async function searchCigarImageUrl(brand: string, name: string): Promise<string 
 Search for a publicly accessible, working image URL of a single stick of cigar with band/label for "${brand} ${name}".
 
 CRITICAL REQUIREMENTS:
-1. The URL MUST be a direct link to an image file (e.g., .jpg, .png, .webp), NOT a webpage URL
-2. The URL MUST be accessible and return a valid image (not 404)
-3. The image should show the cigar band/label clearly
-4. The image should show a single stick of cigar without excessive margins
-5. Prefer images from these reliable sources (in order of preference):
-    - https://www.google.com/ (direct image URLs)
+1. The URL MUST be a DIRECT link to an image file (e.g., .jpg, .png, .webp), NOT a webpage URL
+2. The URL MUST end with an image file extension (.jpg, .jpeg, .png, .webp, .gif) or be from a known image CDN
+3. DO NOT return Google search redirect URLs (e.g., https://www.google.com/url?sa=i&url=...)
+4. DO NOT return Google Images URLs - only return the actual direct image file URL
+5. The URL MUST be accessible and return a valid image (not 404)
+6. The image should show the cigar band/label clearly
+7. The image should show a single stick of cigar without excessive margins
+8. Prefer images from these reliable sources (in order of preference):
+    - Official cigar manufacturer websites
+    - Reputable cigar retailers (famous-smoke.com, holts.com, neptunecigar.com, etc.)
+    - Image CDNs (cloudinary.com, imgur.com, etc.)
+    - Product image hosting services
+
+STRICTLY FORBIDDEN:
+- Google search redirect URLs (any URL containing "google.com/url")
+- Google Images URLs (any URL containing "google.com/imgres" or "googleusercontent.com")
+- Webpage URLs (must be direct image file links only)
+- URLs that might return 404 errors
 
 IMPORTANT: 
-- Return ONLY a working, accessible image URL as plain text
-- Do NOT return URLs that might return 404 errors
-- If you cannot find a verified working image URL, return "null"
-- The URL should end with an image extension (.jpg, .jpeg, .png, .webp) or be a known image CDN URL
+- Return ONLY a working, accessible DIRECT image URL as plain text
+- The URL must start with http:// or https:// and end with an image extension
+- If you cannot find a verified working direct image URL, return "null"
+- Do NOT include any additional text, explanations, or markdown formatting
     `.trim();
 
     // 获取可用模型列表（与主识别函数使用相同的策略）
@@ -658,23 +670,33 @@ IMPORTANT:
             
             console.log(`[searchCigarImageUrl] [${modelName}] Gemini 原始响应:`, rawResponse);
 
-            // 清理响应文本（移除可能的引号、换行、markdown 代码块等）
+            // 清理响应文本（移除可能的引号、换行、markdown 代码块、null 字符串等）
             let imageUrl = rawResponse
                 .replace(/^```[\w]*\n?/g, '') // 移除开头的 markdown 代码块标记
                 .replace(/\n?```$/g, '') // 移除结尾的 markdown 代码块标记
                 .replace(/^["']|["']$/g, '') // 移除首尾引号
                 .replace(/\n/g, '') // 移除换行
+                .replace(/null$/i, '') // 移除末尾的 "null" 字符串（不区分大小写）
+                .replace(/null\s+/gi, '') // 移除中间的 "null" 字符串
                 .trim();
 
             // 验证返回的是有效的 URL
             if (imageUrl && imageUrl.toLowerCase() !== 'null' && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
+                // 排除 Google 跳转链接和 Google Images 链接
+                if (imageUrl.includes('google.com/url') || 
+                    imageUrl.includes('google.com/imgres') || 
+                    imageUrl.includes('googleusercontent.com') ||
+                    imageUrl.includes('google.com/search')) {
+                    console.warn(`[searchCigarImageUrl] [${modelName}] ❌ 跳过 Google 跳转链接:`, imageUrl);
+                    continue;
+                }
+                
                 console.log(`[searchCigarImageUrl] [${modelName}] 找到有效URL:`, imageUrl);
                 
-                // 更宽松的验证：只要是http/https开头的URL就接受
-                // 因为很多图片URL可能不包含明显的图片扩展名（如CDN URL）
+                // 验证 URL 是否以图片扩展名结尾（优先）
                 const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'];
                 const hasImageExtension = imageExtensions.some(ext => 
-                    imageUrl.toLowerCase().includes(ext)
+                    imageUrl.toLowerCase().endsWith(ext) || imageUrl.toLowerCase().includes(ext + '?')
                 );
                 
                 // 检查是否是图片相关的URL（包含图片关键词或常见图片服务）
@@ -685,7 +707,9 @@ IMPORTANT:
                     imageUrl.includes('cloudinary') ||
                     imageUrl.includes('imgur') ||
                     imageUrl.includes('cdn') ||
-                    imageUrl.includes('static');
+                    imageUrl.includes('static') ||
+                    imageUrl.includes('product') ||
+                    imageUrl.includes('media');
                 
                 if (hasImageExtension || isImageRelated) {
                     console.log(`[searchCigarImageUrl] [${modelName}] ✅ URL格式验证通过，开始验证可访问性:`, imageUrl);
@@ -780,26 +804,59 @@ IMPORTANT:
                     
                     console.log(`[searchCigarImageUrl] [REST API ${modelName}] Gemini 原始响应:`, rawResponse);
                     
-                    // 清理响应文本（移除可能的引号、换行、markdown 代码块等）
+                    // 清理响应文本（移除可能的引号、换行、markdown 代码块、null 字符串等）
                     let imageUrl = rawResponse
                         .replace(/^```[\w]*\n?/g, '') // 移除开头的 markdown 代码块标记
                         .replace(/\n?```$/g, '') // 移除结尾的 markdown 代码块标记
                         .replace(/^["']|["']$/g, '') // 移除首尾引号
                         .replace(/\n/g, '') // 移除换行
+                        .replace(/null$/i, '') // 移除末尾的 "null" 字符串（不区分大小写）
+                        .replace(/null\s+/gi, '') // 移除中间的 "null" 字符串
                         .trim();
                     
                     if (imageUrl && imageUrl.toLowerCase() !== 'null' && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
-                        console.log(`[searchCigarImageUrl] [REST API ${modelName}] ✅ 找到有效URL，开始验证可访问性:`, imageUrl);
+                        // 排除 Google 跳转链接和 Google Images 链接
+                        if (imageUrl.includes('google.com/url') || 
+                            imageUrl.includes('google.com/imgres') || 
+                            imageUrl.includes('googleusercontent.com') ||
+                            imageUrl.includes('google.com/search')) {
+                            console.warn(`[searchCigarImageUrl] [REST API ${modelName}] ❌ 跳过 Google 跳转链接:`, imageUrl);
+                            continue;
+                        }
                         
-                        // 同步验证 URL 可访问性（阻塞返回，确保只返回可用的 URL）
-                        const isValid = await validateImageUrl(imageUrl);
+                        // 验证 URL 是否以图片扩展名结尾或包含图片相关关键词
+                        const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'];
+                        const hasImageExtension = imageExtensions.some(ext => 
+                            imageUrl.toLowerCase().endsWith(ext) || imageUrl.toLowerCase().includes(ext + '?')
+                        );
                         
-                        if (isValid) {
-                            console.log(`[searchCigarImageUrl] [REST API ${modelName}] ✅ URL可访问性验证通过，返回:`, imageUrl);
-                            return imageUrl;
+                        const isImageRelated = imageUrl.includes('image') ||
+                            imageUrl.includes('photo') ||
+                            imageUrl.includes('picture') ||
+                            imageUrl.includes('img') ||
+                            imageUrl.includes('cloudinary') ||
+                            imageUrl.includes('imgur') ||
+                            imageUrl.includes('cdn') ||
+                            imageUrl.includes('static') ||
+                            imageUrl.includes('product') ||
+                            imageUrl.includes('media');
+                        
+                        if (hasImageExtension || isImageRelated) {
+                            console.log(`[searchCigarImageUrl] [REST API ${modelName}] ✅ 找到有效URL，开始验证可访问性:`, imageUrl);
+                            
+                            // 同步验证 URL 可访问性（阻塞返回，确保只返回可用的 URL）
+                            const isValid = await validateImageUrl(imageUrl);
+                            
+                            if (isValid) {
+                                console.log(`[searchCigarImageUrl] [REST API ${modelName}] ✅ URL可访问性验证通过，返回:`, imageUrl);
+                                return imageUrl;
+                            } else {
+                                console.warn(`[searchCigarImageUrl] [REST API ${modelName}] ⚠️ URL可访问性验证失败（可能404），尝试下一个模型:`, imageUrl);
+                                // 验证失败，继续尝试下一个模型
+                                continue;
+                            }
                         } else {
-                            console.warn(`[searchCigarImageUrl] [REST API ${modelName}] ⚠️ URL可访问性验证失败（可能404），尝试下一个模型:`, imageUrl);
-                            // 验证失败，继续尝试下一个模型
+                            console.warn(`[searchCigarImageUrl] [REST API ${modelName}] ❌ URL没有明显的图片标识，跳过:`, imageUrl);
                             continue;
                         }
                     } else {

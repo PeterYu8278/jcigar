@@ -668,18 +668,18 @@ export const AICigarScanner: React.FC = () => {
                                         color="gold"
                                         style={{ 
                                             margin: 0,
-                                            width: '78px',
-                                            height: '78px',
+                                            width: '60px',
+                                            height: '60px',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
                                             background: 'linear-gradient(135deg, #FDE08D, #C48D3A)',
                                             border: '1px solid rgba(184, 134, 11, 0.6)',
                                             color: '#1a1a1a',
-                                            fontWeight: 600,
+                                            fontWeight: 1000,
                                             fontSize: '28px',
                                             padding: 0,
-                                            borderRadius: '4px'
+                                            borderRadius: '12px'
                                         }}
                                     >
                                         {result.rating}
