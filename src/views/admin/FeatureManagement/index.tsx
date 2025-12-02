@@ -2311,25 +2311,24 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                                           {
                                             aiCigar: {
                                               enableDataStorage: checked,
+                                              enableImageSearch: aiCigarImageSearchEnabled,
                                             },
                                           },
                                           user.id
                                         );
                                         if (result.success) {
                                           message.success('配置已保存');
-                                          // 直接更新本地 appConfig 状态，避免重新加载导致的状态回退
+                                          // 直接更新本地 appConfig 状态，不重新加载避免状态回退
                                           if (appConfig) {
                                             setAppConfig({
                                               ...appConfig,
                                               aiCigar: {
+                                                ...appConfig.aiCigar,
                                                 enableDataStorage: checked,
+                                                enableImageSearch: aiCigarImageSearchEnabled,
                                               },
                                             });
                                           }
-                                          // 延迟重新加载配置以确保数据库已更新
-                                          setTimeout(async () => {
-                                            await loadAppConfig();
-                                          }, 500);
                                         } else {
                                           message.error(result.error || '保存失败');
                                           setAiCigarStorageEnabled(previousValue); // 恢复原值
@@ -2379,7 +2378,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                                         );
                                         if (result.success) {
                                           message.success('配置已保存');
-                                          // 直接更新本地 appConfig 状态
+                                          // 直接更新本地 appConfig 状态，不重新加载避免状态回退
                                           if (appConfig) {
                                             setAppConfig({
                                               ...appConfig,
@@ -2390,10 +2389,6 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                                               },
                                             });
                                           }
-                                          // 延迟重新加载配置
-                                          setTimeout(async () => {
-                                            await loadAppConfig();
-                                          }, 500);
                                         } else {
                                           message.error(result.error || '保存失败');
                                           setAiCigarImageSearchEnabled(previousValue);
