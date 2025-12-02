@@ -156,8 +156,10 @@ async function callGeminiRESTAPI(
 async function getAvailableModels(): Promise<string[]> {
     if (!API_KEY) return [];
     
-    // 尝试 v1 API，如果失败则尝试 v1beta
+    // 尝试 v1 和 v1beta API，合并所有可用模型
     const apiVersions = ['v1', 'v1beta'];
+    const allModels = new Set<string>();
+    const modelsByVersion: Record<string, string[]> = {};
     
     for (const version of apiVersions) {
         try {
@@ -167,32 +169,56 @@ async function getAvailableModels(): Promise<string[]> {
             );
             
             if (!response.ok) {
+                console.warn(`⚠️ ${version} API 请求失败: ${response.status}`);
                 continue; // 尝试下一个版本
             }
             
             const data = await response.json();
             const models = data.models || [];
             
-            // 提取模型名称，移除 "models/" 前缀
+            // 提取模型名称，移除 "models/" 前缀，并检查是否支持 generateContent
             const modelNames = models
-                .map((model: any) => {
+                .map((model: { name?: string; supportedGenerationMethods?: string[] }) => {
                     const name = model.name || '';
                     // 移除 "models/" 前缀
-                    return name.replace(/^models\//, '');
+                    const modelName = name.replace(/^models\//, '');
+                    
+                    // 检查模型是否支持 generateContent 方法
+                    const supportedMethods = model.supportedGenerationMethods || [];
+                    const supportsGenerateContent = supportedMethods.includes('generateContent');
+                    
+                    // 只返回 gemini 模型且支持 generateContent 的
+                    if (modelName && modelName.includes('gemini') && supportsGenerateContent) {
+                        return modelName;
+                    }
+                    return null;
                 })
-                .filter((name: string) => name && name.includes('gemini'));
+                .filter((name: string | null): name is string => name !== null);
             
             if (modelNames.length > 0) {
-                console.log(`✅ 使用 ${version} API 找到 ${modelNames.length} 个模型`);
-                return modelNames;
+                modelsByVersion[version] = modelNames;
+                modelNames.forEach((model: string) => allModels.add(model));
+                console.log(`✅ 使用 ${version} API 找到 ${modelNames.length} 个模型:`, modelNames);
             }
         } catch (error) {
+            console.warn(`⚠️ ${version} API 调用失败:`, error);
             // 继续尝试下一个版本
             continue;
         }
     }
     
-    console.warn('无法获取模型列表，使用默认模型列表');
+    const uniqueModels = Array.from(allModels);
+    
+    if (uniqueModels.length > 0) {
+        console.log(`✅ 从 API 获取可用模型:`, uniqueModels);
+        // 显示每个模型在哪些版本中可用
+        if (Object.keys(modelsByVersion).length > 1) {
+            console.log('📋 模型版本分布:', modelsByVersion);
+        }
+        return uniqueModels;
+    }
+    
+    console.warn('⚠️ 无法获取模型列表，使用默认模型列表');
     return [];
 }
 
