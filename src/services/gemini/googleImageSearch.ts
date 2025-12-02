@@ -43,14 +43,25 @@ export async function searchGoogleImages(
         const brandName = query.trim();
         
         // 构建优化的搜索查询
-        // 优先搜索可信的雪茄零售商网站
+        // 优先搜索可信的雪茄网站（零售商、评测网站、官方网站）
         const trustedSites = [
+            // 权威评测网站
+            'cigaraficionado.com',
+            'halfwheel.com',
+            'cigar-coop.com',
+            'cigardojo.com',
+            'cigarsratings.com',
+            'cigarinspector.com',
+            'cigarjournal.com',
+            'leafenthusiast.com',
+            // 主流零售商
             'famous-smoke.com',
             'holts.com',
             'cigarsinternational.com',
             'jrcigars.com',
             'neptunecigar.com',
-            'cigaraficionado.com'
+            // 官方网站
+            'habanos.com'  // 古巴雪茄官网
         ];
         
         // 方案 A：优先搜索可信网站（使用 OR 运算符）
@@ -128,12 +139,23 @@ export async function searchGoogleImages(
                 
                 // 1. 可信网站加分（40分）
                 const trustedDomains = [
+                    // 权威评测网站
+                    'cigaraficionado.com',
+                    'halfwheel.com',
+                    'cigar-coop.com',
+                    'cigardojo.com',
+                    'cigarsratings.com',
+                    'cigarinspector.com',
+                    'cigarjournal.com',
+                    'leafenthusiast.com',
+                    // 主流零售商
                     'famous-smoke.com',
                     'holts.com',
                     'cigarsinternational.com',
                     'jrcigars.com',
-                    'cigaraficionado.com',
-                    'halfwheel.com'
+                    'neptunecigar.com',
+                    // 官方网站
+                    'habanos.com'
                 ];
                 if (trustedDomains.some(domain => url.includes(domain))) {
                     score += 40;
