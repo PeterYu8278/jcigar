@@ -657,29 +657,36 @@ export const AICigarScanner: React.FC = () => {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                             <div style={{ flex: 1 }}>
                                 <Title level={4} style={{ margin: 0, color: '#ffd700' }}>{result.brand}</Title>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                    <Text style={{ fontSize: '16px', color: '#fff' }}>{result.name}</Text>
-                                    {result.rating && (
-                                        <Tag 
-                                            icon={<CrownOutlined />}
-                                            color="gold"
-                                            style={{ 
-                                                margin: 0,
-                                                background: 'linear-gradient(135deg, #FDE08D, #C48D3A)',
-                                                border: '1px solid rgba(184, 134, 11, 0.6)',
-                                                color: '#1a1a1a',
-                                                fontWeight: 600,
-                                                fontSize: '12px'
-                                            }}
-                                        >
-                                            {result.rating}
-                                        </Tag>
-                                    )}
-                                </div>
+                                <Text style={{ fontSize: '16px', color: '#fff' }}>{result.name}</Text>
                             </div>
-                            <Tag color={result.strength === 'Full' ? 'red' : result.strength === 'Medium' ? 'orange' : 'green'}>
-                                {result.strength}
-                            </Tag>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                                <Tag color={result.strength === 'Full' ? 'red' : result.strength === 'Medium' ? 'orange' : 'green'}>
+                                    {result.strength}
+                                </Tag>
+                                {result.rating && (
+                                    <Tag 
+                                        icon={<CrownOutlined />}
+                                        color="gold"
+                                        style={{ 
+                                            margin: 0,
+                                            width: '39px',
+                                            height: '39px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            background: 'linear-gradient(135deg, #FDE08D, #C48D3A)',
+                                            border: '1px solid rgba(184, 134, 11, 0.6)',
+                                            color: '#1a1a1a',
+                                            fontWeight: 600,
+                                            fontSize: '14px',
+                                            padding: 0,
+                                            borderRadius: '4px'
+                                        }}
+                                    >
+                                        {result.rating}
+                                    </Tag>
+                                )}
+                            </div>
                         </div>
 
                         {/* 雪茄茄标图像 - 优先使用 Gemini 返回的图片，否则使用用户拍摄的图片 */}

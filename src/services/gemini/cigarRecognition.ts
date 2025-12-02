@@ -510,7 +510,63 @@ Return ONLY the image URL as a plain text string, nothing else. If you cannot fi
             const model = genAI.getGenerativeModel({ model: modelName });
             const result = await model.generateContent(searchPrompt);
             const response = await result.response;
-            const rawResponse = response.text().trim();
+            
+            // 检查响应是否有效
+            if (!response) {
+                console.warn(`[searchCigarImageUrl] [${modelName}] ❌ 响应为空`);
+                continue;
+            }
+            
+            // 调试：检查响应对象的完整结构
+            console.log(`[searchCigarImageUrl] [${modelName}] 响应对象结构:`, {
+                hasText: typeof response.text === 'function',
+                responseType: typeof response,
+                responseKeys: Object.keys(response || {}),
+                candidates: (result as any).response?.candidates,
+            });
+            
+            // 安全地获取文本响应
+            let rawResponse: string;
+            try {
+                const textResult = response.text();
+                rawResponse = typeof textResult === 'string' ? textResult.trim() : '';
+                
+                // 如果 text() 返回 null 或 undefined，尝试从 result 中获取
+                if (!rawResponse) {
+                    console.warn(`[searchCigarImageUrl] [${modelName}] response.text() 返回空值，尝试从 result 获取`);
+                    const candidates = (result as any).response?.candidates;
+                    if (candidates && candidates.length > 0) {
+                        const content = candidates[0]?.content;
+                        if (content?.parts && content.parts.length > 0) {
+                            rawResponse = content.parts[0]?.text?.trim() || '';
+                        }
+                    }
+                }
+            } catch (textError: any) {
+                console.warn(`[searchCigarImageUrl] [${modelName}] ❌ 无法获取文本响应:`, textError?.message || textError);
+                // 尝试从 candidates 中获取
+                const candidates = (result as any).response?.candidates;
+                if (candidates && candidates.length > 0) {
+                    const content = candidates[0]?.content;
+                    if (content?.parts && content.parts.length > 0) {
+                        rawResponse = content.parts[0]?.text?.trim() || '';
+                    } else {
+                        rawResponse = '';
+                    }
+                } else {
+                    rawResponse = '';
+                }
+            }
+            
+            // 如果 rawResponse 为空或 null，记录并继续下一个模型
+            if (!rawResponse || rawResponse === 'null' || rawResponse === '') {
+                console.warn(`[searchCigarImageUrl] [${modelName}] ❌ 响应为空或null，完整响应对象:`, {
+                    response: response,
+                    result: result,
+                    rawResponse: rawResponse
+                });
+                continue;
+            }
             
             console.log(`[searchCigarImageUrl] [${modelName}] Gemini 原始响应:`, rawResponse);
 
@@ -569,7 +625,6 @@ Return ONLY the image URL as a plain text string, nothing else. If you cannot fi
                 
                 // 尝试使用 REST API
                 try {
-                    const imagePart = { text: searchPrompt };
                     const restResponse = await fetch(
                         `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${API_KEY}`,
                         {
@@ -585,25 +640,49 @@ Return ONLY the image URL as a plain text string, nothing else. If you cannot fi
                         }
                     );
                     
-                    if (restResponse.ok) {
-                        const data = await restResponse.json();
-                        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                        const rawResponse = text.trim();
-                        
-                        console.log(`[searchCigarImageUrl] [REST API ${modelName}] Gemini 原始响应:`, rawResponse);
-                        
-                        let imageUrl = rawResponse
-                            .replace(/^["']|["']$/g, '')
-                            .replace(/\n/g, '')
-                            .trim();
-                        
-                        if (imageUrl && imageUrl.toLowerCase() !== 'null' && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
-                            console.log(`[searchCigarImageUrl] [REST API ${modelName}] ✅ 找到有效URL:`, imageUrl);
-                            return imageUrl;
-                        }
+                    if (!restResponse.ok) {
+                        const errorText = await restResponse.text();
+                        console.warn(`[searchCigarImageUrl] [REST API ${modelName}] HTTP错误 ${restResponse.status}:`, errorText);
+                        continue;
                     }
-                } catch (restError) {
-                    console.warn(`[searchCigarImageUrl] REST API 调用也失败，尝试下一个模型...`);
+                    
+                    const data = await restResponse.json();
+                    
+                    // 检查响应结构
+                    if (!data.candidates || data.candidates.length === 0) {
+                        console.warn(`[searchCigarImageUrl] [REST API ${modelName}] ❌ 响应中没有candidates:`, data);
+                        continue;
+                    }
+                    
+                    const candidate = data.candidates[0];
+                    if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
+                        console.warn(`[searchCigarImageUrl] [REST API ${modelName}] ❌ 响应中没有content.parts:`, candidate);
+                        continue;
+                    }
+                    
+                    const text = candidate.content.parts[0]?.text || '';
+                    const rawResponse = text.trim();
+                    
+                    if (!rawResponse || rawResponse === 'null' || rawResponse === '') {
+                        console.warn(`[searchCigarImageUrl] [REST API ${modelName}] ❌ 响应文本为空:`, rawResponse);
+                        continue;
+                    }
+                    
+                    console.log(`[searchCigarImageUrl] [REST API ${modelName}] Gemini 原始响应:`, rawResponse);
+                    
+                    let imageUrl = rawResponse
+                        .replace(/^["']|["']$/g, '')
+                        .replace(/\n/g, '')
+                        .trim();
+                    
+                    if (imageUrl && imageUrl.toLowerCase() !== 'null' && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
+                        console.log(`[searchCigarImageUrl] [REST API ${modelName}] ✅ 找到有效URL:`, imageUrl);
+                        return imageUrl;
+                    } else {
+                        console.warn(`[searchCigarImageUrl] [REST API ${modelName}] ❌ 无效的URL响应:`, imageUrl);
+                    }
+                } catch (restError: any) {
+                    console.warn(`[searchCigarImageUrl] [REST API ${modelName}] 调用失败:`, restError?.message || restError);
                     continue;
                 }
                 
