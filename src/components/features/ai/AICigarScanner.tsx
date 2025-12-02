@@ -1,6 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
-import { Button, Spin, Card, Typography, Space, message, Tag, Divider, Upload, AutoComplete, Image, Modal } from 'antd';
-import { CameraOutlined, ReloadOutlined, ThunderboltFilled, ThunderboltOutlined, LoadingOutlined, UploadOutlined, SwapOutlined, EditOutlined, DownloadOutlined, ShareAltOutlined } from '@ant-design/icons';
+import { Button, Spin, Card, Typography, Space, message, Tag, Divider, Upload, AutoComplete, Image, Modal, Input } from 'antd';
+import { CameraOutlined, ReloadOutlined, ThunderboltFilled, ThunderboltOutlined, LoadingOutlined, UploadOutlined, SwapOutlined, EditOutlined, DownloadOutlined, ShareAltOutlined, SearchOutlined } from '@ant-design/icons';
 import Webcam from 'react-webcam';
 import html2canvas from 'html2canvas';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +9,7 @@ import { processAICigarRecognition } from '../../../services/aiCigarStorage';
 import { getCigars, getBrands } from '../../../services/firebase/firestore';
 import { findCigarByBrandAndName } from '../../../services/aiCigarStorage';
 import { getAppConfig } from '../../../services/firebase/appConfig';
+import { searchCigarByText } from '../../../services/cigar/cigarTextSearch';
 import type { UploadProps } from 'antd';
 import type { Cigar, Brand } from '../../../types';
 
@@ -41,6 +42,8 @@ export const AICigarScanner: React.FC = () => {
     const [loadingSuggestions, setLoadingSuggestions] = useState(false);
     const [matchedCigars, setMatchedCigars] = useState<Cigar[]>([]);
     const [dataStorageEnabled, setDataStorageEnabled] = useState<boolean>(true);
+    const [searchMode, setSearchMode] = useState<'camera' | 'upload' | 'text'>('camera');
+    const [textSearchInput, setTextSearchInput] = useState<string>('');
 
     // 保存识别结果到数据库（内部函数，不暴露给用户）
     // 必须在 handleAnalyze 之前定义，避免依赖循环
@@ -416,6 +419,40 @@ export const AICigarScanner: React.FC = () => {
         return false; // 阻止自动上传
     };
 
+    // 处理文本搜索
+    const handleTextSearch = async () => {
+        if (!textSearchInput || !textSearchInput.trim()) {
+            message.warning('请输入雪茄品牌和名称');
+            return;
+        }
+        
+        setAnalyzing(true);
+        setResult(null);
+        
+        try {
+            console.log(`[AICigarScanner] 文本搜索: "${textSearchInput}"`);
+            const searchResult = await searchCigarByText(textSearchInput);
+            
+            if (searchResult) {
+                console.log('[AICigarScanner] 文本搜索结果:', searchResult);
+                setResult(searchResult);
+                message.success('搜索成功');
+                
+                // 如果启用数据存储，保存结果
+                if (dataStorageEnabled && searchResult.hasDetailedInfo) {
+                    await saveRecognitionResult(searchResult, 'text-search');
+                }
+            } else {
+                message.error('未找到匹配的雪茄信息');
+            }
+        } catch (error) {
+            console.error('[AICigarScanner] 文本搜索失败:', error);
+            message.error('搜索失败，请重试');
+        } finally {
+            setAnalyzing(false);
+        }
+    };
+
     const handleUserMediaError = useCallback((error: string | DOMException) => {
         console.error('Webcam error:', error);
         
@@ -620,14 +657,74 @@ export const AICigarScanner: React.FC = () => {
                                 style={{ 
                                     width: '48px', 
                                     height: '48px', 
-                                    background: 'rgba(0,0,0,0.6)',
-                                    border: '2px solid rgba(255,255,255,0.3)',
+                                    background: searchMode === 'upload' ? 'rgba(255, 215, 0, 0.3)' : 'rgba(0,0,0,0.6)',
+                                    border: searchMode === 'upload' ? '2px solid rgba(255, 215, 0, 0.6)' : '2px solid rgba(255,255,255,0.3)',
                                     color: '#fff'
                                 }}
                                 title="上传图片"
+                                onClick={() => setSearchMode('upload')}
                             />
                         </Upload>
+                        <Button
+                            type="default"
+                            shape="circle"
+                            icon={<SearchOutlined style={{ fontSize: '20px' }} />}
+                            size="large"
+                            style={{ 
+                                width: '48px', 
+                                height: '48px', 
+                                background: searchMode === 'text' ? 'rgba(255, 215, 0, 0.3)' : 'rgba(0,0,0,0.6)',
+                                border: searchMode === 'text' ? '2px solid rgba(255, 215, 0, 0.6)' : '2px solid rgba(255,255,255,0.3)',
+                                color: '#fff'
+                            }}
+                            onClick={() => {
+                                setSearchMode('text');
+                                setImgSrc(null);
+                                setResult(null);
+                            }}
+                            title="文本搜索"
+                        />
                     </div>
+                </div>
+            ) : searchMode === 'text' ? (
+                <div style={{ width: '100%', marginBottom: '16px', padding: '24px', background: 'rgba(0,0,0,0.3)', borderRadius: '12px' }}>
+                    <Space direction="vertical" style={{ width: '100%' }} size="large">
+                        <div>
+                            <Text style={{ color: '#fff', fontSize: '16px', display: 'block', marginBottom: '12px' }}>
+                                输入雪茄品牌和名称
+                            </Text>
+                            <Input.Search
+                                placeholder="例如：Cohiba Robusto, Macanudo Cafe Crystal"
+                                value={textSearchInput}
+                                onChange={(e) => setTextSearchInput(e.target.value)}
+                                onSearch={handleTextSearch}
+                                enterButton="搜索"
+                                size="large"
+                                loading={analyzing}
+                                disabled={analyzing}
+                                style={{ width: '100%' }}
+                            />
+                            <Text style={{ color: '#999', fontSize: '12px', display: 'block', marginTop: '8px' }}>
+                                提示：输入完整的品牌和型号，例如 "Cohiba Robusto" 或 "Macanudo Cafe Crystal"
+                            </Text>
+                        </div>
+                        <Button
+                            type="default"
+                            icon={<CameraOutlined />}
+                            onClick={() => {
+                                setSearchMode('camera');
+                                setTextSearchInput('');
+                                setResult(null);
+                            }}
+                            style={{ 
+                                background: 'rgba(0,0,0,0.6)',
+                                border: '1px solid rgba(255,255,255,0.3)',
+                                color: '#fff'
+                            }}
+                        >
+                            返回拍照模式
+                        </Button>
+                    </Space>
                 </div>
             ) : (
                 <div style={{ width: '100%', marginBottom: '16px' }}>
