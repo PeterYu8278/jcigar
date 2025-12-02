@@ -470,21 +470,12 @@ export async function analyzeCigarImage(
  * @returns 图片 URL 或 null
  */
 /**
- * 验证图片 URL 是否可访问（使用 HEAD 请求）
- * 注意：由于 CORS 限制，某些网站可能无法验证，但我们会尝试
+ * 验证图片 URL 是否可访问（使用 Image 对象）
+ * 注意：由于 CSP 限制，某些网站可能无法验证，验证失败不会影响 URL 返回
  */
 async function validateImageUrl(url: string): Promise<boolean> {
-    try {
-        // 使用 HEAD 请求检查 URL 是否可访问
-        const response = await fetch(url, {
-            method: 'HEAD',
-            mode: 'no-cors', // 使用 no-cors 避免 CORS 错误，但无法读取响应状态
-            cache: 'no-cache'
-        });
-        
-        // 由于 no-cors 模式，我们无法读取状态码
-        // 但我们可以尝试加载图片来验证
-        return new Promise((resolve) => {
+    return new Promise((resolve) => {
+        try {
             const img = new Image();
             const timeout = setTimeout(() => {
                 resolve(false);
@@ -500,12 +491,13 @@ async function validateImageUrl(url: string): Promise<boolean> {
                 resolve(false);
             };
             
+            // 尝试加载图片（可能被 CSP 阻止，但不影响主流程）
             img.src = url;
-        });
-    } catch (error) {
-        console.warn(`[validateImageUrl] URL验证失败:`, url, error);
-        return false;
-    }
+        } catch (error) {
+            // 如果 CSP 阻止，静默失败
+            resolve(false);
+        }
+    });
 }
 
 async function searchCigarImageUrl(brand: string, name: string): Promise<string | null> {
