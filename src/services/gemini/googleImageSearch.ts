@@ -38,7 +38,7 @@ export async function searchGoogleImages(
         // 优化搜索查询：
         // 1. 使用引号强制精确匹配品牌和名称
         // 2. 添加 "single stick" 确保是单支雪茄
-        // 3. 添加 "band label" 确保显示茄标
+        // 3. 添加 "cigar label" 确保显示茄标
         // 4. 排除 "box" "bundle" 避免多支装
         // 5. 添加 "white background" 或 "no background" 优先无背景图片
         // 6. 使用 site: 运算符优先搜索可信网站
@@ -48,6 +48,7 @@ export async function searchGoogleImages(
         // 优先搜索可信的雪茄网站（零售商、评测网站、官方网站）
         const trustedSites = [
             // 权威评测网站
+            'images.google.com',
             'google.com',
             'cigaraficionado.com',
             'halfwheel.com',
@@ -70,7 +71,7 @@ export async function searchGoogleImages(
         // 构建优化的搜索查询
         // 优先级：单支 + 茄标 + 无背景/白背景 + 排除多支装
         const siteQuery = trustedSites.map(site => `site:${site}`).join(' OR ');
-        const searchQuery = `"${brandName}" single stick cigar band label -box -bundle -"5 pack" -"10 pack" (${siteQuery})`;
+        const searchQuery = `${brandName} single stick cigar label white background or no background (${siteQuery})`;
         
         console.log(`[GoogleImageSearch] 🔍 优化搜索（单支+茄标+无背景）: "${searchQuery}"`);
         
@@ -152,6 +153,8 @@ export async function searchGoogleImages(
                 // 1. 可信网站加分（40分）
                 const trustedDomains = [
                     // 权威评测网站
+                    'images.google.com',
+                    'google.com',
                     'cigaraficionado.com',
                     'halfwheel.com',
                     'cigar-coop.com',
