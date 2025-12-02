@@ -1117,16 +1117,35 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                     width: '100%',
                   }}
                   options={[
-                    { label: 'gemini-2.5-flash', value: 'gemini-2.5-flash' },
+                    // Gemini 2.x 系列（最新）
                     { label: 'gemini-2.5-pro', value: 'gemini-2.5-pro' },
-                    { label: 'gemini-2.5-flash-lite', value: 'gemini-2.5-flash-lite' },
                     { label: 'gemini-2.0-flash', value: 'gemini-2.0-flash' },
-                    { label: 'gemini-2.0-flash-001', value: 'gemini-2.0-flash-001' },
+                    { label: 'gemini-2.5-flash', value: 'gemini-2.5-flash' },
                     { label: 'gemini-2.0-flash-lite', value: 'gemini-2.0-flash-lite' },
-                    { label: 'gemini-2.0-flash-lite-001', value: 'gemini-2.0-flash-lite-001' },
+                    { label: 'gemini-2.5-flash-lite', value: 'gemini-2.5-flash-lite' },
+                    { label: 'gemini-2.5-flash-tts', value: 'gemini-2.5-flash-tts' },
+                    { label: 'gemini-3-pro', value: 'gemini-3-pro' },
+                    // Gemini 2.x 实验性模型
+                    { label: 'gemini-2.0-flash-exp', value: 'gemini-2.0-flash-exp' },
+                    { label: 'gemini-2.0-flash-live', value: 'gemini-2.0-flash-live' },
+                    { label: 'gemini-2.5-flash-live', value: 'gemini-2.5-flash-live' },
+                    { label: 'gemini-2.5-flash-native-audio-dialog', value: 'gemini-2.5-flash-native-audio-dialog' },
+                    // Gemini 1.5 系列（稳定）
                     { label: 'gemini-1.5-flash', value: 'gemini-1.5-flash' },
                     { label: 'gemini-1.5-pro', value: 'gemini-1.5-pro' },
                     { label: 'gemini-pro', value: 'gemini-pro' },
+                    // Gemma 系列
+                    { label: 'gemma-3-27b', value: 'gemma-3-27b' },
+                    { label: 'gemma-3-12b', value: 'gemma-3-12b' },
+                    { label: 'gemma-3-4b', value: 'gemma-3-4b' },
+                    { label: 'gemma-3-2b', value: 'gemma-3-2b' },
+                    { label: 'gemma-3-1b', value: 'gemma-3-1b' },
+                    // 其他模型
+                    { label: 'gemini-robotics-er-1.5-preview', value: 'gemini-robotics-er-1.5-preview' },
+                    { label: 'learnlm-2.0-flash-experimental', value: 'learnlm-2.0-flash-experimental' },
+                    // 保留旧版本（兼容性）
+                    { label: 'gemini-2.0-flash-001', value: 'gemini-2.0-flash-001' },
+                    { label: 'gemini-2.0-flash-lite-001', value: 'gemini-2.0-flash-lite-001' },
                   ]}
                   dropdownStyle={{
                     background: 'rgba(26, 26, 26, 0.95)',

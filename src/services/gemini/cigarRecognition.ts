@@ -47,6 +47,56 @@ if (!API_KEY) {
 
 const genAI = new GoogleGenerativeAI(API_KEY || "");
 
+/**
+ * 完整的 Gemini 模型列表（按推荐优先级排序）
+ * 包含所有可用的 Gemini 和 Gemma 模型
+ */
+const ALL_GEMINI_MODELS = [
+    // Gemini 2.x 系列（最新）
+    "gemini-2.5-pro",
+    "gemini-2.0-flash",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-flash-tts",
+    "gemini-3-pro",
+    
+    // Gemini 2.x 实验性模型
+    "gemini-2.0-flash-exp",
+    "gemini-2.0-flash-live",
+    "gemini-2.5-flash-live",
+    "gemini-2.5-flash-native-audio-dialog",
+    
+    // Gemini 1.5 系列（稳定）
+    "gemini-1.5-flash",
+    "gemini-1.5-pro",
+    "gemini-pro",
+    
+    // Gemma 系列
+    "gemma-3-27b",
+    "gemma-3-12b",
+    "gemma-3-4b",
+    "gemma-3-2b",
+    "gemma-3-1b",
+    
+    // 其他模型
+    "gemini-robotics-er-1.5-preview",
+    "learnlm-2.0-flash-experimental",
+];
+
+/**
+ * 默认模型列表（作为回退，优先使用稳定且快速的模型）
+ */
+const DEFAULT_MODELS = [
+    "gemini-2.5-flash-live", 
+    "gemini-2.5-flash",     // 最新快速模型
+    "gemini-2.0-flash",     // 稳定快速模型
+    "gemini-1.5-flash",     // 经典快速模型
+    "gemini-2.5-pro",       // 最新专业模型
+    "gemini-1.5-pro",       // 稳定专业模型
+    "gemini-pro",           // 经典模型
+];
+
 // 辅助函数：直接使用 REST API 调用 Gemini (v1 API)
 async function callGeminiRESTAPI(
     modelName: string, 
@@ -277,12 +327,8 @@ export async function analyzeCigarImage(
         console.warn('获取 API 模型列表失败，跳过动态模型列表');
     }
     
-    // 默认模型列表（作为最后的回退）
-    const defaultModels = [
-        "gemini-1.5-flash",     // 快速模型，通常最稳定
-        "gemini-1.5-pro",       // 较新的模型
-        "gemini-pro",           // 经典模型
-    ];
+    // 使用全局默认模型列表
+    const defaultModels = DEFAULT_MODELS;
     
     // 构建最终模型列表：按优先级合并
     let modelsToTry: string[] = [];
@@ -474,12 +520,8 @@ Return ONLY the image URL as a plain text string, nothing else. If you cannot fi
         // 忽略错误
     }
     
-    // 默认模型列表
-    const defaultModels = [
-        "gemini-1.5-flash",
-        "gemini-1.5-pro",
-        "gemini-pro",
-    ];
+    // 使用全局默认模型列表
+    const defaultModels = DEFAULT_MODELS;
     
     // 构建模型列表（与主识别函数相同的优先级）
     if (configModels.length > 0) {
@@ -812,11 +854,8 @@ export async function analyzeCigarByName(
         console.warn('获取 API 模型列表失败，跳过动态模型列表');
     }
     
-    const defaultModels = [
-        "gemini-1.5-flash",
-        "gemini-1.5-pro",
-        "gemini-pro",
-    ];
+    // 使用全局默认模型列表
+    const defaultModels = DEFAULT_MODELS;
     
     let modelsToTry: string[] = [];
     if (configModels.length > 0) {

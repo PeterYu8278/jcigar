@@ -1,6 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import { Button, Spin, Card, Typography, Space, message, Tag, Divider, Upload, AutoComplete, Image, Modal } from 'antd';
-import { CameraOutlined, ReloadOutlined, ThunderboltFilled, ThunderboltOutlined, LoadingOutlined, UploadOutlined, SwapOutlined, EditOutlined, DownloadOutlined, ShareAltOutlined, CrownOutlined } from '@ant-design/icons';
+import { CameraOutlined, ReloadOutlined, ThunderboltFilled, ThunderboltOutlined, LoadingOutlined, UploadOutlined, SwapOutlined, EditOutlined, DownloadOutlined, ShareAltOutlined } from '@ant-design/icons';
 import Webcam from 'react-webcam';
 import html2canvas from 'html2canvas';
 import { useTranslation } from 'react-i18next';
@@ -665,12 +665,11 @@ export const AICigarScanner: React.FC = () => {
                                 </Tag>
                                 {result.rating && (
                                     <Tag 
-                                        icon={<CrownOutlined />}
                                         color="gold"
                                         style={{ 
                                             margin: 0,
-                                            width: '39px',
-                                            height: '39px',
+                                            width: '78px',
+                                            height: '78px',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
@@ -678,7 +677,7 @@ export const AICigarScanner: React.FC = () => {
                                             border: '1px solid rgba(184, 134, 11, 0.6)',
                                             color: '#1a1a1a',
                                             fontWeight: 600,
-                                            fontSize: '14px',
+                                            fontSize: '28px',
                                             padding: 0,
                                             borderRadius: '4px'
                                         }}
