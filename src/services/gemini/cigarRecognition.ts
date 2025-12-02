@@ -374,7 +374,7 @@ export async function analyzeCigarImage(
     - origin: string (country)
     - size: string (vitola - MUST be a standard cigar size name. Common standard sizes include: Robusto, Torpedo, Churchill, Corona, Cigarillo, Petit Corona, Toro, Gordo, Lancero, Panatela, Belicoso, Pyramid, Perfecto, Culebra, etc. Extract ONLY the standard size name, not descriptive text. For example, if the name is "Placensia Reserva Original Robusto", the size should be "Robusto", not "Reserva Original Robusto".)
     - flavorProfile: array of strings (e.g., ["Earth", "Leather"])
-    - strength: "Mild" | "Medium" | "Full" | "Unknown"
+    - strength: "Mild" | "Medium-Mild" | "Medium" | "Medium-Full" | "Full" | "Unknown" (use "Unknown" if uncertain)
     - wrapper: string (the outer leaf/wrapper tobacco, e.g., "Connecticut", "Maduro", "Habano", "Corojo", or country of origin)
     - binder: string (the binder leaf tobacco, e.g., "Nicaraguan", "Ecuadorian", or country of origin)
     - filler: string (the filler tobacco blend, e.g., "Nicaraguan", "Dominican", "Cuban", or country/blend description)
@@ -1163,7 +1163,7 @@ export async function analyzeCigarByName(
     - origin: string (country)
     - size: string (vitola - MUST be a standard cigar size name. Common standard sizes include: Robusto, Torpedo, Churchill, Corona, Cigarillo, Petit Corona, Toro, Gordo, Lancero, Panatela, Belicoso, Pyramid, Perfecto, Culebra, etc. If the name contains "Club" or "Club 10", the size is likely "Cigarillo". Extract ONLY the standard size name, not descriptive text like "Reserva Original". For example, if the name is "Placensia Reserva Original Robusto", the size should be "Robusto", not "Reserva Original Robusto".)
     - flavorProfile: array of strings (e.g., ["Earth", "Leather"])
-    - strength: "Mild" | "Medium" | "Full" | "Unknown"
+    - strength: "Mild" | "Medium-Mild" | "Medium" | "Medium-Full" | "Full" | "Unknown" (use "Unknown" if uncertain)
     - wrapper: string (the outer leaf/wrapper tobacco, e.g., "Connecticut", "Maduro", "Habano", "Corojo", or country of origin)
     - binder: string (the binder leaf tobacco, e.g., "Nicaraguan", "Ecuadorian", or country of origin)
     - filler: string (the filler tobacco blend, e.g., "Nicaraguan", "Dominican", "Cuban", or country/blend description)
