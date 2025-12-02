@@ -473,13 +473,18 @@ export async function analyzeCigarImage(
  * 验证图片 URL 是否可访问（使用 Image 对象）
  * 注意：由于 CSP 限制，某些网站可能无法验证，验证失败不会影响 URL 返回
  */
+/**
+ * 验证图片 URL 是否可访问
+ * 使用 Image 对象加载图片，通过 onload/onerror 事件判断 URL 是否有效
+ * 设置 crossOrigin 属性以允许跨域图片验证
+ */
 async function validateImageUrl(url: string): Promise<boolean> {
     return new Promise((resolve) => {
         try {
             const img = new Image();
             const timeout = setTimeout(() => {
                 resolve(false);
-            }, 5000); // 5秒超时
+            }, 3000); // 3秒超时
             
             img.onload = () => {
                 clearTimeout(timeout);
@@ -491,10 +496,12 @@ async function validateImageUrl(url: string): Promise<boolean> {
                 resolve(false);
             };
             
-            // 尝试加载图片（可能被 CSP 阻止，但不影响主流程）
+            // 设置 crossOrigin 属性以允许跨域图片加载验证
+            // 即使服务器不支持 CORS，onerror 也会触发，可以判断 URL 是否有效
+            img.crossOrigin = 'anonymous';
             img.src = url;
         } catch (error) {
-            // 如果 CSP 阻止，静默失败
+            // 如果创建 Image 对象失败，返回 false
             resolve(false);
         }
     });
@@ -665,25 +672,33 @@ IMPORTANT:
                     imageUrl.includes('static');
                 
                 if (hasImageExtension || isImageRelated) {
-                    console.log(`[searchCigarImageUrl] [${modelName}] ✅ URL格式验证通过，返回:`, imageUrl);
+                    console.log(`[searchCigarImageUrl] [${modelName}] ✅ URL格式验证通过，开始验证可访问性:`, imageUrl);
                     
-                    // 异步验证 URL 可访问性（不阻塞返回，仅用于日志记录）
-                    validateImageUrl(imageUrl).then(isValid => {
-                        if (isValid) {
-                            console.log(`[searchCigarImageUrl] [${modelName}] ✅ URL可访问性验证通过:`, imageUrl);
-                        } else {
-                            console.warn(`[searchCigarImageUrl] [${modelName}] ⚠️ URL可访问性验证失败（可能404）:`, imageUrl);
-                        }
-                    }).catch(() => {
-                        // 验证失败不影响返回 URL
-                    });
+                    // 同步验证 URL 可访问性（阻塞返回，确保只返回可用的 URL）
+                    const isValid = await validateImageUrl(imageUrl);
                     
-                    return imageUrl;
+                    if (isValid) {
+                        console.log(`[searchCigarImageUrl] [${modelName}] ✅ URL可访问性验证通过，返回:`, imageUrl);
+                        return imageUrl;
+                    } else {
+                        console.warn(`[searchCigarImageUrl] [${modelName}] ⚠️ URL可访问性验证失败（可能404），尝试下一个模型:`, imageUrl);
+                        // 验证失败，继续尝试下一个模型
+                        continue;
+                    }
                 } else {
-                    // 即使没有明显的图片标识，只要是有效URL也尝试返回
-                    // 让浏览器尝试加载，如果失败会在组件中回退
-                    console.log(`[searchCigarImageUrl] [${modelName}] ⚠️ URL没有明显的图片标识，但尝试返回:`, imageUrl);
-                    return imageUrl;
+                    // 即使没有明显的图片标识，也验证可访问性
+                    console.log(`[searchCigarImageUrl] [${modelName}] ⚠️ URL没有明显的图片标识，验证可访问性:`, imageUrl);
+                    
+                    const isValid = await validateImageUrl(imageUrl);
+                    
+                    if (isValid) {
+                        console.log(`[searchCigarImageUrl] [${modelName}] ✅ URL可访问性验证通过，返回:`, imageUrl);
+                        return imageUrl;
+                    } else {
+                        console.warn(`[searchCigarImageUrl] [${modelName}] ⚠️ URL可访问性验证失败，尝试下一个模型:`, imageUrl);
+                        // 验证失败，继续尝试下一个模型
+                        continue;
+                    }
                 }
             } else {
                 console.warn(`[searchCigarImageUrl] [${modelName}] ❌ 无效的URL响应:`, imageUrl);
@@ -755,20 +770,19 @@ IMPORTANT:
                         .trim();
                     
                     if (imageUrl && imageUrl.toLowerCase() !== 'null' && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
-                        console.log(`[searchCigarImageUrl] [REST API ${modelName}] ✅ 找到有效URL，返回:`, imageUrl);
+                        console.log(`[searchCigarImageUrl] [REST API ${modelName}] ✅ 找到有效URL，开始验证可访问性:`, imageUrl);
                         
-                        // 异步验证 URL 可访问性（不阻塞返回，仅用于日志记录）
-                        validateImageUrl(imageUrl).then(isValid => {
-                            if (isValid) {
-                                console.log(`[searchCigarImageUrl] [REST API ${modelName}] ✅ URL可访问性验证通过:`, imageUrl);
-                            } else {
-                                console.warn(`[searchCigarImageUrl] [REST API ${modelName}] ⚠️ URL可访问性验证失败（可能404）:`, imageUrl);
-                            }
-                        }).catch(() => {
-                            // 验证失败不影响返回 URL
-                        });
+                        // 同步验证 URL 可访问性（阻塞返回，确保只返回可用的 URL）
+                        const isValid = await validateImageUrl(imageUrl);
                         
-                        return imageUrl;
+                        if (isValid) {
+                            console.log(`[searchCigarImageUrl] [REST API ${modelName}] ✅ URL可访问性验证通过，返回:`, imageUrl);
+                            return imageUrl;
+                        } else {
+                            console.warn(`[searchCigarImageUrl] [REST API ${modelName}] ⚠️ URL可访问性验证失败（可能404），尝试下一个模型:`, imageUrl);
+                            // 验证失败，继续尝试下一个模型
+                            continue;
+                        }
                     } else {
                         console.warn(`[searchCigarImageUrl] [REST API ${modelName}] ❌ 无效的URL响应:`, imageUrl);
                     }
@@ -786,8 +800,8 @@ IMPORTANT:
         }
     }
     
-    // 所有模型都失败
-    console.warn(`[searchCigarImageUrl] ❌ 所有模型都失败，无法搜索图片URL`);
+    // 所有模型都失败（可能是 API 调用失败，或所有返回的 URL 都验证失败）
+    console.warn(`[searchCigarImageUrl] ❌ 所有模型都失败，无法获取可用的图片URL。已尝试 ${modelsToTry.length} 个模型。`);
     return null;
 }
 
