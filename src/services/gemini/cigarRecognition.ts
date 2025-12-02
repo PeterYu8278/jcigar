@@ -530,7 +530,7 @@ export async function analyzeCigarImage(
                             hasDetailedInfo: true,
                             databaseId: detailedInfo.id
                         } as CigarAnalysisResult;
-                    } else {
+            } else {
                         console.log(`[analyzeCigarImage] ℹ️ 数据库未找到匹配项`);
                     }
                 } catch (error) {
@@ -742,33 +742,81 @@ async function searchCigarImageUrlWithGemini(brand: string, name: string): Promi
     }
 
     const searchPrompt = `
-Search for a publicly accessible, working image URL of a single stick of cigar with band/label for "${brand} ${name}".
+Find a high-quality, publicly accessible image URL for "${brand} ${name}" cigar.
 
-CRITICAL REQUIREMENTS:
-1. The URL MUST be a DIRECT link to an image file (e.g., .jpg, .png, .webp), NOT a webpage URL
-2. The URL MUST end with an image file extension (.jpg, .jpeg, .png, .webp, .gif) or be from a known image CDN
-3. DO NOT return Google search redirect URLs (e.g., https://www.google.com/url?sa=i&url=...)
-4. DO NOT return Google Images URLs - only return the actual direct image file URL
-5. The URL MUST be accessible and return a valid image (not 404)
-6. The image should show the cigar band/label clearly
-7. The image should show a single stick of cigar without excessive margins
-8. Prefer images from these reliable sources (in order of preference):
-    - Official cigar manufacturer websites
-    - Reputable cigar retailers (famous-smoke.com, holts.com, neptunecigar.com, etc.)
-    - Image CDNs (cloudinary.com, imgur.com, etc.)
-    - Product image hosting services
+🎯 SEARCH STRATEGY (Follow this order):
 
-STRICTLY FORBIDDEN:
-- Google search redirect URLs (any URL containing "google.com/url")
-- Google Images URLs (any URL containing "google.com/imgres" or "googleusercontent.com")
-- Webpage URLs (must be direct image file links only)
-- URLs that might return 404 errors
+PRIORITY 1: Official Manufacturer Websites (Most Reliable)
+- Brand official website: [brand].com
+- Parent company websites (e.g., generaldcigar.com, scandinaviantobaccogroup.com)
+- These usually have stable, high-quality product images
 
-IMPORTANT: 
-- Return ONLY a working, accessible DIRECT image URL as plain text
-- The URL must start with http:// or https:// and end with an image extension
-- If you cannot find a verified working direct image URL, return "null"
-- Do NOT include any additional text, explanations, or markdown formatting
+PRIORITY 2: Major Retailers with Reliable CDNs
+✅ RECOMMENDED (Low 404 rate):
+- famous-smoke.com (simple URLs, very reliable)
+- holts.com (stable CDN)
+- cigarsinternational.com (good uptime)
+- jrcigars.com (reliable)
+
+⚠️ USE WITH CAUTION (Medium 404 rate):
+- neptunecigar.com (sometimes restructures URLs)
+- cigarplace.com (cache URLs often expire)
+
+❌ AVOID (High 404 rate):
+- Small retailer websites
+- Blog posts or forum uploads
+- Social media images
+
+PRIORITY 3: Image CDNs
+- cloudinary.com
+- imgur.com
+- cdn.shopify.com (if from verified stores)
+
+🚫 URL PATTERNS TO AVOID (High 404 Rate):
+❌ /cache/ - cached/resized images often expire
+❌ /temp/ - temporary uploads
+❌ /resize/ - dynamic resizing, unstable
+❌ /thumb/ - thumbnails, may be removed
+❌ Complex hash paths (e.g., /abc123def456/xyz789/)
+❌ URLs with multiple query parameters
+
+✅ URL PATTERNS TO PREFER (Low 404 Rate):
+✓ Simple paths: /images/[product-name].jpg
+✓ CDN URLs: cdn.site.com/[product].jpg
+✓ Static assets: static.site.com/images/[product].jpg
+✓ Direct product URLs: /products/[brand]-[name].jpg
+
+📝 EXAMPLES:
+
+GOOD URLs (Simple, Stable):
+✅ https://www.famous-smoke.com/images/cohiba-robusto.jpg
+✅ https://static.holts.com/products/cohiba-robusto.png
+✅ https://cdn.cigarsinternational.com/cohiba-robusto.jpg
+✅ https://images.jrcigars.com/cohiba-robusto.jpg
+
+BAD URLs (Complex, Likely to 404):
+❌ https://site.com/cache/abc123/resize/image.jpg
+❌ https://site.com/temp/upload/12345/image.jpg
+❌ https://unknownsite.com/blog/2020/image.jpg
+❌ https://site.com/media/catalog/product/cache/1/image/9df78eab33525d08d6e5fb8d27136e95/c/o/cohiba.jpg
+
+🎯 VALIDATION CHECKLIST:
+✓ Direct image URL ending with .jpg, .jpeg, .png, .webp, .gif
+✓ From a domain you recognize as stable
+✓ Simple path structure (fewer than 5 path segments)
+✓ No /cache/, /temp/, /resize/, /thumb/ in URL
+✓ Prefer CDN or static subdomain
+✓ No complex hash strings in path
+
+🚨 CRITICAL RULES:
+1. ✅ Return ONLY URLs you are confident will work
+2. ✅ Prefer simple URLs over complex ones
+3. ✅ Prefer major retailers over small sites
+4. ❌ DO NOT return Google redirect URLs
+5. ❌ DO NOT return cached/resized image URLs
+6. ❌ If uncertain, return "null" instead of guessing
+
+OUTPUT: Return ONLY the image URL as plain text, or "null" if you cannot find a reliable URL.
     `.trim();
 
     // 获取可用模型列表（与主识别函数使用相同的策略）
@@ -942,14 +990,14 @@ IMPORTANT:
                     // 同步验证 URL 可访问性（阻塞返回，确保只返回可用的 URL）
                     const isValid = await validateImageUrl(imageUrl);
                     
-                    if (isValid) {
+                        if (isValid) {
                         console.log(`[searchCigarImageUrlWithGemini] [${modelName}] ✅ URL可访问性验证通过，返回:`, imageUrl);
                         return imageUrl;
-                    } else {
+                        } else {
                         console.warn(`[searchCigarImageUrlWithGemini] [${modelName}] ⚠️ URL可访问性验证失败（可能404），尝试下一个模型:`, imageUrl);
                         // 验证失败，继续尝试下一个模型
                         continue;
-                    }
+                        }
                 } else {
                     // 即使没有明显的图片标识，也验证可访问性
                     console.log(`[searchCigarImageUrlWithGemini] [${modelName}] ⚠️ URL没有明显的图片标识，验证可访问性:`, imageUrl);
@@ -958,8 +1006,8 @@ IMPORTANT:
                     
                     if (isValid) {
                         console.log(`[searchCigarImageUrlWithGemini] [${modelName}] ✅ URL可访问性验证通过，返回:`, imageUrl);
-                        return imageUrl;
-                    } else {
+                    return imageUrl;
+                } else {
                         console.warn(`[searchCigarImageUrlWithGemini] [${modelName}] ⚠️ URL可访问性验证失败，尝试下一个模型:`, imageUrl);
                         // 验证失败，继续尝试下一个模型
                         continue;
@@ -1068,7 +1116,7 @@ IMPORTANT:
                         
                         if (hasImageExtension || isImageRelated) {
                             console.log(`[searchCigarImageUrlWithGemini] [REST API ${modelName}] ✅ 找到有效URL，开始验证可访问性:`, imageUrl);
-                            
+                        
                             // 同步验证 URL 可访问性（阻塞返回，确保只返回可用的 URL）
                             const isValid = await validateImageUrl(imageUrl);
                             
@@ -1080,7 +1128,7 @@ IMPORTANT:
                                 // 验证失败，继续尝试下一个模型
                                 continue;
                             }
-                        } else {
+                    } else {
                             console.warn(`[searchCigarImageUrlWithGemini] [REST API ${modelName}] ❌ URL没有明显的图片标识，跳过:`, imageUrl);
                             continue;
                         }
@@ -1136,68 +1184,111 @@ export async function analyzeCigarByName(
         : '';
     
     const prompt = `
-    Based on the cigar name "${brandInfo} ${cigarName}", provide detailed information about this cigar.
-    
-    IMPORTANT: You should reference information from authoritative cigar websites and databases to ensure accuracy. 
-    Consider searching and referencing information from these reputable sources:
-    - https://www.cigaraficionado.com/ and https://www.cigaraficionado.com/ratingsandreviews
-    - https://cigar-coop.com/
-    - https://cigardojo.com/ and https://cigardojo.com/cigar-review-archives/
-    - https://cigarsratings.com/
-    - https://halfwheel.com/ and https://halfwheel.com/cigar-reviews/
-    - https://www.cigaraficionado.com/ and https://www.cigaraficionado.com/ratingsandreviews
-    - https://www.cigarinspector.com/
-    - https://www.cigarjournal.com/ and https://www.cigarjournal.com/ratings-and-awards/ratings/
-    - https://www.famous-smoke.com/ and https://www.famous-smoke.com/cigaradvisor
-    - https://www.habanos.com/en/ (for Cuban cigars)
-    - https://www.leafenthusiast.com/
-    - https://www.neptunecigar.com/ and https://www.neptunecigar.com/cigars
-    
-    Use information from these sources to provide accurate details about the cigar's specifications, ratings, reviews, and characteristics.
-    
-    Return the result strictly as a JSON object with the following keys:
-    - brand: string (brand name only, e.g., "Cohiba", "Montecristo", "Placensia")
-    - brandDescription: string (a brief description of the brand's history and characteristics, in English, 2-3 sentences. If you cannot determine, use empty string "")
-    - brandFoundedYear: number (the year the brand was founded. If you cannot determine, use null or omit this field)
-    - name: string (the full cigar name including model or size/vitola, e.g., "Cohiba Robusto", "Montecristo No.2")
-    - origin: string (country)
-    - size: string (vitola - MUST be a standard cigar size name. Common standard sizes include: Robusto, Torpedo, Churchill, Corona, Cigarillo, Petit Corona, Toro, Gordo, Lancero, Panatela, Belicoso, Pyramid, Perfecto, Culebra, etc. If the name contains "Club" or "Club 10", the size is likely "Cigarillo". Extract ONLY the standard size name, not descriptive text like "Reserva Original". For example, if the name is "Placensia Reserva Original Robusto", the size should be "Robusto", not "Reserva Original Robusto".)
-    - flavorProfile: array of strings (e.g., ["Earth", "Leather"])
-    - strength: "Mild" | "Medium-Mild" | "Medium" | "Medium-Full" | "Full" | "Unknown" (use "Unknown" if uncertain)
-    - wrapper: string (the outer leaf/wrapper tobacco, e.g., "Connecticut", "Maduro", "Habano", "Corojo", or country of origin)
-    - binder: string (the binder leaf tobacco, e.g., "Nicaraguan", "Ecuadorian", or country of origin)
-    - filler: string (the filler tobacco blend, e.g., "Nicaraguan", "Dominican", "Cuban", or country/blend description)
-    - footTasteNotes: array of strings (expected tasting notes for the foot/first third, e.g., ["Pepper", "Wood", "Light Spice"])
-    - bodyTasteNotes: array of strings (expected tasting notes for the body/middle third, e.g., ["Coffee", "Chocolate", "Cedar"])
-    - headTasteNotes: array of strings (expected tasting notes for the head/final third, e.g., ["Leather", "Earth", "Spice"])
-    - description: string (a short 2-sentence description of this specific cigar in English)
-    - rating: number (cigar rating from 0 to 100, based on ratings from authoritative sources like Cigar Aficionado, Cigar Journal, Halfwheel, etc. If multiple ratings are available, use the average or most recent rating. If no rating is found, use null or omit this field)
-    - confidence: number (0.0 to 1.0, how sure are you? Use 0.8-0.9 for well-known cigars, 0.6-0.7 for less common ones)
+Analyze the cigar "${brandInfo} ${cigarName}" and provide detailed information.
 
-    CRITICAL INSTRUCTIONS FOR SIZE/VITOLA EXTRACTION:
-    - The "size" field MUST contain ONLY the standard cigar vitola name (e.g., "Robusto", "Torpedo", "Cigarillo", "Churchill")
-    - Do NOT include descriptive text, series names, or model names in the size field
-    - Examples:
-      * "Cohiba Club 10" → size should be "Cigarillo" (not "Club 10")
-      * "Placensia Reserva Original Robusto" → size should be "Robusto" (not "Reserva Original Robusto")
-      * "Montecristo No.2" → size should be "Torpedo" or "Pyramid" (not "No.2")
-      * "Cohiba Siglo VI" → size should be "Toro" or the appropriate standard size
-    - If you cannot identify a standard size, use the most specific standard size name that matches the dimensions, or leave empty string ""
-    - Common standard sizes: Robusto, Torpedo, Churchill, Corona, Cigarillo, Petit Corona, Toro, Gordo, Lancero, Panatela, Belicoso, Pyramid, Perfecto, Culebra, Double Corona, Petit Robusto, Short Robusto, etc.
+⚠️ CRITICAL: You can ONLY use information from your training data. You CANNOT access external websites in real-time.
 
-    Note: 
-    - If a brand is provided, use that brand name in the "brand" field. If no brand is provided, extract the brand from the cigar name.
-    - The "name" field should include the full name with size/vitola (e.g., "Cohiba Robusto", not just "Cohiba")
-    - The "brand" field should be only the brand name without size (e.g., "Cohiba", "Placensia")
-    - When a brand is provided, use it to improve size/vitola identification accuracy. For example, if brand is "Cohiba" and name contains "Club 10", the size should be "Cigarillo".
-    - brandDescription should provide information about the brand's history, reputation, and characteristics
-    - brandFoundedYear should be the year the brand was established (e.g., 1966 for Cohiba, 1935 for Montecristo)
-    - wrapper, binder, and filler should be based on typical construction for this specific cigar model
-    - footTasteNotes, bodyTasteNotes, and headTasteNotes should be predicted based on the cigar's typical flavor progression
-    - Foot (first third) typically starts lighter and spicier, Body (middle third) develops complexity, Head (final third) becomes richer and more intense
-    - If you cannot determine these details, you can use empty arrays [], empty strings "", or null values
-    - If you cannot identify it as a cigar, return confidence 0 and empty strings
-    Output ONLY valid JSON. Do not include markdown formatting like \`\`\`json.
+📋 STEP-BY-STEP ANALYSIS:
+
+STEP 1: BASIC IDENTIFICATION
+- brand: Extract brand name only (e.g., "Cohiba", "Montecristo")
+- name: Full name with model/size (e.g., "Cohiba Robusto")
+- origin: Country of origin
+- size: Standard vitola name ONLY (Robusto, Torpedo, Churchill, Corona, Cigarillo, etc.)
+- brandDescription: 2-3 sentences about brand history (if known from training data)
+- brandFoundedYear: Founding year (if known from training data, otherwise null)
+
+STEP 2: TOBACCO COMPOSITION (wrapper, binder, filler)
+⚠️ ACCURACY RULE: ONLY provide if you have VERIFIED specifications from your training data
+- If you have CONFIRMED information from cigar reviews or manufacturer specs in your training data:
+  * wrapper: [specific type, e.g., "Connecticut Shade", "Maduro"]
+  * binder: [specific origin, e.g., "Nicaraguan", "Mexican"]
+  * filler: [specific blend, e.g., "Dominican, Nicaraguan"]
+- If you are NOT 100% certain or have no verified data:
+  * wrapper: null
+  * binder: null
+  * filler: null
+- ❌ DO NOT guess based on brand reputation or typical characteristics
+- ❌ DO NOT infer from wrapper color or brand origin
+
+STEP 3: STRENGTH AND FLAVOR
+⚠️ ACCURACY RULE: ONLY provide if you have VERIFIED review data
+- strength:
+  * If you have verified reviews: "Mild" | "Medium-Mild" | "Medium" | "Medium-Full" | "Full"
+  * If uncertain: "Unknown"
+  * ❌ DO NOT guess based on wrapper type or brand
+- flavorProfile:
+  * If you have verified reviews: ["specific", "flavors", "from", "reviews"]
+  * If no verified reviews: [] (empty array)
+  * ❌ DO NOT generate generic flavors
+
+STEP 4: TASTING NOTES (foot, body, head)
+⚠️ ACCURACY RULE: ONLY provide if you have SPECIFIC professional tasting notes
+- If you have VERIFIED tasting notes from professional reviews:
+  * footTasteNotes: ["specific", "notes", "from", "reviews"]
+  * bodyTasteNotes: ["specific", "notes", "from", "reviews"]
+  * headTasteNotes: ["specific", "notes", "from", "reviews"]
+- If NO verified tasting notes:
+  * footTasteNotes: null
+  * bodyTasteNotes: null
+  * headTasteNotes: null
+- ❌ DO NOT create generic progression descriptions
+- ❌ DO NOT infer from tobacco type
+
+STEP 5: RATING
+⚠️ ACCURACY RULE: ONLY provide ACTUAL ratings from professional sources
+- Search your training data for ratings from:
+  * Cigar Aficionado (most authoritative)
+  * Cigar Journal
+  * Halfwheel
+  * Other professional publications
+- If found:
+  * rating: [actual score 0-100]
+  * ratingSource: "[source name and year]" (e.g., "Cigar Aficionado 2022")
+- If NOT found:
+  * rating: null
+  * ratingSource: null
+- ❌ DO NOT estimate or create ratings
+
+STEP 6: DESCRIPTION
+- Provide factual 2-3 sentence description
+- Include: brand history, line characteristics, target audience
+- Base on verified information from your training data
+- Keep it general but accurate
+
+🎯 OUTPUT FORMAT (JSON):
+{
+  "brand": "...",
+  "name": "...",
+  "origin": "...",
+  "size": "...",
+  "brandDescription": "...",
+  "brandFoundedYear": number or null,
+  "wrapper": "..." or null,
+  "binder": "..." or null,
+  "filler": "..." or null,
+  "strength": "..." or "Unknown",
+  "flavorProfile": [...] or [],
+  "footTasteNotes": [...] or null,
+  "bodyTasteNotes": [...] or null,
+  "headTasteNotes": [...] or null,
+  "description": "...",
+  "rating": number or null,
+  "ratingSource": "..." or null,
+  "confidence": 0.0-1.0
+}
+
+🚨 CRITICAL RULES - READ CAREFULLY:
+1. ✅ ACCURACY > COMPLETENESS: It is BETTER to return null than to guess
+2. ✅ Users prefer "no data" over "wrong data"
+3. ✅ Only provide information you are CERTAIN about from your training data
+4. ✅ Use null for unknown fields, not generic descriptions
+5. ✅ Mark confidence level honestly (0.8+ for verified info, 0.6- for uncertain)
+6. ❌ NEVER guess tobacco composition
+7. ❌ NEVER infer tasting notes without verified reviews
+8. ❌ NEVER estimate ratings
+
+Output ONLY valid JSON. Do not include markdown formatting like \`\`\`json.
   `;
 
     // 获取模型列表（复用相同的逻辑）
