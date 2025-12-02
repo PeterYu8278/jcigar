@@ -195,6 +195,48 @@ const AdminInventory: React.FC = () => {
     }
   }
 
+  // 标准雪茄规格名称列表
+  const STANDARD_VITOLAS = [
+    'Cigarillo', 'Perfecto', 'Rerla', 'Petit Robusto', 'Petit Edmundo', 'Robusto', 
+    'Torpedo', 'Churchill', 'Corona', 'Petit Corona',
+    'Toro', 'Gordo', 'Lancero', 'Panatela', 'Belicoso', 'Pyramid', 
+    'Culebra', 'Double Corona', 'Short Robusto', 'Toro Extra',
+    'Corona Gorda', 'Lonsdale', 'Toro Grande', 'Nub', 'Figurado', 'Salomon',
+    'Diadema', 'Presidente', 'Gran Corona',
+    'Laguito No.1', 'Laguito No.2', 'Laguito No.3',
+    'Especiales', 'Especiales No.2', 'Robusto Extra', 'Toro Grande', 'Gigante'
+  ]
+
+  // 提取标准规格名称的辅助函数
+  const extractStandardVitola = (text: string): string | null => {
+    if (!text) return null
+    
+    const normalizedText = text.trim()
+    
+    // 特殊处理：Club 10 通常是 Cigarillo
+    if (normalizedText.toLowerCase().includes('club') && normalizedText.toLowerCase().includes('10')) {
+      return 'Cigarillo'
+    }
+    
+    // 检查是否完全匹配标准规格名称（不区分大小写）
+    for (const vitola of STANDARD_VITOLAS) {
+      if (normalizedText.toLowerCase() === vitola.toLowerCase()) {
+        return vitola
+      }
+    }
+    
+    // 检查是否包含标准规格名称（不区分大小写）
+    for (const vitola of STANDARD_VITOLAS) {
+      const regex = new RegExp(`\\b${vitola}\\b`, 'i')
+      if (regex.test(normalizedText)) {
+        return vitola
+      }
+    }
+    
+    // 如果找不到标准规格，返回null
+    return null
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'negative': return 'red'
@@ -4105,25 +4147,64 @@ const AdminInventory: React.FC = () => {
                     return
                   }
                   
+                  // 获取品牌信息（如果已选择）
+                  const selectedBrand = form.getFieldValue('brand')
+                  const brandName = selectedBrand && typeof selectedBrand === 'string' 
+                    ? selectedBrand.trim() 
+                    : undefined
+                  
                   setAiRecognizing(true)
                   try {
-                    const result = await analyzeCigarByName(productName.trim())
+                    const result = await analyzeCigarByName(productName.trim(), brandName)
                     
                     // 填充表单字段
                     const updates: any = {}
                     
-                    // 规格（从name中提取尺寸，或使用result中的size信息）
-                    if (result.name) {
-                      // 尝试从完整名称中提取尺寸
+                    // 规格提取逻辑（优先使用AI返回的size字段，并识别标准规格名称）
+                    let extractedSize: string | null = null
+                    
+                    // 辅助函数：从文本中提取标准规格
+                    const tryExtractFromText = (text: string): string | null => {
+                      if (!text) return null
+                      return extractStandardVitola(text.trim())
+                    }
+                    
+                    // 1. 优先使用AI返回的size字段
+                    if (result.size && result.size.trim()) {
+                      extractedSize = tryExtractFromText(result.size)
+                    }
+                    
+                    // 2. 如果AI没有返回size或提取失败，从result.name中提取（移除品牌名称）
+                    if (!extractedSize && result.name) {
                       const brandMatch = result.name.match(new RegExp(`^${result.brand}\\s+(.+)`, 'i'))
                       if (brandMatch && brandMatch[1]) {
-                        updates.size = brandMatch[1].trim()
+                        extractedSize = tryExtractFromText(brandMatch[1])
                       } else if (result.name.includes(' ')) {
                         const parts = result.name.split(' ')
                         if (parts.length > 1) {
-                          updates.size = parts.slice(1).join(' ')
+                          extractedSize = tryExtractFromText(parts.slice(1).join(' '))
                         }
                       }
+                    }
+                    
+                    // 3. 如果仍然没有提取到，从原始产品名称中提取
+                    if (!extractedSize) {
+                      // 先尝试整个产品名称
+                      extractedSize = tryExtractFromText(productName.trim())
+                      
+                      // 如果还是没找到，尝试逐个单词匹配
+                      if (!extractedSize) {
+                        const productNameParts = productName.trim().split(/\s+/)
+                        for (const part of productNameParts) {
+                          extractedSize = tryExtractFromText(part)
+                          if (extractedSize) break
+                        }
+                      }
+                    }
+                    
+                    // 设置规格
+                    if (extractedSize) {
+                      updates.size = extractedSize
                     }
                     
                     // 强度（转换格式）

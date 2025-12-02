@@ -147,6 +147,7 @@ export interface CigarAnalysisResult {
     brandFoundedYear?: number;  // 品牌成立年份
     name: string;              // 完整名称，包含尺寸（如 "Cohiba Robusto"）
     origin: string;
+    size?: string;             // 规格/尺寸（如 "Robusto", "Torpedo", "Cigarillo"）
     flavorProfile: string[];
     strength: 'Mild' | 'Medium' | 'Full' | 'Unknown';
     wrapper?: string;      // 茄衣（最外层烟叶）
@@ -192,7 +193,6 @@ export async function analyzeCigarImage(
     - brandDescription: string (a brief description of the brand's history and characteristics, in English, 2-3 sentences. If you cannot determine, use empty string "")
     - brandFoundedYear: number (the year the brand was founded. If you cannot determine, use null or omit this field)
     - name: string (the full cigar name including model or size/vitola, e.g., "Cohiba Robusto", "Montecristo No.2")
-    - size: string (vitola)
     - origin: string (country)
     - flavorProfile: array of strings (e.g., ["Earth", "Leather"])
     - strength: "Mild" | "Medium" | "Full" | "Unknown"
@@ -359,9 +359,12 @@ export async function analyzeCigarImage(
 
 /**
  * 根据产品名称识别雪茄信息（不需要图像）
+ * @param cigarName 雪茄名称
+ * @param brand 品牌名称（可选，如果提供可以提高识别准确度）
  */
 export async function analyzeCigarByName(
-    cigarName: string
+    cigarName: string,
+    brand?: string
 ): Promise<CigarAnalysisResult> {
     if (!API_KEY) {
         const envHint = typeof window !== 'undefined' && window.location.hostname.includes('netlify')
@@ -378,15 +381,20 @@ export async function analyzeCigarByName(
         throw new Error('产品名称不能为空');
     }
 
+    // 构建包含品牌信息的提示
+    const brandInfo = brand && brand.trim() 
+        ? ` The brand is "${brand.trim()}". Use this brand information to improve identification accuracy.`
+        : '';
+    
     const prompt = `
-    Based on the cigar name "${cigarName}", provide detailed information about this cigar.
+    Based on the cigar name "${brandInfo} ${cigarName}", provide detailed information about this cigar.
     Return the result strictly as a JSON object with the following keys:
-    - brand: string (brand name only, e.g., "Cohiba", "Montecristo")
+    - brand: string (brand name only, e.g., "Cohiba", "Montecristo", "Placensia")
     - brandDescription: string (a brief description of the brand's history and characteristics, in English, 2-3 sentences. If you cannot determine, use empty string "")
     - brandFoundedYear: number (the year the brand was founded. If you cannot determine, use null or omit this field)
     - name: string (the full cigar name including model or size/vitola, e.g., "Cohiba Robusto", "Montecristo No.2")
     - origin: string (country)
-    - size: string (vitola)
+    - size: string (vitola - MUST be a standard cigar size name. Common standard sizes include: Robusto, Torpedo, Churchill, Corona, Cigarillo, Petit Corona, Toro, Gordo, Lancero, Panatela, Belicoso, Pyramid, Perfecto, Culebra, etc. If the name contains "Club" or "Club 10", the size is likely "Cigarillo". Extract ONLY the standard size name, not descriptive text like "Reserva Original". For example, if the name is "Placensia Reserva Original Robusto", the size should be "Robusto", not "Reserva Original Robusto".)
     - flavorProfile: array of strings (e.g., ["Earth", "Leather"])
     - strength: "Mild" | "Medium" | "Full" | "Unknown"
     - wrapper: string (the outer leaf/wrapper tobacco, e.g., "Connecticut", "Maduro", "Habano", "Corojo", or country of origin)
@@ -398,10 +406,22 @@ export async function analyzeCigarByName(
     - description: string (a short 2-sentence description of this specific cigar in English)
     - confidence: number (0.0 to 1.0, how sure are you? Use 0.8-0.9 for well-known cigars, 0.6-0.7 for less common ones)
 
+    CRITICAL INSTRUCTIONS FOR SIZE/VITOLA EXTRACTION:
+    - The "size" field MUST contain ONLY the standard cigar vitola name (e.g., "Robusto", "Torpedo", "Cigarillo", "Churchill")
+    - Do NOT include descriptive text, series names, or model names in the size field
+    - Examples:
+      * "Cohiba Club 10" → size should be "Cigarillo" (not "Club 10")
+      * "Placensia Reserva Original Robusto" → size should be "Robusto" (not "Reserva Original Robusto")
+      * "Montecristo No.2" → size should be "Torpedo" or "Pyramid" (not "No.2")
+      * "Cohiba Siglo VI" → size should be "Toro" or the appropriate standard size
+    - If you cannot identify a standard size, use the most specific standard size name that matches the dimensions, or leave empty string ""
+    - Common standard sizes: Robusto, Torpedo, Churchill, Corona, Cigarillo, Petit Corona, Toro, Gordo, Lancero, Panatela, Belicoso, Pyramid, Perfecto, Culebra, Double Corona, Petit Robusto, Short Robusto, etc.
+
     Note: 
+    - If a brand is provided, use that brand name in the "brand" field. If no brand is provided, extract the brand from the cigar name.
     - The "name" field should include the full name with size/vitola (e.g., "Cohiba Robusto", not just "Cohiba")
-    - The "brand" field should be only the brand name without size (e.g., "Cohiba")
-    - Extract the size/vitola from the name if present (e.g., "Robusto", "Torpedo")
+    - The "brand" field should be only the brand name without size (e.g., "Cohiba", "Placensia")
+    - When a brand is provided, use it to improve size/vitola identification accuracy. For example, if brand is "Cohiba" and name contains "Club 10", the size should be "Cigarillo".
     - brandDescription should provide information about the brand's history, reputation, and characteristics
     - brandFoundedYear should be the year the brand was established (e.g., 1966 for Cohiba, 1935 for Montecristo)
     - wrapper, binder, and filler should be based on typical construction for this specific cigar model
