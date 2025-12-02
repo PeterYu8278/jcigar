@@ -155,8 +155,65 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "cigar_database",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "normalizedBrand",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "normalizedName",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "cigar_database",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "verified",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "cigar_database",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "brand",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "cigar_database",
+      "fieldPath": "searchKeywords",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "arrayConfig": "CONTAINS",
+          "queryScope": "COLLECTION"
+        }
+      ]
+    }
+  ]
 }
 

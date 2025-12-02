@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getAppConfig } from "../firebase/appConfig";
 import { searchCigarImageWithGoogle } from "./googleImageSearch";
+import { getCigarDetails } from "../cigar/cigarDatabase";
 
 /**
  * 获取 Gemini API Key
@@ -302,18 +303,22 @@ export interface CigarAnalysisResult {
     origin: string;
     size?: string;             // 规格/尺寸（如 "Robusto", "Torpedo", "Cigarillo"）
     flavorProfile: string[];
-    strength: 'Mild' | 'Medium' | 'Full' | 'Unknown';
+    strength: 'Mild' | 'Medium' | 'Full' | 'Unknown' | 'mild' | 'medium-mild' | 'medium' | 'medium-full' | 'full' | null;
     wrapper?: string;      // 茄衣（最外层烟叶）
     binder?: string;       // 茄套（中间层烟叶）
     filler?: string;       // 茄芯（填充烟叶）
-    footTasteNotes?: string[];  // 脚部（前1/3）品吸笔记
-    bodyTasteNotes?: string[];  // 主体（中1/3）品吸笔记
-    headTasteNotes?: string[];  // 头部（后1/3）品吸笔记
+    footTasteNotes?: string[] | string | null;  // 脚部（前1/3）品吸笔记
+    bodyTasteNotes?: string[] | string | null;  // 主体（中1/3）品吸笔记
+    headTasteNotes?: string[] | string | null;  // 头部（后1/3）品吸笔记
     description: string;
-    rating?: number;       // 评分（0-100，来自权威网站的评分）
+    rating?: number | null;       // 评分（0-100，来自权威网站的评分）
+    ratingSource?: string | null;  // 评分来源（如：Cigar Aficionado 2023）
+    ratingDate?: Date | null;      // 评分日期
     confidence: number; // 0-1
     possibleSizes?: string[];  // 该品牌可能的其他尺寸（如 ["Robusto", "Torpedo", "Churchill"]）
     imageUrl?: string;     // 雪茄茄标图片 URL（如果可用）
+    hasDetailedInfo?: boolean;  // 是否找到数据库详细信息
+    databaseId?: string;        // 数据库记录 ID（如果找到）
 }
 
 export async function analyzeCigarImage(
@@ -500,11 +505,47 @@ export async function analyzeCigarImage(
                     console.error('搜索雪茄图片 URL 失败:', error);
                     // 不抛出错误，继续返回识别结果
                 }
+                
+                // 查询数据库获取详细信息
+                console.log(`[analyzeCigarImage] 🔍 查询数据库获取详细信息...`);
+                try {
+                    const detailedInfo = await getCigarDetails(analysisResult.brand, analysisResult.name);
+                    if (detailedInfo) {
+                        console.log(`[analyzeCigarImage] ✅ 数据库找到匹配项，合并详细信息`);
+                        // 合并详细信息到分析结果
+                        return {
+                            ...analysisResult,
+                            wrapper: detailedInfo.wrapper,
+                            binder: detailedInfo.binder,
+                            filler: detailedInfo.filler,
+                            strength: detailedInfo.strength,
+                            flavorProfile: detailedInfo.flavorProfile,
+                            footTasteNotes: detailedInfo.footTasteNotes,
+                            bodyTasteNotes: detailedInfo.bodyTasteNotes,
+                            headTasteNotes: detailedInfo.headTasteNotes,
+                            description: detailedInfo.description,
+                            rating: detailedInfo.rating,
+                            ratingSource: detailedInfo.ratingSource,
+                            ratingDate: detailedInfo.ratingDate,
+                            hasDetailedInfo: true,
+                            databaseId: detailedInfo.id
+                        } as CigarAnalysisResult;
+                    } else {
+                        console.log(`[analyzeCigarImage] ℹ️ 数据库未找到匹配项`);
+                    }
+                } catch (error) {
+                    console.error('[analyzeCigarImage] ❌ 查询数据库失败:', error);
+                    // 不抛出错误，继续返回基础识别结果
+                }
             } else {
-                console.log(`[analyzeCigarImage] 跳过图片搜索 - 品牌: ${analysisResult.brand}, 名称: ${analysisResult.name}, 可信度: ${analysisResult.confidence}`);
+                console.log(`[analyzeCigarImage] 跳过图片搜索和数据库查询 - 品牌: ${analysisResult.brand}, 名称: ${analysisResult.name}, 可信度: ${analysisResult.confidence}`);
             }
             
-            return analysisResult;
+            // 返回基础识别结果（没有详细信息）
+            return {
+                ...analysisResult,
+                hasDetailedInfo: false
+            } as CigarAnalysisResult;
         } catch (error: any) {
             lastError = error;
             const errorMessage = error?.message || error?.toString() || '';
@@ -536,8 +577,43 @@ export async function analyzeCigarImage(
                                 console.error('搜索雪茄图片 URL 失败:', error);
                                 // 不抛出错误，继续返回识别结果
                             }
+                            
+                            // 查询数据库获取详细信息
+                            console.log(`[analyzeCigarImage] [REST API] 🔍 查询数据库获取详细信息...`);
+                            try {
+                                const detailedInfo = await getCigarDetails(restResult.brand, restResult.name);
+                                if (detailedInfo) {
+                                    console.log(`[analyzeCigarImage] [REST API] ✅ 数据库找到匹配项，合并详细信息`);
+                                    // 合并详细信息到分析结果
+                                    return {
+                                        ...restResult,
+                                        wrapper: detailedInfo.wrapper,
+                                        binder: detailedInfo.binder,
+                                        filler: detailedInfo.filler,
+                                        strength: detailedInfo.strength,
+                                        flavorProfile: detailedInfo.flavorProfile,
+                                        footTasteNotes: detailedInfo.footTasteNotes,
+                                        bodyTasteNotes: detailedInfo.bodyTasteNotes,
+                                        headTasteNotes: detailedInfo.headTasteNotes,
+                                        description: detailedInfo.description,
+                                        rating: detailedInfo.rating,
+                                        ratingSource: detailedInfo.ratingSource,
+                                        ratingDate: detailedInfo.ratingDate,
+                                        hasDetailedInfo: true,
+                                        databaseId: detailedInfo.id
+                                    } as CigarAnalysisResult;
+                                } else {
+                                    console.log(`[analyzeCigarImage] [REST API] ℹ️ 数据库未找到匹配项`);
+                                }
+                            } catch (error) {
+                                console.error('[analyzeCigarImage] [REST API] ❌ 查询数据库失败:', error);
+                                // 不抛出错误，继续返回基础识别结果
+                            }
                         }
-                        return restResult;
+                        return {
+                            ...restResult,
+                            hasDetailedInfo: false
+                        } as CigarAnalysisResult;
                     }
                 } catch (restError) {
                     // REST API 也失败，继续尝试下一个模型

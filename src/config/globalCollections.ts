@@ -8,8 +8,10 @@ export const GLOBAL_COLLECTIONS = {
   USERS: 'users',
   /** 品牌集合 */
   BRANDS: 'brands',
-  /** 雪茄产品集合 */
+  /** 雪茄产品集合（库存管理） */
   CIGARS: 'cigars',
+  /** 雪茄数据库集合（详细信息库） */
+  CIGAR_DATABASE: 'cigar_database',
   /** 订单集合 */
   ORDERS: 'orders',
   /** 活动集合 */
