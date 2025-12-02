@@ -88,15 +88,32 @@ const ALL_GEMINI_MODELS = [
  * 默认模型列表（作为回退，优先使用稳定且快速的模型）
  * 注意：智能过滤逻辑会自动跳过不可用的模型，所以即使某些模型暂时不可用也不会影响功能
  */
+/**
+ * 默认模型列表（优先使用有额度的稳定模型）
+ * 根据实际测试，以下模型有免费额度：
+ * - gemini-2.5-flash, gemini-2.5-pro (稳定版本)
+ * - gemini-2.0-flash, gemini-2.0-flash-001 (稳定版本)
+ * - gemini-2.0-flash-lite, gemini-2.0-flash-lite-001 (轻量版本)
+ * - gemini-2.5-flash-lite (最新轻量版本)
+ * - gemini-flash-latest, gemini-flash-lite-latest, gemini-pro-latest (最新别名)
+ * 
+ * 注意：智能过滤逻辑会自动跳过不可用的模型和无额度的模型
+ */
 const DEFAULT_MODELS = [
+    // 优先使用有额度的稳定模型
+    "gemini-2.5-flash",      // 最新快速模型（有额度）
+    "gemini-2.5-pro",        // 最新专业模型（有额度）
+    "gemini-2.0-flash",      // 稳定快速模型（有额度）
+    "gemini-2.0-flash-001",  // 稳定快速模型（带版本号，有额度）
+    "gemini-2.0-flash-lite-001", // 轻量快速模型（带版本号，有额度）
+    "gemini-2.0-flash-lite", // 轻量快速模型（有额度）
+    "gemini-2.5-flash-lite", // 最新轻量快速模型（有额度）
+    "gemini-flash-latest",   // 最新快速模型别名（有额度）
+    "gemini-flash-lite-latest", // 最新轻量模型别名（有额度）
+    "gemini-pro-latest",     // 最新专业模型别名（有额度）
+    // 以下模型可能无额度或不可用，但保留作为回退
     "gemini-2.5-flash-live", // 实时模型（如果可用）
-    "gemini-2.5-flash",      // 最新快速模型
-    "gemini-2.5-pro",        // 最新专业模型
-    "gemini-2.0-flash",      // 稳定快速模型
-    "gemini-2.0-flash-001",  // 稳定快速模型（带版本号）
-    "gemini-2.0-flash-lite-001", // 轻量快速模型（带版本号）
-    "gemini-2.0-flash-lite", // 轻量快速模型
-    "gemini-2.5-flash-lite", // 最新轻量快速模型
+    "gemini-2.0-flash-live", // 2.0 实时模型（如果可用）
     "gemini-1.5-flash",      // 经典快速模型（如果可用）
     "gemini-1.5-pro",        // 稳定专业模型（如果可用）
     "gemini-pro",            // 经典模型（如果可用）
@@ -150,6 +167,52 @@ async function callGeminiRESTAPI(
         console.warn(`REST API 调用失败 (${modelName}):`, error);
         return null;
     }
+}
+
+/**
+ * 过滤模型列表，优先使用有额度的稳定模型
+ * 根据实际测试日志分析，无额度的模型模式：
+ * - 包含 "-exp" 的实验性模型（但保留 -lite-preview）
+ * - 包含 "-preview-tts" 或 "-tts" 的 TTS 模型
+ * - 包含 "-image" 的图片生成模型（但保留 -image-preview）
+ * - 包含 "-computer-use" 的专用模型
+ * - "gemini-3-pro" 系列（预览版需要付费）
+ * - "gemini-2.5-pro-preview-*" 系列（无免费额度）
+ * - "gemini-2.0-pro-exp" 系列（无免费额度）
+ */
+function filterModelsWithQuota(models: string[]): string[] {
+    // 优先使用的稳定模型（有额度）
+    const preferredModels = models.filter(model => {
+        // 排除无额度的模型类型
+        if (model.includes('-exp') && !model.includes('-lite-preview')) {
+            return false; // 实验性模型（如 -flash-exp, -pro-exp）通常无免费额度
+        }
+        if (model.includes('-preview-tts') || model.includes('-tts')) {
+            return false; // TTS 模型无免费额度
+        }
+        if (model.includes('-image') && !model.includes('-image-preview')) {
+            return false; // 图片生成模型无免费额度
+        }
+        if (model.includes('-computer-use')) {
+            return false; // 专用模型无免费额度
+        }
+        if (model.startsWith('gemini-3-')) {
+            return false; // Gemini 3 预览版需要付费
+        }
+        // gemini-2.5-pro-preview-* 系列无免费额度（但 gemini-2.5-flash-preview-* 有额度）
+        if (model.includes('gemini-2.5-pro-preview-')) {
+            return false;
+        }
+        // gemini-2.0-pro-exp 系列无免费额度
+        if (model.includes('gemini-2.0-pro-exp')) {
+            return false;
+        }
+        return true;
+    });
+    
+    // 如果过滤后还有模型，返回过滤后的列表
+    // 否则返回原始列表（让系统自己处理）
+    return preferredModels.length > 0 ? preferredModels : models;
 }
 
 // 辅助函数：通过 REST API 获取可用模型列表
@@ -210,12 +273,20 @@ async function getAvailableModels(): Promise<string[]> {
     const uniqueModels = Array.from(allModels);
     
     if (uniqueModels.length > 0) {
-        console.log(`✅ 从 API 获取可用模型:`, uniqueModels);
+        // 过滤模型，优先使用有额度的稳定模型
+        const filteredModels = filterModelsWithQuota(uniqueModels);
+        
+        if (filteredModels.length < uniqueModels.length) {
+            const removedModels = uniqueModels.filter(m => !filteredModels.includes(m));
+            console.log(`📋 已过滤 ${removedModels.length} 个无额度的模型:`, removedModels);
+        }
+        
+        console.log(`✅ 从 API 获取可用模型（已过滤）:`, filteredModels);
         // 显示每个模型在哪些版本中可用
         if (Object.keys(modelsByVersion).length > 1) {
             console.log('📋 模型版本分布:', modelsByVersion);
         }
-        return uniqueModels;
+        return filteredModels;
     }
     
     console.warn('⚠️ 无法获取模型列表，使用默认模型列表');
