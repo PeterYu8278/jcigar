@@ -8,7 +8,7 @@
  */
 
 import { collection, query, where, getDocs, limit as firestoreLimit } from 'firebase/firestore';
-import { db } from '../firebase/firebase';
+import { db } from '@/config/firebase';
 import { GLOBAL_COLLECTIONS } from '@/config/globalCollections';
 import type { CigarDetailedInfo, CigarSearchResult } from '@/types/cigar';
 import { cigarCache } from './cigarCache';

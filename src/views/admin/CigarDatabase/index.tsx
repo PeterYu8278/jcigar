@@ -39,7 +39,7 @@ import {
   startAfter,
   QueryDocumentSnapshot
 } from 'firebase/firestore';
-import { db } from '@/services/firebase/firebase';
+import { db } from '@/config/firebase';
 import { GLOBAL_COLLECTIONS } from '@/config/globalCollections';
 import type { CigarDetailedInfo } from '@/types/cigar';
 import { CigarForm } from './CigarForm';

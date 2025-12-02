@@ -23,7 +23,7 @@ import {
 } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { collection, addDoc, query, where, getDocs, writeBatch, doc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/services/firebase/firebase';
+import { db } from '@/config/firebase';
 import { GLOBAL_COLLECTIONS } from '@/config/globalCollections';
 import { useAuthStore } from '@/store/authStore';
 import { normalizeName, generateSearchKeywords } from '@/services/cigar/cigarDatabase';

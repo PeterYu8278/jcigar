@@ -20,7 +20,7 @@ import {
   Image
 } from 'antd';
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/services/firebase/firebase';
+import { db } from '@/config/firebase';
 import { GLOBAL_COLLECTIONS } from '@/config/globalCollections';
 import { useAuthStore } from '@/store/authStore';
 import { normalizeName, generateSearchKeywords } from '@/services/cigar/cigarDatabase';
