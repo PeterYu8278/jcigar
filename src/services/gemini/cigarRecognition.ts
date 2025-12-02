@@ -86,16 +86,20 @@ const ALL_GEMINI_MODELS = [
 
 /**
  * 默认模型列表（作为回退，优先使用稳定且快速的模型）
- * 注意：只包含实际可用的模型，已移除不存在的模型（如 gemini-2.5-flash-live, gemini-1.5-flash, gemini-1.5-pro, gemini-pro）
+ * 注意：智能过滤逻辑会自动跳过不可用的模型，所以即使某些模型暂时不可用也不会影响功能
  */
 const DEFAULT_MODELS = [
-    "gemini-2.5-flash",     // 最新快速模型
-    "gemini-2.5-pro",       // 最新专业模型
-    "gemini-2.0-flash",     // 稳定快速模型
-    "gemini-2.0-flash-001", // 稳定快速模型（带版本号）
+    "gemini-2.5-flash-live", // 实时模型（如果可用）
+    "gemini-2.5-flash",      // 最新快速模型
+    "gemini-2.5-pro",        // 最新专业模型
+    "gemini-2.0-flash",      // 稳定快速模型
+    "gemini-2.0-flash-001",  // 稳定快速模型（带版本号）
     "gemini-2.0-flash-lite-001", // 轻量快速模型（带版本号）
     "gemini-2.0-flash-lite", // 轻量快速模型
     "gemini-2.5-flash-lite", // 最新轻量快速模型
+    "gemini-1.5-flash",      // 经典快速模型（如果可用）
+    "gemini-1.5-pro",        // 稳定专业模型（如果可用）
+    "gemini-pro",            // 经典模型（如果可用）
 ];
 
 // 辅助函数：直接使用 REST API 调用 Gemini (v1 API)
