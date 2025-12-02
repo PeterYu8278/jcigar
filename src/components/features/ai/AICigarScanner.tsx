@@ -434,7 +434,9 @@ export const AICigarScanner: React.FC = () => {
             
             if (searchResult) {
                 console.log('[AICigarScanner] 文本搜索结果:', searchResult);
+                console.log('[AICigarScanner] 设置 result 状态...');
                 setResult(searchResult);
+                console.log('[AICigarScanner] result 状态已设置');
                 message.success('搜索成功');
                 
                 // 如果找到图片URL，设置为显示图片
@@ -453,7 +455,9 @@ export const AICigarScanner: React.FC = () => {
             console.error('[AICigarScanner] 文本搜索失败:', error);
             message.error('搜索失败，请重试');
         } finally {
+            console.log('[AICigarScanner] 设置 analyzing = false');
             setAnalyzing(false);
+            console.log('[AICigarScanner] analyzing 状态已设置为 false');
         }
     };
 
@@ -706,7 +710,10 @@ export const AICigarScanner: React.FC = () => {
                 </div>
             )}
 
-            {result && !analyzing && (
+            {(() => {
+                console.log('[AICigarScanner] 渲染检查 - result:', !!result, 'analyzing:', analyzing);
+                return result && !analyzing;
+            })() && (
                 <>
                     {/* 截图容器：包含图片和识别结果（不包括按钮） */}
                     <div ref={screenshotContainerRef} style={{ width: '100%' }}>
