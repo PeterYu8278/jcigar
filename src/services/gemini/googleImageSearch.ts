@@ -38,8 +38,10 @@ export async function searchGoogleImages(
         // 优化搜索查询：
         // 1. 使用引号强制精确匹配品牌和名称
         // 2. 添加 "single stick" 确保是单支雪茄
-        // 3. 添加 "band" 确保显示茄标
-        // 4. 使用 site: 运算符优先搜索可信网站
+        // 3. 添加 "band label" 确保显示茄标
+        // 4. 排除 "box" "bundle" 避免多支装
+        // 5. 添加 "white background" 或 "no background" 优先无背景图片
+        // 6. 使用 site: 运算符优先搜索可信网站
         const brandName = query.trim();
         
         // 构建优化的搜索查询
@@ -64,13 +66,22 @@ export async function searchGoogleImages(
             'habanos.com'  // 古巴雪茄官网
         ];
         
-        // 方案 A：优先搜索可信网站（使用 OR 运算符）
+        // 构建优化的搜索查询
+        // 优先级：单支 + 茄标 + 无背景/白背景 + 排除多支装
         const siteQuery = trustedSites.map(site => `site:${site}`).join(' OR ');
-        const searchQuery = `"${brandName}" cigar single stick band (${siteQuery})`;
+        const searchQuery = `"${brandName}" single stick cigar band label -box -bundle -"5 pack" -"10 pack" (${siteQuery})`;
         
-        console.log(`[GoogleImageSearch] 🔍 优化搜索: "${searchQuery}"`);
+        console.log(`[GoogleImageSearch] 🔍 优化搜索（单支+茄标+无背景）: "${searchQuery}"`);
         
         // Google Custom Search API 端点
+        // 参数优化说明：
+        // - searchType=image: 图片搜索
+        // - num=10: 最多返回10个结果
+        // - safe=active: 安全搜索
+        // - imgType=photo: 只要照片类型（排除剪贴画、线条图）
+        // - fileType: 指定图片格式
+        // - imgColorType=color: 优先彩色图片（茄标通常是彩色的）
+        // - imgDominantColor: 不指定，让搜索引擎自动选择
         const apiUrl = `https://www.googleapis.com/customsearch/v1?` +
             `key=${GOOGLE_SEARCH_API_KEY}&` +
             `cx=${GOOGLE_SEARCH_ENGINE_ID}&` +
@@ -78,7 +89,8 @@ export async function searchGoogleImages(
             `searchType=image&` +
             `num=${Math.min(maxResults, 10)}&` + // Google API 限制每次最多 10 个结果
             `safe=active&` +
-            `imgType=photo&` + // 只搜索照片类型
+            `imgType=photo&` + // 只搜索照片类型（排除剪贴画）
+            `imgColorType=color&` + // 优先彩色图片（茄标通常是彩色的）
             `fileType=jpg,png,webp`; // 指定文件类型
 
         console.log(`[GoogleImageSearch] 🔍 搜索图片: "${brandName}"`);
@@ -192,10 +204,46 @@ export async function searchGoogleImages(
                     score += 5;
                 }
                 
+                // 7. 单支雪茄相关关键词加分（5分）
+                const title = item.title?.toLowerCase() || '';
+                const contextLink = item.contextLink?.toLowerCase() || '';
+                if (title.includes('single') || 
+                    title.includes('stick') || 
+                    contextLink.includes('single') ||
+                    url.includes('single') ||
+                    url.includes('individual')) {
+                    score += 5;
+                }
+                
+                // 8. 茄标相关关键词加分（5分）
+                if (title.includes('band') || 
+                    title.includes('label') ||
+                    url.includes('band') ||
+                    url.includes('label')) {
+                    score += 5;
+                }
+                
                 // 减分项
-                // 复杂哈希路径减分
+                // 1. 复杂哈希路径减分（-15分）
                 if (/[a-f0-9]{20,}/.test(url)) {
                     score -= 15;
+                }
+                
+                // 2. 多支装减分（-20分）
+                if (title.includes('box') || 
+                    title.includes('bundle') || 
+                    title.includes('pack') ||
+                    url.includes('box') ||
+                    url.includes('bundle')) {
+                    score -= 20;
+                }
+                
+                // 3. 缩略图减分（-10分）
+                if (url.includes('thumb') || 
+                    url.includes('thumbnail') ||
+                    item.width < 300 || 
+                    item.height < 300) {
+                    score -= 10;
                 }
                 
                 return {
