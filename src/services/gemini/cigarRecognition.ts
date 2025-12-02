@@ -243,7 +243,6 @@ export async function analyzeCigarImage(
     
     IMPORTANT: You should reference information from authoritative cigar websites and databases to ensure accuracy. 
     Consider searching and referencing information from these reputable sources:
-    - https://www.google.com/
     - https://www.cigaraficionado.com/ and https://www.cigaraficionado.com/ratingsandreviews
     - https://cigar-coop.com/
     - https://cigardojo.com/ and https://cigardojo.com/cigar-review-archives/
@@ -516,16 +515,6 @@ CRITICAL REQUIREMENTS:
 4. The image should show a single stick of cigar without excessive margins
 5. Prefer images from these reliable sources (in order of preference):
     - https://www.google.com/ (direct image URLs)
-    - https://www.cigaraficionado.com/ (look for direct image URLs in their ratings/reviews)
-    - https://cigar-coop.com/ (direct image URLs)
-    - https://cigardojo.com/ (direct image URLs from reviews)
-    - https://halfwheel.com/ (direct image URLs from reviews)
-    - https://www.cigarjournal.com/ (direct image URLs)
-    - https://www.famous-smoke.com/ (product image URLs)
-    - https://www.neptunecigar.com/ (product image URLs - verify the URL exists)
-    - https://www.habanos.com/en/ (for Cuban cigars - direct image URLs)
-    - https://www.cigarsratings.com/ (direct image URLs)
-    - https://www.leafenthusiast.com/ (direct image URLs)
 
 IMPORTANT: 
 - Return ONLY a working, accessible image URL as plain text
@@ -836,7 +825,6 @@ export async function analyzeCigarByName(
     
     IMPORTANT: You should reference information from authoritative cigar websites and databases to ensure accuracy. 
     Consider searching and referencing information from these reputable sources:
-    - https://www.google.com/
     - https://www.cigaraficionado.com/ and https://www.cigaraficionado.com/ratingsandreviews
     - https://cigar-coop.com/
     - https://cigardojo.com/ and https://cigardojo.com/cigar-review-archives/
