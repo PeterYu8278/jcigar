@@ -17,7 +17,7 @@ export const useCartStore = create<CartState>((set, get) => ({
   wishlist: {},
 
   setQuantity: (id, quantity) => set((state) => ({
-    quantities: { ...state.quantities, [id]: Math.max(1, Math.floor(quantity || 0)) },
+    quantities: { ...state.quantities, [id]: Math.max(1, Math.floor(quantity || 1)) },
   })),
 
   addToCart: (id, quantity = 1) => set((state) => {

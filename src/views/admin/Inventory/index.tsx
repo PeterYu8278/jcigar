@@ -4073,125 +4073,127 @@ const AdminInventory: React.FC = () => {
               </div>
             </div>
           </Form.Item>
-          <Form.Item label={t('inventory.productName')} name="name" rules={[{ required: true, message: t('common.pleaseInputName') }]}> 
-            <Input 
-              addonAfter={
-                <Button
-                  type="text"
-                  icon={aiRecognizing ? <LoadingOutlined /> : <ThunderboltOutlined />}
-                  loading={aiRecognizing}
-                  onClick={async (e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    const productName = form.getFieldValue('name')
-                    if (!productName || !productName.trim()) {
-                      message.warning('请先输入产品名称')
-                      return
-                    }
+          <Form.Item 
+            label={<span>{t('inventory.productName')} <span style={{ color: '#ff4d4f' }}>*</span></span>} 
+            name="name" 
+            required={false} 
+            rules={[{ required: true, message: t('common.pleaseInputName') }]}
+            style={{ marginBottom: 0 }}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item >
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Button
+                type="default"
+                icon={aiRecognizing ? <LoadingOutlined /> : <ThunderboltOutlined />}
+                loading={aiRecognizing}
+                onClick={async (e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  const productName = form.getFieldValue('name')
+                  if (!productName || !productName.trim()) {
+                    message.warning('请先输入产品名称')
+                    return
+                  }
+                  
+                  setAiRecognizing(true)
+                  try {
+                    const result = await analyzeCigarByName(productName.trim())
                     
-                    setAiRecognizing(true)
-                    try {
-                      const result = await analyzeCigarByName(productName.trim())
-                      
-                      // 填充表单字段
-                      const updates: any = {}
-                      
-                      // 规格（从name中提取尺寸，或使用result中的size信息）
-                      if (result.name) {
-                        // 尝试从完整名称中提取尺寸
-                        const brandMatch = result.name.match(new RegExp(`^${result.brand}\\s+(.+)`, 'i'))
-                        if (brandMatch && brandMatch[1]) {
-                          updates.size = brandMatch[1].trim()
-                        } else if (result.name.includes(' ')) {
-                          const parts = result.name.split(' ')
-                          if (parts.length > 1) {
-                            updates.size = parts.slice(1).join(' ')
-                          }
+                    // 填充表单字段
+                    const updates: any = {}
+                    
+                    // 规格（从name中提取尺寸，或使用result中的size信息）
+                    if (result.name) {
+                      // 尝试从完整名称中提取尺寸
+                      const brandMatch = result.name.match(new RegExp(`^${result.brand}\\s+(.+)`, 'i'))
+                      if (brandMatch && brandMatch[1]) {
+                        updates.size = brandMatch[1].trim()
+                      } else if (result.name.includes(' ')) {
+                        const parts = result.name.split(' ')
+                        if (parts.length > 1) {
+                          updates.size = parts.slice(1).join(' ')
                         }
                       }
-                      
-                      // 强度（转换格式）
-                      const strengthMap: Record<string, string> = {
-                        'Mild': 'mild',
-                        'Mild-Medium': 'mild-medium',
-                        'Medium': 'medium',
-                        'Medium-Full': 'medium-full',
-                        'Full': 'full',
-                        'Unknown': 'medium'
-                      }
-                      if (result.strength) {
-                        updates.strength = strengthMap[result.strength] || 'medium'
-                      }
-                      
-                      // 描述
-                      if (result.description) {
-                        updates.description = result.description
-                      }
-                      
-                      // 构造信息
-                      if (result.wrapper) {
-                        updates.wrapper = result.wrapper
-                      }
-                      if (result.binder) {
-                        updates.binder = result.binder
-                      }
-                      if (result.filler) {
-                        updates.filler = result.filler
-                      }
-                      
-                      // 品吸笔记
-                      if (result.footTasteNotes && result.footTasteNotes.length > 0) {
-                        updates.footTasteNotes = result.footTasteNotes
-                      }
-                      if (result.bodyTasteNotes && result.bodyTasteNotes.length > 0) {
-                        updates.bodyTasteNotes = result.bodyTasteNotes
-                      }
-                      if (result.headTasteNotes && result.headTasteNotes.length > 0) {
-                        updates.headTasteNotes = result.headTasteNotes
-                      }
-                      
-                      // 风味特征（标签）
-                      if (result.flavorProfile && result.flavorProfile.length > 0) {
-                        updates.tags = result.flavorProfile
-                      }
-                      
-                      // 品牌（如果表单中没有）
-                      if (result.brand && !form.getFieldValue('brand')) {
-                        updates.brand = result.brand
-                      }
-                      
-                      // 产地（如果表单中没有）
-                      if (result.origin && !form.getFieldValue('origin')) {
-                        updates.origin = result.origin
-                      }
-                      
-                      // 批量设置表单值
-                      form.setFieldsValue(updates)
-                      
-                      message.success(`AI识别完成！可信度: ${Math.round(result.confidence * 100)}%`)
-                    } catch (error: any) {
-                      console.error('AI识别失败:', error)
-                      message.error(`AI识别失败: ${error.message || '未知错误'}`)
-                    } finally {
-                      setAiRecognizing(false)
                     }
-                  }}
-                  style={{ 
-                    background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                    color: '#111',
-                    fontWeight: 600,
-                    border: 'none',
-                    padding: '0 12px',
-                    height: '100%'
-                  }}
-                  title="AI识笳"
-                >
-                  {isMobile ? '' : 'AI识笳'}
-                </Button>
-              }
-            />
+                    
+                    // 强度（转换格式）
+                    const strengthMap: Record<string, string> = {
+                      'Mild': 'mild',
+                      'Mild-Medium': 'mild-medium',
+                      'Medium': 'medium',
+                      'Medium-Full': 'medium-full',
+                      'Full': 'full',
+                      'Unknown': 'medium'
+                    }
+                    if (result.strength) {
+                      updates.strength = strengthMap[result.strength] || 'medium'
+                    }
+                    
+                    // 描述
+                    if (result.description) {
+                      updates.description = result.description
+                    }
+                    
+                    // 构造信息
+                    if (result.wrapper) {
+                      updates.wrapper = result.wrapper
+                    }
+                    if (result.binder) {
+                      updates.binder = result.binder
+                    }
+                    if (result.filler) {
+                      updates.filler = result.filler
+                    }
+                    
+                    // 品吸笔记
+                    if (result.footTasteNotes && result.footTasteNotes.length > 0) {
+                      updates.footTasteNotes = result.footTasteNotes
+                    }
+                    if (result.bodyTasteNotes && result.bodyTasteNotes.length > 0) {
+                      updates.bodyTasteNotes = result.bodyTasteNotes
+                    }
+                    if (result.headTasteNotes && result.headTasteNotes.length > 0) {
+                      updates.headTasteNotes = result.headTasteNotes
+                    }
+                    
+                    // 风味特征（标签）
+                    if (result.flavorProfile && result.flavorProfile.length > 0) {
+                      updates.tags = result.flavorProfile
+                    }
+                    
+                    // 品牌（如果表单中没有）
+                    if (result.brand && !form.getFieldValue('brand')) {
+                      updates.brand = result.brand
+                    }
+                    
+                    // 产地（直接填充识别到的产地）
+                    if (result.origin) {
+                      updates.origin = result.origin
+                    }
+                    
+                    // 批量设置表单值
+                    form.setFieldsValue(updates)
+                    
+                    message.success(`AI识别完成！可信度: ${Math.round(result.confidence * 100)}%`)
+                  } catch (error: any) {
+                    console.error('AI识别失败:', error)
+                    message.error(`AI识别失败: ${error.message || '未知错误'}`)
+                  } finally {
+                    setAiRecognizing(false)
+                  }
+                }}
+                style={{ 
+                  color: '#f4af25'
+                }}
+                title="AI识笳"
+              >
+                {isMobile ? '' : 'AI识笳'}
+              </Button>
+            </div>
           </Form.Item>
-          <Form.Item label={t('inventory.brand')} name="brand" rules={[{ required: true, message: t('common.pleaseInputBrand') }]}>
+          <Form.Item label={<span>{t('inventory.brand')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="brand" required={false} rules={[{ required: true, message: t('common.pleaseInputBrand') }]}>
             <Select
               placeholder={t('inventory.pleaseSelectBrand')}
               showSearch
@@ -4213,17 +4215,18 @@ const AdminInventory: React.FC = () => {
                   try { form.setFieldsValue({ origin: b.country }) } catch {}
                 }
               }}
+              dropdownStyle={{ zIndex: 1050 }}
             >
               {brandList
                 .filter(brand => brand.status === 'active')
                 .map(brand => (
                   <Option key={brand.id} value={brand.name}>
-                    <Space>
+                    <Space align="center">
                       {brand.logo && (
                         <img 
                           src={brand.logo} 
                           alt={brand.name} 
-                          style={{ width: 20, height: 20, borderRadius: 2 }}
+                          style={{ width: 20, height: 20, borderRadius: 2, display: 'block' }}
                         />
                       )}
                       <span>{brand.name}</span>
@@ -4233,13 +4236,13 @@ const AdminInventory: React.FC = () => {
                 ))}
             </Select>
           </Form.Item>
-          <Form.Item label={t('inventory.origin')} name="origin" rules={[{ required: true, message: t('common.pleaseInputOrigin') }]}>
+          <Form.Item label={<span>{t('inventory.origin')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="origin" required={false} rules={[{ required: true, message: t('common.pleaseInputOrigin') }]}>
             <Input />
           </Form.Item>
-          <Form.Item label={isMobile ? t('inventory.specification') : t('inventory.size')} name="size" rules={[{ required: true, message: t('common.pleaseInputSize') }]}> 
+          <Form.Item label={<span>{isMobile ? t('inventory.specification') : t('inventory.size')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="size" required={false} rules={[{ required: true, message: t('common.pleaseInputSize') }]}> 
             <Input />
           </Form.Item>
-          <Form.Item label={t('inventory.strength')} name="strength" rules={[{ required: true, message: t('common.pleaseSelectStrength') }]}>
+          <Form.Item label={<span>{t('inventory.strength')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="strength" required={false} rules={[{ required: true, message: t('common.pleaseSelectStrength') }]}>
             <Select>
               <Option value="mild">{t('inventory.mild')}</Option>
               <Option value="mild-medium">{t('inventory.mildMedium')}</Option>
@@ -4248,7 +4251,7 @@ const AdminInventory: React.FC = () => {
               <Option value="full">{t('inventory.full')}</Option>
             </Select>
           </Form.Item>
-          <Form.Item label={t('inventory.price')} name="price" rules={[{ required: true, message: t('common.pleaseInputPrice') }]}> 
+          <Form.Item label={<span>{t('inventory.price')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="price" required={false} rules={[{ required: true, message: t('common.pleaseInputPrice') }]}> 
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
           

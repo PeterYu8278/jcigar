@@ -351,6 +351,98 @@ export const AICigarScanner: React.FC = () => {
         setMatchedCigars([]); // 重置匹配的雪茄
     };
 
+    // 保存截图功能
+    const handleSaveScreenshot = async () => {
+        if (!resultCardRef.current) {
+            message.error('无法生成截图');
+            return;
+        }
+
+        setSavingScreenshot(true);
+        try {
+            const canvas = await html2canvas(resultCardRef.current, {
+                backgroundColor: '#1a1a1a',
+                scale: 2, // 提高清晰度
+                useCORS: true,
+                logging: false,
+            });
+
+            // 创建下载链接
+            const link = document.createElement('a');
+            const fileName = `AI识笳_${result?.brand}_${result?.name}_${Date.now()}.png`;
+            link.download = fileName;
+            link.href = canvas.toDataURL('image/png');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            message.success('截图已保存');
+        } catch (error) {
+            console.error('Screenshot failed:', error);
+            message.error('保存截图失败，请重试');
+        } finally {
+            setSavingScreenshot(false);
+        }
+    };
+
+    // 分享截图功能
+    const handleShareScreenshot = async () => {
+        if (!resultCardRef.current) {
+            message.error('无法生成截图');
+            return;
+        }
+
+        setSavingScreenshot(true);
+        try {
+            const canvas = await html2canvas(resultCardRef.current, {
+                backgroundColor: '#1a1a1a',
+                scale: 2,
+                useCORS: true,
+                logging: false,
+            });
+
+            // 将 canvas 转换为 blob
+            canvas.toBlob(async (blob) => {
+                if (!blob) {
+                    message.error('生成截图失败');
+                    setSavingScreenshot(false);
+                    return;
+                }
+
+                const fileName = `AI识笳_${result?.brand}_${result?.name}_${Date.now()}.png`;
+                const file = new File([blob], fileName, { type: 'image/png' });
+
+                // 检查是否支持 Web Share API
+                if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try {
+                        await navigator.share({
+                            title: `AI识笳 - ${result?.brand} ${result?.name}`,
+                            text: `识别结果：${result?.brand} ${result?.name}\n可信度：${Math.round((result?.confidence || 0) * 100)}%`,
+                            files: [file],
+                        });
+                        message.success('分享成功');
+                    } catch (shareError: any) {
+                        // 用户取消分享或其他错误
+                        if (shareError.name !== 'AbortError') {
+                            console.error('Share failed:', shareError);
+                            // 如果分享失败，回退到下载
+                            handleSaveScreenshot();
+                        }
+                    }
+                } else {
+                    // 不支持 Web Share API，回退到下载
+                    message.info('当前浏览器不支持分享功能，已保存到本地');
+                    handleSaveScreenshot();
+                }
+                setSavingScreenshot(false);
+            }, 'image/png');
+        } catch (error) {
+            console.error('Share screenshot failed:', error);
+            message.error('分享失败，请重试');
+            setSavingScreenshot(false);
+        }
+    };
+
     // 组件卸载时清理
     useEffect(() => {
         return () => {
@@ -690,7 +782,10 @@ export const AICigarScanner: React.FC = () => {
             )}
 
             {result && !analyzing && (
-                <Card style={{ width: '100%', marginTop: '16px', background: 'rgba(255,255,255,0.05)', border: '1px solid #333' }}>
+                <Card 
+                    ref={resultCardRef}
+                    style={{ width: '100%', marginTop: '16px', background: 'rgba(255,255,255,0.05)', border: '1px solid #333' }}
+                >
                     <Space direction="vertical" style={{ width: '100%' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                             <div>
@@ -936,6 +1031,38 @@ export const AICigarScanner: React.FC = () => {
                                     <Text style={{ color: '#1890ff', fontSize: '13px' }}>正在保存到数据库...</Text>
                                 </div>
                             )}
+                            
+                            {/* 截图保存和分享按钮 */}
+                            <Space style={{ width: '100%' }} size="small">
+                                <Button 
+                                    icon={<DownloadOutlined />}
+                                    onClick={handleSaveScreenshot}
+                                    loading={savingScreenshot}
+                                    disabled={savingScreenshot || saving}
+                                    style={{
+                                        flex: 1,
+                                        background: 'rgba(255, 255, 255, 0.1)',
+                                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                                        color: '#fff'
+                                    }}
+                                >
+                                    保存截图
+                                </Button>
+                                <Button 
+                                    icon={<ShareAltOutlined />}
+                                    onClick={handleShareScreenshot}
+                                    loading={savingScreenshot}
+                                    disabled={savingScreenshot || saving}
+                                    style={{
+                                        flex: 1,
+                                        background: 'rgba(255, 255, 255, 0.1)',
+                                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                                        color: '#fff'
+                                    }}
+                                >
+                                    分享截图
+                                </Button>
+                            </Space>
                             
                             <Button 
                                 block 

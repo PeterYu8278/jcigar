@@ -314,6 +314,15 @@ button + button { margin-left: 8px; }
 
 .dark-theme-form .ant-select-selection-item {
   color: #FFFFFF !important;
+  display: flex !important;
+  align-items: center !important;
+  line-height: normal !important;
+}
+
+.dark-theme-form .ant-select-selection-item .ant-space {
+  display: flex !important;
+  align-items: center !important;
+  line-height: normal !important;
 }
 
 .dark-theme-form .ant-select-clear {

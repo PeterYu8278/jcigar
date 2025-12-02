@@ -186,12 +186,13 @@ export async function analyzeCigarImage(
         : '';
 
     const prompt = `
-    Analyze this image of a cigar. Identify the brand, specific name (vitola if possible), origin, flavor profile, strength, construction details, and expected tasting notes for different sections.${userHintSection}
+    Analyze this image of a cigar. Identify the brand, specific name (model/ vitola if possible), origin, flavor profile, strength, construction details, and expected tasting notes for different sections.${userHintSection}
     Return the result strictly as a JSON object with the following keys:
     - brand: string (brand name only, e.g., "Cohiba", "Montecristo")
-    - brandDescription: string (a brief description of the brand's history and characteristics, in Chinese, 2-3 sentences. If you cannot determine, use empty string "")
+    - brandDescription: string (a brief description of the brand's history and characteristics, in English, 2-3 sentences. If you cannot determine, use empty string "")
     - brandFoundedYear: number (the year the brand was founded. If you cannot determine, use null or omit this field)
-    - name: string (the full cigar name including size/vitola, e.g., "Cohiba Robusto", "Montecristo No.2")
+    - name: string (the full cigar name including model or size/vitola, e.g., "Cohiba Robusto", "Montecristo No.2")
+    - size: string (vitola)
     - origin: string (country)
     - flavorProfile: array of strings (e.g., ["Earth", "Leather"])
     - strength: "Mild" | "Medium" | "Full" | "Unknown"
@@ -203,17 +204,15 @@ export async function analyzeCigarImage(
     - headTasteNotes: array of strings (expected tasting notes for the head/final third, e.g., ["Leather", "Earth", "Spice"])
     - description: string (a short 2-sentence description of this specific cigar in English)
     - confidence: number (0.0 to 1.0, how sure are you?)
-    - possibleSizes: array of strings (other common sizes/vitolas for this brand, e.g., ["Robusto", "Torpedo", "Churchill", "Corona", "No.2", "No.4"]. Include the identified size if applicable, and add 3-5 other common sizes for this brand. If you cannot determine, use empty array [])
 
     Note: 
-    - The "name" field should include the full name with size/vitola (e.g., "Cohiba Robusto", not just "Cohiba")
+    - The "name" field should include the full name with model or size/vitola (e.g., "Cohiba Robusto", not just "Cohiba")
     - The "brand" field should be only the brand name without size (e.g., "Cohiba")
     - brandDescription should provide information about the brand's history, reputation, and characteristics
     - brandFoundedYear should be the year the brand was established (e.g., 1966 for Cohiba, 1935 for Montecristo)
     - wrapper, binder, and filler can be identified by the color, texture, and appearance of the cigar.
     - footTasteNotes, bodyTasteNotes, and headTasteNotes should be predicted based on the cigar's construction, wrapper color, and typical flavor progression for similar cigars.
     - Foot (first third) typically starts lighter and spicier, Body (middle third) develops complexity, Head (final third) becomes richer and more intense.
-    - possibleSizes should include common vitolas for the identified brand (e.g., for Cohiba: ["Robusto", "Torpedo", "Churchill", "Esplendido", "Siglo"])
     - If you cannot determine these details, you can use empty arrays [], empty strings "", or null values.
     If you cannot identify it as a cigar, return confidence 0 and empty strings.
     Output ONLY valid JSON. Do not include markdown formatting like \`\`\`json.
@@ -383,10 +382,11 @@ export async function analyzeCigarByName(
     Based on the cigar name "${cigarName}", provide detailed information about this cigar.
     Return the result strictly as a JSON object with the following keys:
     - brand: string (brand name only, e.g., "Cohiba", "Montecristo")
-    - brandDescription: string (a brief description of the brand's history and characteristics, in Chinese, 2-3 sentences. If you cannot determine, use empty string "")
+    - brandDescription: string (a brief description of the brand's history and characteristics, in English, 2-3 sentences. If you cannot determine, use empty string "")
     - brandFoundedYear: number (the year the brand was founded. If you cannot determine, use null or omit this field)
-    - name: string (the full cigar name including size/vitola, e.g., "Cohiba Robusto", "Montecristo No.2")
+    - name: string (the full cigar name including model or size/vitola, e.g., "Cohiba Robusto", "Montecristo No.2")
     - origin: string (country)
+    - size: string (vitola)
     - flavorProfile: array of strings (e.g., ["Earth", "Leather"])
     - strength: "Mild" | "Medium" | "Full" | "Unknown"
     - wrapper: string (the outer leaf/wrapper tobacco, e.g., "Connecticut", "Maduro", "Habano", "Corojo", or country of origin)
@@ -397,12 +397,11 @@ export async function analyzeCigarByName(
     - headTasteNotes: array of strings (expected tasting notes for the head/final third, e.g., ["Leather", "Earth", "Spice"])
     - description: string (a short 2-sentence description of this specific cigar in English)
     - confidence: number (0.0 to 1.0, how sure are you? Use 0.8-0.9 for well-known cigars, 0.6-0.7 for less common ones)
-    - possibleSizes: array of strings (other common sizes/vitolas for this brand, e.g., ["Robusto", "Torpedo", "Churchill", "Corona", "No.2", "No.4"]. If you cannot determine, use empty array [])
 
     Note: 
     - The "name" field should include the full name with size/vitola (e.g., "Cohiba Robusto", not just "Cohiba")
     - The "brand" field should be only the brand name without size (e.g., "Cohiba")
-    - Extract the size/vitola from the name if present (e.g., "Robusto", "No.2", "Torpedo")
+    - Extract the size/vitola from the name if present (e.g., "Robusto", "Torpedo")
     - brandDescription should provide information about the brand's history, reputation, and characteristics
     - brandFoundedYear should be the year the brand was established (e.g., 1966 for Cohiba, 1935 for Montecristo)
     - wrapper, binder, and filler should be based on typical construction for this specific cigar model
