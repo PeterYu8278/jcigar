@@ -160,6 +160,25 @@ export async function searchCigarByText(brandAndName: string): Promise<CigarAnal
     console.log(`[cigarTextSearch] 📊 最终结果:`, result);
     console.log(`[cigarTextSearch] 📊 最终结果置信度: ${(result.confidence * 100).toFixed(1)}%`);
     
+    // 如果 Gemini 没有返回图片，尝试搜索图片 URL
+    if (!result.imageUrl) {
+      const appConfig = await getAppConfig();
+      const imageSearchEnabled = appConfig?.aiCigar?.enableImageSearch ?? true;
+      
+      if (imageSearchEnabled) {
+        console.log(`[cigarTextSearch] 🔍 Gemini 未返回图片，尝试搜索图片URL...`);
+        try {
+          const imageUrl = await searchCigarImageWithGoogle(brand, name);
+          if (imageUrl) {
+            result.imageUrl = imageUrl;
+            console.log(`[cigarTextSearch] ✅ 找到图片URL:`, imageUrl);
+          }
+        } catch (error) {
+          console.warn(`[cigarTextSearch] ⚠️ 图片搜索失败:`, error);
+        }
+      }
+    }
+    
     // 更新统计
     updateRecognitionStats({
       brand: result.brand,
