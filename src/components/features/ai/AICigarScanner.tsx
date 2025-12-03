@@ -42,7 +42,6 @@ export const AICigarScanner: React.FC = () => {
     const [loadingSuggestions, setLoadingSuggestions] = useState(false);
     const [matchedCigars, setMatchedCigars] = useState<Cigar[]>([]);
     const [dataStorageEnabled, setDataStorageEnabled] = useState<boolean>(true);
-    const [showCamera, setShowCamera] = useState(false); // 默认不显示摄像头，优先文本搜索
 
     // 保存识别结果到数据库（内部函数，不暴露给用户）
     // 必须在 handleAnalyze 之前定义，避免依赖循环
@@ -207,7 +206,6 @@ export const AICigarScanner: React.FC = () => {
             const imageSrc = webcamRef.current.getScreenshot();
             if (imageSrc) {
                 setImgSrc(imageSrc);
-                setShowCamera(false); // 拍照后隐藏摄像头
                 handleAnalyze(imageSrc);
             }
         }
@@ -281,7 +279,6 @@ export const AICigarScanner: React.FC = () => {
         setSaveStatus(null);
         setUserHint(''); // 重置用户提示
         setMatchedCigars([]); // 重置匹配的雪茄
-        setShowCamera(false); // 重置摄像头显示状态，优先文本搜索
     };
 
     // 保存截图功能
@@ -410,7 +407,6 @@ export const AICigarScanner: React.FC = () => {
             const result = e.target?.result as string;
             if (result) {
                 setImgSrc(result);
-                setShowCamera(false); // 上传后隐藏摄像头
                 handleAnalyze(result);
             }
         };
@@ -574,28 +570,11 @@ export const AICigarScanner: React.FC = () => {
                                 💡 提示：可以直接点击"直接搜索"按钮查询，或拍照/上传图片时作为辅助信息
                             </Text>
                         )}
-                        
-                        {/* 使用相机按钮 */}
-                        {!showCamera && (
-                            <Button
-                                block
-                                icon={<CameraOutlined />}
-                                onClick={() => setShowCamera(true)}
-                                style={{
-                                    marginTop: '8px',
-                                    background: 'rgba(255,255,255,0.1)',
-                                    border: '1px solid rgba(255,255,255,0.2)',
-                                    color: '#fff'
-                                }}
-                            >
-                                使用相机拍照识别
-                            </Button>
-                        )}
                     </Space>
                 </Card>
             )}
             
-            {!imgSrc && !result && showCamera ? (
+            {!imgSrc && !result && !analyzing ? (
                 <div style={{ position: 'relative', width: '100%', height: '300px', background: '#000', borderRadius: '12px', overflow: 'hidden' }}>
                     {cameraError ? (
                         <div style={{ 
@@ -728,6 +707,24 @@ export const AICigarScanner: React.FC = () => {
                             <Text style={{ color: '#fff', marginTop: 16 }}>AI 正在识别雪茄...</Text>
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* 文本搜索加载动画 */}
+            {!imgSrc && !result && analyzing && (
+                <div style={{ 
+                    width: '100%', 
+                    height: '300px', 
+                    background: 'rgba(0,0,0,0.9)', 
+                    borderRadius: '12px',
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    marginBottom: '16px'
+                }}>
+                    <Spin indicator={<LoadingOutlined style={{ fontSize: 48, color: '#ffd700' }} spin />} />
+                    <Text style={{ color: '#fff', marginTop: 16 }}>AI 正在搜索雪茄信息...</Text>
                 </div>
             )}
 
