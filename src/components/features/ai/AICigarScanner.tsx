@@ -695,39 +695,25 @@ export const AICigarScanner: React.FC = () => {
                 </div>
             ) : null}
 
-            {/* 图像识别加载动画（拍照/上传后） */}
-            {imgSrc && analyzing && (
+            {/* 全屏加载动画 */}
+            {analyzing && (
                 <div style={{ 
-                    width: '100%', 
-                    height: '300px', 
-                    background: 'rgba(0,0,0,0.9)', 
-                    borderRadius: '12px',
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0,0,0,0.95)', 
                     display: 'flex', 
                     flexDirection: 'column',
                     alignItems: 'center', 
                     justifyContent: 'center',
-                    marginBottom: '16px'
+                    zIndex: 9999
                 }}>
-                    <Spin indicator={<LoadingOutlined style={{ fontSize: 48, color: '#ffd700' }} spin />} />
-                    <Text style={{ color: '#fff', marginTop: 16 }}>AI 正在识别雪茄...</Text>
-                </div>
-            )}
-
-            {/* 文本搜索加载动画 */}
-            {!imgSrc && !result && analyzing && (
-                <div style={{ 
-                    width: '100%', 
-                    height: '300px', 
-                    background: 'rgba(0,0,0,0.9)', 
-                    borderRadius: '12px',
-                    display: 'flex', 
-                    flexDirection: 'column',
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    marginBottom: '16px'
-                }}>
-                    <Spin indicator={<LoadingOutlined style={{ fontSize: 48, color: '#ffd700' }} spin />} />
-                    <Text style={{ color: '#fff', marginTop: 16 }}>AI 正在搜索雪茄信息...</Text>
+                    <Spin indicator={<LoadingOutlined style={{ fontSize: 64, color: '#ffd700' }} spin />} />
+                    <Text style={{ color: '#fff', marginTop: 24, fontSize: '18px', fontWeight: 500 }}>
+                        {imgSrc ? 'AI 正在识别雪茄...' : 'AI 正在搜索雪茄信息...'}
+                    </Text>
                 </div>
             )}
 
