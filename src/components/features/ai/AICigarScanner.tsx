@@ -728,7 +728,7 @@ export const AICigarScanner: React.FC = () => {
                         <Card 
                             style={{ width: '100%', marginTop: '16px', background: 'rgba(255,255,255,0.05)', border: '1px solid #333' }}
                         >
-                            <Space direction="vertical" style={{ width: '100%', padding: 0 }}>
+                            <Space direction="vertical" style={{ width: 'auto' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                             <div style={{ flex: 1 }}>
                                 <Title level={4} style={{ margin: 0, color: '#ffd700' }}>{result!.brand}</Title>
