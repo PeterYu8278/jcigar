@@ -693,20 +693,23 @@ export const AICigarScanner: React.FC = () => {
                         </Upload>
                     </div>
                 </div>
-            ) : (
-                <div style={{ width: '100%', marginBottom: '16px' }}>
-                    <img src={imgSrc ?? undefined} alt="Captured" style={{ width: '100%', borderRadius: '12px', maxHeight: '300px', objectFit: 'contain', background: '#000' }} />
-                    {analyzing && (
-                        <div style={{
-                            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                            background: 'rgba(0,0,0,0.7)', display: 'flex', flexDirection: 'column',
-                            alignItems: 'center', justifyContent: 'center', borderRadius: '12px',
-                            zIndex: 10
-                        }}>
-                            <Spin indicator={<LoadingOutlined style={{ fontSize: 48, color: '#ffd700' }} spin />} />
-                            <Text style={{ color: '#fff', marginTop: 16 }}>AI 正在识别雪茄...</Text>
-                        </div>
-                    )}
+            ) : null}
+
+            {/* 图像识别加载动画（拍照/上传后） */}
+            {imgSrc && analyzing && (
+                <div style={{ 
+                    width: '100%', 
+                    height: '300px', 
+                    background: 'rgba(0,0,0,0.9)', 
+                    borderRadius: '12px',
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    marginBottom: '16px'
+                }}>
+                    <Spin indicator={<LoadingOutlined style={{ fontSize: 48, color: '#ffd700' }} spin />} />
+                    <Text style={{ color: '#fff', marginTop: 16 }}>AI 正在识别雪茄...</Text>
                 </div>
             )}
 
