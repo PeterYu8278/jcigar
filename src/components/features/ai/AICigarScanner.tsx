@@ -517,8 +517,8 @@ export const AICigarScanner: React.FC = () => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', alignItems: 'center' }}>
-            {/* 手动输入雪茄型号（可选） */}
-            {!imgSrc && (
+            {/* 手动输入雪茄型号（可选） - 只在无图片且无结果时显示 */}
+            {!imgSrc && !result && (
                 <Card 
                     style={{ 
                         width: '100%', 
@@ -695,7 +695,7 @@ export const AICigarScanner: React.FC = () => {
                 </div>
             ) : (
                 <div style={{ width: '100%', marginBottom: '16px' }}>
-                    <img src={imgSrc} alt="Captured" style={{ width: '100%', borderRadius: '12px', maxHeight: '300px', objectFit: 'contain', background: '#000' }} />
+                    <img src={imgSrc ?? undefined} alt="Captured" style={{ width: '100%', borderRadius: '12px', maxHeight: '300px', objectFit: 'contain', background: '#000' }} />
                     {analyzing && (
                         <div style={{
                             position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
@@ -723,14 +723,14 @@ export const AICigarScanner: React.FC = () => {
                             <Space direction="vertical" style={{ width: '100%' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                             <div style={{ flex: 1 }}>
-                                <Title level={4} style={{ margin: 0, color: '#ffd700' }}>{result.brand}</Title>
-                                <Text style={{ fontSize: '16px', color: '#fff' }}>{result.name}</Text>
+                                <Title level={4} style={{ margin: 0, color: '#ffd700' }}>{result!.brand}</Title>
+                                <Text style={{ fontSize: '16px', color: '#fff' }}>{result!.name}</Text>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
-                                <Tag color={result.strength === 'Full' ? 'red' : result.strength === 'Medium' ? 'orange' : 'green'}>
-                                    {result.strength}
+                                <Tag color={result!.strength === 'Full' ? 'red' : result!.strength === 'Medium' ? 'orange' : 'green'}>
+                                    {result!.strength}
                                 </Tag>
-                                {result.rating && (
+                                {result!.rating && (
                                     <Tag 
                                         color="gold"
                                         style={{ 
@@ -749,16 +749,16 @@ export const AICigarScanner: React.FC = () => {
                                             borderRadius: '12px'
                                         }}
                                     >
-                                        {result.rating}
+                                        {result!.rating}
                                     </Tag>
                                 )}
                             </div>
                         </div>
 
                         {/* 雪茄茄标图像 - 优先使用 Gemini 返回的图片，否则使用用户拍摄的图片 */}
-                        {(result.imageUrl || imgSrc) && (() => {
-                            const displayImageUrl = result.imageUrl || imgSrc;
-                            console.log('[AICigarScanner] 显示图片 - result.imageUrl:', result.imageUrl, 'imgSrc:', imgSrc, '最终使用:', displayImageUrl);
+                        {(result!.imageUrl || imgSrc) && (() => {
+                            const displayImageUrl = result!.imageUrl || imgSrc;
+                            console.log('[AICigarScanner] 显示图片 - result.imageUrl:', result!.imageUrl, 'imgSrc:', imgSrc, '最终使用:', displayImageUrl);
                             return (
                                 <div style={{ 
                                     marginTop: '12px',
@@ -798,7 +798,7 @@ export const AICigarScanner: React.FC = () => {
                                             onError={(e) => {
                                                 // 如果 Gemini 返回的图片加载失败，回退到用户拍摄的图片
                                                 console.warn('[AICigarScanner] 图片加载失败，尝试回退:', e.currentTarget.src);
-                                                if (result.imageUrl && imgSrc && e.currentTarget.src !== imgSrc) {
+                                                if (result!.imageUrl && imgSrc && e.currentTarget.src !== imgSrc) {
                                                     console.log('[AICigarScanner] 回退到用户拍摄的图片:', imgSrc);
                                                     e.currentTarget.src = imgSrc;
                                                 }
@@ -815,17 +815,17 @@ export const AICigarScanner: React.FC = () => {
                         <Divider style={{ margin: '12px 0', borderColor: '#333' }} />
 
                         <Space split={<Divider type="vertical" style={{ borderColor: '#555' }} />}>
-                            <Text style={{ color: '#ddd' }} type="secondary">产地: <span style={{ color: '#ddd' }}>{result.origin}</span></Text>
-                            <Text style={{ color: '#ddd' }} type="secondary">可信度: <span style={{ color: '#ddd' }}>{Math.round(result.confidence * 100)}%</span></Text>
+                            <Text style={{ color: '#ddd' }} type="secondary">产地: <span style={{ color: '#ddd' }}>{result!.origin}</span></Text>
+                            <Text style={{ color: '#ddd' }} type="secondary">可信度: <span style={{ color: '#ddd' }}>{Math.round(result!.confidence * 100)}%</span></Text>
                         </Space>
 
                         <div style={{ marginTop: '8px' }}>
-                            {result.flavorProfile.map(flavor => (
+                            {result!.flavorProfile.map(flavor => (
                                 <Tag key={flavor} color="gold" style={{ marginRight: '4px', marginBottom: '4px' }}>{flavor}</Tag>
                             ))}
                         </div>
 
-                        {(result.wrapper || result.binder || result.filler) && (
+                        {(result!.wrapper || result!.binder || result!.filler) && (
                             <>
                                 <Divider style={{ margin: '6px 0', borderColor: '#333' }} />
                                 <div style={{ 
@@ -845,22 +845,22 @@ export const AICigarScanner: React.FC = () => {
                                         雪茄构造
                                     </Text>
                                     <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                                        {result.wrapper && (
+                                        {result!.wrapper && (
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', minWidth: '80px' }}>茄衣 (Wrapper):</Text>
-                                                <Text style={{ color: '#ddd', fontSize: '12px', textAlign: 'right', flex: 1 }}>{result.wrapper}</Text>
+                                                <Text style={{ color: '#ddd', fontSize: '12px', textAlign: 'right', flex: 1 }}>{result!.wrapper}</Text>
                                             </div>
                                         )}
-                                        {result.binder && (
+                                        {result!.binder && (
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', minWidth: '80px' }}>茄套 (Binder):</Text>
-                                                <Text style={{ color: '#ddd', fontSize: '12px', textAlign: 'right', flex: 1 }}>{result.binder}</Text>
+                                                <Text style={{ color: '#ddd', fontSize: '12px', textAlign: 'right', flex: 1 }}>{result!.binder}</Text>
                                             </div>
                                         )}
-                                        {result.filler && (
+                                        {result!.filler && (
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', minWidth: '80px' }}>茄芯 (Filler):</Text>
-                                                <Text style={{ color: '#ddd', fontSize: '12px', textAlign: 'right', flex: 1 }}>{result.filler}</Text>
+                                                <Text style={{ color: '#ddd', fontSize: '12px', textAlign: 'right', flex: 1 }}>{result!.filler}</Text>
                                             </div>
                                         )}
                                     </Space>
@@ -868,7 +868,7 @@ export const AICigarScanner: React.FC = () => {
                             </>
                         )}
 
-                        {(result.footTasteNotes?.length || result.bodyTasteNotes?.length || result.headTasteNotes?.length) && (
+                        {(result!.footTasteNotes?.length || result!.bodyTasteNotes?.length || result!.headTasteNotes?.length) && (
                             <>
                                 <Divider style={{ margin: '6px 0', borderColor: '#333' }} />
                                 <div style={{ 
@@ -888,64 +888,64 @@ export const AICigarScanner: React.FC = () => {
                                         品吸笔记
                                     </Text>
                                     <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                                        {result.footTasteNotes && Array.isArray(result.footTasteNotes) && result.footTasteNotes.length > 0 && (
+                                        {result!.footTasteNotes && Array.isArray(result!.footTasteNotes) && result!.footTasteNotes.length > 0 && (
                                             <div>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: '4px', fontWeight: 500 }}>
                                                     脚部 (Foot) - 前1/3:
                                                 </Text>
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                                                    {result.footTasteNotes.map((note: string, index: number) => (
+                                                    {result!.footTasteNotes.map((note: string, index: number) => (
                                                         <Tag key={index} color="cyan" style={{ fontSize: '11px', margin: 0 }}>{note}</Tag>
                                                     ))}
                                                 </div>
                                             </div>
                                         )}
-                                        {result.footTasteNotes && typeof result.footTasteNotes === 'string' && (
+                                        {result!.footTasteNotes && typeof result!.footTasteNotes === 'string' && (
                                             <div>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: '4px', fontWeight: 500 }}>
                                                     脚部 (Foot) - 前1/3:
                                                 </Text>
-                                                <Text style={{ fontSize: '13px', color: '#fff' }}>{result.footTasteNotes}</Text>
+                                                <Text style={{ fontSize: '13px', color: '#fff' }}>{result!.footTasteNotes}</Text>
                                             </div>
                                         )}
-                                        {result.bodyTasteNotes && Array.isArray(result.bodyTasteNotes) && result.bodyTasteNotes.length > 0 && (
+                                        {result!.bodyTasteNotes && Array.isArray(result!.bodyTasteNotes) && result!.bodyTasteNotes.length > 0 && (
                                             <div>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: '4px', fontWeight: 500 }}>
                                                     主体 (Body) - 中1/3:
                                                 </Text>
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                                                    {result.bodyTasteNotes.map((note: string, index: number) => (
+                                                    {result!.bodyTasteNotes.map((note: string, index: number) => (
                                                         <Tag key={index} color="blue" style={{ fontSize: '11px', margin: 0 }}>{note}</Tag>
                                                     ))}
                                                 </div>
                                             </div>
                                         )}
-                                        {result.bodyTasteNotes && typeof result.bodyTasteNotes === 'string' && (
+                                        {result!.bodyTasteNotes && typeof result!.bodyTasteNotes === 'string' && (
                                             <div>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: '4px', fontWeight: 500 }}>
                                                     主体 (Body) - 中1/3:
                                                 </Text>
-                                                <Text style={{ fontSize: '13px', color: '#fff' }}>{result.bodyTasteNotes}</Text>
+                                                <Text style={{ fontSize: '13px', color: '#fff' }}>{result!.bodyTasteNotes}</Text>
                                             </div>
                                         )}
-                                        {result.headTasteNotes && Array.isArray(result.headTasteNotes) && result.headTasteNotes.length > 0 && (
+                                        {result!.headTasteNotes && Array.isArray(result!.headTasteNotes) && result!.headTasteNotes.length > 0 && (
                                             <div>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: '4px', fontWeight: 500 }}>
                                                     头部 (Head) - 后1/3:
                                                 </Text>
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                                                    {result.headTasteNotes.map((note: string, index: number) => (
+                                                    {result!.headTasteNotes.map((note: string, index: number) => (
                                                         <Tag key={index} color="purple" style={{ fontSize: '11px', margin: 0 }}>{note}</Tag>
                                                     ))}
                                                 </div>
                                             </div>
                                         )}
-                                        {result.headTasteNotes && typeof result.headTasteNotes === 'string' && (
+                                        {result!.headTasteNotes && typeof result!.headTasteNotes === 'string' && (
                                             <div>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: '4px', fontWeight: 500 }}>
                                                     头部 (Head) - 后1/3:
                                                 </Text>
-                                                <Text style={{ fontSize: '13px', color: '#fff' }}>{result.headTasteNotes}</Text>
+                                                <Text style={{ fontSize: '13px', color: '#fff' }}>{result!.headTasteNotes}</Text>
                                             </div>
                                         )}
                                     </Space>
@@ -954,7 +954,7 @@ export const AICigarScanner: React.FC = () => {
                         )}
 
                         <Paragraph style={{ color: '#aaa', marginTop: '6px', background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '4px' }}>
-                            {result.description}
+                            {result!.description}
                         </Paragraph>
 
                         {/* 显示匹配雪茄的图片 */}
