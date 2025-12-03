@@ -415,16 +415,38 @@ Analyze this cigar image and provide detailed information.
     - rating: number (cigar rating from 0 to 100, based on ratings from authoritative sources like Cigar Aficionado, Cigar Journal, Halfwheel, etc. If multiple ratings are available, use the average or most recent rating. If no rating is found, use null or omit this field)
     - confidence: number (0.0 to 1.0, how sure are you?)
 
+    📊 THREE-TIER DATA STRATEGY FOR IMAGE ANALYSIS:
+    
+    TIER 1 - VERIFIED DATA (from training data):
+    - Use if you have confirmed information from reviews or manufacturer specs
+    - Mark with high confidence (0.85-0.95)
+    
+    TIER 2 - INFERRED DATA (educated guesses):
+    - Use if you can infer from visual cues (wrapper color, brand origin, construction)
+    - Examples: Dark wrapper → "Likely Maduro", Cuban brand → "Likely Cuban tobacco"
+    - Mark with medium confidence (0.65-0.8)
+    - Use qualifiers: "Likely", "Possibly", "Typical"
+    
+    TIER 3 - NO DATA:
+    - Return null if you cannot infer anything
+    - Mark with low confidence (0.5-0.65)
+    
+    ✅ PROVIDE INFERRED DATA WHEN POSSIBLE:
+    - wrapper, binder, filler: Can infer from wrapper color, brand origin, construction
+    - strength: Can infer from wrapper type (Maduro = fuller), brand reputation
+    - flavorProfile: Can provide typical flavors for this wrapper/origin type
+    - tastingNotes: Can provide typical progression for this cigar type
+    
     Note: 
     - The "name" field should include the full name with model or size/vitola (e.g., "Cohiba Robusto", not just "Cohiba")
     - The "brand" field should be only the brand name without size (e.g., "Cohiba")
     - The "size" field MUST contain ONLY the standard cigar vitola name (e.g., "Robusto", "Torpedo", "Cigarillo", "Churchill"). Do NOT include descriptive text, series names, or model names in the size field.
     - brandDescription should provide information about the brand's history, reputation, and characteristics
     - brandFoundedYear should be the year the brand was established (e.g., 1966 for Cohiba, 1935 for Montecristo)
-    - wrapper, binder, and filler can be identified by the color, texture, and appearance of the cigar.
-    - footTasteNotes, bodyTasteNotes, and headTasteNotes should be predicted based on the cigar's construction, wrapper color, and typical flavor progression for similar cigars.
+    - wrapper, binder, and filler can be identified OR INFERRED from the color, texture, appearance, and brand origin
+    - footTasteNotes, bodyTasteNotes, and headTasteNotes should be from verified reviews OR typical progression for this cigar type
     - Foot (first third) typically starts lighter and spicier, Body (middle third) develops complexity, Head (final third) becomes richer and more intense.
-    - If you cannot determine these details, you can use empty arrays [], empty strings "", or null values.
+    - Provide SOMETHING rather than null when you can make educated inferences, but use qualifiers like "Likely", "Typical"
     If you cannot identify it as a cigar, return confidence 0 and empty strings.
     Output ONLY valid JSON. Do not include markdown formatting like \`\`\`json.
   `;
@@ -1313,41 +1335,103 @@ STEP 1: BASIC IDENTIFICATION
 - brandFoundedYear: Founding year (if known from training data, otherwise null)
 
 STEP 2: TOBACCO COMPOSITION (wrapper, binder, filler)
-⚠️ ACCURACY RULE: ONLY provide if you have VERIFIED specifications from your training data
-- If you have CONFIRMED information from cigar reviews or manufacturer specs in your training data:
+📊 THREE-TIER DATA STRATEGY:
+
+TIER 1 - VERIFIED DATA (Highest Priority):
+- If you have CONFIRMED information from manufacturer specs, professional reviews, or official sources:
   * wrapper: [specific type, e.g., "Connecticut Shade", "Maduro"]
   * binder: [specific origin, e.g., "Nicaraguan", "Mexican"]
   * filler: [specific blend, e.g., "Dominican, Nicaraguan"]
-- If you are NOT 100% certain or have no verified data:
+  * dataQuality.tobaccoComposition: "verified"
+
+TIER 2 - INFERRED DATA (Medium Priority):
+- If you DON'T have verified specs BUT can make EDUCATED INFERENCES based on:
+  * Brand's typical tobacco sources (e.g., Cuban brands use Cuban tobacco)
+  * Wrapper color/appearance (e.g., dark wrapper = Maduro)
+  * Brand origin patterns (e.g., Nicaraguan brands often use Nicaraguan tobacco)
+- Provide your BEST ESTIMATE with lower confidence:
+  * wrapper: [inferred type with qualifier, e.g., "Likely Maduro", "Possibly Connecticut"]
+  * binder: [inferred origin, e.g., "Likely Nicaraguan"]
+  * filler: [inferred blend, e.g., "Likely Dominican blend"]
+  * dataQuality.tobaccoComposition: "inferred"
+
+TIER 3 - NO DATA:
+- If you have NO basis for inference:
   * wrapper: null
   * binder: null
   * filler: null
-- ❌ DO NOT guess based on brand reputation or typical characteristics
-- ❌ DO NOT infer from wrapper color or brand origin
+  * dataQuality.tobaccoComposition: "unknown"
+
+✅ EXAMPLES:
+- Cohiba (Cuban) → wrapper: "Cuban", binder: "Cuban", filler: "Cuban" (Tier 1: verified)
+- Unknown Nicaraguan brand → wrapper: "Likely Nicaraguan", filler: "Likely Nicaraguan blend" (Tier 2: inferred)
+- Completely unknown brand → wrapper: null (Tier 3: no data)
 
 STEP 3: STRENGTH AND FLAVOR
-⚠️ ACCURACY RULE: ONLY provide if you have VERIFIED review data
-- strength:
-  * If you have verified reviews: "Mild" | "Medium-Mild" | "Medium" | "Medium-Full" | "Full"
-  * If uncertain: "Unknown"
-  * ❌ DO NOT guess based on wrapper type or brand
-- flavorProfile:
-  * If you have verified reviews: ["specific", "flavors", "from", "reviews"]
-  * If no verified reviews: [] (empty array)
-  * ❌ DO NOT generate generic flavors
+📊 THREE-TIER DATA STRATEGY:
+
+TIER 1 - VERIFIED DATA:
+- If you have professional reviews or verified specs:
+  * strength: "Mild" | "Medium-Mild" | "Medium" | "Medium-Full" | "Full"
+  * flavorProfile: ["specific", "verified", "flavors"]
+  * dataQuality.flavorProfile: "verified"
+
+TIER 2 - INFERRED DATA:
+- If NO verified reviews BUT can infer from:
+  * Brand reputation (e.g., Padron = typically full-bodied)
+  * Tobacco origin (e.g., Nicaraguan = often stronger)
+  * Wrapper type (e.g., Maduro = often sweeter, fuller)
+- Provide EDUCATED GUESS:
+  * strength: [your best estimate based on brand/origin]
+  * flavorProfile: ["typical", "expected", "notes", "for", "this", "type"]
+  * dataQuality.flavorProfile: "inferred"
+
+TIER 3 - NO DATA:
+  * strength: "Unknown"
+  * flavorProfile: []
+  * dataQuality.flavorProfile: "unknown"
+
+✅ EXAMPLES:
+- Padron 1964 → strength: "Full", flavorProfile: ["Coffee", "Cocoa", "Earth"] (Tier 1: verified from reviews)
+- Unknown Nicaraguan cigar → strength: "Medium-Full", flavorProfile: ["Earth", "Pepper", "Wood"] (Tier 2: typical Nicaraguan profile)
+- Completely unknown → strength: "Unknown", flavorProfile: [] (Tier 3)
 
 STEP 4: TASTING NOTES (foot, body, head)
-⚠️ ACCURACY RULE: ONLY provide if you have SPECIFIC professional tasting notes
-- If you have VERIFIED tasting notes from professional reviews:
-  * footTasteNotes: ["specific", "notes", "from", "reviews"]
-  * bodyTasteNotes: ["specific", "notes", "from", "reviews"]
-  * headTasteNotes: ["specific", "notes", "from", "reviews"]
-- If NO verified tasting notes:
+📊 THREE-TIER DATA STRATEGY:
+
+TIER 1 - VERIFIED DATA:
+- If you have SPECIFIC professional tasting notes from reviews:
+  * footTasteNotes: ["actual", "notes", "from", "reviews"]
+  * bodyTasteNotes: ["actual", "notes", "from", "reviews"]
+  * headTasteNotes: ["actual", "notes", "from", "reviews"]
+  * dataQuality.tastingNotes: "verified"
+
+TIER 2 - INFERRED DATA:
+- If NO specific reviews BUT can infer TYPICAL PROGRESSION based on:
+  * Tobacco composition (e.g., Maduro wrapper = sweet notes)
+  * Brand style (e.g., Cuban = earthy, leathery)
+  * Strength level (e.g., Full = intense flavors)
+- Provide TYPICAL PROGRESSION for this type:
+  * footTasteNotes: ["typical", "opening", "notes"]
+  * bodyTasteNotes: ["typical", "middle", "notes"]
+  * headTasteNotes: ["typical", "final", "notes"]
+  * dataQuality.tastingNotes: "inferred"
+
+TIER 3 - NO DATA:
   * footTasteNotes: null
   * bodyTasteNotes: null
   * headTasteNotes: null
-- ❌ DO NOT create generic progression descriptions
-- ❌ DO NOT infer from tobacco type
+  * dataQuality.tastingNotes: "unknown"
+
+✅ CIGAR TASTING PROGRESSION PATTERNS:
+- Foot (first 1/3): Usually lighter, spicier, initial flavors
+- Body (middle 1/3): Develops complexity, core flavors emerge
+- Head (final 1/3): Intensifies, richer, bolder flavors
+
+✅ EXAMPLES:
+- Cohiba Behike (verified review) → footTasteNotes: ["Pepper", "Cedar"], bodyTasteNotes: ["Leather", "Coffee"], headTasteNotes: ["Earth", "Cocoa"] (Tier 1)
+- Unknown Maduro cigar → footTasteNotes: ["Sweet spice", "Cocoa"], bodyTasteNotes: ["Coffee", "Dark chocolate"], headTasteNotes: ["Earth", "Leather"] (Tier 2: typical Maduro progression)
+- Completely unknown → all null (Tier 3)
 
 STEP 5: RATING
 ⚠️ ACCURACY RULE: ONLY provide ACTUAL ratings from professional sources
@@ -1393,14 +1477,16 @@ STEP 6: DESCRIPTION
 }
 
 🚨 CRITICAL RULES - READ CAREFULLY:
-1. ✅ ACCURACY > COMPLETENESS: It is BETTER to return null than to guess
-2. ✅ Users prefer "no data" over "wrong data"
-3. ✅ Only provide information you are CERTAIN about from your training data
-4. ✅ Use null for unknown fields, not generic descriptions
-5. ✅ Mark confidence level honestly (0.8+ for verified info, 0.6- for uncertain)
-6. ❌ NEVER guess tobacco composition
-7. ❌ NEVER infer tasting notes without verified reviews
-8. ❌ NEVER estimate ratings
+1. ✅ USE THREE-TIER STRATEGY: Verified > Inferred > Null
+2. ✅ ALWAYS mark data quality in dataQuality field
+3. ✅ Verified data (Tier 1) → confidence 0.85-0.95
+4. ✅ Inferred data (Tier 2) → confidence 0.65-0.8, use qualifiers like "Likely", "Typical"
+5. ✅ No data (Tier 3) → return null, confidence 0.5-0.65
+6. ✅ Be HONEST about data source: verified vs inferred
+7. ✅ Inferred data is ACCEPTABLE if marked as "inferred"
+8. ✅ Provide SOMETHING rather than nothing, but mark quality
+9. ❌ NEVER present inferred data as verified
+10. ❌ NEVER estimate ratings (ratings must be verified or null)
 
     Output ONLY valid JSON. Do not include markdown formatting like \`\`\`json.
   `;
