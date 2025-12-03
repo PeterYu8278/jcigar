@@ -365,13 +365,12 @@ INSTRUCTIONS:
 You are analyzing a cigar image WITHOUT any user hints.
 
 INSTRUCTIONS:
-1. Carefully examine the cigar band/label for brand name and model information
+1. Carefully examine the cigar label for brand name and model information
 2. Analyze wrapper color, texture, and construction details
-3. Identify the vitola (size/shape) from visual appearance
-4. Confidence levels:
-   - Clear band with readable text → High confidence (0.85-0.95)
-   - Partial band or unclear text → Medium confidence (0.7-0.8)
-   - No band or very unclear → Low confidence (0.5-0.65)
+3. Confidence levels:
+   - Clear label with readable text → High confidence (0.85-0.95)
+   - Partial label or unclear text → Medium confidence (0.7-0.8)
+   - No label or very unclear → Low confidence (0.5-0.65)
 `;
 
     const prompt = `
