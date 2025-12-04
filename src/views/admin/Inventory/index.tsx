@@ -11,7 +11,7 @@ import { getModalTheme, getResponsiveModalConfig, getModalThemeStyles } from '..
 import { useCloudinary } from '../../../hooks/useCloudinary'
 import { analyzeCigarByName } from '../../../services/gemini/cigarRecognition'
 import { CigarRatingBadge } from '../../../components/common/CigarRatingBadge'
-import { getAggregatedCigarData, type AggregatedCigarData } from '../../../services/cigar/cigarDataAggregation'
+import { getAggregatedCigarData, saveRecognitionToCigarDatabase, type AggregatedCigarData } from '../../../services/cigar/cigarDataAggregation'
 
 const { Title } = Typography
 const { Search } = Input
@@ -518,54 +518,55 @@ const AdminInventory: React.FC = () => {
           <Button type="link" icon={<EditOutlined />} size="small" onClick={async () => {
             setEditing(record)
             
-            // 从 cigar_database 加载聚合数据
-            const productName = `${record.brand} ${record.name}`.trim()
-            try {
-              const aggregatedData = await getAggregatedCigarData(productName)
-              setCigarDatabaseData(aggregatedData)
-              console.log('[Inventory] 从 cigar_database 加载数据:', aggregatedData)
-            } catch (error) {
-              console.error('[Inventory] 加载 cigar_database 数据失败:', error)
-              setCigarDatabaseData(null)
-            }
+            // 先设置为 null，防止使用旧数据
+            setCigarDatabaseData(null)
             
             // 使用 setTimeout 确保 Modal 已经打开，Form 已经渲染
             setTimeout(async () => {
-              // 尝试从 cigar_database 获取数据
+              const productName = `${record.brand} ${record.name}`.trim()
+              
+              // 从 cigar_database 获取聚合数据
               let dbData: AggregatedCigarData | null = null
               try {
                 dbData = await getAggregatedCigarData(productName)
+                console.log('[Inventory] 从 cigar_database 加载数据:', dbData)
               } catch (error) {
                 console.error('[Inventory] 获取 cigar_database 数据失败:', error)
               }
               
-              // 优先使用 cigar_database 的数据，如果没有则使用现有数据
-              form.setFieldsValue({
-                name: record.name,
-                brand: dbData?.brand || record.brand,
-                origin: dbData?.origin || record.origin,
-                size: record.size,
-                strength: dbData?.strength || record.strength,
-                price: record.price,
-                reserved: (record as any)?.inventory?.reserved ?? 0,
-                description: dbData?.description || record.description || '',
-                wrapper: dbData?.wrappers?.[0]?.value || record.construction?.wrapper || '',
-                binder: dbData?.binders?.[0]?.value || record.construction?.binder || '',
-                filler: dbData?.fillers?.[0]?.value || record.construction?.filler || '',
-                footTasteNotes: dbData?.footTasteNotes?.map(item => item.value) || record.tastingNotes?.foot || [],
-                bodyTasteNotes: dbData?.bodyTasteNotes?.map(item => item.value) || record.tastingNotes?.body || [],
-                headTasteNotes: dbData?.headTasteNotes?.map(item => item.value) || record.tastingNotes?.head || [],
-                tags: dbData?.flavorProfile?.map(item => item.value) || record.metadata?.tags || [],
-              })
-              setCigarImages(record.images || [])
+              // 设置 cigarDatabaseData
+              setCigarDatabaseData(dbData)
               
-              // 设置评分（优先使用 cigar_database 的评分）
-              if (dbData?.rating !== null && dbData?.rating !== undefined) {
-                setAiRating(dbData.rating)
-              } else {
-                setAiRating(record.metadata?.rating || null)
-              }
-            }, 0)
+              // 再次使用 setTimeout，确保 React 重新渲染后字段的 disabled 状态已更新
+              setTimeout(() => {
+                // 优先使用 cigar_database 的数据，如果没有则使用现有数据
+                form.setFieldsValue({
+                  name: record.name,
+                  brand: dbData?.brand || record.brand,
+                  origin: dbData?.origin || record.origin,
+                  size: record.size,
+                  strength: dbData?.strength || record.strength,
+                  price: record.price,
+                  reserved: (record as any)?.inventory?.reserved ?? 0,
+                  description: dbData?.description || record.description || '',
+                  wrapper: dbData?.wrappers?.[0]?.value || record.construction?.wrapper || '',
+                  binder: dbData?.binders?.[0]?.value || record.construction?.binder || '',
+                  filler: dbData?.fillers?.[0]?.value || record.construction?.filler || '',
+                  footTasteNotes: dbData?.footTasteNotes?.map(item => item.value) || record.tastingNotes?.foot || [],
+                  bodyTasteNotes: dbData?.bodyTasteNotes?.map(item => item.value) || record.tastingNotes?.body || [],
+                  headTasteNotes: dbData?.headTasteNotes?.map(item => item.value) || record.tastingNotes?.head || [],
+                  tags: dbData?.flavorProfile?.map(item => item.value) || record.metadata?.tags || [],
+                })
+                setCigarImages(record.images || [])
+                
+                // 设置评分（优先使用 cigar_database 的评分）
+                if (dbData?.rating !== null && dbData?.rating !== undefined) {
+                  setAiRating(dbData.rating)
+                } else {
+                  setAiRating(record.metadata?.rating || null)
+                }
+              }, 50) // 等待 React 重新渲染
+            }, 100) // 确保 Modal 完全渲染
           }}>
           </Button>
           <Button type="link" icon={<SearchOutlined />} size="small" onClick={() => {
@@ -4320,6 +4321,23 @@ const AdminInventory: React.FC = () => {
                     
                     // 批量设置表单值
                     form.setFieldsValue(updates)
+                    
+                    // 保存识别结果到 cigar_database（累积统计）
+                    try {
+                      await saveRecognitionToCigarDatabase(result)
+                      console.log('[Inventory] AI识别结果已保存到 cigar_database')
+                      
+                      // 重新加载聚合数据
+                      const fullProductName = `${result.brand} ${result.name}`.trim()
+                      const aggregatedData = await getAggregatedCigarData(fullProductName)
+                      if (aggregatedData) {
+                        setCigarDatabaseData(aggregatedData)
+                        console.log('[Inventory] 已加载更新后的聚合数据:', aggregatedData)
+                      }
+                    } catch (dbError) {
+                      console.error('[Inventory] 保存到 cigar_database 失败:', dbError)
+                      // 不影响用户体验，继续显示成功消息
+                    }
                     
                     message.success(`AI识别完成！可信度: ${Math.round(result.confidence * 100)}%`)
                   } catch (error: any) {
