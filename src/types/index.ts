@@ -350,7 +350,7 @@ export interface FeatureVisibilityConfig {
     [featureKey: string]: {
       visible: boolean;        // 是否可见
       description: string;     // 功能描述
-      category: 'frontend' | 'admin'; // 分类
+      category: 'frontend' | 'admin' | 'cigar-database' | 'tools'; // 分类
       route: string;           // 路由路径
       icon?: string;           // 图标名称
       updatedAt: Date;

@@ -11,7 +11,7 @@ export interface FeatureDefinition {
   description: string;
   descriptionEn: string;
   route: string;
-  category: 'frontend' | 'admin';
+  category: 'frontend' | 'admin' | 'cigar-database' | 'tools';
   icon: string;
   defaultVisible: boolean;
 }
@@ -170,8 +170,76 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     description: '监控系统性能指标',
     descriptionEn: 'Monitor system performance metrics',
     route: '/admin/performance',
-    category: 'admin',
+    category: 'tools',
     icon: 'ThunderboltOutlined',
+    defaultVisible: true,
+  },
+  // 雪茄数据库管理
+  {
+    key: 'cigar-database',
+    name: '雪茄数据库',
+    nameEn: 'Cigar Database',
+    description: '管理雪茄品牌和产品信息',
+    descriptionEn: 'Manage cigar brands and product information',
+    route: '/admin/cigar-database',
+    category: 'cigar-database',
+    icon: 'DatabaseOutlined',
+    defaultVisible: true,
+  },
+  // 工具功能
+  {
+    key: 'orphaned-users',
+    name: '孤立用户清理',
+    nameEn: 'Orphaned User Cleanup',
+    description: '清理系统中的孤立用户数据',
+    descriptionEn: 'Clean up orphaned user data in the system',
+    route: '/admin/orphaned-users',
+    category: 'tools',
+    icon: 'DeleteOutlined',
+    defaultVisible: true,
+  },
+  {
+    key: 'test-data-generator',
+    name: '测试数据生成器',
+    nameEn: 'Test Data Generator',
+    description: '生成测试数据用于开发和测试',
+    descriptionEn: 'Generate test data for development and testing',
+    route: '/admin/test-data-generator',
+    category: 'tools',
+    icon: 'SyncOutlined',
+    defaultVisible: true,
+  },
+  {
+    key: 'gemini-tester',
+    name: 'Gemini 模型测试器',
+    nameEn: 'Gemini Model Tester',
+    description: '测试和比较 Gemini AI 模型性能',
+    descriptionEn: 'Test and compare Gemini AI model performance',
+    route: '/admin/gemini-tester',
+    category: 'tools',
+    icon: 'ExperimentOutlined',
+    defaultVisible: true,
+  },
+  {
+    key: 'cloudinary-test',
+    name: 'Cloudinary 测试',
+    nameEn: 'Cloudinary Test',
+    description: '测试 Cloudinary 图片上传和管理功能',
+    descriptionEn: 'Test Cloudinary image upload and management features',
+    route: '/admin/cloudinary-test',
+    category: 'tools',
+    icon: 'CloudUploadOutlined',
+    defaultVisible: true,
+  },
+  {
+    key: 'debug-orders',
+    name: '订单调试',
+    nameEn: 'Order Debug',
+    description: '调试订单相关问题',
+    descriptionEn: 'Debug order-related issues',
+    route: '/admin/debug-orders',
+    category: 'tools',
+    icon: 'BugOutlined',
     defaultVisible: true,
   },
 ];

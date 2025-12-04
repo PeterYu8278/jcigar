@@ -72,7 +72,7 @@ const FeatureManagement: React.FC = () => {
   const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'frontend' | 'admin' | 'app' | 'whapi' | 'env'>('frontend');
+  const [activeTab, setActiveTab] = useState<'frontend' | 'admin' | 'cigar-database' | 'tools' | 'app' | 'whapi' | 'env'>('frontend');
   const [whapiForm] = Form.useForm();
   const [envForm] = Form.useForm();
   const [searchText, setSearchText] = useState('');
@@ -925,7 +925,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
           borderBottom: '1px solid rgba(244,175,37,0.2)',
           marginBottom: 16
         }}>
-          {(['frontend', 'admin', 'app', 'whapi', 'env'] as const).map((tabKey) => {
+          {(['frontend', 'admin', 'cigar-database', 'tools', 'app', 'whapi', 'env'] as const).map((tabKey) => {
             const isActive = activeTab === tabKey;
             const baseStyle: React.CSSProperties = {
               flex: 1,
@@ -962,6 +962,10 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                   ? t('featureManagement.frontendFeatures', { defaultValue: '前端功能' })
                   : tabKey === 'admin'
                   ? t('featureManagement.adminFeatures', { defaultValue: '管理后台功能' })
+                  : tabKey === 'cigar-database'
+                  ? t('featureManagement.cigarDatabase', { defaultValue: '雪茄数据库' })
+                  : tabKey === 'tools'
+                  ? t('featureManagement.tools', { defaultValue: '工具' })
                   : tabKey === 'app'
                   ? t('featureManagement.appSettings', { defaultValue: '应用配置' })
                   : tabKey === 'whapi'
