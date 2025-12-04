@@ -48,8 +48,6 @@ export async function searchGoogleImages(
         // 优先搜索可信的雪茄网站（零售商、评测网站、官方网站）
         const trustedSites = [
             // 权威评测网站
-            'images.google.com',
-            'google.com',
             'cigaraficionado.com',
             'halfwheel.com',
             'cigar-coop.com',
@@ -64,6 +62,22 @@ export async function searchGoogleImages(
             'cigarsinternational.com',
             'jrcigars.com',
             'neptunecigar.com',
+            'atlanticcigar.com',
+            'cigarplace.biz',
+            'cigarbus.com',
+            'cigarone.com',
+            'puroexpress.com',
+            '70cigars.com',
+            // 国际零售商
+            'infifon.com',
+            'lacasadelhabano.com',
+            'cgarsltd.co.uk',
+            'lacasadeltabaco.com',
+            'hyhpuro.com',
+            'timecigar.com',
+            // 古巴雪茄专卖
+            'cohcigars.com',
+            'topcubans.com',
             // 官方网站
             'habanos.com'  // 古巴雪茄官网
         ];
@@ -153,8 +167,6 @@ export async function searchGoogleImages(
                 // 1. 可信网站加分（40分）
                 const trustedDomains = [
                     // 权威评测网站
-                    'images.google.com',
-                    'google.com',
                     'cigaraficionado.com',
                     'halfwheel.com',
                     'cigar-coop.com',
@@ -169,6 +181,22 @@ export async function searchGoogleImages(
                     'cigarsinternational.com',
                     'jrcigars.com',
                     'neptunecigar.com',
+                    'atlanticcigar.com',
+                    'cigarplace.biz',
+                    'cigarbus.com',
+                    'cigarone.com',
+                    'puroexpress.com',
+                    '70cigars.com',
+                    // 国际零售商
+                    'infifon.com',
+                    'lacasadelhabano.com',
+                    'cgarsltd.co.uk',
+                    'lacasadeltabaco.com',
+                    'hyhpuro.com',
+                    'timecigar.com',
+                    // 古巴雪茄专卖
+                    'cohcigars.com',
+                    'topcubans.com',
                     // 官方网站
                     'habanos.com'
                 ];
