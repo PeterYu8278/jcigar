@@ -11,6 +11,7 @@ import { getModalTheme, getResponsiveModalConfig, getModalThemeStyles } from '..
 import { useCloudinary } from '../../../hooks/useCloudinary'
 import { analyzeCigarByName } from '../../../services/gemini/cigarRecognition'
 import { CigarRatingBadge } from '../../../components/common/CigarRatingBadge'
+import { getAggregatedCigarData, type AggregatedCigarData } from '../../../services/cigar/cigarDataAggregation'
 
 const { Title } = Typography
 const { Search } = Input
@@ -50,6 +51,7 @@ const AdminInventory: React.FC = () => {
   const [cigarImages, setCigarImages] = useState<string[]>([]) // 雪茄图片列表
   const [aiRecognizing, setAiRecognizing] = useState(false) // AI识别状态
   const [aiRating, setAiRating] = useState<number | null>(null) // AI识别的评分
+  const [cigarDatabaseData, setCigarDatabaseData] = useState<AggregatedCigarData | null>(null) // 从 cigar_database 读取的数据
   const [inModalOpen, setInModalOpen] = useState(false)
   const [inStatsOpen, setInStatsOpen] = useState(false)
   const [outStatsOpen, setOutStatsOpen] = useState(false)
@@ -513,29 +515,56 @@ const AdminInventory: React.FC = () => {
       width: 100,
       render: (_: any, record: any) => (
         <Space size="small" style={{ justifyContent: 'center', width: '100%' }}>
-          <Button type="link" icon={<EditOutlined />} size="small" onClick={() => {
+          <Button type="link" icon={<EditOutlined />} size="small" onClick={async () => {
             setEditing(record)
+            
+            // 从 cigar_database 加载聚合数据
+            const productName = `${record.brand} ${record.name}`.trim()
+            try {
+              const aggregatedData = await getAggregatedCigarData(productName)
+              setCigarDatabaseData(aggregatedData)
+              console.log('[Inventory] 从 cigar_database 加载数据:', aggregatedData)
+            } catch (error) {
+              console.error('[Inventory] 加载 cigar_database 数据失败:', error)
+              setCigarDatabaseData(null)
+            }
+            
             // 使用 setTimeout 确保 Modal 已经打开，Form 已经渲染
-            setTimeout(() => {
+            setTimeout(async () => {
+              // 尝试从 cigar_database 获取数据
+              let dbData: AggregatedCigarData | null = null
+              try {
+                dbData = await getAggregatedCigarData(productName)
+              } catch (error) {
+                console.error('[Inventory] 获取 cigar_database 数据失败:', error)
+              }
+              
+              // 优先使用 cigar_database 的数据，如果没有则使用现有数据
               form.setFieldsValue({
                 name: record.name,
-                brand: record.brand,
-                origin: record.origin,
+                brand: dbData?.brand || record.brand,
+                origin: dbData?.origin || record.origin,
                 size: record.size,
-                strength: record.strength,
+                strength: dbData?.strength || record.strength,
                 price: record.price,
                 reserved: (record as any)?.inventory?.reserved ?? 0,
-                description: record.description || '',
-                wrapper: record.construction?.wrapper || '',
-                binder: record.construction?.binder || '',
-                filler: record.construction?.filler || '',
-                footTasteNotes: record.tastingNotes?.foot || [],
-                bodyTasteNotes: record.tastingNotes?.body || [],
-                headTasteNotes: record.tastingNotes?.head || [],
-                tags: record.metadata?.tags || [],
+                description: dbData?.description || record.description || '',
+                wrapper: dbData?.wrappers?.[0]?.value || record.construction?.wrapper || '',
+                binder: dbData?.binders?.[0]?.value || record.construction?.binder || '',
+                filler: dbData?.fillers?.[0]?.value || record.construction?.filler || '',
+                footTasteNotes: dbData?.footTasteNotes?.map(item => item.value) || record.tastingNotes?.foot || [],
+                bodyTasteNotes: dbData?.bodyTasteNotes?.map(item => item.value) || record.tastingNotes?.body || [],
+                headTasteNotes: dbData?.headTasteNotes?.map(item => item.value) || record.tastingNotes?.head || [],
+                tags: dbData?.flavorProfile?.map(item => item.value) || record.metadata?.tags || [],
               })
               setCigarImages(record.images || [])
-              setAiRating(null) // 重置AI识别的rating
+              
+              // 设置评分（优先使用 cigar_database 的评分）
+              if (dbData?.rating !== null && dbData?.rating !== undefined) {
+                setAiRating(dbData.rating)
+              } else {
+                setAiRating(record.metadata?.rating || null)
+              }
             }, 0)
           }}>
           </Button>
@@ -1387,7 +1416,7 @@ const AdminInventory: React.FC = () => {
            >
              {t('common.resetFilters')}
            </Button>
-           <button onClick={() => { setCreating(true); form.resetFields(); setCigarImages([]); }} style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 8, padding: '8px 16px', background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, cursor: 'pointer' }}>
+           <button onClick={() => { setCreating(true); form.resetFields(); setCigarImages([]); setCigarDatabaseData(null); }} style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 8, padding: '8px 16px', background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, cursor: 'pointer' }}>
              <PlusOutlined />
              {t('inventory.addProduct')}
            </button>
@@ -4006,6 +4035,7 @@ const AdminInventory: React.FC = () => {
                 form.resetFields();
                 setCigarImages([]);
                 setAiRating(null); // 重置AI识别的rating
+                setCigarDatabaseData(null); // 重置 cigar_database 数据
               }}>{t('common.cancel')}</Button>
               <button disabled={loading} onClick={() => form.submit()} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease', opacity: loading ? 0.6 : 1 }}>{t('common.confirm')}</button>
             </Space>
@@ -4087,6 +4117,7 @@ const AdminInventory: React.FC = () => {
             form.resetFields()
             setCigarImages([])
             setAiRating(null) // 重置AI识别的rating
+            setCigarDatabaseData(null) // 重置 cigar_database 数据
           } finally {
             setLoading(false)
           }
@@ -4311,6 +4342,7 @@ const AdminInventory: React.FC = () => {
             <Select
               placeholder={t('inventory.pleaseSelectBrand')}
               showSearch
+              disabled={!!editing && !!cigarDatabaseData}
               filterOption={(input, option) => {
                 const children = option?.children as any
                 if (typeof children === 'string') {
@@ -4352,13 +4384,13 @@ const AdminInventory: React.FC = () => {
             </Select>
           </Form.Item>
           <Form.Item label={<span>{t('inventory.origin')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="origin" required={false} rules={[{ required: true, message: t('common.pleaseInputOrigin') }]}>
-            <Input />
+            <Input disabled={!!editing && !!cigarDatabaseData} />
           </Form.Item>
           <Form.Item label={<span>{isMobile ? t('inventory.specification') : t('inventory.size')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="size" required={false} rules={[{ required: true, message: t('common.pleaseInputSize') }]}> 
             <Input />
           </Form.Item>
           <Form.Item label={<span>{t('inventory.strength')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="strength" required={false} rules={[{ required: true, message: t('common.pleaseSelectStrength') }]}>
-            <Select>
+            <Select disabled={!!editing && !!cigarDatabaseData}>
               <Option value="mild">{t('inventory.mild')}</Option>
               <Option value="mild-medium">{t('inventory.mildMedium')}</Option>
               <Option value="medium">{t('inventory.medium')}</Option>
@@ -4371,7 +4403,7 @@ const AdminInventory: React.FC = () => {
           </Form.Item>
           
           <Form.Item label={t('common.description') || '描述'} name="description">
-            <Input.TextArea rows={3} placeholder="请输入雪茄描述" />
+            <Input.TextArea rows={3} placeholder="请输入雪茄描述" disabled={!!editing && !!cigarDatabaseData} />
           </Form.Item>
           
           <div style={{ 
@@ -4404,15 +4436,15 @@ const AdminInventory: React.FC = () => {
           </div>
           
           <Form.Item label="茄衣" name="wrapper">
-            <Input placeholder="例如: Habano, Connecticut, Maduro" />
+            <Input placeholder="例如: Habano, Connecticut, Maduro" disabled={!!editing && !!cigarDatabaseData} />
           </Form.Item>
           
           <Form.Item label="茄套" name="binder">
-            <Input placeholder="例如: Nicaraguan, Ecuadorian" />
+            <Input placeholder="例如: Nicaraguan, Ecuadorian" disabled={!!editing && !!cigarDatabaseData} />
           </Form.Item>
           
           <Form.Item label="茄芯" name="filler">
-            <Input placeholder="例如: Cuban, Nicaraguan, Dominican" />
+            <Input placeholder="例如: Cuban, Nicaraguan, Dominican" disabled={!!editing && !!cigarDatabaseData} />
           </Form.Item>
           
           <div style={{ 
@@ -4455,6 +4487,7 @@ const AdminInventory: React.FC = () => {
               placeholder="输入品吸笔记，按回车添加"
               style={{ width: '100%' }}
               tokenSeparators={[',']}
+              disabled={!!editing && !!cigarDatabaseData}
             />
           </Form.Item>
           
@@ -4469,6 +4502,7 @@ const AdminInventory: React.FC = () => {
               placeholder="输入品吸笔记，按回车添加"
               style={{ width: '100%' }}
               tokenSeparators={[',']}
+              disabled={!!editing && !!cigarDatabaseData}
             />
           </Form.Item>
           
@@ -4483,6 +4517,7 @@ const AdminInventory: React.FC = () => {
               placeholder="输入品吸笔记，按回车添加"
               style={{ width: '100%' }}
               tokenSeparators={[',']}
+              disabled={!!editing && !!cigarDatabaseData}
             />
           </Form.Item>
           
@@ -4526,6 +4561,7 @@ const AdminInventory: React.FC = () => {
               placeholder="输入标签，按回车添加"
               style={{ width: '100%' }}
               tokenSeparators={[',']}
+              disabled={!!editing && !!cigarDatabaseData}
             />
           </Form.Item>
         </Form>
