@@ -27,7 +27,8 @@ export const ADMIN_ROUTES = {
   ORDERS: '/admin/orders',
   TRANSACTIONS: '/admin/transactions',
   EVENTS: '/admin/events',
-  SETTINGS: '/admin/settings'
+  SETTINGS: '/admin/settings',
+  GEMINI_TESTER: '/admin/gemini-tester'
 } as const
 
 // 所有路由
