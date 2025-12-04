@@ -1136,19 +1136,18 @@ const PointsConfigPage: React.FC = () => {
                 const phone = ((u as any)?.profile?.phone || '').toLowerCase();
                 return !!kw && (name.includes(kw) || email.includes(kw) || phone.includes(kw));
               }}
-            >
-              {users
+              options={users
                 .sort((a, b) => {
                   const nameA = (a.displayName || a.email || a.id).toLowerCase();
                   const nameB = (b.displayName || b.email || b.id).toLowerCase();
                   return nameA.localeCompare(nameB);
                 })
-                .map(u => (
-                  <Select.Option key={u.id} value={u.id}>
-                    {u.displayName || u.email || u.id} {((u as any)?.profile?.phone ? `(${(u as any).profile.phone})` : '')}
-                  </Select.Option>
-                ))}
-            </Select>
+                .map(u => ({
+                  key: u.id,
+                  value: u.id,
+                  label: `${u.displayName || u.email || u.id} ${((u as any)?.profile?.phone ? `(${(u as any).profile.phone})` : '')}`
+                }))}
+            />
           </Form.Item>
 
           <Form.Item

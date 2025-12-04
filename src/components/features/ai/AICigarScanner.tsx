@@ -792,8 +792,7 @@ export const AICigarScanner: React.FC = () => {
                                         width: '100%',
                                         maxHeight: '200px',
                                         borderRadius: '8px',
-                                        overflow: 'hidden',
-                                        background: '#000'
+                                        overflow: 'hidden'
                                     }}>
                                         <img 
                                             src={displayImageUrl || ''} 
