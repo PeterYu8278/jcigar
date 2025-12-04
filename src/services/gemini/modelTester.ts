@@ -15,40 +15,73 @@ const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
 
 // 获取所有可用的 Gemini 模型（不过滤）
 export async function fetchAllGeminiModels(config: TestConfig): Promise<string[]> {
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    
-    const allModels: string[] = [];
-    
-    try {
-        // 获取 v1 模型
-        const v1Models = await genAI.listModels();
-        v1Models.forEach((model: any) => {
-            if (model.name?.includes('gemini')) {
-                allModels.push(model.name.replace('models/', ''));
-            }
-        });
-        
-        console.log(`[ModelTester] ✅ 获取到 ${allModels.length} 个模型`);
-        
-        // 根据配置过滤
-        let filteredModels = allModels;
-        
-        if (!config.includeExperimental) {
-            filteredModels = filteredModels.filter(m => !m.includes('-exp'));
-            console.log(`[ModelTester] ℹ️ 排除实验性模型，剩余 ${filteredModels.length} 个`);
-        }
-        
-        if (!config.includePreview) {
-            filteredModels = filteredModels.filter(m => !m.includes('-preview'));
-            console.log(`[ModelTester] ℹ️ 排除预览版模型，剩余 ${filteredModels.length} 个`);
-        }
-        
-        return filteredModels;
-        
-    } catch (error: any) {
-        console.error('[ModelTester] ❌ 获取模型列表失败:', error.message);
+    if (!GEMINI_API_KEY) {
+        console.error('[ModelTester] ❌ 未配置 GEMINI_API_KEY');
         return [];
     }
+    
+    // 尝试 v1 和 v1beta API，合并所有可用模型
+    const apiVersions = ['v1', 'v1beta'];
+    const allModels = new Set<string>();
+    
+    for (const version of apiVersions) {
+        try {
+            // 直接调用 REST API 获取模型列表
+            const response = await fetch(
+                `https://generativelanguage.googleapis.com/${version}/models?key=${GEMINI_API_KEY}`
+            );
+            
+            if (!response.ok) {
+                console.warn(`[ModelTester] ⚠️ ${version} API 请求失败: ${response.status}`);
+                continue;
+            }
+            
+            const data = await response.json();
+            const models = data.models || [];
+            
+            // 提取模型名称
+            const modelNames = models
+                .map((model: { name?: string; supportedGenerationMethods?: string[] }) => {
+                    const name = model.name || '';
+                    const modelName = name.replace(/^models\//, '');
+                    
+                    // 检查是否支持 generateContent
+                    const supportedMethods = model.supportedGenerationMethods || [];
+                    const supportsGenerateContent = supportedMethods.includes('generateContent');
+                    
+                    // 只返回 gemini 模型且支持 generateContent 的
+                    if (modelName && modelName.includes('gemini') && supportsGenerateContent) {
+                        return modelName;
+                    }
+                    return null;
+                })
+                .filter((name: string | null): name is string => name !== null);
+            
+            if (modelNames.length > 0) {
+                modelNames.forEach((model: string) => allModels.add(model));
+                console.log(`[ModelTester] ✅ 使用 ${version} API 找到 ${modelNames.length} 个模型`);
+            }
+        } catch (error: any) {
+            console.warn(`[ModelTester] ⚠️ ${version} API 调用失败:`, error.message);
+            continue;
+        }
+    }
+    
+    let filteredModels = Array.from(allModels);
+    console.log(`[ModelTester] ✅ 总共找到 ${filteredModels.length} 个可用模型`);
+    
+    // 根据配置过滤
+    if (!config.includeExperimental) {
+        filteredModels = filteredModels.filter(m => !m.includes('-exp'));
+        console.log(`[ModelTester] ℹ️ 排除实验性模型，剩余 ${filteredModels.length} 个`);
+    }
+    
+    if (!config.includePreview) {
+        filteredModels = filteredModels.filter(m => !m.includes('-preview'));
+        console.log(`[ModelTester] ℹ️ 排除预览版模型，剩余 ${filteredModels.length} 个`);
+    }
+    
+    return filteredModels;
 }
 
 // 将图片文件转换为 base64
