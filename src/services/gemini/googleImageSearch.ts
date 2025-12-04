@@ -337,7 +337,23 @@ export async function searchCigarImageWithGoogle(
     brand: string,
     name: string
 ): Promise<string | null> {
-    const query = `${brand} ${name}`;
+    // 智能构建 query，避免品牌名重复
+    let query: string;
+    
+    // 标准化处理：移除多余空格，统一大小写用于比较
+    const normalizedBrand = brand.trim().toLowerCase();
+    const normalizedName = name.trim().toLowerCase();
+    
+    // 检查 name 是否已经包含 brand
+    if (normalizedName.startsWith(normalizedBrand)) {
+        // name 已包含 brand，直接使用 name（保留原始大小写）
+        query = name.trim();
+        console.log(`[GoogleImageSearch] ℹ️ name 已包含 brand，使用完整名称: "${query}"`);
+    } else {
+        // name 不包含 brand，拼接两者
+        query = `${brand.trim()} ${name.trim()}`;
+        console.log(`[GoogleImageSearch] ℹ️ 拼接 brand + name: "${query}"`);
+    }
     
     if (!GOOGLE_SEARCH_API_KEY || !GOOGLE_SEARCH_ENGINE_ID) {
         console.warn(`[GoogleImageSearch] ⚠️ Google Search API 未配置，跳过搜索: "${query}"`);
