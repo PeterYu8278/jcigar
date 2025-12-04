@@ -1108,46 +1108,89 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               <Form.Item
                 label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>可用模型</span>}
                 name="geminiModels"
-                extra={<Text style={{ color: '#999', fontSize: '12px' }}>按住 Ctrl/Cmd 键可多选</Text>}
+                extra={
+                  <Text style={{ color: '#999', fontSize: '12px' }}>
+                    基于实测结果 (2025-12-04): 测试了27个模型，仅15个可用。
+                    ⭐推荐使用星级标注的模型。按住 Ctrl/Cmd 键可多选。
+                  </Text>
+                }
               >
                 <Select
                   mode="multiple"
-                  placeholder="选择 Gemini 模型"
+                  placeholder="选择 Gemini 模型（推荐前3个）"
                   allowClear
                   popupClassName="gemini-models-dropdown"
                   style={{
                     width: '100%',
                   }}
                   options={[
-                    // Gemini 2.x 系列（最新）
-                    { label: 'gemini-2.5-pro', value: 'gemini-2.5-pro' },
-                    { label: 'gemini-2.0-flash', value: 'gemini-2.0-flash' },
-                    { label: 'gemini-2.5-flash', value: 'gemini-2.5-flash' },
-                    { label: 'gemini-2.0-flash-lite', value: 'gemini-2.0-flash-lite' },
-                    { label: 'gemini-2.5-flash-lite', value: 'gemini-2.5-flash-lite' },
-                    { label: 'gemini-2.5-flash-tts', value: 'gemini-2.5-flash-tts' },
-                    { label: 'gemini-3-pro', value: 'gemini-3-pro' },
-                    // Gemini 2.x 实验性模型
-                    { label: 'gemini-2.0-flash-exp', value: 'gemini-2.0-flash-exp' },
-                    { label: 'gemini-2.0-flash-live', value: 'gemini-2.0-flash-live' },
-                    { label: 'gemini-2.5-flash-live', value: 'gemini-2.5-flash-live' },
-                    { label: 'gemini-2.5-flash-native-audio-dialog', value: 'gemini-2.5-flash-native-audio-dialog' },
-                    // Gemini 1.5 系列（稳定）
-                    { label: 'gemini-1.5-flash', value: 'gemini-1.5-flash' },
-                    { label: 'gemini-1.5-pro', value: 'gemini-1.5-pro' },
-                    { label: 'gemini-pro', value: 'gemini-pro' },
-                    // Gemma 系列
-                    { label: 'gemma-3-27b', value: 'gemma-3-27b' },
-                    { label: 'gemma-3-12b', value: 'gemma-3-12b' },
-                    { label: 'gemma-3-4b', value: 'gemma-3-4b' },
-                    { label: 'gemma-3-2b', value: 'gemma-3-2b' },
-                    { label: 'gemma-3-1b', value: 'gemma-3-1b' },
-                    // 其他模型
-                    { label: 'gemini-robotics-er-1.5-preview', value: 'gemini-robotics-er-1.5-preview' },
-                    { label: 'learnlm-2.0-flash-experimental', value: 'learnlm-2.0-flash-experimental' },
-                    // 保留旧版本（兼容性）
-                    { label: 'gemini-2.0-flash-001', value: 'gemini-2.0-flash-001' },
-                    { label: 'gemini-2.0-flash-lite-001', value: 'gemini-2.0-flash-lite-001' },
+                    // 🥇 最佳选择（100%成功率, 极快 1.8-2.2s）
+                    { 
+                      label: '⭐⭐⭐⭐⭐ gemini-flash-lite-latest (1.8s, 最佳推荐)', 
+                      value: 'gemini-flash-lite-latest' 
+                    },
+                    { 
+                      label: '⭐⭐⭐⭐⭐ gemini-2.5-flash-lite-preview-09-2025 (2.2s)', 
+                      value: 'gemini-2.5-flash-lite-preview-09-2025' 
+                    },
+                    
+                    // 🥈 优秀选择（100%成功率, 快速 3.5-9.7s）
+                    { 
+                      label: '⭐⭐⭐⭐⭐ gemini-2.0-flash-001 (3.5s)', 
+                      value: 'gemini-2.0-flash-001' 
+                    },
+                    { 
+                      label: '⭐⭐⭐⭐ gemini-2.0-flash (3.9s)', 
+                      value: 'gemini-2.0-flash' 
+                    },
+                    { 
+                      label: '⭐⭐⭐⭐ gemini-2.5-flash (9.7s)', 
+                      value: 'gemini-2.5-flash' 
+                    },
+                    
+                    // 🥉 稳定选择（100%成功率, 较慢 15-17s）
+                    { 
+                      label: '⭐⭐⭐⭐ gemini-pro-latest (15.5s)', 
+                      value: 'gemini-pro-latest' 
+                    },
+                    { 
+                      label: '⭐⭐⭐⭐ gemini-robotics-er-1.5-preview (16.7s)', 
+                      value: 'gemini-robotics-er-1.5-preview' 
+                    },
+                    
+                    // 备选方案（60-80%成功率）
+                    { 
+                      label: '⭐⭐⭐ gemini-2.5-flash-lite (60%成功率)', 
+                      value: 'gemini-2.5-flash-lite' 
+                    },
+                    { 
+                      label: '⭐⭐⭐ gemini-flash-latest (80%成功率)', 
+                      value: 'gemini-flash-latest' 
+                    },
+                    { 
+                      label: '⭐⭐⭐ gemini-2.0-flash-lite (60%成功率)', 
+                      value: 'gemini-2.0-flash-lite' 
+                    },
+                    { 
+                      label: '⭐⭐⭐ gemini-2.0-flash-lite-001 (40%成功率, 52.8s)', 
+                      value: 'gemini-2.0-flash-lite-001' 
+                    },
+                    { 
+                      label: '⭐⭐⭐ gemini-2.0-flash-lite-preview (60%成功率)', 
+                      value: 'gemini-2.0-flash-lite-preview' 
+                    },
+                    { 
+                      label: '⭐⭐⭐ gemini-2.5-pro (60%成功率, 每分钟限2次)', 
+                      value: 'gemini-2.5-pro' 
+                    },
+                    { 
+                      label: '⭐⭐⭐ gemini-2.5-flash-preview-09-2025 (60%成功率)', 
+                      value: 'gemini-2.5-flash-preview-09-2025' 
+                    },
+                    { 
+                      label: '⭐⭐⭐ gemini-2.0-flash-lite-preview-02-05 (80%成功率)', 
+                      value: 'gemini-2.0-flash-lite-preview-02-05' 
+                    },
                   ]}
                   dropdownStyle={{
                     background: 'rgba(26, 26, 26, 0.95)',
