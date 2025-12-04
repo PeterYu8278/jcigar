@@ -49,48 +49,6 @@ if (!API_KEY) {
 }
 
 const genAI = new GoogleGenerativeAI(API_KEY || "");
-
-/**
- * 完整的 Gemini 模型列表（按推荐优先级排序）
- * 包含所有可用的 Gemini 和 Gemma 模型
- */
-const ALL_GEMINI_MODELS = [
-    // Gemini 2.x 系列（最新）
-    "gemini-2.5-pro",
-    "gemini-2.0-flash",
-    "gemini-2.5-flash",
-    "gemini-2.0-flash-lite",
-    "gemini-2.5-flash-lite",
-    "gemini-2.5-flash-tts",
-    "gemini-3-pro",
-    
-    // Gemini 2.x 实验性模型
-    "gemini-2.0-flash-exp",
-    "gemini-2.0-flash-live",
-    "gemini-2.5-flash-live",
-    "gemini-2.5-flash-native-audio-dialog",
-    
-    // Gemini 1.5 系列（稳定）
-    "gemini-1.5-flash",
-    "gemini-1.5-pro",
-    "gemini-pro",
-    
-    // Gemma 系列
-    "gemma-3-27b",
-    "gemma-3-12b",
-    "gemma-3-4b",
-    "gemma-3-2b",
-    "gemma-3-1b",
-    
-    // 其他模型
-    "gemini-robotics-er-1.5-preview",
-    "learnlm-2.0-flash-experimental",
-];
-
-/**
- * 默认模型列表（作为回退，优先使用稳定且快速的模型）
- * 注意：智能过滤逻辑会自动跳过不可用的模型，所以即使某些模型暂时不可用也不会影响功能
- */
 /**
  * 默认模型列表（基于 Gemini 模型测试系统实测结果）
  * 
