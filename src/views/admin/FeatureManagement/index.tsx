@@ -1198,6 +1198,33 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                   }}
                 />
               </Form.Item>
+              
+              {/* 应用推荐配置按钮 */}
+              <div style={{ marginTop: 16, marginBottom: 16 }}>
+                <Button
+                  type="dashed"
+                  onClick={() => {
+                    const recommendedModels = [
+                      'gemini-flash-lite-latest',
+                      'gemini-2.5-flash-lite-preview-09-2025',
+                      'gemini-2.0-flash-001',
+                      'gemini-2.0-flash',
+                      'gemini-2.5-flash'
+                    ];
+                    appConfigForm.setFieldsValue({ geminiModels: recommendedModels });
+                    message.success('已应用推荐配置（Top 5 模型）');
+                  }}
+                  style={{
+                    borderColor: 'rgba(244, 175, 37, 0.5)',
+                    color: '#f4af25'
+                  }}
+                >
+                  ⭐ 应用推荐配置（Top 5 模型）
+                </Button>
+                <Text style={{ color: '#999', fontSize: '12px', marginLeft: 12 }}>
+                  将自动选择测试结果中表现最佳的5个模型
+                </Text>
+              </div>
             </div>
 
             {/* 颜色主题管理 */}
