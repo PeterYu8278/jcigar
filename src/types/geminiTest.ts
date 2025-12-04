@@ -61,6 +61,29 @@ export interface CigarDataStatistics {
     };
 }
 
+// 值频率统计
+export interface ValueFrequency {
+    value: string;       // 具体值（如 "古巴"、"Maduro"）
+    count: number;       // 出现次数
+    percentage: number;  // 占比（相对于总响应数）
+    examples?: string[]; // 原始示例
+}
+
+// 字段值统计
+export interface FieldValueStatistics {
+    fieldName: string;          // 字段名（如 "origin"）
+    displayName: string;        // 显示名称（如 "产地"）
+    fieldType: 'string' | 'array';  // 字段类型
+    totalResponses: number;     // 总响应数
+    nonEmptyCount: number;      // 非空响应数
+    emptyCount: number;         // 空响应数
+    fillRate: number;           // 填充率（百分比）
+    values: ValueFrequency[];   // 具体值统计（按频率降序）
+    totalValues?: number;       // 数组字段：总值数量
+    avgValuesPerResponse?: number; // 数组字段：平均每次返回的值数量
+    consistency: number;        // 一致性评分（0-100，最高频率值占比）
+}
+
 // 单个模型测试结果
 export interface ModelTestResult {
     modelName: string;
@@ -73,10 +96,14 @@ export interface ModelTestResult {
     avgResponseTime: number;
     minResponseTime: number;
     maxResponseTime: number;
+    responses: any[];  // 保存所有成功响应的原始数据
     dataQuality: {
         avgFieldCount: number;
         avgConfidence: number;
         bestFields: string[];  // 最常返回的字段
+    };
+    fieldValueStats: {  // 详细字段值统计
+        [fieldName: string]: FieldValueStatistics;
     };
     isReliable: boolean; // 至少1次成功
     reliabilityScore: number; // 0-100

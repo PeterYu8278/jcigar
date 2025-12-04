@@ -8,8 +8,126 @@ import type {
     CigarDataStatistics,
     FieldOccurrence,
     TestReport,
-    TestConfig
+    TestConfig,
+    FieldValueStatistics,
+    ValueFrequency
 } from '@/types/geminiTest';
+
+// 字段显示名称映射
+const FIELD_DISPLAY_NAMES: { [key: string]: string } = {
+    origin: '产地',
+    wrapper: '茄衣',
+    binder: '茄套',
+    filler: '茄芯',
+    flavorProfile: '风味特征',
+    footTasteNotes: '头段品吸笔记',
+    bodyTasteNotes: '中段品吸笔记',
+    headTasteNotes: '尾段品吸笔记',
+    strength: '强度',
+    size: '尺寸',
+    description: '描述',
+    rating: '评分',
+    brandDescription: '品牌描述'
+};
+
+// 分析单个字段的值分布
+function analyzeFieldValues(
+    responses: any[],
+    fieldName: string
+): FieldValueStatistics {
+    const valueCounts = new Map<string, number>();
+    let nonEmptyCount = 0;
+    let totalValues = 0;  // 用于数组字段
+    
+    responses.forEach(response => {
+        const value = response[fieldName];
+        
+        if (value) {
+            if (Array.isArray(value)) {
+                // 数组字段（如 flavorProfile, tastingNotes）
+                if (value.length > 0) {
+                    nonEmptyCount++;
+                    value.forEach(v => {
+                        if (v && typeof v === 'string' && v.trim()) {
+                            const normalized = v.trim();
+                            valueCounts.set(normalized, (valueCounts.get(normalized) || 0) + 1);
+                            totalValues++;
+                        }
+                    });
+                }
+            } else {
+                // 单值字段（如 origin, wrapper）
+                if (typeof value === 'string' && value.trim()) {
+                    const normalized = value.trim();
+                    valueCounts.set(normalized, (valueCounts.get(normalized) || 0) + 1);
+                    nonEmptyCount++;
+                } else if (typeof value === 'number') {
+                    // 数字字段（如 rating）
+                    valueCounts.set(String(value), (valueCounts.get(String(value)) || 0) + 1);
+                    nonEmptyCount++;
+                }
+            }
+        }
+    });
+    
+    // 转换为频率数组并按出现次数降序排序
+    const values: ValueFrequency[] = Array.from(valueCounts.entries())
+        .map(([value, count]) => ({
+            value,
+            count,
+            percentage: (count / responses.length) * 100
+        }))
+        .sort((a, b) => b.count - a.count);
+    
+    // 计算一致性评分（最高频率值的占比）
+    const consistency = values.length > 0 ? values[0].percentage : 0;
+    
+    // 判断字段类型
+    const isArrayField = responses.some(r => Array.isArray(r[fieldName]));
+    
+    const stats: FieldValueStatistics = {
+        fieldName,
+        displayName: FIELD_DISPLAY_NAMES[fieldName] || fieldName,
+        fieldType: isArrayField ? 'array' : 'string',
+        totalResponses: responses.length,
+        nonEmptyCount,
+        emptyCount: responses.length - nonEmptyCount,
+        fillRate: (nonEmptyCount / responses.length) * 100,
+        values,
+        consistency
+    };
+    
+    // 数组字段额外统计
+    if (isArrayField && nonEmptyCount > 0) {
+        stats.totalValues = totalValues;
+        stats.avgValuesPerResponse = totalValues / nonEmptyCount;
+    }
+    
+    return stats;
+}
+
+// 计算单个模型的所有字段值统计
+export function calculateFieldValueStatsForModel(responses: any[]): {
+    [fieldName: string]: FieldValueStatistics;
+} {
+    if (responses.length === 0) {
+        return {};
+    }
+    
+    const fieldsToAnalyze = [
+        'origin', 'wrapper', 'binder', 'filler',
+        'flavorProfile', 'footTasteNotes', 'bodyTasteNotes', 'headTasteNotes',
+        'strength', 'size'
+    ];
+    
+    const stats: { [key: string]: FieldValueStatistics } = {};
+    
+    fieldsToAnalyze.forEach(field => {
+        stats[field] = analyzeFieldValues(responses, field);
+    });
+    
+    return stats;
+}
 
 // 初始化雪茄数据统计
 export function initializeCigarDataStatistics(): CigarDataStatistics {
@@ -226,6 +344,88 @@ function generateRecommendations(
     return recommendations;
 }
 
+// 打印单个模型的字段值统计
+function printModelFieldValueStats(modelResult: ModelTestResult, rank: number) {
+    console.group(`${rank}. 🤖 ${modelResult.modelName}`);
+    console.log(`⚡ 响应: ${modelResult.avgResponseTime.toFixed(0)}ms | ✅ 成功: ${modelResult.successes}/${modelResult.attempts} | 🏆 可靠性: ${modelResult.reliabilityScore}分`);
+    console.log('');
+    
+    // 重点字段：产地、茄衣、茄套、茄芯、风味、品吸、强度
+    const keyFields = ['origin', 'wrapper', 'binder', 'filler', 'flavorProfile', 
+                       'footTasteNotes', 'bodyTasteNotes', 'headTasteNotes', 'strength'];
+    
+    keyFields.forEach(fieldName => {
+        const stats = modelResult.fieldValueStats[fieldName];
+        if (!stats) return;
+        
+        // 字段标题
+        const icon = {
+            origin: '🌍',
+            wrapper: '🍂',
+            binder: '🌿',
+            filler: '🌾',
+            flavorProfile: '🎨',
+            footTasteNotes: '👃',
+            bodyTasteNotes: '👃',
+            headTasteNotes: '👃',
+            strength: '💪'
+        }[fieldName] || '📋';
+        
+        console.log(`${icon} ${stats.displayName} (${fieldName})`);
+        console.log(`   填充率: ${stats.fillRate.toFixed(0)}% (${stats.nonEmptyCount}/${stats.totalResponses})`);
+        
+        if (stats.fieldType === 'array' && stats.totalValues) {
+            console.log(`   总值数: ${stats.totalValues}个, 平均每次: ${stats.avgValuesPerResponse?.toFixed(1)}个`);
+        }
+        
+        if (stats.values.length > 0) {
+            // 只显示前10个最常见的值
+            const topValues = stats.values.slice(0, 10);
+            const tableData: any = {};
+            
+            topValues.forEach(v => {
+                tableData[v.value] = {
+                    次数: `x${v.count}`,
+                    占比: `${v.percentage.toFixed(1)}%`
+                };
+            });
+            
+            console.table(tableData);
+        } else {
+            console.log('   (无数据)');
+        }
+        
+        // 添加未返回的统计
+        if (stats.emptyCount > 0) {
+            console.log(`   ⚠️ 未返回: ${stats.emptyCount}次 (${(stats.emptyCount / stats.totalResponses * 100).toFixed(0)}%)`);
+        }
+        
+        console.log('');
+    });
+    
+    // 数据质量总结
+    const highQualityFields = Object.values(modelResult.fieldValueStats).filter(s => s.fillRate >= 80);
+    const mediumQualityFields = Object.values(modelResult.fieldValueStats).filter(s => s.fillRate >= 50 && s.fillRate < 80);
+    const lowQualityFields = Object.values(modelResult.fieldValueStats).filter(s => s.fillRate < 50);
+    
+    console.log('💡 数据质量总结:');
+    console.log(`   ✅ 高质量字段 (填充率≥80%): ${highQualityFields.length}个`);
+    if (highQualityFields.length > 0) {
+        console.log(`      ${highQualityFields.map(f => f.displayName).join(', ')}`);
+    }
+    console.log(`   ⚠️ 中等质量字段 (填充率50-80%): ${mediumQualityFields.length}个`);
+    if (mediumQualityFields.length > 0) {
+        console.log(`      ${mediumQualityFields.map(f => f.displayName).join(', ')}`);
+    }
+    if (lowQualityFields.length > 0) {
+        console.log(`   ❌ 低质量字段 (填充率<50%): ${lowQualityFields.length}个`);
+        console.log(`      ${lowQualityFields.map(f => f.displayName).join(', ')}`);
+    }
+    
+    console.groupEnd();
+    console.log('');
+}
+
 // 打印控制台统计报告
 export function printConsoleReport(report: TestReport) {
     console.log('\n');
@@ -332,5 +532,20 @@ export function printConsoleReport(report: TestReport) {
     
     console.log('');
     console.log('═'.repeat(80));
+    
+    // 5. 详细字段值统计（仅显示可用模型）
+    const reliableModels = report.modelResults.filter(r => r.isReliable && r.responses.length > 0);
+    
+    if (reliableModels.length > 0) {
+        console.log('');
+        console.log('═'.repeat(80));
+        console.log('📊 雪茄数据详细值统计（各模型）');
+        console.log('═'.repeat(80));
+        console.log('');
+        
+        reliableModels.forEach((modelResult, index) => {
+            printModelFieldValueStats(modelResult, index + 1);
+        });
+    }
 }
 

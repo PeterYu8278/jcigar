@@ -8,8 +8,10 @@ import type {
     ModelTestResult, 
     TestConfig, 
     ErrorDetail,
-    CigarDataStatistics 
+    CigarDataStatistics,
+    FieldValueStatistics
 } from '@/types/geminiTest';
+import { calculateFieldValueStatsForModel } from './modelStatistics';
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
 
@@ -214,11 +216,13 @@ export async function testSingleModel(
         avgResponseTime: 0,
         minResponseTime: Infinity,
         maxResponseTime: 0,
+        responses: [],  // 保存所有成功响应
         dataQuality: {
             avgFieldCount: 0,
             avgConfidence: 0,
             bestFields: []
         },
+        fieldValueStats: {},  // 字段值统计
         isReliable: false,
         reliabilityScore: 0,
         recommendation: 'not_recommended'
@@ -241,6 +245,9 @@ export async function testSingleModel(
         
         if (testResult.success && testResult.data) {
             result.successes++;
+            
+            // 保存成功的响应数据
+            result.responses.push(testResult.data);
             
             // 统计字段
             const fields = Object.keys(testResult.data);
@@ -317,6 +324,12 @@ export async function testSingleModel(
         result.recommendation = 'use_with_caution';
     } else {
         result.recommendation = 'not_recommended';
+    }
+    
+    // 计算字段值统计（如果有成功的响应）
+    if (result.responses.length > 0) {
+        result.fieldValueStats = calculateFieldValueStatsForModel(result.responses);
+        console.log(`[ModelTester] 📊 已统计 ${Object.keys(result.fieldValueStats).length} 个字段的值分布`);
     }
     
     console.log(`[ModelTester] 📊 测试完成 - 成功率: ${(successRate * 100).toFixed(1)}%, 可靠性评分: ${result.reliabilityScore}`);
