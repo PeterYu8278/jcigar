@@ -381,18 +381,42 @@ Analyze this cigar image and provide detailed information.
     
     IMPORTANT: You should reference information from authoritative cigar websites and databases to ensure accuracy. 
     Consider searching and referencing information from these reputable sources:
+    
+    AUTHORITATIVE REVIEW SITES:
     - https://www.cigaraficionado.com/ and https://www.cigaraficionado.com/ratingsandreviews
+    - https://halfwheel.com/ and https://halfwheel.com/cigar-reviews/
     - https://cigar-coop.com/
     - https://cigardojo.com/ and https://cigardojo.com/cigar-review-archives/
     - https://cigarsratings.com/
-    - https://halfwheel.com/ and https://halfwheel.com/cigar-reviews/
-    - https://www.cigaraficionado.com/ and https://www.cigaraficionado.com/ratingsandreviews
     - https://www.cigarinspector.com/
     - https://www.cigarjournal.com/ and https://www.cigarjournal.com/ratings-and-awards/ratings/
-    - https://www.famous-smoke.com/ and https://www.famous-smoke.com/cigaradvisor
-    - https://www.habanos.com/en/ (for Cuban cigars)
     - https://www.leafenthusiast.com/
+    
+    MAJOR US RETAILERS:
+    - https://www.famous-smoke.com/ and https://www.famous-smoke.com/cigaradvisor
+    - https://www.holts.com/
+    - https://www.cigarsinternational.com/
+    - https://www.jrcigars.com/
     - https://www.neptunecigar.com/ and https://www.neptunecigar.com/cigars
+    - https://www.atlanticcigar.com/
+    - https://www.cigarplace.biz/
+    - https://www.cigarbus.com/
+    - https://www.cigarone.com/
+    - https://www.puroexpress.com/
+    - https://www.70cigars.com/
+    
+    INTERNATIONAL RETAILERS:
+    - https://www.infifon.com/ (Europe)
+    - https://www.lacasadelhabano.com/ (Official Habanos distributor)
+    - https://www.cgarsltd.co.uk/ (UK)
+    - https://www.lacasadeltabaco.com/ (Spain)
+    - https://www.hyhpuro.com/ (Asia)
+    - https://www.timecigar.com/ (Asia)
+    
+    CUBAN CIGAR SPECIALISTS:
+    - https://www.habanos.com/en/ (Official Cuban cigar website)
+    - https://www.cohcigars.com/
+    - https://www.topcubans.com/
     
     Use information from these sources to provide accurate details about the cigar's specifications, ratings, reviews, and characteristics.
     
@@ -873,18 +897,34 @@ Find a high-quality, publicly accessible image URL for "${brand} ${name}" cigar.
 PRIORITY 1: Official Manufacturer Websites (Most Reliable)
 - Brand official website: [brand].com
 - Parent company websites (e.g., generaldcigar.com, scandinaviantobaccogroup.com)
+- Official Cuban cigar website: habanos.com (for Cuban brands)
 - These usually have stable, high-quality product images
 
 PRIORITY 2: Major Retailers with Reliable CDNs
-✅ RECOMMENDED (Low 404 rate):
+✅ HIGHLY RECOMMENDED (Low 404 rate):
 - famous-smoke.com (simple URLs, very reliable)
 - holts.com (stable CDN)
 - cigarsinternational.com (good uptime)
 - jrcigars.com (reliable)
+- atlanticcigar.com (stable CDN)
+- cigarone.com (good uptime)
+
+✅ RECOMMENDED (Generally reliable):
+- puroexpress.com
+- cigarbus.com
+- 70cigars.com
+- infifon.com
+- hyhpuro.com
+- timecigar.com
 
 ⚠️ USE WITH CAUTION (Medium 404 rate):
 - neptunecigar.com (sometimes restructures URLs)
-- cigarplace.com (cache URLs often expire)
+- cigarplace.biz (cache URLs may expire)
+- lacasadelhabano.com (may have complex URLs)
+- cgarsltd.co.uk (UK site, may vary)
+- lacasadeltabaco.com (may restructure)
+- cohcigars.com (Cuban specialist, verify URLs)
+- topcubans.com (Cuban specialist, verify URLs)
 
 ❌ AVOID (High 404 rate):
 - Small retailer websites
@@ -917,6 +957,9 @@ GOOD URLs (Simple, Stable):
 ✅ https://static.holts.com/products/cohiba-robusto.png
 ✅ https://cdn.cigarsinternational.com/cohiba-robusto.jpg
 ✅ https://images.jrcigars.com/cohiba-robusto.jpg
+✅ https://www.atlanticcigar.com/images/cohiba-robusto.jpg
+✅ https://www.habanos.com/images/products/cohiba-robusto.jpg
+✅ https://cdn.cigarone.com/products/cohiba-robusto.png
 
 BAD URLs (Complex, Likely to 404):
 ❌ https://site.com/cache/abc123/resize/image.jpg
