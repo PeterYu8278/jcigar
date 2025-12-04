@@ -164,6 +164,12 @@ export async function searchGoogleImages(
                 let score = 0;
                 const url = item.url.toLowerCase();
                 
+                // 0. 首选网站加分（60分，最高优先级）
+                if (url.includes('cohcigars.com')) {
+                    score += 60;
+                    console.log(`[GoogleImageSearch]   🌟 首选网站 cohcigars.com: +60分`);
+                }
+                
                 // 1. 可信网站加分（40分）
                 const trustedDomains = [
                     // 权威评测网站
