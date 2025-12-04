@@ -14,11 +14,6 @@ if (import.meta.env.DEV) {
   import('./services/firebase/messaging').catch(() => {
     // 静默失败，不影响应用启动
   });
-  
-  // 预加载 Gemini 模型测试工具
-  import('./utils/geminiTestRunner').catch(() => {
-    // 静默失败，不影响应用启动
-  });
 }
 
 // 初始化移动端调试工具（仅在移动设备上显示）

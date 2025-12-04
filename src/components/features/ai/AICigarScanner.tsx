@@ -724,9 +724,9 @@ export const AICigarScanner: React.FC = () => {
             })() && (
                 <>
                     {/* 截图容器：包含图片和识别结果（不包括按钮） */}
-                    <div ref={screenshotContainerRef} style={{ width: '100%', padding: 8 }}>
+                    <div ref={screenshotContainerRef} style={{ width: '100%'}}>
                         <Card 
-                            style={{ width: '100%', marginTop: '16px', padding: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid #333' }}
+                            style={{ width: '100%', marginTop: '16px', padding: 0, background: 'rgba(255,255,255,0.05)', border: '1px solid #333' }}
                         >
                             <Space direction="vertical" style={{ width: 'auto' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>

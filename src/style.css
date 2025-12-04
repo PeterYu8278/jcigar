@@ -119,7 +119,7 @@ a:hover {
 
 /* 调整 cigar-card 内部的 ant-card-body 间距 */
 .cigar-card .ant-card-body {
-  padding: 16px;  /* 默认是 24px，这里改为 16px */
+  padding: 16px !important;  /* 默认是 24px，这里改为 16px */
   margin: 0;      /* 确保没有外边距 */
 }
 
