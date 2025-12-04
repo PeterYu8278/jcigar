@@ -696,8 +696,8 @@ export const AICigarScanner: React.FC = () => {
             ) : null}
 
             {/* 全屏加载动画 */}
-            {analyzing && (
-                <div style={{ 
+                    {analyzing && (
+                        <div style={{
                     position: 'fixed',
                     top: 0,
                     left: 0,
@@ -710,7 +710,7 @@ export const AICigarScanner: React.FC = () => {
                     alignItems: 'center', 
                     justifyContent: 'center',
                     zIndex: 9999
-                }}>
+                        }}>
                     <Spin indicator={<LoadingOutlined style={{ fontSize: 64, color: '#ffd700' }} spin />} />
                     <Text style={{ color: '#fff', marginTop: 24, fontSize: '18px', fontWeight: 500 }}>
                         {imgSrc ? 'AI 正在识别雪茄...' : 'AI 正在搜索雪茄信息...'}
@@ -724,9 +724,9 @@ export const AICigarScanner: React.FC = () => {
             })() && (
                 <>
                     {/* 截图容器：包含图片和识别结果（不包括按钮） */}
-                    <div ref={screenshotContainerRef} style={{ width: '100%' }}>
+                    <div ref={screenshotContainerRef} style={{ width: '100%', padding: 8 }}>
                         <Card 
-                            style={{ width: '100%', marginTop: '16px', padding: 0, background: 'rgba(255,255,255,0.05)', border: '1px solid #333' }}
+                            style={{ width: '100%', marginTop: '16px', padding: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid #333' }}
                         >
                             <Space direction="vertical" style={{ width: 'auto' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
