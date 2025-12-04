@@ -63,6 +63,9 @@ export default function GeminiModelTester() {
     const [isRunning, setIsRunning] = useState(false);
     const startTimeRef = useRef<number>(0);
     
+    // 数据统计选择
+    const [selectedModelForStats, setSelectedModelForStats] = useState<string>('');
+    
     // 文件上传处理
     const handleFileChange = (info: any) => {
         const file = info.file.originFileObj || info.file;
@@ -470,6 +473,132 @@ export default function GeminiModelTester() {
                                         pagination={{ pageSize: 15 }}
                                         size="small"
                                     />
+                                </TabPane>
+                                
+                                <TabPane tab="数据统计" key="data-stats">
+                                    <div style={{ padding: '16px' }}>
+                                        <Space direction="vertical" style={{ width: '100%' }} size="large">
+                                            {/* 模型选择 */}
+                                            <div>
+                                                <Text strong style={{ marginRight: 8 }}>选择模型:</Text>
+                                                <Select
+                                                    style={{ width: 400 }}
+                                                    placeholder="选择模型查看详细数据统计"
+                                                    value={selectedModelForStats || undefined}
+                                                    onChange={(value) => setSelectedModelForStats(value)}
+                                                    options={report.modelResults
+                                                        .filter(r => r.isReliable && r.responses.length > 0)
+                                                        .map(r => ({
+                                                            label: `${r.modelName} (${r.successes}/${r.attempts}次成功)`,
+                                                            value: r.modelName
+                                                        }))
+                                                    }
+                                                />
+                                            </div>
+                                            
+                                            {/* 显示选中模型的详细统计 */}
+                                            {selectedModelForStats && (() => {
+                                                const modelData = report.modelResults.find(r => r.modelName === selectedModelForStats);
+                                                if (!modelData || !modelData.fieldValueStats) return null;
+                                                
+                                                const keyFields = [
+                                                    'origin', 'wrapper', 'binder', 'filler', 
+                                                    'flavorProfile', 'footTasteNotes', 'bodyTasteNotes', 'headTasteNotes', 
+                                                    'strength', 'size'
+                                                ];
+                                                
+                                                return (
+                                                    <div>
+                                                        {keyFields.map(fieldName => {
+                                                            const fieldStats = modelData.fieldValueStats[fieldName];
+                                                            if (!fieldStats) return null;
+                                                            
+                                                            const icon = {
+                                                                origin: '🌍',
+                                                                wrapper: '🍂',
+                                                                binder: '🌿',
+                                                                filler: '🌾',
+                                                                flavorProfile: '🎨',
+                                                                footTasteNotes: '👃',
+                                                                bodyTasteNotes: '👃',
+                                                                headTasteNotes: '👃',
+                                                                strength: '💪',
+                                                                size: '📏'
+                                                            }[fieldName] || '📋';
+                                                            
+                                                            return (
+                                                                <Card 
+                                                                    key={fieldName}
+                                                                    size="small"
+                                                                    title={
+                                                                        <span>
+                                                                            {icon} {fieldStats.displayName} ({fieldName})
+                                                                        </span>
+                                                                    }
+                                                                    extra={
+                                                                        <Tag color={fieldStats.fillRate >= 80 ? 'green' : fieldStats.fillRate >= 50 ? 'orange' : 'red'}>
+                                                                            填充率: {fieldStats.fillRate.toFixed(0)}% ({fieldStats.nonEmptyCount}/{fieldStats.totalResponses})
+                                                                        </Tag>
+                                                                    }
+                                                                    style={{ marginBottom: 16 }}
+                                                                >
+                                                                    {fieldStats.fieldType === 'array' && fieldStats.totalValues && (
+                                                                        <Paragraph type="secondary" style={{ marginBottom: 8 }}>
+                                                                            总计: {fieldStats.totalValues}个值, 平均每次: {fieldStats.avgValuesPerResponse?.toFixed(1)}个
+                                                                        </Paragraph>
+                                                                    )}
+                                                                    
+                                                                    {fieldStats.values.length > 0 ? (
+                                                                        <Table
+                                                                            dataSource={fieldStats.values.slice(0, 10)}
+                                                                            columns={[
+                                                                                {
+                                                                                    title: '值',
+                                                                                    dataIndex: 'value',
+                                                                                    key: 'value'
+                                                                                },
+                                                                                {
+                                                                                    title: '次数',
+                                                                                    dataIndex: 'count',
+                                                                                    key: 'count',
+                                                                                    render: (count) => `x${count}`
+                                                                                },
+                                                                                {
+                                                                                    title: '占比',
+                                                                                    dataIndex: 'percentage',
+                                                                                    key: 'percentage',
+                                                                                    render: (percentage) => (
+                                                                                        <div>
+                                                                                            <Progress 
+                                                                                                percent={percentage} 
+                                                                                                size="small"
+                                                                                                format={(p) => `${p?.toFixed(1)}%`}
+                                                                                            />
+                                                                                        </div>
+                                                                                    )
+                                                                                }
+                                                                            ]}
+                                                                            pagination={false}
+                                                                            size="small"
+                                                                            rowKey="value"
+                                                                        />
+                                                                    ) : (
+                                                                        <Text type="secondary">(无数据)</Text>
+                                                                    )}
+                                                                    
+                                                                    {fieldStats.emptyCount > 0 && (
+                                                                        <Paragraph type="warning" style={{ marginTop: 8 }}>
+                                                                            ⚠️ 未返回: {fieldStats.emptyCount}次 ({(fieldStats.emptyCount / fieldStats.totalResponses * 100).toFixed(0)}%)
+                                                                        </Paragraph>
+                                                                    )}
+                                                                </Card>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                );
+                                            })()}
+                                        </Space>
+                                    </div>
                                 </TabPane>
                                 
                                 <TabPane tab="优化建议" key="recommendations">
