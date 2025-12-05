@@ -1,7 +1,7 @@
 // 库存管理页面
 import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Table, Button, Tag, Space, Typography, Input, Select, Modal, Form, InputNumber, message, Dropdown, Checkbox, Upload, Row, Col, App, Divider } from 'antd'
+import { Table, Button, Tag, Space, Typography, Input, Select, Modal, Form, InputNumber, message, Dropdown, Checkbox, Upload, Row, Col, App, Divider, AutoComplete } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, WarningOutlined, UploadOutlined, DownloadOutlined, MinusCircleOutlined, FilePdfOutlined, FileImageOutlined, EyeOutlined, ThunderboltOutlined, LoadingOutlined } from '@ant-design/icons'
 import type { Cigar, Brand, InboundOrder, OutboundOrder, InventoryMovement, Event } from '../../../types'
 import type { UploadFile } from 'antd'
@@ -12,6 +12,9 @@ import { useCloudinary } from '../../../hooks/useCloudinary'
 import { analyzeCigarByName } from '../../../services/gemini/cigarRecognition'
 import { CigarRatingBadge } from '../../../components/common/CigarRatingBadge'
 import { getAggregatedCigarData, saveRecognitionToCigarDatabase, type AggregatedCigarData } from '../../../services/cigar/cigarDataAggregation'
+import { collection, getDocs } from 'firebase/firestore'
+import { db } from '../../../config/firebase'
+import { GLOBAL_COLLECTIONS } from '../../../config/globalCollections'
 
 const { Title } = Typography
 const { Search } = Input
@@ -52,6 +55,7 @@ const AdminInventory: React.FC = () => {
   const [aiRecognizing, setAiRecognizing] = useState(false) // AI识别状态
   const [aiRating, setAiRating] = useState<number | null>(null) // AI识别的评分
   const [cigarDatabaseData, setCigarDatabaseData] = useState<AggregatedCigarData | null>(null) // 从 cigar_database 读取的数据
+  const [cigarDatabaseOptions, setCigarDatabaseOptions] = useState<string[]>([]) // cigar_database 产品名称列表
   const [inModalOpen, setInModalOpen] = useState(false)
   const [inStatsOpen, setInStatsOpen] = useState(false)
   const [outStatsOpen, setOutStatsOpen] = useState(false)
@@ -132,6 +136,24 @@ const AdminInventory: React.FC = () => {
     stockStatus: true,
     action: true,
   })
+
+  // 加载 cigar_database 产品名称列表
+  useEffect(() => {
+    const loadCigarDatabaseOptions = async () => {
+      try {
+        const cigarDbRef = collection(db, GLOBAL_COLLECTIONS.CIGAR_DATABASE);
+        const snapshot = await getDocs(cigarDbRef);
+        const productNames = snapshot.docs
+          .map(doc => doc.data().productName as string)
+          .filter(name => name && name.trim())
+          .sort();
+        setCigarDatabaseOptions(productNames);
+      } catch (error) {
+        // Silently fail
+      }
+    };
+    loadCigarDatabaseOptions();
+  }, []);
 
   useEffect(() => {
     ;(async () => {
@@ -4149,12 +4171,54 @@ const AdminInventory: React.FC = () => {
             rules={[{ required: true, message: t('common.pleaseInputName') }]}
             style={{ marginBottom: 0 }}
           >
-            <Input 
-              onBlur={async (e) => {
+            <AutoComplete
+              options={cigarDatabaseOptions.map(name => ({ value: name, label: name }))}
+              filterOption={(inputValue, option) =>
+                option?.value.toLowerCase().includes(inputValue.toLowerCase()) || false
+              }
+              onSelect={async (value: string) => {
+                if (!value || editing) return; // 只在创建模式下自动查询
+                
+                // 用户选择了下拉选项，从 cigar_database 查询数据
+                try {
+                  const aggregatedData = await getAggregatedCigarData(value);
+                  
+                  if (aggregatedData) {
+                    setCigarDatabaseData(aggregatedData);
+                    
+                    // 自动填充表单字段
+                    const updates: any = {};
+                    
+                    if (aggregatedData.brand) updates.brand = aggregatedData.brand;
+                    if (aggregatedData.origin) updates.origin = aggregatedData.origin;
+                    if (aggregatedData.strength) updates.strength = aggregatedData.strength;
+                    if (aggregatedData.description) updates.description = aggregatedData.description;
+                    if (aggregatedData.wrappers?.[0]?.value) updates.wrapper = aggregatedData.wrappers[0].value;
+                    if (aggregatedData.binders?.[0]?.value) updates.binder = aggregatedData.binders[0].value;
+                    if (aggregatedData.fillers?.[0]?.value) updates.filler = aggregatedData.fillers[0].value;
+                    if (aggregatedData.footTasteNotes?.length) updates.footTasteNotes = aggregatedData.footTasteNotes.map(item => item.value);
+                    if (aggregatedData.bodyTasteNotes?.length) updates.bodyTasteNotes = aggregatedData.bodyTasteNotes.map(item => item.value);
+                    if (aggregatedData.headTasteNotes?.length) updates.headTasteNotes = aggregatedData.headTasteNotes.map(item => item.value);
+                    if (aggregatedData.flavorProfile?.length) updates.tags = aggregatedData.flavorProfile.map(item => item.value);
+                    
+                    form.setFieldsValue(updates);
+                    
+                    if (aggregatedData.rating !== null && aggregatedData.rating !== undefined) {
+                      setAiRating(aggregatedData.rating);
+                    }
+                    
+                    message.success(`已从数据库加载 "${value}" 的信息（基于 ${aggregatedData.totalRecognitions} 次AI识别）`);
+                  }
+                } catch (error) {
+                  // 查询失败，允许手动输入
+                  setCigarDatabaseData(null);
+                }
+              }}
+              onBlur={async (e: any) => {
                 const productName = e.target.value?.trim();
                 if (!productName || editing) return; // 只在创建模式下自动查询
                 
-                // 尝试从 cigar_database 查询数据
+                // 用户手动输入后失焦，从 cigar_database 查询数据
                 try {
                   const aggregatedData = await getAggregatedCigarData(productName);
                   
@@ -4192,6 +4256,7 @@ const AdminInventory: React.FC = () => {
                   setCigarDatabaseData(null);
                 }
               }}
+              placeholder="输入或选择产品名称"
             />
           </Form.Item>
           <Form.Item >
