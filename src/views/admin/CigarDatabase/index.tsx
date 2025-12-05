@@ -25,7 +25,8 @@ import {
   SearchOutlined,
   ImportOutlined,
   CheckCircleOutlined,
-  CloseCircleOutlined
+  CloseCircleOutlined,
+  EyeOutlined
 } from '@ant-design/icons';
 import {
   collection,
@@ -42,23 +43,53 @@ import {
 import { db } from '@/config/firebase';
 import { GLOBAL_COLLECTIONS } from '@/config/globalCollections';
 import type { CigarDetailedInfo } from '@/types/cigar';
-import { CigarForm } from './CigarForm';
-import { CigarImport } from './CigarImport';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 
 const { Search } = Input;
 const { Option } = Select;
 
+// cigar_database 实际存储的数据结构（统计聚合数据）
+interface CigarDatabaseRecord {
+  id: string;
+  productName: string;
+  normalizedName: string;
+  brandStats: Record<string, number>;
+  originStats: Record<string, number>;
+  strengthStats: Record<string, number>;
+  wrapperStats: Record<string, number>;
+  binderStats: Record<string, number>;
+  fillerStats: Record<string, number>;
+  flavorProfileStats: Record<string, number>;
+  footTasteNotesStats: Record<string, number>;
+  bodyTasteNotesStats: Record<string, number>;
+  headTasteNotesStats: Record<string, number>;
+  ratingSum: number;
+  ratingCount: number;
+  descriptions: Array<{ text: string; confidence: number; addedAt: string }>;
+  totalRecognitions: number;
+  lastRecognizedAt: any;
+  createdAt: any;
+  updatedAt: any;
+}
+
+// 辅助函数：从统计对象中获取最常见的值
+function getMostFrequentValue(stats: Record<string, number>): { value: string; count: number; percentage: number } | null {
+  if (!stats || Object.keys(stats).length === 0) {
+    return null;
+  }
+  const entries = Object.entries(stats);
+  const total = entries.reduce((sum, [_, count]) => sum + count, 0);
+  entries.sort((a, b) => b[1] - a[1]);
+  const [value, count] = entries[0];
+  return { value, count, percentage: (count / total) * 100 };
+}
+
 export const CigarDatabase: React.FC = () => {
-  const [cigars, setCigars] = useState<CigarDetailedInfo[]>([]);
+  const [cigars, setCigars] = useState<CigarDatabaseRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [strengthFilter, setStrengthFilter] = useState<string | undefined>();
-  const [verifiedFilter, setVerifiedFilter] = useState<boolean | undefined>();
-  const [modalVisible, setModalVisible] = useState(false);
-  const [importModalVisible, setImportModalVisible] = useState(false);
-  const [editingCigar, setEditingCigar] = useState<CigarDetailedInfo | null>(null);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 20,
@@ -66,8 +97,8 @@ export const CigarDatabase: React.FC = () => {
   });
   const [stats, setStats] = useState({
     total: 0,
-    verified: 0,
-    unverified: 0
+    totalRecognitions: 0,
+    avgRecognitionsPerCigar: 0
   });
 
   // 加载数据
@@ -83,26 +114,36 @@ export const CigarDatabase: React.FC = () => {
         firestoreLimit(pagination.pageSize)
       );
 
-      // 应用过滤器
-      if (verifiedFilter !== undefined) {
-        q = query(q, where('verified', '==', verifiedFilter));
-      }
-      if (strengthFilter) {
-        q = query(q, where('strength', '==', strengthFilter));
-      }
+      // 注意：cigar_database 中的 strengthStats 是对象，无法直接用 where 查询
+      // 搜索功能通过前端过滤实现
 
       const snapshot = await getDocs(q);
-      const cigarList: CigarDetailedInfo[] = [];
+      const cigarList: CigarDatabaseRecord[] = [];
 
-      snapshot.forEach((doc) => {
-        const data = doc.data();
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
         cigarList.push({
-          ...data,
-          id: doc.id,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-          ratingDate: data.ratingDate?.toDate() || null
-        } as CigarDetailedInfo);
+          id: docSnap.id,
+          productName: data.productName || '',
+          normalizedName: data.normalizedName || '',
+          brandStats: data.brandStats || {},
+          originStats: data.originStats || {},
+          strengthStats: data.strengthStats || {},
+          wrapperStats: data.wrapperStats || {},
+          binderStats: data.binderStats || {},
+          fillerStats: data.fillerStats || {},
+          flavorProfileStats: data.flavorProfileStats || {},
+          footTasteNotesStats: data.footTasteNotesStats || {},
+          bodyTasteNotesStats: data.bodyTasteNotesStats || {},
+          headTasteNotesStats: data.headTasteNotesStats || {},
+          ratingSum: data.ratingSum || 0,
+          ratingCount: data.ratingCount || 0,
+          descriptions: data.descriptions || [],
+          totalRecognitions: data.totalRecognitions || 0,
+          lastRecognizedAt: data.lastRecognizedAt,
+          createdAt: data.createdAt,
+          updatedAt: data.updatedAt
+        });
       });
 
       setCigars(cigarList);
@@ -115,7 +156,6 @@ export const CigarDatabase: React.FC = () => {
       // 加载统计信息
       await loadStats();
     } catch (error) {
-      console.error('加载雪茄数据失败:', error);
       message.error('加载数据失败');
     } finally {
       setLoading(false);
@@ -127,29 +167,29 @@ export const CigarDatabase: React.FC = () => {
     try {
       const cigarsRef = collection(db, GLOBAL_COLLECTIONS.CIGAR_DATABASE);
       
-      // 总数
+      // 获取所有记录计算统计
       const allSnapshot = await getDocs(query(cigarsRef, firestoreLimit(1000)));
       const total = allSnapshot.size;
       
-      // 已验证数量
-      const verifiedSnapshot = await getDocs(
-        query(cigarsRef, where('verified', '==', true), firestoreLimit(1000))
-      );
-      const verified = verifiedSnapshot.size;
+      let totalRecognitions = 0;
+      allSnapshot.forEach(doc => {
+        const data = doc.data();
+        totalRecognitions += (data.totalRecognitions || 0);
+      });
 
       setStats({
         total,
-        verified,
-        unverified: total - verified
+        totalRecognitions,
+        avgRecognitionsPerCigar: total > 0 ? Math.round(totalRecognitions / total) : 0
       });
     } catch (error) {
-      console.error('加载统计信息失败:', error);
+      // Silently fail
     }
   };
 
   useEffect(() => {
     loadCigars();
-  }, [strengthFilter, verifiedFilter]);
+  }, [strengthFilter]);
 
   // 搜索
   const handleSearch = async (value: string) => {
@@ -165,21 +205,37 @@ export const CigarDatabase: React.FC = () => {
       const snapshot = await getDocs(cigarsRef);
       
       const filtered = snapshot.docs
-        .map(doc => ({
-          ...doc.data(),
-          id: doc.id,
-          createdAt: doc.data().createdAt?.toDate() || new Date(),
-          updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-          ratingDate: doc.data().ratingDate?.toDate() || null
-        } as CigarDetailedInfo))
+        .map(docSnap => {
+          const data = docSnap.data();
+          return {
+            id: docSnap.id,
+            productName: data.productName || '',
+            normalizedName: data.normalizedName || '',
+            brandStats: data.brandStats || {},
+            originStats: data.originStats || {},
+            strengthStats: data.strengthStats || {},
+            wrapperStats: data.wrapperStats || {},
+            binderStats: data.binderStats || {},
+            fillerStats: data.fillerStats || {},
+            flavorProfileStats: data.flavorProfileStats || {},
+            footTasteNotesStats: data.footTasteNotesStats || {},
+            bodyTasteNotesStats: data.bodyTasteNotesStats || {},
+            headTasteNotesStats: data.headTasteNotesStats || {},
+            ratingSum: data.ratingSum || 0,
+            ratingCount: data.ratingCount || 0,
+            descriptions: data.descriptions || [],
+            totalRecognitions: data.totalRecognitions || 0,
+            lastRecognizedAt: data.lastRecognizedAt,
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt
+          };
+        })
         .filter(cigar => 
-          cigar.brand.toLowerCase().includes(value.toLowerCase()) ||
-          cigar.name.toLowerCase().includes(value.toLowerCase())
+          cigar.productName.toLowerCase().includes(value.toLowerCase())
         );
 
       setCigars(filtered);
     } catch (error) {
-      console.error('搜索失败:', error);
       message.error('搜索失败');
     } finally {
       setLoading(false);
@@ -193,47 +249,90 @@ export const CigarDatabase: React.FC = () => {
       message.success('删除成功');
       loadCigars();
     } catch (error) {
-      console.error('删除失败:', error);
       message.error('删除失败');
     }
   };
 
-  // 编辑
-  const handleEdit = (cigar: CigarDetailedInfo) => {
-    setEditingCigar(cigar);
-    setModalVisible(true);
-  };
-
-  // 新增
-  const handleAdd = () => {
-    setEditingCigar(null);
-    setModalVisible(true);
+  // 查看详情
+  const handleViewDetails = (cigar: CigarDatabaseRecord) => {
+    // 显示统计详情的模态框
+    const brandResult = getMostFrequentValue(cigar.brandStats);
+    const originResult = getMostFrequentValue(cigar.originStats);
+    const strengthResult = getMostFrequentValue(cigar.strengthStats);
+    const wrapperResult = getMostFrequentValue(cigar.wrapperStats);
+    const binderResult = getMostFrequentValue(cigar.binderStats);
+    const fillerResult = getMostFrequentValue(cigar.fillerStats);
+    
+    const avgRating = cigar.ratingCount > 0 
+      ? (cigar.ratingSum / cigar.ratingCount).toFixed(1) 
+      : null;
+    
+    const latestDescription = cigar.descriptions.length > 0
+      ? cigar.descriptions[cigar.descriptions.length - 1].text
+      : '暂无描述';
+    
+    Modal.info({
+      title: cigar.productName,
+      width: 800,
+      content: (
+        <div>
+          <p><strong>识别次数:</strong> {cigar.totalRecognitions} 次</p>
+          <p><strong>品牌:</strong> {brandResult?.value || '-'} (一致性: {brandResult?.percentage.toFixed(0) || 0}%)</p>
+          <p><strong>产地:</strong> {originResult?.value || '-'} (一致性: {originResult?.percentage.toFixed(0) || 0}%)</p>
+          <p><strong>强度:</strong> {strengthResult?.value || '-'} (一致性: {strengthResult?.percentage.toFixed(0) || 0}%)</p>
+          <p><strong>平均评分:</strong> {avgRating || '-'} {cigar.ratingCount > 0 && `(基于 ${cigar.ratingCount} 次)`}</p>
+          <p><strong>茄衣:</strong> {wrapperResult?.value || '-'}</p>
+          <p><strong>茄套:</strong> {binderResult?.value || '-'}</p>
+          <p><strong>茄芯:</strong> {fillerResult?.value || '-'}</p>
+          <p><strong>描述:</strong> {latestDescription}</p>
+        </div>
+      ),
+      okText: '关闭'
+    });
   };
 
   // 表格列定义
-  const columns: ColumnsType<CigarDetailedInfo> = [
+  const columns: ColumnsType<CigarDatabaseRecord> = [
     {
-      title: '品牌',
-      dataIndex: 'brand',
-      key: 'brand',
-      width: 150,
+      title: '产品名称',
+      dataIndex: 'productName',
+      key: 'productName',
+      width: 250,
       fixed: 'left',
-      render: (text: string) => <strong>{text}</strong>
+      render: (text: string, record: CigarDatabaseRecord) => {
+        const brandResult = getMostFrequentValue(record.brandStats);
+        return (
+          <div>
+            <strong>{text}</strong>
+            {brandResult && (
+              <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
+                品牌: {brandResult.value}
+              </div>
+            )}
+          </div>
+        );
+      }
     },
     {
-      title: '名称',
-      dataIndex: 'name',
-      key: 'name',
-      width: 200,
-      ellipsis: true
+      title: '识别次数',
+      dataIndex: 'totalRecognitions',
+      key: 'totalRecognitions',
+      width: 100,
+      sorter: (a, b) => a.totalRecognitions - b.totalRecognitions,
+      render: (count: number) => (
+        <Tag color={count >= 10 ? 'gold' : count >= 5 ? 'blue' : 'default'}>
+          {count} 次
+        </Tag>
+      )
     },
     {
       title: '强度',
-      dataIndex: 'strength',
       key: 'strength',
-      width: 120,
-      render: (strength: string | null) => {
-        if (!strength) return '-';
+      width: 140,
+      render: (_: any, record: CigarDatabaseRecord) => {
+        const strengthResult = getMostFrequentValue(record.strengthStats);
+        if (!strengthResult) return '-';
+        
         const colorMap: Record<string, string> = {
           'mild': 'green',
           'medium-mild': 'cyan',
@@ -241,60 +340,62 @@ export const CigarDatabase: React.FC = () => {
           'medium-full': 'orange',
           'full': 'red'
         };
-        return <Tag color={colorMap[strength.toLowerCase()] || 'default'}>{strength}</Tag>;
-      }
-    },
-    {
-      title: '评分',
-      dataIndex: 'rating',
-      key: 'rating',
-      width: 80,
-      render: (rating: number | null) => rating ? `${rating}` : '-'
-    },
-    {
-      title: '评分来源',
-      dataIndex: 'ratingSource',
-      key: 'ratingSource',
-      width: 180,
-      ellipsis: true,
-      render: (text: string | null) => text || '-'
-    },
-    {
-      title: '已验证',
-      dataIndex: 'verified',
-      key: 'verified',
-      width: 100,
-      render: (verified: boolean) => 
-        verified ? 
-          <Tag icon={<CheckCircleOutlined />} color="success">已验证</Tag> : 
-          <Tag icon={<CloseCircleOutlined />} color="default">未验证</Tag>
-    },
-    {
-      title: 'AI识别统计',
-      dataIndex: 'aiRecognitionStats',
-      key: 'aiRecognitionStats',
-      width: 150,
-      render: (stats: any) => {
-        if (!stats || stats.totalScans === 0) {
-          return <Tag color="default">未扫描</Tag>;
-        }
-        const successRate = (stats.successfulScans / stats.totalScans * 100).toFixed(0);
-        const avgConfidence = (stats.averageConfidence * 100).toFixed(0);
         return (
-          <Space direction="vertical" size="small">
-            <Tag color="blue">扫描: {stats.totalScans}次</Tag>
-            <Tag color="green">成功率: {successRate}%</Tag>
-            <Tag color="cyan">置信度: {avgConfidence}%</Tag>
-          </Space>
+          <div>
+            <Tag color={colorMap[strengthResult.value.toLowerCase()] || 'default'}>
+              {strengthResult.value}
+            </Tag>
+            <div style={{ fontSize: '11px', color: '#888' }}>
+              一致性: {strengthResult.percentage.toFixed(0)}%
+            </div>
+          </div>
         );
       }
     },
     {
-      title: '创建时间',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
+      title: '产地',
+      key: 'origin',
+      width: 140,
+      render: (_: any, record: CigarDatabaseRecord) => {
+        const originResult = getMostFrequentValue(record.originStats);
+        if (!originResult) return '-';
+        return (
+          <div>
+            <div>{originResult.value}</div>
+            <div style={{ fontSize: '11px', color: '#888' }}>
+              一致性: {originResult.percentage.toFixed(0)}%
+            </div>
+          </div>
+        );
+      }
+    },
+    {
+      title: '平均评分',
+      key: 'rating',
+      width: 120,
+      render: (_: any, record: CigarDatabaseRecord) => {
+        if (record.ratingCount === 0) return '-';
+        const avgRating = (record.ratingSum / record.ratingCount).toFixed(1);
+        return (
+          <div>
+            <Tag color="gold">{avgRating}</Tag>
+            <div style={{ fontSize: '11px', color: '#888' }}>
+              基于 {record.ratingCount} 次
+            </div>
+          </div>
+        );
+      }
+    },
+    {
+      title: '最后识别',
+      dataIndex: 'lastRecognizedAt',
+      key: 'lastRecognizedAt',
       width: 180,
-      render: (date: Date) => dayjs(date).format('YYYY-MM-DD HH:mm')
+      render: (timestamp: any) => {
+        if (!timestamp) return '-';
+        const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+        return dayjs(date).format('YYYY-MM-DD HH:mm');
+      }
     },
     {
       title: '操作',
@@ -306,13 +407,13 @@ export const CigarDatabase: React.FC = () => {
           <Button
             type="link"
             size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
+            icon={<EyeOutlined />}
+            onClick={() => handleViewDetails(record)}
           >
-            编辑
+            详情
           </Button>
           <Popconfirm
-            title="确定要删除这条记录吗？"
+            title="确定要删除这条记录吗？此操作将删除所有AI识别统计数据。"
             onConfirm={() => handleDelete(record.id)}
             okText="确定"
             cancelText="取消"
@@ -337,14 +438,19 @@ export const CigarDatabase: React.FC = () => {
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={8}>
           <Card>
-            <Statistic title="总数" value={stats.total} />
+            <Statistic 
+              title="雪茄总数" 
+              value={stats.total} 
+              suffix="种"
+            />
           </Card>
         </Col>
         <Col span={8}>
           <Card>
             <Statistic
-              title="已验证"
-              value={stats.verified}
+              title="总识别次数"
+              value={stats.totalRecognitions}
+              suffix="次"
               valueStyle={{ color: '#3f8600' }}
             />
           </Card>
@@ -352,9 +458,10 @@ export const CigarDatabase: React.FC = () => {
         <Col span={8}>
           <Card>
             <Statistic
-              title="未验证"
-              value={stats.unverified}
-              valueStyle={{ color: '#cf1322' }}
+              title="平均识别次数"
+              value={stats.avgRecognitionsPerCigar}
+              suffix="次/种"
+              valueStyle={{ color: '#1890ff' }}
             />
           </Card>
         </Col>
@@ -363,24 +470,12 @@ export const CigarDatabase: React.FC = () => {
       {/* 工具栏 */}
       <Card style={{ marginBottom: 16 }}>
         <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }}>
-          <Space>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={handleAdd}
-            >
-              新增雪茄
-            </Button>
-            <Button
-              icon={<ImportOutlined />}
-              onClick={() => setImportModalVisible(true)}
-            >
-              批量导入
-            </Button>
-          </Space>
+          <div style={{ fontSize: '14px', color: '#888' }}>
+            AI识别数据库（只读，通过智能扫描自动累积）
+          </div>
           <Space>
             <Search
-              placeholder="搜索品牌或名称"
+              placeholder="搜索产品名称"
               allowClear
               style={{ width: 300 }}
               onSearch={handleSearch}
@@ -390,27 +485,6 @@ export const CigarDatabase: React.FC = () => {
                 }
               }}
             />
-            <Select
-              placeholder="强度"
-              style={{ width: 150 }}
-              allowClear
-              onChange={setStrengthFilter}
-            >
-              <Option value="mild">Mild</Option>
-              <Option value="medium-mild">Medium-Mild</Option>
-              <Option value="medium">Medium</Option>
-              <Option value="medium-full">Medium-Full</Option>
-              <Option value="full">Full</Option>
-            </Select>
-            <Select
-              placeholder="验证状态"
-              style={{ width: 120 }}
-              allowClear
-              onChange={setVerifiedFilter}
-            >
-              <Option value={true}>已验证</Option>
-              <Option value={false}>未验证</Option>
-            </Select>
           </Space>
         </Space>
       </Card>
@@ -430,50 +504,6 @@ export const CigarDatabase: React.FC = () => {
           scroll={{ x: 1500 }}
         />
       </Card>
-
-      {/* 编辑/新增模态框 */}
-      <Modal
-        title={editingCigar ? '编辑雪茄信息' : '新增雪茄信息'}
-        open={modalVisible}
-        onCancel={() => {
-          setModalVisible(false);
-          setEditingCigar(null);
-        }}
-        footer={null}
-        width={900}
-        destroyOnClose
-      >
-        <CigarForm
-          initialValues={editingCigar}
-          onSuccess={() => {
-            setModalVisible(false);
-            setEditingCigar(null);
-            loadCigars();
-          }}
-          onCancel={() => {
-            setModalVisible(false);
-            setEditingCigar(null);
-          }}
-        />
-      </Modal>
-
-      {/* 批量导入模态框 */}
-      <Modal
-        title="批量导入雪茄数据"
-        open={importModalVisible}
-        onCancel={() => setImportModalVisible(false)}
-        footer={null}
-        width={1000}
-        destroyOnClose
-      >
-        <CigarImport
-          onSuccess={() => {
-            setImportModalVisible(false);
-            loadCigars();
-          }}
-          onCancel={() => setImportModalVisible(false)}
-        />
-      </Modal>
     </div>
   );
 };
