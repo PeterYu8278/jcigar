@@ -5,11 +5,11 @@ import Webcam from 'react-webcam';
 import html2canvas from 'html2canvas';
 import { useTranslation } from 'react-i18next';
 import { analyzeCigarImage, CigarAnalysisResult } from '../../../services/gemini/cigarRecognition';
-import { processAICigarRecognition } from '../../../services/aiCigarStorage';
 import { getCigars, getBrands } from '../../../services/firebase/firestore';
 import { findCigarByBrandAndName } from '../../../services/aiCigarStorage';
 import { getAppConfig } from '../../../services/firebase/appConfig';
 import { searchCigarByText } from '../../../services/cigar/cigarTextSearch';
+import { saveRecognitionToCigarDatabase, getAggregatedCigarData, type AggregatedCigarData } from '../../../services/cigar/cigarDataAggregation';
 import type { UploadProps } from 'antd';
 import type { Cigar, Brand } from '../../../types';
 
@@ -25,6 +25,7 @@ export const AICigarScanner: React.FC = () => {
     const [imgSrc, setImgSrc] = useState<string | null>(null);
     const [analyzing, setAnalyzing] = useState(false);
     const [result, setResult] = useState<CigarAnalysisResult | null>(null);
+    const [aggregatedData, setAggregatedData] = useState<AggregatedCigarData | null>(null);
     const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
     const [cameraError, setCameraError] = useState<string | null>(null);
     const [flashEnabled, setFlashEnabled] = useState(false);
@@ -54,23 +55,20 @@ export const AICigarScanner: React.FC = () => {
 
         setSaving(true);
         try {
-            // 不保存图片，直接保存识别结果
-            const saveResult = await processAICigarRecognition(recognitionResult, undefined);
-            setSaveStatus(saveResult);
-
-            // 显示成功消息
-            if (saveResult.matched) {
-                if (saveResult.dataComplete) {
-                    message.success(`✅ 找到匹配记录（数据完整）`);
-                } else {
-                    message.success(`⚠️ 找到匹配记录，已补充数据`);
-                }
+            // AI识笳仅保存到 cigar_database（不操作 cigars collection）
+            await saveRecognitionToCigarDatabase(recognitionResult);
+            
+            // 保存后立即查询聚合数据
+            const productName = `${recognitionResult.brand} ${recognitionResult.name}`.trim();
+            const aggregated = await getAggregatedCigarData(productName);
+            
+            if (aggregated) {
+                setAggregatedData(aggregated);
+                message.success(`✅ 识别结果已保存（基于 ${aggregated.totalRecognitions} 次识别的统计数据）`);
             } else {
-                const sizeCount = saveResult.cigarIds.length;
-                message.success(`🆕 已创建 ${sizeCount} 条雪茄记录（包含所有可能的尺寸）`);
+                message.success('✅ 识别结果已保存到数据库');
             }
         } catch (error) {
-            console.error('Save failed', error);
             message.error(`保存失败: ${error instanceof Error ? error.message : '未知错误'}`);
         } finally {
             setSaving(false);
@@ -89,7 +87,7 @@ export const AICigarScanner: React.FC = () => {
                 setCigars(cigarsData);
                 setBrands(brandsData);
             } catch (error) {
-                console.error('Failed to load suggestions:', error);
+                // Silently fail
             } finally {
                 setLoadingSuggestions(false);
             }
@@ -106,7 +104,7 @@ export const AICigarScanner: React.FC = () => {
                     setDataStorageEnabled(config.aiCigar?.enableDataStorage ?? true);
                 }
             } catch (error) {
-                console.error('Failed to load AI Cigar config:', error);
+                // Silently fail
             }
         };
         loadConfig();
@@ -163,14 +161,25 @@ export const AICigarScanner: React.FC = () => {
         try {
             // 如果用户提供了提示，传递给识别函数
             const data = await analyzeCigarImage(imageSrc, userHint || undefined);
-            console.log('[AICigarScanner] 识别结果:', {
-                brand: data.brand,
-                name: data.name,
-                confidence: data.confidence,
-                imageUrl: data.imageUrl,
-                hasImageUrl: !!data.imageUrl
-            });
             setResult(data);
+            
+            // 新逻辑：保存到 cigar_database 并加载聚合数据
+            if (dataStorageEnabled) {
+                try {
+                    await saveRecognitionToCigarDatabase(data);
+                    
+                    // 保存后立即查询聚合数据
+                    const productName = `${data.brand} ${data.name}`.trim();
+                    const aggregated = await getAggregatedCigarData(productName);
+            
+            if (aggregated) {
+                setAggregatedData(aggregated);
+                message.success(`识别成功！数据基于 ${aggregated.totalRecognitions} 次识别统计`);
+            }
+                } catch (error) {
+                    message.warning('数据统计更新失败，但识别结果已显示');
+                }
+            }
             
             // 尝试查找匹配的雪茄以获取图片
             try {
@@ -179,21 +188,14 @@ export const AICigarScanner: React.FC = () => {
                     setMatchedCigars([matchedCigar]);
                 }
             } catch (error) {
-                console.warn('Failed to find matched cigar for images:', error);
+                // Silently fail
             }
             
             // 根据可信度显示提示
             if (data.confidence < 0.5) {
                 message.warning('识别可信度较低，建议重新拍摄');
-            } else if (data.confidence >= 0.9) {
-                // 可信度超过 90%，自动保存到数据库
-                message.info(`识别可信度 ${Math.round(data.confidence * 100)}%，正在自动保存...`);
-                await saveRecognitionResult(data, imageSrc);
-            } else {
-                message.info(`识别可信度 ${Math.round(data.confidence * 100)}%，未达到自动保存阈值（90%）`);
             }
         } catch (error) {
-            console.error('Analysis failed', error);
             message.error('识别失败，请重试');
             setImgSrc(null); // Reset to camera
         } finally {
@@ -248,7 +250,6 @@ export const AICigarScanner: React.FC = () => {
                 setFlashSupported(false);
             }
         } catch (error: any) {
-            console.error('Flash toggle error:', error);
             // 如果错误是因为不支持，隐藏闪光灯按钮
             if (error?.name === 'NotSupportedError' || error?.name === 'NotReadableError') {
                 setFlashSupported(false);
@@ -276,6 +277,7 @@ export const AICigarScanner: React.FC = () => {
         }
         setImgSrc(null);
         setResult(null);
+        setAggregatedData(null); // 重置聚合数据
         setSaveStatus(null);
         setUserHint(''); // 重置用户提示
         setMatchedCigars([]); // 重置匹配的雪茄
@@ -308,7 +310,6 @@ export const AICigarScanner: React.FC = () => {
 
             message.success(t('common.screenshotSaved'));
         } catch (error) {
-            console.error('Screenshot failed:', error);
             message.error(t('common.screenshotSaveFailed'));
         } finally {
             setSavingScreenshot(false);
@@ -354,7 +355,6 @@ export const AICigarScanner: React.FC = () => {
                     } catch (shareError: any) {
                         // 用户取消分享或其他错误
                         if (shareError.name !== 'AbortError') {
-                            console.error('Share failed:', shareError);
                             // 如果分享失败，回退到下载
                             handleSaveScreenshot();
                         }
@@ -367,7 +367,6 @@ export const AICigarScanner: React.FC = () => {
                 setSavingScreenshot(false);
             }, 'image/png');
         } catch (error) {
-            console.error('Share screenshot failed:', error);
             message.error(t('common.shareFailed'));
             setSavingScreenshot(false);
         }
@@ -429,14 +428,10 @@ export const AICigarScanner: React.FC = () => {
         setImgSrc(null); // 清空图片
         
         try {
-            console.log(`[AICigarScanner] 文本搜索: "${userHint}"`);
             const searchResult = await searchCigarByText(userHint);
             
             if (searchResult) {
-                console.log('[AICigarScanner] 文本搜索结果:', searchResult);
-                console.log('[AICigarScanner] 设置 result 状态...');
                 setResult(searchResult);
-                console.log('[AICigarScanner] result 状态已设置');
                 message.success('搜索成功');
                 
                 // 如果找到图片URL，设置为显示图片
@@ -452,18 +447,13 @@ export const AICigarScanner: React.FC = () => {
                 message.error('未找到匹配的雪茄信息');
             }
         } catch (error) {
-            console.error('[AICigarScanner] 文本搜索失败:', error);
             message.error('搜索失败，请重试');
         } finally {
-            console.log('[AICigarScanner] 设置 analyzing = false');
             setAnalyzing(false);
-            console.log('[AICigarScanner] analyzing 状态已设置为 false');
         }
     };
 
     const handleUserMediaError = useCallback((error: string | DOMException) => {
-        console.error('Webcam error:', error);
-        
         // 如果后置摄像头失败，尝试前置摄像头
         if (facingMode === 'environment') {
             setFacingMode('user');
@@ -718,10 +708,7 @@ export const AICigarScanner: React.FC = () => {
                 </div>
             )}
 
-            {(() => {
-                console.log('[AICigarScanner] 渲染检查 - result:', !!result, 'analyzing:', analyzing);
-                return result && !analyzing;
-            })() && (
+            {(result && !analyzing) && (
                 <>
                     {/* 截图容器：包含图片和识别结果（不包括按钮） */}
                     <div ref={screenshotContainerRef} style={{ width: '100%'}}>
@@ -767,7 +754,6 @@ export const AICigarScanner: React.FC = () => {
                         {/* 雪茄茄标图像 - 优先使用 Gemini 返回的图片，否则使用用户拍摄的图片 */}
                         {(result!.imageUrl || imgSrc) && (() => {
                             const displayImageUrl = result!.imageUrl || imgSrc;
-                            console.log('[AICigarScanner] 显示图片 - result.imageUrl:', result!.imageUrl, 'imgSrc:', imgSrc, '最终使用:', displayImageUrl);
                             return (
                                 <div style={{ 
                                     marginTop: '12px',
@@ -805,14 +791,9 @@ export const AICigarScanner: React.FC = () => {
                                             }}
                                             onError={(e) => {
                                                 // 如果 Gemini 返回的图片加载失败，回退到用户拍摄的图片
-                                                console.warn('[AICigarScanner] 图片加载失败，尝试回退:', e.currentTarget.src);
                                                 if (result!.imageUrl && imgSrc && e.currentTarget.src !== imgSrc) {
-                                                    console.log('[AICigarScanner] 回退到用户拍摄的图片:', imgSrc);
                                                     e.currentTarget.src = imgSrc;
                                                 }
-                                            }}
-                                            onLoad={() => {
-                                                console.log('[AICigarScanner] 图片加载成功:', displayImageUrl);
                                             }}
                                         />
                                     </div>
@@ -822,18 +803,63 @@ export const AICigarScanner: React.FC = () => {
 
                         <Divider style={{ margin: '12px 0', borderColor: '#333' }} />
 
+                        {/* 显示统计信息（如果有聚合数据） */}
+                        {aggregatedData && aggregatedData.totalRecognitions > 1 && (
+                            <div style={{ 
+                                marginBottom: '12px', 
+                                padding: '8px 12px',
+                                background: 'rgba(255, 215, 0, 0.1)',
+                                borderRadius: '6px',
+                                border: '1px solid rgba(255, 215, 0, 0.3)'
+                            }}>
+                                <Text style={{ color: '#ffd700', fontSize: '12px' }}>
+                                    📊 数据来源: 基于 {aggregatedData.totalRecognitions} 次 AI 识别统计
+                                </Text>
+                            </div>
+                        )}
+
                         <Space split={<Divider type="vertical" style={{ borderColor: '#555' }} />}>
-                            <Text style={{ color: '#ddd' }} type="secondary">产地: <span style={{ color: '#ddd' }}>{result!.origin}</span></Text>
+                            <Text style={{ color: '#ddd' }} type="secondary">
+                                产地: <span style={{ color: '#ddd' }}>
+                                    {aggregatedData ? aggregatedData.origin : result!.origin}
+                                    {aggregatedData && aggregatedData.originConsistency < 100 && (
+                                        <Text type="secondary" style={{ color: '#999', fontSize: '11px', marginLeft: 4 }}>
+                                            ({aggregatedData.originConsistency.toFixed(0)}%一致)
+                                        </Text>
+                                    )}
+                                </span>
+                            </Text>
                             <Text style={{ color: '#ddd' }} type="secondary">可信度: <span style={{ color: '#ddd' }}>{Math.round(result!.confidence * 100)}%</span></Text>
                         </Space>
 
+                        {/* 风味特征：优先使用聚合数据（Top 10） */}
                         <div style={{ marginTop: '8px' }}>
-                            {result!.flavorProfile.map(flavor => (
-                                <Tag key={flavor} color="gold" style={{ marginRight: '4px', marginBottom: '4px' }}>{flavor}</Tag>
-                            ))}
+                            {aggregatedData && aggregatedData.flavorProfile.length > 0 ? (
+                                // 显示聚合的 Top 10 风味
+                                aggregatedData.flavorProfile.map((item, index) => (
+                                    <Tag 
+                                        key={item.value} 
+                                        color="gold" 
+                                        style={{ marginRight: '4px', marginBottom: '4px' }}
+                                    >
+                                        {item.value}
+                                        {aggregatedData.totalRecognitions > 1 && (
+                                            <span style={{ fontSize: '10px', marginLeft: 4, opacity: 0.8 }}>
+                                                x{item.count}
+                                            </span>
+                                        )}
+                                    </Tag>
+                                ))
+                            ) : (
+                                // 回退到单次识别结果
+                                result!.flavorProfile.map(flavor => (
+                                    <Tag key={flavor} color="gold" style={{ marginRight: '4px', marginBottom: '4px' }}>{flavor}</Tag>
+                                ))
+                            )}
                         </div>
 
-                        {(result!.wrapper || result!.binder || result!.filler) && (
+                        {((aggregatedData && (aggregatedData.wrappers.length > 0 || aggregatedData.binders.length > 0 || aggregatedData.fillers.length > 0)) || 
+                          (result!.wrapper || result!.binder || result!.filler)) && (
                             <>
                                 <Divider style={{ margin: '6px 0', borderColor: '#333' }} />
                                 <div style={{ 
@@ -850,22 +876,79 @@ export const AICigarScanner: React.FC = () => {
                                         fontWeight: 500,
                                         color: '#ffd700'
                                     }}>
-                                        雪茄构造
+                                        雪茄构造 {aggregatedData && aggregatedData.totalRecognitions > 1 && (
+                                            <span style={{ fontSize: '11px', color: '#999' }}>
+                                                (Top 5 统计最多)
+                                            </span>
+                                        )}
                                     </Text>
                                     <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                                        {result!.wrapper && (
+                                        {/* 茄衣 */}
+                                        {(aggregatedData && aggregatedData.wrappers.length > 0) ? (
+                                            <div>
+                                                <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: 4 }}>
+                                                    🍂 茄衣 (Wrapper):
+                                                </Text>
+                                                {aggregatedData.wrappers.map((item, index) => (
+                                                    <div key={index} style={{ marginLeft: 8, marginBottom: 2 }}>
+                                                        <Text style={{ color: '#ddd', fontSize: '11px' }}>
+                                                            {index + 1}. {item.value}
+                                                            <span style={{ color: '#999', marginLeft: 4 }}>
+                                                                (x{item.count}, {item.percentage.toFixed(0)}%)
+                                                            </span>
+                                                        </Text>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : result!.wrapper && (
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', minWidth: '80px' }}>茄衣 (Wrapper):</Text>
                                                 <Text style={{ color: '#ddd', fontSize: '12px', textAlign: 'right', flex: 1 }}>{result!.wrapper}</Text>
                                             </div>
                                         )}
-                                        {result!.binder && (
+                                        
+                                        {/* 茄套 */}
+                                        {(aggregatedData && aggregatedData.binders.length > 0) ? (
+                                            <div>
+                                                <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: 4 }}>
+                                                    🌿 茄套 (Binder):
+                                                </Text>
+                                                {aggregatedData.binders.map((item, index) => (
+                                                    <div key={index} style={{ marginLeft: 8, marginBottom: 2 }}>
+                                                        <Text style={{ color: '#ddd', fontSize: '11px' }}>
+                                                            {index + 1}. {item.value}
+                                                            <span style={{ color: '#999', marginLeft: 4 }}>
+                                                                (x{item.count}, {item.percentage.toFixed(0)}%)
+                                                            </span>
+                                                        </Text>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : result!.binder && (
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', minWidth: '80px' }}>茄套 (Binder):</Text>
                                                 <Text style={{ color: '#ddd', fontSize: '12px', textAlign: 'right', flex: 1 }}>{result!.binder}</Text>
                                             </div>
                                         )}
-                                        {result!.filler && (
+                                        
+                                        {/* 茄芯 */}
+                                        {(aggregatedData && aggregatedData.fillers.length > 0) ? (
+                                            <div>
+                                                <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: 4 }}>
+                                                    🌾 茄芯 (Filler):
+                                                </Text>
+                                                {aggregatedData.fillers.map((item, index) => (
+                                                    <div key={index} style={{ marginLeft: 8, marginBottom: 2 }}>
+                                                        <Text style={{ color: '#ddd', fontSize: '11px' }}>
+                                                            {index + 1}. {item.value}
+                                                            <span style={{ color: '#999', marginLeft: 4 }}>
+                                                                (x{item.count}, {item.percentage.toFixed(0)}%)
+                                                            </span>
+                                                        </Text>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : result!.filler && (
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', minWidth: '80px' }}>茄芯 (Filler):</Text>
                                                 <Text style={{ color: '#ddd', fontSize: '12px', textAlign: 'right', flex: 1 }}>{result!.filler}</Text>
@@ -876,7 +959,8 @@ export const AICigarScanner: React.FC = () => {
                             </>
                         )}
 
-                        {(result!.footTasteNotes?.length || result!.bodyTasteNotes?.length || result!.headTasteNotes?.length) && (
+                        {((aggregatedData && (aggregatedData.footTasteNotes.length > 0 || aggregatedData.bodyTasteNotes.length > 0 || aggregatedData.headTasteNotes.length > 0)) ||
+                          (result!.footTasteNotes?.length || result!.bodyTasteNotes?.length || result!.headTasteNotes?.length)) && (
                             <>
                                 <Divider style={{ margin: '6px 0', borderColor: '#333' }} />
                                 <div style={{ 
@@ -893,10 +977,33 @@ export const AICigarScanner: React.FC = () => {
                                         fontWeight: 500,
                                         color: '#ffd700'
                                     }}>
-                                        品吸笔记
+                                        品吸笔记 {aggregatedData && aggregatedData.totalRecognitions > 1 && (
+                                            <span style={{ fontSize: '11px', color: '#999' }}>
+                                                (Top 5 统计最多)
+                                            </span>
+                                        )}
                                     </Text>
                                     <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                                        {result!.footTasteNotes && Array.isArray(result!.footTasteNotes) && result!.footTasteNotes.length > 0 && (
+                                        {/* 头段品吸笔记：优先使用聚合数据 Top 5 */}
+                                        {(aggregatedData && aggregatedData.footTasteNotes.length > 0) ? (
+                                            <div>
+                                                <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: '4px', fontWeight: 500 }}>
+                                                    👃 脚部 (Foot) - 前1/3:
+                                                </Text>
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                                    {aggregatedData.footTasteNotes.map((item, index) => (
+                                                        <Tag key={index} color="cyan" style={{ fontSize: '11px', margin: 0 }}>
+                                                            {item.value}
+                                                            {aggregatedData.totalRecognitions > 1 && (
+                                                                <span style={{ fontSize: '10px', marginLeft: 2, opacity: 0.8 }}>
+                                                                    x{item.count}
+                                                                </span>
+                                                            )}
+                                                        </Tag>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ) : (result!.footTasteNotes && Array.isArray(result!.footTasteNotes) && result!.footTasteNotes.length > 0) && (
                                             <div>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: '4px', fontWeight: 500 }}>
                                                     脚部 (Foot) - 前1/3:
@@ -908,15 +1015,26 @@ export const AICigarScanner: React.FC = () => {
                                                 </div>
                                             </div>
                                         )}
-                                        {result!.footTasteNotes && typeof result!.footTasteNotes === 'string' && (
+                                        {/* 中段品吸笔记：优先使用聚合数据 Top 5 */}
+                                        {(aggregatedData && aggregatedData.bodyTasteNotes.length > 0) ? (
                                             <div>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: '4px', fontWeight: 500 }}>
-                                                    脚部 (Foot) - 前1/3:
+                                                    👃 主体 (Body) - 中1/3:
                                                 </Text>
-                                                <Text style={{ fontSize: '13px', color: '#fff' }}>{result!.footTasteNotes}</Text>
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                                    {aggregatedData.bodyTasteNotes.map((item, index) => (
+                                                        <Tag key={index} color="blue" style={{ fontSize: '11px', margin: 0 }}>
+                                                            {item.value}
+                                                            {aggregatedData.totalRecognitions > 1 && (
+                                                                <span style={{ fontSize: '10px', marginLeft: 2, opacity: 0.8 }}>
+                                                                    x{item.count}
+                                                                </span>
+                                                            )}
+                                                        </Tag>
+                                                    ))}
+                                                </div>
                                             </div>
-                                        )}
-                                        {result!.bodyTasteNotes && Array.isArray(result!.bodyTasteNotes) && result!.bodyTasteNotes.length > 0 && (
+                                        ) : (result!.bodyTasteNotes && Array.isArray(result!.bodyTasteNotes) && result!.bodyTasteNotes.length > 0) && (
                                             <div>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: '4px', fontWeight: 500 }}>
                                                     主体 (Body) - 中1/3:
@@ -928,15 +1046,26 @@ export const AICigarScanner: React.FC = () => {
                                                 </div>
                                             </div>
                                         )}
-                                        {result!.bodyTasteNotes && typeof result!.bodyTasteNotes === 'string' && (
+                                        {/* 尾段品吸笔记：优先使用聚合数据 Top 5 */}
+                                        {(aggregatedData && aggregatedData.headTasteNotes.length > 0) ? (
                                             <div>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: '4px', fontWeight: 500 }}>
-                                                    主体 (Body) - 中1/3:
+                                                    👃 头部 (Head) - 后1/3:
                                                 </Text>
-                                                <Text style={{ fontSize: '13px', color: '#fff' }}>{result!.bodyTasteNotes}</Text>
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                                    {aggregatedData.headTasteNotes.map((item, index) => (
+                                                        <Tag key={index} color="purple" style={{ fontSize: '11px', margin: 0 }}>
+                                                            {item.value}
+                                                            {aggregatedData.totalRecognitions > 1 && (
+                                                                <span style={{ fontSize: '10px', marginLeft: 2, opacity: 0.8 }}>
+                                                                    x{item.count}
+                                                                </span>
+                                                            )}
+                                                        </Tag>
+                                                    ))}
+                                                </div>
                                             </div>
-                                        )}
-                                        {result!.headTasteNotes && Array.isArray(result!.headTasteNotes) && result!.headTasteNotes.length > 0 && (
+                                        ) : (result!.headTasteNotes && Array.isArray(result!.headTasteNotes) && result!.headTasteNotes.length > 0) && (
                                             <div>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: '4px', fontWeight: 500 }}>
                                                     头部 (Head) - 后1/3:
@@ -946,14 +1075,6 @@ export const AICigarScanner: React.FC = () => {
                                                         <Tag key={index} color="purple" style={{ fontSize: '11px', margin: 0 }}>{note}</Tag>
                                                     ))}
                                                 </div>
-                                            </div>
-                                        )}
-                                        {result!.headTasteNotes && typeof result!.headTasteNotes === 'string' && (
-                                            <div>
-                                                <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: '4px', fontWeight: 500 }}>
-                                                    头部 (Head) - 后1/3:
-                                                </Text>
-                                                <Text style={{ fontSize: '13px', color: '#fff' }}>{result!.headTasteNotes}</Text>
                                             </div>
                                         )}
                                     </Space>

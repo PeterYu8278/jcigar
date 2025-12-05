@@ -69,14 +69,10 @@ export async function saveRecognitionToCigarDatabase(
         const docId = normalizeProductName(productName);
         const docRef = doc(db, 'cigar_database', docId);
         
-        console.log(`[cigarDataAggregation] 📊 保存识别结果: ${productName}`);
-        
         const docSnap = await getDoc(docRef);
         
         if (docSnap.exists()) {
             // 文档已存在，更新统计
-            console.log(`[cigarDataAggregation] ✅ 文档已存在，更新统计计数`);
-            
             const existingData = docSnap.data();
             
             // 更新单值字段统计
@@ -173,11 +169,8 @@ export async function saveRecognitionToCigarDatabase(
             // 执行更新
             await updateDoc(docRef, updateData);
             
-            console.log(`[cigarDataAggregation] ✅ 统计已更新，总识别次数: ${(existingData.totalRecognitions || 0) + 1}`);
-            
         } else {
             // 文档不存在，创建新文档
-            console.log(`[cigarDataAggregation] 📝 创建新文档`);
             
             const newData: any = {
                 productName,
@@ -246,11 +239,8 @@ export async function saveRecognitionToCigarDatabase(
             }
             
             await setDoc(docRef, newData);
-            
-            console.log(`[cigarDataAggregation] ✅ 新文档已创建`);
         }
     } catch (error) {
-        console.error('[cigarDataAggregation] ❌ 保存失败:', error);
         throw error;
     }
 }
@@ -314,12 +304,9 @@ export async function getAggregatedCigarData(
         const docId = normalizeProductName(productName);
         const docRef = doc(db, 'cigar_database', docId);
         
-        console.log(`[cigarDataAggregation] 🔍 查询聚合数据: ${productName}`);
-        
         const docSnap = await getDoc(docRef);
         
         if (!docSnap.exists()) {
-            console.log(`[cigarDataAggregation] ℹ️ 未找到数据（从未被识别过）`);
             return null;
         }
         
@@ -385,12 +372,9 @@ export async function getAggregatedCigarData(
             avgConfidence
         };
         
-        console.log(`[cigarDataAggregation] ✅ 聚合完成，基于 ${aggregatedData.totalRecognitions} 次识别`);
-        
         return aggregatedData;
         
     } catch (error) {
-        console.error('[cigarDataAggregation] ❌ 查询失败:', error);
         return null;
     }
 }
@@ -405,7 +389,6 @@ export async function searchCigarDatabase(searchTerm: string): Promise<string[]>
         const normalized = normalizeProductName(searchTerm);
         return [normalized];
     } catch (error) {
-        console.error('[cigarDataAggregation] ❌ 搜索失败:', error);
         return [];
     }
 }
