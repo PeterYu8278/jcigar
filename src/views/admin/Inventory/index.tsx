@@ -3949,7 +3949,9 @@ const AdminInventory: React.FC = () => {
           setEditing(null);
           form.resetFields();
           setAiRating(null); // 重置AI识别的rating
+          setCigarDatabaseData(null); // 重置 cigar_database 数据
         }}
+        destroyOnClose={true}
         {...getResponsiveModalConfig(isMobile, true, 600)}
         footer={isMobile ? (
           <div style={{ padding: '8px 0' }}>
