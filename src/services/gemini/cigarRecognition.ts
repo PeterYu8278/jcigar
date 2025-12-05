@@ -969,6 +969,7 @@ PRIORITY 2: Major Retailers with Reliable CDNs
 - infifon.com
 - hyhpuro.com
 - timecigar.com
+- cigarcountry.com
 
 ⚠️ USE WITH CAUTION (Medium 404 rate):
 - neptunecigar.com (sometimes restructures URLs)

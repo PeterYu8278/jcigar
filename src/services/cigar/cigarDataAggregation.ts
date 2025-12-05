@@ -87,10 +87,18 @@ export async function saveRecognitionToCigarDatabase(
     userName?: string
 ): Promise<void> {
     try {
+        // 验证必需字段
+        if (!result.brand || !result.name) {
+            console.warn('[saveRecognitionToCigarDatabase] 缺少必需字段 brand 或 name:', { brand: result.brand, name: result.name });
+            return;
+        }
+        
         // 使用辅助函数生成产品名称（自动去重品牌名）
         const productName = generateProductName(result.brand, result.name);
         const docId = normalizeProductName(productName);
         const docRef = doc(db, 'cigar_database', docId);
+        
+        console.log('[saveRecognitionToCigarDatabase] 准备保存:', { productName, userId, userName, hasDescription: !!result.description });
         
         const docSnap = await getDoc(docRef);
         
@@ -215,6 +223,7 @@ export async function saveRecognitionToCigarDatabase(
             
             // 执行更新
             await updateDoc(docRef, updateData);
+            console.log('[saveRecognitionToCigarDatabase] 更新成功:', { productName, updateFields: Object.keys(updateData) });
             
         } else {
             // 文档不存在，创建新文档
@@ -224,7 +233,7 @@ export async function saveRecognitionToCigarDatabase(
                 normalizedName: docId,
                 
                 // 初始化统计对象
-                brandStats: { [result.brand]: 1 },
+                brandStats: result.brand ? { [result.brand]: 1 } : {},
                 originStats: result.origin ? { [result.origin]: 1 } : {},
                 strengthStats: result.strength ? { [result.strength]: 1 } : {},
                 wrapperStats: result.wrapper ? { [result.wrapper]: 1 } : {},
@@ -288,8 +297,10 @@ export async function saveRecognitionToCigarDatabase(
             }
             
             await setDoc(docRef, newData);
+            console.log('[saveRecognitionToCigarDatabase] 创建成功:', { productName, newDataFields: Object.keys(newData) });
         }
     } catch (error) {
+        console.error('[saveRecognitionToCigarDatabase] 保存失败:', error, { brand: result.brand, name: result.name });
         throw error;
     }
 }

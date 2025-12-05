@@ -465,12 +465,22 @@ export const AICigarScanner: React.FC = () => {
                 // 如果启用数据存储，保存结果（与图像搜索相同的存储机制）
                 if (dataStorageEnabled) {
                     try {
+                        console.log('[AICigarScanner] 文本搜索 - 准备保存到数据库:', { 
+                            brand: searchResult.brand, 
+                            name: searchResult.name,
+                            userId: user?.id,
+                            userName: user?.displayName,
+                            hasDescription: !!searchResult.description
+                        });
+                        
                         // 传递用户信息（与图像搜索一致）
                         await saveRecognitionToCigarDatabase(
                             searchResult,
                             user?.id,
                             user?.displayName || undefined
                         );
+                        
+                        console.log('[AICigarScanner] 文本搜索 - 保存成功');
                         
                         // 保存后立即查询聚合数据（与图像搜索一致）
                         const productName = generateProductName(searchResult.brand, searchResult.name);
@@ -481,8 +491,11 @@ export const AICigarScanner: React.FC = () => {
                             message.success(`识别成功！数据基于 ${aggregated.totalRecognitions} 次识别统计`);
                         }
                     } catch (error) {
+                        console.error('[AICigarScanner] 文本搜索 - 保存失败:', error);
                         message.warning('数据统计更新失败，但识别结果已显示');
                     }
+                } else {
+                    console.log('[AICigarScanner] 文本搜索 - 数据存储已禁用');
                 }
             } else {
                 message.error('未找到匹配的雪茄信息');

@@ -55,6 +55,7 @@ export async function searchGoogleImages(
             'cigarinspector.com',
             'cigarjournal.com',
             'leafenthusiast.com',
+            'cigarcountry.com',
             // 主流零售商
             'famous-smoke.com',
             'holts.com',
@@ -157,7 +158,7 @@ export async function searchGoogleImages(
                 const url = item.url.toLowerCase();
                 
                 // 0. 首选网站加分（60分，最高优先级）
-                if (url.includes('cohcigars.com')) {
+                if (url.includes('cigarcountry.com') || url.includes('cohcigars.com')) {
                     score += 60;
                 }
                 
@@ -172,6 +173,7 @@ export async function searchGoogleImages(
                     'cigarinspector.com',
                     'cigarjournal.com',
                     'leafenthusiast.com',
+                    'cigarcountry.com',
                     // 主流零售商
                     'famous-smoke.com',
                     'holts.com',
