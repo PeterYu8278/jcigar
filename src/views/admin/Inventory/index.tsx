@@ -4453,73 +4453,164 @@ const AdminInventory: React.FC = () => {
               </Button>
             </div>
           </Form.Item>
-          <Form.Item label={<span>{t('inventory.brand')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="brand" required={false} rules={[{ required: true, message: t('common.pleaseInputBrand') }]}>
-            <Select
-              placeholder={t('inventory.pleaseSelectBrand')}
-              showSearch
-              disabled={!!cigarDatabaseData}
-              filterOption={(input, option) => {
-                const children = option?.children as any
-                if (typeof children === 'string') {
-                  return children.toLowerCase().includes(input.toLowerCase())
-                }
-                if (Array.isArray(children)) {
-                  return children.some((child: any) => 
-                    typeof child === 'string' && child.toLowerCase().includes(input.toLowerCase())
-                  )
-                }
-                return false
-              }}
-              onChange={(val) => {
-                const b = brandList.find(brand => brand.name === val)
-                if (b?.country) {
-                  try { form.setFieldsValue({ origin: b.country }) } catch {}
-                }
-              }}
-              dropdownStyle={{ zIndex: 1050 }}
-            >
-              {brandList
-                .filter(brand => brand.status === 'active')
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .map(brand => (
-                  <Option key={brand.id} value={brand.name}>
-                    <Space align="center">
-                      {brand.logo && (
-                        <img 
-                          src={brand.logo} 
-                          alt={brand.name} 
-                          style={{ width: 20, height: 20, borderRadius: 2, display: 'block' }}
-                        />
-                      )}
-                      <span>{brand.name}</span>
-                      <span style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>({brand.country})</span>
-                    </Space>
-                  </Option>
-                ))}
-            </Select>
-          </Form.Item>
-          <Form.Item label={<span>{t('inventory.origin')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="origin" required={false} rules={[{ required: true, message: t('common.pleaseInputOrigin') }]}>
-            <Input disabled={!!cigarDatabaseData} />
-          </Form.Item>
+          {cigarDatabaseData ? (
+            <Form.Item label={<span>{t('inventory.brand')} <span style={{ color: '#ff4d4f' }}>*</span></span>}>
+              <div style={{ 
+                padding: '8px 12px', 
+                background: 'rgba(255, 215, 0, 0.1)', 
+                border: '1px solid rgba(255, 215, 0, 0.3)',
+                borderRadius: '6px',
+                color: '#fff'
+              }}>
+                <strong>{cigarDatabaseData.brand}</strong>
+                <span style={{ marginLeft: '8px', fontSize: '12px', color: '#888' }}>
+                  (一致性: {cigarDatabaseData.brandConsistency.toFixed(0)}%)
+                </span>
+              </div>
+            </Form.Item>
+          ) : (
+            <Form.Item label={<span>{t('inventory.brand')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="brand" required={false} rules={[{ required: true, message: t('common.pleaseInputBrand') }]}>
+              <Select
+                placeholder={t('inventory.pleaseSelectBrand')}
+                showSearch
+                filterOption={(input, option) => {
+                  const children = option?.children as any
+                  if (typeof children === 'string') {
+                    return children.toLowerCase().includes(input.toLowerCase())
+                  }
+                  if (Array.isArray(children)) {
+                    return children.some((child: any) => 
+                      typeof child === 'string' && child.toLowerCase().includes(input.toLowerCase())
+                    )
+                  }
+                  return false
+                }}
+                onChange={(val) => {
+                  const b = brandList.find(brand => brand.name === val)
+                  if (b?.country) {
+                    try { form.setFieldsValue({ origin: b.country }) } catch {}
+                  }
+                }}
+                dropdownStyle={{ zIndex: 1050 }}
+              >
+                {brandList
+                  .filter(brand => brand.status === 'active')
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map(brand => (
+                    <Option key={brand.id} value={brand.name}>
+                      <Space align="center">
+                        {brand.logo && (
+                          <img 
+                            src={brand.logo} 
+                            alt={brand.name} 
+                            style={{ width: 20, height: 20, borderRadius: 2, display: 'block' }}
+                          />
+                        )}
+                        <span>{brand.name}</span>
+                        <span style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>({brand.country})</span>
+                      </Space>
+                    </Option>
+                  ))}
+              </Select>
+            </Form.Item>
+          )}
+          {cigarDatabaseData ? (
+            <Form.Item label={<span>{t('inventory.origin')} <span style={{ color: '#ff4d4f' }}>*</span></span>}>
+              <div style={{ 
+                padding: '8px 12px', 
+                background: 'rgba(255, 215, 0, 0.1)', 
+                border: '1px solid rgba(255, 215, 0, 0.3)',
+                borderRadius: '6px',
+                color: '#fff'
+              }}>
+                {cigarDatabaseData.origin}
+                <span style={{ marginLeft: '8px', fontSize: '12px', color: '#888' }}>
+                  (一致性: {cigarDatabaseData.originConsistency.toFixed(0)}%)
+                </span>
+              </div>
+            </Form.Item>
+          ) : (
+            <Form.Item label={<span>{t('inventory.origin')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="origin" required={false} rules={[{ required: true, message: t('common.pleaseInputOrigin') }]}>
+              <Input />
+            </Form.Item>
+          )}
           <Form.Item label={<span>{isMobile ? t('inventory.specification') : t('inventory.size')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="size" required={false} rules={[{ required: true, message: t('common.pleaseInputSize') }]}> 
             <Input />
           </Form.Item>
-          <Form.Item label={<span>{t('inventory.strength')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="strength" required={false} rules={[{ required: true, message: t('common.pleaseSelectStrength') }]}>
-            <Select disabled={!!cigarDatabaseData}>
-              <Option value="mild">{t('inventory.mild')}</Option>
-              <Option value="mild-medium">{t('inventory.mildMedium')}</Option>
-              <Option value="medium">{t('inventory.medium')}</Option>
-              <Option value="medium-full">{t('inventory.mediumFull')}</Option>
-              <Option value="full">{t('inventory.full')}</Option>
-            </Select>
-          </Form.Item>
+          {cigarDatabaseData ? (
+            <Form.Item label={<span>{t('inventory.strength')} <span style={{ color: '#ff4d4f' }}>*</span></span>}>
+              <div style={{ 
+                padding: '8px 12px', 
+                background: 'rgba(255, 215, 0, 0.1)', 
+                border: '1px solid rgba(255, 215, 0, 0.3)',
+                borderRadius: '6px',
+                color: '#fff'
+              }}>
+                <Tag color={
+                  cigarDatabaseData.strength.toLowerCase() === 'full' ? 'red' :
+                  cigarDatabaseData.strength.toLowerCase().includes('medium') ? 'orange' :
+                  'green'
+                }>
+                  {cigarDatabaseData.strength}
+                </Tag>
+                <span style={{ marginLeft: '8px', fontSize: '12px', color: '#888' }}>
+                  (一致性: {cigarDatabaseData.strengthConsistency.toFixed(0)}%)
+                </span>
+              </div>
+            </Form.Item>
+          ) : (
+            <Form.Item label={<span>{t('inventory.strength')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="strength" required={false} rules={[{ required: true, message: t('common.pleaseSelectStrength') }]}>
+              <Select>
+                <Option value="mild">{t('inventory.mild')}</Option>
+                <Option value="mild-medium">{t('inventory.mildMedium')}</Option>
+                <Option value="medium">{t('inventory.medium')}</Option>
+                <Option value="medium-full">{t('inventory.mediumFull')}</Option>
+                <Option value="full">{t('inventory.full')}</Option>
+              </Select>
+            </Form.Item>
+          )}
+          
+          {cigarDatabaseData && cigarDatabaseData.rating !== null && (
+            <Form.Item label="评分">
+              <div style={{ 
+                padding: '8px 12px', 
+                background: 'rgba(255, 215, 0, 0.1)', 
+                border: '1px solid rgba(255, 215, 0, 0.3)',
+                borderRadius: '6px',
+                color: '#fff'
+              }}>
+                <Tag color="gold" style={{ fontSize: '16px', padding: '4px 12px' }}>
+                  {cigarDatabaseData.rating.toFixed(1)}
+                </Tag>
+                <span style={{ marginLeft: '8px', fontSize: '12px', color: '#888' }}>
+                  (基于 {cigarDatabaseData.ratingCount} 次评分)
+                </span>
+              </div>
+            </Form.Item>
+          )}
+          
           <Form.Item label={<span>{t('inventory.price')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="price" required={false} rules={[{ required: true, message: t('common.pleaseInputPrice') }]}> 
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
           
-          <Form.Item label={t('common.description') || '描述'} name="description">
-            <Input.TextArea rows={3} placeholder="请输入雪茄描述" disabled={!!cigarDatabaseData} />
-          </Form.Item>
+          {cigarDatabaseData ? (
+            <Form.Item label={t('common.description') || '描述'}>
+              <div style={{ 
+                padding: '12px', 
+                background: 'rgba(255, 215, 0, 0.1)', 
+                border: '1px solid rgba(255, 215, 0, 0.3)',
+                borderRadius: '6px',
+                color: '#fff',
+                minHeight: '80px'
+              }}>
+                {cigarDatabaseData.description}
+              </div>
+            </Form.Item>
+          ) : (
+            <Form.Item label={t('common.description') || '描述'} name="description">
+              <Input.TextArea rows={3} placeholder="请输入雪茄描述" />
+            </Form.Item>
+          )}
           
           <div style={{ 
             margin: '16px 0',
@@ -4550,17 +4641,74 @@ const AdminInventory: React.FC = () => {
             }} />
           </div>
           
-          <Form.Item label="茄衣" name="wrapper">
-            <Input placeholder="例如: Habano, Connecticut, Maduro" disabled={!!cigarDatabaseData} />
-          </Form.Item>
-          
-          <Form.Item label="茄套" name="binder">
-            <Input placeholder="例如: Nicaraguan, Ecuadorian" disabled={!!cigarDatabaseData} />
-          </Form.Item>
-          
-          <Form.Item label="茄芯" name="filler">
-            <Input placeholder="例如: Cuban, Nicaraguan, Dominican" disabled={!!cigarDatabaseData} />
-          </Form.Item>
+          {cigarDatabaseData ? (
+            <>
+              <Form.Item label="茄衣">
+                <div style={{ 
+                  padding: '8px 12px', 
+                  background: 'rgba(255, 215, 0, 0.1)', 
+                  border: '1px solid rgba(255, 215, 0, 0.3)',
+                  borderRadius: '6px',
+                  color: '#fff'
+                }}>
+                  {cigarDatabaseData.wrappers?.[0]?.value || '-'}
+                  {cigarDatabaseData.wrappers?.[0]?.percentage && (
+                    <span style={{ marginLeft: '8px', fontSize: '12px', color: '#888' }}>
+                      ({cigarDatabaseData.wrappers[0].percentage.toFixed(0)}%)
+                    </span>
+                  )}
+                </div>
+              </Form.Item>
+              
+              <Form.Item label="茄套">
+                <div style={{ 
+                  padding: '8px 12px', 
+                  background: 'rgba(255, 215, 0, 0.1)', 
+                  border: '1px solid rgba(255, 215, 0, 0.3)',
+                  borderRadius: '6px',
+                  color: '#fff'
+                }}>
+                  {cigarDatabaseData.binders?.[0]?.value || '-'}
+                  {cigarDatabaseData.binders?.[0]?.percentage && (
+                    <span style={{ marginLeft: '8px', fontSize: '12px', color: '#888' }}>
+                      ({cigarDatabaseData.binders[0].percentage.toFixed(0)}%)
+                    </span>
+                  )}
+                </div>
+              </Form.Item>
+              
+              <Form.Item label="茄芯">
+                <div style={{ 
+                  padding: '8px 12px', 
+                  background: 'rgba(255, 215, 0, 0.1)', 
+                  border: '1px solid rgba(255, 215, 0, 0.3)',
+                  borderRadius: '6px',
+                  color: '#fff'
+                }}>
+                  {cigarDatabaseData.fillers?.[0]?.value || '-'}
+                  {cigarDatabaseData.fillers?.[0]?.percentage && (
+                    <span style={{ marginLeft: '8px', fontSize: '12px', color: '#888' }}>
+                      ({cigarDatabaseData.fillers[0].percentage.toFixed(0)}%)
+                    </span>
+                  )}
+                </div>
+              </Form.Item>
+            </>
+          ) : (
+            <>
+              <Form.Item label="茄衣" name="wrapper">
+                <Input placeholder="例如: Habano, Connecticut, Maduro" />
+              </Form.Item>
+              
+              <Form.Item label="茄套" name="binder">
+                <Input placeholder="例如: Nicaraguan, Ecuadorian" />
+              </Form.Item>
+              
+              <Form.Item label="茄芯" name="filler">
+                <Input placeholder="例如: Cuban, Nicaraguan, Dominican" />
+              </Form.Item>
+            </>
+          )}
           
           <div style={{ 
             margin: '16px 0',
@@ -4591,50 +4739,117 @@ const AdminInventory: React.FC = () => {
             }} />
           </div>
           
-          <Form.Item 
-            label="脚部 (Foot) - 前1/3" 
-            name="footTasteNotes"
-            labelCol={isMobile ? { span: 24 } : undefined}
-            wrapperCol={isMobile ? { span: 24 } : undefined}
-          >
-            <Select
-              mode="tags"
-              placeholder="输入品吸笔记，按回车添加"
-              style={{ width: '100%' }}
-              tokenSeparators={[',']}
-              disabled={!!cigarDatabaseData}
-            />
-          </Form.Item>
+          {cigarDatabaseData ? (
+            <>
+              <Form.Item 
+                label="脚部 (Foot) - 前1/3" 
+                labelCol={isMobile ? { span: 24 } : undefined}
+                wrapperCol={isMobile ? { span: 24 } : undefined}
+              >
+                <div style={{ 
+                  padding: '8px 12px', 
+                  background: 'rgba(255, 215, 0, 0.1)', 
+                  border: '1px solid rgba(255, 215, 0, 0.3)',
+                  borderRadius: '6px'
+                }}>
+                  <Space wrap>
+                    {cigarDatabaseData.footTasteNotes?.map((item, idx) => (
+                      <Tag key={idx} color="cyan">
+                        {item.value} ({item.percentage.toFixed(0)}%)
+                      </Tag>
+                    )) || <span style={{ color: '#888' }}>-</span>}
+                  </Space>
+                </div>
+              </Form.Item>
+              
+              <Form.Item 
+                label="主体 (Body) - 中1/3" 
+                labelCol={isMobile ? { span: 24 } : undefined}
+                wrapperCol={isMobile ? { span: 24 } : undefined}
+              >
+                <div style={{ 
+                  padding: '8px 12px', 
+                  background: 'rgba(255, 215, 0, 0.1)', 
+                  border: '1px solid rgba(255, 215, 0, 0.3)',
+                  borderRadius: '6px'
+                }}>
+                  <Space wrap>
+                    {cigarDatabaseData.bodyTasteNotes?.map((item, idx) => (
+                      <Tag key={idx} color="blue">
+                        {item.value} ({item.percentage.toFixed(0)}%)
+                      </Tag>
+                    )) || <span style={{ color: '#888' }}>-</span>}
+                  </Space>
+                </div>
+              </Form.Item>
+              
+              <Form.Item 
+                label="头部 (Head) - 后1/3" 
+                labelCol={isMobile ? { span: 24 } : undefined}
+                wrapperCol={isMobile ? { span: 24 } : undefined}
+              >
+                <div style={{ 
+                  padding: '8px 12px', 
+                  background: 'rgba(255, 215, 0, 0.1)', 
+                  border: '1px solid rgba(255, 215, 0, 0.3)',
+                  borderRadius: '6px'
+                }}>
+                  <Space wrap>
+                    {cigarDatabaseData.headTasteNotes?.map((item, idx) => (
+                      <Tag key={idx} color="purple">
+                        {item.value} ({item.percentage.toFixed(0)}%)
+                      </Tag>
+                    )) || <span style={{ color: '#888' }}>-</span>}
+                  </Space>
+                </div>
+              </Form.Item>
+            </>
+          ) : (
+            <>
+              <Form.Item 
+                label="脚部 (Foot) - 前1/3" 
+                name="footTasteNotes"
+                labelCol={isMobile ? { span: 24 } : undefined}
+                wrapperCol={isMobile ? { span: 24 } : undefined}
+              >
+                <Select
+                  mode="tags"
+                  placeholder="输入品吸笔记，按回车添加"
+                  style={{ width: '100%' }}
+                  tokenSeparators={[',']}
+                />
+              </Form.Item>
+              
+              <Form.Item 
+                label="主体 (Body) - 中1/3" 
+                name="bodyTasteNotes"
+                labelCol={isMobile ? { span: 24 } : undefined}
+                wrapperCol={isMobile ? { span: 24 } : undefined}
+              >
+                <Select
+                  mode="tags"
+                  placeholder="输入品吸笔记，按回车添加"
+                  style={{ width: '100%' }}
+                  tokenSeparators={[',']}
+                />
+              </Form.Item>
+              
+              <Form.Item 
+                label="头部 (Head) - 后1/3" 
+                name="headTasteNotes"
+                labelCol={isMobile ? { span: 24 } : undefined}
+                wrapperCol={isMobile ? { span: 24 } : undefined}
+              >
+                <Select
+                  mode="tags"
+                  placeholder="输入品吸笔记，按回车添加"
+                  style={{ width: '100%' }}
+                  tokenSeparators={[',']}
+                />
+              </Form.Item>
+            </>
+          )}
           
-          <Form.Item 
-            label="主体 (Body) - 中1/3" 
-            name="bodyTasteNotes"
-            labelCol={isMobile ? { span: 24 } : undefined}
-            wrapperCol={isMobile ? { span: 24 } : undefined}
-          >
-            <Select
-              mode="tags"
-              placeholder="输入品吸笔记，按回车添加"
-              style={{ width: '100%' }}
-              tokenSeparators={[',']}
-              disabled={!!cigarDatabaseData}
-            />
-          </Form.Item>
-          
-          <Form.Item 
-            label="头部 (Head) - 后1/3" 
-            name="headTasteNotes"
-            labelCol={isMobile ? { span: 24 } : undefined}
-            wrapperCol={isMobile ? { span: 24 } : undefined}
-          >
-            <Select
-              mode="tags"
-              placeholder="输入品吸笔记，按回车添加"
-              style={{ width: '100%' }}
-              tokenSeparators={[',']}
-              disabled={!!cigarDatabaseData}
-            />
-          </Form.Item>
           
           <div style={{ 
             margin: '16px 0',
@@ -4665,20 +4880,42 @@ const AdminInventory: React.FC = () => {
             }} />
           </div>
           
-          <Form.Item 
-            label="标签/风味特征" 
-            name="tags"
-            labelCol={isMobile ? { span: 24 } : undefined}
-            wrapperCol={isMobile ? { span: 24 } : undefined}
-          >
-            <Select
-              mode="tags"
-              placeholder="输入标签，按回车添加"
-              style={{ width: '100%' }}
-              tokenSeparators={[',']}
-              disabled={!!cigarDatabaseData}
-            />
-          </Form.Item>
+          {cigarDatabaseData ? (
+            <Form.Item 
+              label="标签/风味特征" 
+              labelCol={isMobile ? { span: 24 } : undefined}
+              wrapperCol={isMobile ? { span: 24 } : undefined}
+            >
+              <div style={{ 
+                padding: '8px 12px', 
+                background: 'rgba(255, 215, 0, 0.1)', 
+                border: '1px solid rgba(255, 215, 0, 0.3)',
+                borderRadius: '6px'
+              }}>
+                <Space wrap>
+                  {cigarDatabaseData.flavorProfile?.map((item, idx) => (
+                    <Tag key={idx} color="gold">
+                      {item.value} ({item.percentage.toFixed(0)}%)
+                    </Tag>
+                  )) || <span style={{ color: '#888' }}>-</span>}
+                </Space>
+              </div>
+            </Form.Item>
+          ) : (
+            <Form.Item 
+              label="标签/风味特征" 
+              name="tags"
+              labelCol={isMobile ? { span: 24 } : undefined}
+              wrapperCol={isMobile ? { span: 24 } : undefined}
+            >
+              <Select
+                mode="tags"
+                placeholder="输入标签，按回车添加"
+                style={{ width: '100%' }}
+                tokenSeparators={[',']}
+              />
+            </Form.Item>
+          )}
         </Form>
       </Modal>
 
