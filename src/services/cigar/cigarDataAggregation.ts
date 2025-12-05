@@ -182,16 +182,35 @@ export async function saveRecognitionToCigarDatabase(
                 });
             }
             
-            // 添加新的描述
+            // 更新描述（优先保存高 confidence 和最新日期）
             if (result.description) {
-                const newDescription = {
-                    text: result.description,
-                    confidence: result.confidence,
-                    addedAt: new Date().toISOString()
-                };
+                const existingDescription = existingData.description || '';
+                const existingConfidence = existingData.descriptionConfidence || 0;
+                const existingUpdatedAt = existingData.descriptionUpdatedAt;
                 
-                const existingDescriptions = existingData.descriptions || [];
-                updateData.descriptions = [...existingDescriptions, newDescription];
+                const newConfidence = result.confidence || 0;
+                const newUpdatedAt = serverTimestamp();
+                
+                // 判断是否应该更新描述：
+                // 1. 如果现有描述为空，直接使用新描述
+                // 2. 如果新描述的 confidence 更高，则更新
+                // 3. 如果 confidence 相同，总是更新（使用最新日期）
+                let shouldUpdate = false;
+                
+                if (!existingDescription) {
+                    shouldUpdate = true;
+                } else if (newConfidence > existingConfidence) {
+                    shouldUpdate = true;
+                } else if (newConfidence === existingConfidence) {
+                    // 如果 confidence 相同，使用最新日期（总是更新）
+                    shouldUpdate = true;
+                }
+                
+                if (shouldUpdate) {
+                    updateData.description = result.description;
+                    updateData.descriptionConfidence = newConfidence;
+                    updateData.descriptionUpdatedAt = newUpdatedAt;
+                }
             }
             
             // 执行更新
@@ -220,11 +239,10 @@ export async function saveRecognitionToCigarDatabase(
                 ratingSum: (result.rating !== null && result.rating !== undefined && typeof result.rating === 'number') ? result.rating : 0,
                 ratingCount: (result.rating !== null && result.rating !== undefined && typeof result.rating === 'number') ? 1 : 0,
                 
-                descriptions: result.description ? [{
-                    text: result.description,
-                    confidence: result.confidence,
-                    addedAt: new Date().toISOString()
-                }] : [],
+                // 描述字段（字符串，优先保存高 confidence 和最新日期）
+                description: result.description || '',
+                descriptionConfidence: result.confidence || 0,
+                descriptionUpdatedAt: serverTimestamp(),
                 
                 totalRecognitions: 1,
                 lastRecognizedAt: serverTimestamp(),
@@ -357,16 +375,11 @@ export async function getAggregatedCigarData(
         const bodyTasteNotes = getTopNValues(data.bodyTasteNotesStats || {}, 5);
         const headTasteNotes = getTopNValues(data.headTasteNotesStats || {}, 5);
         
-        // 获取描述（取最新的）
-        const descriptions = data.descriptions || [];
-        const latestDescription = descriptions.length > 0 
-            ? descriptions[descriptions.length - 1].text 
-            : '';
+        // 获取描述（字符串）
+        const description = data.description || '';
         
-        // 计算平均置信度
-        const avgConfidence = descriptions.length > 0
-            ? descriptions.reduce((sum: number, d: any) => sum + (d.confidence || 0), 0) / descriptions.length
-            : 0;
+        // 计算平均置信度（使用 descriptionConfidence，如果没有则使用 0）
+        const avgConfidence = data.descriptionConfidence || 0;
         
         // 计算平均评分
         const ratingSum = data.ratingSum || 0;
@@ -392,7 +405,7 @@ export async function getAggregatedCigarData(
             strength: strengthResult?.value || '',
             strengthConsistency: strengthResult?.percentage || 0,
             
-            description: latestDescription,
+            description: description,
             
             rating: avgRating,
             ratingCount,
@@ -453,16 +466,11 @@ function getAggregatedCigarDataFromDoc(data: any): AggregatedCigarData {
     const bodyTasteNotes = getTopNValues(data.bodyTasteNotesStats || {}, 5);
     const headTasteNotes = getTopNValues(data.headTasteNotesStats || {}, 5);
     
-    // 获取描述（取最新的）
-    const descriptions = data.descriptions || [];
-    const latestDescription = descriptions.length > 0 
-        ? descriptions[descriptions.length - 1].text 
-        : '';
+    // 获取描述（字符串）
+    const description = data.description || '';
     
-    // 计算平均置信度
-    const avgConfidence = descriptions.length > 0
-        ? descriptions.reduce((sum: number, d: any) => sum + (d.confidence || 0), 0) / descriptions.length
-        : 0;
+    // 计算平均置信度（使用 descriptionConfidence，如果没有则使用 0）
+    const avgConfidence = data.descriptionConfidence || 0;
     
     // 计算平均评分
     const ratingSum = data.ratingSum || 0;
@@ -488,7 +496,7 @@ function getAggregatedCigarDataFromDoc(data: any): AggregatedCigarData {
         strength: strengthResult?.value || '',
         strengthConsistency: strengthResult?.percentage || 0,
         
-        description: latestDescription,
+        description: description,
         
         rating: avgRating,
         ratingCount,

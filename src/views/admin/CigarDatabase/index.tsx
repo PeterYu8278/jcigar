@@ -68,7 +68,9 @@ interface CigarDatabaseRecord {
   headTasteNotesStats: Record<string, number>;
   ratingSum: number;
   ratingCount: number;
-  descriptions: Array<{ text: string; confidence: number; addedAt: string }>;
+  description: string; // 描述（字符串，优先保存高 confidence 和最新日期）
+  descriptionConfidence?: number; // 描述的置信度
+  descriptionUpdatedAt?: any; // 描述更新时间
   totalRecognitions: number;
   lastRecognizedAt: any;
   createdAt: any;
@@ -144,7 +146,9 @@ export const CigarDatabase: React.FC = () => {
           headTasteNotesStats: data.headTasteNotesStats || {},
           ratingSum: data.ratingSum || 0,
           ratingCount: data.ratingCount || 0,
-          descriptions: data.descriptions || [],
+          description: data.description || '',
+          descriptionConfidence: data.descriptionConfidence,
+          descriptionUpdatedAt: data.descriptionUpdatedAt,
           totalRecognitions: data.totalRecognitions || 0,
           lastRecognizedAt: data.lastRecognizedAt,
           createdAt: data.createdAt,
@@ -231,7 +235,9 @@ export const CigarDatabase: React.FC = () => {
             headTasteNotesStats: data.headTasteNotesStats || {},
             ratingSum: data.ratingSum || 0,
             ratingCount: data.ratingCount || 0,
-            descriptions: data.descriptions || [],
+            description: data.description || '',
+            descriptionConfidence: data.descriptionConfidence,
+            descriptionUpdatedAt: data.descriptionUpdatedAt,
             totalRecognitions: data.totalRecognitions || 0,
             lastRecognizedAt: data.lastRecognizedAt,
             createdAt: data.createdAt,
@@ -312,9 +318,7 @@ export const CigarDatabase: React.FC = () => {
         ? (cigar.ratingSum / cigar.ratingCount).toFixed(1) 
         : null;
       
-      const latestDescription = cigar.descriptions.length > 0
-        ? cigar.descriptions[cigar.descriptions.length - 1].text
-        : '暂无描述';
+      const latestDescription = cigar.description || '暂无描述';
       
       // 格式化最后识别时间
       let lastRecognizedText = '';
