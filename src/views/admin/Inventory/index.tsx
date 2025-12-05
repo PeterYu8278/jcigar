@@ -4149,7 +4149,50 @@ const AdminInventory: React.FC = () => {
             rules={[{ required: true, message: t('common.pleaseInputName') }]}
             style={{ marginBottom: 0 }}
           >
-            <Input />
+            <Input 
+              onBlur={async (e) => {
+                const productName = e.target.value?.trim();
+                if (!productName || editing) return; // 只在创建模式下自动查询
+                
+                // 尝试从 cigar_database 查询数据
+                try {
+                  const aggregatedData = await getAggregatedCigarData(productName);
+                  
+                  if (aggregatedData) {
+                    setCigarDatabaseData(aggregatedData);
+                    
+                    // 自动填充表单字段
+                    const updates: any = {};
+                    
+                    if (aggregatedData.brand) updates.brand = aggregatedData.brand;
+                    if (aggregatedData.origin) updates.origin = aggregatedData.origin;
+                    if (aggregatedData.strength) updates.strength = aggregatedData.strength;
+                    if (aggregatedData.description) updates.description = aggregatedData.description;
+                    if (aggregatedData.wrappers?.[0]?.value) updates.wrapper = aggregatedData.wrappers[0].value;
+                    if (aggregatedData.binders?.[0]?.value) updates.binder = aggregatedData.binders[0].value;
+                    if (aggregatedData.fillers?.[0]?.value) updates.filler = aggregatedData.fillers[0].value;
+                    if (aggregatedData.footTasteNotes?.length) updates.footTasteNotes = aggregatedData.footTasteNotes.map(item => item.value);
+                    if (aggregatedData.bodyTasteNotes?.length) updates.bodyTasteNotes = aggregatedData.bodyTasteNotes.map(item => item.value);
+                    if (aggregatedData.headTasteNotes?.length) updates.headTasteNotes = aggregatedData.headTasteNotes.map(item => item.value);
+                    if (aggregatedData.flavorProfile?.length) updates.tags = aggregatedData.flavorProfile.map(item => item.value);
+                    
+                    form.setFieldsValue(updates);
+                    
+                    if (aggregatedData.rating !== null && aggregatedData.rating !== undefined) {
+                      setAiRating(aggregatedData.rating);
+                    }
+                    
+                    message.success(`已从数据库加载 "${productName}" 的信息（基于 ${aggregatedData.totalRecognitions} 次AI识别）`);
+                  } else {
+                    // 未找到数据，清空 cigarDatabaseData 以允许手动输入
+                    setCigarDatabaseData(null);
+                  }
+                } catch (error) {
+                  // 查询失败，允许手动输入
+                  setCigarDatabaseData(null);
+                }
+              }}
+            />
           </Form.Item>
           <Form.Item >
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
