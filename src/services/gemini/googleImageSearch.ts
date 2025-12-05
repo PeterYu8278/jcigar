@@ -26,7 +26,6 @@ export async function searchGoogleImages(
     maxResults: number = 10
 ): Promise<string[]> {
     if (!GOOGLE_SEARCH_API_KEY || !GOOGLE_SEARCH_ENGINE_ID) {
-        console.warn('[GoogleImageSearch] ⚠️ Google Search API 未配置，跳过 Google 图片搜索');
         return [];
     }
 
@@ -87,8 +86,6 @@ export async function searchGoogleImages(
         const siteQuery = trustedSites.map(site => `site:${site}`).join(' OR ');
         const searchQuery = `${brandName} `;
         
-        console.log(`[GoogleImageSearch] 🔍 优化搜索（单支+茄标+无背景）: "${searchQuery}"`);
-        
         // Google Custom Search API 端点
         // 参数优化说明：
         // - searchType=image: 图片搜索
@@ -109,20 +106,15 @@ export async function searchGoogleImages(
             `imgColorType=color&` + // 优先彩色图片（茄标通常是彩色的）
             `fileType=jpg,png,webp`; // 指定文件类型
 
-        console.log(`[GoogleImageSearch] 🔍 搜索图片: "${brandName}"`);
-
         const response = await fetch(apiUrl);
 
         if (!response.ok) {
-            const errorText = await response.text();
-            console.warn(`[GoogleImageSearch] ❌ API 请求失败 (${response.status}):`, errorText);
             return [];
         }
 
         const data = await response.json();
 
         if (!data.items || data.items.length === 0) {
-            console.log(`[GoogleImageSearch] ⚠️ 未找到图片结果`);
             return [];
         }
 
@@ -167,7 +159,6 @@ export async function searchGoogleImages(
                 // 0. 首选网站加分（60分，最高优先级）
                 if (url.includes('cohcigars.com')) {
                     score += 60;
-                    console.log(`[GoogleImageSearch]   🌟 首选网站 cohcigars.com: +60分`);
                 }
                 
                 // 1. 可信网站加分（40分）
@@ -290,15 +281,10 @@ export async function searchGoogleImages(
                 };
             })
             .sort((a: any, b: any) => b.score - a.score) // 按分数降序排序
-            .map((item: any) => {
-                console.log(`[GoogleImageSearch]   - URL 评分 ${item.score}: ${item.url}`);
-                return item.url;
-            });
+            .map((item: any) => item.url);
 
-        console.log(`[GoogleImageSearch] ✅ 找到 ${scoredUrls.length} 个有效图片 URL（已按质量排序）`);
         return scoredUrls;
     } catch (error: any) {
-        console.warn(`[GoogleImageSearch] ❌ 搜索失败:`, error?.message || error);
         return [];
     }
 }
@@ -354,47 +340,34 @@ export async function searchCigarImageWithGoogle(
     if (normalizedName.startsWith(normalizedBrand)) {
         // name 已包含 brand，直接使用 name（保留原始大小写）
         baseQuery = name.trim();
-        console.log(`[GoogleImageSearch] ℹ️ name 已包含 brand，使用完整名称: "${baseQuery}"`);
     } else {
         // name 不包含 brand，拼接两者
         baseQuery = `${brand.trim()} ${name.trim()}`;
-        console.log(`[GoogleImageSearch] ℹ️ 拼接 brand + name: "${baseQuery}"`);
     }
     
     // 添加 'cigar stick' 关键词以提高搜索精确度（优先单支雪茄）
     const query = `${baseQuery} cigar stick`;
-    console.log(`[GoogleImageSearch] ℹ️ 最终搜索查询: "${query}"`);
     
     if (!GOOGLE_SEARCH_API_KEY || !GOOGLE_SEARCH_ENGINE_ID) {
-        console.warn(`[GoogleImageSearch] ⚠️ Google Search API 未配置，跳过搜索: "${query}"`);
-        console.warn(`[GoogleImageSearch] 💡 提示: 请在环境变量中设置 VITE_GOOGLE_SEARCH_API_KEY 和 VITE_GOOGLE_SEARCH_ENGINE_ID`);
         return null;
     }
-
-    console.log(`[GoogleImageSearch] 🔍 开始搜索: "${query}"`);
 
     // 搜索图片
     const imageUrls = await searchGoogleImages(query, 10);
 
     if (imageUrls.length === 0) {
-        console.log(`[GoogleImageSearch] ⚠️ 未找到图片 URL`);
         return null;
     }
 
     // 验证每个 URL 的可访问性，返回第一个可用的
     for (const url of imageUrls) {
-        console.log(`[GoogleImageSearch] 🔍 验证 URL 可访问性:`, url);
         const isValid = await validateImageUrl(url);
         
         if (isValid) {
-            console.log(`[GoogleImageSearch] ✅ 找到可用的图片 URL:`, url);
             return url;
-        } else {
-            console.log(`[GoogleImageSearch] ⚠️ URL 不可访问，尝试下一个:`, url);
         }
     }
 
-    console.log(`[GoogleImageSearch] ❌ 所有 URL 都不可访问`);
     return null;
 }
 

@@ -30,8 +30,6 @@ export interface AIRecognitionResult {
  */
 export async function updateRecognitionStats(result: AIRecognitionResult): Promise<void> {
   try {
-    console.log(`[cigarRecognitionStats] 📊 更新识别统计: ${result.brand} ${result.name}`);
-    
     const normalizedBrand = normalizeName(result.brand);
     const normalizedName = normalizeName(result.name);
     
@@ -75,21 +73,8 @@ export async function updateRecognitionStats(result: AIRecognitionResult): Promi
         'aiRecognitionStats.imageUrlSuccessRate': imageUrlSuccessRate,
         updatedAt: serverTimestamp()
       });
-      
-      console.log(`[cigarRecognitionStats] ✅ 统计已更新: 总扫描 ${totalScans}, 成功 ${successfulScans}, 平均置信度 ${(averageConfidence * 100).toFixed(1)}%`);
-    } else {
-      // 如果数据库中没有此雪茄，创建一个统计记录（不包含详细信息）
-      console.log(`[cigarRecognitionStats] ℹ️ 数据库中无此雪茄，创建统计记录（仅统计信息）`);
-      
-      // 注意：这里只创建统计信息，不创建完整的雪茄记录
-      // 完整的雪茄记录应该由管理员手动录入或用户贡献
-      
-      // 暂时不创建新记录，只记录到日志
-      // 未来可以创建一个单独的 "ai_recognition_stats" 集合来存储这些统计
-      console.log(`[cigarRecognitionStats] 📝 记录到日志: ${result.brand} ${result.name}, 置信度: ${(result.confidence * 100).toFixed(1)}%`);
     }
   } catch (error) {
-    console.error('[cigarRecognitionStats] ❌ 更新统计失败:', error);
     // 不抛出错误，避免影响主流程
   }
 }
@@ -129,7 +114,6 @@ export async function getRecognitionStats(
     
     return null;
   } catch (error) {
-    console.error('[cigarRecognitionStats] ❌ 获取统计失败:', error);
     return null;
   }
 }

@@ -21,10 +21,7 @@ import type { CigarAnalysisResult } from '../gemini/cigarRecognition';
  * @returns 雪茄详细信息
  */
 export async function searchCigarByText(brandAndName: string): Promise<CigarAnalysisResult | null> {
-  console.log(`[cigarTextSearch] 🔍 开始文本搜索: "${brandAndName}"`);
-  
   if (!brandAndName || !brandAndName.trim()) {
-    console.warn('[cigarTextSearch] ⚠️ 输入为空');
     return null;
   }
   
@@ -56,14 +53,10 @@ export async function searchCigarByText(brandAndName: string): Promise<CigarAnal
     }
   }
   
-  console.log(`[cigarTextSearch] 📋 解析结果 - 品牌: "${brand}", 名称: "${name}"`);
-  
   // 1. 查询数据库
-  console.log(`[cigarTextSearch] 🔍 查询数据库...`);
   try {
     const dbResult = await getCigarDetails(brand, name);
     if (dbResult) {
-      console.log(`[cigarTextSearch] ✅ 数据库找到匹配项`);
       
       // 构建返回结果
       const result: CigarAnalysisResult = {
@@ -95,15 +88,13 @@ export async function searchCigarByText(brandAndName: string): Promise<CigarAnal
         const imageSearchEnabled = appConfig?.aiCigar?.enableImageSearch ?? true;
         
         if (imageSearchEnabled) {
-          console.log(`[cigarTextSearch] 🔍 数据库无图片，尝试搜索图片URL...`);
           try {
             const imageUrl = await searchCigarImageWithGoogle(brand, name);
             if (imageUrl) {
               result.imageUrl = imageUrl;
-              console.log(`[cigarTextSearch] ✅ 找到图片URL:`, imageUrl);
             }
           } catch (error) {
-            console.warn(`[cigarTextSearch] ⚠️ 图片搜索失败:`, error);
+            // Silently fail
           }
         }
       }
@@ -115,40 +106,18 @@ export async function searchCigarByText(brandAndName: string): Promise<CigarAnal
         confidence: 1.0,
         imageUrlFound: !!result.imageUrl,
         hasDetailedInfo: true
-      }).catch(err => console.warn('[cigarTextSearch] 统计更新失败:', err));
+      }).catch(() => {});
       
       return result;
-    } else {
-      console.log(`[cigarTextSearch] ℹ️ 数据库未找到匹配项`);
     }
   } catch (error) {
-    console.error('[cigarTextSearch] ❌ 数据库查询失败:', error);
+    // Database query failed
   }
   
   // 2. 数据库未找到，使用 Gemini API 推理详细信息
-  console.log(`[cigarTextSearch] 🤖 数据库未找到，使用 Gemini API 推理详细信息...`);
-  
   try {
-    console.log(`[cigarTextSearch] 📞 调用 Gemini API: analyzeCigarByName("${name}", "${brand}")`);
-    
     // 调用 Gemini API 根据品牌和名称获取详细信息
     const geminiResult = await analyzeCigarByName(name, brand);
-    
-    console.log(`[cigarTextSearch] ✅ Gemini API 返回详细信息:`, {
-      brand: geminiResult.brand,
-      name: geminiResult.name,
-      wrapper: geminiResult.wrapper,
-      binder: geminiResult.binder,
-      filler: geminiResult.filler,
-      strength: geminiResult.strength,
-      flavorProfile: geminiResult.flavorProfile,
-      footTasteNotes: geminiResult.footTasteNotes,
-      bodyTasteNotes: geminiResult.bodyTasteNotes,
-      headTasteNotes: geminiResult.headTasteNotes,
-      rating: geminiResult.rating,
-      ratingSource: geminiResult.ratingSource,
-      confidence: geminiResult.confidence
-    });
     
     // 标注为 AI 推理结果（非数据库验证）
     const result: CigarAnalysisResult = {
@@ -157,24 +126,19 @@ export async function searchCigarByText(brandAndName: string): Promise<CigarAnal
       confidence: geminiResult.confidence * 0.9 // 文本搜索的置信度略降低
     };
     
-    console.log(`[cigarTextSearch] 📊 最终结果:`, result);
-    console.log(`[cigarTextSearch] 📊 最终结果置信度: ${(result.confidence * 100).toFixed(1)}%`);
-    
     // 如果 Gemini 没有返回图片，尝试搜索图片 URL
     if (!result.imageUrl) {
       const appConfig = await getAppConfig();
       const imageSearchEnabled = appConfig?.aiCigar?.enableImageSearch ?? true;
       
       if (imageSearchEnabled) {
-        console.log(`[cigarTextSearch] 🔍 Gemini 未返回图片，尝试搜索图片URL...`);
         try {
           const imageUrl = await searchCigarImageWithGoogle(brand, name);
           if (imageUrl) {
             result.imageUrl = imageUrl;
-            console.log(`[cigarTextSearch] ✅ 找到图片URL:`, imageUrl);
           }
         } catch (error) {
-          console.warn(`[cigarTextSearch] ⚠️ 图片搜索失败:`, error);
+          // Silently fail
         }
       }
     }
@@ -186,18 +150,11 @@ export async function searchCigarByText(brandAndName: string): Promise<CigarAnal
       confidence: result.confidence,
       imageUrlFound: !!result.imageUrl,
       hasDetailedInfo: false
-    }).catch(err => console.warn('[cigarTextSearch] 统计更新失败:', err));
+    }).catch(() => {});
     
     return result;
   } catch (error) {
-    console.error('[cigarTextSearch] ❌ Gemini API 调用失败:', error);
-    console.error('[cigarTextSearch] 错误详情:', {
-      message: (error as any)?.message,
-      stack: (error as any)?.stack
-    });
-    
     // Gemini API 失败，返回基础信息
-    console.log(`[cigarTextSearch] ℹ️ 返回基础识别结果（无详细信息）`);
     
     const basicResult: CigarAnalysisResult = {
       brand,
@@ -216,15 +173,13 @@ export async function searchCigarByText(brandAndName: string): Promise<CigarAnal
     const imageSearchEnabled = appConfig?.aiCigar?.enableImageSearch ?? true;
     
     if (imageSearchEnabled) {
-      console.log(`[cigarTextSearch] 🔍 尝试搜索图片URL...`);
       try {
         const imageUrl = await searchCigarImageWithGoogle(brand, name);
         if (imageUrl) {
           basicResult.imageUrl = imageUrl;
-          console.log(`[cigarTextSearch] ✅ 找到图片URL:`, imageUrl);
         }
       } catch (imgError) {
-        console.warn(`[cigarTextSearch] ⚠️ 图片搜索失败:`, imgError);
+        // Silently fail
       }
     }
     
@@ -235,7 +190,7 @@ export async function searchCigarByText(brandAndName: string): Promise<CigarAnal
       confidence: 0.5,
       imageUrlFound: !!basicResult.imageUrl,
       hasDetailedInfo: false
-    }).catch(err => console.warn('[cigarTextSearch] 统计更新失败:', err));
+    }).catch(() => {});
     
     return basicResult;
   }

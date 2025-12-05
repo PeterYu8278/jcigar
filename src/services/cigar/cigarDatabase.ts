@@ -158,8 +158,6 @@ async function queryExactMatch(
   normalizedName: string
 ): Promise<CigarDetailedInfo | null> {
   try {
-    console.log(`[cigarDatabase] 🔍 精确匹配查询: brand="${normalizedBrand}", name="${normalizedName}"`);
-    
     const cigarsRef = collection(db, GLOBAL_COLLECTIONS.CIGAR_DATABASE);
     const q = query(
       cigarsRef,
@@ -171,14 +169,11 @@ async function queryExactMatch(
     const snapshot = await getDocs(q);
     
     if (snapshot.empty) {
-      console.log(`[cigarDatabase] ℹ️ 精确匹配未找到结果`);
       return null;
     }
     
     const doc = snapshot.docs[0];
     const data = doc.data() as CigarDetailedInfo;
-    
-    console.log(`[cigarDatabase] ✅ 精确匹配成功: ${data.brand} ${data.name}`);
     
     return {
       ...data,
@@ -191,7 +186,6 @@ async function queryExactMatch(
         null
     };
   } catch (error) {
-    console.error('[cigarDatabase] ❌ 精确匹配查询失败:', error);
     return null;
   }
 }
@@ -210,11 +204,8 @@ async function queryFuzzyMatch(
   inputName: string
 ): Promise<CigarSearchResult | null> {
   try {
-    console.log(`[cigarDatabase] 🔍 模糊匹配查询: brand="${inputBrand}", name="${inputName}"`);
-    
     // 生成搜索关键词
     const searchKeywords = generateSearchKeywords(inputBrand, inputName);
-    console.log(`[cigarDatabase] 📋 搜索关键词:`, searchKeywords);
     
     const cigarsRef = collection(db, GLOBAL_COLLECTIONS.CIGAR_DATABASE);
     
@@ -228,11 +219,8 @@ async function queryFuzzyMatch(
     const snapshot = await getDocs(q);
     
     if (snapshot.empty) {
-      console.log(`[cigarDatabase] ℹ️ 模糊匹配未找到结果`);
       return null;
     }
-    
-    console.log(`[cigarDatabase] 📊 找到 ${snapshot.size} 个候选项，开始计算相似度...`);
     
     // 计算每个候选的相似度
     const candidates: CigarSearchResult[] = [];
@@ -246,8 +234,6 @@ async function queryFuzzyMatch(
         data.name,
         data.searchKeywords
       );
-      
-      console.log(`[cigarDatabase]   - ${data.brand} ${data.name}: 相似度 ${(similarity * 100).toFixed(1)}%`);
       
       candidates.push({
         data: {
@@ -269,13 +255,8 @@ async function queryFuzzyMatch(
     
     const bestMatch = candidates[0];
     
-    if (bestMatch) {
-      console.log(`[cigarDatabase] ✅ 最佳匹配: ${bestMatch.data.brand} ${bestMatch.data.name} (相似度: ${(bestMatch.similarity * 100).toFixed(1)}%)`);
-    }
-    
     return bestMatch || null;
   } catch (error) {
-    console.error('[cigarDatabase] ❌ 模糊匹配查询失败:', error);
     return null;
   }
 }
@@ -296,8 +277,6 @@ export async function getCigarDetails(
   brand: string,
   name: string
 ): Promise<CigarDetailedInfo | null> {
-  console.log(`[cigarDatabase] 🚀 开始查询雪茄详细信息: "${brand} ${name}"`);
-  
   // 1. 检查缓存
   const cached = cigarCache.get(brand, name);
   if (cached) {
@@ -319,16 +298,12 @@ export async function getCigarDetails(
   // 4. 模糊匹配查询
   const fuzzyMatch = await queryFuzzyMatch(brand, name);
   if (fuzzyMatch && fuzzyMatch.similarity >= 0.8) {  // 80% 相似度阈值
-    console.log(`[cigarDatabase] ✅ 模糊匹配成功（相似度 >= 80%）`);
     // 写入缓存
     cigarCache.set(brand, name, fuzzyMatch.data);
     return fuzzyMatch.data;
-  } else if (fuzzyMatch) {
-    console.log(`[cigarDatabase] ⚠️ 最佳匹配相似度过低 (${(fuzzyMatch.similarity * 100).toFixed(1)}% < 80%)，不返回结果`);
   }
   
   // 5. 未找到
-  console.log(`[cigarDatabase] ❌ 未找到匹配的雪茄信息`);
   return null;
 }
 

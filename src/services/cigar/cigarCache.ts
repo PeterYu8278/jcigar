@@ -69,18 +69,14 @@ class CigarCache {
     const cached = this.cache.get(key);
     
     if (!cached) {
-      console.log(`[cigarCache] ❌ 缓存未命中: ${brand} ${name}`);
       return null;
     }
     
     // 检查是否过期
     if (this.isExpired(cached)) {
-      console.log(`[cigarCache] ⏰ 缓存已过期: ${brand} ${name}`);
       this.cache.delete(key);
       return null;
     }
-    
-    console.log(`[cigarCache] ✅ 缓存命中: ${brand} ${name}`);
     
     // LRU: 将访问的项移到最后（Map 保持插入顺序）
     this.cache.delete(key);
@@ -103,7 +99,6 @@ class CigarCache {
     if (this.cache.size >= this.maxSize) {
       const firstKey = this.cache.keys().next().value;
       if (firstKey) {
-        console.log(`[cigarCache] 🗑️ LRU 淘汰: ${firstKey}`);
         this.cache.delete(firstKey);
       }
     }
@@ -112,8 +107,6 @@ class CigarCache {
       data,
       timestamp: Date.now()
     });
-    
-    console.log(`[cigarCache] 💾 缓存已保存: ${brand} ${name} (缓存大小: ${this.cache.size}/${this.maxSize})`);
   }
   
   /**
@@ -126,10 +119,8 @@ class CigarCache {
     if (brand && name) {
       const key = this.generateKey(brand, name);
       this.cache.delete(key);
-      console.log(`[cigarCache] 🗑️ 清除缓存: ${brand} ${name}`);
     } else {
       this.cache.clear();
-      console.log(`[cigarCache] 🗑️ 清除所有缓存`);
     }
   }
   
@@ -170,10 +161,6 @@ class CigarCache {
         this.cache.delete(key);
         cleaned++;
       }
-    }
-    
-    if (cleaned > 0) {
-      console.log(`[cigarCache] 🧹 清理了 ${cleaned} 个过期缓存项`);
     }
     
     return cleaned;
