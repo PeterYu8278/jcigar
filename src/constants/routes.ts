@@ -27,15 +27,27 @@ export const ADMIN_ROUTES = {
   ORDERS: '/admin/orders',
   TRANSACTIONS: '/admin/transactions',
   EVENTS: '/admin/events',
-  SETTINGS: '/admin/settings',
-  GEMINI_TESTER: '/admin/gemini-tester'
+  SETTINGS: '/admin/settings'
+} as const
+
+// 开发者路由
+export const DEVELOPER_ROUTES = {
+  FEATURE_MANAGEMENT: '/developer/feature-management',
+  CIGAR_DATABASE: '/developer/cigar-database',
+  PERFORMANCE: '/developer/performance',
+  GEMINI_TESTER: '/developer/gemini-tester',
+  CLOUDINARY_TEST: '/developer/cloudinary-test',
+  ORPHANED_USERS: '/developer/orphaned-users',
+  DEBUG_ORDERS: '/developer/debug-orders',
+  TEST_DATA_GENERATOR: '/developer/test-data-generator'
 } as const
 
 // 所有路由
 export const ROUTES = {
   ...AUTH_ROUTES,
   ...FRONTEND_ROUTES,
-  ...ADMIN_ROUTES
+  ...ADMIN_ROUTES,
+  ...DEVELOPER_ROUTES
 } as const
 
 export type RouteKey = keyof typeof ROUTES

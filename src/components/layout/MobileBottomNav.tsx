@@ -8,7 +8,6 @@ import {
   ShoppingCartOutlined,
   UserOutlined,
   DashboardOutlined,
-  TeamOutlined,
   DollarOutlined,
   QrcodeOutlined,
   TrophyOutlined,
@@ -83,18 +82,6 @@ const MobileBottomNav: React.FC = () => {
       key: '/admin',
       icon: <DashboardOutlined />,
       label: t('navigation.dashboard'),
-      badge: null
-    },
-    {
-      key: '/admin/users',
-      icon: <TeamOutlined />,
-      label: t('navigation.users'),
-      badge: null
-    },
-    {
-      key: '/admin/events',
-      icon: <CalendarOutlined />,
-      label: t('navigation.events'),
       badge: null
     },
     {

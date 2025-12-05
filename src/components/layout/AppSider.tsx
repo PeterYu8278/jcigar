@@ -15,8 +15,6 @@ import {
   MenuUnfoldOutlined,
   ShoppingCartOutlined,
   FireOutlined,
-  ThunderboltOutlined,
-  SyncOutlined,
   TrophyOutlined,
   ClockCircleOutlined,
   SettingOutlined
@@ -141,11 +139,6 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
       icon: <ClockCircleOutlined />,
       label: t('navigation.visitSessions'),
     },
-    {
-      key: '/admin/performance',
-      icon: <ThunderboltOutlined />,
-      label: t(NAV_KEYS.PERFORMANCE),
-    },
   ]
 
   // 根据功能可见性过滤菜单项（developer 不受限制）
@@ -163,14 +156,9 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
     if (isDeveloper) {
       const items = [...adminMenuItemsBase]
       items.push({
-        key: '/admin/feature-management',
+        key: '/developer/feature-management',
         icon: <SettingOutlined />,
         label: t('navigation.featureManagement', { defaultValue: '功能管理' }),
-      })
-      items.push({
-        key: '/admin/test-data-generator',
-        icon: <SyncOutlined />,
-        label: '测试数据生成器',
       })
       return items
     }

@@ -576,6 +576,7 @@ const AdminInventory: React.FC = () => {
                 bodyTasteNotes: dbData?.bodyTasteNotes?.map(item => item.value) || record.tastingNotes?.body || [],
                 headTasteNotes: dbData?.headTasteNotes?.map(item => item.value) || record.tastingNotes?.head || [],
                 tags: dbData?.flavorProfile?.map(item => item.value) || record.metadata?.tags || [],
+                rating: !dbData ? (record.metadata?.rating || null) : undefined, // 只在没有cigar_database数据时设置rating到表单
               })
               setCigarImages(record.images || [])
               
@@ -4060,9 +4061,19 @@ const AdminInventory: React.FC = () => {
               tastingNotes.head = Array.isArray(values.headTasteNotes) ? values.headTasteNotes : [];
             }
             
-            // 构建元数据（优先使用AI识别的rating，否则使用原有的rating）
+            // 构建元数据
+            // Rating优先级：aiRating（来自cigar_database）> 手动输入（values.rating）> 原有值
+            let finalRating = 0;
+            if (aiRating !== null && aiRating !== undefined) {
+              finalRating = aiRating;
+            } else if (values.rating !== null && values.rating !== undefined) {
+              finalRating = values.rating;
+            } else if (editing?.metadata?.rating !== null && editing?.metadata?.rating !== undefined) {
+              finalRating = editing.metadata.rating;
+            }
+            
             const metadata: any = {
-              rating: aiRating !== null ? aiRating : (editing?.metadata?.rating ?? 0),
+              rating: finalRating,
               reviews: editing?.metadata?.reviews ?? 0,
               tags: Array.isArray(values.tags) ? values.tags : [],
             };
@@ -4572,22 +4583,46 @@ const AdminInventory: React.FC = () => {
             </Form.Item>
           )}
           
-          {cigarDatabaseData && cigarDatabaseData.rating !== null && (
-            <Form.Item label="评分">
-              <div style={{ 
-                padding: '8px 12px', 
-                background: 'rgba(255, 215, 0, 0.1)', 
-                border: '1px solid rgba(255, 215, 0, 0.3)',
-                borderRadius: '6px',
-                color: '#fff'
-              }}>
-                <Tag color="gold" style={{ fontSize: '16px', padding: '4px 12px' }}>
-                  {cigarDatabaseData.rating.toFixed(1)}
-                </Tag>
-                <span style={{ marginLeft: '8px', fontSize: '12px', color: '#888' }}>
-                  (基于 {cigarDatabaseData.ratingCount} 次评分)
-                </span>
-              </div>
+          {cigarDatabaseData ? (
+            cigarDatabaseData.rating !== null ? (
+              <Form.Item label="评分">
+                <div style={{ 
+                  padding: '8px 12px', 
+                  background: 'rgba(255, 215, 0, 0.1)', 
+                  border: '1px solid rgba(255, 215, 0, 0.3)',
+                  borderRadius: '6px',
+                  color: '#fff'
+                }}>
+                  <Tag color="gold" style={{ fontSize: '16px', padding: '4px 12px' }}>
+                    {cigarDatabaseData.rating.toFixed(1)}
+                  </Tag>
+                  <span style={{ marginLeft: '8px', fontSize: '12px', color: '#888' }}>
+                    (基于 {cigarDatabaseData.ratingCount} 次评分)
+                  </span>
+                </div>
+              </Form.Item>
+            ) : (
+              <Form.Item label="评分">
+                <div style={{ 
+                  padding: '8px 12px', 
+                  background: 'rgba(255, 215, 0, 0.1)', 
+                  border: '1px solid rgba(255, 215, 0, 0.3)',
+                  borderRadius: '6px',
+                  color: '#888'
+                }}>
+                  暂无评分数据
+                </div>
+              </Form.Item>
+            )
+          ) : (
+            <Form.Item label="评分" name="rating">
+              <InputNumber 
+                min={0} 
+                max={100} 
+                step={0.1}
+                style={{ width: '100%' }} 
+                placeholder="0-100"
+              />
             </Form.Item>
           )}
           

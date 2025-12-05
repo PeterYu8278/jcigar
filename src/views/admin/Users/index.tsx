@@ -6,7 +6,7 @@ import { MemberProfileCard } from '../../../components/common/MemberProfileCard'
 import { ProfileView } from '../../../components/common/ProfileView'
 import { ReferralTreeView } from '../../../components/admin/ReferralTreeView'
 
-const { Title } = Typography
+const { Title, Text } = Typography
 const { Search } = Input
 const { Option } = Select
 
@@ -383,6 +383,35 @@ const AdminUsers: React.FC = () => {
       onFilter: (value: any, record: any) => {
         const status = record.status || 'active'
         return !value || status === value
+      },
+    },
+    {
+      title: 'AI识茄使用',
+      key: 'aiUsageStats',
+      width: 120,
+      render: (_: any, record: any) => {
+        const scanCount = record.aiUsageStats?.cigarScanCount || 0;
+        const lastScanAt = record.aiUsageStats?.lastCigarScanAt;
+        
+        if (scanCount === 0) {
+          return <Text type="secondary">未使用</Text>;
+        }
+        
+        return (
+          <Space direction="vertical" size="small">
+            <Tag color="blue">{scanCount} 次</Tag>
+            {lastScanAt && (
+              <Text type="secondary" style={{ fontSize: '11px' }}>
+                最后: {new Date(lastScanAt).toLocaleDateString()}
+              </Text>
+            )}
+          </Space>
+        );
+      },
+      sorter: (a: any, b: any) => {
+        const aCount = a.aiUsageStats?.cigarScanCount || 0;
+        const bCount = b.aiUsageStats?.cigarScanCount || 0;
+        return aCount - bCount;
       },
     },
     {

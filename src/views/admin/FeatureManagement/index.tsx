@@ -16,6 +16,7 @@ import { getAppConfig, updateAppConfig, resetAppConfig } from '../../../services
 import ImageUpload from '../../../components/common/ImageUpload';
 import MockAppInterface from '../../../components/admin/MockAppInterface';
 import WhapiMessageTester from '../../../components/admin/WhapiMessageTester';
+import CigarDatabase from '../CigarDatabase';
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -83,6 +84,7 @@ const FeatureManagement: React.FC = () => {
   const [savingAppConfig, setSavingAppConfig] = useState(false);
   const [aiCigarStorageEnabled, setAiCigarStorageEnabled] = useState<boolean>(true);
   const [aiCigarImageSearchEnabled, setAiCigarImageSearchEnabled] = useState<boolean>(true);
+  const [aiCigarImageSearchOrder, setAiCigarImageSearchOrder] = useState<'google-first' | 'gemini-first'>('google-first');
   const [pendingColorChanges, setPendingColorChanges] = useState<Partial<ColorThemeConfig>>({});
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [generatedEnv, setGeneratedEnv] = useState<string>('');
@@ -152,6 +154,7 @@ const FeatureManagement: React.FC = () => {
     if (appConfig) {
       setAiCigarStorageEnabled(appConfig.aiCigar?.enableDataStorage ?? true);
       setAiCigarImageSearchEnabled(appConfig.aiCigar?.enableImageSearch ?? true);
+      setAiCigarImageSearchOrder(appConfig.aiCigar?.imageSearchOrder ?? 'google-first');
     }
   }, [appConfig]);
 
@@ -355,7 +358,19 @@ const FeatureManagement: React.FC = () => {
       if (result.success) {
         message.success('应用配置已保存');
         setPendingColorChanges({}); // 清空待保存的更改
-        await loadAppConfig();
+        
+        // 直接更新本地 appConfig 状态，保留其他字段（如 aiCigar、whapi）
+        if (appConfig) {
+          setAppConfig({
+            ...appConfig,
+            logoUrl: values.logoUrl,
+            appName: values.appName,
+            hideFooter: values.hideFooter ?? false,
+            colorTheme: finalColorTheme,
+            auth: authConfig,
+            gemini: geminiConfig,
+          });
+        }
       } else {
         message.error(result.error || '保存失败');
       }
@@ -378,6 +393,8 @@ const FeatureManagement: React.FC = () => {
       if (result.success) {
         message.success('已重置为默认配置');
         setPendingColorChanges({}); // 清空待保存的颜色更改
+        
+        // 重新加载配置（重置操作需要完整重载）
         await loadAppConfig();
       } else {
         message.error(result.error || '重置失败');
@@ -978,7 +995,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
       </div>
 
       {/* 搜索和批量操作（仅功能标签页显示） */}
-      {activeTab !== 'app' && activeTab !== 'whapi' && activeTab !== 'env' && (
+      {activeTab !== 'app' && activeTab !== 'whapi' && activeTab !== 'env' && activeTab !== 'cigar-database' && (
         <div style={{ marginBottom: 16, display: 'flex', gap: 12, alignItems: 'center' }}>
           <Search
             placeholder={t('featureManagement.searchPlaceholder', { defaultValue: '搜索功能...' })}
@@ -1318,7 +1335,15 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
 
                   if (result.success) {
                     message.success('WhatsApp 配置已保存');
-                    await loadAppConfig();
+                    
+                    // 直接更新本地 appConfig 状态，避免重新加载导致其他字段被重置
+                    if (appConfig) {
+                      setAppConfig({
+                        ...appConfig,
+                        whapi: whapiConfig,
+                      });
+                    }
+                    
                     // 重新初始化 Whapi 客户端
                     const { initWhapiClient } = await import('../../../services/whapi');
                     await initWhapiClient(whapiConfig);
@@ -2308,7 +2333,12 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
         </Card>
       ) : null}
 
-      {activeTab !== 'app' && activeTab !== 'whapi' && activeTab !== 'env' && (
+      {/* 雪茄数据库标签页：直接显示 CigarDatabase 组件 */}
+      {activeTab === 'cigar-database' ? (
+        <CigarDatabase />
+      ) : null}
+
+      {activeTab !== 'app' && activeTab !== 'whapi' && activeTab !== 'env' && activeTab !== 'cigar-database' && (
         <>
           <Card style={{
             background: 'rgba(255, 255, 255, 0.05)',
@@ -2386,6 +2416,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                                             aiCigar: {
                                               enableDataStorage: checked,
                                               enableImageSearch: aiCigarImageSearchEnabled,
+                                              imageSearchOrder: aiCigarImageSearchOrder,
                                             },
                                           },
                                           user.id
@@ -2400,6 +2431,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                                                 ...appConfig.aiCigar,
                                                 enableDataStorage: checked,
                                                 enableImageSearch: aiCigarImageSearchEnabled,
+                                                imageSearchOrder: aiCigarImageSearchOrder,
                                               },
                                             });
                                           }
@@ -2446,6 +2478,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                                             aiCigar: {
                                               enableDataStorage: aiCigarStorageEnabled,
                                               enableImageSearch: checked,
+                                              imageSearchOrder: aiCigarImageSearchOrder,
                                             },
                                           },
                                           user.id
@@ -2460,6 +2493,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                                                 ...appConfig.aiCigar,
                                                 enableDataStorage: aiCigarStorageEnabled,
                                                 enableImageSearch: checked,
+                                                imageSearchOrder: aiCigarImageSearchOrder,
                                               },
                                             });
                                           }
@@ -2483,6 +2517,75 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                               <Text style={{ color: '#999', fontSize: '12px', display: 'block', marginTop: '4px' }}>
                                 控制AI识茄功能是否自动搜索雪茄图片URL（Google + Gemini）
                               </Text>
+                              
+                              {/* 搜索引擎顺序选择器（仅在启用图片搜索时显示） */}
+                              {aiCigarImageSearchEnabled && (
+                                <div style={{ marginTop: '8px' }}>
+                                  <Text style={{ color: '#c0c0c0', fontSize: '13px', display: 'block', marginBottom: '4px' }}>
+                                    搜索引擎顺序
+                                  </Text>
+                                  <Select
+                                    value={aiCigarImageSearchOrder}
+                                    onChange={async (value: 'google-first' | 'gemini-first') => {
+                                      const previousValue = aiCigarImageSearchOrder;
+                                      setAiCigarImageSearchOrder(value);
+                                      
+                                      // 立即保存配置
+                                      if (user?.id) {
+                                        try {
+                                          const result = await updateAppConfig(
+                                            {
+                                              aiCigar: {
+                                                enableDataStorage: aiCigarStorageEnabled,
+                                                enableImageSearch: aiCigarImageSearchEnabled,
+                                                imageSearchOrder: value,
+                                              },
+                                            },
+                                            user.id
+                                          );
+                                          if (result.success) {
+                                            message.success('配置已保存');
+                                            // 直接更新本地 appConfig 状态
+                                            if (appConfig) {
+                                              setAppConfig({
+                                                ...appConfig,
+                                                aiCigar: {
+                                                  ...appConfig.aiCigar,
+                                                  enableDataStorage: aiCigarStorageEnabled,
+                                                  enableImageSearch: aiCigarImageSearchEnabled,
+                                                  imageSearchOrder: value,
+                                                },
+                                              });
+                                            }
+                                          } else {
+                                            message.error(result.error || '保存失败');
+                                            setAiCigarImageSearchOrder(previousValue);
+                                          }
+                                        } catch (error) {
+                                          message.error('保存失败');
+                                          setAiCigarImageSearchOrder(previousValue);
+                                        }
+                                      } else {
+                                        setAiCigarImageSearchOrder(previousValue);
+                                      }
+                                    }}
+                                    style={{ width: '100%' }}
+                                    size="small"
+                                  >
+                                    <Select.Option value="google-first">
+                                      <span>🔍 Google 优先 → Gemini 回退</span>
+                                    </Select.Option>
+                                    <Select.Option value="gemini-first">
+                                      <span>✨ Gemini 优先 → Google 回退</span>
+                                    </Select.Option>
+                                  </Select>
+                                  <Text style={{ color: '#999', fontSize: '11px', display: 'block', marginTop: '4px' }}>
+                                    {aiCigarImageSearchOrder === 'google-first' 
+                                      ? '优先使用 Google Custom Search，失败时回退到 Gemini'
+                                      : '优先使用 Gemini，失败时回退到 Google Custom Search'}
+                                  </Text>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>

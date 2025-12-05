@@ -296,14 +296,14 @@ const AppContent: React.FC = () => {
                   <Route path="/admin/finance" element={<ProtectedRoute roles={['admin', 'developer']}><AdminFinance /></ProtectedRoute>} />
                   <Route path="/admin/points-config" element={<ProtectedRoute roles={['admin', 'developer']}><PointsConfigPage /></ProtectedRoute>} />
                   <Route path="/admin/visit-sessions" element={<ProtectedRoute roles={['admin', 'developer']}><VisitSessionsPage /></ProtectedRoute>} />
-                  <Route path="/admin/orphaned-users" element={<ProtectedRoute roles={['developer']}><OrphanedUserCleanup /></ProtectedRoute>} />
-                  <Route path="/admin/performance" element={<ProtectedRoute roles={['admin', 'developer']}><PerformanceMonitor /></ProtectedRoute>} />
-                  <Route path="/admin/feature-management" element={<ProtectedRoute roles={['developer']}><FeatureManagement /></ProtectedRoute>} />
-                  <Route path="/admin/cigar-database" element={<ProtectedRoute roles={['admin', 'developer']}><CigarDatabase /></ProtectedRoute>} />
-                  <Route path="/admin/gemini-tester" element={<ProtectedRoute roles={['developer']}><GeminiModelTester /></ProtectedRoute>} />
-                  <Route path="/admin/cloudinary-test" element={<ProtectedRoute roles={['developer']}><CloudinaryTestPage /></ProtectedRoute>} />
-                  <Route path="/admin/debug-orders" element={<ProtectedRoute roles={['developer']}><EventOrderDebug /></ProtectedRoute>} />
-                  <Route path="/admin/test-data-generator" element={<ProtectedRoute roles={['developer']}><TestDataGenerator /></ProtectedRoute>} />
+                  <Route path="/developer/orphaned-users" element={<ProtectedRoute roles={['developer']}><OrphanedUserCleanup /></ProtectedRoute>} />
+                  <Route path="/developer/performance" element={<ProtectedRoute roles={['developer']}><PerformanceMonitor /></ProtectedRoute>} />
+                  <Route path="/developer/feature-management" element={<ProtectedRoute roles={['developer']}><FeatureManagement /></ProtectedRoute>} />
+                  <Route path="/developer/cigar-database" element={<ProtectedRoute roles={['developer']}><CigarDatabase /></ProtectedRoute>} />
+                  <Route path="/developer/gemini-tester" element={<ProtectedRoute roles={['developer']}><GeminiModelTester /></ProtectedRoute>} />
+                  <Route path="/developer/cloudinary-test" element={<ProtectedRoute roles={['developer']}><CloudinaryTestPage /></ProtectedRoute>} />
+                  <Route path="/developer/debug-orders" element={<ProtectedRoute roles={['developer']}><EventOrderDebug /></ProtectedRoute>} />
+                  <Route path="/developer/test-data-generator" element={<ProtectedRoute roles={['developer']}><TestDataGenerator /></ProtectedRoute>} />
                   
                   {/* 默认重定向 */}
                   <Route path="*" element={<Navigate to="/" replace />} />

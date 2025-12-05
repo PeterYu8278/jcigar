@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+﻿import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getAppConfig } from "../firebase/appConfig";
 import { searchCigarImageWithGoogle } from "./googleImageSearch";
 import { getCigarDetails } from "../cigar/cigarDatabase";
@@ -849,47 +849,85 @@ async function validateImageUrl(url: string): Promise<boolean> {
 }
 
 /**
- * 并行搜索雪茄图片 URL（Gemini + Google Image Search）
+ * 搜索雪茄图片 URL（支持配置顺序：Google + Gemini）
  * @param brand 品牌名称
  * @param name 雪茄名称
  * @returns 可用的图片 URL 或 null
  */
 async function searchCigarImageUrl(brand: string, name: string): Promise<string | null> {
-    console.log(`[searchCigarImageUrl] 🚀 开始搜索图片: "${brand} ${name}" (优先执行 Google Image Search)`);
+    // 获取搜索引擎顺序配置
+    const appConfig = await getAppConfig();
+    const searchOrder = appConfig?.aiCigar?.imageSearchOrder || 'google-first';
     
-    // 优先执行 Google Image Search
-    try {
-        console.log(`[searchCigarImageUrl] 🔍 优先执行 Google Image Search...`);
-        const googleResult = await searchCigarImageWithGoogle(brand, name);
-        
-        if (googleResult) {
-            console.log(`[searchCigarImageUrl] ✅ Google Image Search 成功（优先）:`, googleResult);
-            return googleResult;
-        } else {
-            console.log(`[searchCigarImageUrl] ℹ️ Google Image Search 未找到可用图片 URL，回退到 Gemini...`);
+    console.log(`[searchCigarImageUrl] 🚀 开始搜索图片: "${brand} ${name}" (顺序: ${searchOrder})`);
+    
+    // 根据配置顺序执行搜索
+    if (searchOrder === 'gemini-first') {
+        // Gemini 优先
+        try {
+            console.log(`[searchCigarImageUrl] ✨ 优先执行 Gemini 搜索...`);
+            const geminiResult = await searchCigarImageUrlWithGemini(brand, name);
+            
+            if (geminiResult) {
+                console.log(`[searchCigarImageUrl] ✅ Gemini 搜索成功（优先）:`, geminiResult);
+                return geminiResult;
+            } else {
+                console.log(`[searchCigarImageUrl] ℹ️ Gemini 搜索未找到可用图片 URL，回退到 Google...`);
+            }
+        } catch (error) {
+            console.warn(`[searchCigarImageUrl] ⚠️ Gemini 搜索失败:`, error);
+            console.log(`[searchCigarImageUrl] ℹ️ Gemini 搜索失败，回退到 Google...`);
         }
-    } catch (error) {
-        console.warn(`[searchCigarImageUrl] ⚠️ Google Image Search 失败:`, error);
-        console.log(`[searchCigarImageUrl] ℹ️ Google Image Search 失败，回退到 Gemini...`);
-    }
 
-    // 如果 Google 搜索失败或未找到结果，回退到 Gemini
-    try {
-        console.log(`[searchCigarImageUrl] 🔍 执行 Gemini 搜索（回退）...`);
-        const geminiResult = await searchCigarImageUrlWithGemini(brand, name);
-        
-        if (geminiResult) {
-            console.log(`[searchCigarImageUrl] ✅ Gemini 搜索成功（回退）:`, geminiResult);
-            return geminiResult;
-        } else {
-            console.log(`[searchCigarImageUrl] ℹ️ Gemini 搜索未找到可用图片 URL`);
+        // 回退到 Google
+        try {
+            console.log(`[searchCigarImageUrl] 🔍 执行 Google Image Search（回退）...`);
+            const googleResult = await searchCigarImageWithGoogle(brand, name);
+            
+            if (googleResult) {
+                console.log(`[searchCigarImageUrl] ✅ Google Image Search 成功（回退）:`, googleResult);
+                return googleResult;
+            } else {
+                console.log(`[searchCigarImageUrl] ℹ️ Google Image Search 未找到可用图片 URL`);
+            }
+        } catch (error) {
+            console.warn(`[searchCigarImageUrl] ⚠️ Google Image Search 失败:`, error);
         }
-    } catch (error) {
-        console.warn(`[searchCigarImageUrl] ⚠️ Gemini 搜索失败:`, error);
+    } else {
+        // Google 优先（默认）
+        try {
+            console.log(`[searchCigarImageUrl] 🔍 优先执行 Google Image Search...`);
+            const googleResult = await searchCigarImageWithGoogle(brand, name);
+            
+            if (googleResult) {
+                console.log(`[searchCigarImageUrl] ✅ Google Image Search 成功（优先）:`, googleResult);
+                return googleResult;
+            } else {
+                console.log(`[searchCigarImageUrl] ℹ️ Google Image Search 未找到可用图片 URL，回退到 Gemini...`);
+            }
+        } catch (error) {
+            console.warn(`[searchCigarImageUrl] ⚠️ Google Image Search 失败:`, error);
+            console.log(`[searchCigarImageUrl] ℹ️ Google Image Search 失败，回退到 Gemini...`);
+        }
+
+        // 回退到 Gemini
+        try {
+            console.log(`[searchCigarImageUrl] ✨ 执行 Gemini 搜索（回退）...`);
+            const geminiResult = await searchCigarImageUrlWithGemini(brand, name);
+            
+            if (geminiResult) {
+                console.log(`[searchCigarImageUrl] ✅ Gemini 搜索成功（回退）:`, geminiResult);
+                return geminiResult;
+            } else {
+                console.log(`[searchCigarImageUrl] ℹ️ Gemini 搜索未找到可用图片 URL`);
+            }
+        } catch (error) {
+            console.warn(`[searchCigarImageUrl] ⚠️ Gemini 搜索失败:`, error);
+        }
     }
 
     // 两个搜索都失败
-    console.warn(`[searchCigarImageUrl] ❌ 所有搜索方法都失败（Google Image Search 和 Gemini 都未找到可用图片）`);
+    console.warn(`[searchCigarImageUrl] ❌ 所有搜索方法都失败（${searchOrder === 'gemini-first' ? 'Gemini 和 Google' : 'Google 和 Gemini'} 都未找到可用图片）`);
     return null;
 }
 

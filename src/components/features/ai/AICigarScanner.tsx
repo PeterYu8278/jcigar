@@ -10,6 +10,8 @@ import { findCigarByBrandAndName } from '../../../services/aiCigarStorage';
 import { getAppConfig } from '../../../services/firebase/appConfig';
 import { searchCigarByText } from '../../../services/cigar/cigarTextSearch';
 import { saveRecognitionToCigarDatabase, getAggregatedCigarData, generateProductName, type AggregatedCigarData } from '../../../services/cigar/cigarDataAggregation';
+import { incrementUserCigarScanCount } from '../../../services/user/userAiStats';
+import { useAuthStore } from '../../../store/modules/auth';
 import type { UploadProps } from 'antd';
 import type { Cigar, Brand } from '../../../types';
 
@@ -17,6 +19,7 @@ const { Title, Text, Paragraph } = Typography;
 
 export const AICigarScanner: React.FC = () => {
     const { t } = useTranslation();
+    const { user } = useAuthStore();
     const webcamRef = useRef<Webcam>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const videoTrackRef = useRef<MediaStreamTrack | null>(null);
@@ -163,6 +166,11 @@ export const AICigarScanner: React.FC = () => {
             const data = await analyzeCigarImage(imageSrc, userHint || undefined);
             setResult(data);
             
+            // 更新用户 AI 识茄使用统计
+            if (user?.id) {
+                incrementUserCigarScanCount(user.id);
+            }
+            
             // 新逻辑：保存到 cigar_database 并加载聚合数据
             if (dataStorageEnabled) {
                 try {
@@ -172,10 +180,10 @@ export const AICigarScanner: React.FC = () => {
                     const productName = generateProductName(data.brand, data.name);
                     const aggregated = await getAggregatedCigarData(productName);
             
-            if (aggregated) {
-                setAggregatedData(aggregated);
-                message.success(`识别成功！数据基于 ${aggregated.totalRecognitions} 次识别统计`);
-            }
+             if (aggregated) {
+                 setAggregatedData(aggregated);
+                 message.success(`识别成功！数据基于 ${aggregated.totalRecognitions} 次识别统计`);
+             }
                 } catch (error) {
                     message.warning('数据统计更新失败，但识别结果已显示');
                 }
@@ -433,6 +441,11 @@ export const AICigarScanner: React.FC = () => {
             if (searchResult) {
                 setResult(searchResult);
                 message.success('搜索成功');
+                
+                // 更新用户 AI 识茄使用统计
+                if (user?.id) {
+                    incrementUserCigarScanCount(user.id);
+                }
                 
                 // 如果找到图片URL，设置为显示图片
                 if (searchResult.imageUrl) {

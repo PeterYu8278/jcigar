@@ -159,6 +159,8 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
       } : undefined,
       aiCigar: data.aiCigar ? {
         enableDataStorage: data.aiCigar.enableDataStorage ?? true,
+        enableImageSearch: data.aiCigar.enableImageSearch ?? true,
+        imageSearchOrder: data.aiCigar.imageSearchOrder || 'google-first',
       } : undefined,
       updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
       updatedBy: data.updatedBy || '',
@@ -228,6 +230,8 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
             } : undefined,
             aiCigar: data.aiCigar ? {
               enableDataStorage: data.aiCigar.enableDataStorage ?? true,
+              enableImageSearch: data.aiCigar.enableImageSearch ?? true,
+              imageSearchOrder: data.aiCigar.imageSearchOrder || 'google-first',
             } : undefined,
             updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
             updatedBy: data.updatedBy || '',

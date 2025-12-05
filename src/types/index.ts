@@ -32,6 +32,12 @@ export interface User {
     nextFirstVisitWaiverExpiresAt?: Date; // 续费后首次驻店免扣费到期时间
   };
   
+  // AI 功能使用统计
+  aiUsageStats?: {
+    cigarScanCount?: number;  // AI识茄使用次数
+    lastCigarScanAt?: Date;   // 最后一次使用AI识茄的时间
+  };
+  
   // 引荐信息
   referral?: {
     referredBy?: string | null;       // 引荐人的 memberId（不是 userId）
@@ -380,6 +386,7 @@ export interface AppConfig {
   aiCigar?: {
     enableDataStorage?: boolean;  // AI识茄是否启用数据存储（默认 true）
     enableImageSearch?: boolean;  // AI识茄是否启用图片URL搜索（默认 true）
+    imageSearchOrder?: 'google-first' | 'gemini-first';  // 图片URL搜索引擎顺序（默认 'google-first'）
   };
   updatedAt: Date;
   updatedBy: string;       // 最后更新的开发者ID

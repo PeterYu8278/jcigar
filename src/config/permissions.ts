@@ -81,7 +81,16 @@ export const ROUTE_PERMISSIONS = {
   '/admin/events': ['admin', 'developer'],
   '/admin/orders': ['admin', 'developer'],
   '/admin/finance': ['admin', 'developer'],
-  '/admin/feature-management': ['developer'], // 仅开发者可访问
+  
+  // Developer 专属路由
+  '/developer/feature-management': ['developer'],
+  '/developer/cigar-database': ['developer'],
+  '/developer/performance': ['developer'],
+  '/developer/gemini-tester': ['developer'],
+  '/developer/cloudinary-test': ['developer'],
+  '/developer/orphaned-users': ['developer'],
+  '/developer/debug-orders': ['developer'],
+  '/developer/test-data-generator': ['developer'],
 };
 
 // 权限检查函数
