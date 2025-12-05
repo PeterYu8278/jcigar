@@ -462,22 +462,23 @@ export const AICigarScanner: React.FC = () => {
                     setImgSrc(searchResult.imageUrl);
                 }
                 
-                // 如果启用数据存储，保存结果
-                if (dataStorageEnabled && searchResult.hasDetailedInfo) {
+                // 如果启用数据存储，保存结果（与图像搜索相同的存储机制）
+                if (dataStorageEnabled) {
                     try {
-                        // 🆕 传递用户信息
+                        // 传递用户信息（与图像搜索一致）
                         await saveRecognitionToCigarDatabase(
                             searchResult,
                             user?.id,
                             user?.displayName || undefined
                         );
                         
-                        // 保存后立即查询聚合数据
+                        // 保存后立即查询聚合数据（与图像搜索一致）
                         const productName = generateProductName(searchResult.brand, searchResult.name);
                         const aggregated = await getAggregatedCigarData(productName);
                         
                         if (aggregated) {
                             setAggregatedData(aggregated);
+                            message.success(`识别成功！数据基于 ${aggregated.totalRecognitions} 次识别统计`);
                         }
                     } catch (error) {
                         message.warning('数据统计更新失败，但识别结果已显示');
@@ -855,36 +856,6 @@ export const AICigarScanner: React.FC = () => {
                                 <Text style={{ color: '#ffd700', fontSize: '12px' }}>
                                     📊 数据来源: 基于 {aggregatedData.totalRecognitions} 次 AI 识别统计
                                 </Text>
-                            </div>
-                        )}
-
-                        {/* 🆕 显示贡献者信息 */}
-                        {aggregatedData && aggregatedData.contributors.length > 0 && (
-                            <div style={{ 
-                                marginBottom: '12px', 
-                                padding: '8px 12px',
-                                background: 'rgba(255, 255, 255, 0.05)',
-                                borderRadius: '6px',
-                                border: '1px solid rgba(255, 255, 255, 0.1)'
-                            }}>
-                                <Text style={{ color: '#fff', fontSize: '12px', marginBottom: '4px', display: 'block' }}>
-                                    👥 贡献者（{aggregatedData.uniqueContributors}人）
-                                </Text>
-                                <Space wrap size={[4, 4]}>
-                                    {aggregatedData.contributors.map((contributor) => (
-                                        <Tag 
-                                            key={contributor.userId}
-                                            style={{ 
-                                                background: 'rgba(255, 215, 0, 0.2)',
-                                                border: '1px solid rgba(255, 215, 0, 0.3)',
-                                                color: '#ffd700',
-                                                fontSize: '11px'
-                                            }}
-                                        >
-                                            {contributor.userName}
-                                        </Tag>
-                                    ))}
-                                </Space>
                             </div>
                         )}
 
