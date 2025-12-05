@@ -9,7 +9,7 @@ import { getCigars, getBrands } from '../../../services/firebase/firestore';
 import { findCigarByBrandAndName } from '../../../services/aiCigarStorage';
 import { getAppConfig } from '../../../services/firebase/appConfig';
 import { searchCigarByText } from '../../../services/cigar/cigarTextSearch';
-import { saveRecognitionToCigarDatabase, getAggregatedCigarData, type AggregatedCigarData } from '../../../services/cigar/cigarDataAggregation';
+import { saveRecognitionToCigarDatabase, getAggregatedCigarData, generateProductName, type AggregatedCigarData } from '../../../services/cigar/cigarDataAggregation';
 import type { UploadProps } from 'antd';
 import type { Cigar, Brand } from '../../../types';
 
@@ -59,7 +59,7 @@ export const AICigarScanner: React.FC = () => {
             await saveRecognitionToCigarDatabase(recognitionResult);
             
             // 保存后立即查询聚合数据
-            const productName = `${recognitionResult.brand} ${recognitionResult.name}`.trim();
+            const productName = generateProductName(recognitionResult.brand, recognitionResult.name);
             const aggregated = await getAggregatedCigarData(productName);
             
             if (aggregated) {
@@ -169,7 +169,7 @@ export const AICigarScanner: React.FC = () => {
                     await saveRecognitionToCigarDatabase(data);
                     
                     // 保存后立即查询聚合数据
-                    const productName = `${data.brand} ${data.name}`.trim();
+                    const productName = generateProductName(data.brand, data.name);
                     const aggregated = await getAggregatedCigarData(productName);
             
             if (aggregated) {

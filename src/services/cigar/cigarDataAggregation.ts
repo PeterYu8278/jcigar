@@ -15,6 +15,16 @@ function normalizeProductName(name: string): string {
         .replace(/[^a-z0-9]/g, '');
 }
 
+// 生成产品名称（去除品牌名重复）
+export function generateProductName(brand: string, name: string): string {
+    // 如果 name 已经包含 brand，则直接使用 name
+    if (name.toLowerCase().startsWith(brand.toLowerCase())) {
+        return name.trim();
+    }
+    // 否则拼接 brand + name
+    return `${brand} ${name}`.trim();
+}
+
 // 值频率统计接口
 export interface ValueFrequencyItem {
     value: string;
@@ -65,7 +75,8 @@ export async function saveRecognitionToCigarDatabase(
     result: CigarAnalysisResult
 ): Promise<void> {
     try {
-        const productName = `${result.brand} ${result.name}`.trim();
+        // 使用辅助函数生成产品名称（自动去重品牌名）
+        const productName = generateProductName(result.brand, result.name);
         const docId = normalizeProductName(productName);
         const docRef = doc(db, 'cigar_database', docId);
         

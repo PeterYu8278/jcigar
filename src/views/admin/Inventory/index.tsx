@@ -11,7 +11,7 @@ import { getModalTheme, getResponsiveModalConfig, getModalThemeStyles } from '..
 import { useCloudinary } from '../../../hooks/useCloudinary'
 import { analyzeCigarByName } from '../../../services/gemini/cigarRecognition'
 import { CigarRatingBadge } from '../../../components/common/CigarRatingBadge'
-import { getAggregatedCigarData, saveRecognitionToCigarDatabase, type AggregatedCigarData } from '../../../services/cigar/cigarDataAggregation'
+import { getAggregatedCigarData, saveRecognitionToCigarDatabase, generateProductName, type AggregatedCigarData } from '../../../services/cigar/cigarDataAggregation'
 import { collection, getDocs } from 'firebase/firestore'
 import { db } from '../../../config/firebase'
 import { GLOBAL_COLLECTIONS } from '../../../config/globalCollections'
@@ -541,7 +541,7 @@ const AdminInventory: React.FC = () => {
             setEditing(record)
             
             // 从 cigar_database 加载聚合数据
-            const productName = `${record.brand} ${record.name}`.trim()
+            const productName = generateProductName(record.brand, record.name)
             try {
               const aggregatedData = await getAggregatedCigarData(productName)
               setCigarDatabaseData(aggregatedData)
@@ -4406,7 +4406,7 @@ const AdminInventory: React.FC = () => {
                       await saveRecognitionToCigarDatabase(result)
                       
                       // 重新加载聚合数据
-                      const fullProductName = `${result.brand} ${result.name}`.trim()
+                      const fullProductName = generateProductName(result.brand, result.name)
                       const aggregatedData = await getAggregatedCigarData(fullProductName)
                       
                       if (aggregatedData) {
