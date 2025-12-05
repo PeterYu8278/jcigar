@@ -93,7 +93,6 @@ const AdminUsers: React.FC = () => {
     displayName: true,
     email: true,
     role: true,
-    membership: true,
     lastActive: true,
     status: true,
     action: true,
@@ -295,36 +294,6 @@ const AdminUsers: React.FC = () => {
         return !value || record.role === value
       },
     },
-    {
-      title: t('usersAdmin.level'),
-      dataIndex: ['membership', 'level'],
-      key: 'membership',
-      render: (level: string) => (
-        <Tag color={getMembershipColor(level)}>
-          {getMembershipText(level)}
-        </Tag>
-      ),
-      filterIcon: (filtered: boolean) => (
-        <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />
-      ),
-      filterDropdown: (props: any) => {
-        const { setSelectedKeys, selectedKeys, confirm, clearFilters } = props as any
-        return (
-          <div style={{ padding: 8 }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 120 }}>
-              <Button size="small" type={(selectedKeys[0] === undefined) ? 'primary' : 'text'} onClick={() => { setSelectedKeys([]); clearFilters?.(); confirm({ closeDropdown: true }) }}>{t('common.all')}</Button>
-              <Button size="small" type={selectedKeys[0] === 'bronze' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['bronze']); confirm({ closeDropdown: true }) }}>{t('profile.bronzeMember')}</Button>
-              <Button size="small" type={selectedKeys[0] === 'silver' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['silver']); confirm({ closeDropdown: true }) }}>{t('profile.silverMember')}</Button>
-              <Button size="small" type={selectedKeys[0] === 'gold' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['gold']); confirm({ closeDropdown: true }) }}>{t('profile.goldMember')}</Button>
-              <Button size="small" type={selectedKeys[0] === 'platinum' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['platinum']); confirm({ closeDropdown: true }) }}>{t('profile.platinumMember')}</Button>
-            </div>
-          </div>
-        )
-      },
-      onFilter: (value: any, record: any) => {
-        return !value || (record?.membership?.level === value)
-      },
-    },
     // 移除加入时间列以适配移动端
     // 在移动端隐藏“最后活跃”列
     // { title: '最后活跃', dataIndex: 'lastActive', key: 'lastActive', responsive: ['md'] as any },
@@ -394,15 +363,29 @@ const AdminUsers: React.FC = () => {
         const lastScanAt = record.aiUsageStats?.lastCigarScanAt;
         
         if (scanCount === 0) {
-          return <Text type="secondary">未使用</Text>;
+          return <Text style={{ color: '#FFFFFF' }}>未使用</Text>;
+        }
+        
+        // 处理 Firestore Timestamp 或 Date 对象
+        let formattedDate = '';
+        if (lastScanAt) {
+          try {
+            // 如果是 Firestore Timestamp，使用 toDate() 方法
+            const date = lastScanAt?.toDate ? lastScanAt.toDate() : new Date(lastScanAt);
+            if (date && !isNaN(date.getTime())) {
+              formattedDate = date.toLocaleDateString();
+            }
+          } catch (error) {
+            console.error('[Users] 日期格式化失败:', error);
+          }
         }
         
         return (
           <Space direction="vertical" size="small">
             <Tag color="blue">{scanCount} 次</Tag>
-            {lastScanAt && (
-              <Text type="secondary" style={{ fontSize: '11px' }}>
-                最后: {new Date(lastScanAt).toLocaleDateString()}
+            {formattedDate && (
+              <Text style={{ fontSize: '11px', color: '#FFFFFF' }}>
+                最后: {formattedDate}
               </Text>
             )}
           </Space>

@@ -73,6 +73,8 @@ interface CigarDatabaseRecord {
   lastRecognizedAt: any;
   createdAt: any;
   updatedAt: any;
+  // 🆕 贡献者信息
+  contributors?: Record<string, string>; // userId -> userName
 }
 
 // 辅助函数：从统计对象中获取最常见的值
@@ -146,7 +148,9 @@ export const CigarDatabase: React.FC = () => {
           totalRecognitions: data.totalRecognitions || 0,
           lastRecognizedAt: data.lastRecognizedAt,
           createdAt: data.createdAt,
-          updatedAt: data.updatedAt
+          updatedAt: data.updatedAt,
+          // 🆕 贡献者信息
+          contributors: data.contributors || {}
         });
       });
 
@@ -354,7 +358,53 @@ export const CigarDatabase: React.FC = () => {
                   最后识别: {lastRecognizedText}
                 </Tag>
               )}
+              {/* 🆕 贡献者数量 */}
+              {cigar.contributors && Object.keys(cigar.contributors).length > 0 && (
+                <Tag color="blue" style={{ 
+                  fontSize: '12px', 
+                  marginLeft: 8,
+                  background: 'rgba(24, 144, 255, 0.1)',
+                  color: '#1890ff',
+                  border: '1px solid rgba(24, 144, 255, 0.3)'
+                }}>
+                  贡献用户: {Object.keys(cigar.contributors).length} 人
+                </Tag>
+              )}
             </div>
+
+            {/* 🆕 贡献者列表 */}
+            {cigar.contributors && Object.keys(cigar.contributors).length > 0 && (
+              <>
+                <Divider style={{ margin: '8px 0', borderColor: '#333' }}>
+                  <span style={{ color: '#ffd700', fontSize: '14px', fontWeight: 600 }}>
+                    👥 贡献者列表
+                  </span>
+                </Divider>
+                <div style={{
+                  background: 'rgba(0, 0, 0, 0.2)',
+                  padding: '16px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                }}>
+                  <Space wrap size={[8, 8]}>
+                    {Object.entries(cigar.contributors).map(([userId, userName]) => (
+                      <Tag 
+                        key={userId}
+                        style={{ 
+                          background: 'rgba(255, 215, 0, 0.2)',
+                          border: '1px solid rgba(255, 215, 0, 0.3)',
+                          color: '#ffd700',
+                          fontSize: '13px',
+                          padding: '4px 12px'
+                        }}
+                      >
+                        {userName}
+                      </Tag>
+                    ))}
+                  </Space>
+                </div>
+              </>
+            )}
 
             <Divider style={{ margin: '8px 0', borderColor: '#333' }} />
 

@@ -19,6 +19,7 @@ import Shop from './views/frontend/Shop'
 import Profile from './views/frontend/Profile'
 import BrandDetail from './views/frontend/BrandDetail'
 import ReloadPage from './views/frontend/Reload'
+import AICigarHistory from './views/frontend/AICigarHistory'
 
 // 管理后台页面
 import AdminDashboard from './views/admin/Dashboard'
@@ -284,6 +285,7 @@ const AppContent: React.FC = () => {
                   <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
                   <Route path="/shop" element={<ProtectedRoute roles={['member','vip', 'admin', 'developer']}><Shop /></ProtectedRoute>} />
                   <Route path="/profile" element={<ProtectedRoute roles={['member','vip', 'admin', 'developer']}><Profile /></ProtectedRoute>} />
+                  <Route path="/ai-cigar-history" element={<ProtectedRoute roles={['member','vip', 'admin', 'developer']}><AICigarHistory /></ProtectedRoute>} />
                   <Route path="/reload" element={<ProtectedRoute roles={['member','vip', 'admin', 'developer']}><ReloadPage /></ProtectedRoute>} />
                   <Route path="/brand/:brandId" element={<ProtectedRoute roles={['member','vip', 'admin', 'developer']}><BrandDetail /></ProtectedRoute>} />
                   

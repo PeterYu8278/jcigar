@@ -74,6 +74,17 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     icon: 'EyeOutlined',
     defaultVisible: true,
   },
+  {
+    key: 'ai-cigar-history',
+    name: 'AI识茄历史',
+    nameEn: 'AI Cigar History',
+    description: '查看AI识茄历史记录',
+    descriptionEn: 'View AI cigar recognition history',
+    route: '/ai-cigar-history',
+    category: 'frontend',
+    icon: 'DatabaseOutlined',
+    defaultVisible: true,
+  },
   // 管理后台功能
   {
     key: 'dashboard',

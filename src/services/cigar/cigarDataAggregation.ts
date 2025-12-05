@@ -3,7 +3,7 @@
  * 基于多次 AI 识别的统计结果，提供可靠的雪茄数据
  */
 
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, increment } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, increment, collection, getDocs } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import type { CigarAnalysisResult } from '../gemini/cigarRecognition';
 
@@ -65,14 +65,26 @@ export interface AggregatedCigarData {
     totalRecognitions: number;
     lastRecognizedAt: Date;
     avgConfidence: number;
+    
+    // 🆕 贡献者信息
+    contributors: Array<{
+        userId: string;
+        userName: string;
+    }>;
+    uniqueContributors: number;
 }
 
 /**
  * 保存或更新 AI 识别结果到 cigar_database
  * 每次识别都更新同一个文档的统计计数
+ * @param result AI 识别结果
+ * @param userId 用户ID（可选）
+ * @param userName 用户名（可选）
  */
 export async function saveRecognitionToCigarDatabase(
-    result: CigarAnalysisResult
+    result: CigarAnalysisResult,
+    userId?: string,
+    userName?: string
 ): Promise<void> {
     try {
         // 使用辅助函数生成产品名称（自动去重品牌名）
@@ -92,6 +104,11 @@ export async function saveRecognitionToCigarDatabase(
                 lastRecognizedAt: serverTimestamp(),
                 updatedAt: serverTimestamp()
             };
+            
+            // 🆕 更新用户资料映射（如果提供了用户信息）
+            if (userId && userName) {
+                updateData[`contributors.${userId}`] = userName;
+            }
             
             // 更新品牌统计
             if (result.brand) {
@@ -212,7 +229,10 @@ export async function saveRecognitionToCigarDatabase(
                 totalRecognitions: 1,
                 lastRecognizedAt: serverTimestamp(),
                 createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp()
+                updatedAt: serverTimestamp(),
+                
+                // 🆕 初始化用户资料映射（如果提供了用户信息）
+                contributors: (userId && userName) ? { [userId]: userName } : {}
             };
             
             // 初始化风味特征统计
@@ -353,6 +373,13 @@ export async function getAggregatedCigarData(
         const ratingCount = data.ratingCount || 0;
         const avgRating = ratingCount > 0 ? ratingSum / ratingCount : null;
         
+        // 🆕 提取贡献者信息
+        const contributors = data.contributors || {};
+        const contributorsList = Object.entries(contributors).map(([userId, userName]) => ({
+            userId,
+            userName: userName as string
+        }));
+        
         const aggregatedData: AggregatedCigarData = {
             productName,
             
@@ -380,7 +407,11 @@ export async function getAggregatedCigarData(
             
             totalRecognitions: data.totalRecognitions || 0,
             lastRecognizedAt: data.lastRecognizedAt?.toDate() || new Date(),
-            avgConfidence
+            avgConfidence,
+            
+            // 🆕 贡献者信息
+            contributors: contributorsList,
+            uniqueContributors: Object.keys(contributors).length
         };
         
         return aggregatedData;
@@ -400,6 +431,129 @@ export async function searchCigarDatabase(searchTerm: string): Promise<string[]>
         const normalized = normalizeProductName(searchTerm);
         return [normalized];
     } catch (error) {
+        return [];
+    }
+}
+
+/**
+ * 从文档数据中提取聚合数据（辅助函数）
+ */
+function getAggregatedCigarDataFromDoc(data: any): AggregatedCigarData {
+    // 获取单值字段（统计最多的）
+    const brandResult = getMostFrequentValue(data.brandStats || {});
+    const originResult = getMostFrequentValue(data.originStats || {});
+    const strengthResult = getMostFrequentValue(data.strengthStats || {});
+    
+    // 获取 Top N 字段
+    const wrappers = getTopNValues(data.wrapperStats || {}, 5);
+    const binders = getTopNValues(data.binderStats || {}, 5);
+    const fillers = getTopNValues(data.fillerStats || {}, 5);
+    const flavorProfile = getTopNValues(data.flavorProfileStats || {}, 10);
+    const footTasteNotes = getTopNValues(data.footTasteNotesStats || {}, 5);
+    const bodyTasteNotes = getTopNValues(data.bodyTasteNotesStats || {}, 5);
+    const headTasteNotes = getTopNValues(data.headTasteNotesStats || {}, 5);
+    
+    // 获取描述（取最新的）
+    const descriptions = data.descriptions || [];
+    const latestDescription = descriptions.length > 0 
+        ? descriptions[descriptions.length - 1].text 
+        : '';
+    
+    // 计算平均置信度
+    const avgConfidence = descriptions.length > 0
+        ? descriptions.reduce((sum: number, d: any) => sum + (d.confidence || 0), 0) / descriptions.length
+        : 0;
+    
+    // 计算平均评分
+    const ratingSum = data.ratingSum || 0;
+    const ratingCount = data.ratingCount || 0;
+    const avgRating = ratingCount > 0 ? ratingSum / ratingCount : null;
+    
+    // 提取贡献者信息
+    const contributors = data.contributors || {};
+    const contributorsList = Object.entries(contributors).map(([userId, userName]) => ({
+        userId,
+        userName: userName as string
+    }));
+    
+    return {
+        productName: data.productName || '',
+        
+        brand: brandResult?.value || '',
+        brandConsistency: brandResult?.percentage || 0,
+        
+        origin: originResult?.value || '',
+        originConsistency: originResult?.percentage || 0,
+        
+        strength: strengthResult?.value || '',
+        strengthConsistency: strengthResult?.percentage || 0,
+        
+        description: latestDescription,
+        
+        rating: avgRating,
+        ratingCount,
+        
+        wrappers,
+        binders,
+        fillers,
+        footTasteNotes,
+        bodyTasteNotes,
+        headTasteNotes,
+        flavorProfile,
+        
+        totalRecognitions: data.totalRecognitions || 0,
+        lastRecognizedAt: data.lastRecognizedAt?.toDate() || new Date(),
+        avgConfidence,
+        
+        contributors: contributorsList,
+        uniqueContributors: Object.keys(contributors).length
+    };
+}
+
+/**
+ * 获取用户的所有识别历史
+ * @param userId 用户ID
+ * @returns 用户扫描过的雪茄列表（包含聚合数据）
+ */
+export async function getUserCigarScanHistory(userId: string): Promise<Array<{
+    productName: string;
+    aggregatedData: AggregatedCigarData;
+}>> {
+    try {
+        // 1. 获取所有 cigar_database 文档
+        const snapshot = await getDocs(collection(db, 'cigar_database'));
+        
+        // 2. 过滤出 contributors 中包含该用户的文档
+        const userHistory: Array<{
+            productName: string;
+            aggregatedData: AggregatedCigarData;
+        }> = [];
+        
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const contributors = data.contributors || {};
+            
+            // 检查该用户是否在 contributors 中
+            if (contributors[userId]) {
+                // 提取聚合数据
+                const aggregatedData = getAggregatedCigarDataFromDoc(data);
+                
+                userHistory.push({
+                    productName: data.productName,
+                    aggregatedData
+                });
+            }
+        });
+        
+        // 3. 按最后识别时间排序（降序：最新的在前）
+        return userHistory.sort((a, b) => {
+            const timeA = a.aggregatedData.lastRecognizedAt?.getTime() || 0;
+            const timeB = b.aggregatedData.lastRecognizedAt?.getTime() || 0;
+            return timeB - timeA;
+        });
+        
+    } catch (error) {
+        console.error('[getUserCigarScanHistory] 查询失败:', error);
         return [];
     }
 }

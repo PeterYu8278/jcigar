@@ -475,7 +475,7 @@ Analyze this cigar image and provide detailed information.
     - strength: Can infer from wrapper type (Maduro = fuller), brand reputation
     - flavorProfile: Can provide typical flavors for this wrapper/origin type
     - tastingNotes: Can provide typical progression for this cigar type
-    
+
     Note: 
     - The "name" field should include the full name with model or size/vitola (e.g., "Cohiba Robusto", not just "Cohiba")
     - The "brand" field should be only the brand name without size (e.g., "Cohiba")

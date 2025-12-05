@@ -5,7 +5,8 @@ import {
   CalendarOutlined,
   ShoppingOutlined,
   TrophyOutlined,
-  UserOutlined
+  UserOutlined,
+  DatabaseOutlined
 } from '@ant-design/icons'
 
 const { Text } = Typography
@@ -14,6 +15,7 @@ import { getEventsByUser, getUsers, getOrdersByUser, getCigars, getDocument } fr
 import { getUserPointsRecords } from '../../services/firebase/pointsRecords'
 import type { User, Event, Order, Cigar, PointsRecord } from '../../types'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { MemberProfileCard } from './MemberProfileCard'
 import { isFeatureVisible } from '../../services/firebase/featureVisibility'
 import { useAuthStore } from '../../store/modules/auth'
@@ -35,6 +37,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 }) => {
   const { t } = useTranslation()
   const { user: authUser } = useAuthStore()
+  const navigate = useNavigate()
   const [user, setUser] = useState<User | null>(propUser || null)
   const [loadingUser, setLoadingUser] = useState(false)
   const [showMemberCard, setShowMemberCard] = useState(false)
@@ -342,6 +345,32 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
         ))}
       </div>
+
+      {/* 🆕 AI 识茄历史记录入口 */}
+      {user?.id === authUser?.id && (
+        <div style={{ 
+          maxWidth: '640px',
+          margin: '0 auto 24px auto'
+        }}>
+          <Button
+            type="default"
+            icon={<DatabaseOutlined />}
+            onClick={() => navigate('/ai-cigar-history')}
+            style={{
+              width: '100%',
+              height: '48px',
+              fontSize: '16px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 215, 0, 0.3)',
+              borderRadius: '8px',
+              color: '#ffd700',
+              fontWeight: 500
+            }}
+          >
+            查看我的 AI 识茄历史
+          </Button>
+        </div>
+      )}
 
       {/* Tabs Section */}
       <div>

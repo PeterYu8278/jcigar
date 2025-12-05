@@ -59,7 +59,12 @@ export const AICigarScanner: React.FC = () => {
         setSaving(true);
         try {
             // AI识笳仅保存到 cigar_database（不操作 cigars collection）
-            await saveRecognitionToCigarDatabase(recognitionResult);
+            // 🆕 传递用户信息
+            await saveRecognitionToCigarDatabase(
+                recognitionResult,
+                user?.id,
+                user?.displayName || undefined
+            );
             
             // 保存后立即查询聚合数据
             const productName = generateProductName(recognitionResult.brand, recognitionResult.name);
@@ -68,7 +73,7 @@ export const AICigarScanner: React.FC = () => {
             if (aggregated) {
                 setAggregatedData(aggregated);
                 message.success(`✅ 识别结果已保存（基于 ${aggregated.totalRecognitions} 次识别的统计数据）`);
-            } else {
+                } else {
                 message.success('✅ 识别结果已保存到数据库');
             }
         } catch (error) {
@@ -76,7 +81,7 @@ export const AICigarScanner: React.FC = () => {
         } finally {
             setSaving(false);
         }
-    }, [dataStorageEnabled]);
+    }, [dataStorageEnabled, user?.id, user?.displayName]);
 
     // 加载品牌和雪茄列表用于自动完成
     useEffect(() => {
@@ -174,7 +179,12 @@ export const AICigarScanner: React.FC = () => {
             // 新逻辑：保存到 cigar_database 并加载聚合数据
             if (dataStorageEnabled) {
                 try {
-                    await saveRecognitionToCigarDatabase(data);
+                    // 🆕 传递用户信息
+                    await saveRecognitionToCigarDatabase(
+                        data,
+                        user?.id,
+                        user?.displayName || undefined
+                    );
                     
                     // 保存后立即查询聚合数据
                     const productName = generateProductName(data.brand, data.name);
@@ -454,7 +464,24 @@ export const AICigarScanner: React.FC = () => {
                 
                 // 如果启用数据存储，保存结果
                 if (dataStorageEnabled && searchResult.hasDetailedInfo) {
-                    await saveRecognitionResult(searchResult, 'text-search');
+                    try {
+                        // 🆕 传递用户信息
+                        await saveRecognitionToCigarDatabase(
+                            searchResult,
+                            user?.id,
+                            user?.displayName || undefined
+                        );
+                        
+                        // 保存后立即查询聚合数据
+                        const productName = generateProductName(searchResult.brand, searchResult.name);
+                        const aggregated = await getAggregatedCigarData(productName);
+                        
+                        if (aggregated) {
+                            setAggregatedData(aggregated);
+                        }
+                    } catch (error) {
+                        message.warning('数据统计更新失败，但识别结果已显示');
+                    }
                 }
             } else {
                 message.error('未找到匹配的雪茄信息');
@@ -831,6 +858,36 @@ export const AICigarScanner: React.FC = () => {
                             </div>
                         )}
 
+                        {/* 🆕 显示贡献者信息 */}
+                        {aggregatedData && aggregatedData.contributors.length > 0 && (
+                            <div style={{ 
+                                marginBottom: '12px', 
+                                padding: '8px 12px',
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                borderRadius: '6px',
+                                border: '1px solid rgba(255, 255, 255, 0.1)'
+                            }}>
+                                <Text style={{ color: '#fff', fontSize: '12px', marginBottom: '4px', display: 'block' }}>
+                                    👥 贡献者（{aggregatedData.uniqueContributors}人）
+                                </Text>
+                                <Space wrap size={[4, 4]}>
+                                    {aggregatedData.contributors.map((contributor) => (
+                                        <Tag 
+                                            key={contributor.userId}
+                                            style={{ 
+                                                background: 'rgba(255, 215, 0, 0.2)',
+                                                border: '1px solid rgba(255, 215, 0, 0.3)',
+                                                color: '#ffd700',
+                                                fontSize: '11px'
+                                            }}
+                                        >
+                                            {contributor.userName}
+                                        </Tag>
+                                    ))}
+                                </Space>
+                            </div>
+                        )}
+
                         <Space split={<Divider type="vertical" style={{ borderColor: '#555' }} />}>
                             <Text style={{ color: '#ddd' }} type="secondary">
                                 产地: <span style={{ color: '#ddd' }}>
@@ -866,7 +923,7 @@ export const AICigarScanner: React.FC = () => {
                             ) : (
                                 // 回退到单次识别结果
                                 result!.flavorProfile.map(flavor => (
-                                    <Tag key={flavor} color="gold" style={{ marginRight: '4px', marginBottom: '4px' }}>{flavor}</Tag>
+                                <Tag key={flavor} color="gold" style={{ marginRight: '4px', marginBottom: '4px' }}>{flavor}</Tag>
                                 ))
                             )}
                         </div>

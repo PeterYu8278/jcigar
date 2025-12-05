@@ -73,6 +73,7 @@ export const ROUTE_PERMISSIONS = {
   '/events': ['guest', 'member', 'vip', 'admin', 'developer'],
   '/shop': ['member', 'vip', 'admin', 'developer'],
   '/profile': ['member', 'vip', 'admin', 'developer'],
+  '/ai-cigar-history': ['member', 'vip', 'admin', 'developer'], // AI识茄历史记录页面权限
   '/reload': ['member', 'vip', 'admin', 'developer'], // 充值页面权限
   '/brand': ['member', 'vip', 'admin', 'developer'], // 品牌详情页面权限
   '/admin': ['admin', 'developer'],
