@@ -523,9 +523,7 @@ const AdminInventory: React.FC = () => {
             try {
               const aggregatedData = await getAggregatedCigarData(productName)
               setCigarDatabaseData(aggregatedData)
-              console.log('[Inventory] 从 cigar_database 加载数据:', aggregatedData)
             } catch (error) {
-              console.error('[Inventory] 加载 cigar_database 数据失败:', error)
               setCigarDatabaseData(null)
             }
             
@@ -536,7 +534,7 @@ const AdminInventory: React.FC = () => {
               try {
                 dbData = await getAggregatedCigarData(productName)
               } catch (error) {
-                console.error('[Inventory] 获取 cigar_database 数据失败:', error)
+                // Silently fail
               }
               
               // 优先使用 cigar_database 的数据，如果没有则使用现有数据
@@ -2941,7 +2939,6 @@ const AdminInventory: React.FC = () => {
                                   items: order.items
                                 })
                               } else {
-                                console.error('  - ❌ 订单未找到')
                                 message.error('订单未找到')
                               }
                             }}
@@ -2979,16 +2976,9 @@ const AdminInventory: React.FC = () => {
                                       message.success('✅ 订单已取消')
                                       setInboundOrders(await getAllInboundOrders())
                                     } else {
-                                      console.error('  - ❌ 订单未找到')
                                       message.error('订单未找到')
                                     }
                                   } catch (error: any) {
-                                    console.error('  - ❌ 取消订单失败:', error)
-                                    console.error('  - 错误详情:', {
-                                      message: error.message,
-                                      stack: error.stack,
-                                      error: error
-                                    })
                                     message.error('操作失败: ' + error.message)
                                   } finally {
                                     setLoading(false)
@@ -3054,12 +3044,6 @@ const AdminInventory: React.FC = () => {
                                     setInboundOrders(await getAllInboundOrders())
                                     setInventoryMovements(await getAllInventoryMovements())
                                   } catch (error: any) {
-                                    console.error('  - ❌ 创建反向订单失败:', error)
-                                    console.error('  - 错误详情:', {
-                                      message: error.message,
-                                      stack: error.stack,
-                                      error: error
-                                    })
                                     message.error('创建失败: ' + error.message)
                                   } finally {
                                     setLoading(false)
@@ -3278,7 +3262,6 @@ const AdminInventory: React.FC = () => {
                                     items: order.items
                                   })
                                 } else {
-                                  console.error('  - ❌ 订单未找到')
                                   message.error('订单未找到')
                                 }
                               }}
@@ -3324,16 +3307,9 @@ const AdminInventory: React.FC = () => {
                                         message.success('✅ 订单已取消')
                                         setInboundOrders(await getAllInboundOrders())
                                       } else {
-                                        console.error('  - ❌ 订单未找到')
                                         message.error('订单未找到')
                                       }
                                     } catch (error: any) {
-                                      console.error('  - ❌ 取消订单失败:', error)
-                                      console.error('  - 错误详情:', {
-                                        message: error.message,
-                                        stack: error.stack,
-                                        error: error
-                                      })
                                       message.error('操作失败: ' + error.message)
                                     } finally {
                                       setLoading(false)
@@ -3407,12 +3383,6 @@ const AdminInventory: React.FC = () => {
                                       setInboundOrders(await getAllInboundOrders())
                                       setInventoryMovements(await getAllInventoryMovements())
                                     } catch (error: any) {
-                                      console.error('  - ❌ 创建反向订单失败:', error)
-                                      console.error('  - 错误详情:', {
-                                        message: error.message,
-                                        stack: error.stack,
-                                        error: error
-                                      })
                                       message.error('创建失败: ' + error.message)
                                     } finally {
                                       setLoading(false)
@@ -4321,52 +4291,46 @@ const AdminInventory: React.FC = () => {
                     // 批量设置表单值
                     form.setFieldsValue(updates)
                     
-                    // 立即保存到 cigar_database（累积统计，不保存到 cigars）
+                    // 保存到 cigar_database（AI识笳按钮仅保存到 cigar_database，不保存到 cigars）
                     try {
                       await saveRecognitionToCigarDatabase(result)
-                      console.log('[Inventory] AI识别结果已保存到 cigar_database')
                       
-                      // 重新加载聚合数据并更新状态
+                      // 重新加载聚合数据
                       const fullProductName = `${result.brand} ${result.name}`.trim()
                       const aggregatedData = await getAggregatedCigarData(fullProductName)
+                      
                       if (aggregatedData) {
                         setCigarDatabaseData(aggregatedData)
-                        console.log('[Inventory] 已加载更新后的聚合数据:', aggregatedData)
                         
-                        // 如果在编辑模式，重新填充表单（使用最新的聚合数据）
+                        // 如果在编辑模式，使用聚合数据覆盖表单字段
                         if (editing) {
-                          const refreshedUpdates: any = {}
+                          const dbUpdates: any = {}
                           
-                          // 优先使用聚合数据
-                          if (aggregatedData.brand) refreshedUpdates.brand = aggregatedData.brand
-                          if (aggregatedData.origin) refreshedUpdates.origin = aggregatedData.origin
-                          if (aggregatedData.strength) refreshedUpdates.strength = aggregatedData.strength
-                          if (aggregatedData.description) refreshedUpdates.description = aggregatedData.description
-                          if (aggregatedData.wrappers?.[0]?.value) refreshedUpdates.wrapper = aggregatedData.wrappers[0].value
-                          if (aggregatedData.binders?.[0]?.value) refreshedUpdates.binder = aggregatedData.binders[0].value
-                          if (aggregatedData.fillers?.[0]?.value) refreshedUpdates.filler = aggregatedData.fillers[0].value
-                          if (aggregatedData.footTasteNotes?.length) refreshedUpdates.footTasteNotes = aggregatedData.footTasteNotes.map(item => item.value)
-                          if (aggregatedData.bodyTasteNotes?.length) refreshedUpdates.bodyTasteNotes = aggregatedData.bodyTasteNotes.map(item => item.value)
-                          if (aggregatedData.headTasteNotes?.length) refreshedUpdates.headTasteNotes = aggregatedData.headTasteNotes.map(item => item.value)
-                          if (aggregatedData.flavorProfile?.length) refreshedUpdates.tags = aggregatedData.flavorProfile.map(item => item.value)
+                          if (aggregatedData.brand) dbUpdates.brand = aggregatedData.brand
+                          if (aggregatedData.origin) dbUpdates.origin = aggregatedData.origin
+                          if (aggregatedData.strength) dbUpdates.strength = aggregatedData.strength
+                          if (aggregatedData.description) dbUpdates.description = aggregatedData.description
+                          if (aggregatedData.wrappers?.[0]?.value) dbUpdates.wrapper = aggregatedData.wrappers[0].value
+                          if (aggregatedData.binders?.[0]?.value) dbUpdates.binder = aggregatedData.binders[0].value
+                          if (aggregatedData.fillers?.[0]?.value) dbUpdates.filler = aggregatedData.fillers[0].value
+                          if (aggregatedData.footTasteNotes?.length) dbUpdates.footTasteNotes = aggregatedData.footTasteNotes.map(item => item.value)
+                          if (aggregatedData.bodyTasteNotes?.length) dbUpdates.bodyTasteNotes = aggregatedData.bodyTasteNotes.map(item => item.value)
+                          if (aggregatedData.headTasteNotes?.length) dbUpdates.headTasteNotes = aggregatedData.headTasteNotes.map(item => item.value)
+                          if (aggregatedData.flavorProfile?.length) dbUpdates.tags = aggregatedData.flavorProfile.map(item => item.value)
                           
-                          // 更新表单
-                          form.setFieldsValue(refreshedUpdates)
+                          form.setFieldsValue(dbUpdates)
                           
-                          // 更新评分
                           if (aggregatedData.rating !== null && aggregatedData.rating !== undefined) {
                             setAiRating(aggregatedData.rating)
                           }
                         }
                       }
-                    } catch (dbError) {
-                      console.error('[Inventory] 保存到 cigar_database 失败:', dbError)
-                      // 不影响用户体验，继续显示成功消息
+                      
+                      message.success(`AI识别完成并已保存到数据库！可信度: ${Math.round(result.confidence * 100)}%`)
+                    } catch (dbError: any) {
+                      message.error(`保存到数据库失败: ${dbError.message || '未知错误'}`)
                     }
-                    
-                    message.success(`AI识别完成！可信度: ${Math.round(result.confidence * 100)}%`)
                   } catch (error: any) {
-                    console.error('AI识别失败:', error)
                     message.error(`AI识别失败: ${error.message || '未知错误'}`)
                   } finally {
                     setAiRecognizing(false)
@@ -4385,7 +4349,7 @@ const AdminInventory: React.FC = () => {
             <Select
               placeholder={t('inventory.pleaseSelectBrand')}
               showSearch
-              disabled={!!editing && !!cigarDatabaseData}
+              disabled={!!cigarDatabaseData}
               filterOption={(input, option) => {
                 const children = option?.children as any
                 if (typeof children === 'string') {
@@ -4427,13 +4391,13 @@ const AdminInventory: React.FC = () => {
             </Select>
           </Form.Item>
           <Form.Item label={<span>{t('inventory.origin')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="origin" required={false} rules={[{ required: true, message: t('common.pleaseInputOrigin') }]}>
-            <Input disabled={!!editing && !!cigarDatabaseData} />
+            <Input disabled={!!cigarDatabaseData} />
           </Form.Item>
           <Form.Item label={<span>{isMobile ? t('inventory.specification') : t('inventory.size')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="size" required={false} rules={[{ required: true, message: t('common.pleaseInputSize') }]}> 
             <Input />
           </Form.Item>
           <Form.Item label={<span>{t('inventory.strength')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="strength" required={false} rules={[{ required: true, message: t('common.pleaseSelectStrength') }]}>
-            <Select disabled={!!editing && !!cigarDatabaseData}>
+            <Select disabled={!!cigarDatabaseData}>
               <Option value="mild">{t('inventory.mild')}</Option>
               <Option value="mild-medium">{t('inventory.mildMedium')}</Option>
               <Option value="medium">{t('inventory.medium')}</Option>
@@ -4446,7 +4410,7 @@ const AdminInventory: React.FC = () => {
           </Form.Item>
           
           <Form.Item label={t('common.description') || '描述'} name="description">
-            <Input.TextArea rows={3} placeholder="请输入雪茄描述" disabled={!!editing && !!cigarDatabaseData} />
+            <Input.TextArea rows={3} placeholder="请输入雪茄描述" disabled={!!cigarDatabaseData} />
           </Form.Item>
           
           <div style={{ 
@@ -4479,15 +4443,15 @@ const AdminInventory: React.FC = () => {
           </div>
           
           <Form.Item label="茄衣" name="wrapper">
-            <Input placeholder="例如: Habano, Connecticut, Maduro" disabled={!!editing && !!cigarDatabaseData} />
+            <Input placeholder="例如: Habano, Connecticut, Maduro" disabled={!!cigarDatabaseData} />
           </Form.Item>
           
           <Form.Item label="茄套" name="binder">
-            <Input placeholder="例如: Nicaraguan, Ecuadorian" disabled={!!editing && !!cigarDatabaseData} />
+            <Input placeholder="例如: Nicaraguan, Ecuadorian" disabled={!!cigarDatabaseData} />
           </Form.Item>
           
           <Form.Item label="茄芯" name="filler">
-            <Input placeholder="例如: Cuban, Nicaraguan, Dominican" disabled={!!editing && !!cigarDatabaseData} />
+            <Input placeholder="例如: Cuban, Nicaraguan, Dominican" disabled={!!cigarDatabaseData} />
           </Form.Item>
           
           <div style={{ 
@@ -4530,7 +4494,7 @@ const AdminInventory: React.FC = () => {
               placeholder="输入品吸笔记，按回车添加"
               style={{ width: '100%' }}
               tokenSeparators={[',']}
-              disabled={!!editing && !!cigarDatabaseData}
+              disabled={!!cigarDatabaseData}
             />
           </Form.Item>
           
@@ -4545,7 +4509,7 @@ const AdminInventory: React.FC = () => {
               placeholder="输入品吸笔记，按回车添加"
               style={{ width: '100%' }}
               tokenSeparators={[',']}
-              disabled={!!editing && !!cigarDatabaseData}
+              disabled={!!cigarDatabaseData}
             />
           </Form.Item>
           
@@ -4560,7 +4524,7 @@ const AdminInventory: React.FC = () => {
               placeholder="输入品吸笔记，按回车添加"
               style={{ width: '100%' }}
               tokenSeparators={[',']}
-              disabled={!!editing && !!cigarDatabaseData}
+              disabled={!!cigarDatabaseData}
             />
           </Form.Item>
           
@@ -4604,7 +4568,7 @@ const AdminInventory: React.FC = () => {
               placeholder="输入标签，按回车添加"
               style={{ width: '100%' }}
               tokenSeparators={[',']}
-              disabled={!!editing && !!cigarDatabaseData}
+              disabled={!!cigarDatabaseData}
             />
           </Form.Item>
         </Form>
@@ -5974,18 +5938,11 @@ const AdminInventory: React.FC = () => {
               setDeleteConfirmOpen(false)
               setDeleteTargetOrder(null)
             } else {
-              console.error('  - ❌ 订单未找到或ID为空', { targetOrderId: deleteTargetOrder.id, order })
               message.error('订单未找到，无法删除')
               setDeleteConfirmOpen(false)
               setDeleteTargetOrder(null)
             }
           } catch (error: any) {
-            console.error('  - ❌ 删除入库订单失败:', error)
-            console.error('  - 错误详情:', {
-              message: error.message,
-              stack: error.stack,
-              error: error
-            })
             message.error(t('common.deleteFailed') + ': ' + (error.message || String(error)))
           } finally {
             setLoading(false)
