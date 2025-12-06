@@ -15,14 +15,23 @@ function normalizeProductName(name: string): string {
         .replace(/[^a-z0-9]/g, '');
 }
 
-// 生成产品名称（去除品牌名重复）
+// 清理字段：移除括号及其内容
+function cleanField(value: string): string {
+    if (!value) return value;
+    return value.replace(/\s*\([^)]*\)\s*/g, '').trim();
+}
+
+// 生成产品名称（去除品牌名重复，移除括号内容）
 export function generateProductName(brand: string, name: string): string {
-    // 如果 name 已经包含 brand，则直接使用 name
-    if (name.toLowerCase().startsWith(brand.toLowerCase())) {
-        return name.trim();
+    // 移除括号及其内容（例如：Macanudo Crystal Cafe (Likely Crystal Cafe or similar mild size) -> Macanudo Crystal Cafe）
+    const cleanName = cleanField(name);
+    
+    // 如果 name 已经包含 brand，则直接使用清理后的 name
+    if (cleanName.toLowerCase().startsWith(brand.toLowerCase())) {
+        return cleanName;
     }
-    // 否则拼接 brand + name
-    return `${brand} ${name}`.trim();
+    // 否则拼接 brand + 清理后的 name
+    return `${brand} ${cleanName}`.trim();
 }
 
 // 值频率统计接口
@@ -123,9 +132,12 @@ export async function saveRecognitionToCigarDatabase(
                 updateData[`brandStats.${result.brand}`] = increment(1);
             }
             
-            // 更新产地统计
+            // 更新产地统计（移除括号内容）
             if (result.origin) {
-                updateData[`originStats.${result.origin}`] = increment(1);
+                const cleanOrigin = cleanField(result.origin);
+                if (cleanOrigin) {
+                    updateData[`originStats.${cleanOrigin}`] = increment(1);
+                }
             }
             
             // 更新强度统计
@@ -234,7 +246,7 @@ export async function saveRecognitionToCigarDatabase(
                 
                 // 初始化统计对象
                 brandStats: result.brand ? { [result.brand]: 1 } : {},
-                originStats: result.origin ? { [result.origin]: 1 } : {},
+                originStats: result.origin ? { [cleanField(result.origin)]: 1 } : {},
                 strengthStats: result.strength ? { [result.strength]: 1 } : {},
                 wrapperStats: result.wrapper ? { [result.wrapper]: 1 } : {},
                 binderStats: result.binder ? { [result.binder]: 1 } : {},
