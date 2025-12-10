@@ -46,6 +46,7 @@ const Home: React.FC = () => {
   const [swiperInstance, setSwiperInstance] = useState<any>(null)
   const [eventsFeatureVisible, setEventsFeatureVisible] = useState<boolean>(true)
   const [shopFeatureVisible, setShopFeatureVisible] = useState<boolean>(true)
+  const [visitSessionsFeatureVisible, setVisitSessionsFeatureVisible] = useState<boolean>(true)
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
   
   // 会员等级文本获取函数
@@ -146,6 +147,10 @@ const Home: React.FC = () => {
         // 检查商城功能是否可见（developer 不受限制）
         const shopVisible = user?.role === 'developer' ? true : await isFeatureVisible('shop')
         setShopFeatureVisible(shopVisible)
+        
+        // 检查驻店记录功能是否可见（developer 不受限制）
+        const visitSessionsVisible = user?.role === 'developer' ? true : await isFeatureVisible('visit-sessions')
+        setVisitSessionsFeatureVisible(visitSessionsVisible)
         
         setLoadingEvents(true)
         setLoadingCigars(true)
@@ -312,11 +317,15 @@ const Home: React.FC = () => {
         </div>
       </Card>
 
-      {/* 合并后的计时器和兑换模块 */}
-      <VisitTimerRedemption style={{ marginTop: 24 }} />
+      {/* 合并后的计时器和兑换模块 - 仅在驻店记录功能可见时显示 */}
+      {visitSessionsFeatureVisible && (
+        <VisitTimerRedemption style={{ marginTop: 24 }} />
+      )}
 
-      {/* CTA 横幅 - 神秘礼物 */}
-      <MysteryGiftBanner />
+      {/* CTA 横幅 - 神秘礼物 - 仅在驻店记录功能可见时显示 */}
+      {visitSessionsFeatureVisible && (
+        <MysteryGiftBanner />
+      )}
 
       {/* 功能卡片 - 已移除旧"最新活动"卡片，改为下方新列表 */}
 
