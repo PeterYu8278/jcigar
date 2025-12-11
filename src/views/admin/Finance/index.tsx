@@ -350,7 +350,10 @@ const AdminFinance: React.FC = () => {
       if (dateRange && dateRange[0] && dateRange[1]) {
         const d = toDateSafe(transaction.createdAt)
         if (!d) return false
-        if (!(dayjs(d).isAfter(dateRange[0]) && dayjs(d).isBefore(dateRange[1]))) {
+        const date = dayjs(d)
+        const start = dateRange[0].startOf('day')
+        const end = dateRange[1].endOf('day')
+        if (!((date.isAfter(start) || date.isSame(start)) && (date.isBefore(end) || date.isSame(end)))) {
           return false
         }
       }
@@ -493,30 +496,39 @@ const AdminFinance: React.FC = () => {
 
   // 计算统计数据（基于选中的日期范围）
   const filteredTransactionsForStats = useMemo(() => {
-    if (!selectedDateRange) return filteredTransactions
-    
-    const now = dayjs()
-    let startDate: dayjs.Dayjs
-    
-    switch (selectedDateRange) {
-      case 'week':
-        startDate = now.startOf('week')
-        break
-      case 'month':
-        startDate = now.startOf('month')
-        break
-      case 'year':
-        startDate = now.startOf('year')
-        break
-      default:
-        return filteredTransactions
+    // 如果有快捷日期选择，直接基于所有交易记录筛选
+    if (selectedDateRange) {
+      const now = dayjs()
+      let startDate: dayjs.Dayjs
+      
+      switch (selectedDateRange) {
+        case 'week':
+          startDate = now.startOf('week')
+          break
+        case 'month':
+          startDate = now.startOf('month')
+          break
+        case 'year':
+          startDate = now.startOf('year')
+          break
+        default:
+          return transactions
+      }
+      
+      return transactions.filter(t => {
+        const d = toDateSafe(t.createdAt)
+        if (!d) return false
+        const transactionDate = dayjs(d)
+        const start = startDate.startOf('day')
+        const end = now.endOf('day')
+        return (transactionDate.isAfter(start) || transactionDate.isSame(start)) && 
+               (transactionDate.isBefore(end) || transactionDate.isSame(end))
+      })
     }
     
-    return filteredTransactions.filter(t => {
-      const transactionDate = dayjs(t.createdAt)
-      return transactionDate.isAfter(startDate) && transactionDate.isBefore(now.endOf('day'))
-    })
-  }, [filteredTransactions, selectedDateRange])
+    // 如果没有快捷日期选择，使用筛选后的交易记录（可能包含手动选择的日期范围）
+    return filteredTransactions
+  }, [transactions, filteredTransactions, selectedDateRange])
 
   // 统计数据
   const totalRevenue = filteredTransactionsForStats
@@ -529,11 +541,57 @@ const AdminFinance: React.FC = () => {
 
   const netProfit = totalRevenue - totalExpenses
 
-  // 计算品牌销量统计
+  // 计算品牌销量统计（基于筛选后的交易记录和日期范围）
   const brandSalesStats = useMemo(() => {
     const brandMap = new Map<string, { quantity: number; amount: number }>()
     
+    // 确定日期范围
+    let dateFilter: ((orderDate: any) => boolean) | null = null
+    if (selectedDateRange) {
+      const now = dayjs()
+      let startDate: dayjs.Dayjs
+      
+      switch (selectedDateRange) {
+        case 'week':
+          startDate = now.startOf('week')
+          break
+        case 'month':
+          startDate = now.startOf('month')
+          break
+        case 'year':
+          startDate = now.startOf('year')
+          break
+        default:
+          break
+      }
+      
+      if (startDate!) {
+        const start = startDate.startOf('day')
+        const end = now.endOf('day')
+        dateFilter = (orderDate: any) => {
+          const d = toDateSafe(orderDate)
+          if (!d) return false
+          const date = dayjs(d)
+          return (date.isAfter(start) || date.isSame(start)) && (date.isBefore(end) || date.isSame(end))
+        }
+      }
+    } else if (dateRange && dateRange[0] && dateRange[1]) {
+      const start = dateRange[0].startOf('day')
+      const end = dateRange[1].endOf('day')
+      dateFilter = (orderDate: any) => {
+        const d = toDateSafe(orderDate)
+        if (!d) return false
+        const date = dayjs(d)
+        return (date.isAfter(start) || date.isSame(start)) && (date.isBefore(end) || date.isSame(end))
+      }
+    }
+    
     orders.forEach(order => {
+      // 检查订单日期是否在筛选范围内
+      if (dateFilter && !dateFilter(order.createdAt)) {
+        return
+      }
+      
       const items = (order as any)?.items || []
       items.forEach((item: any) => {
         const cigar = cigars.find(c => c.id === item.cigarId)
@@ -560,7 +618,7 @@ const AdminFinance: React.FC = () => {
       ...stat,
       percentage: (stat.quantity / maxQuantity) * 100
     }))
-  }, [orders, cigars])
+  }, [orders, cigars, selectedDateRange, dateRange])
 
   // 计算选中品牌的产品详情
   const brandProductDetails = useMemo(() => {
@@ -834,7 +892,10 @@ const AdminFinance: React.FC = () => {
             justifyContent: isMobile ? 'center' : 'flex-start'
           }}>
             <button 
-              onClick={() => setSelectedDateRange(null)}
+              onClick={() => {
+                setSelectedDateRange(null)
+                setDateRange(null)
+              }}
               style={{
                 height: isMobile ? 28 : 32,
                 padding: isMobile ? '0 12px' : '0 16px',
@@ -854,7 +915,12 @@ const AdminFinance: React.FC = () => {
               {t('financeAdmin.allTime')}
             </button>
             <button 
-              onClick={() => setSelectedDateRange('week')}
+              onClick={() => {
+                const now = dayjs()
+                const startDate = now.startOf('week')
+                setSelectedDateRange('week')
+                setDateRange([startDate, now.endOf('day')])
+              }}
               style={{
                 height: isMobile ? 28 : 32,
                 padding: isMobile ? '0 12px' : '0 16px',
@@ -874,7 +940,12 @@ const AdminFinance: React.FC = () => {
               {t('financeAdmin.thisWeek')}
             </button>
             <button 
-              onClick={() => setSelectedDateRange('month')}
+              onClick={() => {
+                const now = dayjs()
+                const startDate = now.startOf('month')
+                setSelectedDateRange('month')
+                setDateRange([startDate, now.endOf('day')])
+              }}
               style={{
                 height: isMobile ? 28 : 32,
                 padding: isMobile ? '0 12px' : '0 16px',
@@ -894,7 +965,12 @@ const AdminFinance: React.FC = () => {
               {t('financeAdmin.thisMonth')}
             </button>
             <button 
-              onClick={() => setSelectedDateRange('year')}
+              onClick={() => {
+                const now = dayjs()
+                const startDate = now.startOf('year')
+                setSelectedDateRange('year')
+                setDateRange([startDate, now.endOf('day')])
+              }}
               style={{
                 height: isMobile ? 28 : 32,
                 padding: isMobile ? '0 12px' : '0 16px',
@@ -1021,7 +1097,13 @@ const AdminFinance: React.FC = () => {
           <RangePicker 
             placeholder={[t('financeAdmin.startDate'), t('financeAdmin.endDate')]}
             value={dateRange}
-            onChange={setDateRange}
+            onChange={(dates) => {
+              setDateRange(dates)
+              // 手动选择日期时清除快捷按钮状态
+              if (dates) {
+                setSelectedDateRange(null)
+              }
+            }}
             className="points-config-form"
           />
           {/* 移除交易类别筛选 */}
