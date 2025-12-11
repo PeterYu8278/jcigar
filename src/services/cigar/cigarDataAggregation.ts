@@ -22,16 +22,20 @@ function cleanField(value: string): string {
 }
 
 // 生成产品名称（去除品牌名重复，移除括号内容）
-export function generateProductName(brand: string, name: string): string {
+export function generateProductName(brand: string | undefined, name: string | undefined): string {
+    // 处理空值情况
+    const safeBrand = brand || '';
+    const safeName = name || '';
+    
     // 移除括号及其内容（例如：Macanudo Crystal Cafe (Likely Crystal Cafe or similar mild size) -> Macanudo Crystal Cafe）
-    const cleanName = cleanField(name);
+    const cleanName = cleanField(safeName);
     
     // 如果 name 已经包含 brand，则直接使用清理后的 name
-    if (cleanName.toLowerCase().startsWith(brand.toLowerCase())) {
+    if (cleanName && safeBrand && cleanName.toLowerCase().startsWith(safeBrand.toLowerCase())) {
         return cleanName;
     }
     // 否则拼接 brand + 清理后的 name
-    return `${brand} ${cleanName}`.trim();
+    return `${safeBrand} ${cleanName}`.trim();
 }
 
 // 值频率统计接口

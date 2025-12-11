@@ -42,7 +42,7 @@ const LanguageSwitcher: React.FC = () => {
       value={language}
       onChange={handleLanguageChange}
       options={languageOptions}
-      style={{ minWidth: 70 }}
+      style={{ minWidth: 100 }}
       suffixIcon={<GlobalOutlined />}
       size="small"
     />

@@ -131,8 +131,11 @@ const AdminOrders: React.FC = () => {
 
   // 处理搜索和数据源
   useEffect(() => {
-    if (keyword.trim()) {
-      // 有搜索关键词时，需要加载所有订单进行客户端搜索
+    // 判断是否有筛选条件
+    const hasFilters = statusFilter || paymentFilter || (dateRange && dateRange[0] && dateRange[1])
+    
+    if (keyword.trim() || !hasFilters) {
+      // 有搜索关键词或没有筛选条件时，加载所有订单
       setLoading(true)
       getAllOrders()
         .then(ordersData => {
@@ -145,20 +148,34 @@ const AdminOrders: React.FC = () => {
           setLoading(false)
         })
     } else {
-      // 没有搜索关键词时，使用分页数据
+      // 有筛选条件但没有搜索关键词时，使用分页数据
       setOrders(paginatedOrders)
     }
-  }, [keyword, paginatedOrders, t])
+  }, [keyword, paginatedOrders, statusFilter, paymentFilter, dateRange, t])
 
   // 分页处理函数
-  const handlePaginationChange = (page: number, pageSize?: number) => {
+  const handlePaginationChange = async (page: number, pageSize?: number) => {
+    const hasFilters = statusFilter || paymentFilter || (dateRange && dateRange[0] && dateRange[1])
+    
     const newPagination = {
       current: page,
       pageSize: pageSize || pagination.pageSize,
-      total: pagination.total
+      total: filteredSorted.length
     }
     setPagination(newPagination)
     localStorage.setItem('orders-pagination', JSON.stringify(newPagination))
+    
+    // 如果有筛选条件但没有搜索关键词，需要加载服务端分页数据
+    if (hasFilters && !keyword.trim()) {
+      const filters: any = {}
+      if (statusFilter) filters.status = statusFilter
+      if (paymentFilter) filters.paymentMethod = paymentFilter
+      if (dateRange && dateRange[0] && dateRange[1]) {
+        filters.startDate = dateRange[0].toDate()
+        filters.endDate = dateRange[1].toDate()
+      }
+      await loadPage(page, Object.keys(filters).length > 0 ? filters : undefined)
+    }
   }
 
   // 删除订单相关的出库记录
@@ -292,43 +309,39 @@ const AdminOrders: React.FC = () => {
   }
 
   const filtered = useMemo(() => {
-    // 如果有搜索关键词，使用客户端筛选
-    if (keyword.trim()) {
-      let result = filterOrders(orders, users, keyword, undefined, undefined, undefined, cigars) // 服务端已处理status和payment筛选
-      
-      // 按匹配状态筛选
-      if (matchStatusTab === 'matched') {
-        result = result.filter(order => {
-          const matchStatus = getOrderMatchStatus(order.id)
-          return matchStatus.status === 'fully'
-        })
-      } else if (matchStatusTab === 'unmatched') {
-        result = result.filter(order => {
-          const matchStatus = getOrderMatchStatus(order.id)
-          return matchStatus.status !== 'fully'
-        })
-      }
-      
-      return result
+    // 判断是否有筛选条件
+    const hasFilters = statusFilter || paymentFilter || (dateRange && dateRange[0] && dateRange[1])
+    
+    // 确定使用的数据源
+    let dataSource: Order[]
+    if (keyword.trim() || !hasFilters) {
+      // 有搜索关键词或没有筛选条件时，使用所有订单数据
+      dataSource = orders
     } else {
-      // 没有搜索关键词时，使用分页数据，只处理匹配状态筛选
-      let result = paginatedOrders
-      
-      if (matchStatusTab === 'matched') {
-        result = result.filter(order => {
-          const matchStatus = getOrderMatchStatus(order.id)
-          return matchStatus.status === 'fully'
-        })
-      } else if (matchStatusTab === 'unmatched') {
-        result = result.filter(order => {
-          const matchStatus = getOrderMatchStatus(order.id)
-          return matchStatus.status !== 'fully'
-        })
-      }
-      
-      return result
+      // 有筛选条件但没有搜索关键词时，使用分页数据
+      dataSource = paginatedOrders
     }
-  }, [orders, paginatedOrders, users, keyword, cigars, matchStatusTab, transactions])
+    
+    // 如果有搜索关键词，进行客户端筛选
+    if (keyword.trim()) {
+      dataSource = filterOrders(dataSource, users, keyword, undefined, undefined, undefined, cigars)
+    }
+    
+    // 按匹配状态筛选
+    if (matchStatusTab === 'matched') {
+      dataSource = dataSource.filter(order => {
+        const matchStatus = getOrderMatchStatus(order.id)
+        return matchStatus.status === 'fully'
+      })
+    } else if (matchStatusTab === 'unmatched') {
+      dataSource = dataSource.filter(order => {
+        const matchStatus = getOrderMatchStatus(order.id)
+        return matchStatus.status !== 'fully'
+      })
+    }
+    
+    return dataSource
+  }, [orders, paginatedOrders, users, keyword, cigars, matchStatusTab, transactions, statusFilter, paymentFilter, dateRange])
 
   const columns = useOrderColumns({
     users,

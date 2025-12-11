@@ -199,6 +199,120 @@ const AdminInventory: React.FC = () => {
     })()
   }, [])
 
+  // 统一处理编辑时的数据加载
+  useEffect(() => {
+    if (!editing) {
+      // 重置状态
+      setCigarDatabaseData(null)
+      setAiRating(null)
+      return
+    }
+
+    // 加载产品数据和 cigar_database 数据
+    const loadEditData = async () => {
+      try {
+        // 从 cigar_database 加载聚合数据（需要 brand 和 name 都存在）
+        if (!editing.brand || !editing.name) {
+          // 如果缺少必要字段，直接使用产品文档的数据
+          setTimeout(() => {
+            form.setFieldsValue({
+              name: editing.name || '',
+              brand: editing.brand || '',
+              origin: editing.origin || '',
+              size: editing.size || '',
+              strength: editing.strength || '',
+              price: editing.price || 0,
+              reserved: editing.inventory?.reserved ?? 0,
+              description: editing.description || '',
+              wrapper: editing.construction?.wrapper || '',
+              binder: editing.construction?.binder || '',
+              filler: editing.construction?.filler || '',
+              footTasteNotes: editing.tastingNotes?.foot || [],
+              bodyTasteNotes: editing.tastingNotes?.body || [],
+              headTasteNotes: editing.tastingNotes?.head || [],
+              tags: editing.metadata?.tags || [],
+              rating: editing.metadata?.rating || null,
+            })
+            setCigarImages(editing.images || [])
+            setAiRating(editing.metadata?.rating || null)
+          }, 0)
+          return
+        }
+        
+        const productName = generateProductName(editing.brand, editing.name)
+        const aggregatedData = await getAggregatedCigarData(productName)
+        setCigarDatabaseData(aggregatedData)
+        
+        // 使用 setTimeout 确保 Modal 已经打开，Form 已经渲染
+        setTimeout(() => {
+          // 优先使用 cigar_database 的数据，如果没有则使用现有数据
+          form.setFieldsValue({
+            name: editing.name,
+            brand: aggregatedData?.brand || editing.brand,
+            origin: aggregatedData?.origin || editing.origin,
+            size: editing.size,
+            strength: aggregatedData?.strength || editing.strength,
+            price: editing.price,
+            reserved: editing.inventory?.reserved ?? 0,
+            description: aggregatedData?.description || editing.description || '',
+            wrapper: aggregatedData?.wrappers?.[0]?.value || editing.construction?.wrapper || '',
+            binder: aggregatedData?.binders?.[0]?.value || editing.construction?.binder || '',
+            filler: aggregatedData?.fillers?.[0]?.value || editing.construction?.filler || '',
+            footTasteNotes: aggregatedData?.footTasteNotes?.map(item => item.value) || editing.tastingNotes?.foot || [],
+            bodyTasteNotes: aggregatedData?.bodyTasteNotes?.map(item => item.value) || editing.tastingNotes?.body || [],
+            headTasteNotes: aggregatedData?.headTasteNotes?.map(item => item.value) || editing.tastingNotes?.head || [],
+            tags: aggregatedData?.flavorProfile?.map(item => item.value) || editing.metadata?.tags || [],
+            rating: !aggregatedData ? (editing.metadata?.rating || null) : undefined, // 只在没有cigar_database数据时设置rating到表单
+          })
+          setCigarImages(editing.images || [])
+          
+          // 设置评分（优先使用 cigar_database 的评分）
+          if (aggregatedData?.rating !== null && aggregatedData?.rating !== undefined) {
+            setAiRating(aggregatedData.rating)
+          } else {
+            setAiRating(editing.metadata?.rating || null)
+          }
+        }, 0)
+      } catch (error) {
+        // 如果加载失败，使用产品文档的数据
+        console.error('加载 cigar_database 数据失败:', error)
+        setCigarDatabaseData(null)
+        
+        setTimeout(() => {
+          form.setFieldsValue({
+            name: editing.name,
+            brand: editing.brand,
+            origin: editing.origin,
+            size: editing.size,
+            strength: editing.strength,
+            price: editing.price,
+            reserved: editing.inventory?.reserved ?? 0,
+            description: editing.description || '',
+            wrapper: editing.construction?.wrapper || '',
+            binder: editing.construction?.binder || '',
+            filler: editing.construction?.filler || '',
+            footTasteNotes: editing.tastingNotes?.foot || [],
+            bodyTasteNotes: editing.tastingNotes?.body || [],
+            headTasteNotes: editing.tastingNotes?.head || [],
+            tags: editing.metadata?.tags || [],
+            rating: editing.metadata?.rating || null,
+          })
+          setCigarImages(editing.images || [])
+          setAiRating(editing.metadata?.rating || null)
+        }, 0)
+      }
+    }
+
+    loadEditData()
+  }, [editing, form])
+
+  // 当 cigarDatabaseData 变化时，确保品牌字段被设置到表单中
+  useEffect(() => {
+    if (cigarDatabaseData?.brand) {
+      form.setFieldsValue({ brand: cigarDatabaseData.brand })
+    }
+  }, [cigarDatabaseData, form])
+
   const getStrengthColor = (strength: string) => {
     switch (strength) {
       case 'mild': return 'green'
@@ -537,56 +651,8 @@ const AdminInventory: React.FC = () => {
       width: 100,
       render: (_: any, record: any) => (
         <Space size="small" style={{ justifyContent: 'center', width: '100%' }}>
-          <Button type="link" icon={<EditOutlined />} size="small" onClick={async () => {
+          <Button type="link" icon={<EditOutlined />} size="small" onClick={() => {
             setEditing(record)
-            
-            // 从 cigar_database 加载聚合数据
-            const productName = generateProductName(record.brand, record.name)
-            try {
-              const aggregatedData = await getAggregatedCigarData(productName)
-              setCigarDatabaseData(aggregatedData)
-            } catch (error) {
-              setCigarDatabaseData(null)
-            }
-            
-            // 使用 setTimeout 确保 Modal 已经打开，Form 已经渲染
-            setTimeout(async () => {
-              // 尝试从 cigar_database 获取数据
-              let dbData: AggregatedCigarData | null = null
-              try {
-                dbData = await getAggregatedCigarData(productName)
-              } catch (error) {
-                // Silently fail
-              }
-              
-              // 优先使用 cigar_database 的数据，如果没有则使用现有数据
-              form.setFieldsValue({
-                name: record.name,
-                brand: dbData?.brand || record.brand,
-                origin: dbData?.origin || record.origin,
-                size: record.size,
-                strength: dbData?.strength || record.strength,
-                price: record.price,
-                reserved: (record as any)?.inventory?.reserved ?? 0,
-                description: dbData?.description || record.description || '',
-                wrapper: dbData?.wrappers?.[0]?.value || record.construction?.wrapper || '',
-                binder: dbData?.binders?.[0]?.value || record.construction?.binder || '',
-                filler: dbData?.fillers?.[0]?.value || record.construction?.filler || '',
-                footTasteNotes: dbData?.footTasteNotes?.map(item => item.value) || record.tastingNotes?.foot || [],
-                bodyTasteNotes: dbData?.bodyTasteNotes?.map(item => item.value) || record.tastingNotes?.body || [],
-                headTasteNotes: dbData?.headTasteNotes?.map(item => item.value) || record.tastingNotes?.head || [],
-                tags: dbData?.flavorProfile?.map(item => item.value) || record.metadata?.tags || [],
-                rating: !dbData ? (record.metadata?.rating || null) : undefined, // 只在没有cigar_database数据时设置rating到表单
-              })
-              setCigarImages(record.images || [])
-              
-              // 设置评分（优先使用 cigar_database 的评分）
-              if (dbData?.rating !== null && dbData?.rating !== undefined) {
-                setAiRating(dbData.rating)
-              } else {
-                setAiRating(record.metadata?.rating || null)
-              }
-            }, 0)
           }}>
           </Button>
           <Button type="link" icon={<SearchOutlined />} size="small" onClick={() => {
@@ -1642,24 +1708,6 @@ const AdminInventory: React.FC = () => {
                                     }} 
                                     onClick={() => {
                               setEditing(record)
-                              form.setFieldsValue({
-                                name: (record as any).name,
-                                brand: (record as any).brand,
-                                origin: (record as any).origin,
-                                size: (record as any).size,
-                                strength: (record as any).strength,
-                                price: (record as any).price,
-                                reserved: (record as any)?.inventory?.reserved ?? 0,
-                                description: (record as any).description || '',
-                                wrapper: (record as any).construction?.wrapper || '',
-                                binder: (record as any).construction?.binder || '',
-                                filler: (record as any).construction?.filler || '',
-                                footTasteNotes: (record as any).tastingNotes?.foot || [],
-                                bodyTasteNotes: (record as any).tastingNotes?.body || [],
-                                headTasteNotes: (record as any).tastingNotes?.head || [],
-                                tags: (record as any).metadata?.tags || [],
-                              })
-                              setCigarImages((record as any).images || [])
                                     }}
                                   >
                               {t('common.edit')}
@@ -3952,7 +4000,6 @@ const AdminInventory: React.FC = () => {
           setAiRating(null); // 重置AI识别的rating
           setCigarDatabaseData(null); // 重置 cigar_database 数据
         }}
-        destroyOnClose={true}
         {...getResponsiveModalConfig(isMobile, true, 600)}
         footer={isMobile ? (
           <div style={{ padding: '8px 0' }}>
@@ -3993,32 +4040,8 @@ const AdminInventory: React.FC = () => {
                       return
                     }
                     
-                    Modal.confirm({
-                      title: t('common.deleteProduct'),
-                      content: `确定删除产品 ${productName} 吗？`,
-                      okButtonProps: { danger: true },
-                      onOk: async () => {
-                        
-                        setLoading(true)
-                        try {
-                          const res = await deleteDocument(COLLECTIONS.CIGARS, productId)
-                          
-                          if (res.success) {
-                            message.success(t('common.deleted'))
-                            setItems(await getCigars())
-                            setSelectedRowKeys([])
-                            setEditing(null)
-                            form.resetFields()
-                          } else {
-                            message.error(t('common.deleteFailed'))
-                          }
-                        } catch (error) {
-                          message.error(t('common.deleteFailed') + ': ' + (error as Error).message)
-                        } finally {
-                          setLoading(false)
-                        }
-                      }
-                    })
+                    // 使用受控 Modal 替代 modal.confirm，以解决 React 19 兼容性问题
+                    setDeleting(editing)
                   }}>{t('common.delete')}</Button>
                 </>
               )}
@@ -4043,21 +4066,39 @@ const AdminInventory: React.FC = () => {
             // 根据品牌名称找到对应的品牌ID
             const selectedBrand = brandList.find(brand => brand.name === values.brand)
             
-            // 构建构造信息
+            // 构建构造信息（优先使用 cigarDatabaseData，否则使用表单值）
             const construction: any = {};
-            if (values.wrapper) construction.wrapper = values.wrapper;
-            if (values.binder) construction.binder = values.binder;
-            if (values.filler) construction.filler = values.filler;
+            if (cigarDatabaseData?.wrappers?.[0]?.value) {
+              construction.wrapper = cigarDatabaseData.wrappers[0].value;
+            } else if (values.wrapper) {
+              construction.wrapper = values.wrapper;
+            }
+            if (cigarDatabaseData?.binders?.[0]?.value) {
+              construction.binder = cigarDatabaseData.binders[0].value;
+            } else if (values.binder) {
+              construction.binder = values.binder;
+            }
+            if (cigarDatabaseData?.fillers?.[0]?.value) {
+              construction.filler = cigarDatabaseData.fillers[0].value;
+            } else if (values.filler) {
+              construction.filler = values.filler;
+            }
             
-            // 构建品吸笔记
+            // 构建品吸笔记（优先使用 cigarDatabaseData，否则使用表单值）
             const tastingNotes: any = {};
-            if (values.footTasteNotes && values.footTasteNotes.length > 0) {
+            if (cigarDatabaseData?.footTasteNotes && cigarDatabaseData.footTasteNotes.length > 0) {
+              tastingNotes.foot = cigarDatabaseData.footTasteNotes.map(item => item.value);
+            } else if (values.footTasteNotes && values.footTasteNotes.length > 0) {
               tastingNotes.foot = Array.isArray(values.footTasteNotes) ? values.footTasteNotes : [];
             }
-            if (values.bodyTasteNotes && values.bodyTasteNotes.length > 0) {
+            if (cigarDatabaseData?.bodyTasteNotes && cigarDatabaseData.bodyTasteNotes.length > 0) {
+              tastingNotes.body = cigarDatabaseData.bodyTasteNotes.map(item => item.value);
+            } else if (values.bodyTasteNotes && values.bodyTasteNotes.length > 0) {
               tastingNotes.body = Array.isArray(values.bodyTasteNotes) ? values.bodyTasteNotes : [];
             }
-            if (values.headTasteNotes && values.headTasteNotes.length > 0) {
+            if (cigarDatabaseData?.headTasteNotes && cigarDatabaseData.headTasteNotes.length > 0) {
+              tastingNotes.head = cigarDatabaseData.headTasteNotes.map(item => item.value);
+            } else if (values.headTasteNotes && values.headTasteNotes.length > 0) {
               tastingNotes.head = Array.isArray(values.headTasteNotes) ? values.headTasteNotes : [];
             }
             
@@ -4072,22 +4113,45 @@ const AdminInventory: React.FC = () => {
               finalRating = editing.metadata.rating;
             }
             
+            // 标签（优先使用 cigarDatabaseData，否则使用表单值）
+            let tags: string[] = [];
+            if (cigarDatabaseData?.flavorProfile && cigarDatabaseData.flavorProfile.length > 0) {
+              tags = cigarDatabaseData.flavorProfile.map(item => item.value);
+            } else if (Array.isArray(values.tags) && values.tags.length > 0) {
+              tags = values.tags;
+            }
+            
             const metadata: any = {
               rating: finalRating,
               reviews: editing?.metadata?.reviews ?? 0,
-              tags: Array.isArray(values.tags) ? values.tags : [],
+              tags: tags,
             };
+            
+            // 品牌（优先使用 cigarDatabaseData，否则使用表单值）
+            const brand = cigarDatabaseData?.brand || values.brand || '';
+            
+            // 根据品牌名称找到对应的品牌ID（优先使用 cigarDatabaseData 的品牌）
+            const finalSelectedBrand = brandList.find(b => b.name === brand) || selectedBrand;
+            
+            // 描述（优先使用 cigarDatabaseData，否则使用表单值）
+            const description = cigarDatabaseData?.description || values.description || '';
+            
+            // 产地（优先使用 cigarDatabaseData，否则使用表单值或品牌国家）
+            const origin = cigarDatabaseData?.origin || values.origin || finalSelectedBrand?.country;
+            
+            // 强度（优先使用 cigarDatabaseData，否则使用表单值）
+            const strength = cigarDatabaseData?.strength || values.strength;
             
             const payload: Partial<Cigar> = {
               name: values.name,
-              brand: values.brand,
-              brandId: selectedBrand?.id, // 添加品牌ID关联
-              origin: values.origin ?? selectedBrand?.country,
+              brand: brand,
+              brandId: finalSelectedBrand?.id, // 添加品牌ID关联
+              origin: origin,
               size: values.size,
-              strength: values.strength,
+              strength: strength,
               price: values.price,
               sku: (editing as any)?.sku, // 保留原有SKU值
-              description: values.description || '',
+              description: description,
               images: cigarImages,
               inventory: {
                 // 库存实时由日志计算，不写入 stock 字段
@@ -4392,8 +4456,8 @@ const AdminInventory: React.FC = () => {
                       updates.tags = result.flavorProfile
                     }
                     
-                    // 品牌（如果表单中没有）
-                    if (result.brand && !form.getFieldValue('brand')) {
+                    // 品牌（优先使用AI识别的品牌）
+                    if (result.brand) {
                       updates.brand = result.brand
                     }
                     
@@ -4467,35 +4531,48 @@ const AdminInventory: React.FC = () => {
             </div>
           </Form.Item>
           {cigarDatabaseData ? (
-            <Form.Item label={<span>{t('inventory.brand')} <span style={{ color: '#ff4d4f' }}>*</span></span>}>
-              <div style={{ 
-                padding: '8px 12px', 
-                background: 'rgba(255, 215, 0, 0.1)', 
-                border: '1px solid rgba(255, 215, 0, 0.3)',
-                borderRadius: '6px',
-                color: '#fff'
-              }}>
-                <strong>{cigarDatabaseData.brand}</strong>
-                <span style={{ marginLeft: '8px', fontSize: '12px', color: '#888' }}>
-                  (一致性: {cigarDatabaseData.brandConsistency.toFixed(0)}%)
-                </span>
-              </div>
-            </Form.Item>
+            <>
+              {/* 隐藏的表单字段，用于保存品牌值 */}
+              <Form.Item name="brand" style={{ display: 'none' }}>
+                <Input type="hidden" />
+              </Form.Item>
+              <Form.Item label={<span>{t('inventory.brand')} <span style={{ color: '#ff4d4f' }}>*</span></span>}>
+                <div style={{ 
+                  padding: '8px 12px', 
+                  background: 'rgba(255, 215, 0, 0.1)', 
+                  border: '1px solid rgba(255, 215, 0, 0.3)',
+                  borderRadius: '6px',
+                  color: '#fff'
+                }}>
+                  <strong>{cigarDatabaseData.brand}</strong>
+                  <span style={{ marginLeft: '8px', fontSize: '12px', color: '#888' }}>
+                    (一致性: {cigarDatabaseData.brandConsistency.toFixed(0)}%)
+                  </span>
+                </div>
+              </Form.Item>
+            </>
           ) : (
             <Form.Item label={<span>{t('inventory.brand')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="brand" required={false} rules={[{ required: true, message: t('common.pleaseInputBrand') }]}>
               <Select
                 placeholder={t('inventory.pleaseSelectBrand')}
                 showSearch
+                allowClear={false}
                 filterOption={(input, option) => {
-                  const children = option?.children as any
-                  if (typeof children === 'string') {
-                    return children.toLowerCase().includes(input.toLowerCase())
+                  // 使用 option.value（品牌名称）进行筛选
+                  const brandName = String(option?.value || '')
+                  const inputLower = input.toLowerCase()
+                  
+                  // 筛选品牌名称
+                  if (brandName.toLowerCase().includes(inputLower)) {
+                    return true
                   }
-                  if (Array.isArray(children)) {
-                    return children.some((child: any) => 
-                      typeof child === 'string' && child.toLowerCase().includes(input.toLowerCase())
-                    )
+                  
+                  // 同时筛选国家（查找对应的品牌对象）
+                  const brand = brandList.find(b => b.name === brandName)
+                  if (brand?.country && brand.country.toLowerCase().includes(inputLower)) {
+                    return true
                   }
+                  
                   return false
                 }}
                 onChange={(val) => {
@@ -4504,7 +4581,7 @@ const AdminInventory: React.FC = () => {
                     try { form.setFieldsValue({ origin: b.country }) } catch {}
                   }
                 }}
-                dropdownStyle={{ zIndex: 1050 }}
+                getPopupContainer={(triggerNode) => triggerNode.parentElement || document.body}
               >
                 {brandList
                   .filter(brand => brand.status === 'active')
@@ -5035,7 +5112,7 @@ const AdminInventory: React.FC = () => {
         </Form>
       </Modal>
 
-      {/* 删除确认 */}
+      {/* 删除确认 - 使用受控 Modal 替代 modal.confirm 以解决 React 19 兼容性问题 */}
       <Modal
         title={t('common.deleteProduct')}
         open={!!deleting}
@@ -5043,14 +5120,23 @@ const AdminInventory: React.FC = () => {
         onOk={async () => {
           if (!deleting) return
           
-          
           setLoading(true)
           try {
-            const res = await deleteDocument(COLLECTIONS.CIGARS, (deleting as any).id)
+            const productId = (deleting as any).id
+            const res = await deleteDocument(COLLECTIONS.CIGARS, productId)
             
             if (res.success) {
               message.success(t('common.deleted'))
               setItems(await getCigars())
+              setSelectedRowKeys([])
+              // 如果正在编辑被删除的产品，重置编辑状态
+              if (editing && (editing as any).id === productId) {
+                setEditing(null)
+                form.resetFields()
+                setCigarImages([])
+                setAiRating(null)
+                setCigarDatabaseData(null)
+              }
             } else {
               message.error(t('common.deleteFailed'))
             }
@@ -5062,6 +5148,10 @@ const AdminInventory: React.FC = () => {
           }
         }}
         okButtonProps={{ danger: true }}
+        confirmLoading={loading}
+        {...getResponsiveModalConfig(isMobile, true, 520)}
+        styles={getModalThemeStyles(isMobile, true)}
+        zIndex={2000}
       >
         {t('common.confirmDeleteProduct')} {(deleting as any)?.name}？{t('common.thisOperationCannotBeUndone')}
       </Modal>
