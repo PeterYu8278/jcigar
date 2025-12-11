@@ -1,7 +1,7 @@
 // 用户管理页面
 import React, { useEffect, useMemo, useState } from 'react'
 import { Table, Button, Tag, Space, Typography, Input, Select, message, Modal, Form, Switch, Dropdown, Checkbox, Row, Col, Spin, App } from 'antd'
-import { EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined, EyeOutlined, ArrowLeftOutlined, CalendarOutlined, ShoppingOutlined, TrophyOutlined } from '@ant-design/icons'
+import { EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined, EyeOutlined, ArrowLeftOutlined, CalendarOutlined, ShoppingOutlined, TrophyOutlined, KeyOutlined } from '@ant-design/icons'
 import { MemberProfileCard } from '../../../components/common/MemberProfileCard'
 import { ProfileView } from '../../../components/common/ProfileView'
 import { ReferralTreeView } from '../../../components/admin/ReferralTreeView'
@@ -14,10 +14,10 @@ import { getUsers, createDocument, updateDocument, deleteDocument, COLLECTIONS, 
 import { getUsersPaginated } from '../../../services/firebase/paginatedQueries'
 import { usePaginatedData } from '../../../hooks/usePaginatedData'
 import type { User, Event, Order } from '../../../types'
-import { sendPasswordResetEmailFor } from '../../../services/firebase/auth'
+import { sendPasswordResetEmailFor, resetPasswordByPhone } from '../../../services/firebase/auth'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../../../store/modules/auth'
-import { getModalThemeStyles, getModalWidth } from '../../../config/modalTheme'
+import { getModalThemeStyles, getModalWidth, getResponsiveModalConfig } from '../../../config/modalTheme'
 import { normalizePhoneNumber } from '../../../utils/phoneNormalization'
 import { collection, query, where, getDocs, limit, doc, setDoc } from 'firebase/firestore'
 import { db } from '../../../config/firebase'
@@ -71,6 +71,8 @@ const AdminUsers: React.FC = () => {
   const [editing, setEditing] = useState<null | User>(null)
   const [creating, setCreating] = useState(false)
   const [deleting, setDeleting] = useState<null | User>(null)
+  const [resettingPassword, setResettingPassword] = useState<null | User>(null)
+  const [resettingPasswordLoading, setResettingPasswordLoading] = useState(false)
   const [form] = Form.useForm()
   const [keyword, setKeyword] = useState('')
   const [roleFilter, setRoleFilter] = useState<string | undefined>()
@@ -85,10 +87,15 @@ const AdminUsers: React.FC = () => {
   const [visibleCols, setVisibleCols] = useState<Record<string, boolean>>(() => {
     const saved = localStorage.getItem('users.visibleCols')
     if (saved) {
-      try { return JSON.parse(saved) } catch {}
+      try { 
+        const parsed = JSON.parse(saved)
+        // 确保 id 字段根据用户角色设置
+        parsed.id = currentUser?.role === 'developer'
+        return parsed
+      } catch {}
     }
     return {
-    id: true,
+    id: currentUser?.role === 'developer',
     memberId: true,
     displayName: true,
     email: true,
@@ -218,12 +225,12 @@ const AdminUsers: React.FC = () => {
   }
 
   const allColumns = [
-    {
+    ...(currentUser?.role === 'developer' ? [{
       title: t('usersAdmin.userId'),
       dataIndex: 'id',
       key: 'id',
       width: 80,
-    },
+    }] : []),
     {
       title: t('usersAdmin.memberId'),
       dataIndex: 'memberId',
@@ -412,6 +419,14 @@ const AdminUsers: React.FC = () => {
               phone: (record as any)?.profile?.phone,
             })
           }}>
+          </Button>
+          <Button 
+            type="link" 
+            icon={<KeyOutlined />} 
+            size="small" 
+            onClick={() => setResettingPassword(record)}
+            title={t('usersAdmin.resetPassword') || '重置密码'}
+          >
           </Button>
         </Space>
       ),
@@ -1252,7 +1267,7 @@ const AdminUsers: React.FC = () => {
             if (editing) {
               const res = await updateDocument<User>(COLLECTIONS.USERS, editing.id, {
                 displayName: values.displayName,
-                email: values.email,
+                email: values.email || undefined, // ✅ 允许email为空
                 role: values.role,
                 membership: { ...editing.membership, level: values.level },
                 profile: { ...(editing as any).profile, phone: normalizedPhone },
@@ -1262,7 +1277,7 @@ const AdminUsers: React.FC = () => {
               // 创建新用户时，先创建文档获取ID，然后生成会员ID并更新
               const userData: Omit<User, 'id'> = {
                 displayName: values.displayName,
-                email: values.email,
+                email: values.email || undefined, // ✅ 允许email为空
                 role: values.role,
                 status: 'inactive',  // ✅ 默认状态为非活跃
                 profile: { phone: normalizedPhone },
@@ -1312,7 +1327,7 @@ const AdminUsers: React.FC = () => {
             label={<span style={{ color: '#FFFFFF' }}>{t('auth.email')}</span>}
             name="email"
             rules={[
-              { required: true, message: t('auth.emailRequired') },
+              // ✅ 管理员和开发者手动创建用户时，电邮为选填
               { type: 'email', message: t('auth.emailInvalid') },
               {
                 validator: async (_, value) => {
@@ -1486,6 +1501,216 @@ const AdminUsers: React.FC = () => {
         okButtonProps={{ danger: true }}
       >
         {t('usersAdmin.deleteUserConfirm', { name: deleting?.displayName })}
+      </Modal>
+
+      {/* 重置密码确认 */}
+      <Modal
+        title={<span style={{ color: '#FFFFFF' }}>{t('usersAdmin.resetPassword') || '重置密码'}</span>}
+        open={!!resettingPassword}
+        onCancel={() => setResettingPassword(null)}
+        footer={null}
+        {...getResponsiveModalConfig(isMobile, true, 500)}
+        styles={getModalThemeStyles(isMobile, true)}
+      >
+        <div style={{ color: '#FFFFFF' }}>
+          <p style={{ marginBottom: 20 }}>
+            选择重置方式：
+          </p>
+          
+          {/* 重置方式按钮 */}
+          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+            {/* 电邮重置按钮 */}
+            <Button
+              type="default"
+              block
+              size="large"
+              disabled={!resettingPassword?.email || resettingPassword.email.trim() === ''}
+              loading={resettingPasswordLoading}
+              onClick={async () => {
+                if (!resettingPassword || !resettingPassword.email) {
+                  message.error('该用户没有绑定邮箱，无法通过邮箱重置密码')
+                  return
+                }
+                
+                modal.confirm({
+                  title: <span style={{ color: '#FFFFFF' }}>确认发送密码重置邮件</span>,
+                  content: <span style={{ color: '#FFFFFF' }}>确定要向 {resettingPassword.email} 发送密码重置邮件吗？</span>,
+                  okText: '确认',
+                  cancelText: '取消',
+                  centered: true,
+                  styles: {
+                    content: {
+                      background: 'rgba(24, 22, 17, 0.95)',
+                      border: '1px solid rgba(244, 175, 37, 0.6)',
+                      borderRadius: '12px',
+                      backdropFilter: 'blur(20px)',
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)'
+                    },
+                    body: {
+                      background: 'rgba(24, 22, 17, 0.95)',
+                      color: '#FFFFFF'
+                    },
+                    header: {
+                      background: 'transparent',
+                      borderBottom: '1px solid rgba(244, 175, 37, 0.6)',
+                      color: '#FFFFFF'
+                    },
+                    mask: {
+                      backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                      backdropFilter: 'blur(8px)'
+                    }
+                  },
+                  okButtonProps: {
+                    style: {
+                      background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                      color: '#111',
+                      fontWeight: 'bold',
+                      border: 'none'
+                    }
+                  },
+                  cancelButtonProps: {
+                    style: {
+                      border: '1px solid rgba(244, 175, 37, 0.6)',
+                      background: 'rgba(255,255,255,0.1)',
+                      color: '#ffffff'
+                    }
+                  },
+                  onOk: async () => {
+                    setResettingPasswordLoading(true)
+                    try {
+                      const result = await sendPasswordResetEmailFor(resettingPassword.email!)
+                      if (result.success) {
+                        message.success(t('usersAdmin.passwordResetSent') || '密码重置邮件已发送')
+                        setResettingPassword(null)
+                      } else {
+                        message.error(result.error?.message || t('usersAdmin.passwordResetFailed') || '发送密码重置邮件失败')
+                      }
+                    } catch (error: any) {
+                      message.error(error.message || '发送密码重置邮件失败')
+                    } finally {
+                      setResettingPasswordLoading(false)
+                    }
+                  }
+                })
+              }}
+              style={{
+                height: '48px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '16px',
+                fontWeight: 500
+              }}
+            >
+              通过电邮重置
+              {resettingPassword?.email && (
+                <span style={{ marginLeft: 8, fontSize: '12px', opacity: 0.7 }}>
+                  ({resettingPassword.email})
+                </span>
+              )}
+            </Button>
+            
+            {/* WhatsApp重置按钮 */}
+            <Button
+              type="default"
+              block
+              size="large"
+              disabled={!(resettingPassword as any)?.profile?.phone || (resettingPassword as any).profile.phone.trim() === ''}
+              loading={resettingPasswordLoading}
+              onClick={async () => {
+                if (!resettingPassword || !(resettingPassword as any)?.profile?.phone) {
+                  message.error('该用户没有绑定手机号，无法通过WhatsApp重置密码')
+                  return
+                }
+                
+                const phone = (resettingPassword as any).profile.phone
+                modal.confirm({
+                  title: <span style={{ color: '#FFFFFF' }}>确认通过WhatsApp重置密码</span>,
+                  content: <span style={{ color: '#FFFFFF' }}>确定要通过WhatsApp向 {phone} 发送临时密码吗？</span>,
+                  okText: '确认',
+                  cancelText: '取消',
+                  centered: true,
+                  styles: {
+                    content: {
+                      background: 'rgba(24, 22, 17, 0.95)',
+                      border: '1px solid rgba(244, 175, 37, 0.6)',
+                      borderRadius: '12px',
+                      backdropFilter: 'blur(20px)',
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)'
+                    },
+                    body: {
+                      background: 'rgba(24, 22, 17, 0.95)',
+                      color: '#FFFFFF'
+                    },
+                    header: {
+                      background: 'transparent',
+                      borderBottom: '1px solid rgba(244, 175, 37, 0.6)',
+                      color: '#FFFFFF'
+                    },
+                    mask: {
+                      backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                      backdropFilter: 'blur(8px)'
+                    }
+                  },
+                  okButtonProps: {
+                    style: {
+                      background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                      color: '#111',
+                      fontWeight: 'bold',
+                      border: 'none'
+                    }
+                  },
+                  cancelButtonProps: {
+                    style: {
+                      border: '1px solid rgba(244, 175, 37, 0.6)',
+                      background: 'rgba(255,255,255,0.1)',
+                      color: '#ffffff'
+                    }
+                  },
+                  onOk: async () => {
+                    setResettingPasswordLoading(true)
+                    try {
+                      const result = await resetPasswordByPhone(phone)
+                      if (result.success) {
+                        message.success('密码重置成功，临时密码已通过WhatsApp发送')
+                        setResettingPassword(null)
+                      } else {
+                        message.error(result.error || '通过WhatsApp重置密码失败')
+                      }
+                    } catch (error: any) {
+                      message.error(error.message || '通过WhatsApp重置密码失败')
+                    } finally {
+                      setResettingPasswordLoading(false)
+                    }
+                  }
+                })
+              }}
+              style={{
+                height: '48px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '16px',
+                fontWeight: 500
+              }}
+            >
+              通过WhatsApp重置
+              {(resettingPassword as any)?.profile?.phone && (
+                <span style={{ marginLeft: 8, fontSize: '12px', opacity: 0.7 }}>
+                  ({(resettingPassword as any).profile.phone})
+                </span>
+              )}
+            </Button>
+          </Space>
+          
+          {/* 提示信息 */}
+          {(!resettingPassword?.email || resettingPassword.email.trim() === '') && 
+           (!(resettingPassword as any)?.profile?.phone || (resettingPassword as any).profile.phone.trim() === '') && (
+            <p style={{ color: '#ff4d4f', fontSize: '12px', marginTop: 16, textAlign: 'center' }}>
+              该用户没有绑定邮箱或手机号，无法重置密码
+            </p>
+          )}
+        </div>
       </Modal>
     </div>
   )
