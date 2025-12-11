@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import { Spin, Select, InputNumber, Button, Modal, message, Tag } from 'antd'
-import { CheckCircleOutlined, UserOutlined, DeleteOutlined } from '@ant-design/icons'
+import { CheckCircleOutlined, UserOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import type { User, Cigar, Event } from '../../types'
 import { updateDocument, COLLECTIONS, unregisterFromEvent } from '../../services/firebase/firestore'
 import { useTranslation } from 'react-i18next'
@@ -59,17 +59,17 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
 
   if (participantsLoading) {
     return (
-      <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
+      <div style={{ textAlign: 'center', padding: 40, color: 'rgba(255, 255, 255, 0.6)' }}>
         <Spin size="large" />
-        <div style={{ marginTop: 16 }}>{t('participants.loadingParticipants')}</div>
+        <div style={{ marginTop: 16, color: 'rgba(255, 255, 255, 0.6)' }}>{t('participants.loadingParticipants')}</div>
       </div>
     )
   }
 
   if (registeredParticipants.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
-        <UserOutlined style={{ fontSize: 48, marginBottom: 16 }} />
+      <div style={{ textAlign: 'center', padding: 40, color: 'rgba(255, 255, 255, 0.6)' }}>
+        <UserOutlined style={{ fontSize: 48, marginBottom: 16, color: 'rgba(255, 255, 255, 0.6)' }} />
         <div>{t('participants.noParticipants')}</div>
       </div>
     )
@@ -77,20 +77,20 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
 
   return (
     <div style={{ 
-      maxHeight: '400px', 
+      flex: 1,
+      height: '100%',
+      maxHeight: '100%',
       overflowY: 'auto',
       overflowX: 'hidden',
-      padding: '8px',
-      border: '1px solid #f0f0f0',
-      borderRadius: '8px',
-      background: '#fafafa',
       width: '100%',
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      display: 'flex',
+      flexDirection: 'column',
+      minHeight: 0
     }}>
       <div style={{ 
         display: 'grid', 
         gap: '12px',
-        padding: '8px',
         width: '100%',
         boxSizing: 'border-box'
       }}>
@@ -104,10 +104,10 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
             key={uid} 
             style={{ 
                 padding: '16px',
-              background: '#fff',
+              background: 'rgba(255, 255, 255, 0.05)',
                 borderRadius: '8px',
-              border: '1px solid #e8e8e8',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              border: '1px solid rgba(244, 175, 37, 0.2)',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
                 transition: 'all 0.2s ease',
                 width: '100%',
                 boxSizing: 'border-box',
@@ -128,7 +128,7 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                 height: 32,
                 textAlign: 'center', 
                 lineHeight: '32px',
-                color: '#111', 
+                color: '#FFFFFF', 
                 fontSize: 12,
                 flexShrink: 0
               }}>
@@ -144,7 +144,7 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
               }}>
                 <span style={{ 
                   fontWeight: 600, 
-                  color: '#111', 
+                  color: '#FFFFFF', 
                   fontSize: 13,
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
@@ -154,7 +154,7 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                 </span>
                 <span style={{ 
                   fontSize: 11, 
-                  color: '#999', 
+                  color: 'rgba(255, 255, 255, 0.6)', 
                   whiteSpace: 'nowrap',
                   flexShrink: 0
                 }}>
@@ -214,7 +214,7 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                 width: '100%',
                 boxSizing: 'border-box'
               }}>
-                <span style={{ fontSize: 11, color: '#666', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: 11, color: 'rgba(255, 255, 255, 0.6)', whiteSpace: 'nowrap' }}>
                   ID: {allocation.orderId}
                 </span>
                 <div style={{ flexShrink: 0 }}>
@@ -242,8 +242,8 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                 style={{
                   marginBottom: 8,
                   padding: '8px',
-                  background: '#fafafa',
-                  border: '1px dashed #e8e8e8',
+                  background: 'rgba(244, 175, 37, 0.1)',
+                  border: '1px dashed rgba(244, 175, 37, 0.3)',
                   borderRadius: 6,
               display: 'flex', 
               flexDirection: isMobile ? 'column' : 'row',
@@ -255,9 +255,9 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
               >
                 {/* 名称：活动名称（与雪茄分配列宽一致） */}
                 <div style={{ 
-                  width: isMobile ? '100%' : 210, 
+                  width: isMobile ? '100%' : 180, 
                   flexShrink: 0, 
-                  color: '#666', 
+                  color: '#FFFFFF', 
                   fontSize: 12, 
                   fontWeight: 600 
                 }}>
@@ -272,7 +272,7 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                   flex: isMobile ? '0 0 100%' : '0 0 auto'
                 }}>
                 {/* 数量可调，默认 1 */}
-                  <div style={{ width: isMobile ? '50%' : 120, flexShrink: 0 }}>
+                  <div style={{ width: isMobile ? '50%' : 90, flexShrink: 0 }}>
                   <InputNumber
                     min={1}
                     max={99}
@@ -293,11 +293,11 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                     }}
                     style={{ width: '100%' }}
                       controls={false}
-                    addonAfter={<span style={{ color: '#666', fontSize: 11 }}>{t('participants.pieces')}</span>}
+                    addonAfter={<span style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 11 }}>{t('participants.pieces')}</span>}
                   />
                 </div>
                 {/* 费用可调，默认活动 fee */}
-                  <div style={{ width: isMobile ? '50%' : 130, flexShrink: 0 }}>
+                  <div style={{ width: isMobile ? '50%' : 100, flexShrink: 0 }}>
                   <InputNumber
                     min={0}
                     step={0.01}
@@ -320,7 +320,6 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                     }}
                     style={{ width: '100%' }}
                       controls={false}
-                      addonBefore={<span style={{ color: '#666', fontSize: 11 }}>RM</span>}
                     placeholder="0.00"
                   />
                   </div>
@@ -364,7 +363,7 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                     boxSizing: 'border-box'
                   }}
                 >
-                  <div style={{ width: isMobile ? '100%' : 220, flexShrink: 0 }}>
+                  <div style={{ width: isMobile ? '100%' : 200, flexShrink: 0 }}>
                 <Select
                   placeholder={t('participants.selectCigarModel')}
                   style={{ width: '100%' }}
@@ -412,7 +411,7 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                     boxSizing: 'border-box'
                   }}>
                     <div style={{ 
-                      width: isMobile ? 'calc((100% - 48px) / 2)' : 120, 
+                      width: isMobile ? 'calc((100% - 80px) / 2)' : 90, 
                       flexShrink: 0,
                       flexGrow: isMobile ? 0 : 0
                     }}>
@@ -436,11 +435,11 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                   }}
                   style={{ width: '100%' }}
                         controls={false}
-                  addonAfter={<span style={{ color: '#666', fontSize: 11 }}>{t('participants.pieces')}</span>}
+                  addonAfter={<span style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 11 }}>{t('participants.pieces')}</span>}
                 />
               </div>
                     <div style={{ 
-                      width: isMobile ? 'calc((100% - 48px) / 2)' : 130, 
+                      width: isMobile ? 'calc((100% - 80px) / 2)' : 100, 
                       flexShrink: 0,
                       flexGrow: isMobile ? 0 : 0
                     }}>
@@ -468,7 +467,6 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                   }}
                   style={{ width: '100%' }}
                         controls={false}
-                        addonBefore={<span style={{ color: '#666', fontSize: 11 }}>RM</span>}
                   placeholder="0.00"
                 />
               </div>
@@ -478,8 +476,8 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                       justifyContent: 'flex-end', 
                       gap: 4, 
                       flexShrink: 0,
-                      width: 32,
-                      minWidth: 32,
+                      width: isMobile ? 'auto' : 68,
+                      minWidth: isMobile ? 'auto' : 68,
                       flexGrow: 0
                     }}>
                 <Button 
@@ -498,6 +496,20 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                         onAllocSavingChange(null)
                   }}
                 />
+                <Button 
+                  size="small"
+                  icon={<PlusOutlined />}
+                  style={{ width: 32, height: 24, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  onClick={async () => {
+                        const current = (event as any)?.allocations?.[uid] || {}
+                        const nextItems = [...((current?.items as any[]) || []), { cigarId: undefined, quantity: 1, unitPrice: 0, amount: 0 }]
+                        const updated = { ...(event as any).allocations, [uid]: { ...current, items: nextItems } }
+                        onAllocSavingChange(uid)
+                        await updateDocument(COLLECTIONS.EVENTS, (event as any).id, { allocations: updated } as any)
+                        onEventUpdate({ ...event, allocations: updated } as Event)
+                        onAllocSavingChange(null)
+                  }}
+                />
                     </div>
               </div>
             </div>
@@ -507,17 +519,6 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                 return (
                   <div>
                     {items.map((row, idx) => renderRow(row, idx))}
-                    <div>
-                      <Button size="small" onClick={async () => {
-                        const current = (event as any)?.allocations?.[uid] || {}
-                        const nextItems = [...((current?.items as any[]) || []), { cigarId: undefined, quantity: 1, unitPrice: 0, amount: 0 }]
-                        const updated = { ...(event as any).allocations, [uid]: { ...current, items: nextItems } }
-                        onAllocSavingChange(uid)
-                        await updateDocument(COLLECTIONS.EVENTS, (event as any).id, { allocations: updated } as any)
-                        onEventUpdate({ ...event, allocations: updated } as Event)
-                        onAllocSavingChange(null)
-                      }}>{t('common.add')}</Button>
-                    </div>
                   </div>
                 )
               }
@@ -526,9 +527,6 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
               return (
                 <div>
                   {renderRow({ cigarId: undefined, quantity: 1, unitPrice: 0, amount: 0 }, 0)}
-                  <div>
-                    <Button size="small" onClick={ensureItemsInit}>{t('common.add')}</Button>
-                  </div>
                 </div>
               )
             })()}

@@ -1,7 +1,7 @@
 // 财务管理页面
 import React, { useEffect, useState, useMemo } from 'react'
 import { Table, Card, Row, Col, Statistic, Typography, DatePicker, Select, Button, Space, message, Modal, Form, InputNumber, Input, Spin } from 'antd'
-import { DollarOutlined, ShoppingOutlined, CalendarOutlined, ArrowUpOutlined, ArrowDownOutlined, PlusOutlined, EyeOutlined, BarChartOutlined, PieChartOutlined, DeleteOutlined, CheckOutlined } from '@ant-design/icons'
+import { DollarOutlined, ShoppingOutlined, CalendarOutlined, ArrowUpOutlined, ArrowDownOutlined, PlusOutlined, EyeOutlined, BarChartOutlined, PieChartOutlined, DeleteOutlined, CheckOutlined, SearchOutlined } from '@ant-design/icons'
 import type { Transaction, User, InboundOrder, OutboundOrder, InventoryMovement } from '../../../types'
 import { getAllTransactions, getAllOrders, createTransaction, COLLECTIONS, getAllUsers, updateDocument, deleteDocument, getCigars, getAllInboundOrders, getAllOutboundOrders, getAllInventoryMovements } from '../../../services/firebase/firestore'
 // 不再使用服务端分页，改为加载所有数据并使用客户端分页
@@ -12,6 +12,7 @@ import { getModalThemeStyles, getModalWidth, getModalTheme, getResponsiveModalCo
 const { Title } = Typography
 const { RangePicker } = DatePicker
 const { Option } = Select
+const { Search } = Input
 
 const AdminFinance: React.FC = () => {
   const { t } = useTranslation()
@@ -29,6 +30,7 @@ const AdminFinance: React.FC = () => {
   const [creating, setCreating] = useState(false)
   const [viewing, setViewing] = useState<Transaction | null>(null)
   const [isEditing, setIsEditing] = useState(false)
+  const [deleting, setDeleting] = useState<Transaction | null>(null)
   const [activeTab, setActiveTab] = useState('overview')
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null)
   const [editForm] = Form.useForm()
@@ -113,6 +115,7 @@ const AdminFinance: React.FC = () => {
   const [form] = Form.useForm()
   
   // 筛选状态
+  const [keyword, setKeyword] = useState('')
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null)
   // 移除货币筛选
 
@@ -309,40 +312,68 @@ const AdminFinance: React.FC = () => {
 
   // 删除交易记录
   const handleDeleteTransaction = async (transaction: Transaction) => {
-    Modal.confirm({
-      title: t('financeAdmin.deleteTransaction'),
-      content: t('financeAdmin.deleteTransactionConfirm'),
-      okText: t('common.confirm'),
-      cancelText: t('common.cancel'),
-      okType: 'danger',
-      onOk: async () => {
-        setLoading(true)
-        try {
-          const result = await deleteDocument(COLLECTIONS.TRANSACTIONS, transaction.id)
-          if (result.success) {
-            message.success(t('financeAdmin.transactionDeleted'))
-            // 重新加载所有交易数据
-            const data = await getAllTransactions()
-            setTransactions(data)
-          } else {
-            message.error(t('financeAdmin.deleteFailed'))
-          }
-        } finally {
-          setLoading(false)
+    setDeleting(transaction)
+  }
+
+  const confirmDeleteTransaction = async () => {
+    if (!deleting) return
+    
+    setLoading(true)
+    try {
+      const result = await deleteDocument(COLLECTIONS.TRANSACTIONS, deleting.id)
+      if (result.success) {
+        message.success(t('financeAdmin.transactionDeleted'))
+        // 重新加载所有交易数据
+        const data = await getAllTransactions()
+        setTransactions(data)
+        // 如果正在查看被删除的交易，关闭查看 Modal
+        if (viewing?.id === deleting.id) {
+          setViewing(null)
+          setIsEditing(false)
         }
+        setDeleting(null)
+      } else {
+        message.error(t('financeAdmin.deleteFailed'))
       }
-    })
+    } catch (error) {
+      console.error('Delete transaction error:', error)
+      message.error(t('financeAdmin.deleteFailed'))
+    } finally {
+      setLoading(false)
+    }
   }
 
   // 筛选后的数据
   const filteredTransactions = useMemo(() => {
     return transactions.filter(transaction => {
-      if (!dateRange || !dateRange[0] || !dateRange[1]) return true
-      const d = toDateSafe(transaction.createdAt)
-      if (!d) return false
-      return dayjs(d).isAfter(dateRange[0]) && dayjs(d).isBefore(dateRange[1])
+      // 日期筛选
+      if (dateRange && dateRange[0] && dateRange[1]) {
+        const d = toDateSafe(transaction.createdAt)
+        if (!d) return false
+        if (!(dayjs(d).isAfter(dateRange[0]) && dayjs(d).isBefore(dateRange[1]))) {
+          return false
+        }
+      }
+      
+      // 搜索关键词筛选
+      if (keyword.trim()) {
+        const searchLower = keyword.toLowerCase()
+        const description = (transaction.description || '').toLowerCase()
+        const id = (transaction.id || '').toLowerCase()
+        const relatedId = (transaction.relatedId || '').toLowerCase()
+        const amount = Math.abs(transaction.amount).toString()
+        
+        if (!description.includes(searchLower) && 
+            !id.includes(searchLower) && 
+            !relatedId.includes(searchLower) &&
+            !amount.includes(searchLower)) {
+          return false
+        }
+      }
+      
+      return true
     })
-  }, [transactions, dateRange])
+  }, [transactions, dateRange, keyword])
 
   // 拆分收入/支出字段并计算累计余额（基于时间顺序）
   const { enriched, balanceMap } = useMemo(() => {
@@ -536,6 +567,7 @@ const AdminFinance: React.FC = () => {
     if (!selectedBrand) return []
     
     const productMap = new Map<string, { 
+      cigarId: string;
       cigar: any; 
       quantity: number; 
       amount: number; 
@@ -547,30 +579,46 @@ const AdminFinance: React.FC = () => {
       const items = (order as any)?.items || []
       items.forEach((item: any) => {
         const cigar = cigars.find(c => c.id === item.cigarId)
-        if (cigar && cigar.brand === selectedBrand) {
+        // 获取品牌，与品牌摘要统计逻辑保持一致
+        const brand = cigar?.brand || 'Unknown'
+        
+        // 匹配选中品牌（包括 Unknown 的情况）
+        if (brand === selectedBrand) {
           const quantity = Number(item.quantity || 0)
           const amount = Number(item.quantity || 0) * Number(item.price || 0)
           const user = users.find(u => u.id === order.userId)
           const userName = user?.displayName || user?.email || order.userId
           
           const existing = productMap.get(item.cigarId) || { 
-            cigar, 
+            cigarId: item.cigarId,
+            cigar: cigar || null, 
             quantity: 0, 
             amount: 0, 
             orders: 0,
-            orderDetails: []
+            orderDetails: [] as Array<{ orderId: string; orderDate: string; quantity: number; amount: number; userName: string }>
           }
+          
+          // 安全转换日期
+          let orderDate: string | Date = order.createdAt
+          if (orderDate && typeof (orderDate as any).toDate === 'function') {
+            orderDate = (orderDate as any).toDate()
+          }
+          // 转换为字符串或保持 Date 对象
+          const orderDateStr = orderDate instanceof Date 
+            ? orderDate.toISOString() 
+            : (typeof orderDate === 'string' ? orderDate : new Date().toISOString())
           
           existing.orderDetails.push({
             orderId: order.id,
-            orderDate: order.createdAt,
+            orderDate: orderDateStr,
             quantity,
             amount,
             userName
           })
           
           productMap.set(item.cigarId, {
-            cigar,
+            cigarId: item.cigarId,
+            cigar: cigar || null,
             quantity: existing.quantity + quantity,
             amount: existing.amount + amount,
             orders: existing.orders + 1,
@@ -961,6 +1009,15 @@ const AdminFinance: React.FC = () => {
         backdropFilter: 'blur(10px)'
       }}>
         <Space size="middle" wrap>
+          <Search
+            placeholder={t('financeAdmin.searchPlaceholder')}
+            allowClear
+            style={{ width: isMobile ? '100%' : 300 }}
+            prefix={<SearchOutlined />}
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            className="points-config-form"
+          />
           <RangePicker 
             placeholder={[t('financeAdmin.startDate'), t('financeAdmin.endDate')]}
             value={dateRange}
@@ -971,6 +1028,7 @@ const AdminFinance: React.FC = () => {
           {/* 移除货币筛选 */}
           <Button 
             onClick={() => {
+              setKeyword('')
               setDateRange(null)
               
             }}
@@ -1113,7 +1171,7 @@ const AdminFinance: React.FC = () => {
           }} style={theme.button.secondary}>
             {t('common.cancel')}
           </button>,
-          <button key="delete" type="button" onClick={() => viewing && handleDeleteTransaction(viewing)} style={theme.button.danger}>
+          <button key="delete" type="button" onClick={() => viewing && handleDeleteTransaction(viewing)} disabled={loading} style={theme.button.danger}>
             {t('common.delete')}
           </button>,
           !isEditing ? (
@@ -1300,78 +1358,120 @@ const AdminFinance: React.FC = () => {
                       {fields.length === 0 && (
                         <div style={theme.text.hint}>{t('common.noData')}</div>
                       )}
-                      {fields.map((field, index) => (
+                      {fields.map((field, index) => {
+                        const fieldValue = editForm.getFieldValue(['relatedOrders', field.name, 'orderId'])
+                        const fieldAmount = editForm.getFieldValue(['relatedOrders', field.name, 'amount']) || 0
+                        
+                        // 获取订单/入库单信息用于显示
+                        let displayInfo: { id: string; text: string } | null = null
+                        if (fieldValue) {
+                          if (isExpenseTransaction) {
+                            const ref = inboundReferenceOptions.find(r => r.referenceNo === fieldValue)
+                            if (ref) {
+                              displayInfo = {
+                                id: ref.referenceNo,
+                                text: `📦 ${ref.referenceNo} · ${ref.productCount} ${t('inventory.types')} · RM${ref.totalValue.toFixed(2)}`
+                              }
+                            }
+                          } else {
+                            const order = (orders || []).find((o: any) => o.id === fieldValue)
+                            if (order) {
+                              const u = (users || []).find((x: any) => x.id === order.userId)
+                              const name = u?.displayName || u?.email || order.userId
+                              const total = Number((order as any)?.total || 0)
+                              displayInfo = {
+                                id: order.id,
+                                text: `${order.id} · ${name} · RM${total.toFixed(2)}`
+                              }
+                            }
+                          }
+                        }
+                        
+                        return (
                         <div key={field.key} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
                           <Form.Item name={[field.name, 'orderId']} style={{ marginBottom: 0, flex: 1 }}>
-                            <Select
-                              allowClear
-                              showSearch
-                              placeholder={isExpenseTransaction ? t('financeAdmin.selectInboundReference') : t('financeAdmin.relatedOrderId')}
-                              disabled={!isEditing}
-                              filterOption={(input, option) => {
-                                const searchText = (input || '').toLowerCase()
-                                const searchableText = (option as any)?.searchText || ''
-                                return searchableText.toLowerCase().includes(searchText)
-                              }}
-                              options={isExpenseTransaction ? (
-                                // 支出交易：显示入库单号
-                                inboundReferenceOptions.map(ref => {
-                                  const searchText = `${ref.referenceNo} ${ref.reason} ${ref.totalValue.toFixed(2)}`
-                                  return {
-                                    label: (
-                                      <div>
-                                        <div>
-                                          📦 {ref.referenceNo} · {ref.productCount} {t('inventory.types')} · RM{ref.totalValue.toFixed(2)}
-                                        </div>
-                                        <div style={{ fontSize: '12px', color: '#bab09c' }}>
-                                          {ref.reason || '-'}
-                                        </div>
-                                      </div>
-                                    ),
-                                    value: ref.referenceNo,
-                                    searchText
-                                  }
-                                })
-                              ) : (
-                                // 收入交易：显示销售订单
-                                (orders || [])
-                                  .filter(o => !isOrderFullyMatched(o.id))
-                                  .map(o => {
-                                    const u = (users || []).find((x: any) => x.id === o.userId)
-                                    const name = u?.displayName || u?.email || o.userId
-                                    const addr = (o as any)?.shipping?.address || '-'
-                                    const total = Number((o as any)?.total || 0)
-                                    const searchText = `${o.id} ${name} ${addr} ${total.toFixed(2)}`
-                                    return { 
+                            {isEditing ? (
+                              <Select
+                                allowClear
+                                showSearch
+                                placeholder={isExpenseTransaction ? t('financeAdmin.selectInboundReference') : t('financeAdmin.relatedOrderId')}
+                                filterOption={(input, option) => {
+                                  const searchText = (input || '').toLowerCase()
+                                  const searchableText = (option as any)?.searchText || ''
+                                  return searchableText.toLowerCase().includes(searchText)
+                                }}
+                                options={isExpenseTransaction ? (
+                                  // 支出交易：显示入库单号
+                                  inboundReferenceOptions.map(ref => {
+                                    const searchText = `${ref.referenceNo} ${ref.reason} ${ref.totalValue.toFixed(2)}`
+                                    return {
                                       label: (
                                         <div>
-                                          <div>{o.id} · {name} · RM{total.toFixed(2)}</div>
-                                          <div style={{ fontSize: '12px', color: '#bab09c' }}>{addr}</div>
+                                          <div>
+                                            📦 {ref.referenceNo} · {ref.productCount} {t('inventory.types')} · RM{ref.totalValue.toFixed(2)}
+                                          </div>
+                                          <div style={{ fontSize: '12px', color: '#bab09c' }}>
+                                            {ref.reason || '-'}
+                                          </div>
                                         </div>
-                                      ), 
-                                      value: o.id,
+                                      ),
+                                      value: ref.referenceNo,
                                       searchText
                                     }
                                   })
-                              )}
-                              onChange={(val) => {
-                                const arr = Array.isArray(editForm.getFieldValue('relatedOrders')) ? [...editForm.getFieldValue('relatedOrders')] : []
-                                
-                                let defaultAmt = 0
-                                if (isExpenseTransaction) {
-                                  // 支出交易：使用入库单的总价值
-                                  const inboundRef = inboundReferenceOptions.find(r => r.referenceNo === val)
-                                  defaultAmt = inboundRef?.totalValue || 0
-                                } else {
-                                  // 收入交易：使用销售订单的总额
-                                  const order = (orders || []).find((o: any) => o.id === val)
-                                  defaultAmt = Number((order as any)?.total || 0)
-                                }
-                                
-                                arr[field.name] = { ...(arr[field.name] || {}), orderId: val, amount: defaultAmt }
-                                editForm.setFieldsValue({ relatedOrders: arr })
-                              }}
-                            />
+                                ) : (
+                                  // 收入交易：显示销售订单
+                                  (orders || [])
+                                    .filter(o => !isOrderFullyMatched(o.id))
+                                    .map(o => {
+                                      const u = (users || []).find((x: any) => x.id === o.userId)
+                                      const name = u?.displayName || u?.email || o.userId
+                                      const addr = (o as any)?.shipping?.address || '-'
+                                      const total = Number((o as any)?.total || 0)
+                                      const searchText = `${o.id} ${name} ${addr} ${total.toFixed(2)}`
+                                      return { 
+                                        label: (
+                                          <div>
+                                            <div>{o.id} · {name} · RM{total.toFixed(2)}</div>
+                                            <div style={{ fontSize: '12px', color: '#bab09c' }}>{addr}</div>
+                                          </div>
+                                        ), 
+                                        value: o.id,
+                                        searchText
+                                      }
+                                    })
+                                )}
+                                onChange={(val) => {
+                                  const arr = Array.isArray(editForm.getFieldValue('relatedOrders')) ? [...editForm.getFieldValue('relatedOrders')] : []
+                                  
+                                  let defaultAmt = 0
+                                  if (isExpenseTransaction) {
+                                    // 支出交易：使用入库单的总价值
+                                    const inboundRef = inboundReferenceOptions.find(r => r.referenceNo === val)
+                                    defaultAmt = inboundRef?.totalValue || 0
+                                  } else {
+                                    // 收入交易：使用销售订单的总额
+                                    const order = (orders || []).find((o: any) => o.id === val)
+                                    defaultAmt = Number((order as any)?.total || 0)
+                                  }
+                                  
+                                  arr[field.name] = { ...(arr[field.name] || {}), orderId: val, amount: defaultAmt }
+                                  editForm.setFieldsValue({ relatedOrders: arr })
+                                }}
+                              />
+                            ) : (
+                              <div style={{ 
+                                padding: '4px 11px',
+                                minHeight: '32px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                color: '#FFFFFF',
+                                fontSize: 13,
+                                fontWeight: 600
+                              }}>
+                                {displayInfo ? displayInfo.text : fieldValue || '-'}
+                              </div>
+                            )}
                           </Form.Item>
                           <Form.Item name={[field.name, 'amount']} style={{ marginBottom: 0, width: 120 }}>
                             <InputNumber min={0} step={0.01} style={{ width: '100%' }} disabled={!isEditing} />
@@ -1380,7 +1480,8 @@ const AdminFinance: React.FC = () => {
                             <button type="button" onClick={() => remove(field.name)} style={theme.button.text}>{t('common.remove')}</button>
                           )}
                         </div>
-                      ))}
+                        )
+                      })}
                       <div style={{ ...theme.text.hint, display: 'flex', justifyContent: 'flex-end' }}>
                         {t('financeAdmin.relatedOrdersHint')}
                       </div>
@@ -1436,44 +1537,106 @@ const AdminFinance: React.FC = () => {
                               const logColor = isExpenseTransaction ? '#52c41a' : '#ff4d4f'
                               const logPrefix = isExpenseTransaction ? '+' : '-'
                               
+                              // 获取订单信息（用于显示顾客信息）
+                              const order = !isExpenseTransaction ? (orders || []).find((o: any) => o.id === log.referenceNo) : null
+                              const customer = order ? (users || []).find((u: any) => u.id === order.userId) : null
+                              const customerName = customer?.displayName || customer?.email || order?.userId || '-'
+                              const customerPhone = customer?.phone || '-'
+                              const shippingAddress = order?.shipping?.address || '-'
+                              
+                              // 获取产品详细信息
+                              const productBrand = cigar?.brand || '-'
+                              const productOrigin = cigar?.origin || '-'
+                              const productStrength = cigar?.strength || '-'
+                              const unitPrice = log.unitPrice ? Number(log.unitPrice).toFixed(2) : '-'
+                              
                               return (
                                 <div 
                                   key={log.id}
                                   style={{
-                                    padding: 10,
+                                    padding: 12,
                                     background: 'rgba(255,255,255,0.05)',
                                     borderRadius: 6,
                                     border: matchedOrder ? `1px solid ${logColor}66` : '1px solid rgba(255,255,255,0.1)'
                                   }}
                                 >
+                                  {/* 产品信息 */}
                                   <div style={{ 
                                     display: 'flex', 
                                     justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    marginBottom: 6
+                                    alignItems: 'flex-start',
+                                    marginBottom: 8
                                   }}>
-                                    <div style={{ 
-                                      fontSize: 13, 
-                                      fontWeight: 600, 
-                                      color: '#fff',
-                                      flex: 1
-                                    }}>
-                                      {cigarName}
+                                    <div style={{ flex: 1 }}>
+                                      <div style={{ 
+                                        fontSize: 14, 
+                                        fontWeight: 600, 
+                                        color: '#fff',
+                                        marginBottom: 4
+                                      }}>
+                                        {cigarName}
+                                      </div>
+                                      <div style={{ 
+                                        fontSize: 11,
+                                        color: 'rgba(255,255,255,0.6)',
+                                        display: 'flex',
+                                        flexWrap: 'wrap',
+                                        gap: '8px 12px'
+                                      }}>
+                                        {productBrand !== '-' && <span>品牌: {productBrand}</span>}
+                                        {productOrigin !== '-' && <span>产地: {productOrigin}</span>}
+                                        {productStrength !== '-' && <span>强度: {productStrength}</span>}
+                                        {unitPrice !== '-' && <span>单价: RM{unitPrice}</span>}
+                                      </div>
                                     </div>
                                     <div style={{ 
-                                      fontSize: 14, 
+                                      fontSize: 16, 
                                       fontWeight: 700, 
                                       color: logColor,
                                       whiteSpace: 'nowrap',
-                                      marginLeft: 8
+                                      marginLeft: 12
                                     }}>
                                       {logPrefix}{log.quantity}
                                     </div>
                                   </div>
                                   
+                                  {/* 顾客信息（仅出库记录显示） */}
+                                  {!isExpenseTransaction && order && (
+                                    <div style={{
+                                      marginTop: 8,
+                                      padding: 8,
+                                      background: 'rgba(244, 175, 37, 0.1)',
+                                      borderRadius: 4,
+                                      border: '1px solid rgba(244, 175, 37, 0.2)'
+                                    }}>
+                                      <div style={{ 
+                                        fontSize: 11,
+                                        fontWeight: 600,
+                                        color: '#F4AF25',
+                                        marginBottom: 4
+                                      }}>
+                                        👤 顾客信息
+                                      </div>
+                                      <div style={{ 
+                                        fontSize: 11,
+                                        color: 'rgba(255,255,255,0.7)',
+                                        lineHeight: '1.6'
+                                      }}>
+                                        <div>姓名: {customerName}</div>
+                                        {customerPhone !== '-' && <div>电话: {customerPhone}</div>}
+                                        {shippingAddress !== '-' && <div>地址: {shippingAddress}</div>}
+                                      </div>
+                                    </div>
+                                  )}
+                                  
+                                  {/* 订单号和金额 */}
                                   <div style={{ 
                                     display: 'flex',
                                     justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginTop: 8,
+                                    paddingTop: 8,
+                                    borderTop: '1px solid rgba(255,255,255,0.1)',
                                     fontSize: 11,
                                     color: 'rgba(255,255,255,0.6)'
                                   }}>
@@ -1481,15 +1644,16 @@ const AdminFinance: React.FC = () => {
                                       🔖 {log.referenceNo}
                                     </div>
                                     {matchedOrder && (
-                                      <div style={{ color: '#52c41a' }}>
+                                      <div style={{ color: '#52c41a', fontWeight: 600 }}>
                                         ✓ RM {matchedOrder.amount.toFixed(2)}
                                       </div>
                                     )}
                                   </div>
                                   
+                                  {/* 原因 */}
                                   {log.reason && log.reason !== '-' && (
                                     <div style={{ 
-                                      marginTop: 4,
+                                      marginTop: 6,
                                       fontSize: 11, 
                                       color: 'rgba(255,255,255,0.5)' 
                                     }}>
@@ -1657,8 +1821,11 @@ const AdminFinance: React.FC = () => {
               failed++
               continue
             }
-            const isIncome = income > 0
-            const amount = isIncome ? income : expense
+            // 使用 income - expense 计算金额（与手动创建交易记录的逻辑一致）
+            // 收入：income > 0, expense = 0 => amount = income（正数）
+            // 支出：income = 0, expense > 0 => amount = -expense（负数）
+            const amount = income - expense
+            const isIncome = amount > 0
             const parsedDate = dayjs(r.date).isValid() ? dayjs(r.date).toDate() : new Date()
             const payload = {
               type: isIncome ? 'income' : 'expense',
@@ -1843,7 +2010,7 @@ const AdminFinance: React.FC = () => {
             {!isMobile ? (
               <Table
                 dataSource={brandProductDetails}
-                rowKey={(record) => record.cigar.id}
+                rowKey={(record, index) => record.cigar?.id || `unknown-${index}`}
                 pagination={false}
                 size="small"
                 expandable={{
@@ -1874,7 +2041,11 @@ const AdminFinance: React.FC = () => {
                             dataIndex: 'orderDate',
                             key: 'orderDate',
                             width: 150,
-                            render: (date: string) => dayjs(date).format('YYYY-MM-DD HH:mm')
+                            render: (date: string) => {
+                              if (!date) return '-'
+                              const d = dayjs(date)
+                              return d.isValid() ? d.format('YYYY-MM-DD HH:mm') : '-'
+                            }
                           },
                           {
                             title: t('financeAdmin.userName'),
@@ -1910,10 +2081,10 @@ const AdminFinance: React.FC = () => {
                     title: t('financeAdmin.productName'),
                     dataIndex: 'cigar',
                     key: 'name',
-                    render: (cigar: any) => (
+                    render: (cigar: any, record: any) => (
                       <div>
-                        <div style={{ fontWeight: 600, color: '#FFFFFF' }}>{cigar.name}</div>
-                        <div style={{ fontSize: 12, color: '#bab09c' }}>{cigar.specification || '-'}</div>
+                        <div style={{ fontWeight: 600, color: '#000000' }}>{cigar?.name || record.cigarId || 'Unknown'}</div>
+                        <div style={{ fontSize: 12, color: '#bab09c' }}>{cigar?.specification || '-'}</div>
                       </div>
                     )
                   },
@@ -1951,11 +2122,12 @@ const AdminFinance: React.FC = () => {
               />
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {brandProductDetails.map((product) => {
-                  const isExpanded = productExpandedKeys.includes(product.cigar.id)
+                {brandProductDetails.map((product, index) => {
+                  const productId = product.cigar?.id || `unknown-${index}`
+                  const isExpanded = productExpandedKeys.includes(productId)
                   return (
                     <div 
-                      key={product.cigar.id}
+                      key={productId}
                       style={{
                         background: '#f8f9fa',
                         borderRadius: 8,
@@ -1966,9 +2138,9 @@ const AdminFinance: React.FC = () => {
                       <div style={{ padding: 12 }}>
                         <div style={{ marginBottom: 8 }}>
                           <div style={{ fontSize: 14, fontWeight: 600, color: '#212529' }}>
-                            {product.cigar.name}
+                            {product.cigar?.name || product.cigarId || 'Unknown'}
                           </div>
-                          {product.cigar.specification && (
+                          {product.cigar?.specification && (
                             <div style={{ fontSize: 12, color: '#6c757d', marginTop: 2 }}>
                               {product.cigar.specification}
                             </div>
@@ -1997,9 +2169,9 @@ const AdminFinance: React.FC = () => {
                         <button
                           onClick={() => {
                             if (isExpanded) {
-                              setProductExpandedKeys(prev => prev.filter(k => k !== product.cigar.id))
+                              setProductExpandedKeys(prev => prev.filter(k => k !== productId))
                             } else {
-                              setProductExpandedKeys(prev => [...prev, product.cigar.id])
+                              setProductExpandedKeys(prev => [...prev, productId])
                             }
                           }}
                           style={{
@@ -2052,7 +2224,10 @@ const AdminFinance: React.FC = () => {
                                   <div style={{ flex: 1 }}>
                                     <div style={{ fontSize: 10, color: '#6c757d' }}>{t('financeAdmin.orderDate')}</div>
                                     <div style={{ fontSize: 11, color: '#495057' }}>
-                                      {dayjs(detail.orderDate).format('YYYY-MM-DD HH:mm')}
+                                      {detail.orderDate ? (() => {
+                                        const d = dayjs(detail.orderDate)
+                                        return d.isValid() ? d.format('YYYY-MM-DD HH:mm') : '-'
+                                      })() : '-'}
                                     </div>
                                   </div>
                                   <div style={{ flex: 1, textAlign: 'right' }}>
@@ -2088,6 +2263,24 @@ const AdminFinance: React.FC = () => {
             )}
           </>
         )}
+      </Modal>
+
+      {/* 删除确认 Modal */}
+      <Modal
+        open={!!deleting}
+        title={t('financeAdmin.deleteTransaction')}
+        onCancel={() => setDeleting(null)}
+        footer={[
+          <button key="cancel" type="button" onClick={() => setDeleting(null)} style={theme.button.secondary}>
+            {t('common.cancel')}
+          </button>,
+          <button key="confirm" type="button" onClick={confirmDeleteTransaction} disabled={loading} style={theme.button.danger}>
+            {t('common.confirm')}
+          </button>
+        ]}
+        {...getResponsiveModalConfig(isMobile)}
+      >
+        <p style={{ color: '#FFFFFF' }}>{t('financeAdmin.deleteTransactionConfirm')}</p>
       </Modal>
     </div>
   )

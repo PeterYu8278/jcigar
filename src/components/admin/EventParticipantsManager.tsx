@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Space, Select, Button, message, Modal, Form, Input } from 'antd'
 import { CheckCircleOutlined, DownloadOutlined, PlusOutlined } from '@ant-design/icons'
 import type { Event, User, Cigar } from '../../types'
@@ -17,6 +17,7 @@ interface EventParticipantsManagerProps {
   cigars: Cigar[]
   onEventUpdate: (event: Event) => void
   getCigarPriceById: (id: string) => number
+  getCigarCostById?: (id: string) => number
 }
 
 const EventParticipantsManager: React.FC<EventParticipantsManagerProps> = ({
@@ -24,7 +25,8 @@ const EventParticipantsManager: React.FC<EventParticipantsManagerProps> = ({
   participantsUsers,
   cigars,
   onEventUpdate,
-  getCigarPriceById
+  getCigarPriceById,
+  getCigarCostById
 }) => {
   const { t } = useTranslation()
   const [manualAddValue, setManualAddValue] = useState<string>('')
@@ -35,12 +37,42 @@ const EventParticipantsManager: React.FC<EventParticipantsManagerProps> = ({
   const [createUserLoading, setCreateUserLoading] = useState(false)
   const [createUserForm] = Form.useForm()
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
+  const summaryRef = useRef<HTMLDivElement>(null)
+  const [summaryHeight, setSummaryHeight] = useState<number | null>(null)
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768)
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+
+  // 动态同步 ParticipantsSummary 的高度到参与者列表容器（仅电脑端）
+  useEffect(() => {
+    if (isMobile) {
+      setSummaryHeight(null)
+      return
+    }
+
+    const updateHeight = () => {
+      if (summaryRef.current) {
+        const height = summaryRef.current.offsetHeight
+        setSummaryHeight(height)
+      }
+    }
+
+    // 初始设置
+    updateHeight()
+
+    // 使用 ResizeObserver 监听高度变化
+    const resizeObserver = new ResizeObserver(updateHeight)
+    if (summaryRef.current) {
+      resizeObserver.observe(summaryRef.current)
+    }
+
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [isMobile, event, participantsUsers, cigars])
 
   const handleAddParticipant = async () => {
     if (!event) return
@@ -355,14 +387,18 @@ const EventParticipantsManager: React.FC<EventParticipantsManagerProps> = ({
         alignItems: 'flex-start' 
       }}>
         {/* 参与者列表 */}
-        <div style={{ flex: 1, width: isMobile ? '100%' : 'auto' }}>
+        <div style={{ flex: 1, width: isMobile ? '100%' : 'auto', alignSelf: 'flex-start' }}>
           <div style={{ 
-            maxHeight: 400, 
-            width: isMobile ? '100%' : '600px',
-            overflow: 'none', 
-            border: '1px solid #f0f0f0', 
-            borderRadius: 6,
-            background: '#fafafa'
+            height: isMobile ? 'auto' : (summaryHeight ? `${summaryHeight}px` : '400px'),
+            maxHeight: isMobile ? 400 : (summaryHeight ? `${summaryHeight}px` : '400px'),
+            width: isMobile ? '100%' : '520px',
+            overflow: 'hidden', 
+            border: '1px solid rgba(244, 175, 37, 0.3)', 
+            borderRadius: 8,
+            background: 'rgba(255, 255, 255, 0.05)',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            flexDirection: 'column'
           }}>
             <ParticipantsList
               event={event}
@@ -378,11 +414,16 @@ const EventParticipantsManager: React.FC<EventParticipantsManagerProps> = ({
         </div>
         
         {/* 产品类别统计 */}
-        <div style={{ flex: 1, width: isMobile ? '100%' : 'auto' }}>
+        <div 
+          ref={summaryRef}
+          style={{ flex: 1, width: isMobile ? '100%' : 'auto', alignSelf: 'flex-start' }}
+        >
           <ParticipantsSummary
             event={event}
             getCigarPriceById={getCigarPriceById}
+            getCigarCostById={getCigarCostById}
             cigars={cigars}
+            onEventUpdate={onEventUpdate}
           />
         </div>
       </div>

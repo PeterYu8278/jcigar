@@ -4536,20 +4536,20 @@ const AdminInventory: React.FC = () => {
               <Form.Item name="brand" style={{ display: 'none' }}>
                 <Input type="hidden" />
               </Form.Item>
-              <Form.Item label={<span>{t('inventory.brand')} <span style={{ color: '#ff4d4f' }}>*</span></span>}>
-                <div style={{ 
-                  padding: '8px 12px', 
-                  background: 'rgba(255, 215, 0, 0.1)', 
-                  border: '1px solid rgba(255, 215, 0, 0.3)',
-                  borderRadius: '6px',
-                  color: '#fff'
-                }}>
-                  <strong>{cigarDatabaseData.brand}</strong>
-                  <span style={{ marginLeft: '8px', fontSize: '12px', color: '#888' }}>
-                    (一致性: {cigarDatabaseData.brandConsistency.toFixed(0)}%)
-                  </span>
-                </div>
-              </Form.Item>
+            <Form.Item label={<span>{t('inventory.brand')} <span style={{ color: '#ff4d4f' }}>*</span></span>}>
+              <div style={{ 
+                padding: '8px 12px', 
+                background: 'rgba(255, 215, 0, 0.1)', 
+                border: '1px solid rgba(255, 215, 0, 0.3)',
+                borderRadius: '6px',
+                color: '#fff'
+              }}>
+                <strong>{cigarDatabaseData.brand}</strong>
+                <span style={{ marginLeft: '8px', fontSize: '12px', color: '#888' }}>
+                  (一致性: {cigarDatabaseData.brandConsistency.toFixed(0)}%)
+                </span>
+              </div>
+            </Form.Item>
             </>
           ) : (
             <Form.Item label={<span>{t('inventory.brand')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="brand" required={false} rules={[{ required: true, message: t('common.pleaseInputBrand') }]}>

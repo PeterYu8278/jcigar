@@ -1,19 +1,29 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
+import { InputNumber, message } from 'antd'
 import type { Event, Cigar } from '../../types'
 import { useTranslation } from 'react-i18next'
+import { updateDocument, COLLECTIONS } from '../../services/firebase/firestore'
 
 interface ParticipantsSummaryProps {
   event: Event | null
   getCigarPriceById: (cigarId: string) => number
+  getCigarCostById?: (cigarId: string) => number
   cigars?: Cigar[]
+  onEventUpdate?: (event: Event) => void
 }
 
 const ParticipantsSummary: React.FC<ParticipantsSummaryProps> = ({
   event,
   getCigarPriceById,
-  cigars = []
+  getCigarCostById,
+  cigars = [],
+  onEventUpdate
 }) => {
   const { t } = useTranslation()
+  const [feeCostSaving, setFeeCostSaving] = useState(false)
+  
+  // 获取活动费用成本
+  const feeCost = (event as any)?.participants?.feeCost ?? 0
   
   // 计算产品类别统计（支持多行 items；不包含活动费用） - 必须在所有条件检查之前调用useMemo
   const categoryStats = useMemo(() => {
@@ -25,7 +35,8 @@ const ParticipantsSummary: React.FC<ParticipantsSummaryProps> = ({
       count: number; 
       totalQuantity: number; 
       totalAmount: number;
-      products: Record<string, { count: number; totalQuantity: number; totalAmount: number }>
+      totalCost: number;
+      products: Record<string, { count: number; totalQuantity: number; totalAmount: number; totalCost: number }>
     }> = {}
     
     registeredParticipants.forEach((uid: string) => {
@@ -39,24 +50,28 @@ const ParticipantsSummary: React.FC<ParticipantsSummaryProps> = ({
         const productName = cigar?.name || 'Unknown Product'
         const quantity = qty || 1
         const amount = (unit != null ? unit : getCigarPriceById(cigarId)) * quantity
+        const cost = getCigarCostById ? getCigarCostById(cigarId) * quantity : 0
 
         if (!stats[category]) {
           stats[category] = { 
             count: 0, 
             totalQuantity: 0, 
             totalAmount: 0,
+            totalCost: 0,
             products: {}
           }
         }
         if (!stats[category].products[productName]) {
-          stats[category].products[productName] = { count: 0, totalQuantity: 0, totalAmount: 0 }
+          stats[category].products[productName] = { count: 0, totalQuantity: 0, totalAmount: 0, totalCost: 0 }
         }
         stats[category].count += 1
         stats[category].totalQuantity += quantity
         stats[category].totalAmount += amount
+        stats[category].totalCost += cost
         stats[category].products[productName].count += 1
         stats[category].products[productName].totalQuantity += quantity
         stats[category].products[productName].totalAmount += amount
+        stats[category].products[productName].totalCost += cost
       }
 
       const items = (allocation as any)?.items as Array<{ cigarId: string; quantity: number; unitPrice?: number }> | undefined
@@ -68,7 +83,7 @@ const ParticipantsSummary: React.FC<ParticipantsSummaryProps> = ({
     })
     
     return Object.entries(stats).sort((a, b) => b[1].totalAmount - a[1].totalAmount)
-  }, [event, cigars, getCigarPriceById])
+  }, [event, cigars, getCigarPriceById, getCigarCostById])
 
   // 计算活动费用统计
   const feeStats = useMemo(() => {
@@ -110,8 +125,24 @@ const ParticipantsSummary: React.FC<ParticipantsSummaryProps> = ({
     }, 0)
   }, [event, getCigarPriceById])
 
-  // 计算总金额（包含活动费用）
-  const totalAmount = useMemo(() => {
+  // 计算产品总成本（不含活动费用）
+  const productTotalCost = useMemo(() => {
+    if (!event || !getCigarCostById) return 0
+    const registeredParticipants = (event as any)?.participants?.registered || []
+    return registeredParticipants.reduce((sum: number, uid: string) => {
+      const allocation = (event as any)?.allocations?.[uid]
+      if (!allocation) return sum
+      const items = (allocation as any)?.items as Array<{ cigarId: string; quantity: number; unitPrice?: number }> | undefined
+      if (Array.isArray(items) && items.length > 0) {
+        return sum + items.reduce((s, it) => s + (getCigarCostById(it.cigarId) * (it?.quantity || 1)), 0)
+      }
+      const qty = allocation?.quantity || 1
+      return sum + (getCigarCostById(allocation?.cigarId) * qty)
+    }, 0)
+  }, [event, getCigarCostById])
+
+  // 计算总收入（包含活动费用）
+  const totalRevenue = useMemo(() => {
     if (!event) return 0
     
     const registeredParticipants = (event as any)?.participants?.registered || []
@@ -129,6 +160,16 @@ const ParticipantsSummary: React.FC<ParticipantsSummaryProps> = ({
     return productSum + feeStats.feeTotal
   }, [event, getCigarPriceById, feeStats.feeTotal])
 
+  // 计算总支出（产品成本 + 活动费用成本）
+  const totalExpenses = useMemo(() => {
+    return productTotalCost + feeCost
+  }, [productTotalCost, feeCost])
+
+  // 计算总盈余（总收入 - 总支出）
+  const totalProfit = useMemo(() => {
+    return totalRevenue - totalExpenses
+  }, [totalRevenue, totalExpenses])
+
   // 条件渲染 - 在所有Hooks调用之后
   if (!event) return null
   
@@ -137,7 +178,6 @@ const ParticipantsSummary: React.FC<ParticipantsSummaryProps> = ({
 
   return (
     <div style={{ 
-      marginTop: 16, 
       padding: 16, 
       background: '#f6ffed', 
       border: '1px solid #b7eb8f', 
@@ -160,15 +200,20 @@ const ParticipantsSummary: React.FC<ParticipantsSummaryProps> = ({
                 display: 'flex', 
                 justifyContent: 'space-between', 
                 alignItems: 'center',
-                padding: '8px 12px',
+                padding: '6px 10px',
                 background: 'rgba(82, 196, 26, 0.1)',
                 fontSize: 12
               }}>
                 <div style={{ fontWeight: 600, color: '#389e0d' }}>
                   {category}
                 </div>
-                <div style={{ display: 'flex', gap: 16, color: '#666' }}>
-                  <span style={{ fontWeight: 600, color: '#fa541c' }}>RM{stats.totalAmount}</span>
+                <div style={{ display: 'flex', gap: 8, color: '#666', alignItems: 'center', flexShrink: 0 }}>
+                  <span style={{ width: 55, textAlign: 'right', fontWeight: 600, color: '#fa541c' }}>RM{stats.totalAmount.toFixed(2)}</span>
+                  {getCigarCostById && (
+                    <span style={{ width: 55, textAlign: 'right', fontSize: 11, color: '#722ed1' }}>
+                      RM{stats.totalCost.toFixed(2)}
+                    </span>
+                  )}
                 </div>
               </div>
               
@@ -179,17 +224,22 @@ const ParticipantsSummary: React.FC<ParticipantsSummaryProps> = ({
                     display: 'flex', 
                     justifyContent: 'space-between', 
                     alignItems: 'center',
-                    padding: '4px 0',
+                    padding: '3px 0',
                     fontSize: 11,
                     borderBottom: '1px solid #f0f0f0'
                   }}>
-                    <div style={{ color: '#666', flex: 1 }}>
+                    <div style={{ color: '#666', flex: 1, minWidth: 0 }}>
                       {productName}
                     </div>
-                    <div style={{ display: 'flex', gap: 12, color: '#999' }}>
-                      <span>{productStats.count}人</span>
-                      <span>{productStats.totalQuantity}支</span>
-                      <span style={{ fontWeight: 500, color: '#fa541c' }}>RM{productStats.totalAmount}</span>
+                    <div style={{ display: 'flex', gap: 8, color: '#999', alignItems: 'center', flexShrink: 0 }}>
+                      <span style={{ width: 24, textAlign: 'right' }}>{productStats.count}人</span>
+                      <span style={{ width: 24, textAlign: 'right' }}>{productStats.totalQuantity}支</span>
+                      <span style={{ width: 55, textAlign: 'right', fontWeight: 500, color: '#fa541c' }}>RM{productStats.totalAmount.toFixed(2)}</span>
+                      {getCigarCostById && (
+                        <span style={{ width: 55, textAlign: 'right', fontSize: 10, color: '#722ed1' }}>
+                          RM{productStats.totalCost.toFixed(2)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -205,7 +255,14 @@ const ParticipantsSummary: React.FC<ParticipantsSummaryProps> = ({
         <div style={{ fontSize: 14, fontWeight: 600, color: '#fa8c16', marginBottom: 8 }}>{t('participants.productRevenue')}</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 6, padding: '8px 12px', fontSize: 12 }}>
           <div style={{ color: '#ad6800' }}>{t('participants.productsSubtotal')}</div>
-          <div style={{ fontWeight: 700, color: '#fa8c16' }}>RM{productTotal.toFixed(2)}</div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'flex-end' }}>
+            <span style={{ width: 60, textAlign: 'right', fontWeight: 700, color: '#fa8c16' }}>RM{productTotal.toFixed(2)}</span>
+            {getCigarCostById && (
+              <span style={{ width: 60, textAlign: 'right', fontSize: 11, color: '#722ed1', fontWeight: 600 }}>
+                RM{productTotalCost.toFixed(2)}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -214,21 +271,89 @@ const ParticipantsSummary: React.FC<ParticipantsSummaryProps> = ({
         <div style={{ fontSize: 14, fontWeight: 600, color: '#722ed1', marginBottom: 8 }}>{t('participants.eventFee')}</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', background: '#f9f0ff', border: '1px solid #d3adf7', borderRadius: 6, padding: '8px 12px', fontSize: 12 }}>
           <div style={{ color: '#722ed1' }}>{(event as any)?.title || t('events.fee')}</div>
-          <div style={{ color: '#595959' }}>{feeStats.feeQuantity} 次</div>
-          <div style={{ fontWeight: 700, color: '#722ed1' }}>RM{feeStats.feeTotal.toFixed(2)}</div>
+          <div style={{ color: '#595959', width: 32, textAlign: 'right' }}>{feeStats.feeQuantity} 次</div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+            <span style={{ width: 70, textAlign: 'right', fontWeight: 700, color: '#722ed1' }}>RM{feeStats.feeTotal.toFixed(2)}</span>
+            {getCigarCostById && (
+              <InputNumber
+                size="small"
+                min={0}
+                step={0.01}
+                precision={2}
+                value={feeCost}
+                disabled={feeCostSaving}
+                controls={false}
+                onChange={async (value) => {
+                  if (!event || !event.id) return
+                  const newFeeCost = Number(value) || 0
+                  setFeeCostSaving(true)
+                  try {
+                    await updateDocument(COLLECTIONS.EVENTS, event.id, {
+                      'participants.feeCost': newFeeCost
+                    } as any)
+                    if (onEventUpdate) {
+                      onEventUpdate({
+                        ...event,
+                        participants: {
+                          ...(event as any).participants,
+                          feeCost: newFeeCost
+                        }
+                      } as Event)
+                    }
+                  } catch (error) {
+                    message.error(t('common.saveFailed'))
+                  } finally {
+                    setFeeCostSaving(false)
+                  }
+                }}
+                style={{ width: 60 }}
+                placeholder="0.00"
+              />
+            )}
+          </div>
         </div>
       </div>
       
-      {/* 总计 */}
+      {/* 财务统计 */}
       <div style={{ 
         paddingTop: 12, 
-        borderTop: '1px solid #b7eb8f',
-      textAlign: 'right'
-    }}>
-      <div style={{ fontSize: 18, fontWeight: 600, color: '#389e0d' }}>
-          {t('participants.totalAmount')}：RM{totalAmount.toFixed(2)}
+        borderTop: '1px solid #b7eb8f'
+      }}>
+        {/* 总收入 */}
+        <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontSize: 16, fontWeight: 600, color: '#389e0d' }}>
+            {t('participants.totalRevenue')}
+          </div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: '#389e0d' }}>
+            RM{totalRevenue.toFixed(2)}
+          </div>
+        </div>
+        
+        {/* 总支出 */}
+        {getCigarCostById && (
+          <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: 16, fontWeight: 600, color: '#722ed1' }}>
+              {t('participants.totalExpenses')}
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: '#722ed1' }}>
+              RM{totalExpenses.toFixed(2)}
+            </div>
+          </div>
+        )}
+        
+        {/* 总盈余 */}
+        {getCigarCostById && (
+          <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: totalProfit >= 0 ? '#389e0d' : '#ff4d4f' }}>
+              {t('participants.totalProfit')}
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: totalProfit >= 0 ? '#389e0d' : '#ff4d4f' }}>
+              RM{totalProfit.toFixed(2)}
+            </div>
       </div>
-      <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+        )}
+        
+        <div style={{ fontSize: 12, color: '#666', marginTop: 4, textAlign: 'right' }}>
         {t('participants.participantsCount', { count: registeredParticipants.length })}
       </div>
       </div>

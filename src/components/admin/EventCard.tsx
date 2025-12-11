@@ -10,6 +10,8 @@ interface EventCardProps {
   getStatusText: (status: string) => string
   getStatusColor: (status: string) => string
   completedEvents?: Event[] // 已完成的活动列表，用于计算社交关系
+  revenue?: number // 活动总收入
+  profit?: number // 活动净利润
 }
 
 const EventCard: React.FC<EventCardProps> = ({
@@ -17,7 +19,9 @@ const EventCard: React.FC<EventCardProps> = ({
   onView,
   getStatusText,
   getStatusColor,
-  completedEvents = []
+  completedEvents = [],
+  revenue = 0,
+  profit = 0
 }) => {
   const { t } = useTranslation()
   const { user } = useAuthStore()
@@ -124,96 +128,119 @@ const EventCard: React.FC<EventCardProps> = ({
             />
           </div>
           
-          <div style={{ flex: 1 }}>
-            {/* 活动名称 + 状态 同行显示 */}
+          <div style={{ flex: 1, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            <div style={{ flex: 1 }}>
+              {/* 活动名称 */}
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                marginBottom: 8 
+              }}>
+                <div style={{ 
+                  fontSize: 16, 
+                  fontWeight: 800, 
+                  color: '#fff', 
+                  flex: 1, 
+                  marginRight: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}>
+                  {event.title}
+                  {/* 社交关系 tag */}
+                  {socialTag && (
+                    <span style={{ 
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      background: socialTag.color,
+                      flexShrink: 0,
+                      display: 'inline-block'
+                    }} />
+                  )}
+                </div>
+              </div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }}>
+                <div style={{ 
+                  fontSize: 12, 
+                  color: '#f4af25', 
+                  fontWeight: 600, 
+                  marginBottom: 4 
+                }}>
+                  {t('events.participants')}: {((event as any)?.participants?.registered || []).length}
+                </div>
+                {(() => {
+                  const s = (event as any)?.schedule?.startDate
+                  const e = (event as any)?.schedule?.endDate
+                  const sd = (s as any)?.toDate ? (s as any).toDate() : s
+                  const ed = (e as any)?.toDate ? (e as any).toDate() : e
+                  const time = sd && ed ? `${dayjs(sd).format('YYYY-MM-DD HH:mm')} - ${dayjs(ed).format('HH:mm')}` : '-'
+                  const loc = (event as any)?.location?.name || ''
+                  return (
+                    <div>
+                      <div>{time}</div>
+                      {loc && <div>{loc}</div>}
+                    </div>
+                  )
+                })()}
+                {/* 总收入和净利润 */}
+                <div style={{ marginTop: 8, display: 'flex', flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#389e0d' }}>
+                    RM{revenue.toFixed(2)}
+                  </div>
+                  <div style={{ 
+                    fontSize: 12, 
+                    fontWeight: 600,
+                    color: '#1890ff'
+                  }}>
+                    RM{profit.toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            </div>
             <div style={{ 
               display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center', 
-              marginBottom: 8 
+              flexDirection: 'column',
+              alignItems: 'flex-end',
+              gap: 8
             }}>
-              <div style={{ 
-                fontSize: 16, 
-                fontWeight: 800, 
-                color: '#fff', 
-                flex: 1, 
-                marginRight: 8 
-              }}>
-                {event.title}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                {/* 社交关系 tag */}
-                {socialTag && (
-                  <span style={{ 
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    background: socialTag.color,
-                    flexShrink: 0,
-                    display: 'inline-block'
-                  }} />
-                )}
-                <span style={{ 
-                  fontSize: 12, 
-                  padding: '2px 8px', 
-                  borderRadius: 9999, 
-                  background: event.status === 'published' ? 'rgba(34,197,94,0.2)' : 
-                             event.status === 'ongoing' ? 'rgba(56,189,248,0.2)' : 
-                             event.status === 'completed' ? 'rgba(148,163,184,0.2)' : 
-                             'rgba(244,63,94,0.2)', 
-                  color: event.status === 'published' ? '#34d399' : 
-                         event.status === 'ongoing' ? '#38bdf8' : 
-                         event.status === 'completed' ? '#94a3b8' : 
-                         '#f87171', 
-                  flexShrink: 0 
-                }}>
-                  {getStatusText(event.status)}
-                </span>
-              </div>
-            </div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }}>
-              <div style={{ 
+              {/* 状态标签 */}
+              <span style={{ 
                 fontSize: 12, 
-                color: '#f4af25', 
-                fontWeight: 600, 
-                marginBottom: 4 
+                padding: '2px 8px', 
+                borderRadius: 9999, 
+                background: event.status === 'published' ? 'rgba(34,197,94,0.2)' : 
+                           event.status === 'ongoing' ? 'rgba(56,189,248,0.2)' : 
+                           event.status === 'completed' ? 'rgba(148,163,184,0.2)' : 
+                           'rgba(244,63,94,0.2)', 
+                color: event.status === 'published' ? '#34d399' : 
+                       event.status === 'ongoing' ? '#38bdf8' : 
+                       event.status === 'completed' ? '#94a3b8' : 
+                       '#f87171', 
+                flexShrink: 0 
               }}>
-                {t('events.participants')}: {((event as any)?.participants?.registered || []).length}
-              </div>
-              {(() => {
-                const s = (event as any)?.schedule?.startDate
-                const e = (event as any)?.schedule?.endDate
-                const sd = (s as any)?.toDate ? (s as any).toDate() : s
-                const ed = (e as any)?.toDate ? (e as any).toDate() : e
-                const time = sd && ed ? `${dayjs(sd).format('YYYY-MM-DD HH:mm')} - ${dayjs(ed).format('HH:mm')}` : '-'
-                const loc = (event as any)?.location?.name || ''
-                return `${time} | ${loc}`
-              })()}
+                {getStatusText(event.status)}
+              </span>
+              {/* 编辑按钮 */}
+              <button 
+                style={{ 
+                  padding: '4px 8px', 
+                  borderRadius: 6, 
+                  background: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
+                  color: '#221c10', 
+                  fontWeight: 600, 
+                  fontSize: 12, 
+                  cursor: 'pointer', 
+                  transition: 'all 0.2s ease',
+                  whiteSpace: 'nowrap'
+                }} 
+                onClick={() => onView(event)}
+              >
+                {t('common.edit')}
+              </button>
             </div>
           </div>
-        </div>
-        <div style={{ 
-          padding: '2px 8px',
-          display: 'flex', 
-          justifyContent: 'flex-end', 
-          alignItems: 'center', 
-          gap: 8 
-        }}>
-          <button 
-            style={{ 
-              padding: '4px 8px', 
-              borderRadius: 6, 
-              background: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
-              color: '#221c10', 
-              fontWeight: 600, 
-              fontSize: 12, 
-              cursor: 'pointer', 
-              transition: 'all 0.2s ease' 
-            }} 
-            onClick={() => onView(event)}
-          >
-            {t('common.edit')}
-          </button>
         </div>
       </div>
     </div>

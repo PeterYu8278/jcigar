@@ -3,8 +3,8 @@ import React, { useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import { Table, Button, Tag, Space, Typography, Input, Select, DatePicker, message, Modal, Form, InputNumber, Switch, Dropdown, Checkbox, Upload, Spin, Descriptions, Progress, Tabs, Row, Col } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, EyeOutlined, DownloadOutlined, UploadOutlined, UserOutlined, CheckCircleOutlined } from '@ant-design/icons'
-import type { Event, User, Cigar } from '../../../types'
-import { getEvents, createDocument, updateDocument, deleteDocument, COLLECTIONS, getUsers, registerForEvent, unregisterFromEvent, getCigars, createOrdersFromEventAllocations, getAllOrders, getUsersByIds, getEventById } from '../../../services/firebase/firestore'
+import type { Event, User, Cigar, Transaction } from '../../../types'
+import { getEvents, createDocument, updateDocument, deleteDocument, COLLECTIONS, getUsers, registerForEvent, unregisterFromEvent, getCigars, createOrdersFromEventAllocations, getAllOrders, getUsersByIds, getEventById, getAllTransactions } from '../../../services/firebase/firestore'
 import ParticipantsList from '../../../components/admin/ParticipantsList'
 import ParticipantsSummary from '../../../components/admin/ParticipantsSummary'
 import ImageUpload from '../../../components/common/ImageUpload'
@@ -28,6 +28,7 @@ const DEFAULT_MAX_PARTICIPANTS = 0
 const DEFAULT_FEE = 0
 const DEFAULT_STATUS = 'draft'
 
+// 活动财务标签页组件
 // Event Status Configuration
 const EVENT_STATUSES = {
   DRAFT: 'draft',
@@ -115,6 +116,14 @@ const AdminEvents: React.FC = () => {
     const cigar = cigars.find(x => x.id === id)
     return cigar?.price ?? 0
   }
+
+  const getCigarCostById = (id?: string): number => {
+    if (!id) return 0
+    const cigar = cigars.find(x => x.id === id)
+    // 如果 Cigar 类型中有 cost 字段，使用它；否则使用价格的 70% 作为默认成本
+    return (cigar as any)?.cost ?? (cigar?.price ?? 0) * 0.7
+  }
+
 
   // Date conversion utility
   const toDateOrNull = (val: any): Date | null => {
@@ -392,7 +401,6 @@ const AdminEvents: React.FC = () => {
     id: true,
     title: true,
     schedule: true,
-    location: true,
     registration: true,
     isPrivate: true,
     revenue: true,
@@ -401,6 +409,8 @@ const AdminEvents: React.FC = () => {
   })
 
   const [orders, setOrders] = useState<any[]>([])
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([])
+  
   const revenueMap = useMemo(() => {
     const map: Record<string, number> = {}
     for (const o of orders) {
@@ -411,6 +421,78 @@ const AdminEvents: React.FC = () => {
     }
     return map
   }, [orders])
+
+  // 计算每个活动的净利润（与 ParticipantsSummary 逻辑一致）
+  const profitMap = useMemo(() => {
+    const map: Record<string, number> = {}
+    
+    events.forEach(event => {
+      // 计算产品总收入（基于 allocations）
+      let productRevenue = 0
+      const registeredParticipants = (event as any)?.participants?.registered || []
+      registeredParticipants.forEach((uid: string) => {
+        const allocation = (event as any)?.allocations?.[uid]
+        if (!allocation) return
+        
+        const items = (allocation as any)?.items as Array<{ cigarId: string; quantity: number; unitPrice?: number }> | undefined
+        if (Array.isArray(items) && items.length > 0) {
+          productRevenue += items.reduce((s, it) => {
+            const price = it?.unitPrice != null ? Number(it.unitPrice) : getCigarPriceById(it.cigarId)
+            return s + (price * (it?.quantity || 1))
+          }, 0)
+        } else if (allocation?.amount != null) {
+          productRevenue += allocation.amount
+        } else {
+          const qty = allocation?.quantity || 1
+          productRevenue += getCigarPriceById(allocation?.cigarId) * qty
+        }
+      })
+      
+      // 计算活动费用总收入（基于 allocations）
+      let feeRevenue = 0
+      const feeUnitFallback = Number((event as any)?.participants?.fee || 0)
+      registeredParticipants.forEach((uid: string) => {
+        const alloc = (event as any)?.allocations?.[uid]
+        if (!alloc) return
+        const qty = (alloc as any)?.feeQuantity != null ? Number((alloc as any).feeQuantity) : 1
+        const unit = (alloc as any)?.feeUnitPrice != null ? Number((alloc as any).feeUnitPrice) : feeUnitFallback
+        if (unit > 0) {
+          feeRevenue += unit * (qty > 0 ? qty : 1)
+        }
+      })
+      
+      // 总收入 = 产品收入 + 活动费用收入
+      const totalRevenue = productRevenue + feeRevenue
+      
+      // 计算产品总成本（基于 allocations）
+      let productCost = 0
+      registeredParticipants.forEach((uid: string) => {
+        const allocation = (event as any)?.allocations?.[uid]
+        if (!allocation) return
+        
+        const items = (allocation as any)?.items as Array<{ cigarId: string; quantity: number }> | undefined
+        if (Array.isArray(items) && items.length > 0) {
+          productCost += items.reduce((s, it) => {
+            return s + (getCigarCostById(it.cigarId) * (it?.quantity || 1))
+          }, 0)
+        } else {
+          const qty = allocation?.quantity || 1
+          productCost += getCigarCostById(allocation?.cigarId) * qty
+        }
+      })
+      
+      // 活动费用成本
+      const feeCost = (event as any)?.participants?.feeCost ?? 0
+      
+      // 总支出 = 产品成本 + 活动费用成本
+      const totalExpenses = productCost + feeCost
+      
+      // 净利润 = 总收入 - 总支出
+      map[event.id] = totalRevenue - totalExpenses
+    })
+    
+    return map
+  }, [events, getCigarPriceById, getCigarCostById])
 
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
   const theme = getModalTheme()
@@ -496,8 +578,12 @@ const AdminEvents: React.FC = () => {
         setEvents(updatedEvents)
         setParticipantsUsers(users)
         setCigars(cigars)
-        const os = await getAllOrders()
+        const [os, transactions] = await Promise.all([
+          getAllOrders(),
+          getAllTransactions()
+        ])
         setOrders(os)
+        setAllTransactions(transactions)
       } finally {
         setLoading(false)
       }
@@ -551,8 +637,11 @@ const AdminEvents: React.FC = () => {
       key: 'title',
       render: (title: string, record: any) => (
         <div>
-          <div style={{ fontWeight: 'bold' }}>{title}</div>
+          <div style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>{title}</div>
           <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
+            {(record?.location?.name || '') && (
+              <span style={{ marginRight: 8 }}>📍 {record.location.name}</span>
+            )}
             {(record.description || '').length > 50 
               ? `${record.description.substring(0, 50)}...` 
               : record.description}
@@ -583,11 +672,6 @@ const AdminEvents: React.FC = () => {
       ),
     },
     {
-      title: t('events.location'),
-      dataIndex: ['location','name'],
-      key: 'location',
-    },
-    {
       title: t('events.registration'),
       key: 'registration',
       render: (_: any, record: any) => (
@@ -599,7 +683,7 @@ const AdminEvents: React.FC = () => {
               return maxParticipants === 0 ? `${registered}/∞ ${t('events.people')}` : `${registered}/${maxParticipants} ${t('events.people')}`
             })()}
           </div>
-          <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
+          <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', whiteSpace: 'nowrap' }}>
             {t('events.fee')}: RM{(record?.participants as any)?.fee ?? 0}
           </div>
         </div>
@@ -608,11 +692,26 @@ const AdminEvents: React.FC = () => {
     {
       title: t('events.revenue'),
       key: 'revenue',
-      render: (_: any, record: any) => (
+      render: (_: any, record: any) => {
+        const eventId = (record as any).id
+        const revenue = revenueMap[eventId] ?? 0
+        const profit = profitMap[eventId] ?? 0
+        return (
+          <div>
         <div style={{ fontWeight: 600, color: '#389e0d' }}>
-          RM{revenueMap[(record as any).id] ?? 0}
+              RM{revenue.toFixed(2)}
         </div>
-      ),
+            <div style={{ 
+              fontSize: '12px', 
+              fontWeight: 600,
+              color: '#1890ff',
+              marginTop: 4
+            }}>
+              RM{profit.toFixed(2)}
+            </div>
+          </div>
+        )
+      },
     },
     {
       title: t('events.status'),
@@ -849,6 +948,8 @@ const AdminEvents: React.FC = () => {
                 getStatusText={getStatusText}
                 getStatusColor={getStatusColor}
                 completedEvents={completedEvents}
+                revenue={revenueMap[ev.id] ?? 0}
+                profit={profitMap[ev.id] ?? 0}
               />
             ))}
             {filtered.length === 0 && (
@@ -973,9 +1074,10 @@ const AdminEvents: React.FC = () => {
                                 setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e))
                               }}
                               getCigarPriceById={getCigarPriceById}
+                              getCigarCostById={getCigarCostById}
                             />
                 ),
-              }
+              },
             ]}
           />
         )}
@@ -1189,6 +1291,11 @@ const AdminEvents: React.FC = () => {
         <ParticipantsSummary
           event={participantsEvent}
           getCigarPriceById={getCigarPriceById}
+          getCigarCostById={getCigarCostById}
+          onEventUpdate={(updatedEvent) => {
+            setParticipantsEvent(updatedEvent)
+            setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e))
+          }}
         />
       </Modal>
 

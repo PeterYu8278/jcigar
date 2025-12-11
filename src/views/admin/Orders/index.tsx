@@ -328,18 +328,18 @@ const AdminOrders: React.FC = () => {
     }
     
     // 按匹配状态筛选
-    if (matchStatusTab === 'matched') {
+      if (matchStatusTab === 'matched') {
       dataSource = dataSource.filter(order => {
-        const matchStatus = getOrderMatchStatus(order.id)
-        return matchStatus.status === 'fully'
-      })
-    } else if (matchStatusTab === 'unmatched') {
+          const matchStatus = getOrderMatchStatus(order.id)
+          return matchStatus.status === 'fully'
+        })
+      } else if (matchStatusTab === 'unmatched') {
       dataSource = dataSource.filter(order => {
-        const matchStatus = getOrderMatchStatus(order.id)
-        return matchStatus.status !== 'fully'
-      })
-    }
-    
+          const matchStatus = getOrderMatchStatus(order.id)
+          return matchStatus.status !== 'fully'
+        })
+      }
+      
     return dataSource
   }, [orders, paginatedOrders, users, keyword, cigars, matchStatusTab, transactions, statusFilter, paymentFilter, dateRange])
 
