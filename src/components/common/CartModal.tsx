@@ -1,7 +1,6 @@
 // 通用购物车弹窗组件
 import React, { useState, useEffect } from 'react'
 import { Modal, Button, List, Typography, Radio, Divider, message, Select } from 'antd'
-import { ShoppingCartOutlined } from '@ant-design/icons'
 import { getModalThemeStyles, getModalWidth } from '../../config/modalTheme'
 import type { Cigar, Event } from '../../types'
 import { CigarRatingBadge } from './CigarRatingBadge'
@@ -205,15 +204,27 @@ export const CartModal: React.FC<CartModalProps> = ({
             margin: 0,
             fontSize: '16px',
             fontWeight: 'bold',
-            color: '#F4AF25'
+            display: 'flex',
+            alignItems: 'center'
           }}>
             {mode === 'cart' ? (
-              <>
-            <ShoppingCartOutlined style={{ marginRight: '8px' }} />
-            购物车 ({cartItemCount} 件商品)
-              </>
+              <span style={{
+                background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
+                WebkitBackgroundClip: 'text',
+                color: 'transparent',
+                backgroundClip: 'text'
+              } as React.CSSProperties}>
+                购物车 ({cartItemCount} 件商品)
+              </span>
             ) : (
-              <>订单结算</>
+              <span style={{
+                background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
+                WebkitBackgroundClip: 'text',
+                color: 'transparent',
+                backgroundClip: 'text'
+              } as React.CSSProperties}>
+                订单结算
+              </span>
             )}
           </h2>
           <Button

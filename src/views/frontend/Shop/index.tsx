@@ -1,7 +1,7 @@
 // 商品导航页面
 import React, { useEffect, useState, useRef } from 'react'
 import { Input, Slider, Button, Typography, Modal, Tag, Radio, Divider, message, Select } from 'antd'
-import { SearchOutlined, ArrowLeftOutlined, ShoppingCartOutlined, ReloadOutlined } from '@ant-design/icons'
+import { SearchOutlined, ArrowLeftOutlined, ReloadOutlined } from '@ant-design/icons'
 import type { Cigar, Brand, Event } from '../../../types'
 import { getCigars, getBrands, getEvents } from '../../../services/firebase/firestore'
 import { useCartStore } from '../../../store/modules'
@@ -1268,15 +1268,27 @@ const Shop: React.FC = () => {
                 margin: 0,
                 fontSize: '13px',
                 fontWeight: 'bold',
-                color: '#F4AF25'
+                display: 'flex',
+                alignItems: 'center'
               }}>
                 {sidebarMode === 'cart' ? (
-                  <>
-                    <ShoppingCartOutlined style={{ marginRight: '6px', fontSize: '14px' }} />
+                  <span style={{
+                    background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
+                    WebkitBackgroundClip: 'text',
+                    color: 'transparent',
+                    backgroundClip: 'text'
+                  } as React.CSSProperties}>
                     购物车 ({cartItemCount} 件商品)
-                  </>
+                  </span>
                 ) : (
-                  <>订单结算</>
+                  <span style={{
+                    background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
+                    WebkitBackgroundClip: 'text',
+                    color: 'transparent',
+                    backgroundClip: 'text'
+                  } as React.CSSProperties}>
+                    订单结算
+                  </span>
                 )}
               </h2>
             </div>
@@ -1884,7 +1896,6 @@ const Shop: React.FC = () => {
                 }}
                 onClick={() => setCartModalVisible(true)}
               >
-                <ShoppingCartOutlined style={{ fontSize: '18px', color: '#fff' }} />
                 <span style={{ color: '#fff', fontSize: '14px', fontWeight: '600' }}>
                   0 item
                 </span>
@@ -1910,13 +1921,12 @@ const Shop: React.FC = () => {
                 pointerEvents: 'auto'
               }}
             >
-              {/* 左侧：购物车图标和数量 */}
+              {/* 左侧：购物车数量 */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px'
               }}>
-                <ShoppingCartOutlined style={{ fontSize: '24px' }} />
                 <span style={{ fontSize: '16px', fontWeight: '600' }}>
                   {cartItemCount} {cartItemCount === 1 ? 'item' : 'items'}
                 </span>
