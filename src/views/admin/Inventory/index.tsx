@@ -4547,16 +4547,16 @@ const AdminInventory: React.FC = () => {
                 <span style={{ marginLeft: '8px', fontSize: '12px', color: '#888' }}>
                   (一致性: {cigarDatabaseData.brandConsistency.toFixed(0)}%)
                 </span>
-              </div>
-            </Form.Item>
+            </div>
+          </Form.Item>
             </>
           ) : (
-            <Form.Item label={<span>{t('inventory.brand')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="brand" required={false} rules={[{ required: true, message: t('common.pleaseInputBrand') }]}>
-              <Select
-                placeholder={t('inventory.pleaseSelectBrand')}
-                showSearch
+          <Form.Item label={<span>{t('inventory.brand')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="brand" required={false} rules={[{ required: true, message: t('common.pleaseInputBrand') }]}>
+            <Select
+              placeholder={t('inventory.pleaseSelectBrand')}
+              showSearch
                 allowClear={false}
-                filterOption={(input, option) => {
+              filterOption={(input, option) => {
                   // 使用 option.value（品牌名称）进行筛选
                   const brandName = String(option?.value || '')
                   const inputLower = input.toLowerCase()
@@ -4570,38 +4570,38 @@ const AdminInventory: React.FC = () => {
                   const brand = brandList.find(b => b.name === brandName)
                   if (brand?.country && brand.country.toLowerCase().includes(inputLower)) {
                     return true
-                  }
+                }
                   
-                  return false
-                }}
-                onChange={(val) => {
-                  const b = brandList.find(brand => brand.name === val)
-                  if (b?.country) {
-                    try { form.setFieldsValue({ origin: b.country }) } catch {}
-                  }
-                }}
+                return false
+              }}
+              onChange={(val) => {
+                const b = brandList.find(brand => brand.name === val)
+                if (b?.country) {
+                  try { form.setFieldsValue({ origin: b.country }) } catch {}
+                }
+              }}
                 getPopupContainer={(triggerNode) => triggerNode.parentElement || document.body}
-              >
-                {brandList
-                  .filter(brand => brand.status === 'active')
-                  .sort((a, b) => a.name.localeCompare(b.name))
-                  .map(brand => (
-                    <Option key={brand.id} value={brand.name}>
-                      <Space align="center">
-                        {brand.logo && (
-                          <img 
-                            src={brand.logo} 
-                            alt={brand.name} 
-                            style={{ width: 20, height: 20, borderRadius: 2, display: 'block' }}
-                          />
-                        )}
-                        <span>{brand.name}</span>
-                        <span style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>({brand.country})</span>
-                      </Space>
-                    </Option>
-                  ))}
-              </Select>
-            </Form.Item>
+            >
+              {brandList
+                .filter(brand => brand.status === 'active')
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map(brand => (
+                  <Option key={brand.id} value={brand.name}>
+                    <Space align="center">
+                      {brand.logo && (
+                        <img 
+                          src={brand.logo} 
+                          alt={brand.name} 
+                          style={{ width: 20, height: 20, borderRadius: 2, display: 'block' }}
+                        />
+                      )}
+                      <span>{brand.name}</span>
+                      <span style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>({brand.country})</span>
+                    </Space>
+                  </Option>
+                ))}
+            </Select>
+          </Form.Item>
           )}
           {cigarDatabaseData ? (
             <Form.Item label={<span>{t('inventory.origin')} <span style={{ color: '#ff4d4f' }}>*</span></span>}>
@@ -4619,9 +4619,9 @@ const AdminInventory: React.FC = () => {
               </div>
             </Form.Item>
           ) : (
-            <Form.Item label={<span>{t('inventory.origin')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="origin" required={false} rules={[{ required: true, message: t('common.pleaseInputOrigin') }]}>
-              <Input />
-            </Form.Item>
+          <Form.Item label={<span>{t('inventory.origin')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="origin" required={false} rules={[{ required: true, message: t('common.pleaseInputOrigin') }]}>
+            <Input />
+          </Form.Item>
           )}
           <Form.Item label={<span>{isMobile ? t('inventory.specification') : t('inventory.size')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="size" required={false} rules={[{ required: true, message: t('common.pleaseInputSize') }]}> 
             <Input />
@@ -4648,15 +4648,15 @@ const AdminInventory: React.FC = () => {
               </div>
             </Form.Item>
           ) : (
-            <Form.Item label={<span>{t('inventory.strength')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="strength" required={false} rules={[{ required: true, message: t('common.pleaseSelectStrength') }]}>
-              <Select>
-                <Option value="mild">{t('inventory.mild')}</Option>
-                <Option value="mild-medium">{t('inventory.mildMedium')}</Option>
-                <Option value="medium">{t('inventory.medium')}</Option>
-                <Option value="medium-full">{t('inventory.mediumFull')}</Option>
-                <Option value="full">{t('inventory.full')}</Option>
-              </Select>
-            </Form.Item>
+          <Form.Item label={<span>{t('inventory.strength')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="strength" required={false} rules={[{ required: true, message: t('common.pleaseSelectStrength') }]}>
+            <Select>
+              <Option value="mild">{t('inventory.mild')}</Option>
+              <Option value="mild-medium">{t('inventory.mildMedium')}</Option>
+              <Option value="medium">{t('inventory.medium')}</Option>
+              <Option value="medium-full">{t('inventory.mediumFull')}</Option>
+              <Option value="full">{t('inventory.full')}</Option>
+            </Select>
+          </Form.Item>
           )}
           
           {cigarDatabaseData ? (
@@ -4720,9 +4720,9 @@ const AdminInventory: React.FC = () => {
               </div>
             </Form.Item>
           ) : (
-            <Form.Item label={t('common.description') || '描述'} name="description">
-              <Input.TextArea rows={3} placeholder="请输入雪茄描述" />
-            </Form.Item>
+          <Form.Item label={t('common.description') || '描述'} name="description">
+            <Input.TextArea rows={3} placeholder="请输入雪茄描述" />
+          </Form.Item>
           )}
           
           <div style={{ 
@@ -4809,17 +4809,17 @@ const AdminInventory: React.FC = () => {
             </>
           ) : (
             <>
-              <Form.Item label="茄衣" name="wrapper">
-                <Input placeholder="例如: Habano, Connecticut, Maduro" />
-              </Form.Item>
-              
-              <Form.Item label="茄套" name="binder">
-                <Input placeholder="例如: Nicaraguan, Ecuadorian" />
-              </Form.Item>
-              
-              <Form.Item label="茄芯" name="filler">
-                <Input placeholder="例如: Cuban, Nicaraguan, Dominican" />
-              </Form.Item>
+          <Form.Item label="茄衣" name="wrapper">
+            <Input placeholder="例如: Habano, Connecticut, Maduro" />
+          </Form.Item>
+          
+          <Form.Item label="茄套" name="binder">
+            <Input placeholder="例如: Nicaraguan, Ecuadorian" />
+          </Form.Item>
+          
+          <Form.Item label="茄芯" name="filler">
+            <Input placeholder="例如: Cuban, Nicaraguan, Dominican" />
+          </Form.Item>
             </>
           )}
           
@@ -4919,47 +4919,47 @@ const AdminInventory: React.FC = () => {
             </>
           ) : (
             <>
-              <Form.Item 
-                label="脚部 (Foot) - 前1/3" 
-                name="footTasteNotes"
-                labelCol={isMobile ? { span: 24 } : undefined}
-                wrapperCol={isMobile ? { span: 24 } : undefined}
-              >
-                <Select
-                  mode="tags"
-                  placeholder="输入品吸笔记，按回车添加"
-                  style={{ width: '100%' }}
-                  tokenSeparators={[',']}
-                />
-              </Form.Item>
-              
-              <Form.Item 
-                label="主体 (Body) - 中1/3" 
-                name="bodyTasteNotes"
-                labelCol={isMobile ? { span: 24 } : undefined}
-                wrapperCol={isMobile ? { span: 24 } : undefined}
-              >
-                <Select
-                  mode="tags"
-                  placeholder="输入品吸笔记，按回车添加"
-                  style={{ width: '100%' }}
-                  tokenSeparators={[',']}
-                />
-              </Form.Item>
-              
-              <Form.Item 
-                label="头部 (Head) - 后1/3" 
-                name="headTasteNotes"
-                labelCol={isMobile ? { span: 24 } : undefined}
-                wrapperCol={isMobile ? { span: 24 } : undefined}
-              >
-                <Select
-                  mode="tags"
-                  placeholder="输入品吸笔记，按回车添加"
-                  style={{ width: '100%' }}
-                  tokenSeparators={[',']}
-                />
-              </Form.Item>
+          <Form.Item 
+            label="脚部 (Foot) - 前1/3" 
+            name="footTasteNotes"
+            labelCol={isMobile ? { span: 24 } : undefined}
+            wrapperCol={isMobile ? { span: 24 } : undefined}
+          >
+            <Select
+              mode="tags"
+              placeholder="输入品吸笔记，按回车添加"
+              style={{ width: '100%' }}
+              tokenSeparators={[',']}
+            />
+          </Form.Item>
+          
+          <Form.Item 
+            label="主体 (Body) - 中1/3" 
+            name="bodyTasteNotes"
+            labelCol={isMobile ? { span: 24 } : undefined}
+            wrapperCol={isMobile ? { span: 24 } : undefined}
+          >
+            <Select
+              mode="tags"
+              placeholder="输入品吸笔记，按回车添加"
+              style={{ width: '100%' }}
+              tokenSeparators={[',']}
+            />
+          </Form.Item>
+          
+          <Form.Item 
+            label="头部 (Head) - 后1/3" 
+            name="headTasteNotes"
+            labelCol={isMobile ? { span: 24 } : undefined}
+            wrapperCol={isMobile ? { span: 24 } : undefined}
+          >
+            <Select
+              mode="tags"
+              placeholder="输入品吸笔记，按回车添加"
+              style={{ width: '100%' }}
+              tokenSeparators={[',']}
+            />
+          </Form.Item>
             </>
           )}
           
@@ -5015,19 +5015,19 @@ const AdminInventory: React.FC = () => {
               </div>
             </Form.Item>
           ) : (
-            <Form.Item 
-              label="标签/风味特征" 
-              name="tags"
-              labelCol={isMobile ? { span: 24 } : undefined}
-              wrapperCol={isMobile ? { span: 24 } : undefined}
-            >
-              <Select
-                mode="tags"
-                placeholder="输入标签，按回车添加"
-                style={{ width: '100%' }}
-                tokenSeparators={[',']}
-              />
-            </Form.Item>
+          <Form.Item 
+            label="标签/风味特征" 
+            name="tags"
+            labelCol={isMobile ? { span: 24 } : undefined}
+            wrapperCol={isMobile ? { span: 24 } : undefined}
+          >
+            <Select
+              mode="tags"
+              placeholder="输入标签，按回车添加"
+              style={{ width: '100%' }}
+              tokenSeparators={[',']}
+            />
+          </Form.Item>
           )}
         </Form>
       </Modal>

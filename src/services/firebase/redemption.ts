@@ -595,8 +595,8 @@ export const getRedemptionRecordsBySession = async (
       const updatedAt = (item.updatedAt as any)?.toDate?.() || (item.updatedAt instanceof Date ? item.updatedAt : item.updatedAt)
       
       return {
-        ...item,
-        visitSessionId: visitSessionId,
+      ...item,
+      visitSessionId: visitSessionId,
         redeemedAt,
         createdAt,
         updatedAt
