@@ -264,7 +264,7 @@ const ColorTemplateCard: React.FC<ColorTemplateCardProps> = ({
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
             <div style={{ display: 'flex', gap: 16, fontSize: 24 }}>
-              <span style={{ color: primary }}>⭐</span>
+              <span style={{ color: primary }}></span>
               <span style={{ color: primary }}>🔔</span>
               <span style={{ color: primary }}>✓</span>
               <span style={{ color: primary }}>✗</span>

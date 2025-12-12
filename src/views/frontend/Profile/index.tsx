@@ -242,7 +242,7 @@ const Profile: React.FC = () => {
   return (
     <div style={{
       minHeight: '100vh',
-      paddingTop: isMobile ? '0px' : '60px',
+      paddingTop: '0px',
       paddingBottom: isMobile ? '80px' : '40px'
     }}>
       <div style={{
@@ -306,7 +306,7 @@ const Profile: React.FC = () => {
         <div style={theme.content as React.CSSProperties}>
           {/* 基本信息卡片 */}
           <div style={theme.card.elevated as React.CSSProperties}>
-            <div style={theme.text.subtitle as React.CSSProperties}>📋 {t('profile.editProfile')}</div>
+            <div style={theme.text.subtitle as React.CSSProperties}>{t('profile.editProfile')}</div>
         <Form
           form={form}
               layout="horizontal"
@@ -536,7 +536,7 @@ const Profile: React.FC = () => {
 
           {/* 偏好设置卡片 */}
           <div style={{ ...(theme.card.elevated as React.CSSProperties), marginTop: 12 }}>
-            <div style={theme.text.subtitle as React.CSSProperties}>⚙️ {t('profile.settings')}</div>
+            <div style={theme.text.subtitle as React.CSSProperties}>{t('profile.settings')}</div>
             <Form
               form={form}
               layout="horizontal"

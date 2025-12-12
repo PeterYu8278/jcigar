@@ -1832,7 +1832,7 @@ const AdminInventory: React.FC = () => {
                     padding: '60px 0', 
                     color: 'rgba(255,255,255,0.6)' 
                   }}>
-                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏷️</div>
+                    <div style={{ fontSize: '48px', marginBottom: '16px' }}></div>
                     <div style={{ fontSize: '16px', marginBottom: '8px' }}>{t('inventory.noBrandsFound')}</div>
                     <div style={{ fontSize: '14px' }}>{t('inventory.addFirstBrand')}</div>
                   </div>
@@ -2170,7 +2170,7 @@ const AdminInventory: React.FC = () => {
               {/* 入库列表渲染在后文（我们将在实际列表处包裹滚动容器） */}
               
               <Modal
-                title={editingOrder ? "📝 编辑入库订单" : t('inventory.inStockRecord')}
+                title={editingOrder ? "编辑入库订单" : t('inventory.inStockRecord')}
                 open={inModalOpen || !!editingOrder}
                 onCancel={() => {
                   setInModalOpen(false)
@@ -2319,7 +2319,7 @@ const AdminInventory: React.FC = () => {
                       })
                     }
                     
-                    message.success('✅ 订单已更新')
+                    message.success('订单已更新')
                   } else {
                     // 创建模式：创建新订单
                     const inboundOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
@@ -2474,9 +2474,9 @@ const AdminInventory: React.FC = () => {
                                       }
                                     }}
                                   >
-                                    <Option value="cigar">🎯 {t('inventory.itemTypeCigar')}</Option>
-                                    <Option value="activity">🎪 {t('inventory.itemTypeActivity')}</Option>
-                                    <Option value="gift">🎁 {t('inventory.itemTypeGift')}</Option>
+                                    <Option value="cigar">{t('inventory.itemTypeCigar')}</Option>
+                                    <Option value="activity">{t('inventory.itemTypeActivity')}</Option>
+                                    <Option value="gift">{t('inventory.itemTypeGift')}</Option>
                                     <Option value="service">💼 {t('inventory.itemTypeService')}</Option>
                                     <Option value="other">📦 {t('inventory.itemTypeOther')}</Option>
                                   </Select>
@@ -2772,11 +2772,11 @@ const AdminInventory: React.FC = () => {
                               const cigar = items.find(i => i.id === id)
                               const itemType = rec.itemType || 'cigar'
                               const itemTypeIcons: { [key: string]: string } = {
-                                'cigar': '🎯',
-                                'activity': '🎪',
-                                'gift': '🎁',
-                                'service': '💼',
-                                'other': '📦'
+                                'cigar': '',
+                                'activity': '',
+                                'gift': '',
+                                'service': '',
+                                'other': ''
                               }
                               const itemTypeColors: { [key: string]: string } = {
                                 'cigar': '#52c41a',
@@ -2785,7 +2785,7 @@ const AdminInventory: React.FC = () => {
                                 'service': '#1890ff',
                                 'other': '#8c8c8c'
                               }
-                              const icon = itemTypeIcons[itemType] || '🎯'
+                              const icon = itemTypeIcons[itemType] || ''
                               const color = itemTypeColors[itemType] || '#52c41a'
                               const displayName = rec.cigarName || cigar?.name || id
                               
@@ -3025,7 +3025,7 @@ const AdminInventory: React.FC = () => {
                             onClick={() => {
                               
                               Modal.confirm({
-                                title: '⚠️ 取消订单',
+                                title: '取消订单',
                                 content: (
                                   <div>
                                     <p>将订单 <strong>{group.referenceNo}</strong> 标记为已取消状态</p>
@@ -3060,7 +3060,7 @@ const AdminInventory: React.FC = () => {
                               })
                             }}
                           >
-                            ⚠️ 取消
+                            取消
                           </Button>
                           
                           {/* 反向订单（退货/红冲） */}
@@ -3077,7 +3077,7 @@ const AdminInventory: React.FC = () => {
                                     <p>将为订单 <strong>{group.referenceNo}</strong> 创建反向订单（退货）</p>
                                     <p>• 原订单数量：<span style={{ color: '#52c41a' }}>+{group.totalQuantity}</span></p>
                                     <p>• 反向订单数量：<span style={{ color: '#ff4d4f' }}>-{group.totalQuantity}</span></p>
-                                    <p style={{ marginTop: 12, color: '#faad14' }}>⚠️ 此操作将创建一个负数量的退货订单，用于冲销原订单的库存影响。</p>
+                                    <p style={{ marginTop: 12, color: '#faad14' }}>此操作将创建一个负数量的退货订单，用于冲销原订单的库存影响。</p>
                                   </div>
                                 ),
                                 okText: '确认创建',
@@ -3111,7 +3111,7 @@ const AdminInventory: React.FC = () => {
                                     }
                                     
                                     await createInboundOrder(returnOrderData)
-                                    message.success('✅ 反向订单已创建')
+                                    message.success('反向订单已创建')
                                     setInboundOrders(await getAllInboundOrders())
                                     setInventoryMovements(await getAllInventoryMovements())
                                   } catch (error: any) {
@@ -3348,7 +3348,7 @@ const AdminInventory: React.FC = () => {
                                 border: 'none'
                               }}
                             >
-                              ✏️ 编辑
+                              编辑
                             </button>
                             
                             {/* 取消订单按钮 */}
@@ -3357,7 +3357,7 @@ const AdminInventory: React.FC = () => {
                                 e.stopPropagation()
                                 
                                 Modal.confirm({
-                                  title: '⚠️ 取消订单',
+                                  title: '取消订单',
                                   content: (
                                     <div>
                                       <p>将订单 <strong>{group.referenceNo}</strong> 标记为已取消状态</p>
@@ -3402,7 +3402,7 @@ const AdminInventory: React.FC = () => {
                                 border: '1px solid rgba(255, 255, 255, 0.2)'
                               }}
                             >
-                              ⚠️ 取消
+                              取消
                             </button>
                             
                             {/* 退货按钮 */}
@@ -3450,7 +3450,7 @@ const AdminInventory: React.FC = () => {
                                       }
                                       
                                       await createInboundOrder(returnOrderData)
-                                      message.success('✅ 反向订单已创建')
+                                      message.success('反向订单已创建')
                                       setInboundOrders(await getAllInboundOrders())
                                       setInventoryMovements(await getAllInventoryMovements())
                                     } catch (error: any) {
@@ -3503,7 +3503,7 @@ const AdminInventory: React.FC = () => {
                                 border: '1px solid rgba(255, 255, 255, 0.2)'
                               }}
                             >
-                              🗑️ 删除
+                              删除
                             </button>
                             </div>
                             {group.logs.map((log: any) => {
@@ -3616,7 +3616,7 @@ const AdminInventory: React.FC = () => {
                                   fontSize: 11, 
                                   color: 'rgba(255,255,255,0.6)' 
                                 }}>
-                                  📝 {group.reason}
+                                  {group.reason}
                 </div>
               )}
                             </div>
@@ -5359,7 +5359,7 @@ const AdminInventory: React.FC = () => {
                 alignItems: 'center',
                 gap: 6
               }}>
-                📊 {t('inventory.summary')}
+                {t('inventory.summary')}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 12 }}>
                 <div>
@@ -5371,13 +5371,13 @@ const AdminInventory: React.FC = () => {
                   <div style={{ fontSize: 18, fontWeight: 700, color: '#f4af25' }}>{getComputedStock(viewingProductLogs || '')}</div>
                 </div>
                 <div>
-                  <div style={{ color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>✅ {t('inventory.totalInStock')}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>{t('inventory.totalInStock')}</div>
                   <div style={{ fontSize: 16, fontWeight: 600, color: '#52c41a' }}>
                     +{currentProductLogs.filter(log => log.type === 'in').reduce((sum, log) => sum + (log.quantity || 0), 0)}
                   </div>
                 </div>
                 <div>
-                  <div style={{ color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>❌ {t('inventory.totalOutStock')}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>{t('inventory.totalOutStock')}</div>
                   <div style={{ fontSize: 16, fontWeight: 600, color: '#ff4d4f' }}>
                     -{currentProductLogs.filter(log => log.type === 'out').reduce((sum, log) => sum + (log.quantity || 0), 0)}
                   </div>
@@ -5476,7 +5476,7 @@ const AdminInventory: React.FC = () => {
                       
                       {log.reason && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.5)' }}>📝 {t('inventory.reason')}</span>
+                          <span style={{ color: 'rgba(255,255,255,0.5)' }}>{t('inventory.reason')}</span>
                           <span style={{ color: '#fff', fontWeight: 500, textAlign: 'right', flex: 1, marginLeft: 8 }}>
                             {log.reason}
                           </span>
@@ -6045,7 +6045,7 @@ const AdminInventory: React.FC = () => {
       
       {/* 订单编辑Modal */}
       <Modal
-        title="📝 编辑入库订单"
+        title="编辑入库订单"
         open={!!editingOrder}
         onCancel={() => {
           setEditingOrder(null)

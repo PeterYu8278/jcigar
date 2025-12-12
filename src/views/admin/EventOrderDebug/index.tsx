@@ -51,7 +51,7 @@ const EventOrderDebug: React.FC = () => {
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
       <Title level={2} style={{ color: '#ffd700', marginBottom: '24px' }}>
-        🔍 活动订单调试工具
+        活动订单调试工具
       </Title>
 
       <Card title="检查活动数据" style={{ marginBottom: '24px' }}>
@@ -110,7 +110,7 @@ const EventOrderDebug: React.FC = () => {
         <Space direction="vertical" style={{ width: '100%' }} size="large">
           {/* 活动基本信息 */}
           {debugInfo.event ? (
-            <Card title="📋 活动基本信息">
+            <Card title="活动基本信息">
               <Descriptions column={1} bordered>
                 <Descriptions.Item label="活动ID">{debugInfo.event.id}</Descriptions.Item>
                 <Descriptions.Item label="活动标题">{debugInfo.event.title}</Descriptions.Item>
@@ -142,7 +142,7 @@ const EventOrderDebug: React.FC = () => {
 
           {/* 摘要统计 */}
           {debugInfo.event && (
-            <Card title="📊 数据摘要">
+            <Card title="数据摘要">
               <Descriptions column={2} bordered>
                 <Descriptions.Item label="已报名用户">{debugInfo.summary.totalRegistered}</Descriptions.Item>
                 <Descriptions.Item label="有雪茄分配">{debugInfo.summary.totalAllocated}</Descriptions.Item>
@@ -150,7 +150,7 @@ const EventOrderDebug: React.FC = () => {
                 <Descriptions.Item label="缺失订单">
                   <Text type={debugInfo.summary.missingOrders > 0 ? 'danger' : 'success'}>
                     {debugInfo.summary.missingOrders}
-                    {debugInfo.summary.missingOrders > 0 && ' ❌'}
+                    {debugInfo.summary.missingOrders > 0 && ''}
                   </Text>
                 </Descriptions.Item>
               </Descriptions>
@@ -261,7 +261,7 @@ const EventOrderDebug: React.FC = () => {
 
           {/* 诊断建议 */}
           {debugInfo.event && (
-            <Card title="💡 诊断建议">
+            <Card title="诊断建议">
               <Space direction="vertical" style={{ width: '100%' }}>
                 {debugInfo.eventStatus !== 'completed' && (
                   <Alert

@@ -986,16 +986,40 @@ const AdminUsers: React.FC = () => {
                               <span style={{ fontSize: 12, color: '#ccc' }}>{getStatusText(status)}</span>
                             </div>
                           </div>
-                          <button style={{ padding: '4px 8px', borderRadius: 6, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10', fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => {
-                            setEditing(u)
-                            form.setFieldsValue({
-                              displayName: u.displayName,
-                              email: u.email,
-                              role: u.role,
-                              level: u.membership?.level,
-                              phone: (u as any)?.profile?.phone,
-                            })
-                          }}>{t('common.viewDetails')}</button>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+                            <button style={{ padding: '4px 8px', borderRadius: 6, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10', fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s ease', width: '100%', minWidth: '40px' }} onClick={() => {
+                              setEditing(u)
+                              form.setFieldsValue({
+                                displayName: u.displayName,
+                                email: u.email,
+                                role: u.role,
+                                level: u.membership?.level,
+                                phone: (u as any)?.profile?.phone,
+                              })
+                            }}>{t('common.viewDetails')}</button>
+                            <button 
+                              style={{ 
+                                padding: '4px 8px', 
+                                borderRadius: 6, 
+                                background: 'rgba(255,255,255,0.1)', 
+                                border: '1px solid rgba(244, 175, 37, 0.6)',
+                                color: '#FDE08D', 
+                                fontWeight: 600, 
+                                fontSize: 12, 
+                                cursor: 'pointer', 
+                                transition: 'all 0.2s ease',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '100%',
+                                minWidth: '40px'
+                              }} 
+                              onClick={() => setResettingPassword(u)}
+                              title={t('usersAdmin.resetPassword') || '重置密码'}
+                            >
+                              <KeyOutlined style={{ fontSize: 14 }} />
+                            </button>
+                          </div>
                         </div>
     </div>
   )

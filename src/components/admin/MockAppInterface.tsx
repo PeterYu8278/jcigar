@@ -162,7 +162,7 @@ const MockAppInterface: React.FC<MockAppInterfaceProps> = ({
           fontSize: 13,
         }}
       >
-        💡 提示: 将鼠标悬停在元素上查看可编辑提示，点击元素进行颜色编辑
+        提示: 将鼠标悬停在元素上查看可编辑提示，点击元素进行颜色编辑
       </div>
 
       {/* 颜色选择器弹窗 */}

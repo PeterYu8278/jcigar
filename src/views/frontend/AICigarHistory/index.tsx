@@ -219,7 +219,6 @@ const AICigarHistory: React.FC = () => {
                                     fontWeight: 'bold',
                                     color: '#000'
                                 }}>
-                                    🔥
                                 </div>
                                 <div style={{
                                     fontSize: '12px',

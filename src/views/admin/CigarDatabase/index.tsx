@@ -381,7 +381,7 @@ export const CigarDatabase: React.FC = () => {
               <>
                 <Divider style={{ margin: '8px 0', borderColor: '#333' }}>
                   <span style={{ color: '#ffd700', fontSize: '14px', fontWeight: 600 }}>
-                    👥 贡献者列表
+                    贡献者列表
                   </span>
                 </Divider>
                 <div style={{
@@ -659,7 +659,7 @@ export const CigarDatabase: React.FC = () => {
               <>
                 <Divider style={{ margin: '8px 0', borderColor: '#333' }}>
                   <span style={{ color: '#ffd700', fontSize: '14px', fontWeight: 600 }}>
-                    📝 产品描述
+                    产品描述
                   </span>
                 </Divider>
                 <div style={{

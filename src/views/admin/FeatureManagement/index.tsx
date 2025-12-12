@@ -1132,7 +1132,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                 extra={
                   <Text style={{ color: '#999', fontSize: '12px' }}>
                     基于实测结果 (2025-12-04): 测试了27个模型，仅15个可用。
-                    ⭐推荐使用星级标注的模型。按住 Ctrl/Cmd 键可多选。
+                    推荐使用星级标注的模型。按住 Ctrl/Cmd 键可多选。
                   </Text>
                 }
               >
@@ -1147,69 +1147,69 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                   options={[
                     // 🥇 最佳选择（100%成功率, 极快 1.8-2.2s）
                     { 
-                      label: '⭐⭐⭐⭐⭐ gemini-flash-lite-latest (1.8s, 最佳推荐)', 
+                      label: 'gemini-flash-lite-latest (1.8s, 最佳推荐)', 
                       value: 'gemini-flash-lite-latest' 
                     },
                     { 
-                      label: '⭐⭐⭐⭐⭐ gemini-2.5-flash-lite-preview-09-2025 (2.2s)', 
+                      label: 'gemini-2.5-flash-lite-preview-09-2025 (2.2s)', 
                       value: 'gemini-2.5-flash-lite-preview-09-2025' 
                     },
                     
                     // 🥈 优秀选择（100%成功率, 快速 3.5-9.7s）
                     { 
-                      label: '⭐⭐⭐⭐⭐ gemini-2.0-flash-001 (3.5s)', 
+                      label: 'gemini-2.0-flash-001 (3.5s)', 
                       value: 'gemini-2.0-flash-001' 
                     },
                     { 
-                      label: '⭐⭐⭐⭐ gemini-2.0-flash (3.9s)', 
+                      label: 'gemini-2.0-flash (3.9s)', 
                       value: 'gemini-2.0-flash' 
                     },
                     { 
-                      label: '⭐⭐⭐⭐ gemini-2.5-flash (9.7s)', 
+                      label: 'gemini-2.5-flash (9.7s)', 
                       value: 'gemini-2.5-flash' 
                     },
                     
                     // 🥉 稳定选择（100%成功率, 较慢 15-17s）
                     { 
-                      label: '⭐⭐⭐⭐ gemini-pro-latest (15.5s)', 
+                      label: 'gemini-pro-latest (15.5s)', 
                       value: 'gemini-pro-latest' 
                     },
                     { 
-                      label: '⭐⭐⭐⭐ gemini-robotics-er-1.5-preview (16.7s)', 
+                      label: 'gemini-robotics-er-1.5-preview (16.7s)', 
                       value: 'gemini-robotics-er-1.5-preview' 
                     },
                     
                     // 备选方案（60-80%成功率）
                     { 
-                      label: '⭐⭐⭐ gemini-2.5-flash-lite (60%成功率)', 
+                      label: 'gemini-2.5-flash-lite (60%成功率)', 
                       value: 'gemini-2.5-flash-lite' 
                     },
                     { 
-                      label: '⭐⭐⭐ gemini-flash-latest (80%成功率)', 
+                      label: 'gemini-flash-latest (80%成功率)', 
                       value: 'gemini-flash-latest' 
                     },
                     { 
-                      label: '⭐⭐⭐ gemini-2.0-flash-lite (60%成功率)', 
+                      label: 'gemini-2.0-flash-lite (60%成功率)', 
                       value: 'gemini-2.0-flash-lite' 
                     },
                     { 
-                      label: '⭐⭐⭐ gemini-2.0-flash-lite-001 (40%成功率, 52.8s)', 
+                      label: 'gemini-2.0-flash-lite-001 (40%成功率, 52.8s)', 
                       value: 'gemini-2.0-flash-lite-001' 
                     },
                     { 
-                      label: '⭐⭐⭐ gemini-2.0-flash-lite-preview (60%成功率)', 
+                      label: 'gemini-2.0-flash-lite-preview (60%成功率)', 
                       value: 'gemini-2.0-flash-lite-preview' 
                     },
                     { 
-                      label: '⭐⭐⭐ gemini-2.5-pro (60%成功率, 每分钟限2次)', 
+                      label: 'gemini-2.5-pro (60%成功率, 每分钟限2次)', 
                       value: 'gemini-2.5-pro' 
                     },
                     { 
-                      label: '⭐⭐⭐ gemini-2.5-flash-preview-09-2025 (60%成功率)', 
+                      label: 'gemini-2.5-flash-preview-09-2025 (60%成功率)', 
                       value: 'gemini-2.5-flash-preview-09-2025' 
                     },
                     { 
-                      label: '⭐⭐⭐ gemini-2.0-flash-lite-preview-02-05 (80%成功率)', 
+                      label: 'gemini-2.0-flash-lite-preview-02-05 (80%成功率)', 
                       value: 'gemini-2.0-flash-lite-preview-02-05' 
                     },
                   ]}
@@ -1240,7 +1240,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                     color: '#f4af25'
                   }}
                 >
-                  ⭐ 应用推荐配置（Top 5 模型）
+                  应用推荐配置（Top 5 模型）
                 </Button>
                 <Text style={{ color: '#999', fontSize: '12px', marginLeft: 12 }}>
                   将自动选择测试结果中表现最佳的5个模型
@@ -2573,7 +2573,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                                     size="small"
                                   >
                                     <Select.Option value="google-first">
-                                      <span>🔍 Google 优先 → Gemini 回退</span>
+                                      <span>Google 优先 → Gemini 回退</span>
                                     </Select.Option>
                                     <Select.Option value="gemini-first">
                                       <span>✨ Gemini 优先 → Google 回退</span>

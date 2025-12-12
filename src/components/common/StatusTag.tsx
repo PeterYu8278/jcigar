@@ -114,15 +114,15 @@ const StatusTag: React.FC<StatusTagProps> = ({
     if (type === 'order') {
       switch (status as OrderStatus) {
         case ORDER_STATUS.PENDING:
-          return '⏳ '
+          return ''
         case ORDER_STATUS.PROCESSING:
-          return '⚙️ '
+          return ''
         case ORDER_STATUS.SHIPPED:
-          return '🚚 '
+          return ''
         case ORDER_STATUS.DELIVERED:
-          return '✅ '
+          return ''
         case ORDER_STATUS.CANCELLED:
-          return '❌ '
+          return ''
         default:
           return ''
       }
@@ -132,13 +132,13 @@ const StatusTag: React.FC<StatusTagProps> = ({
     if (type === 'payment') {
       switch (status as PaymentStatus) {
         case PAYMENT_STATUS.UNPAID:
-          return '💳 '
+          return ''
         case PAYMENT_STATUS.PAID:
-          return '✅ '
+          return ''
         case PAYMENT_STATUS.REFUNDED:
-          return '↩️ '
+          return ''
         case PAYMENT_STATUS.PARTIAL_REFUND:
-          return '↩️ '
+          return ''
         default:
           return ''
       }
@@ -148,11 +148,11 @@ const StatusTag: React.FC<StatusTagProps> = ({
     if (type === 'user') {
       switch (status as UserStatus) {
         case USER_STATUS.ACTIVE:
-          return '✅ '
+          return ''
         case USER_STATUS.INACTIVE:
-          return '⏸️ '
+          return ''
         case USER_STATUS.SUSPENDED:
-          return '🚫 '
+          return ''
         default:
           return ''
       }

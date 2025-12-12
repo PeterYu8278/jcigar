@@ -72,9 +72,9 @@ export const AICigarScanner: React.FC = () => {
             
             if (aggregated) {
                 setAggregatedData(aggregated);
-                message.success(`✅ 识别结果已保存（基于 ${aggregated.totalRecognitions} 次识别的统计数据）`);
+                message.success(`识别结果已保存（基于 ${aggregated.totalRecognitions} 次识别的统计数据）`);
                 } else {
-                message.success('✅ 识别结果已保存到数据库');
+                message.success('识别结果已保存到数据库');
             }
         } catch (error) {
             message.error(`保存失败: ${error instanceof Error ? error.message : '未知错误'}`);
@@ -611,7 +611,7 @@ export const AICigarScanner: React.FC = () => {
                         />
                         {userHint && (
                             <Text type="secondary" style={{ fontSize: '12px', color: '#aaa' }}>
-                                💡 提示：可以直接点击"直接搜索"按钮查询，或拍照/上传图片时作为辅助信息
+                                提示：可以直接点击"直接搜索"按钮查询，或拍照/上传图片时作为辅助信息
                             </Text>
                         )}
                     </Space>
@@ -867,7 +867,7 @@ export const AICigarScanner: React.FC = () => {
                                 border: '1px solid rgba(255, 215, 0, 0.3)'
                             }}>
                                 <Text style={{ color: '#ffd700', fontSize: '12px' }}>
-                                    📊 数据来源: 基于 {aggregatedData.totalRecognitions} 次 AI 识别统计
+                                    数据来源: 基于 {aggregatedData.totalRecognitions} 次 AI 识别统计
                                 </Text>
                             </div>
                         )}

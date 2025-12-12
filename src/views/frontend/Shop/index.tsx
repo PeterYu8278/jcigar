@@ -272,7 +272,6 @@ const Shop: React.FC = () => {
                 fontWeight: 'bold',
                 color: '#000'
               }}>
-                🔥
               </div>
               <div style={{
                 fontSize: '12px',
@@ -1136,7 +1135,7 @@ const Shop: React.FC = () => {
               padding: '48px 24px', 
               color: '#9ca3af' 
             }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔍</div>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}></div>
               <div style={{ fontSize: '16px', color: '#c0c0c0' }}>
                 {searchKeyword ? '未找到匹配的商品' : '暂无商品数据'}
               </div>

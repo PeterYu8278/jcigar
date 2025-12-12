@@ -400,7 +400,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                 backdropFilter: 'blur(6px)'
               }}>
                 <Text style={{ color: '#FDE08D', fontSize: 14 }}>
-                  💡 充值积分后，即可开通会员，享受VIP权益！
+                  充值积分后，即可开通会员，享受VIP权益！
                 </Text>
               </div>
             </div>
@@ -918,7 +918,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
               padding: 8,
               textAlign: 'center'
             }}>
-              <span style={{ fontSize: 16, color: '#FDE08D' }}>ℹ️</span>
+              <span style={{ fontSize: 16, color: '#FDE08D' }}></span>
               <Text style={{ fontSize: 12, color: '#9ca3af' }}>
                 Last call for redemption is at {cutoffTime} PM
               </Text>

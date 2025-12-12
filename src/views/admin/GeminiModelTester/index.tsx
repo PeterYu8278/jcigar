@@ -265,7 +265,7 @@ export default function GeminiModelTester() {
             <Row gutter={[16, 16]}>
                 {/* 配置面板 */}
                 <Col span={24}>
-                    <Card title="⚙️ 测试配置" size="small">
+                    <Card title="测试配置" size="small">
                         <Space direction="vertical" style={{ width: '100%' }} size="middle">
                             {/* 图片上传 */}
                             <div>
@@ -388,7 +388,7 @@ export default function GeminiModelTester() {
                 {/* 进度面板 */}
                 {progress.status !== 'idle' && (
                     <Col span={24}>
-                        <Card title="📊 测试进度" size="small">
+                        <Card title="测试进度" size="small">
                             <Progress 
                                 percent={progress.percentage} 
                                 status={progress.status === 'running' ? 'active' : 
@@ -461,7 +461,7 @@ export default function GeminiModelTester() {
                 {/* 详细结果 */}
                 {report && (
                     <Col span={24}>
-                        <Card title="📋 详细结果">
+                        <Card title="详细结果">
                             <Tabs defaultActiveKey="models">
                                 <TabPane tab="模型列表" key="models">
                                     <Table
@@ -522,9 +522,9 @@ export default function GeminiModelTester() {
                                                                 footTasteNotes: '👃',
                                                                 bodyTasteNotes: '👃',
                                                                 headTasteNotes: '👃',
-                                                                strength: '💪',
-                                                                size: '📏'
-                                                            }[fieldName] || '📋';
+                                                                strength: '',
+                                                                size: ''
+                                                            }[fieldName] || '';
                                                             
                                                             return (
                                                                 <Card 
@@ -588,7 +588,7 @@ export default function GeminiModelTester() {
                                                                     
                                                                     {fieldStats.emptyCount > 0 && (
                                                                         <Paragraph type="warning" style={{ marginTop: 8 }}>
-                                                                            ⚠️ 未返回: {fieldStats.emptyCount}次 ({(fieldStats.emptyCount / fieldStats.totalResponses * 100).toFixed(0)}%)
+                                                                            未返回: {fieldStats.emptyCount}次 ({(fieldStats.emptyCount / fieldStats.totalResponses * 100).toFixed(0)}%)
                                                                         </Paragraph>
                                                                     )}
                                                                 </Card>

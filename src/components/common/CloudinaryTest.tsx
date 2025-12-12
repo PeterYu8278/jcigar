@@ -38,13 +38,13 @@ const CloudinaryTest: React.FC = () => {
             folder: 'test'
           })
           
-          setTestResult(`✅ ${t('cloudinary.testSuccess')}`)
+          setTestResult(`${t('cloudinary.testSuccess')}`)
           setTestImageUrl(result.secure_url)
           message.success(t('cloudinary.testSuccess'))
         }
       }, 'image/png')
       } catch (err) {
-        setTestResult(`❌ ${t('cloudinary.testFail')}`)
+        setTestResult(`${t('cloudinary.testFail')}`)
         message.error(t('cloudinary.testFail'))
       }
   }
@@ -67,12 +67,12 @@ const CloudinaryTest: React.FC = () => {
           {testResult && (
             <div style={{ 
               padding: '12px', 
-              background: testResult.includes('✅') ? '#f6ffed' : '#fff2f0',
-              border: `1px solid ${testResult.includes('✅') ? '#b7eb8f' : '#ffccc7'}`,
+              background: testResult.includes(t('cloudinary.testSuccess')) ? '#f6ffed' : '#fff2f0',
+              border: `1px solid ${testResult.includes(t('cloudinary.testSuccess')) ? '#b7eb8f' : '#ffccc7'}`,
               borderRadius: '6px',
               marginBottom: 16
             }}>
-              <Text style={{ color: testResult.includes('✅') ? '#52c41a' : '#ff4d4f' }}>
+              <Text style={{ color: testResult.includes(t('cloudinary.testSuccess')) ? '#52c41a' : '#ff4d4f' }}>
                 {testResult}
               </Text>
             </div>

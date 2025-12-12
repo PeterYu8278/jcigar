@@ -208,7 +208,7 @@ const OrphanedUserCleanup: React.FC = () => {
                 <li>引荐关系</li>
               </ul>
               <p style={{ marginTop: 8, fontWeight: 'bold' }}>
-                ⚠️ 此操作不可恢复！
+                此操作不可恢复！
               </p>
             </div>
           }
@@ -266,7 +266,7 @@ const OrphanedUserCleanup: React.FC = () => {
           />
 
           <Alert
-            message="⚠️ 注意：此工具无法验证 Firebase Auth 状态"
+            message="注意：此工具无法验证 Firebase Auth 状态"
             description="由于客户端 SDK 限制，此工具只能列出所有 Firestore 用户。请手动在 Firebase Console 的 Authentication 页面验证哪些用户缺失 Auth 记录。"
             type="info"
             showIcon

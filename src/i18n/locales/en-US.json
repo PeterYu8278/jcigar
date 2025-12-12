@@ -390,7 +390,6 @@
     "deleteUserConfirm": "Are you sure to delete user {{name}}? This action cannot be undone.",
     "deleted": "Deleted",
     "noEmail": "This user has no email",
-    "passwordResetSent": "Password reset email sent",
     "sendFailed": "Send failed",
     "searchByNameOrEmail": "Search by name, email or member ID",
     "selectRole": "Select Role",

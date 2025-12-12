@@ -640,7 +640,7 @@ const AdminEvents: React.FC = () => {
           <div style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>{title}</div>
           <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
             {(record?.location?.name || '') && (
-              <span style={{ marginRight: 8 }}>📍 {record.location.name}</span>
+              <span style={{ marginRight: 8 }}>{record.location.name}</span>
             )}
             {(record.description || '').length > 50 
               ? `${record.description.substring(0, 50)}...` 
@@ -1438,7 +1438,7 @@ const AdminEvents: React.FC = () => {
             {/* 基本信息卡片 */}
             <div style={theme.card.elevated}>
               <div style={theme.text.subtitle}>
-                📋 基本信息
+                基本信息
               </div>
               
               <Form.Item 
@@ -1530,7 +1530,7 @@ const AdminEvents: React.FC = () => {
             {/* 参与设置卡片 */}
             <div style={theme.card.elevated}>
               <div style={theme.text.subtitle}>
-                👥 参与设置
+                参与设置
               </div>
               
               <Row gutter={12}>
@@ -1595,7 +1595,7 @@ const AdminEvents: React.FC = () => {
             {!isMobile && (
               <div style={theme.card.elevated}>
                 <div style={theme.text.subtitle}>
-                  🖼️ 活动图片
+                  活动图片
                 </div>
                 
                 <Form.Item 

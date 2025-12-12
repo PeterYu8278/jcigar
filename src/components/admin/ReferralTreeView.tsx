@@ -255,7 +255,7 @@ export const ReferralTreeView: React.FC<ReferralTreeViewProps> = ({ users: propU
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 11 }}>
-                  👥 {t('profile.totalReferred')}: {totalReferrals}
+                  {t('profile.totalReferred')}: {totalReferrals}
                 </Text>
                 <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 11 }}>
                   💰 {t('profile.referralPoints')}: {referralPoints}

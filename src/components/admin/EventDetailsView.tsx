@@ -46,7 +46,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
       <div style={{ width: '100%', overflow: 'hidden' }}>
         {/* 基本信息卡片 */}
         <div style={theme.card.elevated}>
-          <div style={theme.text.subtitle}>📋 基本信息</div>
+          <div style={theme.text.subtitle}>基本信息</div>
           
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 12, color: '#aaa', marginBottom: 4 }}>{t('events.eventName')}</div>
@@ -108,7 +108,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
         
         {/* 参与设置卡片 */}
         <div style={theme.card.elevated}>
-          <div style={theme.text.subtitle}>👥 参与设置</div>
+          <div style={theme.text.subtitle}>参与设置</div>
           
           <Row gutter={12} style={{ marginBottom: 12 }}>
             <Col span={12}>

@@ -358,7 +358,7 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
           gap: '8px'
         }}>
           <Text style={{ color: '#ff6b6b', fontSize: 14, fontWeight: 500 }}>
-            ⚠️ {checkInError}
+            {checkInError}
           </Text>
         </div>
       )}

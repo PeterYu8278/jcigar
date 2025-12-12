@@ -70,28 +70,28 @@ const EmptyState: React.FC<EmptyStateProps> = ({
         return {
           defaultTitle: '暂无数据',
           defaultDescription: '还没有任何数据，点击下方按钮添加',
-          defaultIcon: '📝',
+          defaultIcon: '',
           defaultActionText: '添加数据'
         }
       case 'noResult':
         return {
           defaultTitle: '无搜索结果',
           defaultDescription: '没有找到匹配的内容，请尝试其他关键词',
-          defaultIcon: '🔍',
+          defaultIcon: '',
           defaultActionText: '重置搜索'
         }
       case 'noPermission':
         return {
           defaultTitle: '暂无权限',
           defaultDescription: '您没有权限访问此内容',
-          defaultIcon: '🔒',
+          defaultIcon: '',
           defaultActionText: '返回首页'
         }
       case 'error':
         return {
           defaultTitle: '出错了',
           defaultDescription: '页面加载失败，请稍后重试',
-          defaultIcon: '⚠️',
+          defaultIcon: '',
           defaultActionText: '重新加载'
         }
       case 'network':
