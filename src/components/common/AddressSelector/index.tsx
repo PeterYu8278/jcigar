@@ -11,9 +11,10 @@ import {
   Input, 
   message,
   Space,
-  Radio,
   Empty,
-  Checkbox
+  Checkbox,
+  Row,
+  Col
 } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { Address } from '../../../types'
@@ -48,7 +49,16 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
   const [modalVisible, setModalVisible] = useState(false)
   const [editingAddress, setEditingAddress] = useState<Address | null>(null)
   const [form] = Form.useForm()
-  const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.matchMedia('(max-width: 768px)').matches)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   useEffect(() => {
     if (user?.id) {
@@ -79,11 +89,46 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
   const handleCreate = () => {
     setEditingAddress(null)
     form.resetFields()
+    // 如果用户信息存在，自动填充姓名和手机号
+    const userPhone = (user as any)?.profile?.phone || user?.phone
+    if (user?.displayName || userPhone) {
+      form.setFieldsValue({
+        name: user?.displayName || '',
+        phone: userPhone || '',
+        isSelf: true
+      })
+    } else {
+      form.setFieldsValue({
+        isSelf: true
+      })
+    }
     setModalVisible(true)
+  }
+
+  const handleIsSelfChange = (e: any) => {
+    const isSelf = e.target.checked
+    if (isSelf && user) {
+      // 如果选中"是本人"，自动填充用户信息
+      const userPhone = (user as any)?.profile?.phone || user?.phone
+      form.setFieldsValue({
+        name: user.displayName || '',
+        phone: userPhone || ''
+      })
+    }
   }
 
   const handleEdit = (address: Address) => {
     setEditingAddress(address)
+    // 判断地址的姓名和手机号是否与用户信息匹配
+    // 如果用户信息存在，检查姓名和手机号是否都匹配
+    let isSelf = false
+    if (user) {
+      const userPhone = (user as any)?.profile?.phone || user?.phone
+      const nameMatch = user.displayName && address.name === user.displayName
+      const phoneMatch = userPhone && address.phone === userPhone
+      // 如果姓名和手机号都匹配，或者至少有一个匹配且另一个为空，则认为是本人
+      isSelf = (nameMatch && phoneMatch) || (nameMatch && !userPhone) || (phoneMatch && !user.displayName)
+    }
     form.setFieldsValue({
       name: address.name,
       phone: address.phone,
@@ -92,7 +137,8 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
       district: address.district,
       detail: address.detail,
       postalCode: address.postalCode,
-      isDefault: address.isDefault
+      isDefault: address.isDefault,
+      isSelf: isSelf
     })
     setModalVisible(true)
   }
@@ -147,8 +193,11 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
         setModalVisible(false)
         await loadAddresses()
         // 如果是新创建的地址且设为默认，自动选中
-        if (!editingAddress && addressData.isDefault && result.addressId) {
-          onChange?.(result.addressId)
+        if (!editingAddress && addressData.isDefault) {
+          const addResult = result as { success: boolean; addressId?: string; error?: Error }
+          if (addResult.addressId) {
+            onChange?.(addResult.addressId)
+          }
         }
       } else {
         message.error(result.error?.message || '操作失败')
@@ -250,7 +299,29 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
           }
         }}
       >
-        <Form form={form} layout="vertical" className="dark-theme-form">
+        <Form 
+          form={form} 
+          layout="horizontal" 
+          className="dark-theme-form" 
+          labelCol={{ flex: isMobile ? '100px' : '120px' }}
+          wrapperCol={{ flex: 'auto' }}
+          labelWrap
+        >
+          <Form.Item
+            name="isSelf"
+            valuePropName="checked"
+            initialValue={true}
+            label=" "
+            colon={false}
+          >
+            <Checkbox 
+              style={{ color: '#fff' }}
+              onChange={handleIsSelfChange}
+            >
+              我是收货人
+            </Checkbox>
+          </Form.Item>
+
           <Form.Item
             name="name"
             label={<span style={{ color: '#fff' }}>收货人姓名</span>}
@@ -275,23 +346,42 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
           </Form.Item>
 
           <Form.Item
-            name="isSelf"
+            name="isDefault"
             valuePropName="checked"
-            initialValue={true}
+            initialValue={addresses.length === 0}
+            label=" "
+            colon={false}
           >
             <Checkbox style={{ color: '#fff' }}>
-              收货人姓名和联系号码是否本人
+              设为默认地址
             </Checkbox>
           </Form.Item>
           
           <Form.Item
             name="province"
             label={<span style={{ color: '#fff' }}>省/直辖市</span>}
-            rules={[{ required: true, message: '请输入省/直辖市' }]}
+            rules={[{ required: true, message: '请选择省/直辖市' }]}
           >
-            <Input 
-              placeholder="请输入省/直辖市"
-            />
+            <Select 
+              placeholder="请选择省/直辖市"
+              className="dark-theme-form"
+              dropdownClassName="dark-theme-form"
+            >
+              <Select.Option value="Johor">Johor</Select.Option>
+              <Select.Option value="Kedah">Kedah</Select.Option>
+              <Select.Option value="Kelantan">Kelantan</Select.Option>
+              <Select.Option value="Melaka">Melaka</Select.Option>
+              <Select.Option value="Negeri Sembilan">Negeri Sembilan</Select.Option>
+              <Select.Option value="Pahang">Pahang</Select.Option>
+              <Select.Option value="Perak">Perak</Select.Option>
+              <Select.Option value="Perlis">Perlis</Select.Option>
+              <Select.Option value="Pulau Pinang">Pulau Pinang</Select.Option>
+              <Select.Option value="Sabah">Sabah</Select.Option>
+              <Select.Option value="Sarawak">Sarawak</Select.Option>
+              <Select.Option value="Selangor">Selangor</Select.Option>
+              <Select.Option value="Terengganu">Terengganu</Select.Option>
+              <Select.Option value="Wilayah Persekutuan">Wilayah Persekutuan</Select.Option>
+            </Select>
           </Form.Item>
           
           <Form.Item
@@ -306,11 +396,11 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
           
           <Form.Item
             name="district"
-            label={<span style={{ color: '#fff' }}>区/县</span>}
-            rules={[{ required: true, message: '请输入区/县' }]}
+            label={<span style={{ color: '#fff' }}>邮区编号</span>}
+            rules={[{ required: true, message: '请输入邮区编号' }]}
           >
             <Input 
-              placeholder="请输入区/县"
+              placeholder="请输入邮区编号"
             />
           </Form.Item>
           
@@ -332,16 +422,6 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
             <Input 
               placeholder="请输入邮编（可选）"
             />
-          </Form.Item>
-          
-          <Form.Item
-            name="isDefault"
-            initialValue={addresses.length === 0}
-          >
-            <Radio.Group>
-              <Radio value={true} style={{ color: '#fff' }}>设为默认地址</Radio>
-              <Radio value={false} style={{ color: '#fff' }}>不设为默认</Radio>
-            </Radio.Group>
           </Form.Item>
         </Form>
       </Modal>

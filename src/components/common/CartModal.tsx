@@ -110,10 +110,10 @@ export const CartModal: React.FC<CartModalProps> = ({
       setMode('checkout')
     } else {
       // 电脑端：调用回调
-      onClose()
-      if (onCheckout) {
-        onCheckout()
-      }
+    onClose()
+    if (onCheckout) {
+      onCheckout()
+    }
     }
   }
 
@@ -209,8 +209,8 @@ export const CartModal: React.FC<CartModalProps> = ({
           }}>
             {mode === 'cart' ? (
               <>
-                <ShoppingCartOutlined style={{ marginRight: '8px' }} />
-                购物车 ({cartItemCount} 件商品)
+            <ShoppingCartOutlined style={{ marginRight: '8px' }} />
+            购物车 ({cartItemCount} 件商品)
               </>
             ) : (
               <>订单结算</>
@@ -235,198 +235,198 @@ export const CartModal: React.FC<CartModalProps> = ({
           {mode === 'cart' ? (
             // 购物车模式
             <>
-              {cartItems.length === 0 ? (
-                // 空状态
-                <div style={{
-                  textAlign: 'center',
-                  padding: '60px 20px',
-                  color: '#999'
-                }}>
-                  <div style={{ fontSize: '64px', marginBottom: '16px' }}>🛒</div>
-                  <div style={{ fontSize: '16px', color: '#c0c0c0' }}>
-                    购物车是空的
-                  </div>
-                  <div style={{ fontSize: '14px', color: '#666', marginTop: '8px' }}>
-                    快去添加商品吧！
-                  </div>
-                </div>
-              ) : (
-                // 商品列表
-                <List
-                  dataSource={cartItems}
-                  renderItem={(item) => {
-                    // 获取风味特征（合并所有品吸笔记）
-                    const flavorNotes = item.tastingNotes 
-                      ? [
-                          ...(item.tastingNotes.foot || []),
-                          ...(item.tastingNotes.body || []),
-                          ...(item.tastingNotes.head || [])
-                        ].filter(Boolean)
-                      : []
+          {cartItems.length === 0 ? (
+            // 空状态
+            <div style={{
+              textAlign: 'center',
+              padding: '60px 20px',
+              color: '#999'
+            }}>
+              <div style={{ fontSize: '64px', marginBottom: '16px' }}>🛒</div>
+              <div style={{ fontSize: '16px', color: '#c0c0c0' }}>
+                购物车是空的
+              </div>
+              <div style={{ fontSize: '14px', color: '#666', marginTop: '8px' }}>
+                快去添加商品吧！
+              </div>
+            </div>
+          ) : (
+            // 商品列表
+            <List
+              dataSource={cartItems}
+              renderItem={(item) => {
+                // 获取风味特征（合并所有品吸笔记）
+                const flavorNotes = item.tastingNotes 
+                  ? [
+                      ...(item.tastingNotes.foot || []),
+                      ...(item.tastingNotes.body || []),
+                      ...(item.tastingNotes.head || [])
+                    ].filter(Boolean)
+                  : []
 
-                    return (
-                      <List.Item
-                        style={{
-                          background: 'rgba(255, 255, 255, 0.03)',
-                          borderRadius: '12px',
-                          marginBottom: '12px',
-                          padding: '16px',
-                          border: '1px solid rgba(255, 255, 255, 0.1)'
-                        }}
-                      >
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
-                          {/* 产品名称 */}
-                          <Title level={5} style={{ color: '#ffffff', margin: 0 }}>
-                            {item.name}
-                          </Title>
-                          
-                          {/* 图片和信息区域 */}
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: '16px'
-                          }}>
-                            {/* 左侧图片 */}
-                            <div style={{ position: 'relative', flexShrink: 0 }}>
-                              <img 
-                                alt={item.name}
-                                src={item.images?.[0] || DEFAULT_CIGAR_IMAGE}
-                              style={{
-                                width: '60px',
-                                height: '100px',
-                                objectFit: 'cover',
-                                  borderRadius: '8px',
-                                  border: '2px solid #B8860B'
-                                }}
-                              />
-                              <CigarRatingBadge rating={item.metadata?.rating} size="small" />
-                            </div>
+                return (
+                  <List.Item
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      borderRadius: '12px',
+                      marginBottom: '12px',
+                      padding: '16px',
+                      border: '1px solid rgba(255, 255, 255, 0.1)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+                      {/* 产品名称 */}
+                      <Title level={5} style={{ color: '#ffffff', margin: 0 }}>
+                        {item.name}
+                      </Title>
+                      
+                      {/* 图片和信息区域 */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '16px'
+                      }}>
+                        {/* 左侧图片 */}
+                        <div style={{ position: 'relative', flexShrink: 0 }}>
+                          <img 
+                            alt={item.name}
+                            src={item.images?.[0] || DEFAULT_CIGAR_IMAGE}
+                          style={{
+                            width: '60px',
+                            height: '100px',
+                            objectFit: 'cover',
+                              borderRadius: '8px',
+                              border: '2px solid #B8860B'
+                            }}
+                          />
+                          <CigarRatingBadge rating={item.metadata?.rating} size="small" />
+                        </div>
 
-                            {/* 右侧信息 */}
-                            <div style={{ flex: 1 }}>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '12px' }}>
-                                {/* 产地 */}
-                                {item.origin && (
+                        {/* 右侧信息 */}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '12px' }}>
+                            {/* 产地 */}
+                            {item.origin && (
+                              <Text style={{ color: '#9ca3af', fontSize: '12px' }}>
+                                {item.origin}
+                              </Text>
+                            )}
+                            {/* 规格和强度同排 */}
+                            {(item.size || item.strength) && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {item.size && (
                                   <Text style={{ color: '#9ca3af', fontSize: '12px' }}>
-                                    {item.origin}
+                                    {item.size}
                                   </Text>
                                 )}
-                                {/* 规格和强度同排 */}
-                                {(item.size || item.strength) && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    {item.size && (
-                                      <Text style={{ color: '#9ca3af', fontSize: '12px' }}>
-                                        {item.size}
-                                      </Text>
-                                    )}
-                                    {item.size && item.strength && (
-                                      <Text style={{ color: '#9ca3af', fontSize: '12px' }}>•</Text>
-                                    )}
-                                    {item.strength && (
-                                      <Text style={{ color: '#9ca3af', fontSize: '12px' }}>
-                                        {strengthMap[item.strength] || item.strength}
-                                      </Text>
-                                    )}
-                                  </div>
+                                {item.size && item.strength && (
+                                  <Text style={{ color: '#9ca3af', fontSize: '12px' }}>•</Text>
                                 )}
-                                {/* 风味特征 */}
-                                {flavorNotes.length > 0 && (
+                                {item.strength && (
                                   <Text style={{ color: '#9ca3af', fontSize: '12px' }}>
-                                    {flavorNotes.join('、')}
+                                    {strengthMap[item.strength] || item.strength}
                                   </Text>
                                 )}
                               </div>
+                            )}
+                            {/* 风味特征 */}
+                            {flavorNotes.length > 0 && (
+                              <Text style={{ color: '#9ca3af', fontSize: '12px' }}>
+                                {flavorNotes.join('、')}
+                              </Text>
+                            )}
+                          </div>
 
-                              {/* 价格、数量控制器和删除 */}
+                          {/* 价格、数量控制器和删除 */}
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'space-between'
+                          }}>
+                            <div style={{ color: '#FFD700', fontWeight: 'bold' }}>
+                              RM {item.price}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              {/* 数量调整 */}
                               <div style={{ 
                                 display: 'flex', 
                                 alignItems: 'center', 
-                                justifyContent: 'space-between'
+                                gap: '4px',
+                                border: '1px solid rgba(255, 215, 0, 0.3)',
+                                borderRadius: '6px',
+                                padding: '2px 4px'
                               }}>
-                                <div style={{ color: '#FFD700', fontWeight: 'bold' }}>
-                                  RM {item.price}
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                  {/* 数量调整 */}
-                                  <div style={{ 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    gap: '4px',
-                                    border: '1px solid rgba(255, 215, 0, 0.3)',
-                                    borderRadius: '6px',
-                                    padding: '2px 4px'
-                                  }}>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        const currentQty = quantities[item.id] || 0
-                                        if (currentQty > 1) {
-                                          setQuantity(item.id, currentQty - 1)
-                                        } else if (currentQty === 1) {
-                                          // 当数量为1时，点击减号提示确认移除
-                                          setConfirmRemove({
-                                            visible: true,
-                                            itemId: item.id,
-                                            itemName: item.name
-                                          })
-                                        }
-                                      }}
-                                      style={{
-                                        background: 'transparent',
-                                        border: 'none',
-                                        color: '#FFD700',
-                                        cursor: 'pointer',
-                                        padding: '4px 8px',
-                                        fontSize: '16px',
-                                        lineHeight: 1,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        minWidth: '24px',
-                                        height: '24px'
-                                      }}
-                                    >
-                                      −
-                                    </button>
-                                    <span style={{ 
-                                      color: '#ffffff', 
-                                      fontSize: '14px',
-                                      fontWeight: '500',
-                                      minWidth: '24px', 
-                                      textAlign: 'center',
-                                      lineHeight: '24px'
-                                    }}>
-                                      {item.quantity}
-                                    </span>
-                                    <button
-                                      onClick={() => addToCart(item.id)}
-                                      style={{
-                                        background: 'transparent',
-                                        border: 'none',
-                                        color: '#FFD700',
-                                        cursor: 'pointer',
-                                        padding: '4px 8px',
-                                        fontSize: '16px',
-                                        lineHeight: 1,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        minWidth: '24px',
-                                        height: '24px'
-                                      }}
-                                    >
-                                      +
-                                    </button>
-                                  </div>
-                                </div>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    const currentQty = quantities[item.id] || 0
+                                    if (currentQty > 1) {
+                                      setQuantity(item.id, currentQty - 1)
+                                    } else if (currentQty === 1) {
+                                      // 当数量为1时，点击减号提示确认移除
+                                      setConfirmRemove({
+                                        visible: true,
+                                        itemId: item.id,
+                                        itemName: item.name
+                                      })
+                                    }
+                                  }}
+                                  style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: '#FFD700',
+                                    cursor: 'pointer',
+                                    padding: '4px 8px',
+                                    fontSize: '16px',
+                                    lineHeight: 1,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    minWidth: '24px',
+                                    height: '24px'
+                                  }}
+                                >
+                                  −
+                                </button>
+                                <span style={{ 
+                                  color: '#ffffff', 
+                                  fontSize: '14px',
+                                  fontWeight: '500',
+                                  minWidth: '24px', 
+                                  textAlign: 'center',
+                                  lineHeight: '24px'
+                                }}>
+                                  {item.quantity}
+                                </span>
+                                <button
+                                  onClick={() => addToCart(item.id)}
+                                  style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: '#FFD700',
+                                    cursor: 'pointer',
+                                    padding: '4px 8px',
+                                    fontSize: '16px',
+                                    lineHeight: 1,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    minWidth: '24px',
+                                    height: '24px'
+                                  }}
+                                >
+                                  +
+                                </button>
                               </div>
                             </div>
                           </div>
                         </div>
-                      </List.Item>
-                    )
-                  }}
-                />
+                      </div>
+                    </div>
+                  </List.Item>
+                )
+              }}
+            />
               )}
             </>
           ) : (
