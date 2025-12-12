@@ -95,7 +95,8 @@ async function generateEventOrders(
                        statusRand < 0.5 ? 'delivered' :
                        statusRand < 0.95 ? 'completed' : 'cancelled'
 
-        const orderData: Order = {
+        const orderData = {
+          id: `order-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           orderNo,
           userId,
           items: orderItems,
@@ -107,7 +108,7 @@ async function generateEventOrders(
             note: '活动订单'
           },
           payment: {
-            method: status !== 'pending' ? (['credit', 'paypal', 'bank_transfer'][Math.floor(Math.random() * 3)] as any) : 'bank_transfer',
+            method: status !== 'pending' ? (['credit', 'paypal', 'bank_transfer'][Math.floor(Math.random() * 3)] as 'credit' | 'paypal' | 'bank_transfer') : 'bank_transfer',
             transactionId: status !== 'pending' ? `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` : undefined,
             paidAt: status !== 'pending' ? new Date(createdAt.getTime() + Math.random() * 24 * 60 * 60 * 1000) : undefined
           },
@@ -213,6 +214,7 @@ async function generateRedemptionOrders(
       }))
 
       const orderData: Order = {
+        id: `order-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         orderNo,
         userId: session.userId,
         items: orderItems,
@@ -223,7 +225,7 @@ async function generateRedemptionOrders(
           note: '驻店兑换'
         },
         payment: {
-          method: 'points',
+          method: 'bank_transfer' as const,
           paidAt: createdAt
         },
         shipping: {

@@ -12,7 +12,9 @@ import {
   limit,
   startAfter,
   updateDoc,
-  Timestamp
+  Timestamp,
+  type QuerySnapshot,
+  type DocumentData
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { GLOBAL_COLLECTIONS } from '../../config/globalCollections';
@@ -588,7 +590,7 @@ export const getAllMembershipFeeRecords = async (
         }
       }
 
-      const snapshot = await getDocs(q);
+      const snapshot: QuerySnapshot<DocumentData> = await getDocs(q);
       const batch = snapshot.docs.map(mapDocToMembershipFeeRecord);
     
       allRecords.push(...batch);
@@ -661,7 +663,7 @@ export const getAllMembershipFeeRecords = async (
           }
         }
         
-        const snapshot = await getDocs(q);
+        const snapshot: QuerySnapshot<DocumentData> = await getDocs(q);
         const batch = snapshot.docs.map(mapDocToMembershipFeeRecord);
         
         allRecords.push(...batch);

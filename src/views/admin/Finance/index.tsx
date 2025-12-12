@@ -318,29 +318,29 @@ const AdminFinance: React.FC = () => {
   const confirmDeleteTransaction = async () => {
     if (!deleting) return
     
-    setLoading(true)
-    try {
+        setLoading(true)
+        try {
       const result = await deleteDocument(COLLECTIONS.TRANSACTIONS, deleting.id)
-      if (result.success) {
-        message.success(t('financeAdmin.transactionDeleted'))
-        // 重新加载所有交易数据
-        const data = await getAllTransactions()
-        setTransactions(data)
+          if (result.success) {
+            message.success(t('financeAdmin.transactionDeleted'))
+            // 重新加载所有交易数据
+            const data = await getAllTransactions()
+            setTransactions(data)
         // 如果正在查看被删除的交易，关闭查看 Modal
         if (viewing?.id === deleting.id) {
           setViewing(null)
           setIsEditing(false)
         }
         setDeleting(null)
-      } else {
-        message.error(t('financeAdmin.deleteFailed'))
-      }
+          } else {
+            message.error(t('financeAdmin.deleteFailed'))
+          }
     } catch (error) {
       console.error('Delete transaction error:', error)
       message.error(t('financeAdmin.deleteFailed'))
-    } finally {
-      setLoading(false)
-    }
+        } finally {
+          setLoading(false)
+        }
   }
 
   // 筛选后的数据
@@ -348,8 +348,8 @@ const AdminFinance: React.FC = () => {
     return transactions.filter(transaction => {
       // 日期筛选
       if (dateRange && dateRange[0] && dateRange[1]) {
-        const d = toDateSafe(transaction.createdAt)
-        if (!d) return false
+      const d = toDateSafe(transaction.createdAt)
+      if (!d) return false
         const date = dayjs(d)
         const start = dateRange[0].startOf('day')
         const end = dateRange[1].endOf('day')
@@ -498,23 +498,23 @@ const AdminFinance: React.FC = () => {
   const filteredTransactionsForStats = useMemo(() => {
     // 如果有快捷日期选择，直接基于所有交易记录筛选
     if (selectedDateRange) {
-      const now = dayjs()
-      let startDate: dayjs.Dayjs
-      
-      switch (selectedDateRange) {
-        case 'week':
-          startDate = now.startOf('week')
-          break
-        case 'month':
-          startDate = now.startOf('month')
-          break
-        case 'year':
-          startDate = now.startOf('year')
-          break
-        default:
+    const now = dayjs()
+    let startDate: dayjs.Dayjs
+    
+    switch (selectedDateRange) {
+      case 'week':
+        startDate = now.startOf('week')
+        break
+      case 'month':
+        startDate = now.startOf('month')
+        break
+      case 'year':
+        startDate = now.startOf('year')
+        break
+      default:
           return transactions
-      }
-      
+    }
+    
       return transactions.filter(t => {
         const d = toDateSafe(t.createdAt)
         if (!d) return false
@@ -523,7 +523,7 @@ const AdminFinance: React.FC = () => {
         const end = now.endOf('day')
         return (transactionDate.isAfter(start) || transactionDate.isSame(start)) && 
                (transactionDate.isBefore(end) || transactionDate.isSame(end))
-      })
+    })
     }
     
     // 如果没有快捷日期选择，使用筛选后的交易记录（可能包含手动选择的日期范围）
@@ -1473,74 +1473,74 @@ const AdminFinance: React.FC = () => {
                         <div key={field.key} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
                           <Form.Item name={[field.name, 'orderId']} style={{ marginBottom: 0, flex: 1 }}>
                             {isEditing ? (
-                              <Select
-                                allowClear
-                                showSearch
-                                placeholder={isExpenseTransaction ? t('financeAdmin.selectInboundReference') : t('financeAdmin.relatedOrderId')}
-                                filterOption={(input, option) => {
-                                  const searchText = (input || '').toLowerCase()
-                                  const searchableText = (option as any)?.searchText || ''
-                                  return searchableText.toLowerCase().includes(searchText)
-                                }}
-                                options={isExpenseTransaction ? (
-                                  // 支出交易：显示入库单号
-                                  inboundReferenceOptions.map(ref => {
-                                    const searchText = `${ref.referenceNo} ${ref.reason} ${ref.totalValue.toFixed(2)}`
-                                    return {
+                            <Select
+                              allowClear
+                              showSearch
+                              placeholder={isExpenseTransaction ? t('financeAdmin.selectInboundReference') : t('financeAdmin.relatedOrderId')}
+                              filterOption={(input, option) => {
+                                const searchText = (input || '').toLowerCase()
+                                const searchableText = (option as any)?.searchText || ''
+                                return searchableText.toLowerCase().includes(searchText)
+                              }}
+                              options={isExpenseTransaction ? (
+                                // 支出交易：显示入库单号
+                                inboundReferenceOptions.map(ref => {
+                                  const searchText = `${ref.referenceNo} ${ref.reason} ${ref.totalValue.toFixed(2)}`
+                                  return {
+                                    label: (
+                                      <div>
+                                        <div>
+                                          📦 {ref.referenceNo} · {ref.productCount} {t('inventory.types')} · RM{ref.totalValue.toFixed(2)}
+                                        </div>
+                                        <div style={{ fontSize: '12px', color: '#bab09c' }}>
+                                          {ref.reason || '-'}
+                                        </div>
+                                      </div>
+                                    ),
+                                    value: ref.referenceNo,
+                                    searchText
+                                  }
+                                })
+                              ) : (
+                                // 收入交易：显示销售订单
+                                (orders || [])
+                                  .filter(o => !isOrderFullyMatched(o.id))
+                                  .map(o => {
+                                    const u = (users || []).find((x: any) => x.id === o.userId)
+                                    const name = u?.displayName || u?.email || o.userId
+                                    const addr = (o as any)?.shipping?.address || '-'
+                                    const total = Number((o as any)?.total || 0)
+                                    const searchText = `${o.id} ${name} ${addr} ${total.toFixed(2)}`
+                                    return { 
                                       label: (
                                         <div>
-                                          <div>
-                                            📦 {ref.referenceNo} · {ref.productCount} {t('inventory.types')} · RM{ref.totalValue.toFixed(2)}
-                                          </div>
-                                          <div style={{ fontSize: '12px', color: '#bab09c' }}>
-                                            {ref.reason || '-'}
-                                          </div>
+                                          <div>{o.id} · {name} · RM{total.toFixed(2)}</div>
+                                          <div style={{ fontSize: '12px', color: '#bab09c' }}>{addr}</div>
                                         </div>
-                                      ),
-                                      value: ref.referenceNo,
+                                      ), 
+                                      value: o.id,
                                       searchText
                                     }
                                   })
-                                ) : (
-                                  // 收入交易：显示销售订单
-                                  (orders || [])
-                                    .filter(o => !isOrderFullyMatched(o.id))
-                                    .map(o => {
-                                      const u = (users || []).find((x: any) => x.id === o.userId)
-                                      const name = u?.displayName || u?.email || o.userId
-                                      const addr = (o as any)?.shipping?.address || '-'
-                                      const total = Number((o as any)?.total || 0)
-                                      const searchText = `${o.id} ${name} ${addr} ${total.toFixed(2)}`
-                                      return { 
-                                        label: (
-                                          <div>
-                                            <div>{o.id} · {name} · RM{total.toFixed(2)}</div>
-                                            <div style={{ fontSize: '12px', color: '#bab09c' }}>{addr}</div>
-                                          </div>
-                                        ), 
-                                        value: o.id,
-                                        searchText
-                                      }
-                                    })
-                                )}
-                                onChange={(val) => {
-                                  const arr = Array.isArray(editForm.getFieldValue('relatedOrders')) ? [...editForm.getFieldValue('relatedOrders')] : []
-                                  
-                                  let defaultAmt = 0
-                                  if (isExpenseTransaction) {
-                                    // 支出交易：使用入库单的总价值
-                                    const inboundRef = inboundReferenceOptions.find(r => r.referenceNo === val)
-                                    defaultAmt = inboundRef?.totalValue || 0
-                                  } else {
-                                    // 收入交易：使用销售订单的总额
-                                    const order = (orders || []).find((o: any) => o.id === val)
-                                    defaultAmt = Number((order as any)?.total || 0)
-                                  }
-                                  
-                                  arr[field.name] = { ...(arr[field.name] || {}), orderId: val, amount: defaultAmt }
-                                  editForm.setFieldsValue({ relatedOrders: arr })
-                                }}
-                              />
+                              )}
+                              onChange={(val) => {
+                                const arr = Array.isArray(editForm.getFieldValue('relatedOrders')) ? [...editForm.getFieldValue('relatedOrders')] : []
+                                
+                                let defaultAmt = 0
+                                if (isExpenseTransaction) {
+                                  // 支出交易：使用入库单的总价值
+                                  const inboundRef = inboundReferenceOptions.find(r => r.referenceNo === val)
+                                  defaultAmt = inboundRef?.totalValue || 0
+                                } else {
+                                  // 收入交易：使用销售订单的总额
+                                  const order = (orders || []).find((o: any) => o.id === val)
+                                  defaultAmt = Number((order as any)?.total || 0)
+                                }
+                                
+                                arr[field.name] = { ...(arr[field.name] || {}), orderId: val, amount: defaultAmt }
+                                editForm.setFieldsValue({ relatedOrders: arr })
+                              }}
+                            />
                             ) : (
                               <div style={{ 
                                 padding: '4px 11px',
@@ -1650,15 +1650,15 @@ const AdminFinance: React.FC = () => {
                                     marginBottom: 8
                                   }}>
                                     <div style={{ flex: 1 }}>
-                                      <div style={{ 
+                                    <div style={{ 
                                         fontSize: 14, 
-                                        fontWeight: 600, 
-                                        color: '#fff',
+                                      fontWeight: 600, 
+                                      color: '#fff',
                                         marginBottom: 4
-                                      }}>
-                                        {cigarName}
-                                      </div>
-                                      <div style={{ 
+                                    }}>
+                                      {cigarName}
+                                    </div>
+                                    <div style={{ 
                                         fontSize: 11,
                                         color: 'rgba(255,255,255,0.6)',
                                         display: 'flex',

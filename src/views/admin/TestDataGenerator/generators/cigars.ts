@@ -58,10 +58,14 @@ function generateCigarData(
       reserved: 0,
       minStock: 10 + Math.floor(Math.random() * 40)
     },
-    status,
+    metadata: {
+      rating: 0,
+      reviews: 0,
+      tags: []
+    },
     createdAt,
     updatedAt: createdAt
-  }
+  } as Omit<Cigar, 'id'>
 }
 
 /**

@@ -10,6 +10,8 @@ import { signOut } from 'firebase/auth'
 import { getUserByMemberId } from '../../utils/memberId'
 import { useAuthStore } from '../../store/modules/auth'
 import type { User as FirebaseUser } from 'firebase/auth'
+import type { AppConfig } from '../../types'
+import { getAppConfig } from '../../services/firebase/appConfig'
 
 const { Title, Text } = Typography
 

@@ -201,6 +201,7 @@ const FormField: React.FC<FormFieldProps> = ({
             style={{ width: config.width || '100%' }}
             onBlur={config.onBlur}
             onFocus={config.onFocus}
+            placeholder={typeof config.placeholder === 'string' ? [config.placeholder, config.placeholder] : config.placeholder || ['开始日期', '结束日期']}
           />
         )
       

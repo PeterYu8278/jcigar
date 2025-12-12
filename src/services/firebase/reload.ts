@@ -13,7 +13,10 @@ import {
   orderBy, 
   limit,
   startAfter,
-  Timestamp
+  Timestamp,
+  type QuerySnapshot,
+  type DocumentData,
+  type QueryDocumentSnapshot
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { GLOBAL_COLLECTIONS } from '../../config/globalCollections';
@@ -589,8 +592,8 @@ export const getAllReloadRecords = async (
         }
       }
 
-      const snapshot = await getDocs(q);
-      const batch = snapshot.docs.map(doc => {
+      const snapshot: QuerySnapshot<DocumentData> = await getDocs(q);
+      const batch = snapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => {
         const data = doc.data();
         return {
           id: doc.id,
@@ -683,8 +686,8 @@ export const getAllReloadRecords = async (
           }
         }
         
-        const snapshot = await getDocs(q);
-        const batch = snapshot.docs.map(doc => {
+        const snapshot: QuerySnapshot<DocumentData> = await getDocs(q);
+        const batch = snapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => {
           const data = doc.data();
           return {
             id: doc.id,

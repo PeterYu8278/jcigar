@@ -19,7 +19,8 @@ import {
     Row,
     Col,
     Tag,
-    Modal
+    Modal,
+    Select
 } from 'antd';
 import {
     UploadOutlined,
@@ -485,7 +486,7 @@ export default function GeminiModelTester() {
                                                     style={{ width: 400 }}
                                                     placeholder="选择模型查看详细数据统计"
                                                     value={selectedModelForStats || undefined}
-                                                    onChange={(value) => setSelectedModelForStats(value)}
+                                                    onChange={(value: string) => setSelectedModelForStats(value)}
                                                     options={report.modelResults
                                                         .filter(r => r.isReliable && r.responses.length > 0)
                                                         .map(r => ({

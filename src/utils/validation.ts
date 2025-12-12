@@ -327,12 +327,12 @@ export const sanitizeData = <T extends Record<string, any>>(
     
     // 去除字符串空格
     if (trimStrings && typeof value === 'string') {
-      result[key] = value.trim()
+      (result as any)[key] = value.trim()
     }
     
     // 转换数字
     if (convertNumbers && typeof value === 'string' && !isNaN(Number(value))) {
-      result[key] = Number(value)
+      (result as any)[key] = Number(value)
     }
   })
   

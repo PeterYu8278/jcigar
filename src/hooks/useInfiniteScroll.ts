@@ -115,7 +115,7 @@ export function useInfiniteScroll(
     }
   }, [enabled, checkAndLoadMore, root])
 
-  return scrollRef
+  return scrollRef as React.RefObject<HTMLElement>
 }
 
 export default useInfiniteScroll

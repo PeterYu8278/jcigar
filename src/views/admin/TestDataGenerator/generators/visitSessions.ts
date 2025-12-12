@@ -61,7 +61,14 @@ function generateVisitSessionData(
   // 生成兑换项（0-3个，确保不超过每日限制）
   const maxRedemptions = Math.min(3 - currentDailyCount, 3)
   const redemptionCount = maxRedemptions > 0 ? Math.floor(Math.random() * (maxRedemptions + 1)) : 0
-  const redemptions = redemptionCount > 0 ? [] : undefined
+  const redemptions: Array<{
+    recordId?: string;
+    cigarId: string;
+    cigarName: string;
+    quantity: number;
+    redeemedAt: Date;
+    redeemedBy: string;
+  }> = redemptionCount > 0 ? [] : undefined as any
 
   if (redemptions && redemptionCount > 0 && cigars.length > 0) {
     const shuffledCigars = [...cigars].sort(() => Math.random() - 0.5)
@@ -78,7 +85,7 @@ function generateVisitSessionData(
         quantity: 1, // 每次兑换1支
         redeemedAt,
         redeemedBy: 'system' // 系统生成
-      })
+      } as any)
       
       // 更新每日兑换计数
       dailyRedemptions.set(redemptionKey, currentDailyCount + i + 1)

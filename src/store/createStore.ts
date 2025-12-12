@@ -38,21 +38,21 @@ export const createStore = <T extends BaseStore>(
 
   // 添加 immer 中间件
   if (config.immer !== false) {
-    creator = immer(creator) as StateCreator<T>
+    creator = immer(creator as any) as any as StateCreator<T>
   }
 
   // 添加 devtools 中间件
   if (config.devtools !== false && import.meta.env.DEV) {
-    creator = devtools(creator, { name: config.name }) as StateCreator<T>
+    creator = devtools(creator, { name: config.name }) as any as StateCreator<T>
   }
 
   // 添加 persist 中间件
   if (config.persist) {
     creator = persist(creator, {
       name: `${config.name}-storage`,
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => localStorage) as any,
       ...config.persistOptions
-    }) as StateCreator<T>
+    }) as any as StateCreator<T>
   }
 
   return create<T>()(creator)
@@ -291,7 +291,7 @@ export const createStoreSubscriber = <T>(store: any) => {
 /**
  * Store 调试工具
  */
-export const createStoreDebugger = <T>(store: any, name: string) => {
+export const createStoreDebugger = <T extends object>(store: any, name: string) => {
   if (!import.meta.env.DEV) return
 
   return {
@@ -319,7 +319,7 @@ export const createStoreDebugger = <T>(store: any, name: string) => {
     compare: (stateA: T, stateB: T) => {
       const differences: Partial<Record<keyof T, { old: any; new: any }>> = {}
 
-      Object.keys(stateA).forEach((key) => {
+      Object.keys(stateA as object).forEach((key) => {
         const k = key as keyof T
         if (stateA[k] !== stateB[k]) {
           differences[k] = { old: stateA[k], new: stateB[k] }

@@ -225,7 +225,7 @@ export function useAsync<T, Args extends any[] = any[]>(
   // 立即执行
   useEffect(() => {
     if (immediate) {
-      execute()
+      execute(...([] as any))
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 

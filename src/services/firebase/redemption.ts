@@ -589,13 +589,19 @@ export const getRedemptionRecordsBySession = async (
     const redemptions = data.redemptions || [];
     
     // 转换日期字段并添加 visitSessionId 以保持兼容性
-    return redemptions.map(item => ({
-      ...item,
-      visitSessionId: visitSessionId,
-      redeemedAt: item.redeemedAt?.toDate?.() || new Date(item.redeemedAt),
-      createdAt: item.createdAt?.toDate?.() || new Date(item.createdAt),
-      updatedAt: item.updatedAt?.toDate?.() || item.updatedAt
-    } as RedemptionRecord));
+    return redemptions.map(item => {
+      const redeemedAt = (item.redeemedAt as any)?.toDate?.() || (item.redeemedAt instanceof Date ? item.redeemedAt : new Date(item.redeemedAt as any))
+      const createdAt = (item.createdAt as any)?.toDate?.() || (item.createdAt instanceof Date ? item.createdAt : new Date(item.createdAt as any))
+      const updatedAt = (item.updatedAt as any)?.toDate?.() || (item.updatedAt instanceof Date ? item.updatedAt : item.updatedAt)
+      
+      return {
+        ...item,
+        visitSessionId: visitSessionId,
+        redeemedAt,
+        createdAt,
+        updatedAt
+      } as RedemptionRecord
+    })
   } catch (error: any) {
     return [];
   }
@@ -630,12 +636,16 @@ export const getDailyRedemptions = async (
       
       redemptions.forEach(item => {
         if (item.dayKey === dayKey) {
+          const redeemedAt = (item.redeemedAt as any)?.toDate?.() || (item.redeemedAt instanceof Date ? item.redeemedAt : new Date(item.redeemedAt as any))
+          const createdAt = (item.createdAt as any)?.toDate?.() || (item.createdAt instanceof Date ? item.createdAt : new Date(item.createdAt as any))
+          const updatedAt = (item.updatedAt as any)?.toDate?.() || (item.updatedAt instanceof Date ? item.updatedAt : item.updatedAt)
+          
           allRecords.push({
             ...item,
             visitSessionId: data.visitSessionId,
-            redeemedAt: item.redeemedAt?.toDate?.() || new Date(item.redeemedAt),
-            createdAt: item.createdAt?.toDate?.() || new Date(item.createdAt),
-            updatedAt: item.updatedAt?.toDate?.() || item.updatedAt
+            redeemedAt,
+            createdAt,
+            updatedAt
           } as RedemptionRecord);
         }
       });
@@ -682,12 +692,16 @@ export const getHourlyRedemptions = async (
       
       redemptions.forEach(item => {
         if (item.hourKey === hourKey) {
+          const redeemedAt = (item.redeemedAt as any)?.toDate?.() || (item.redeemedAt instanceof Date ? item.redeemedAt : new Date(item.redeemedAt as any))
+          const createdAt = (item.createdAt as any)?.toDate?.() || (item.createdAt instanceof Date ? item.createdAt : new Date(item.createdAt as any))
+          const updatedAt = (item.updatedAt as any)?.toDate?.() || (item.updatedAt instanceof Date ? item.updatedAt : item.updatedAt)
+          
           allRecords.push({
             ...item,
             visitSessionId: data.visitSessionId,
-            redeemedAt: item.redeemedAt?.toDate?.() || new Date(item.redeemedAt),
-            createdAt: item.createdAt?.toDate?.() || new Date(item.createdAt),
-            updatedAt: item.updatedAt?.toDate?.() || item.updatedAt
+            redeemedAt,
+            createdAt,
+            updatedAt
           } as RedemptionRecord);
         }
       });

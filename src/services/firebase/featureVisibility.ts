@@ -83,18 +83,20 @@ export const updateFeatureVisibilityConfig = async (
     if (!docSnap.exists()) {
       // 如果不存在，创建新配置
       const defaultConfig = getDefaultFeatureVisibilityConfig();
-      const newFeatures: FeatureVisibilityConfig['features'] = {
-        ...defaultConfig.features,
-        ...features,
-      };
-      
-      // 更新每个功能的 updatedAt 和 updatedBy
+      const newFeatures: FeatureVisibilityConfig['features'] = {} as FeatureVisibilityConfig['features']
+      Object.keys(defaultConfig.features).forEach(key => {
+        newFeatures[key] = defaultConfig.features[key]
+      })
       Object.keys(features).forEach(key => {
-        if (newFeatures[key]) {
-          newFeatures[key].updatedAt = now;
-          newFeatures[key].updatedBy = updatedBy;
+        if (features[key]) {
+          newFeatures[key] = {
+            ...newFeatures[key],
+            ...features[key],
+            updatedAt: now,
+            updatedBy: updatedBy
+          }!
         }
-      });
+      })
       
       await setDoc(docRef, {
         id: CONFIG_ID,

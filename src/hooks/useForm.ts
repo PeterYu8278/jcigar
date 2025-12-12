@@ -148,7 +148,7 @@ export function useForm<T = any>(config: UseFormConfig<T> = {}): UseFormReturn<T
    */
   const setFieldsValue = useCallback(
     (values: Partial<T>) => {
-      form.setFieldsValue(values)
+      form.setFieldsValue(values as any)
       setIsDirty(true)
     },
     [form]
@@ -294,9 +294,9 @@ export function useForm<T = any>(config: UseFormConfig<T> = {}): UseFormReturn<T
     (values?: Partial<T>) => {
       form.resetFields()
       if (values) {
-        form.setFieldsValue(values)
+        form.setFieldsValue(values as any)
       } else if (initialValues) {
-        form.setFieldsValue(initialValues)
+        form.setFieldsValue(initialValues as any)
       }
       setErrors({})
       setIsDirty(false)

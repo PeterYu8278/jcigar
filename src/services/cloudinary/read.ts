@@ -144,7 +144,8 @@ export const getResource = async (
 ): Promise<CloudinaryResource | null> => {
   try {
     // 由于需要 Admin API 签名，这里只能提供基础验证
-    const exists = await checkResourceExists(publicId, options.resourceType)
+    const resourceType = options.resourceType === 'auto' ? undefined : options.resourceType
+    const exists = await checkResourceExists(publicId, resourceType)
     if (!exists) {
       return null
     }

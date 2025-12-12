@@ -206,17 +206,27 @@ interface SearchInputWithButtonProps extends SearchInputProps {
 
 export const SearchInputWithButton: React.FC<SearchInputWithButtonProps> = ({
   onSearch,
+  onChange,
   buttonText = '搜索',
   buttonLoading = false,
   ...restProps
 }) => {
+  const { onChange: restOnChange, ...otherProps } = restProps as any
   return (
     <Input.Search
-      placeholder={restProps.placeholder || '请输入搜索关键词'}
+      placeholder={otherProps.placeholder || '请输入搜索关键词'}
       enterButton={buttonText}
       loading={buttonLoading}
       onSearch={onSearch}
-      {...restProps}
+      {...otherProps}
+      onChange={restOnChange ? (e) => {
+        if (onChange) {
+          onChange(e.target.value)
+        }
+        if (restOnChange) {
+          restOnChange(e)
+        }
+      } : onChange ? (e) => onChange(e.target.value) : undefined}
     />
   )
 }

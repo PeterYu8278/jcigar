@@ -1157,7 +1157,7 @@ export const CigarDatabase: React.FC = () => {
           }}
         />
       </Card>
-      
+
       {/* 详情 Modal */}
       <Modal
         title={
@@ -1230,7 +1230,7 @@ export const CigarDatabase: React.FC = () => {
       >
         {renderDetailModalContent()}
       </Modal>
-      </div>
+    </div>
     </>
   );
 };

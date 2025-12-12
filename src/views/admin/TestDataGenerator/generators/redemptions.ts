@@ -1,5 +1,5 @@
 // 兑换记录生成器
-import { doc, setDoc, Timestamp, getDocs, query, limit, where } from 'firebase/firestore'
+import { doc, setDoc, Timestamp, getDocs, query, limit, where, collection } from 'firebase/firestore'
 import { db } from '../../../../config/firebase'
 import { GLOBAL_COLLECTIONS } from '../../../../config/globalCollections'
 import type { RedemptionRecordDocument, RedemptionRecordItem, VisitSession, Cigar } from '../../../../types'
@@ -20,7 +20,7 @@ export async function generateRedemptions(
     )
     const sessionsSnapshot = await getDocs(sessionsQuery)
     const sessions = sessionsSnapshot.docs.map(doc => {
-      const data = doc.data()
+      const data = doc.data() as any
       return {
         id: doc.id,
         ...data,
@@ -42,7 +42,7 @@ export async function generateRedemptions(
     const cigarsSnapshot = await getDocs(cigarsQuery)
     const cigars = cigarsSnapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data()
+      ...(doc.data() as any)
     } as Cigar))
 
     if (cigars.length === 0) {

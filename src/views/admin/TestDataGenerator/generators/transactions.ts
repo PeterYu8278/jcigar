@@ -1,7 +1,7 @@
 // 交易记录生成器
 import { doc, setDoc, Timestamp, getDocs, query, limit, where, collection } from 'firebase/firestore'
 import { db } from '../../../../config/firebase'
-import { COLLECTIONS } from '../../../../services/firebase/firestore'
+import { GLOBAL_COLLECTIONS } from '../../../../config/globalCollections'
 import type { Transaction, Event, Order, MembershipFeeRecord } from '../../../../types'
 
 /**
@@ -75,7 +75,7 @@ export async function generateTransactions(
         createdAt
       }
 
-      await setDoc(doc(db, COLLECTIONS.TRANSACTIONS, transactionId), {
+      await setDoc(doc(db, 'transactions', transactionId), {
         ...transactionData,
         createdAt: Timestamp.fromDate(createdAt)
       })
@@ -105,7 +105,7 @@ export async function generateTransactions(
         createdAt
       }
 
-      await setDoc(doc(db, COLLECTIONS.TRANSACTIONS, transactionId), {
+      await setDoc(doc(db, 'transactions', transactionId), {
         ...transactionData,
         createdAt: Timestamp.fromDate(createdAt)
       })
@@ -137,7 +137,7 @@ export async function generateTransactions(
         createdAt
       }
 
-      await setDoc(doc(db, COLLECTIONS.TRANSACTIONS, transactionId), {
+      await setDoc(doc(db, 'transactions', transactionId), {
         ...transactionData,
         createdAt: Timestamp.fromDate(createdAt)
       })
