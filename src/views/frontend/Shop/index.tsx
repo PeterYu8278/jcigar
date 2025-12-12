@@ -1,15 +1,17 @@
 // 商品导航页面
 import React, { useEffect, useState, useRef } from 'react'
-import { Input, Slider, Button, Typography, Modal, Tag } from 'antd'
+import { Input, Slider, Button, Typography, Modal, Tag, Radio, Divider, message, Select } from 'antd'
 import { SearchOutlined, ArrowLeftOutlined, ShoppingCartOutlined, ReloadOutlined } from '@ant-design/icons'
-import type { Cigar, Brand } from '../../../types'
-import { getCigars, getBrands } from '../../../services/firebase/firestore'
+import type { Cigar, Brand, Event } from '../../../types'
+import { getCigars, getBrands, getEvents } from '../../../services/firebase/firestore'
 import { useCartStore } from '../../../store/modules'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { CartModal } from '../../../components/common/CartModal'
+import { AddressSelector } from '../../../components/common/AddressSelector'
 import { getModalThemeStyles } from '../../../config/modalTheme'
 import { CigarRatingBadge } from '../../../components/common/CigarRatingBadge'
+import { useAuthStore } from '../../../store/modules/auth'
 
 const { Title, Text } = Typography
 
@@ -36,6 +38,13 @@ const Shop: React.FC = () => {
   const [selectedSize, setSelectedSize] = useState<string | null>(null)
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 2000])
   const [cartModalVisible, setCartModalVisible] = useState(false)
+  const [sidebarMode, setSidebarMode] = useState<'cart' | 'checkout'>('cart') // 侧边栏模式：购物车或结算
+  const [paymentMethod, setPaymentMethod] = useState<string>('cash')
+  const [deliveryMethod, setDeliveryMethod] = useState<'address' | 'event'>('address')
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
+  const [availableEvents, setAvailableEvents] = useState<Event[]>([])
+  const { user } = useAuthStore()
   const { addToCart, toggleWishlist, wishlist, quantities, setQuantity, removeFromCart, clearCart } = useCartStore()
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
   const brandRefs = useRef<Record<string, HTMLDivElement | null>>({})
@@ -54,6 +63,25 @@ const Shop: React.FC = () => {
         setBrands(brandsData)
       } finally {
         setLoading(false)
+      }
+    })()
+  }, [])
+
+  // 加载可用活动
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const events = await getEvents()
+        // 筛选出状态为 upcoming 或 ongoing 的活动，且未过报名截止日期
+        const now = new Date()
+        const available = events.filter(event => {
+          const isStatusValid = event.status === 'upcoming' || event.status === 'ongoing'
+          const isDeadlineValid = new Date(event.schedule.registrationDeadline) >= now
+          return isStatusValid && isDeadlineValid
+        })
+        setAvailableEvents(available)
+      } catch (error) {
+        console.error('加载活动失败:', error)
       }
     })()
   }, [])
@@ -226,15 +254,14 @@ const Shop: React.FC = () => {
       display: 'flex', 
       height: !isMobile ? 'calc(100vh - 64px)' : '100%',
       background: 'transparent',
-      overflow: 'hidden',
-      paddingTop: !isMobile ? '100px' : 0
+      overflow: 'hidden'
     }}>
       {/* 左侧品牌导航栏 */}
       <div 
         ref={sidebarRef}
         className="shop-sidebar"
         style={{
-          width: isMobile ? '80px' : '120px',
+          width: isMobile ? '60px' : '100px',
           background: 'linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%)',
           borderRight: '1px solid rgba(255, 215, 0, 0.1)',
           overflowY: 'auto',
@@ -242,7 +269,6 @@ const Shop: React.FC = () => {
           paddingTop: '16px',
           paddingBottom: '80px',
           position: 'sticky',
-          top: !isMobile ? '64px' : 0,
           height: !isMobile ? 'calc(100vh - 64px)' : '90vh'
         }}
       >
@@ -493,18 +519,27 @@ const Shop: React.FC = () => {
         )}
       </div>
 
-      {/* 右侧商品展示区域 */}
+      {/* 右侧商品展示区域和购物车侧边栏容器 */}
       <div style={{
         flex: 1,
         display: 'flex',
-        flexDirection: 'column',
         overflow: 'hidden',
         height: !isMobile ? '95vh' : '90vh'
+      }}>
+        {/* 商品展示区域 */}
+        <div style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          marginRight: !isMobile ? '280px' : '0'
       }}>
         {/* 顶部搜索栏 - 固定不滚动 */}
         <div style={{ 
           flexShrink: 0,
-          padding: isMobile ? '12px' : '16px',
+          paddingTop: isMobile ? '12px' : '16px',
+          paddingRight: isMobile ? '12px' : '16px',
+          paddingLeft: isMobile ? '12px' : '16px',
           paddingBottom: '12px',
           borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
         }}>
@@ -585,8 +620,10 @@ const Shop: React.FC = () => {
             flex: 1,
             overflowY: 'auto',
             overflowX: 'hidden',
-            padding: isMobile ? '0px 12px' : '20px',
-            paddingBottom: '100px',
+            paddingTop: isMobile ? '0px' : '20px',
+            paddingRight: isMobile ? '12px' : '20px',
+            paddingLeft: isMobile ? '12px' : '20px',
+            paddingBottom: isMobile ? '100px' : '100px', // 为底部购物车栏留出空间
             position: 'relative',
             zIndex: 1
           }}
@@ -893,7 +930,7 @@ const Shop: React.FC = () => {
               // 电脑端：网格布局
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(8, 1fr)', 
+          gridTemplateColumns: 'repeat(6, 1fr)', 
           gridAutoRows: '1fr',
           gap: '16px',
           alignItems: 'stretch'
@@ -968,7 +1005,7 @@ const Shop: React.FC = () => {
                     color: '#fff',
                     margin: 0,
                     lineHeight: '1.3',
-                    minHeight: '36px',
+                    height: '36px',
                     display: '-webkit-box',
                     WebkitLineClamp: 2,
                     WebkitBoxOrient: 'vertical',
@@ -979,91 +1016,97 @@ const Shop: React.FC = () => {
                   </h3>
                   
                   {/* 第二行：产地 */}
-                  {cigar.origin && (
-                    <div style={{ 
-                      fontSize: '11px', 
-                      color: '#999',
-                      lineHeight: '1.4'
-                    }}>
-                      {cigar.origin}
-                    </div>
-                  )}
+                  <div style={{ 
+                    fontSize: '11px', 
+                    color: '#999',
+                    lineHeight: '1.4',
+                    height: '18px',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 1,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}>
+                    {cigar.origin || '-'}
+                  </div>
 
-                  {/* 第三行：规格和强度tag */}
-                  {(cigar.size || cigar.strength) && (
+                  {/* 第三行：规格tag */}
+                  {cigar.size && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                      {cigar.size && (
-                        <Tag
-                          color="blue"
-                          style={{
-                            margin: 0,
-                            cursor: 'pointer',
-                            fontSize: '11px',
-                            padding: '0 6px',
-                            lineHeight: '18px',
-                            border: selectedSize === cigar.size ? '2px solid #f4af25' : 'none',
-                            boxShadow: selectedSize === cigar.size ? '0 0 8px rgba(244, 175, 37, 0.5)' : 'none',
-                            transition: 'all 0.2s ease'
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            if (selectedSize === cigar.size) {
-                              setSelectedSize(null)
-                            } else {
-                              setSelectedSize(cigar.size)
-                            }
-                          }}
-                        >
-                          {cigar.size}
-                        </Tag>
-                      )}
-                      {cigar.strength && (
-                        <Tag
-                          color={(() => {
-                            const strengthColors: Record<string, string> = {
-                              'mild': 'green',
-                              'mild-medium': 'lime',
-                              'medium': 'orange',
-                              'medium-full': 'volcano',
-                              'full': 'red'
-                            }
-                            return strengthColors[cigar.strength] || 'default'
-                          })()}
-                          style={{
-                            margin: 0,
-                            cursor: 'pointer',
-                            fontSize: '11px',
-                            padding: '0 6px',
-                            lineHeight: '18px',
-                            border: selectedStrength === cigar.strength ? '2px solid #f4af25' : 'none',
-                            boxShadow: selectedStrength === cigar.strength ? '0 0 8px rgba(244, 175, 37, 0.5)' : 'none',
-                            transition: 'all 0.2s ease'
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            if (selectedStrength === cigar.strength) {
-                              setSelectedStrength(null)
-                            } else {
-                              setSelectedStrength(cigar.strength)
-                            }
-                          }}
-                        >
-                          {(() => {
-                            const strengthMap: Record<string, string> = {
-                              'mild': t('shop.mild') || '温和',
-                              'mild-medium': t('shop.mildMedium') || '温和-中等',
-                              'medium': t('shop.medium') || '中等',
-                              'medium-full': t('shop.mediumFull') || '中等-浓郁',
-                              'full': t('shop.full') || '浓郁'
-                            }
-                            return strengthMap[cigar.strength] || cigar.strength
-                          })()}
-                        </Tag>
-                      )}
+                      <Tag
+                        color="blue"
+                        style={{
+                          margin: 0,
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                          padding: '0 6px',
+                          lineHeight: '18px',
+                          border: selectedSize === cigar.size ? '2px solid #f4af25' : 'none',
+                          boxShadow: selectedSize === cigar.size ? '0 0 8px rgba(244, 175, 37, 0.5)' : 'none',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (selectedSize === cigar.size) {
+                            setSelectedSize(null)
+                          } else {
+                            setSelectedSize(cigar.size)
+                          }
+                        }}
+                      >
+                        {cigar.size}
+                      </Tag>
                     </div>
                   )}
 
-                  {/* 第四行：风味特征 */}
+                  {/* 第四行：强度tag */}
+                  {cigar.strength && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      <Tag
+                        color={(() => {
+                          const strengthColors: Record<string, string> = {
+                            'mild': 'green',
+                            'mild-medium': 'lime',
+                            'medium': 'orange',
+                            'medium-full': 'volcano',
+                            'full': 'red'
+                          }
+                          return strengthColors[cigar.strength] || 'default'
+                        })()}
+                        style={{
+                          margin: 0,
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                          padding: '0 6px',
+                          lineHeight: '18px',
+                          border: selectedStrength === cigar.strength ? '2px solid #f4af25' : 'none',
+                          boxShadow: selectedStrength === cigar.strength ? '0 0 8px rgba(244, 175, 37, 0.5)' : 'none',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (selectedStrength === cigar.strength) {
+                            setSelectedStrength(null)
+                          } else {
+                            setSelectedStrength(cigar.strength)
+                          }
+                        }}
+                      >
+                        {(() => {
+                          const strengthMap: Record<string, string> = {
+                            'mild': t('shop.mild') || '温和',
+                            'mild-medium': t('shop.mildMedium') || '温和-中等',
+                            'medium': t('shop.medium') || '中等',
+                            'medium-full': t('shop.mediumFull') || '中等-浓郁',
+                            'full': t('shop.full') || '浓郁'
+                          }
+                          return strengthMap[cigar.strength] || cigar.strength
+                        })()}
+                      </Tag>
+                    </div>
+                  )}
+
+                  {/* 第五行：风味特征 */}
                   {(() => {
                     const flavorNotes = cigar.tastingNotes 
                       ? [
@@ -1075,54 +1118,106 @@ const Shop: React.FC = () => {
                     const flavorProfile = cigar.metadata?.tags || [];
                     const allFlavors = [...new Set([...flavorNotes, ...flavorProfile])].slice(0, 3);
                     
-                    if (allFlavors.length > 0) {
-                      return (
-                        <div style={{ 
-                          fontSize: '10px', 
-                          color: 'rgba(255, 255, 255, 0.6)',
-                          lineHeight: '1.4'
-                        }}>
-                          {allFlavors.join(' · ')}
-                        </div>
-                      );
-                    }
-                    return null;
+                    return (
+                      <div style={{ 
+                        fontSize: '10px', 
+                        color: 'rgba(255, 255, 255, 0.6)',
+                        lineHeight: '1.4',
+                        height: '28px',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
+                        {allFlavors.length > 0 ? allFlavors.join(' · ') : '-'}
+                      </div>
+                    );
                   })()}
 
-                  {/* 第五行：价格和按钮 */}
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginTop: 'auto'
+                  {/* 第六行：价格 */}
+                  <div style={{ 
+                    fontSize: '18px', 
+                    color: '#F4AF25',
+                    fontWeight: 'bold'
                   }}>
-                    <div style={{ 
-                      fontSize: '18px', 
-                      color: '#F4AF25',
-                      fontWeight: 'bold'
+                    RM {cigar.price}
+                  </div>
+
+                  {/* 第七行：数量控制器 */}
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '4px',
+                    border: '1px solid rgba(255, 215, 0, 0.3)',
+                    borderRadius: '6px',
+                    padding: '2px 4px',
+                    alignSelf: 'flex-start'
+                  }}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                        const currentQty = quantities[cigar.id] || 0
+                        if (currentQty > 1) {
+                          setQuantity(cigar.id, currentQty - 1)
+                        } else if (currentQty === 1) {
+                          // 当数量为1时，点击减号提示确认移除
+                          setConfirmRemove({
+                            visible: true,
+                            itemId: cigar.id,
+                            itemName: cigar.name
+                          })
+                        }
+                    }}
+                    style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#FFD700',
+                      cursor: 'pointer',
+                        padding: '4px 8px',
+                        fontSize: '16px',
+                        lineHeight: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minWidth: '24px',
+                        height: '24px'
+                      }}
+                    >
+                      −
+                    </button>
+                    <span style={{ 
+                      color: '#ffffff', 
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      minWidth: '24px', 
+                      textAlign: 'center',
+                      lineHeight: '24px'
                     }}>
-                      RM {cigar.price}
-                    </div>
-                    
+                      {quantities[cigar.id] || 0}
+                    </span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
                         addToCart(cigar.id)
                       }}
                       style={{
-                        padding: '4px 12px',
-                        borderRadius: 8,
-                        background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                        color: '#221c10',
-                        fontWeight: 600,
+                        background: 'transparent',
+                      border: 'none',
+                        color: '#FFD700',
                         cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        border: 'none',
-                        fontSize: '11px'
-                      }}
-                    >
-                      +
-                    </button>
+                        padding: '4px 8px',
+                        fontSize: '16px',
+                        lineHeight: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minWidth: '24px',
+                        height: '24px'
+                    }}
+                  >
+                    +
+                  </button>
                   </div>
                 </div>
                   </div>
@@ -1144,7 +1239,619 @@ const Shop: React.FC = () => {
         </div>
       </div>
 
-      {/* 底部购物车操作栏 - 仅手机端显示 */}
+        {/* 购物车侧边栏 - 电脑端（始终显示） */}
+        {!isMobile && (
+          <div style={{
+            position: 'fixed',
+            right: '0',
+            width: '280px',
+            height: 'calc(100vh - 64px)',
+            background: 'rgba(24, 22, 17, 0.95)',
+            borderLeft: '1px solid rgba(244, 175, 37, 0.6)',
+            backdropFilter: 'blur(20px)',
+            boxShadow: 'rgba(0, 0, 0, 0.5) -8px 0px 32px',
+            zIndex: 200,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+          }}>
+            {/* 侧边栏标题栏 */}
+            <div style={{
+              padding: '11px 14px',
+              borderBottom: '1px solid rgba(255, 215, 0, 0.2)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexShrink: 0
+            }}>
+              <h2 style={{
+                margin: 0,
+                fontSize: '13px',
+                fontWeight: 'bold',
+                color: '#F4AF25'
+              }}>
+                {sidebarMode === 'cart' ? (
+                  <>
+                    <ShoppingCartOutlined style={{ marginRight: '6px', fontSize: '14px' }} />
+                    购物车 ({cartItemCount} 件商品)
+                  </>
+                ) : (
+                  <>订单结算</>
+                )}
+              </h2>
+            </div>
+
+            {/* 侧边栏内容 */}
+            <div style={{ 
+              flex: 1,
+              paddingTop: '11px',
+              paddingRight: '11px',
+              paddingLeft: '11px',
+              paddingBottom: sidebarMode === 'checkout' ? '20px' : '11px',
+              overflowY: 'auto',
+              overflowX: 'hidden'
+            }}>
+              {sidebarMode === 'cart' ? (
+                // 购物车模式
+                cartItems.length === 0 ? (
+                // 空状态
+                <div style={{
+                  textAlign: 'center',
+                  padding: '42px 14px',
+                  color: '#999'
+                }}>
+                  <div style={{ fontSize: '45px', marginBottom: '11px' }}>🛒</div>
+                  <div style={{ fontSize: '11px', color: '#c0c0c0' }}>
+                    购物车是空的
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#666', marginTop: '6px' }}>
+                    快去添加商品吧！
+                  </div>
+                </div>
+              ) : (
+                // 商品列表
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {cartItems.map((item) => {
+                    // 获取风味特征（合并所有品吸笔记）
+                    const flavorNotes = item.tastingNotes 
+                      ? [
+                          ...(item.tastingNotes.foot || []),
+                          ...(item.tastingNotes.body || []),
+                          ...(item.tastingNotes.head || [])
+                        ].filter(Boolean)
+                      : []
+
+                    const strengthMap: Record<string, string> = {
+                      'mild': t('inventory.mild') || '温和',
+                      'mild-medium': t('shop.mildMedium') || '温和-中等',
+                      'medium': t('inventory.medium') || '中等',
+                      'medium-full': t('shop.mediumFull') || '中等-浓郁',
+                      'full': t('inventory.full') || '浓郁'
+                    }
+
+                    return (
+                      <div
+                        key={item.id}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.03)',
+                          borderRadius: '8px',
+                          padding: '11px',
+                          border: '1px solid rgba(255, 255, 255, 0.1)'
+                        }}
+                      >
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+                          {/* 产品名称 */}
+                          <Title level={5} style={{ color: '#ffffff', margin: 0, fontSize: '14px' }}>
+                            {item.name}
+                          </Title>
+                          
+                          {/* 图片和信息区域 */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: '11px'
+                          }}>
+                            {/* 左侧图片 */}
+                            <div style={{ position: 'relative', flexShrink: 0 }}>
+                              <img 
+                                alt={item.name}
+                                src={item.images?.[0] || DEFAULT_CIGAR_IMAGE}
+                                style={{
+                                  width: '42px',
+                                  height: '70px',
+                                  objectFit: 'cover',
+                                  borderRadius: '6px',
+                                  border: '1px solid #B8860B'
+                                }}
+                              />
+                              <CigarRatingBadge rating={item.metadata?.rating} size="small" />
+                            </div>
+
+                            {/* 右侧信息 */}
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginBottom: '8px' }}>
+                                {/* 产地 */}
+                                {item.origin && (
+                                  <Text style={{ color: '#9ca3af', fontSize: '8px' }}>
+                                    {item.origin}
+                                  </Text>
+                                )}
+                                {/* 规格和强度同排 */}
+                                {(item.size || item.strength) && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    {item.size && (
+                                      <Text style={{ color: '#9ca3af', fontSize: '8px' }}>
+                                        {item.size}
+                                      </Text>
+                                    )}
+                                    {item.size && item.strength && (
+                                      <Text style={{ color: '#9ca3af', fontSize: '8px' }}>•</Text>
+                                    )}
+                                    {item.strength && (
+                                      <Text style={{ color: '#9ca3af', fontSize: '8px' }}>
+                                        {strengthMap[item.strength] || item.strength}
+                                      </Text>
+                                    )}
+                                  </div>
+                                )}
+                                {/* 风味特征 */}
+                                {flavorNotes.length > 0 && (
+                                  <Text style={{ color: '#9ca3af', fontSize: '8px' }}>
+                                    {flavorNotes.join('、')}
+                                  </Text>
+                                )}
+                              </div>
+
+                              {/* 价格、数量控制器 */}
+                              <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'space-between'
+                              }}>
+                                <div style={{ color: '#FFD700', fontWeight: 'bold', fontSize: '11px' }}>
+                                  RM {item.price}
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  {/* 数量调整 */}
+                                  <div style={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: '3px',
+                                    border: '1px solid rgba(255, 215, 0, 0.3)',
+                                    borderRadius: '4px',
+                                    padding: '1px 3px'
+                                  }}>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        const currentQty = quantities[item.id] || 0
+                                        if (currentQty > 1) {
+                                          setQuantity(item.id, currentQty - 1)
+                                        } else if (currentQty === 1) {
+                                          setConfirmRemove({
+                                            visible: true,
+                                            itemId: item.id,
+                                            itemName: item.name
+                                          })
+                                        }
+                                      }}
+                                      style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: '#FFD700',
+                                        cursor: 'pointer',
+                                        padding: '3px 6px',
+                                        fontSize: '11px',
+                                        lineHeight: 1,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        minWidth: '17px',
+                                        height: '17px'
+                                      }}
+                                    >
+                                      −
+                                    </button>
+                                    <span style={{ 
+                                      color: '#ffffff', 
+                                      fontSize: '10px',
+                                      fontWeight: '500',
+                                      minWidth: '17px', 
+                                      textAlign: 'center',
+                                      lineHeight: '17px'
+                                    }}>
+                                      {item.quantity}
+                                    </span>
+                                    <button
+                                      onClick={() => addToCart(item.id)}
+                                      style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: '#FFD700',
+                                        cursor: 'pointer',
+                                        padding: '3px 6px',
+                                        fontSize: '11px',
+                                        lineHeight: 1,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        minWidth: '17px',
+                                        height: '17px'
+                                      }}
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+              ) : (
+                // 结算模式
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {/* 订单摘要 */}
+                  <div>
+                    <h3 style={{ 
+                      margin: '0 0 8px 0', 
+                      fontSize: '12px', 
+                      fontWeight: '600', 
+                      color: '#fff' 
+                    }}>
+                      订单摘要
+                    </h3>
+                    <div style={{ 
+                      background: 'rgba(255, 255, 255, 0.03)', 
+                      borderRadius: '6px', 
+                      padding: '8px',
+                      border: '1px solid rgba(255, 255, 255, 0.1)'
+                    }}>
+                      {cartItems.map((item) => {
+                        const strengthMap: Record<string, string> = {
+                          'mild': t('inventory.mild') || '温和',
+                          'mild-medium': t('shop.mildMedium') || '温和-中等',
+                          'medium': t('inventory.medium') || '中等',
+                          'medium-full': t('shop.mediumFull') || '中等-浓郁',
+                          'full': t('inventory.full') || '浓郁'
+                        }
+                        return (
+                          <div 
+                            key={item.id}
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'flex-start',
+                              padding: '6px 0',
+                              borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
+                            }}
+                          >
+                            <div style={{ flex: 1 }}>
+                              <div style={{ color: '#fff', fontSize: '10px', fontWeight: '500' }}>
+                                {item.name}
+                              </div>
+                              <div style={{ color: '#999', fontSize: '8px', marginTop: '2px' }}>
+                                {item.size && `${item.size} • `}
+                                {item.strength && (strengthMap[item.strength] || item.strength)}
+                              </div>
+                            </div>
+                            <div style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '8px',
+                              marginLeft: '8px'
+                            }}>
+                              <span style={{ color: '#999', fontSize: '8px' }}>
+                                ×{item.quantity}
+                              </span>
+                              <span style={{ color: '#FFD700', fontWeight: 'bold', fontSize: '10px', minWidth: '45px', textAlign: 'right' }}>
+                                RM {item.price * item.quantity}
+                              </span>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 配送方式选择 */}
+                  <div>
+                    <h3 style={{ 
+                      margin: '0 0 8px 0', 
+                      fontSize: '12px', 
+                      fontWeight: '600', 
+                      color: '#fff' 
+                    }}>
+                      配送方式
+                    </h3>
+                    <Button.Group style={{ width: '100%', display: 'flex', marginBottom: '12px' }}>
+                      <Button
+                        type={deliveryMethod === 'address' ? 'primary' : 'default'}
+                        onClick={() => {
+                          setDeliveryMethod('address')
+                          setSelectedEventId(null)
+                        }}
+                        style={{
+                          flex: 1,
+                          height: '28px',
+                          fontSize: '10px',
+                          background: deliveryMethod === 'address'
+                            ? 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)' 
+                            : 'rgba(255, 255, 255, 0.03)',
+                          border: deliveryMethod === 'address'
+                            ? 'none' 
+                            : '1px solid rgba(255, 255, 255, 0.1)',
+                          color: deliveryMethod === 'address' ? '#000' : '#fff',
+                          fontWeight: deliveryMethod === 'address' ? 'bold' : 'normal',
+                          cursor: 'pointer',
+                          zIndex: 1
+                        }}
+                      >
+                        送货上门
+                      </Button>
+                      <Button
+                        type={deliveryMethod === 'event' ? 'primary' : 'default'}
+                        onClick={() => {
+                          setDeliveryMethod('event')
+                          setSelectedAddressId(null)
+                        }}
+                        style={{
+                          flex: 1,
+                          height: '28px',
+                          fontSize: '10px',
+                          background: deliveryMethod === 'event'
+                            ? 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)' 
+                            : 'rgba(255, 255, 255, 0.03)',
+                          border: deliveryMethod === 'event'
+                            ? 'none' 
+                            : '1px solid rgba(255, 255, 255, 0.1)',
+                          color: deliveryMethod === 'event' ? '#000' : '#fff',
+                          fontWeight: deliveryMethod === 'event' ? 'bold' : 'normal',
+                          cursor: 'pointer',
+                          zIndex: 1
+                        }}
+                      >
+                        活动现场领取
+                      </Button>
+                    </Button.Group>
+
+                    {/* 地址选择 */}
+                    {deliveryMethod === 'address' && (
+                      <div style={{ marginBottom: '12px' }}>
+                        <AddressSelector
+                          value={selectedAddressId || undefined}
+                          onChange={(addressId) => setSelectedAddressId(addressId)}
+                          allowCreate={true}
+                          showSelect={false}
+                        />
+                      </div>
+                    )}
+
+                    {/* 活动选择 */}
+                    {deliveryMethod === 'event' && (
+                      <div style={{ marginBottom: '12px' }}>
+                        <Select
+                          value={selectedEventId || undefined}
+                          onChange={(eventId) => setSelectedEventId(eventId)}
+                          placeholder="请选择活动"
+                          style={{ width: '100%' }}
+                          loading={availableEvents.length === 0}
+                          className="dark-theme-form"
+                          dropdownClassName="dark-theme-form"
+                        >
+                          {availableEvents.map(event => (
+                            <Select.Option key={event.id} value={event.id}>
+                              {event.title} - {event.location.name}
+                            </Select.Option>
+                          ))}
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 支付方式 */}
+                  <div>
+                    <h3 style={{ 
+                      margin: '0 0 8px 0', 
+                      fontSize: '12px', 
+                      fontWeight: '600', 
+                      color: '#fff' 
+                    }}>
+                      支付方式
+                    </h3>
+                    <Button.Group style={{ width: '100%', display: 'flex' }}>
+                      <Button
+                        type={paymentMethod === 'cash' ? 'primary' : 'default'}
+                        onClick={() => setPaymentMethod('cash')}
+                        style={{
+                          flex: 1,
+                          height: '28px',
+                          fontSize: '10px',
+                          background: paymentMethod === 'cash' 
+                            ? 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)' 
+                            : 'rgba(255, 255, 255, 0.03)',
+                          border: paymentMethod === 'cash' 
+                            ? 'none' 
+                            : '1px solid rgba(255, 255, 255, 0.1)',
+                          color: paymentMethod === 'cash' ? '#000' : '#fff',
+                          fontWeight: paymentMethod === 'cash' ? 'bold' : 'normal'
+                        }}
+                      >
+                        现金支付
+                      </Button>
+                      <Button
+                        type={paymentMethod === 'online' ? 'primary' : 'default'}
+                        onClick={() => setPaymentMethod('online')}
+                        style={{
+                          flex: 1,
+                          height: '28px',
+                          fontSize: '10px',
+                          background: paymentMethod === 'online' 
+                            ? 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)' 
+                            : 'rgba(255, 255, 255, 0.03)',
+                          border: paymentMethod === 'online' 
+                            ? 'none' 
+                            : '1px solid rgba(255, 255, 255, 0.1)',
+                          color: paymentMethod === 'online' ? '#000' : '#fff',
+                          fontWeight: paymentMethod === 'online' ? 'bold' : 'normal'
+                        }}
+                      >
+                        在线支付
+                      </Button>
+                    </Button.Group>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 底部操作栏 */}
+            {sidebarMode === 'cart' && cartItems.length > 0 && (
+              <div style={{
+                padding: '11px 14px',
+                borderTop: '1px solid rgba(255, 215, 0, 0.2)',
+                flexShrink: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                background: 'rgba(0, 0, 0, 0.3)'
+              }}>
+                {/* 总计 */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '11px',
+                  width: '100%'
+                }}>
+                  <span style={{ fontSize: '11px', color: '#c0c0c0' }}>总计：</span>
+                  <span style={{ fontSize: '17px', color: '#F4AF25', fontWeight: 'bold' }}>
+                    RM {cartTotal.toFixed(2)}
+                  </span>
+                </div>
+
+                {/* 操作按钮 */}
+                <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+                  <Button
+                    type="primary"
+                    onClick={() => {
+                      if (!isMobile) {
+                        setSidebarMode('checkout')
+                      } else {
+                        setCartModalVisible(true)
+                      }
+                    }}
+                    style={{
+                      background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
+                      border: 'none',
+                      color: '#000',
+                      fontWeight: 'bold',
+                      width: '100%',
+                      height: '31px',
+                      fontSize: '11px'
+                    }}
+                  >
+                    去结算
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* 结算模式底部操作栏 */}
+            {sidebarMode === 'checkout' && cartItems.length > 0 && (
+              <div style={{
+                padding: '11px 14px',
+                borderTop: '1px solid rgba(255, 215, 0, 0.2)',
+                flexShrink: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                background: 'rgba(0, 0, 0, 0.3)'
+              }}>
+                {/* 总计 */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '11px',
+                  width: '100%'
+                }}>
+                  <span style={{ fontSize: '11px', color: '#c0c0c0' }}>总计：</span>
+                  <span style={{ fontSize: '17px', color: '#F4AF25', fontWeight: 'bold' }}>
+                    RM {cartTotal.toFixed(2)}
+                  </span>
+                </div>
+
+                {/* 操作按钮 */}
+                <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                  <Button
+                    onClick={() => setSidebarMode('cart')}
+                    style={{
+                      flex: 1,
+                      height: '31px',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      color: '#fff',
+                      fontSize: '11px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    返回
+                  </Button>
+                  <Button
+                    type="primary"
+                    onClick={() => {
+                      // 验证配送方式
+                      if (deliveryMethod === 'address' && !selectedAddressId) {
+                        message.error('请选择收货地址')
+                        return
+                      }
+                      if (deliveryMethod === 'event' && !selectedEventId) {
+                        message.error('请选择活动')
+                        return
+                      }
+                      
+                      // TODO: 处理结算逻辑
+                      console.log('结算订单', {
+                        items: cartItems,
+                        total: cartTotal,
+                        paymentMethod,
+                        deliveryMethod,
+                        addressId: selectedAddressId,
+                        eventId: selectedEventId
+                      })
+                      // 清空购物车
+                      clearCart()
+                      setSidebarMode('cart')
+                      setSelectedAddressId(null)
+                      setSelectedEventId(null)
+                      setDeliveryMethod('address')
+                      // 显示成功消息
+                      message.success('订单已提交成功！')
+                    }}
+                    style={{
+                      flex: 2,
+                      height: '31px',
+                      background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
+                      border: 'none',
+                      color: '#000',
+                      fontSize: '11px',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    确认结算
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 底部购物车操作栏 - 手机端 */}
       {isMobile && (
         <div style={{
           position: 'fixed',
@@ -1190,8 +1897,8 @@ const Shop: React.FC = () => {
               style={{
                 padding: '16px 20px',
                 borderRadius: 16,
-                background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                color: '#221c10',
+                background: 'linear-gradient(to right, rgb(253, 224, 141), rgb(196, 141, 58))',
+                color: 'rgb(34, 28, 16)',
                 fontWeight: 600,
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
@@ -1224,7 +1931,92 @@ const Shop: React.FC = () => {
         </div>
       )}
 
-      {/* 购物车弹窗 */}
+      {/* 底部购物车操作栏 - 手机端 */}
+      {isMobile && (
+        <div style={{
+          position: 'fixed',
+          bottom: '60px',
+          left: 0,
+          right: 0,
+          padding: '16px 20px',
+          zIndex: 100,
+          pointerEvents: 'none',
+          background: 'linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.8) 100%)',
+          backdropFilter: 'blur(8px)',
+          borderTop: '1px solid rgba(255, 215, 0, 0.2)'
+        }}>
+          {cartItemCount === 0 ? (
+            // 空状态：显示购物车图标按钮
+            <div style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              pointerEvents: 'auto'
+            }}>
+              <Button
+                style={{
+                  background: 'rgba(100, 100, 100, 0.8)',
+                  backdropFilter: 'blur(8px)',
+                  border: 'none',
+                  borderRadius: '24px',
+                  padding: '12px 24px',
+                  height: 'auto',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+                }}
+                onClick={() => setCartModalVisible(true)}
+              >
+                <ShoppingCartOutlined style={{ fontSize: '18px', color: '#fff' }} />
+                <span style={{ color: '#fff', fontSize: '14px', fontWeight: '600' }}>
+                  0 item
+                </span>
+              </Button>
+            </div>
+          ) : (
+            // 有商品状态：显示完整购物车底栏
+            <button
+              onClick={() => setCartModalVisible(true)}
+              style={{
+                padding: '16px 20px',
+                borderRadius: 16,
+                background: 'linear-gradient(to right, rgb(253, 224, 141), rgb(196, 141, 58))',
+                color: 'rgb(34, 28, 16)',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                width: '100%',
+                boxShadow: '0 8px 24px rgba(244, 175, 37, 0.6)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                pointerEvents: 'auto',
+                border: 'none'
+              }}
+            >
+              {/* 左侧：购物车图标和数量 */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <ShoppingCartOutlined style={{ fontSize: '24px' }} />
+                <span style={{ fontSize: '16px', fontWeight: '600' }}>
+                  {cartItemCount} {cartItemCount === 1 ? 'item' : 'items'}
+                </span>
+              </div>
+
+              {/* 右侧：总价 */}
+              <div style={{ fontSize: '18px', fontWeight: 'bold' }}>
+                RM {cartTotal.toFixed(2)}
+              </div>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* 购物车弹窗 - 仅手机端 */}
+      {isMobile && (
       <CartModal
         open={cartModalVisible}
         onClose={() => setCartModalVisible(false)}
@@ -1235,9 +2027,12 @@ const Shop: React.FC = () => {
         setQuantity={setQuantity}
         addToCart={addToCart}
         removeFromCart={removeFromCart}
+        clearCart={clearCart}
         isMobile={isMobile}
         t={t}
+          onCheckout={undefined}
                     />
+      )}
 
       {/* 确认移除对话框 */}
       <Modal

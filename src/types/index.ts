@@ -60,6 +60,8 @@ export interface User {
     avatar?: string;
     phone?: string;
   };
+  // 用户地址列表
+  addresses?: Address[];
   // 用户偏好设置（根级别）
     preferences?: {
     locale?: string;              // 语言设置（'zh' | 'en' | 'zh-CN' | 'en-US'）
@@ -190,6 +192,21 @@ export interface Event {
   coverImage?: string; // 活动封面图片URL（别名）
   status: 'draft' | 'published' | 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
   isPrivate?: boolean; // 是否为私人活动
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// 地址类型
+export interface Address {
+  id: string;
+  name: string; // 收货人姓名
+  phone: string; // 联系电话
+  province: string; // 省
+  city: string; // 市
+  district: string; // 区
+  detail: string; // 详细地址
+  postalCode?: string; // 邮编（可选）
+  isDefault: boolean; // 是否默认地址
   createdAt: Date;
   updatedAt: Date;
 }
