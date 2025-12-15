@@ -6,6 +6,13 @@ export interface User {
   email: string;
   displayName: string;
   role: 'admin' | 'member' | 'guest' | 'vip' | 'developer';
+  // 个人折扣，仅管理员/开发者可见
+  discount?: {
+    rate?: number;      // 折扣百分比，例如 10 表示 10%
+    note?: string;      // 备注
+    updatedBy?: string; // 最后更新人 userId
+    updatedAt?: Date;   // 最后更新时间
+  };
   
   // 扁平化的常用属性（向后兼容）
   photoURL?: string;

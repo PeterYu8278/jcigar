@@ -1,6 +1,6 @@
 // 用户管理页面
 import React, { useEffect, useMemo, useState } from 'react'
-import { Table, Button, Tag, Space, Typography, Input, Select, message, Modal, Form, Switch, Dropdown, Checkbox, Row, Col, Spin, App } from 'antd'
+import { Table, Button, Tag, Space, Typography, Input, Select, message, Modal, Form, Switch, Dropdown, Checkbox, Row, Col, Spin, App, InputNumber } from 'antd'
 import { EditOutlined, DeleteOutlined, PlusOutlined, SearchOutlined, EyeOutlined, ArrowLeftOutlined, CalendarOutlined, ShoppingOutlined, TrophyOutlined, KeyOutlined } from '@ant-design/icons'
 import { MemberProfileCard } from '../../../components/common/MemberProfileCard'
 import { ProfileView } from '../../../components/common/ProfileView'
@@ -113,6 +113,7 @@ const AdminUsers: React.FC = () => {
   const [activeIndex, setActiveIndex] = useState<string>('') // 当前高亮的字母
   const [showBubble, setShowBubble] = useState(false) // 字母气泡显示
   const [bubbleLetter, setBubbleLetter] = useState('') // 气泡字母
+  const canManageDiscount = currentUser?.role === 'developer' || currentUser?.role === 'admin'
 
   // 筛选条件变化时不需要重新加载数据（因为现在使用客户端筛选）
   // 数据加载已在下面的 useEffect 中处理
@@ -415,6 +416,8 @@ const AdminUsers: React.FC = () => {
               displayName: record.displayName,
               email: record.email,
               role: record.role,
+              discountRate: record.discount?.rate,
+              discountNote: record.discount?.note,
               level: record.membership?.level,
               phone: (record as any)?.profile?.phone,
             })
@@ -993,6 +996,8 @@ const AdminUsers: React.FC = () => {
                                 displayName: u.displayName,
                                 email: u.email,
                                 role: u.role,
+                                discountRate: u.discount?.rate,
+                                discountNote: u.discount?.note,
                                 level: u.membership?.level,
                                 phone: (u as any)?.profile?.phone,
                               })
@@ -1228,6 +1233,8 @@ const AdminUsers: React.FC = () => {
                     displayName: user.displayName,
                     email: user.email,
                     role: user.role,
+                    discountRate: user.discount?.rate,
+                    discountNote: user.discount?.note,
                     level: user.membership?.level,
                     phone: (user as any)?.profile?.phone,
                   })
@@ -1268,7 +1275,6 @@ const AdminUsers: React.FC = () => {
                 return
               }
               normalizedPhone = normalized
-              
               // 检查手机号唯一性
               const phoneQuery = query(
                 collection(db, 'users'), 
@@ -1288,6 +1294,21 @@ const AdminUsers: React.FC = () => {
               }
             }
             
+            const hasDiscountValue = values.discountRate !== undefined && values.discountRate !== null && values.discountRate !== ''
+            const hasDiscountNote = values.discountNote && values.discountNote.trim() !== ''
+            const discountPayload = canManageDiscount ? (
+              hasDiscountValue || hasDiscountNote || editing?.discount
+                ? {
+                  discount: hasDiscountValue || hasDiscountNote ? {
+                    rate: hasDiscountValue ? Number(values.discountRate) : undefined,
+                    note: hasDiscountNote ? values.discountNote.trim() : undefined,
+                    updatedBy: currentUser?.id,
+                    updatedAt: new Date(),
+                  } : null
+                }
+                : {}
+            ) : {}
+            
             if (editing) {
               const res = await updateDocument<User>(COLLECTIONS.USERS, editing.id, {
                 displayName: values.displayName,
@@ -1295,6 +1316,7 @@ const AdminUsers: React.FC = () => {
                 role: values.role,
                 membership: { ...editing.membership, level: values.level },
                 profile: { ...(editing as any).profile, phone: normalizedPhone },
+                ...discountPayload,
               } as any)
                 if (res.success) message.success(t('usersAdmin.saved'))
             } else {
@@ -1312,6 +1334,7 @@ const AdminUsers: React.FC = () => {
                 membership: { level: values.level, joinDate: new Date(), lastActive: new Date() },
                 createdAt: new Date(),
                 updatedAt: new Date(),
+                ...(discountPayload.discount ? { discount: discountPayload.discount } : {}),
               } as any
               
               const res = await createDocument<User>(COLLECTIONS.USERS, userData)
@@ -1470,6 +1493,35 @@ const AdminUsers: React.FC = () => {
               }}
             />
           </Form.Item>
+
+          {canManageDiscount && (
+            <Row gutter={12}>
+              <Col span={12}>
+                <Form.Item
+                  label={<span style={{ color: '#FFFFFF' }}>折扣（%）</span>}
+                  name="discountRate"
+                  rules={[
+                    {
+                      type: 'number',
+                      min: 0,
+                      max: 100,
+                      message: '折扣需在 0-100 之间'
+                    }
+                  ]}
+                >
+                  <InputNumber min={0} max={100} step={1} style={{ width: '100%' }} addonAfter="%" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  label={<span style={{ color: '#FFFFFF' }}>折扣备注（仅管理员可见）</span>}
+                  name="discountNote"
+                >
+                  <Input placeholder="例如：长期会员折扣" />
+                </Form.Item>
+              </Col>
+            </Row>
+          )}
 
           <Form.Item 
             label={<span style={{ color: '#FFFFFF' }}>{t('usersAdmin.role')}</span>}

@@ -50,6 +50,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [referredUsers, setReferredUsers] = useState<User[]>([])
   const [loadingReferrals, setLoadingReferrals] = useState(false)
   const [pointsRecords, setPointsRecords] = useState<PointsRecord[]>([])
+  const canViewDiscount = authUser?.role === 'developer' || authUser?.role === 'admin'
   const [loadingPointsRecords, setLoadingPointsRecords] = useState(false)
 
   // 如果传入userId，加载用户数据
@@ -293,6 +294,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <div style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.6)' }}>
             <p style={{ margin: '4px 0' }}>{t('auth.email')}: {user.email || '-'}</p>
             <p style={{ margin: '4px 0' }}>{t('auth.phone')}: {(user as any)?.profile?.phone || '-'}</p>
+            {canViewDiscount && (user.discount?.rate !== undefined || user.discount?.note) && (
+              <p style={{ margin: '4px 0', color: '#FDE08D' }}>
+                折扣: {user.discount?.rate !== undefined ? `${user.discount?.rate}%` : '—'}
+                {user.discount?.note ? `（${user.discount.note}）` : ''}
+              </p>
+            )}
           </div>
         </div>
 
