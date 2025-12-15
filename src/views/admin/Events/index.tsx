@@ -1540,7 +1540,7 @@ const AdminEvents: React.FC = () => {
                     name="fee"
                     style={{ marginBottom: 12 }}
                   >
-                    <InputNumber min={0} style={{ width: '100%' }} placeholder="费用" />
+                    <InputNumber min={0} style={{ width: '100%' }} placeholder="费用" controls={false} />
           </Form.Item>
                 </Col>
                 <Col span={12}>
@@ -1549,7 +1549,7 @@ const AdminEvents: React.FC = () => {
                     name="maxParticipants"
                     style={{ marginBottom: 12 }}
                   >
-                    <InputNumber min={0} style={{ width: '100%' }} placeholder="人数上限" />
+                    <InputNumber min={0} style={{ width: '100%' }} placeholder="人数上限" controls={false} />
           </Form.Item>
                 </Col>
               </Row>
