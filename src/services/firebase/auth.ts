@@ -1089,6 +1089,9 @@ export const generateResetPasswordMessageByPhone = async (phone: string) => {
   return {
     success: true,
     message: coreResult.message,
+    normalizedPhone: coreResult.normalizedPhone,
+    userDisplayName: coreResult.userDisplayName,
+    tempPassword: coreResult.tempPassword,
   };
 };
 

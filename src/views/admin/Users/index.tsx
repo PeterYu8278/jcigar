@@ -1812,23 +1812,26 @@ const AdminUsers: React.FC = () => {
                   // 调用后端逻辑：重置密码并生成与 WhatsApp 相同的消息内容（但不发送）
                   const result = await generateResetPasswordMessageByPhone(phone);
 
-                  if (!result.success || !result.message) {
+                  if (!result.success || !result.message || !result.normalizedPhone) {
                     message.error(result.error || '生成重置内容失败');
                     return;
                   }
 
-                  const content = result.message;
+                  // 构造 WhatsApp 官方发送链接，phone 不带 "+"，text 为 URL 编码后的完整消息
+                  const whatsappPhone = result.normalizedPhone.replace(/^\+/, '');
+                  const url = `https://api.whatsapp.com/send?phone=${encodeURIComponent(
+                    whatsappPhone
+                  )}&text=${encodeURIComponent(result.message)}`;
 
-                  if (navigator.clipboard && navigator.clipboard.writeText) {
-                    await navigator.clipboard.writeText(content);
-                    message.success('重置内容已复制到剪贴板，请粘贴到 WhatsApp 或电邮手动发送');
-                  } else {
-                    // 回退方案：显示内容供手动复制
+                  // 优先直接打开链接，方便管理员一键跳转到 WhatsApp 发送
+                  const opened = window.open(url, '_blank');
+                  if (!opened) {
+                    // 如果被拦截，则回退为展示链接供手动复制
                     modal.info({
-                      title: '重置内容',
+                      title: 'WhatsApp 重置链接',
                       content: (
                         <div>
-                          <p>当前浏览器不支持自动复制，请手动全选复制以下内容：</p>
+                          <p>浏览器拦截了自动打开，请手动复制以下链接并在浏览器或 WhatsApp 中打开：</p>
                           <pre
                             style={{
                               whiteSpace: 'pre-wrap',
@@ -1841,7 +1844,7 @@ const AdminUsers: React.FC = () => {
                               overflow: 'auto'
                             }}
                           >
-                            {content}
+                            {url}
                           </pre>
                         </div>
                       ),
@@ -1851,13 +1854,13 @@ const AdminUsers: React.FC = () => {
                     });
                   }
                 } catch (error: any) {
-                  message.error(error?.message || '复制重置内容失败，请稍后重试');
+                  message.error(error?.message || '打开 WhatsApp 重置链接失败，请稍后重试');
                 } finally {
                   setResettingPasswordLoading(false);
                 }
               }}
             >
-              复制重置内容手动发送
+              手动发送
             </Button>
           </Space>
           
