@@ -948,19 +948,33 @@ export const sendPasswordResetEmailFor = async (email: string) => {
   }
 }
 
+type ResetPasswordByPhoneCoreResult = {
+  success: boolean;
+  error?: string;
+  normalizedPhone?: string;
+  userDisplayName?: string;
+  tempPassword?: string;
+  message?: string;
+  userId?: string;
+};
+
 /**
- * 通过手机号重置密码
- * 生成临时密码并通过 whapi 发送
+ * 重置密码核心逻辑：
+ * - 校验手机号
+ * - 查找用户
+ * - 生成临时密码
+ * - 通过 Netlify Function 更新 Firebase Auth 密码
+ * - 构造 WhatsApp 消息文案
+ *
+ * 不负责真正发送 WhatsApp 消息，便于复用（发送 / 手动复制）。
  */
-export const resetPasswordByPhone = async (phone: string) => {
+const resetPasswordByPhoneCore = async (phone: string): Promise<ResetPasswordByPhoneCoreResult> => {
   try {
-    // 标准化手机号
     const normalizedPhone = normalizePhoneNumber(phone);
     if (!normalizedPhone) {
       return { success: false, error: '手机号格式无效' };
     }
 
-    // 查找用户
     const usersRef = collection(db, 'users');
     const q = query(usersRef, where('profile.phone', '==', normalizedPhone), limit(1));
     const snap = await getDocs(q);
@@ -971,27 +985,21 @@ export const resetPasswordByPhone = async (phone: string) => {
 
     const userDoc = snap.docs[0];
     const userData = userDoc.data() as User;
-    const uid = userDoc.id; // 使用 Firestore 文档 ID 作为 uid
-    const email = userData.email; // 可选，用于日志记录
+    const uid = userDoc.id;
+    const email = userData.email;
 
-    // 生成临时密码（8位随机数字+字母）
     const tempPassword = generateTempPassword();
 
-    // 调用 Netlify Function 创建临时密码
-    // 优先使用 uid，如果没有 uid 则使用 email 或 phoneNumber
     try {
       const requestBody: { uid?: string; email?: string; phoneNumber?: string; newPassword: string } = {
         newPassword: tempPassword,
       };
 
-      // 优先使用 uid（最可靠）
       if (uid) {
         requestBody.uid = uid;
       } else if (email) {
-        // 如果没有 uid，使用 email
         requestBody.email = email;
       } else {
-        // 如果既没有 uid 也没有 email，使用 phoneNumber
         requestBody.phoneNumber = normalizedPhone;
       }
 
@@ -1008,46 +1016,81 @@ export const resetPasswordByPhone = async (phone: string) => {
         return { success: false, error: errorData.error || '重置密码失败' };
       }
     } catch (netlifyError: any) {
-      // 如果 Netlify Function 不可用，尝试直接更新（仅开发环境）
       console.warn('[resetPasswordByPhone] Netlify Function 不可用，尝试直接更新:', netlifyError);
-      // 注意：在生产环境中，应该使用 Netlify Function 来更新密码
       return { success: false, error: '重置密码服务暂时不可用，请稍后重试' };
     }
 
-    // 通过 whapi 发送临时密码
-    try {
-      const { sendPasswordReset } = await import('../whapi');
-      const { getAppConfig } = await import('./appConfig');
-      const appConfig = await getAppConfig();
-      const appName = appConfig?.appName || 'Cigar Club';
+    const { getAppConfig } = await import('./appConfig');
+    const appConfig = await getAppConfig();
+    const appName = appConfig?.appName || 'Cigar Club';
+    const displayName = (userData as any).displayName || '用户';
 
-      const message = `[${appName}] 重置密码
-您好 ${userData.displayName || '用户'}，您的密码已重置。
+    const message = `[${appName}] 重置密码
+您好 ${displayName}，您的密码已重置。
 
 临时密码：${tempPassword}
 
 请尽快登录并修改密码。如非本人操作，请立即联系管理员。`;
 
-      const result = await sendPasswordReset(
-        normalizedPhone,
-        userData.displayName || '用户',
-        tempPassword,
-        userDoc.id,
-        message
-      );
-
-      if (!result.success) {
-        return { success: false, error: result.error || '发送临时密码失败' };
-      }
-    } catch (whapiError: any) {
-      return { success: false, error: `密码已重置，但发送临时密码失败: ${whapiError.message || '未知错误'}` };
-    }
-
-    return { success: true };
+    return {
+      success: true,
+      normalizedPhone,
+      userDisplayName: displayName,
+      tempPassword,
+      message,
+      userId: uid,
+    };
   } catch (error: any) {
     return { success: false, error: error.message || '重置密码失败' };
   }
-}
+};
+
+/**
+ * 通过手机号重置密码并通过 whapi 发送临时密码
+ */
+export const resetPasswordByPhone = async (phone: string) => {
+  const coreResult = await resetPasswordByPhoneCore(phone);
+
+  if (!coreResult.success) {
+    return { success: false, error: coreResult.error || '重置密码失败' };
+  }
+
+  try {
+    const { sendPasswordReset } = await import('../whapi');
+    const result = await sendPasswordReset(
+      coreResult.normalizedPhone!,
+      coreResult.userDisplayName || '用户',
+      coreResult.tempPassword!,
+      coreResult.userId,
+      coreResult.message
+    );
+
+    if (!result.success) {
+      return { success: false, error: result.error || '发送临时密码失败' };
+    }
+
+    return { success: true };
+  } catch (whapiError: any) {
+    return { success: false, error: `密码已重置，但发送临时密码失败: ${whapiError.message || '未知错误'}` };
+  }
+};
+
+/**
+ * 通过手机号重置密码，但不发送 WhatsApp，只返回生成的消息内容
+ * 适用于「复制重置内容手动发送」场景
+ */
+export const generateResetPasswordMessageByPhone = async (phone: string) => {
+  const coreResult = await resetPasswordByPhoneCore(phone);
+
+  if (!coreResult.success) {
+    return { success: false, error: coreResult.error || '重置密码失败' };
+  }
+
+  return {
+    success: true,
+    message: coreResult.message,
+  };
+};
 
 /**
  * 生成临时密码（8位随机数字+字母）

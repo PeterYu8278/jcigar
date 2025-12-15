@@ -14,7 +14,7 @@ import { getUsers, createDocument, updateDocument, deleteDocument, COLLECTIONS, 
 import { getUsersPaginated } from '../../../services/firebase/paginatedQueries'
 import { usePaginatedData } from '../../../hooks/usePaginatedData'
 import type { User, Event, Order } from '../../../types'
-import { sendPasswordResetEmailFor, resetPasswordByPhone } from '../../../services/firebase/auth'
+import { sendPasswordResetEmailFor, resetPasswordByPhone, generateResetPasswordMessageByPhone } from '../../../services/firebase/auth'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../../../store/modules/auth'
 import { getModalThemeStyles, getModalWidth, getResponsiveModalConfig } from '../../../config/modalTheme'
@@ -1799,41 +1799,25 @@ const AdminUsers: React.FC = () => {
               type="dashed"
               block
               size="large"
-              loading={resettingPasswordLoading}
               onClick={async () => {
                 try {
-                  if (!resettingPassword) {
-                    message.error('未选择用户，无法生成重置内容');
+                  if (!resettingPassword || !(resettingPassword as any)?.profile?.phone) {
+                    message.error('该用户没有绑定手机号，无法生成重置内容');
                     return;
                   }
 
-                  const displayName =
-                    (resettingPassword as any)?.profile?.displayName ||
-                    (resettingPassword as any)?.profile?.name ||
-                    resettingPassword.displayName ||
-                    '用户';
+                  const phone = (resettingPassword as any).profile.phone;
+                  setResettingPasswordLoading(true);
 
-                  const email = resettingPassword.email;
-                  const phone = (resettingPassword as any)?.profile?.phone;
+                  // 调用后端逻辑：重置密码并生成与 WhatsApp 相同的消息内容（但不发送）
+                  const result = await generateResetPasswordMessageByPhone(phone);
 
-                  // 根据已有逻辑，优先生成重置链接，其次提示临时密码由系统生成
-                  const resetLink = `${window.location.origin}/reset-password`;
-
-                  let content = `[Cigar Club] 重置密码手动发送模板
-
-您好 ${displayName}，
-
-您可以通过以下链接重置密码：
-${resetLink}
-
-如果链接无法打开，请联系管理员协助处理。`;
-
-                  if (email) {
-                    content += `\n\n绑定邮箱：${email}`;
+                  if (!result.success || !result.message) {
+                    message.error(result.error || '生成重置内容失败');
+                    return;
                   }
-                  if (phone) {
-                    content += `\n绑定手机号：${phone}`;
-                  }
+
+                  const content = result.message;
 
                   if (navigator.clipboard && navigator.clipboard.writeText) {
                     await navigator.clipboard.writeText(content);
@@ -1868,6 +1852,8 @@ ${resetLink}
                   }
                 } catch (error: any) {
                   message.error(error?.message || '复制重置内容失败，请稍后重试');
+                } finally {
+                  setResettingPasswordLoading(false);
                 }
               }}
             >
