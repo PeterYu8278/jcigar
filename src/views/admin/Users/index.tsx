@@ -48,6 +48,7 @@ const AdminUsers: React.FC = () => {
   const { user: currentUser } = useAuthStore()
   const [users, setUsers] = useState<User[]>([]) // 保留用于搜索和筛选
   const [loading, setLoading] = useState(false)
+  const canManageDiscount = currentUser?.role === 'developer' || currentUser?.role === 'admin'
   
   // 服务端分页
   const {
@@ -116,7 +117,6 @@ const AdminUsers: React.FC = () => {
   const [activeIndex, setActiveIndex] = useState<string>('') // 当前高亮的字母
   const [showBubble, setShowBubble] = useState(false) // 字母气泡显示
   const [bubbleLetter, setBubbleLetter] = useState('') // 气泡字母
-  const canManageDiscount = currentUser?.role === 'developer' || currentUser?.role === 'admin'
 
   // 筛选条件变化时不需要重新加载数据（因为现在使用客户端筛选）
   // 数据加载已在下面的 useEffect 中处理
