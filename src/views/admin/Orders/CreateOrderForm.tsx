@@ -272,6 +272,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                               <InputNumber 
                                 min={1} 
                                 placeholder={t('ordersAdmin.quantity')}
+                                controls={false}
                                 style={{ width: '100%' }}
                               />
                             </Form.Item>
