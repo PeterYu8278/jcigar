@@ -1793,6 +1793,86 @@ const AdminUsers: React.FC = () => {
                 </span>
               )}
             </Button>
+
+            {/* 复制内容手动发送按钮 */}
+            <Button
+              type="dashed"
+              block
+              size="large"
+              loading={resettingPasswordLoading}
+              onClick={async () => {
+                try {
+                  if (!resettingPassword) {
+                    message.error('未选择用户，无法生成重置内容');
+                    return;
+                  }
+
+                  const displayName =
+                    (resettingPassword as any)?.profile?.displayName ||
+                    (resettingPassword as any)?.profile?.name ||
+                    resettingPassword.displayName ||
+                    '用户';
+
+                  const email = resettingPassword.email;
+                  const phone = (resettingPassword as any)?.profile?.phone;
+
+                  // 根据已有逻辑，优先生成重置链接，其次提示临时密码由系统生成
+                  const resetLink = `${window.location.origin}/reset-password`;
+
+                  let content = `[Cigar Club] 重置密码手动发送模板
+
+您好 ${displayName}，
+
+您可以通过以下链接重置密码：
+${resetLink}
+
+如果链接无法打开，请联系管理员协助处理。`;
+
+                  if (email) {
+                    content += `\n\n绑定邮箱：${email}`;
+                  }
+                  if (phone) {
+                    content += `\n绑定手机号：${phone}`;
+                  }
+
+                  if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(content);
+                    message.success('重置内容已复制到剪贴板，请粘贴到 WhatsApp 或电邮手动发送');
+                  } else {
+                    // 回退方案：显示内容供手动复制
+                    modal.info({
+                      title: '重置内容',
+                      content: (
+                        <div>
+                          <p>当前浏览器不支持自动复制，请手动全选复制以下内容：</p>
+                          <pre
+                            style={{
+                              whiteSpace: 'pre-wrap',
+                              wordBreak: 'break-all',
+                              background: 'rgba(0,0,0,0.4)',
+                              padding: 12,
+                              borderRadius: 8,
+                              color: '#fff',
+                              maxHeight: 260,
+                              overflow: 'auto'
+                            }}
+                          >
+                            {content}
+                          </pre>
+                        </div>
+                      ),
+                      okText: '知道了',
+                      centered: true,
+                      styles: getModalThemeStyles(isMobile, true)
+                    });
+                  }
+                } catch (error: any) {
+                  message.error(error?.message || '复制重置内容失败，请稍后重试');
+                }
+              }}
+            >
+              复制重置内容手动发送
+            </Button>
           </Space>
           
           {/* 提示信息 */}
