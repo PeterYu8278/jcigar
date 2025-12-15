@@ -289,6 +289,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                                 precision={2}
                                 placeholder={t('ordersAdmin.price')}
                                 prefix="RM"
+                                controls={false}
                                 style={{ width: '100%' }}
                               />
                             </Form.Item>
