@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import dayjs from 'dayjs'
 import { Form, Select, DatePicker, InputNumber, Input, Button } from 'antd'
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
@@ -29,8 +29,21 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
   const [form] = Form.useForm()
   const groupedCigars = groupCigarsByBrand(cigars)
   const itemsWatch = Form.useWatch('items', form)
+  const userIdWatch = Form.useWatch('userId', form)
   const theme = getModalTheme()
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
+
+  const discountRate = useMemo(() => {
+    const user = users.find(u => u.id === userIdWatch)
+    const rate = user?.discount?.rate
+    return typeof rate === 'number' ? rate : undefined
+  }, [userIdWatch, users])
+
+  const applyDiscount = (price: number) => {
+    if (discountRate === undefined) return price
+    const discounted = price * (1 - discountRate / 100)
+    return Number(discounted.toFixed(2))
+  }
 
   useEffect(() => {
     const handleResize = () => {
@@ -39,6 +52,25 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+
+  // 当用户切换或折扣变动时，自动为已选择商品应用折扣价
+  useEffect(() => {
+    const items = form.getFieldValue('items') || []
+    if (!Array.isArray(items) || items.length === 0) return
+
+    const next = items.map((it: any) => {
+      if (!it?.cigarId) return it
+      const cigar = cigars.find(c => c.id === it.cigarId)
+      if (!cigar) return it
+      const target = applyDiscount(cigar.price)
+      return Number(it.price) !== target ? { ...it, price: target } : it
+    })
+
+    const changed = next.some((it: any, idx: number) => it !== items[idx])
+    if (changed) {
+      form.setFieldsValue({ items: next })
+    }
+  }, [discountRate, cigars, form])
 
   const computeSummary = () => {
     const items = Array.isArray(itemsWatch) ? itemsWatch : []
@@ -204,7 +236,7 @@ const CreateOrderForm: React.FC<CreateOrderFormProps> = ({
                               onChange={(cigarId) => {
                                 const cigar = cigars.find(c => c.id === cigarId)
                                 if (cigar) {
-                                  form.setFieldValue(['items', field.name, 'price'], cigar.price)
+                                  form.setFieldValue(['items', field.name, 'price'], applyDiscount(cigar.price))
                                 }
                               }}
                               filterOption={(input, option) => {
