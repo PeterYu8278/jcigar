@@ -91,6 +91,8 @@ const AdminUsers: React.FC = () => {
         const parsed = JSON.parse(saved)
         // 确保 id 字段根据用户角色设置
         parsed.id = currentUser?.role === 'developer'
+        // 只有管理员/开发者可见折扣列
+        parsed.discount = canManageDiscount
         return parsed
       } catch {}
     }
@@ -100,6 +102,7 @@ const AdminUsers: React.FC = () => {
     displayName: true,
     email: true,
     role: true,
+    discount: canManageDiscount,
     lastActive: true,
     status: true,
     action: true,
@@ -255,6 +258,16 @@ const AdminUsers: React.FC = () => {
       dataIndex: 'email',
       key: 'email',
     },
+    ...(canManageDiscount ? [{
+      title: '折扣',
+      dataIndex: 'discount',
+      key: 'discount',
+      width: 80,
+      render: (_: any, record: any) => {
+        const rate = record.discount?.rate
+        return rate !== undefined && rate !== null ? `${rate}%` : '-'
+      }
+    }] : []),
     {
       title: t('usersAdmin.role'),
       dataIndex: 'role',
@@ -981,8 +994,11 @@ const AdminUsers: React.FC = () => {
                               </Tag>
                             </div>
                             <div style={{ marginTop: 4, fontSize: 12, color: '#aaa' }}>
-                              {u.memberId && <span style={{ marginRight: 8, fontFamily: 'monospace' }}>{t('usersAdmin.memberId')}: {u.memberId}</span>}
-                              {maskPhone((u as any)?.profile?.phone)}
+                  {u.memberId && <span style={{ marginRight: 8, fontFamily: 'monospace' }}>{t('usersAdmin.memberId')}: {u.memberId}</span>}
+                  {maskPhone((u as any)?.profile?.phone)}
+                  {canManageDiscount && u.discount?.rate !== undefined && (
+                    <span style={{ marginLeft: 8, color: '#FDE08D' }}>折扣 {u.discount.rate}%</span>
+                  )}
                             </div>
                             <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
                               <span style={{ width: 8, height: 8, borderRadius: 999, background: status === 'active' ? '#52c41a' : '#ff4d4f', display: 'inline-block' }} />
