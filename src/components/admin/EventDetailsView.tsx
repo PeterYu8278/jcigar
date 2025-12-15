@@ -118,6 +118,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
                 onChange={(val) => onEditFormChange({...editForm, fee: val})}
                 min={0}
                 style={{ width: '100%' }}
+              controls={false}
                 placeholder="费用"
               />
             </Col>
@@ -128,6 +129,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
                 onChange={(val) => onEditFormChange({...editForm, maxParticipants: val})}
                 min={0}
                 style={{ width: '100%' }}
+              controls={false}
                 placeholder="人数上限"
               />
             </Col>
@@ -489,6 +491,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
               style={{ width: '100%' }}
               autoFocus
               min={0}
+              controls={false}
               addonBefore={<span style={{ color: '#FFFFFF' }}>RM</span>}
             />
           ) : (
@@ -505,6 +508,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
               style={{ width: '100%' }}
               autoFocus
               min={0}
+              controls={false}
               addonAfter={<span style={{ color: '#FFFFFF' }}>{t('events.people')}</span>}
             />
           ) : (
