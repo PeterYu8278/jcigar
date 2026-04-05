@@ -5,11 +5,12 @@ import { Modal, Button, Space, message } from 'antd'
 import { useQRCode } from '../../hooks/useQRCode'
 import { QRCodeDisplay } from '../common/QRCodeDisplay'
 import { useTranslation } from 'react-i18next'
-import type { User, AppConfig } from '../../types'
+import type { User, AppConfig, PointsConfig } from '../../types'
 import { collection, query, where, orderBy, limit, onSnapshot, Unsubscribe } from 'firebase/firestore'
 import { db } from '../../config/firebase'
 import { GLOBAL_COLLECTIONS } from '../../config/globalCollections'
 import { getAppConfig } from '../../services/firebase/appConfig'
+import { getPointsConfig } from '../../services/firebase/pointsConfig'
 
 interface MemberProfileCardProps {
   user: User | null
@@ -32,6 +33,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
 }) => {
   const { t } = useTranslation()
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
+  const [pointsConfig, setPointsConfig] = useState<PointsConfig | null>(null)
   
   // 3D旋转动画状态
   const [isRotating, setIsRotating] = useState(false)
@@ -54,6 +56,17 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
       }
     }
     loadAppConfig()
+  }, [])
+
+  // 加载积分配置（用于控制引荐奖励文案是否显示）
+  useEffect(() => {
+    const loadPointsConfig = async () => {
+      const config = await getPointsConfig()
+      if (config) {
+        setPointsConfig(config)
+      }
+    }
+    loadPointsConfig()
   }, [])
 
   // 使用 onSnapshot 实时监听用户 check-in 状态
@@ -720,27 +733,39 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
             </Button>
           </Space>
 
-          {/* 奖励说明 */}
-          <div style={{
-            padding: '12px',
-            background: 'rgba(212, 175, 55, 0.1)',
-            borderRadius: '8px',
-            fontSize: '12px',
-            color: 'rgba(255, 255, 255, 0.8)',
-            lineHeight: '1.6',
-            marginBottom: 12,
-            fontFamily: "'Noto Sans SC', sans-serif"
-          }}>
-            {t('profile.referralReward')}
-          </div>
-          <div style={{
-            fontSize: '12px',
-            color: 'rgba(255, 255, 255, 0.6)',
-            lineHeight: '1.6',
-            fontFamily: "'Noto Sans SC', sans-serif"
-          }}>
-            {t('profile.shareWithFriends')}
-          </div>
+          {/* 奖励说明：当“被引荐人首充，引荐人奖励”和“被引荐人首充，被引荐人奖励”都为 0 时隐藏 */}
+          {(() => {
+            const referrerReward = pointsConfig?.reload?.referrerFirstReload ?? 0
+            const referredReward = pointsConfig?.reload?.referredFirstReload ?? 0
+            const hideReferralTexts = referrerReward === 0 && referredReward === 0
+
+            if (hideReferralTexts) return null
+
+            return (
+              <>
+                <div style={{
+                  padding: '12px',
+                  background: 'rgba(212, 175, 55, 0.1)',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  lineHeight: '1.6',
+                  marginBottom: 12,
+                  fontFamily: "'Noto Sans SC', sans-serif"
+                }}>
+                  {t('profile.referralReward')}
+                </div>
+                <div style={{
+                  fontSize: '12px',
+                  color: 'rgba(255, 255, 255, 0.6)',
+                  lineHeight: '1.6',
+                  fontFamily: "'Noto Sans SC', sans-serif"
+                }}>
+                  {t('profile.shareWithFriends')}
+                </div>
+              </>
+            )
+          })()}
         </div>
       </Modal>
     </>

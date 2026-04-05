@@ -205,7 +205,15 @@
     "developer": "Developer",
     "member": "Member",
     "guest": "Guest",
-    "vip": "VIP"
+    "vip": "VIP",
+    "alreadyHaveAccount": "Already have an account?",
+    "signIn": "Sign In",
+    "emailOrPhone": "Email or Phone",
+    "loginErrorPlaceholder": "Please enter email or phone",
+    "referralCode": "Referral Code",
+    "referralCodeOptional": "Referral Code (Optional)",
+    "phoneAlreadyRegistered": "Phone number already registered",
+    "emailAlreadyRegistered": "Email already registered"
   },
   "featureManagement": {
     "title": "Feature Management",
@@ -225,6 +233,8 @@
     "home": "Home",
     "events": "Events",
     "shop": "Shop",
+    "brands": "Brands",
+    "contact": "Contact",
     "profile": "Profile",
     "admin": "Admin",
     "dashboard": "Dashboard",
@@ -235,7 +245,55 @@
     "pointsConfig": "Points Config",
     "visitSessions": "Visit Sessions",
     "performance": "Performance",
-    "featureManagement": "Feature Management"
+    "featureManagement": "Feature Management",
+    "invoiceTemplate": "Invoice Template"
+  },
+  "invoiceTemplate": {
+    "title": "Invoice Template",
+    "subtitle": "Developer-only: customize invoice PDF layout and seller profile (stored in app_config).",
+    "saved": "Saved",
+    "saveFailed": "Save failed",
+    "preview": "Preview",
+    "downloadPreview": "Download preview PDF",
+    "previewFailed": "Failed to open preview (it may be blocked by the browser)",
+    "multiLineHint": "One item per line",
+    "note": "Tip: after saving, order invoice View/Download will use the latest template.",
+    "currentAppName": "Current app name",
+    "seller": {
+      "title": "Seller profile (header / notes / bank)",
+      "name": "Company name",
+      "regNo": "Registration no.",
+      "addressLines": "Address (multi-line)",
+      "phone": "Phone",
+      "fax": "Fax",
+      "bankName": "Bank",
+      "bankAccount": "Account no.",
+      "notes": "Notes (multi-line)"
+    },
+    "tabs": {
+      "designer": "A4 Designer",
+      "form": "Form"
+    },
+    "template": {
+      "title": "Template settings (layout / headers / toggles)",
+      "marginMm": "Margin (mm)",
+      "rightBoxWidthMm": "Right info box width (mm)",
+      "infoBoxHeightMm": "Info box height (mm)",
+      "footerYmm": "Footer Y (mm)",
+      "signatureYmm": "Signature Y (mm)",
+      "currencySymbol": "Currency symbol",
+      "invoiceTitle": "Invoice title",
+      "thNo": "Header: No",
+      "thDesc": "Header: Description",
+      "thQty": "Header: Qty",
+      "thPrice": "Header: Price/Unit",
+      "thAmount": "Header: Amount",
+      "showNotes": "Show Notes",
+      "showBank": "Show bank info",
+      "showFooter": "Show footer",
+      "showSignature": "Show signature area",
+      "showPage": "Show Page"
+    }
   },
   "events": {
     "registerFailed": "Registration failed",
@@ -528,7 +586,43 @@
     "phone": "Phone",
     "markShipped": "Mark Shipped",
     "markDelivered": "Mark Delivered",
-    "confirmOrder": "Confirm Order"
+    "confirmOrder": "Confirm Order",
+    "tabs": {
+      "orders": "Orders",
+      "invoices": "Invoices"
+    },
+    "invoice": {
+      "status": "Invoice",
+      "generated": "Generated",
+      "notGenerated": "Not generated",
+      "generate": "Generate Invoice",
+      "print": "Download PDF",
+      "popupBlocked": "Popup blocked. Please allow popups for this site and try again.",
+      "needGenerateFirst": "Please generate the invoice first",
+      "view": "View",
+      "previewFailed": "Unable to open preview (it may be blocked by the browser)",
+      "saveFailed": "Failed to save invoice info",
+      "generatedAndOpened": "Invoice generated and print window opened",
+      "selectOneOrder": "Please select exactly 1 order",
+      "filterAll": "All orders",
+      "filterInvoiced": "Invoiced",
+      "filterNotInvoiced": "Not invoiced",
+      "modalTitle": "Generate Invoice",
+      "printHint": "A print window will open. In the print dialog, choose “Save as PDF”.",
+      "downloadPdf": "Download PDF",
+      "invoiceNo": "Invoice No",
+      "invoiceNoRequired": "Please input invoice number",
+      "invoiceDate": "Date",
+      "invoiceDateRequired": "Please select date",
+      "invoiceTo": "Invoice To",
+      "invoiceToRequired": "Please input invoice recipient",
+      "address": "Address",
+      "addressRequired": "Please input address",
+      "phone": "Phone",
+      "phoneRequired": "Please input phone",
+      "terms": "Terms"
+    },
+    "orderTotal": "Order Total"
   },
   "inventory": {
     "cigarName": "Cigar Name",
@@ -765,8 +859,7 @@
     "startDate": "Start Date",
     "endDate": "End Date",
     "searchPlaceholder": "Search transactions (description, ID, amount)",
-    "resetFilters": "Reset Filters",
-    "exportReport": "Export Report",
+    "exportReport": "Export report",
     "pasteImport": "Paste Import",
     "pasteImportTitle": "Paste Import Transactions",
     "pasteImportHint": "Paste one record per line.",
@@ -836,10 +929,22 @@
     "orderDate": "Order Date",
     "userName": "User Name",
     "quantity": "Quantity",
-    "balance": "Balance"
-  },
-  "financialAdmin": {
-    "balance": "Balance"
+    "balance": "Balance",
+    "totalProfit": "Total Profit",
+    "totalCogs": "Total COGS",
+    "profitMargin": "Profit Margin",
+    "revenue": "Revenue",
+    "cost": "Cost",
+    "profit": "Profit",
+    "margin": "Margin",
+    "profitTrend": "Profit Trend Chart",
+    "status": {
+      "paid": "Paid",
+      "partial": "Partial",
+      "unmatched": "Unmatched"
+    },
+    "filteringMonth": "Filtering results for: {{month}}",
+    "resetFilters": "Date filters reset"
   },
   "participants": {
     "loadingParticipants": "Loading participant information...",

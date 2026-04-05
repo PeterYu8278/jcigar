@@ -68,6 +68,22 @@ export const COLLECTIONS = {
   INVENTORY_MOVEMENTS: 'inventory_movements',
 } as const;
 
+// 通用日期转换工具
+export const toDateOrNull = (val: any): Date | null => {
+  if (!val) return null
+  if (val && typeof val.toDate === 'function') {
+    const d = val.toDate()
+    return isNaN(d?.getTime?.() || NaN) ? null : d
+  }
+  if ((val as any)?.toDate && typeof (val as any).toDate === 'function') {
+    const d = (val as any).toDate()
+    return isNaN(d?.getTime?.() || NaN) ? null : d
+  }
+  if (val instanceof Date) return isNaN(val.getTime()) ? null : val
+  const d = new Date(val)
+  return isNaN(d.getTime()) ? null : d
+}
+
 // 通用CRUD操作
 export const createDocument = async <T>(collectionName: string, data: Omit<T, 'id'>) => {
   
@@ -435,6 +451,10 @@ export const createOrdersFromEventAllocations = async (eventId: string): Promise
       return { success: true, createdOrders: 0, updatedOrders: 0 };
     }
 
+    // 获取活动日期作为订单日期基准
+    const rawEventStart = (event as any)?.schedule?.startDate;
+    const eventDate = toDateOrNull(rawEventStart) || new Date();
+
     const registeredUsers = (event as any)?.participants?.registered || [];
     let createdOrdersCount = 0;
     let updatedOrdersCount = 0;
@@ -492,21 +512,29 @@ export const createOrdersFromEventAllocations = async (eventId: string): Promise
             payment: {
               method: 'bank_transfer' as const,
               transactionId: `EVENT_${eventId}_${userId}`,
-              paidAt: new Date()
+              paidAt: eventDate // 使用活动日期
             },
             shipping: {
               address: String((event as any)?.title || '活动现场领取')
             },
-            createdAt: new Date(),
+            createdAt: eventDate, // 使用活动日期同步
             updatedAt: new Date()
           };
+
+          // 如果订单已存在，先删除旧的出库记录（确保数据一致性）
+          if (allocation.orderId) {
+            const oldOutbounds = await getOutboundOrdersByReferenceNo(allocation.orderId);
+            for (const ob of oldOutbounds) {
+              await deleteOutboundOrder(ob.id);
+            }
+          }
 
           let orderId: string;
           let isNewOrder = false;
 
           // 检查是否已存在订单
           if (allocation.orderId) {
-            // 更新现有订单 - 只更新允许的字段
+            // 更新现有订单 - 全量覆盖关键字段，包括日期
             const updateData = {
               items: orderData.items,
               total: orderData.total,
@@ -514,6 +542,7 @@ export const createOrdersFromEventAllocations = async (eventId: string): Promise
               source: orderData.source,
               payment: orderData.payment,
               shipping: orderData.shipping,
+              createdAt: orderData.createdAt, // 覆盖原始日期为活动日期
               updatedAt: new Date()
             };
             const updateResult = await updateDocument(COLLECTIONS.ORDERS, allocation.orderId, updateData);
@@ -525,15 +554,11 @@ export const createOrdersFromEventAllocations = async (eventId: string): Promise
             }
           } else {
             // 创建新订单（自定义ID：ORD-YYYY-MM-0000-E，按活动开始日期）
-            const rawStart = (event as any)?.schedule?.startDate
-            const startDate: Date = rawStart && typeof (rawStart as any)?.toDate === 'function' 
-              ? (rawStart as any).toDate()
-              : (rawStart instanceof Date ? rawStart : new Date())
-            const year = startDate.getFullYear();
-            const month = String(startDate.getMonth() + 1).padStart(2, '0');
+            const year = eventDate.getFullYear();
+            const month = String(eventDate.getMonth() + 1).padStart(2, '0');
             const prefix = `ORD-${year}-${month}-`;
-            const startOfMonth = new Date(year, startDate.getMonth(), 1, 0, 0, 0, 0);
-            const endOfMonth = new Date(year, startDate.getMonth() + 1, 0, 23, 59, 59, 999);
+            const startOfMonth = new Date(year, eventDate.getMonth(), 1, 0, 0, 0, 0);
+            const endOfMonth = new Date(year, eventDate.getMonth() + 1, 0, 23, 59, 59, 999);
             const qCount = query(
               collection(db, COLLECTIONS.ORDERS),
               where('createdAt', '>=', startOfMonth),
@@ -553,7 +578,7 @@ export const createOrdersFromEventAllocations = async (eventId: string): Promise
             const sanitized = sanitizeForFirestore(orderData);
             await setDoc(doc(db, COLLECTIONS.ORDERS, newId), {
               ...sanitized,
-              createdAt: (sanitized as any)?.createdAt || new Date(),
+              createdAt: sanitized.createdAt,
               updatedAt: new Date(),
             } as any);
             orderId = newId;
@@ -561,47 +586,46 @@ export const createOrdersFromEventAllocations = async (eventId: string): Promise
             createdOrdersCount++;
           }
 
-          // 如果是新订单，创建出库记录（仅对真实雪茄行生成，不含费用行）
-          if (isNewOrder) {
-            const outboundItems = []
-            let outboundTotalQty = 0
-            let outboundTotalValue = 0
+          // 为该订单生成/更新出库记录（仅对真实雪茄行生成，不含费用行）
+          // 逻辑：不论是新订单还是更新订单，此时旧的已删，创建全新的
+          const outboundItems = []
+          let outboundTotalQty = 0
+          let outboundTotalValue = 0
+          
+          for (const it of orderItems) {
+            // 仅对真实存在的雪茄生成出库记录（费用行不会匹配到实体雪茄）
+            const cigar = await getCigarById(it.cigarId)
+            if (!cigar) continue
             
-            for (const it of orderItems) {
-              // 仅对真实存在的雪茄生成出库记录（费用行不会匹配到实体雪茄）
-              const cigar = await getCigarById(it.cigarId)
-              if (!cigar) continue
-              
-              const outboundItem = {
-                cigarId: it.cigarId,
-                cigarName: cigar.name,
-                itemType: 'cigar' as const,
-                quantity: it.quantity,
-                unitPrice: it.price,
-                subtotal: it.quantity * it.price
-              }
-              
-              outboundItems.push(outboundItem)
-              outboundTotalQty += it.quantity
-              outboundTotalValue += outboundItem.subtotal
+            const outboundItem = {
+              cigarId: it.cigarId,
+              cigarName: cigar.name,
+              itemType: 'cigar' as const,
+              quantity: it.quantity,
+              unitPrice: it.price,
+              subtotal: it.quantity * it.price
             }
             
-            // 创建出库订单
-            if (outboundItems.length > 0) {
-              const outboundOrderData: Omit<OutboundOrder, 'id' | 'updatedAt'> = {
-                referenceNo: orderId,
-                type: 'event',
-                reason: String((event as any)?.title || '活动订单出库'),
-                items: outboundItems,
-                totalQuantity: outboundTotalQty,
-                totalValue: outboundTotalValue,
-                status: 'completed',
-                operatorId: 'system',
-                createdAt: new Date()
-              }
-              
-              await createOutboundOrder(outboundOrderData)
+            outboundItems.push(outboundItem)
+            outboundTotalQty += it.quantity
+            outboundTotalValue += outboundItem.subtotal
+          }
+          
+          // 创建出库订单
+          if (outboundItems.length > 0) {
+            const outboundOrderData: Omit<OutboundOrder, 'id' | 'updatedAt'> = {
+              referenceNo: orderId,
+              type: 'event',
+              reason: String((event as any)?.title || '活动订单出库'),
+              items: outboundItems,
+              totalQuantity: outboundTotalQty,
+              totalValue: outboundTotalValue,
+              status: 'completed',
+              operatorId: 'system',
+              createdAt: orderData.createdAt || new Date()
             }
+            
+            await createOutboundOrder(outboundOrderData)
           }
 
           // 将订单ID存储到分配记录中（更新副本）

@@ -22,7 +22,7 @@ const Login: React.FC = () => {
   const [resetPasswordForm] = Form.useForm()
   const touchStartY = useRef(0)
   const containerRef = useRef<HTMLDivElement>(null)
-  
+
   const navigate = useNavigate()
   const location = useLocation()
   const { user, setUser } = useAuthStore()
@@ -122,7 +122,7 @@ const Login: React.FC = () => {
 
     return () => clearInterval(interval)
   }, [resetPasswordVisible])
-  
+
   // 下拉刷新处理
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY
@@ -130,10 +130,10 @@ const Login: React.FC = () => {
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (isRefreshing) return
-    
+
     const touchY = e.touches[0].clientY
     const pullDelta = touchY - touchStartY.current
-    
+
     // 只在页面顶部且向下拖动时才触发
     if (pullDelta > 0 && window.scrollY === 0) {
       setPullDistance(Math.min(pullDelta, 150))
@@ -149,7 +149,7 @@ const Login: React.FC = () => {
       // 触发刷新
       setIsRefreshing(true)
       setPullDistance(80)
-      
+
       // 延迟刷新以显示动画
       setTimeout(() => {
         window.location.reload()
@@ -180,13 +180,13 @@ const Login: React.FC = () => {
     if (hasCheckedRedirect.current) {
       return;
     }
-    
+
     const checkRedirectResult = async () => {
       hasCheckedRedirect.current = true;
       setLoading(true)
       try {
         const result = await handleGoogleRedirectResult()
-        
+
         if (result.success) {
           if ((result as any).needsProfile) {
             message.info('请完善您的账户信息')
@@ -203,7 +203,7 @@ const Login: React.FC = () => {
         setLoading(false)
       }
     }
-    
+
     checkRedirectResult()
   }, [navigate, t])
 
@@ -231,7 +231,7 @@ const Login: React.FC = () => {
     setLoginError('') // 清除之前的错误
     try {
       const res = await loginWithGoogle()
-      
+
       if (res.success) {
         // 检查是否正在重定向
         if ((res as any).isRedirecting) {
@@ -239,7 +239,7 @@ const Login: React.FC = () => {
           message.loading('正在跳转到 Google 登录...', 0)
           return
         }
-        
+
         // 检查是否需要完善信息
         if ((res as any).needsProfile) {
           message.info('请完善您的账户信息')
@@ -263,22 +263,22 @@ const Login: React.FC = () => {
     // 检查是否距离上次发送不足1分钟
     const now = Date.now()
     const lastSendTime = getLastResetPasswordTime()
-    
+
     if (lastSendTime !== null) {
       const timeSinceLastSend = now - lastSendTime
       const oneMinute = 60 * 1000 // 1分钟 = 60000毫秒
-      
+
       if (timeSinceLastSend < oneMinute) {
         const remainingSeconds = Math.ceil((oneMinute - timeSinceLastSend) / 1000)
         setResetPasswordCooldown(remainingSeconds)
         return
       }
     }
-    
+
     setResetPasswordLoading(true)
     try {
       const identifier = values.identifier.trim()
-      
+
       // 如果禁用了邮箱和 Google 登录，只处理手机号重置
       if (appConfig?.auth?.disableEmailLogin && appConfig?.auth?.disableGoogleLogin) {
         const result = await resetPasswordByPhone(identifier)
@@ -293,10 +293,10 @@ const Login: React.FC = () => {
         }
         return
       }
-      
+
       // 否则根据输入类型处理
       const type = identifyInputType(identifier)
-      
+
       if (type === 'email') {
         // 邮箱重置：发送重置链接
         const result = await sendPasswordResetEmailFor(identifier)
@@ -332,19 +332,19 @@ const Login: React.FC = () => {
   }
 
   return (
-      <div 
-        ref={containerRef}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        style={{
-          width: '100%',
-          padding: '0 25px',
-          position: 'relative',
-          boxSizing: 'border-box',
-          transform: `translateY(${pullDistance}px)`,
-          transition: isRefreshing ? 'transform 0.3s ease' : pullDistance > 0 ? 'none' : 'transform 0.3s ease'
-        }}>
+    <div
+      ref={containerRef}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      style={{
+        width: '100%',
+        padding: '0 25px',
+        position: 'relative',
+        boxSizing: 'border-box',
+        transform: `translateY(${pullDistance}px)`,
+        transition: isRefreshing ? 'transform 0.3s ease' : pullDistance > 0 ? 'none' : 'transform 0.3s ease'
+      }}>
       {/* 下拉刷新指示器 */}
       {pullDistance > 0 && (
         <div style={{
@@ -361,15 +361,15 @@ const Login: React.FC = () => {
           opacity: pullDistance / 80,
           transition: 'opacity 0.2s ease'
         }}>
-          <Spin 
+          <Spin
             indicator={<LoadingOutlined style={{ fontSize: 24, color: '#ffd700' }} spin />}
             spinning={isRefreshing}
           />
           <span>{isRefreshing ? '正在刷新...' : pullDistance > 80 ? '释放刷新' : '下拉刷新'}</span>
         </div>
       )}
-      
-      <Card style={{ 
+
+      <Card style={{
         width: '100%',
         maxWidth: 400,
         background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.9) 0%, rgba(45, 45, 45, 0.8) 100%)',
@@ -381,117 +381,117 @@ const Login: React.FC = () => {
         zIndex: 1
       }}>
         {configLoading ? (
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
             minHeight: '300px',
             flexDirection: 'column',
             gap: '16px'
           }}>
-            <Spin 
+            <Spin
               indicator={<LoadingOutlined style={{ fontSize: 32, color: '#ffd700' }} spin />}
               size="large"
             />
             <Text style={{ color: '#c0c0c0' }}>加载中...</Text>
           </div>
         ) : (
-        <Space direction="vertical" size="large" style={{ width: '100%' }}>
-          <div style={{ textAlign: 'center', paddingTop: '20px' }}>
-            {/* 应用 Logo */}
-            {appConfig?.logoUrl && !logoError && (
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'center',
-                background: 'transparent'
+          <Space direction="vertical" size="large" style={{ width: '100%' }}>
+            <div style={{ textAlign: 'center', paddingTop: '20px' }}>
+              {/* 应用 Logo */}
+              {appConfig?.logoUrl && !logoError && (
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  background: 'transparent'
+                }}>
+                  <img
+                    src={appConfig.logoUrl}
+                    alt={appConfig?.appName || 'App Logo'}
+                    onError={() => {
+                      console.warn('[Login] Logo 加载失败:', appConfig.logoUrl)
+                      setLogoError(true)
+                    }}
+                    style={{
+                      width: 'auto',
+                      height: '50px',
+                      maxWidth: '100%',
+                      objectFit: 'contain',
+                      background: 'transparent',
+                      mixBlendMode: 'normal'
+                    }}
+                  />
+                </div>
+              )}
+              <Title level={2} style={{
+                marginTop: 10,
+                marginBottom: 8,
+                background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                fontWeight: 700,
+                letterSpacing: '2px'
               }}>
-                <img
-                  src={appConfig.logoUrl}
-                  alt={appConfig?.appName || 'App Logo'}
-                  onError={() => {
-                    console.warn('[Login] Logo 加载失败:', appConfig.logoUrl)
-                    setLogoError(true)
-                  }}
-                  style={{
-                    width: 'auto',
-                    height: '50px',
-                    maxWidth: '100%',
-                    objectFit: 'contain',
-                    background: 'transparent',
-                    mixBlendMode: 'normal'
-                  }}
-                />
-              </div>
-            )}
-            <Title level={2} style={{ 
-              marginTop: 10,
-              marginBottom: 8,
-              background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              fontWeight: 700,
-              letterSpacing: '2px'
-            }}>
-              {appConfig?.appName || 'Cigar Club'}
-            </Title>
-            <Text style={{ color: '#c0c0c0', fontSize: '16px' }}>
-              {t('auth.welcomeBack')}
-            </Text>
-          </div>
+                {appConfig?.appName || 'Cigar Club'}
+              </Title>
+              <Text style={{ color: '#c0c0c0', fontSize: '16px' }}>
+                {t('auth.welcomeBack')}
+              </Text>
+            </div>
 
-          {/* 显示登录表单（即使禁用电邮登录，仍允许手机号登录） */}
-          <Form
-            name="login"
-            onFinish={onFinish}
-            autoComplete="off"
-            size="large"
-            style={{ padding: '0 20px' }}
-          >
-            <Form.Item
-              name="email"
-              rules={[
-                { required: true, message: appConfig?.auth?.disableEmailLogin ? '请输入手机号' : '请输入邮箱或手机号' },
-                {
-                  validator: (_, value) => {
-                    if (!value) return Promise.resolve()
-                    
-                    // 检查中文字符
-                    if (/[\u4e00-\u9fa5]/.test(value)) {
-                      return Promise.reject(new Error('不允许输入中文字符'))
-                    }
-                    
-                    const type = identifyInputType(value)
-                    
-                    if (type === 'unknown') {
-                      return Promise.reject(new Error(appConfig?.auth?.disableEmailLogin ? '请输入有效的手机号' : '请输入有效的邮箱或手机号'))
-                    }
-                    
-                    // 如果禁用了电邮登录，不允许使用邮箱
-                    if (appConfig?.auth?.disableEmailLogin && type === 'email') {
-                      return Promise.reject(new Error('请输入有效的手机号'))
-                    }
-                    
-                    // 邮箱验证：必须包含 @ 和 .
-                    if (type === 'email') {
-                      if (!isValidEmail(value)) {
-                        return Promise.reject(new Error('邮箱格式无效'))
-                  }
-                }
-                    
-                    // 手机号额外验证标准化
-                    if (type === 'phone') {
-                      const normalized = normalizePhoneNumber(value)
-                      if (!normalized) {
-                        return Promise.reject(new Error('手机号格式无效（需10-15位数字）'))
-                      }
-                    }
-                    
-                    return Promise.resolve()
-                  }
-                }
-              ]}
+            {/* 显示登录表单（即使禁用电邮登录，仍允许手机号登录） */}
+            <Form
+              name="login"
+              onFinish={onFinish}
+              autoComplete="off"
+              size="large"
+              style={{ padding: '0 20px' }}
             >
+              <Form.Item
+                name="email"
+                rules={[
+                  { required: true, message: appConfig?.auth?.disableEmailLogin ? '请输入手机号' : '请输入邮箱或手机号' },
+                  {
+                    validator: (_, value) => {
+                      if (!value) return Promise.resolve()
+
+                      // 检查中文字符
+                      if (/[\u4e00-\u9fa5]/.test(value)) {
+                        return Promise.reject(new Error('不允许输入中文字符'))
+                      }
+
+                      const type = identifyInputType(value)
+
+                      if (type === 'unknown') {
+                        return Promise.reject(new Error(appConfig?.auth?.disableEmailLogin ? '请输入有效的手机号' : '请输入有效的邮箱或手机号'))
+                      }
+
+                      // 如果禁用了电邮登录，不允许使用邮箱
+                      if (appConfig?.auth?.disableEmailLogin && type === 'email') {
+                        return Promise.reject(new Error('请输入有效的手机号'))
+                      }
+
+                      // 邮箱验证：必须包含 @ 和 .
+                      if (type === 'email') {
+                        if (!isValidEmail(value)) {
+                          return Promise.reject(new Error('邮箱格式无效'))
+                        }
+                      }
+
+                      // 手机号额外验证标准化
+                      if (type === 'phone') {
+                        const normalized = normalizePhoneNumber(value)
+                        if (!normalized) {
+                          return Promise.reject(new Error('手机号格式无效（需10-15位数字）'))
+                        }
+                      }
+
+                      return Promise.resolve()
+                    }
+                  }
+                ]}
+              >
                 <Input
                   prefix={<UserOutlined style={{ color: loginError ? '#ff4d4f' : '#ffd700' }} />}
                   placeholder={loginError || (appConfig?.auth?.disableEmailLogin ? "手机号 (例: 0123456789)" : "邮箱 / 手机号 (例: admin@example.com 或 0123456789)")}
@@ -499,7 +499,7 @@ const Login: React.FC = () => {
                     const input = e.currentTarget
                     // 清除错误状态
                     if (loginError) setLoginError('')
-                    
+
                     // 如果禁用了电邮登录，只允许输入数字
                     if (appConfig?.auth?.disableEmailLogin) {
                       input.value = input.value.replace(/\D/g, '')
@@ -556,7 +556,7 @@ const Login: React.FC = () => {
                 <Input.Password
                   prefix={<LockOutlined style={{ color: loginError ? '#ff4d4f' : '#ffd700' }} />}
                   placeholder={t('auth.password')}
-                  iconRender={(visible) => 
+                  iconRender={(visible) =>
                     visible ? (
                       <EyeOutlined style={{ color: '#ffd700' }} />
                     ) : (
@@ -581,7 +581,7 @@ const Login: React.FC = () => {
                 />
               </Form.Item>
 
-              <Form.Item style={{textAlign: 'right' }}>
+              <Form.Item style={{ textAlign: 'right' }}>
                 <Button
                   type="link"
                   onClick={() => setResetPasswordVisible(true)}
@@ -601,7 +601,7 @@ const Login: React.FC = () => {
                   type="primary"
                   htmlType="submit"
                   loading={loading}
-                  style={{ 
+                  style={{
                     width: '100%',
                     height: '48px',
                     background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
@@ -619,54 +619,54 @@ const Login: React.FC = () => {
               </Form.Item>
             </Form>
 
-          {/* 如果 Google 登录未被禁用，显示 Google 登录按钮 */}
-          {!appConfig?.auth?.disableGoogleLogin && (
-            <div style={{ padding: '0 20px' }}>
-              <Button
-                icon={<GoogleOutlined />}
-                onClick={onGoogle}
-                loading={loading}
-                style={{ 
-                  width: '100%',
-                  height: '48px',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: '#221c10',
-                  fontSize: '16px',
-                  fontWeight: 600,
-                  boxShadow: '0 4px 20px rgba(255, 215, 0, 0.3)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px'
-                }}
-              >
-                {t('auth.loginWithGoogle')}
-              </Button>
+            {/* 如果 Google 登录未被禁用，显示 Google 登录按钮 */}
+            {!appConfig?.auth?.disableGoogleLogin && (
+              <div style={{ padding: '0 20px' }}>
+                <Button
+                  icon={<GoogleOutlined />}
+                  onClick={onGoogle}
+                  loading={loading}
+                  style={{
+                    width: '100%',
+                    height: '48px',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: '#221c10',
+                    fontSize: '16px',
+                    fontWeight: 600,
+                    boxShadow: '0 4px 20px rgba(255, 215, 0, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  {t('auth.loginWithGoogle')}
+                </Button>
+              </div>
+            )}
+
+
+            <div style={{ textAlign: 'center', paddingBottom: '20px' }}>
+              <Text style={{ color: '#999999' }}>
+                {t('auth.noAccount')}{' '}
+                <Button
+                  type="link"
+                  onClick={() => navigate('/register')}
+                  style={{
+                    background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                    fontWeight: 700,
+                    padding: 0
+                  }}
+                >
+                  {t('auth.registerNow')}
+                </Button>
+              </Text>
             </div>
-          )}
-
-
-          <div style={{ textAlign: 'center', paddingBottom: '20px' }}>
-            <Text style={{ color: '#999999' }}>
-              {t('auth.noAccount')}{' '}
-              <Button 
-                type="link" 
-                onClick={() => navigate('/register')}
-                style={{
-                  background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                  fontWeight: 700,
-                  padding: 0
-                }}
-              >
-                {t('auth.registerNow')}
-              </Button>
-            </Text>
-          </div>
-        </Space>
+          </Space>
         )}
       </Card>
 
@@ -728,18 +728,20 @@ const Login: React.FC = () => {
           <Form.Item
             name="identifier"
             label={<span style={{ color: '#c0c0c0' }}>
-              {appConfig?.auth?.disableEmailLogin && appConfig?.auth?.disableGoogleLogin 
-                ? '手机号' 
+              {appConfig?.auth?.disableEmailLogin && appConfig?.auth?.disableGoogleLogin
+                ? '手机号'
                 : '邮箱地址或手机号'}
             </span>}
             rules={[
-              { required: true, message: appConfig?.auth?.disableEmailLogin && appConfig?.auth?.disableGoogleLogin 
-                ? '请输入手机号' 
-                : '请输入邮箱地址或手机号' },
+              {
+                required: true, message: appConfig?.auth?.disableEmailLogin && appConfig?.auth?.disableGoogleLogin
+                  ? '请输入手机号'
+                  : '请输入邮箱地址或手机号'
+              },
               {
                 validator: (_, value) => {
                   if (!value) return Promise.resolve()
-                  
+
                   // 如果禁用了邮箱和 Google 登录，只验证手机号
                   if (appConfig?.auth?.disableEmailLogin && appConfig?.auth?.disableGoogleLogin) {
                     const normalized = normalizePhoneNumber(value)
@@ -748,26 +750,26 @@ const Login: React.FC = () => {
                     }
                     return Promise.resolve()
                   }
-                  
+
                   // 否则验证邮箱或手机号
                   const type = identifyInputType(value)
                   if (type === 'unknown') {
                     return Promise.reject(new Error('请输入有效的邮箱地址或手机号'))
                   }
-                  
+
                   if (type === 'email') {
                     if (!isValidEmail(value)) {
                       return Promise.reject(new Error('邮箱格式无效'))
                     }
                   }
-                  
+
                   if (type === 'phone') {
                     const normalized = normalizePhoneNumber(value)
                     if (!normalized) {
                       return Promise.reject(new Error('手机号格式无效'))
                     }
                   }
-                  
+
                   return Promise.resolve()
                 }
               }
@@ -865,7 +867,7 @@ const Login: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-      
+
     </div>
   )
 }

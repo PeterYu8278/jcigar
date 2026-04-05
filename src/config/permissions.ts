@@ -85,6 +85,7 @@ export const ROUTE_PERMISSIONS = {
   
   // Developer 专属路由
   '/developer/feature-management': ['developer'],
+  '/developer/invoice-template': ['admin', 'developer'],
   '/developer/cigar-database': ['developer'],
   '/developer/performance': ['developer'],
   '/developer/gemini-tester': ['developer'],

@@ -60,7 +60,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ siderCollapsed = false, isDesktop
       if (result.success) {
         useAuthStore.getState().logout()
         message.success(t('auth.logoutSuccess', { defaultValue: '已登出' }))
-        navigate('/login')
+        navigate('/')
       } else {
         message.error(result.error?.message || t('auth.logoutFailed', { defaultValue: '登出失败' }))
       }

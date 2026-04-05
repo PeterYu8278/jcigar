@@ -7,45 +7,47 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  
+
   /* 黑金配色变量 */
   --cigar-black-primary: #0a0a0a;
   --cigar-black-secondary: #1a1a1a;
   --cigar-black-tertiary: #2d2d2d;
   --cigar-black-quaternary: #0f0f0f;
-  
+
   --cigar-gold-primary: #ffd700;
   --cigar-gold-secondary: #ffed4e;
   --cigar-gold-tertiary: #e6b800;
   --cigar-gold-accent: #cd853f;
-  
+
   --cigar-text-primary: #f8f8f8;
   --cigar-text-secondary: #c0c0c0;
   --cigar-text-tertiary: #999999;
   --cigar-text-quaternary: #666666;
-  
+
   --cigar-border-primary: #333333;
   --cigar-border-secondary: #444444;
-  
+
   /* 渐变背景 */
   --cigar-gradient-primary: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2d2d2d 100%);
   --cigar-gradient-gold: linear-gradient(135deg, #ffd700 0%, #ffed4e 50%, #e6b800 100%);
   --cigar-gradient-dark: linear-gradient(135deg, #0a0a0a 0%, #0f0f0f 100%);
-  
+
   /* 阴影效果 */
   --cigar-shadow-primary: 0 8px 32px rgba(0, 0, 0, 0.3);
   --cigar-shadow-gold: 0 4px 20px rgba(255, 215, 0, 0.15);
   --cigar-shadow-card: 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
   /* 侧边栏宽度变量（由脚本更新） */
   --sider-width: 240px;
-  
+
   /* 动画时长 */
   --cigar-transition-fast: 0.2s ease-in-out;
   --cigar-transition-normal: 0.3s ease-in-out;
   --cigar-transition-slow: 0.5s ease-in-out;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
 }
 
@@ -74,12 +76,7 @@ a:hover {
   color: var(--cigar-text-primary);
 }
 
-/* 让 Modal 视觉居中随侧边栏变化进行修正（仅桌面端） */
-@media (min-width: 769px) {
-  .ant-modal-wrap {
-    padding-left: var(--sider-width);
-  }
-}
+/* 让 Modal 视觉居中（已移除全局 padding-left 偏置，防止 Landing Page 错位） */
 
 /* 自定义滚动条样式 */
 ::-webkit-scrollbar {
@@ -119,8 +116,10 @@ a:hover {
 
 /* 调整 cigar-card 内部的 ant-card-body 间距 */
 .cigar-card .ant-card-body {
-  padding: 16px !important;  /* 默认是 24px，这里改为 16px */
-  margin: 0;      /* 确保没有外边距 */
+  padding: 16px !important;
+  /* 默认是 24px，这里改为 16px */
+  margin: 0;
+  /* 确保没有外边距 */
 }
 
 /* 商城页面 - 隐藏滚动条 */
@@ -140,6 +139,7 @@ a:hover {
 
 /* 手机端全局隐藏滚动条（保留滚动功能） */
 @media (max-width: 768px) {
+
   body::-webkit-scrollbar,
   html::-webkit-scrollbar,
   #root::-webkit-scrollbar {
@@ -147,14 +147,14 @@ a:hover {
     height: 0 !important;
     display: none !important;
   }
-  
+
   body,
   html,
   #root {
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
   }
-  
+
   /* 认证页面容器隐藏滚动条 */
   .ant-layout::-webkit-scrollbar,
   .ant-layout-content::-webkit-scrollbar {
@@ -162,7 +162,7 @@ a:hover {
     height: 0 !important;
     display: none !important;
   }
-  
+
   .ant-layout,
   .ant-layout-content {
     scrollbar-width: none !important;
@@ -181,21 +181,30 @@ a:hover {
 
 /* 统一的无边框金色渐变按钮样式（用于创建/保存/确认等提交类按钮） */
 .cigar-btn-gradient {
-  background: linear-gradient(to right,#FDE08D,#C48D3A) !important;
+  background: linear-gradient(to right, #FDE08D, #C48D3A) !important;
   color: #111 !important;
   font-weight: 600 !important;
-  box-shadow: 0 4px 14px rgba(196,141,58,0.35) !important;
+  box-shadow: 0 4px 14px rgba(196, 141, 58, 0.35) !important;
 }
+
 .cigar-btn-gradient:hover,
 .cigar-btn-gradient:focus {
   filter: brightness(1.05);
-  box-shadow: 0 6px 18px rgba(196,141,58,0.45) !important;
+  box-shadow: 0 6px 18px rgba(196, 141, 58, 0.45) !important;
 }
 
 /* 全局相邻按钮间距统一为 8px */
-.ant-btn + .ant-btn { margin-left: 8px; }
-.ant-modal-footer > * + * { margin-left: 8px; }
-button + button { margin-left: 8px; }
+.ant-btn+.ant-btn {
+  margin-left: 8px;
+}
+
+.ant-modal-footer>*+* {
+  margin-left: 8px;
+}
+
+button+button {
+  margin-left: 8px;
+}
 
 /* 暗色主题弹窗样式 */
 .ant-modal-content {
@@ -230,7 +239,7 @@ button + button { margin-left: 8px; }
   color: #FFFFFF !important;
 }
 
-.dark-theme-form .ant-form-item-label > label {
+.dark-theme-form .ant-form-item-label>label {
   color: #FFFFFF !important;
 }
 
@@ -242,7 +251,7 @@ button + button { margin-left: 8px; }
   color: inherit;
 }
 
-.dark-theme-form .ant-form-item-label > label.ant-form-item-required::before {
+.dark-theme-form .ant-form-item-label>label.ant-form-item-required::before {
   color: #ff6b6b !important;
 }
 
@@ -284,7 +293,7 @@ button + button { margin-left: 8px; }
   color: rgba(255, 255, 255, 0.6) !important;
 }
 
-.dark-theme-form .ant-picker-input > input {
+.dark-theme-form .ant-picker-input>input {
   color: #FFFFFF !important;
 }
 
@@ -421,9 +430,26 @@ button + button { margin-left: 8px; }
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-  20%, 40%, 60%, 80% { transform: translateX(5px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-5px);
+  }
+
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(5px);
+  }
 }
 
 .ant-input:focus,
@@ -465,10 +491,10 @@ button + button { margin-left: 8px; }
   :root {
     font-size: 14px;
   }
-  
+
   .cigar-card {
     margin: 8px;
-  border-radius: 8px;
+    border-radius: 8px;
   }
 
   /* 手机端显示视图切换按钮 */
@@ -494,12 +520,14 @@ button + button { margin-left: 8px; }
   /* 手机端调整内容区域 */
   .ant-layout-content {
     margin-left: 0 !important;
-    padding: 16px ;
-    padding-bottom: 90px ; /* 为底部导航留出空间 */
+    padding: 16px;
+    padding-bottom: 90px;
+    /* 为底部导航留出空间 */
   }
 }
 
 @media (min-width: 769px) {
+
   /* 桌面端隐藏视图切换按钮 */
   .mobile-view-toggle {
     display: none !important;
@@ -515,7 +543,7 @@ button + button { margin-left: 8px; }
   :root {
     font-size: 13px;
   }
-  
+
   .cigar-card {
     margin: 4px;
     border-radius: 6px;
@@ -706,10 +734,11 @@ button + button { margin-left: 8px; }
   border-color: rgba(244, 175, 37, 0.6) !important;
 }
 
-.ant-descriptions .ant-descriptions-row > th,
-.ant-descriptions .ant-descriptions-row > td {
+.ant-descriptions .ant-descriptions-row>th,
+.ant-descriptions .ant-descriptions-row>td {
   border-color: rgba(244, 175, 37, 0.6) !important;
 }
+
 /* 活动详情弹窗 Tabs 样式 - 参考仪表板页面的 active tab 格式 */
 .ant-tabs-nav {
   margin-bottom: 10px !important;
@@ -872,27 +901,27 @@ button + button { margin-left: 8px; }
   background: transparent !important;
 }
 
-.points-config-form .ant-table-thead > tr > th {
+.points-config-form .ant-table-thead>tr>th {
   background: rgba(255, 255, 255, 0.05) !important;
   border-bottom: 1px solid rgba(244, 175, 37, 0.6) !important;
   color: rgba(255, 255, 255, 0.85) !important;
 }
 
-.points-config-form .ant-table-tbody > tr {
+.points-config-form .ant-table-tbody>tr {
   background: transparent !important;
 }
 
-.points-config-form .ant-table-tbody > tr > td {
+.points-config-form .ant-table-tbody>tr>td {
   background: transparent !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
   color: rgba(255, 255, 255, 0.85) !important;
 }
 
-.points-config-form .ant-table-tbody > tr:hover > td {
+.points-config-form .ant-table-tbody>tr:hover>td {
   background: rgba(255, 255, 255, 0.05) !important;
 }
 
-.points-config-form .ant-table-tbody > tr.ant-table-row-selected > td {
+.points-config-form .ant-table-tbody>tr.ant-table-row-selected>td {
   background: rgba(244, 175, 37, 0.1) !important;
 }
 

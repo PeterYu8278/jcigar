@@ -14,6 +14,7 @@ import type { User as FirebaseUser } from 'firebase/auth';
 import { doc, setDoc, getDoc, getDocFromCache, collection, getDocs, query, where, limit, updateDoc, arrayUnion, increment } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
 import type { User } from '../../types';
+import { getAppConfig } from './appConfig';
 import { normalizePhoneNumber, identifyInputType } from '../../utils/phoneNormalization';
 import { generateMemberId, getUserByMemberId } from '../../utils/memberId';
 
@@ -226,7 +227,6 @@ export const loginWithEmailOrPhone = async (identifier: string, password: string
     }
     
     // 检查是否禁用了电邮登录（只禁止邮箱登录，不禁止手机号登录）
-    const { getAppConfig } = await import('./appConfig')
     const appConfig = await getAppConfig()
     
     // 如果是邮箱登录且已禁用，则阻止
@@ -306,7 +306,6 @@ const isProfileComplete = (userData: User): boolean => {
 // 使用 Google 登录（新架构：通过邮箱匹配用户）
 export const loginWithGoogle = async () => {
   // 检查是否禁用了 Google 登录
-  const { getAppConfig } = await import('./appConfig')
   const appConfig = await getAppConfig()
   if (appConfig?.auth?.disableGoogleLogin) {
     return { success: false, error: new Error('Google 登录已被禁用') } as { success: false; error: Error }
@@ -428,7 +427,6 @@ export const loginWithGoogle = async () => {
 // 处理 Google 重定向登录结果（新架构：通过邮箱匹配）
 export const handleGoogleRedirectResult = async () => {
   // 检查是否禁用了 Google 登录
-  const { getAppConfig } = await import('./appConfig')
   const appConfig = await getAppConfig()
   if (appConfig?.auth?.disableGoogleLogin) {
     // 清除可能的 pending 标记

@@ -63,7 +63,7 @@ export const ReferralTreeView: React.FC<ReferralTreeViewProps> = ({ users: propU
 
     // 创建节点映射
     const nodeMap = new Map<string, ReferralNode>()
-    
+
     // 初始化所有节点
     users.forEach(user => {
       nodeMap.set(user.id, {
@@ -77,11 +77,11 @@ export const ReferralTreeView: React.FC<ReferralTreeViewProps> = ({ users: propU
 
     // 构建树结构
     const rootNodes: ReferralNode[] = []
-    
+
     users.forEach(user => {
       const node = nodeMap.get(user.id)!
       const referrerId = user.referral?.referredByUserId
-      
+
       if (referrerId && nodeMap.has(referrerId)) {
         // 有引荐人，添加到引荐人的children
         const referrerNode = nodeMap.get(referrerId)!
@@ -114,13 +114,13 @@ export const ReferralTreeView: React.FC<ReferralTreeViewProps> = ({ users: propU
     const filterNode = (node: ReferralNode): ReferralNode | null => {
       const user = node.user
       const keyword = searchKeyword.trim().toLowerCase()
-      
+
       // 搜索过滤
-      const matchSearch = !keyword || 
+      const matchSearch = !keyword ||
         user.displayName?.toLowerCase().includes(keyword) ||
         user.email?.toLowerCase().includes(keyword) ||
         user.memberId?.toLowerCase().includes(keyword)
-      
+
       // 类型过滤
       let matchFilter = true
       if (filterType === 'hasReferrer') {
@@ -207,8 +207,8 @@ export const ReferralTreeView: React.FC<ReferralTreeViewProps> = ({ users: propU
         <Card
           size="small"
           style={{
-            background: isSelected 
-              ? 'rgba(255, 215, 0, 0.15)' 
+            background: isSelected
+              ? 'rgba(255, 215, 0, 0.15)'
               : 'rgba(255, 255, 255, 0.05)',
             border: isSelected
               ? '1px solid rgba(255, 215, 0, 0.5)'
@@ -217,8 +217,8 @@ export const ReferralTreeView: React.FC<ReferralTreeViewProps> = ({ users: propU
             marginBottom: 12,
             cursor: 'pointer',
             transition: 'all 0.3s ease',
-            boxShadow: isSelected 
-              ? '0 4px 12px rgba(255, 215, 0, 0.2)' 
+            boxShadow: isSelected
+              ? '0 4px 12px rgba(255, 215, 0, 0.2)'
               : '0 2px 8px rgba(0, 0, 0, 0.1)'
           }}
           onClick={() => setSelectedNodeId(isSelected ? null : user.id)}
@@ -248,7 +248,7 @@ export const ReferralTreeView: React.FC<ReferralTreeViewProps> = ({ users: propU
                   </Tag>
                 )}
               </div>
-              
+
               <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 12, display: 'block', marginBottom: 8 }}>
                 {user.email}
               </Text>
@@ -364,7 +364,7 @@ export const ReferralTreeView: React.FC<ReferralTreeViewProps> = ({ users: propU
           value={searchKeyword}
           onChange={(e) => setSearchKeyword(e.target.value)}
         />
-        
+
         {/* 筛选和操作按钮 */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Select
@@ -376,22 +376,22 @@ export const ReferralTreeView: React.FC<ReferralTreeViewProps> = ({ users: propU
             <Option value="hasReferrer">{t('usersAdmin.hasReferrer')}</Option>
             <Option value="hasReferrals">{t('usersAdmin.hasReferrals')}</Option>
           </Select>
-          <Button 
-            icon={<ExpandOutlined />} 
+          <Button
+            icon={<ExpandOutlined />}
             onClick={expandAll}
             style={{ flex: '1 1 auto' }}
           >
             {t('usersAdmin.expandAll')}
           </Button>
-          <Button 
-            icon={<ShrinkOutlined />} 
+          <Button
+            icon={<ShrinkOutlined />}
             onClick={collapseAll}
             style={{ flex: '1 1 auto' }}
           >
             {t('usersAdmin.collapseAll')}
           </Button>
-          <Button 
-            icon={<ReloadOutlined />} 
+          <Button
+            icon={<ReloadOutlined />}
             onClick={() => window.location.reload()}
             style={{ flex: '1 1 auto' }}
           >
@@ -401,7 +401,7 @@ export const ReferralTreeView: React.FC<ReferralTreeViewProps> = ({ users: propU
       </div>
 
       {/* 关系图 */}
-      <div style={{ 
+      <div style={{
         minHeight: 400,
         maxHeight: 'calc(100vh - 400px)',
         overflowY: 'auto',
@@ -411,7 +411,7 @@ export const ReferralTreeView: React.FC<ReferralTreeViewProps> = ({ users: propU
       }}>
         {filteredTree.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 20px', color: 'rgba(255, 255, 255, 0.6)' }}>
-            <Text>{t('usersAdmin.noReferralData')}</Text>
+            {t('usersAdmin.noReferralData')}
           </div>
         ) : (
           <div>

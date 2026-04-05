@@ -593,3 +593,73 @@ export async function getUserCigarScanHistory(userId: string): Promise<Array<{
     }
 }
 
+/**
+ * 强制覆盖/更新智库数据（人工修正）
+ * 此方法赋予单次更新极高权重，从而直接改变数据库聚合后的标准结果
+ */
+export async function forceUpdateCigarDatabase(
+    result: Partial<CigarAnalysisResult>,
+    userId?: string,
+    userName?: string
+): Promise<void> {
+    try {
+        if (!result.brand || !result.name) return;
+        
+        const productName = generateProductName(result.brand, result.name);
+        const docId = normalizeProductName(productName);
+        const docRef = doc(db, 'cigar_database', docId);
+        
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+            // 彻底覆盖现有统计，使得人工作为绝对权威
+            const updateData: any = {
+                updatedAt: serverTimestamp(),
+                description: result.description || '',
+                descriptionConfidence: 1.0,
+                descriptionUpdatedAt: serverTimestamp(),
+                
+                // 将最新数据赋予极大权重(+100)确立绝对统治地位
+                totalRecognitions: increment(100),
+            };
+            
+            if (result.brand) updateData[`brandStats.${result.brand}`] = increment(100);
+            if (result.origin) updateData[`originStats.${cleanField(result.origin)}`] = increment(100);
+            if (result.strength) updateData[`strengthStats.${result.strength}`] = increment(100);
+            if (result.wrapper) updateData[`wrapperStats.${result.wrapper}`] = increment(100);
+            if (result.binder) updateData[`binderStats.${result.binder}`] = increment(100);
+            if (result.filler) updateData[`fillerStats.${result.filler}`] = increment(100);
+            
+            // 评分
+            if (result.rating !== null && result.rating !== undefined) {
+                updateData.ratingSum = increment(result.rating * 100);
+                updateData.ratingCount = increment(100);
+            }
+            
+            // 标签
+            if (result.flavorProfile && Array.isArray(result.flavorProfile)) {
+                result.flavorProfile.forEach(flavor => {
+                    if (flavor && flavor.trim()) updateData[`flavorProfileStats.${flavor}`] = increment(100);
+                });
+            }
+            // 品吸笔记
+            if (result.footTasteNotes && Array.isArray(result.footTasteNotes)) {
+                result.footTasteNotes.forEach(note => { if (note && note.trim()) updateData[`footTasteNotesStats.${note}`] = increment(100); });
+            }
+            if (result.bodyTasteNotes && Array.isArray(result.bodyTasteNotes)) {
+                result.bodyTasteNotes.forEach(note => { if (note && note.trim()) updateData[`bodyTasteNotesStats.${note}`] = increment(100); });
+            }
+            if (result.headTasteNotes && Array.isArray(result.headTasteNotes)) {
+                result.headTasteNotes.forEach(note => { if (note && note.trim()) updateData[`headTasteNotesStats.${note}`] = increment(100); });
+            }
+            
+            await updateDoc(docRef, updateData);
+        } else {
+            // 如果不存在则按常规处理
+            await saveRecognitionToCigarDatabase(result as CigarAnalysisResult, userId, userName);
+        }
+    } catch (e) {
+        console.error('[forceUpdateCigarDatabase] 强制更新失败:', e);
+    }
+}
+

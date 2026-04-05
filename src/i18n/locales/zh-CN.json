@@ -203,7 +203,15 @@
     "developer": "开发者",
     "member": "会员",
     "guest": "游客",
-    "vip": "VIP"
+    "vip": "VIP",
+    "alreadyHaveAccount": "已有账户？",
+    "signIn": "直接登录",
+    "emailOrPhone": "邮箱或手机号",
+    "loginErrorPlaceholder": "请输入邮箱或手机号",
+    "referralCode": "引荐码",
+    "referralCodeOptional": "引荐码 (可选)",
+    "phoneAlreadyRegistered": "该手机号已被注册",
+    "emailAlreadyRegistered": "该邮箱已被注册"
   },
   "featureManagement": {
     "title": "功能管理",
@@ -223,6 +231,8 @@
     "home": "首页",
     "events": "活动",
     "shop": "商城",
+    "brands": "品牌",
+    "contact": "联系我们",
     "profile": "个人中心",
     "admin": "管理后台",
     "dashboard": "仪表板",
@@ -232,7 +242,55 @@
     "finance": "财务管理",
     "pointsConfig": "积分配置",
     "visitSessions": "驻店记录",
-    "performance": "性能监控"
+    "performance": "性能监控",
+    "invoiceTemplate": "发票模板"
+  },
+  "invoiceTemplate": {
+    "title": "发票模板",
+    "subtitle": "开发者可在此客制化发票 PDF 的版式与卖方信息（保存到 app_config）",
+    "saved": "已保存",
+    "saveFailed": "保存失败",
+    "preview": "预览",
+    "downloadPreview": "下载预览PDF",
+    "previewFailed": "预览打开失败（可能被浏览器拦截）",
+    "multiLineHint": "每行一条",
+    "note": "提示：保存后，订单“查看/下载 PDF”将使用最新模板。",
+    "currentAppName": "当前应用名称",
+    "seller": {
+      "title": "卖方信息（抬头/备注/银行）",
+      "name": "公司名称",
+      "regNo": "注册号",
+      "addressLines": "地址（多行）",
+      "phone": "电话",
+      "fax": "传真",
+      "bankName": "银行",
+      "bankAccount": "账号",
+      "notes": "备注（多行）"
+    },
+    "tabs": {
+      "designer": "A4 设计器",
+      "form": "配置表单"
+    },
+    "template": {
+      "title": "模板设置（版式/表头/显示开关）",
+      "marginMm": "页边距 (mm)",
+      "rightBoxWidthMm": "右侧信息框宽度 (mm)",
+      "infoBoxHeightMm": "信息框高度 (mm)",
+      "footerYmm": "页脚 Y 坐标 (mm)",
+      "signatureYmm": "签名区 Y 坐标 (mm)",
+      "currencySymbol": "货币符号",
+      "invoiceTitle": "发票标题",
+      "thNo": "表头：No",
+      "thDesc": "表头：Description",
+      "thQty": "表头：Qty",
+      "thPrice": "表头：Price/Unit",
+      "thAmount": "表头：Amount",
+      "showNotes": "显示 Notes",
+      "showBank": "显示银行信息",
+      "showFooter": "显示页脚",
+      "showSignature": "显示签名区",
+      "showPage": "显示 Page"
+    }
   },
   "events": {
     "registerFailed": "报名失败",
@@ -525,7 +583,43 @@
     "phone": "联系电话",
     "markShipped": "标记发货",
     "markDelivered": "标记送达",
-    "confirmOrder": "确认订单"
+    "confirmOrder": "确认订单",
+    "tabs": {
+      "orders": "订单列表",
+      "invoices": "发票管理"
+    },
+    "invoice": {
+      "status": "发票",
+      "generated": "已生成",
+      "notGenerated": "未生成",
+      "generate": "生成发票",
+      "print": "下载PDF",
+      "popupBlocked": "弹窗被拦截，请允许本站点打开新窗口后重试",
+      "needGenerateFirst": "请先生成发票",
+      "view": "查看",
+      "previewFailed": "无法打开预览（可能被浏览器拦截）",
+      "saveFailed": "保存发票信息失败",
+      "generatedAndOpened": "发票已生成并打开打印窗口",
+      "selectOneOrder": "请选择 1 个订单生成发票",
+      "filterAll": "全部订单",
+      "filterInvoiced": "已开发票",
+      "filterNotInvoiced": "未开发票",
+      "modalTitle": "生成发票",
+      "printHint": "将打开打印窗口，请在系统打印对话框中选择“保存为 PDF”。",
+      "downloadPdf": "下载PDF",
+      "invoiceNo": "发票号",
+      "invoiceNoRequired": "请输入发票号",
+      "invoiceDate": "日期",
+      "invoiceDateRequired": "请选择日期",
+      "invoiceTo": "发票对象",
+      "invoiceToRequired": "请输入发票对象",
+      "address": "地址",
+      "addressRequired": "请输入地址",
+      "phone": "电话",
+      "phoneRequired": "请输入电话",
+      "terms": "条款"
+    },
+    "orderTotal": "订单总计"
   },
   "inventory": {
     "cigarName": "雪茄名称",
@@ -759,12 +853,10 @@
     "enterDescription": "输入交易描述",
     "relatedOrderId": "关联的订单ID或活动ID（选填）",
     "relatedUserId": "相关用户ID（选填）",
-    "transactionAdded": "交易记录已添加",
     "addFailed": "添加失败",
     "startDate": "开始日期",
     "endDate": "结束日期",
     "searchPlaceholder": "搜索交易记录（描述、ID、金额）",
-    "resetFilters": "重置筛选",
     "exportReport": "导出报表",
     "pasteImport": "粘贴导入",
     "pasteImportTitle": "粘贴导入交易记录",
@@ -835,10 +927,22 @@
     "orderDate": "订单日期",
     "userName": "用户名称",
     "quantity": "数量",
-    "balance": "余额"
-  },
-  "financialAdmin": {
-    "balance": "余额"
+    "balance": "余额",
+    "totalProfit": "总利润",
+    "totalCogs": "总成本",
+    "profitMargin": "利润率",
+    "revenue": "销售额",
+    "cost": "成本",
+    "profit": "利润",
+    "margin": "利润率",
+    "profitTrend": "利润趋势图",
+    "status": {
+      "paid": "已结清",
+      "partial": "部分支付",
+      "unmatched": "未对账"
+    },
+    "filteringMonth": "正在筛选项目: {{month}}",
+    "resetFilters": "已重置日期筛选"
   },
   "participants": {
     "loadingParticipants": "加载参与者信息中...",

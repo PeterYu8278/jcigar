@@ -145,6 +145,17 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
         text: data.colorTheme.text || DEFAULT_COLOR_THEME.text,
         icon: data.colorTheme.icon || DEFAULT_COLOR_THEME.icon,
       } : DEFAULT_COLOR_THEME,
+      invoice: data.invoice ? {
+        sellerName: data.invoice.sellerName || undefined,
+        sellerRegNo: data.invoice.sellerRegNo || undefined,
+        sellerAddressLines: Array.isArray(data.invoice.sellerAddressLines) ? data.invoice.sellerAddressLines : undefined,
+        sellerPhone: data.invoice.sellerPhone || undefined,
+        sellerFax: data.invoice.sellerFax || undefined,
+        bankName: data.invoice.bankName || undefined,
+        bankAccountNo: data.invoice.bankAccountNo || undefined,
+        notes: Array.isArray(data.invoice.notes) ? data.invoice.notes : undefined,
+      } : undefined,
+      invoiceTemplate: data.invoiceTemplate ?? undefined,
       whapi: whapiConfig,
       whapiTemplates,
       auth: data.auth ? {
@@ -216,6 +227,17 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
               text: data.colorTheme.text || DEFAULT_COLOR_THEME.text,
               icon: data.colorTheme.icon || DEFAULT_COLOR_THEME.icon,
             } : DEFAULT_COLOR_THEME,
+            invoice: data.invoice ? {
+              sellerName: data.invoice.sellerName || undefined,
+              sellerRegNo: data.invoice.sellerRegNo || undefined,
+              sellerAddressLines: Array.isArray(data.invoice.sellerAddressLines) ? data.invoice.sellerAddressLines : undefined,
+              sellerPhone: data.invoice.sellerPhone || undefined,
+              sellerFax: data.invoice.sellerFax || undefined,
+              bankName: data.invoice.bankName || undefined,
+              bankAccountNo: data.invoice.bankAccountNo || undefined,
+              notes: Array.isArray(data.invoice.notes) ? data.invoice.notes : undefined,
+            } : undefined,
+            invoiceTemplate: data.invoiceTemplate ?? undefined,
             whapi: whapiConfig,
             whapiTemplates,
             auth: data.auth ? {
@@ -251,7 +273,7 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
  * 更新应用配置
  */
 export const updateAppConfig = async (
-  updates: Partial<Pick<AppConfig, 'logoUrl' | 'appName' | 'hideFooter' | 'colorTheme' | 'whapi' | 'whapiTemplates' | 'auth' | 'gemini' | 'aiCigar'>>,
+  updates: Partial<Pick<AppConfig, 'logoUrl' | 'appName' | 'hideFooter' | 'colorTheme' | 'invoice' | 'invoiceTemplate' | 'whapi' | 'whapiTemplates' | 'auth' | 'gemini' | 'aiCigar'>>,
   updatedBy: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
@@ -263,10 +285,31 @@ export const updateAppConfig = async (
       updatedAt: Timestamp.fromDate(new Date()),
       updatedBy,
     };
+
+    // Firestore 不允许 undefined：递归移除嵌套对象中的 undefined
+    const stripUndefinedDeep = (input: any): any => {
+      if (input === undefined) return undefined
+      if (input === null) return null
+      if (Array.isArray(input)) {
+        const arr = input
+          .map(v => stripUndefinedDeep(v))
+          .filter(v => v !== undefined)
+        return arr
+      }
+      if (typeof input === 'object') {
+        const out: any = {}
+        Object.keys(input).forEach(k => {
+          const v = stripUndefinedDeep(input[k])
+          if (v !== undefined) out[k] = v
+        })
+        return out
+      }
+      return input
+    }
     
     // 处理所有更新字段
     Object.keys(updates).forEach(key => {
-      const value = (updates as any)[key];
+      const value = stripUndefinedDeep((updates as any)[key]);
       if (value !== undefined) {
         updateData[key] = value;
       }

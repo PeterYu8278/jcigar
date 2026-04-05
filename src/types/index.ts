@@ -218,6 +218,94 @@ export interface Address {
   updatedAt: Date;
 }
 
+// 发票相关类型
+export interface InvoiceParty {
+  name: string;
+  address: string;
+  phone: string;
+}
+
+export interface OrderInvoiceMeta {
+  invoiceNo: string;          // 发票号，例如 IV-00586
+  invoiceDate: Date;          // 发票日期
+  invoiceTo: InvoiceParty;    // 发票对象
+  terms?: string;             // 条款，例如 CASH
+  generatedAt: Date;          // 生成时间
+  generatedBy: string;        // 生成者 userId
+}
+
+export interface InvoiceTextStyle {
+  fontSize?: number;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+}
+
+export interface InvoiceBlockRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  style?: InvoiceTextStyle;
+  lineWidth?: number; // for divider-like blocks, in mm
+}
+
+export interface InvoiceTemplateConfig {
+  version: 1;
+  layout?: {
+    marginMm?: number;
+    rightBoxWidthMm?: number;
+    infoBoxHeightMm?: number;
+    footerYmm?: number;
+    signatureYmm?: number;
+    blocks?: {
+      sellerHeader?: InvoiceBlockRect;
+      invoiceToBox?: InvoiceBlockRect;
+      invoiceMetaBox?: InvoiceBlockRect;
+      itemsTable?: InvoiceBlockRect;
+      totals?: InvoiceBlockRect;
+      notes?: InvoiceBlockRect;
+      footer?: InvoiceBlockRect;
+      signature?: InvoiceBlockRect;
+      dividerHeaderToCustomer?: InvoiceBlockRect;
+      dividerCustomerToItems?: InvoiceBlockRect;
+    };
+  };
+  labels?: {
+    invoiceTitle?: string;      // INVOICE
+    yourRef?: string;           // Your Ref.
+    ourDoNo?: string;           // Our D/O No
+    terms?: string;             // Terms
+    date?: string;              // Date
+    page?: string;              // Page
+    pageValue?: string;         // 1 of 1
+    notes?: string;             // Notes :
+    total?: string;             // Total
+    eoe?: string;               // E. & O.E
+    computerGenerated?: string; // COMPUTER GENERATED INVOICE
+    noSignature?: string;       // NO SIGNATURE REQUIRED
+    ackReceipt?: string;        // Acknowledgment of receipt
+    forCompany?: string;        // FOR
+  };
+  table?: {
+    headers?: {
+      no?: string;
+      description?: string;
+      qty?: string;
+      priceUnit?: string;
+      amount?: string;
+    };
+    currencySymbol?: string; // RM
+  };
+  show?: {
+    showNotes?: boolean;
+    showBank?: boolean;
+    showFooter?: boolean;
+    showSignature?: boolean;
+    showPage?: boolean;
+  };
+}
+
 // 订单类型
 export interface Order {
   id: string;
@@ -245,6 +333,7 @@ export interface Order {
     address: string;
     trackingNumber?: string;
   };
+  invoice?: OrderInvoiceMeta; // 发票元数据（管理员生成）
   createdAt: Date;
   updatedAt: Date;
 }
@@ -398,6 +487,17 @@ export interface AppConfig {
   appName?: string;        // 应用名称（例如：Cigar Club）
   hideFooter?: boolean;    // 是否隐藏 Footer
   colorTheme?: ColorThemeConfig;  // 颜色主题配置
+  invoice?: {
+    sellerName?: string;
+    sellerRegNo?: string;
+    sellerAddressLines?: string[];
+    sellerPhone?: string;
+    sellerFax?: string;
+    bankName?: string;
+    bankAccountNo?: string;
+    notes?: string[];
+  };
+  invoiceTemplate?: InvoiceTemplateConfig | null;
   whapi?: import('./whapi').WhapiConfig;  // Whapi.Cloud WhatsApp 配置
   whapiTemplates?: import('./whapi').MessageTemplate[];  // 消息模板
   auth?: {

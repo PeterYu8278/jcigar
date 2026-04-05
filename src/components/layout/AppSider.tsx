@@ -17,7 +17,8 @@ import {
   FireOutlined,
   TrophyOutlined,
   ClockCircleOutlined,
-  SettingOutlined
+  SettingOutlined,
+  FileTextOutlined
 } from '@ant-design/icons'
 import { useAuthStore } from '../../store/modules/auth'
 import { useTranslation } from 'react-i18next'
@@ -160,15 +161,29 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
         icon: <SettingOutlined />,
         label: t('navigation.featureManagement', { defaultValue: '功能管理' }),
       })
+      items.push({
+        key: '/developer/invoice-template',
+        icon: <FileTextOutlined />,
+        label: t('navigation.invoiceTemplate', { defaultValue: '发票模板' }),
+      })
       return items
     }
     const items = adminMenuItemsBase.filter(item => {
       const featureKey = getFeatureKeyByRoute(item.key)
       return featureKey ? (featuresVisibility[featureKey] ?? true) : true
     })
+
+    // admin 也允许配置发票模板（保存到 app_config）
+    if (isAdmin) {
+      items.push({
+        key: '/developer/invoice-template',
+        icon: <FileTextOutlined />,
+        label: t('navigation.invoiceTemplate', { defaultValue: '发票模板' }),
+      })
+    }
     
     return items
-  }, [featuresVisibility, isDeveloper, t])
+  }, [featuresVisibility, isDeveloper, isAdmin, t])
 
   // 为管理员合并前端和管理后台菜单
   const menuItems = isAdmin ? [

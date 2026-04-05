@@ -20,6 +20,7 @@ import Profile from './views/frontend/Profile'
 import BrandDetail from './views/frontend/BrandDetail'
 import ReloadPage from './views/frontend/Reload'
 import AICigarHistory from './views/frontend/AICigarHistory'
+import Landing from './views/frontend/Landing'
 
 // 管理后台页面
 import AdminDashboard from './views/admin/Dashboard'
@@ -38,6 +39,7 @@ import FeatureManagement from './views/admin/FeatureManagement'
 import TestDataGenerator from './views/admin/TestDataGenerator'
 import CigarDatabase from './views/admin/CigarDatabase'
 import GeminiModelTester from './views/admin/GeminiModelTester'
+import InvoiceTemplateEditor from './views/admin/InvoiceTemplate'
 
 // 认证页面
 import Login from './views/auth/Login'
@@ -89,13 +91,16 @@ const AppContent: React.FC = () => {
     }
   }, [])
 
-  // 无需 padding 的页面（认证页面 + 商城页面）
-  const noPaddingPages = ['/login', '/register', '/auth/complete-profile', '/shop']
+  // 无需 padding 的页面（基础认证页面 + 商城页面 + 未登录首页 Landing）
+  const noPaddingPages = ['/login', '/register', '/auth/complete-profile', '/shop', ...(user ? [] : ['/'])]
   const needsPadding = !noPaddingPages.includes(location.pathname)
   
-  // 认证页面（不显示 header/footer）
+  // 认证页面（不显示 header/footer，且需要居中显示）
   const authPages = ['/login', '/register', '/auth/complete-profile']
   const isAuthPage = authPages.includes(location.pathname)
+  const shouldCenter = isAuthPage
+  const isLandingPage = !user && location.pathname === '/'
+  const isClippedLayout = !isLandingPage && !isAuthPage
   
   // 侧边栏显示逻辑：手机端商城页面隐藏，电脑端商城页面显示
   // 逻辑：已登录 AND (是电脑端 OR 不是商城页面)
@@ -120,24 +125,34 @@ const AppContent: React.FC = () => {
     }
   }, [])
 
-  // 控制 body 滚动（仅认证页面禁止滚动）
   useEffect(() => {
-    if (isAuthPage) {
-      // 认证页面：禁止 body 滚动
+    if (isLandingPage) {
+      // Landing Page：完全原生滚动，不锁定高度
+      document.body.style.height = 'auto'
+      document.documentElement.style.height = 'auto'
+      document.body.style.overflow = 'auto'
+      document.documentElement.style.overflow = 'auto'
+    } else if (isAuthPage) {
+      // 认证页面：高度锁定，禁止外部滚动
+      document.body.style.height = '100%'
+      document.documentElement.style.height = '100%'
       document.body.style.overflow = 'hidden'
       document.documentElement.style.overflow = 'hidden'
     } else {
-      // 其他页面：恢复滚动
-      document.body.style.overflow = 'auto'
-      document.documentElement.style.overflow = 'auto'
+      // 后台管理/其他页面：高度锁定，使用内部 Content 滚动
+      document.body.style.height = '100%'
+      document.documentElement.style.height = '100%'
+      document.body.style.overflow = 'hidden'
+      document.documentElement.style.overflow = 'hidden'
     }
 
     return () => {
-      // 清理：恢复默认
+      // 清理：恢复默认状态
+      document.body.style.height = '100%'
+      document.documentElement.style.height = '100%'
       document.body.style.overflow = 'auto'
-      document.documentElement.style.overflow = 'auto'
     }
-  }, [isAuthPage])
+  }, [isAuthPage, isLandingPage])
 
   // 动态更新页面标题、meta 标签和 PWA 图标
   useEffect(() => {
@@ -208,12 +223,13 @@ const AppContent: React.FC = () => {
 
   return (
       <Layout style={{ 
-        height: viewportHeight,
+        height: isLandingPage ? 'auto' : viewportHeight,
+        minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
         background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2d2d2d 100%)',
         position: 'relative',
-        overflow: needsPadding ? 'auto' : 'hidden'
+        overflow: isLandingPage ? 'visible' : (needsPadding ? 'auto' : 'hidden')
       }}>
         {/* 全局背景装饰 */}
         <div style={{
@@ -234,7 +250,8 @@ const AppContent: React.FC = () => {
         {user && !isAuthPage && <AppHeader siderCollapsed={siderCollapsed} isDesktop={isDesktop} showSider={showSider} />}
         <Layout style={{ 
           background: 'transparent',
-          flex: 1
+          flex: 1,
+          overflow: isLandingPage ? 'visible' : 'hidden'
         }}>
           {showSider && <AppSider onCollapseChange={setSiderCollapsed} />}
           <Layout style={{ 
@@ -242,7 +259,8 @@ const AppContent: React.FC = () => {
             marginLeft: showSider && isDesktop ? (siderCollapsed ? 64 : 240) : 0,
             flex: 1,
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            overflow: isLandingPage ? 'visible' : 'hidden'
           }}>
             <Content
               style={{
@@ -251,15 +269,15 @@ const AppContent: React.FC = () => {
                 paddingBottom: needsPadding ? 12 : 0,
                 paddingLeft: needsPadding ? 12 : 0,
                 margin: 0,
-                flex: needsPadding ? 'none' : 1,
-                background: 'radial-gradient(ellipse at top, #3c2f1a, #121212)' ,
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-                backdropFilter: 'blur(10px)',
+                flex: (needsPadding || isLandingPage) ? 'none' : 1,
+                background: isLandingPage ? 'transparent' : 'radial-gradient(ellipse at top, #3c2f1a, #121212)' ,
+                boxShadow: isLandingPage ? 'none' : '0 8px 32px rgba(0, 0, 0, 0.3)',
+                backdropFilter: isLandingPage ? 'none' : 'blur(10px)',
                 position: 'relative',
-                overflow: needsPadding ? 'hidden' : 'hidden',
-                display: needsPadding ? 'block' : 'flex',
-                alignItems: needsPadding ? undefined : 'center',
-                justifyContent: needsPadding ? undefined : 'center'
+                overflow: isLandingPage ? 'visible' : (needsPadding ? 'auto' : 'hidden'),
+                display: shouldCenter ? 'flex' : 'block',
+                alignItems: shouldCenter ? 'center' : undefined,
+                justifyContent: shouldCenter ? 'center' : undefined
               }}
             >
               {/* 内容区域背景装饰 */}
@@ -281,7 +299,7 @@ const AppContent: React.FC = () => {
                   <Route path="/auth/complete-profile" element={<CompleteProfile />} />
                   
                   {/* 前端路由 */}
-                  <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+                  <Route path="/" element={user ? <Home /> : <Landing />} />
                   <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
                   <Route path="/shop" element={<ProtectedRoute roles={['member','vip', 'admin', 'developer']}><Shop /></ProtectedRoute>} />
                   <Route path="/profile" element={<ProtectedRoute roles={['member','vip', 'admin', 'developer']}><Profile /></ProtectedRoute>} />
@@ -301,6 +319,7 @@ const AppContent: React.FC = () => {
                   <Route path="/developer/orphaned-users" element={<ProtectedRoute roles={['developer']}><OrphanedUserCleanup /></ProtectedRoute>} />
                   <Route path="/developer/performance" element={<ProtectedRoute roles={['developer']}><PerformanceMonitor /></ProtectedRoute>} />
                   <Route path="/developer/feature-management" element={<ProtectedRoute roles={['developer']}><FeatureManagement /></ProtectedRoute>} />
+                  <Route path="/developer/invoice-template" element={<ProtectedRoute roles={['admin', 'developer']}><InvoiceTemplateEditor /></ProtectedRoute>} />
                   <Route path="/developer/cigar-database" element={<ProtectedRoute roles={['developer']}><CigarDatabase /></ProtectedRoute>} />
                   <Route path="/developer/gemini-tester" element={<ProtectedRoute roles={['developer']}><GeminiModelTester /></ProtectedRoute>} />
                   <Route path="/developer/cloudinary-test" element={<ProtectedRoute roles={['developer']}><CloudinaryTestPage /></ProtectedRoute>} />

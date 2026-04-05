@@ -11,7 +11,7 @@ import { getModalTheme, getResponsiveModalConfig, getModalThemeStyles } from '..
 import { useCloudinary } from '../../../hooks/useCloudinary'
 import { analyzeCigarByName } from '../../../services/gemini/cigarRecognition'
 import { CigarRatingBadge } from '../../../components/common/CigarRatingBadge'
-import { getAggregatedCigarData, saveRecognitionToCigarDatabase, generateProductName, type AggregatedCigarData } from '../../../services/cigar/cigarDataAggregation'
+import { getAggregatedCigarData, saveRecognitionToCigarDatabase, generateProductName, forceUpdateCigarDatabase, type AggregatedCigarData } from '../../../services/cigar/cigarDataAggregation'
 import { collection, getDocs } from 'firebase/firestore'
 import { db } from '../../../config/firebase'
 import { GLOBAL_COLLECTIONS } from '../../../config/globalCollections'
@@ -4066,41 +4066,17 @@ const AdminInventory: React.FC = () => {
             // 根据品牌名称找到对应的品牌ID
             const selectedBrand = brandList.find(brand => brand.name === values.brand)
             
-            // 构建构造信息（优先使用 cigarDatabaseData，否则使用表单值）
+            // 构建构造信息（基于表单值）
             const construction: any = {};
-            if (cigarDatabaseData?.wrappers?.[0]?.value) {
-              construction.wrapper = cigarDatabaseData.wrappers[0].value;
-            } else if (values.wrapper) {
-              construction.wrapper = values.wrapper;
-            }
-            if (cigarDatabaseData?.binders?.[0]?.value) {
-              construction.binder = cigarDatabaseData.binders[0].value;
-            } else if (values.binder) {
-              construction.binder = values.binder;
-            }
-            if (cigarDatabaseData?.fillers?.[0]?.value) {
-              construction.filler = cigarDatabaseData.fillers[0].value;
-            } else if (values.filler) {
-              construction.filler = values.filler;
-            }
+            if (values.wrapper) construction.wrapper = values.wrapper;
+            if (values.binder) construction.binder = values.binder;
+            if (values.filler) construction.filler = values.filler;
             
-            // 构建品吸笔记（优先使用 cigarDatabaseData，否则使用表单值）
+            // 构建品吸笔记（基于表单值）
             const tastingNotes: any = {};
-            if (cigarDatabaseData?.footTasteNotes && cigarDatabaseData.footTasteNotes.length > 0) {
-              tastingNotes.foot = cigarDatabaseData.footTasteNotes.map(item => item.value);
-            } else if (values.footTasteNotes && values.footTasteNotes.length > 0) {
-              tastingNotes.foot = Array.isArray(values.footTasteNotes) ? values.footTasteNotes : [];
-            }
-            if (cigarDatabaseData?.bodyTasteNotes && cigarDatabaseData.bodyTasteNotes.length > 0) {
-              tastingNotes.body = cigarDatabaseData.bodyTasteNotes.map(item => item.value);
-            } else if (values.bodyTasteNotes && values.bodyTasteNotes.length > 0) {
-              tastingNotes.body = Array.isArray(values.bodyTasteNotes) ? values.bodyTasteNotes : [];
-            }
-            if (cigarDatabaseData?.headTasteNotes && cigarDatabaseData.headTasteNotes.length > 0) {
-              tastingNotes.head = cigarDatabaseData.headTasteNotes.map(item => item.value);
-            } else if (values.headTasteNotes && values.headTasteNotes.length > 0) {
-              tastingNotes.head = Array.isArray(values.headTasteNotes) ? values.headTasteNotes : [];
-            }
+            if (values.footTasteNotes && values.footTasteNotes.length > 0) tastingNotes.foot = Array.isArray(values.footTasteNotes) ? values.footTasteNotes : [];
+            if (values.bodyTasteNotes && values.bodyTasteNotes.length > 0) tastingNotes.body = Array.isArray(values.bodyTasteNotes) ? values.bodyTasteNotes : [];
+            if (values.headTasteNotes && values.headTasteNotes.length > 0) tastingNotes.head = Array.isArray(values.headTasteNotes) ? values.headTasteNotes : [];
             
             // 构建元数据
             // Rating优先级：aiRating（来自cigar_database）> 手动输入（values.rating）> 原有值
@@ -4113,11 +4089,9 @@ const AdminInventory: React.FC = () => {
               finalRating = editing.metadata.rating;
             }
             
-            // 标签（优先使用 cigarDatabaseData，否则使用表单值）
+            // 标签（基于表单值）
             let tags: string[] = [];
-            if (cigarDatabaseData?.flavorProfile && cigarDatabaseData.flavorProfile.length > 0) {
-              tags = cigarDatabaseData.flavorProfile.map(item => item.value);
-            } else if (Array.isArray(values.tags) && values.tags.length > 0) {
+            if (Array.isArray(values.tags) && values.tags.length > 0) {
               tags = values.tags;
             }
             
@@ -4127,20 +4101,35 @@ const AdminInventory: React.FC = () => {
               tags: tags,
             };
             
-            // 品牌（优先使用 cigarDatabaseData，否则使用表单值）
-            const brand = cigarDatabaseData?.brand || values.brand || '';
-            
-            // 根据品牌名称找到对应的品牌ID（优先使用 cigarDatabaseData 的品牌）
+            // 完全使用表单输入值（方案 B 放开编辑权）
+            const brand = values.brand || '';
             const finalSelectedBrand = brandList.find(b => b.name === brand) || selectedBrand;
+            const description = values.description || '';
+            const origin = values.origin || finalSelectedBrand?.country || '';
+            const strength = values.strength || '';
             
-            // 描述（优先使用 cigarDatabaseData，否则使用表单值）
-            const description = cigarDatabaseData?.description || values.description || '';
-            
-            // 产地（优先使用 cigarDatabaseData，否则使用表单值或品牌国家）
-            const origin = cigarDatabaseData?.origin || values.origin || finalSelectedBrand?.country;
-            
-            // 强度（优先使用 cigarDatabaseData，否则使用表单值）
-            const strength = cigarDatabaseData?.strength || values.strength;
+            // 强制更新智库数据
+            try {
+                if (values.name && brand) {
+                    await forceUpdateCigarDatabase({
+                        name: values.name,
+                        brand: brand,
+                        origin: origin,
+                        strength: strength,
+                        description: description,
+                        rating: finalRating,
+                        wrapper: construction.wrapper,
+                        binder: construction.binder,
+                        filler: construction.filler,
+                        flavorProfile: tags,
+                        footTasteNotes: tastingNotes.foot,
+                        bodyTasteNotes: tastingNotes.body,
+                        headTasteNotes: tastingNotes.head,
+                    });
+                }
+            } catch (e) {
+                console.error('更新智库数据失败', e);
+            }
             
             const payload: Partial<Cigar> = {
               name: values.name,
@@ -4243,100 +4232,104 @@ const AdminInventory: React.FC = () => {
           </Form.Item>
           <Form.Item 
             label={<span>{t('inventory.productName')} <span style={{ color: '#ff4d4f' }}>*</span></span>} 
-            name="name" 
             required={false} 
-            rules={[{ required: true, message: t('common.pleaseInputName') }]}
             style={{ marginBottom: 0 }}
           >
             <Space.Compact style={{ width: '100%' }}>
-              <AutoComplete
-                options={cigarDatabaseOptions.map(name => ({ value: name, label: name }))}
-                filterOption={(inputValue, option) =>
-                  option?.value.toLowerCase().includes(inputValue.toLowerCase()) || false
-                }
-                onSelect={async (value: string) => {
-                  if (!value || editing) return; // 只在创建模式下自动查询
-                  
-                  // 用户选择了下拉选项，从 cigar_database 查询数据
-                  try {
-                    const aggregatedData = await getAggregatedCigarData(value);
-                    
-                    if (aggregatedData) {
-                      setCigarDatabaseData(aggregatedData);
-                      
-                      // 自动填充表单字段
-                      const updates: any = {};
-                      
-                      if (aggregatedData.brand) updates.brand = aggregatedData.brand;
-                      if (aggregatedData.origin) updates.origin = aggregatedData.origin;
-                      if (aggregatedData.strength) updates.strength = aggregatedData.strength;
-                      if (aggregatedData.description) updates.description = aggregatedData.description;
-                      if (aggregatedData.wrappers?.[0]?.value) updates.wrapper = aggregatedData.wrappers[0].value;
-                      if (aggregatedData.binders?.[0]?.value) updates.binder = aggregatedData.binders[0].value;
-                      if (aggregatedData.fillers?.[0]?.value) updates.filler = aggregatedData.fillers[0].value;
-                      if (aggregatedData.footTasteNotes?.length) updates.footTasteNotes = aggregatedData.footTasteNotes.map(item => item.value);
-                      if (aggregatedData.bodyTasteNotes?.length) updates.bodyTasteNotes = aggregatedData.bodyTasteNotes.map(item => item.value);
-                      if (aggregatedData.headTasteNotes?.length) updates.headTasteNotes = aggregatedData.headTasteNotes.map(item => item.value);
-                      if (aggregatedData.flavorProfile?.length) updates.tags = aggregatedData.flavorProfile.map(item => item.value);
-                      
-                      form.setFieldsValue(updates);
-                      
-                      if (aggregatedData.rating !== null && aggregatedData.rating !== undefined) {
-                        setAiRating(aggregatedData.rating);
-                      }
-                      
-                      message.success(`已从数据库加载 "${value}" 的信息（基于 ${aggregatedData.totalRecognitions} 次AI识别）`);
-                    }
-                  } catch (error) {
-                    // 查询失败，允许手动输入
-                    setCigarDatabaseData(null);
+              <Form.Item
+                name="name"
+                noStyle
+                rules={[{ required: true, message: t('common.pleaseInputName') }]}
+              >
+                <AutoComplete
+                  options={cigarDatabaseOptions.map(name => ({ value: name, label: name }))}
+                  filterOption={(inputValue, option) =>
+                    option?.value.toLowerCase().includes(inputValue.toLowerCase()) || false
                   }
-                }}
-                onBlur={async (e: any) => {
-                  const productName = e.target.value?.trim();
-                  if (!productName || editing) return; // 只在创建模式下自动查询
-                  
-                  // 用户手动输入后失焦，从 cigar_database 查询数据
-                  try {
-                    const aggregatedData = await getAggregatedCigarData(productName);
+                  onSelect={async (value: string) => {
+                    if (!value || editing) return; // 只在创建模式下自动查询
                     
-                    if (aggregatedData) {
-                      setCigarDatabaseData(aggregatedData);
+                    // 用户选择了下拉选项，从 cigar_database 查询数据
+                    try {
+                      const aggregatedData = await getAggregatedCigarData(value);
                       
-                      // 自动填充表单字段
-                      const updates: any = {};
-                      
-                      if (aggregatedData.brand) updates.brand = aggregatedData.brand;
-                      if (aggregatedData.origin) updates.origin = aggregatedData.origin;
-                      if (aggregatedData.strength) updates.strength = aggregatedData.strength;
-                      if (aggregatedData.description) updates.description = aggregatedData.description;
-                      if (aggregatedData.wrappers?.[0]?.value) updates.wrapper = aggregatedData.wrappers[0].value;
-                      if (aggregatedData.binders?.[0]?.value) updates.binder = aggregatedData.binders[0].value;
-                      if (aggregatedData.fillers?.[0]?.value) updates.filler = aggregatedData.fillers[0].value;
-                      if (aggregatedData.footTasteNotes?.length) updates.footTasteNotes = aggregatedData.footTasteNotes.map(item => item.value);
-                      if (aggregatedData.bodyTasteNotes?.length) updates.bodyTasteNotes = aggregatedData.bodyTasteNotes.map(item => item.value);
-                      if (aggregatedData.headTasteNotes?.length) updates.headTasteNotes = aggregatedData.headTasteNotes.map(item => item.value);
-                      if (aggregatedData.flavorProfile?.length) updates.tags = aggregatedData.flavorProfile.map(item => item.value);
-                      
-                      form.setFieldsValue(updates);
-                      
-                      if (aggregatedData.rating !== null && aggregatedData.rating !== undefined) {
-                        setAiRating(aggregatedData.rating);
+                      if (aggregatedData) {
+                        setCigarDatabaseData(aggregatedData);
+                        
+                        // 自动填充表单字段
+                        const updates: any = {};
+                        
+                        if (aggregatedData.brand) updates.brand = aggregatedData.brand;
+                        if (aggregatedData.origin) updates.origin = aggregatedData.origin;
+                        if (aggregatedData.strength) updates.strength = aggregatedData.strength;
+                        if (aggregatedData.description) updates.description = aggregatedData.description;
+                        if (aggregatedData.wrappers?.[0]?.value) updates.wrapper = aggregatedData.wrappers[0].value;
+                        if (aggregatedData.binders?.[0]?.value) updates.binder = aggregatedData.binders[0].value;
+                        if (aggregatedData.fillers?.[0]?.value) updates.filler = aggregatedData.fillers[0].value;
+                        if (aggregatedData.footTasteNotes?.length) updates.footTasteNotes = aggregatedData.footTasteNotes.map(item => item.value);
+                        if (aggregatedData.bodyTasteNotes?.length) updates.bodyTasteNotes = aggregatedData.bodyTasteNotes.map(item => item.value);
+                        if (aggregatedData.headTasteNotes?.length) updates.headTasteNotes = aggregatedData.headTasteNotes.map(item => item.value);
+                        if (aggregatedData.flavorProfile?.length) updates.tags = aggregatedData.flavorProfile.map(item => item.value);
+                        
+                        form.setFieldsValue(updates);
+                        
+                        if (aggregatedData.rating !== null && aggregatedData.rating !== undefined) {
+                          setAiRating(aggregatedData.rating);
+                        }
+                        
+                        message.success(`已从数据库加载 "${value}" 的信息（基于 ${aggregatedData.totalRecognitions} 次AI识别）`);
                       }
-                      
-                      message.success(`已从数据库加载 "${productName}" 的信息（基于 ${aggregatedData.totalRecognitions} 次AI识别）`);
-                    } else {
-                      // 未找到数据，清空 cigarDatabaseData 以允许手动输入
+                    } catch (error) {
+                      // 查询失败，允许手动输入
                       setCigarDatabaseData(null);
                     }
-                  } catch (error) {
-                    // 查询失败，允许手动输入
-                    setCigarDatabaseData(null);
-                  }
-                }}
-                placeholder="输入或选择产品名称"
-                style={{ flex: 1 }}
-              />
+                  }}
+                  onBlur={async (e: any) => {
+                    const productName = e.target.value?.trim();
+                    if (!productName || editing) return; // 只在创建模式下自动查询
+                    
+                    // 用户手动输入后失焦，从 cigar_database 查询数据
+                    try {
+                      const aggregatedData = await getAggregatedCigarData(productName);
+                      
+                      if (aggregatedData) {
+                        setCigarDatabaseData(aggregatedData);
+                        
+                        // 自动填充表单字段
+                        const updates: any = {};
+                        
+                        if (aggregatedData.brand) updates.brand = aggregatedData.brand;
+                        if (aggregatedData.origin) updates.origin = aggregatedData.origin;
+                        if (aggregatedData.strength) updates.strength = aggregatedData.strength;
+                        if (aggregatedData.description) updates.description = aggregatedData.description;
+                        if (aggregatedData.wrappers?.[0]?.value) updates.wrapper = aggregatedData.wrappers[0].value;
+                        if (aggregatedData.binders?.[0]?.value) updates.binder = aggregatedData.binders[0].value;
+                        if (aggregatedData.fillers?.[0]?.value) updates.filler = aggregatedData.fillers[0].value;
+                        if (aggregatedData.footTasteNotes?.length) updates.footTasteNotes = aggregatedData.footTasteNotes.map(item => item.value);
+                        if (aggregatedData.bodyTasteNotes?.length) updates.bodyTasteNotes = aggregatedData.bodyTasteNotes.map(item => item.value);
+                        if (aggregatedData.headTasteNotes?.length) updates.headTasteNotes = aggregatedData.headTasteNotes.map(item => item.value);
+                        if (aggregatedData.flavorProfile?.length) updates.tags = aggregatedData.flavorProfile.map(item => item.value);
+                        
+                        form.setFieldsValue(updates);
+                        
+                        if (aggregatedData.rating !== null && aggregatedData.rating !== undefined) {
+                          setAiRating(aggregatedData.rating);
+                        }
+                        
+                        message.success(`已从数据库加载 "${productName}" 的信息（基于 ${aggregatedData.totalRecognitions} 次AI识别）`);
+                      } else {
+                        // 未找到数据，清空 cigarDatabaseData 以允许手动输入
+                        setCigarDatabaseData(null);
+                      }
+                    } catch (error) {
+                      // 查询失败，允许手动输入
+                      setCigarDatabaseData(null);
+                    }
+                  }}
+                  placeholder="输入或选择产品名称"
+                  style={{ flex: 1 }}
+                />
+              </Form.Item>
               <Button
                 type="default"
                 icon={aiRecognizing ? <LoadingOutlined /> : <ThunderboltOutlined />}
@@ -4529,28 +4522,6 @@ const AdminInventory: React.FC = () => {
               </Button>
             </Space.Compact>
           </Form.Item>
-          {cigarDatabaseData ? (
-            <>
-              {/* 隐藏的表单字段，用于保存品牌值 */}
-              <Form.Item name="brand" style={{ display: 'none' }}>
-                <Input type="hidden" />
-              </Form.Item>
-            <Form.Item label={<span>{t('inventory.brand')} <span style={{ color: '#ff4d4f' }}>*</span></span>}>
-              <div style={{ 
-                padding: '8px 12px', 
-                background: 'rgba(255, 215, 0, 0.1)', 
-                border: '1px solid rgba(255, 215, 0, 0.3)',
-                borderRadius: '6px',
-                color: '#fff'
-              }}>
-                <strong>{cigarDatabaseData.brand}</strong>
-                <span style={{ marginLeft: '8px', fontSize: '12px', color: '#888' }}>
-                  (一致性: {cigarDatabaseData.brandConsistency.toFixed(0)}%)
-                </span>
-            </div>
-          </Form.Item>
-            </>
-          ) : (
           <Form.Item label={<span>{t('inventory.brand')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="brand" required={false} rules={[{ required: true, message: t('common.pleaseInputBrand') }]}>
             <Select
               placeholder={t('inventory.pleaseSelectBrand')}
@@ -4602,52 +4573,12 @@ const AdminInventory: React.FC = () => {
                 ))}
             </Select>
           </Form.Item>
-          )}
-          {cigarDatabaseData ? (
-            <Form.Item label={<span>{t('inventory.origin')} <span style={{ color: '#ff4d4f' }}>*</span></span>}>
-              <div style={{ 
-                padding: '8px 12px', 
-                background: 'rgba(255, 215, 0, 0.1)', 
-                border: '1px solid rgba(255, 215, 0, 0.3)',
-                borderRadius: '6px',
-                color: '#fff'
-              }}>
-                {cigarDatabaseData.origin}
-                <span style={{ marginLeft: '8px', fontSize: '12px', color: '#888' }}>
-                  (一致性: {cigarDatabaseData.originConsistency.toFixed(0)}%)
-                </span>
-              </div>
-            </Form.Item>
-          ) : (
           <Form.Item label={<span>{t('inventory.origin')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="origin" required={false} rules={[{ required: true, message: t('common.pleaseInputOrigin') }]}>
             <Input />
           </Form.Item>
-          )}
           <Form.Item label={<span>{isMobile ? t('inventory.specification') : t('inventory.size')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="size" required={false} rules={[{ required: true, message: t('common.pleaseInputSize') }]}> 
             <Input />
           </Form.Item>
-          {cigarDatabaseData ? (
-            <Form.Item label={<span>{t('inventory.strength')} <span style={{ color: '#ff4d4f' }}>*</span></span>}>
-              <div style={{ 
-                padding: '8px 12px', 
-                background: 'rgba(255, 215, 0, 0.1)', 
-                border: '1px solid rgba(255, 215, 0, 0.3)',
-                borderRadius: '6px',
-                color: '#fff'
-              }}>
-                <Tag color={
-                  cigarDatabaseData.strength.toLowerCase() === 'full' ? 'red' :
-                  cigarDatabaseData.strength.toLowerCase().includes('medium') ? 'orange' :
-                  'green'
-                }>
-                  {cigarDatabaseData.strength}
-                </Tag>
-                <span style={{ marginLeft: '8px', fontSize: '12px', color: '#888' }}>
-                  (一致性: {cigarDatabaseData.strengthConsistency.toFixed(0)}%)
-                </span>
-              </div>
-            </Form.Item>
-          ) : (
           <Form.Item label={<span>{t('inventory.strength')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="strength" required={false} rules={[{ required: true, message: t('common.pleaseSelectStrength') }]}>
             <Select>
               <Option value="mild">{t('inventory.mild')}</Option>
@@ -4657,41 +4588,8 @@ const AdminInventory: React.FC = () => {
               <Option value="full">{t('inventory.full')}</Option>
             </Select>
           </Form.Item>
-          )}
           
-          {cigarDatabaseData ? (
-            cigarDatabaseData.rating !== null ? (
-              <Form.Item label="评分">
-                <div style={{ 
-                  padding: '8px 12px', 
-                  background: 'rgba(255, 215, 0, 0.1)', 
-                  border: '1px solid rgba(255, 215, 0, 0.3)',
-                  borderRadius: '6px',
-                  color: '#fff'
-                }}>
-                  <Tag color="gold" style={{ fontSize: '16px', padding: '4px 12px' }}>
-                    {cigarDatabaseData.rating.toFixed(1)}
-                  </Tag>
-                  <span style={{ marginLeft: '8px', fontSize: '12px', color: '#888' }}>
-                    (基于 {cigarDatabaseData.ratingCount} 次评分)
-                  </span>
-                </div>
-              </Form.Item>
-            ) : (
-              <Form.Item label="评分">
-                <div style={{ 
-                  padding: '8px 12px', 
-                  background: 'rgba(255, 215, 0, 0.1)', 
-                  border: '1px solid rgba(255, 215, 0, 0.3)',
-                  borderRadius: '6px',
-                  color: '#888'
-                }}>
-                  暂无评分数据
-                </div>
-              </Form.Item>
-            )
-          ) : (
-            <Form.Item label="评分" name="rating">
+          <Form.Item label="评分" name="rating">
               <InputNumber 
                 min={0} 
                 max={100} 
@@ -4700,30 +4598,14 @@ const AdminInventory: React.FC = () => {
                 placeholder="0-100"
               />
             </Form.Item>
-          )}
           
           <Form.Item label={<span>{t('inventory.price')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="price" required={false} rules={[{ required: true, message: t('common.pleaseInputPrice') }]}> 
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
           
-          {cigarDatabaseData ? (
-            <Form.Item label={t('common.description') || '描述'}>
-              <div style={{ 
-                padding: '12px', 
-                background: 'rgba(255, 215, 0, 0.1)', 
-                border: '1px solid rgba(255, 215, 0, 0.3)',
-                borderRadius: '6px',
-                color: '#fff',
-                minHeight: '80px'
-              }}>
-                {cigarDatabaseData.description}
-              </div>
-            </Form.Item>
-          ) : (
           <Form.Item label={t('common.description') || '描述'} name="description">
             <Input.TextArea rows={3} placeholder="请输入雪茄描述" />
           </Form.Item>
-          )}
           
           <div style={{ 
             margin: '16px 0',
@@ -4754,61 +4636,6 @@ const AdminInventory: React.FC = () => {
             }} />
           </div>
           
-          {cigarDatabaseData ? (
-            <>
-              <Form.Item label="茄衣">
-                <div style={{ 
-                  padding: '8px 12px', 
-                  background: 'rgba(255, 215, 0, 0.1)', 
-                  border: '1px solid rgba(255, 215, 0, 0.3)',
-                  borderRadius: '6px',
-                  color: '#fff'
-                }}>
-                  {cigarDatabaseData.wrappers?.[0]?.value || '-'}
-                  {cigarDatabaseData.wrappers?.[0]?.percentage && (
-                    <span style={{ marginLeft: '8px', fontSize: '12px', color: '#888' }}>
-                      ({cigarDatabaseData.wrappers[0].percentage.toFixed(0)}%)
-                    </span>
-                  )}
-                </div>
-              </Form.Item>
-              
-              <Form.Item label="茄套">
-                <div style={{ 
-                  padding: '8px 12px', 
-                  background: 'rgba(255, 215, 0, 0.1)', 
-                  border: '1px solid rgba(255, 215, 0, 0.3)',
-                  borderRadius: '6px',
-                  color: '#fff'
-                }}>
-                  {cigarDatabaseData.binders?.[0]?.value || '-'}
-                  {cigarDatabaseData.binders?.[0]?.percentage && (
-                    <span style={{ marginLeft: '8px', fontSize: '12px', color: '#888' }}>
-                      ({cigarDatabaseData.binders[0].percentage.toFixed(0)}%)
-                    </span>
-                  )}
-                </div>
-              </Form.Item>
-              
-              <Form.Item label="茄芯">
-                <div style={{ 
-                  padding: '8px 12px', 
-                  background: 'rgba(255, 215, 0, 0.1)', 
-                  border: '1px solid rgba(255, 215, 0, 0.3)',
-                  borderRadius: '6px',
-                  color: '#fff'
-                }}>
-                  {cigarDatabaseData.fillers?.[0]?.value || '-'}
-                  {cigarDatabaseData.fillers?.[0]?.percentage && (
-                    <span style={{ marginLeft: '8px', fontSize: '12px', color: '#888' }}>
-                      ({cigarDatabaseData.fillers[0].percentage.toFixed(0)}%)
-                    </span>
-                  )}
-                </div>
-              </Form.Item>
-            </>
-          ) : (
-            <>
           <Form.Item label="茄衣" name="wrapper">
             <Input placeholder="例如: Habano, Connecticut, Maduro" />
           </Form.Item>
@@ -4820,8 +4647,6 @@ const AdminInventory: React.FC = () => {
           <Form.Item label="茄芯" name="filler">
             <Input placeholder="例如: Cuban, Nicaraguan, Dominican" />
           </Form.Item>
-            </>
-          )}
           
           <div style={{ 
             margin: '16px 0',
@@ -4852,73 +4677,6 @@ const AdminInventory: React.FC = () => {
             }} />
           </div>
           
-          {cigarDatabaseData ? (
-            <>
-              <Form.Item 
-                label="脚部 (Foot) - 前1/3" 
-                labelCol={isMobile ? { span: 24 } : undefined}
-                wrapperCol={isMobile ? { span: 24 } : undefined}
-              >
-                <div style={{ 
-                  padding: '8px 12px', 
-                  background: 'rgba(255, 215, 0, 0.1)', 
-                  border: '1px solid rgba(255, 215, 0, 0.3)',
-                  borderRadius: '6px'
-                }}>
-                  <Space wrap>
-                    {cigarDatabaseData.footTasteNotes?.map((item, idx) => (
-                      <Tag key={idx} color="cyan">
-                        {item.value} ({item.percentage.toFixed(0)}%)
-                      </Tag>
-                    )) || <span style={{ color: '#888' }}>-</span>}
-                  </Space>
-                </div>
-              </Form.Item>
-              
-              <Form.Item 
-                label="主体 (Body) - 中1/3" 
-                labelCol={isMobile ? { span: 24 } : undefined}
-                wrapperCol={isMobile ? { span: 24 } : undefined}
-              >
-                <div style={{ 
-                  padding: '8px 12px', 
-                  background: 'rgba(255, 215, 0, 0.1)', 
-                  border: '1px solid rgba(255, 215, 0, 0.3)',
-                  borderRadius: '6px'
-                }}>
-                  <Space wrap>
-                    {cigarDatabaseData.bodyTasteNotes?.map((item, idx) => (
-                      <Tag key={idx} color="blue">
-                        {item.value} ({item.percentage.toFixed(0)}%)
-                      </Tag>
-                    )) || <span style={{ color: '#888' }}>-</span>}
-                  </Space>
-                </div>
-              </Form.Item>
-              
-              <Form.Item 
-                label="头部 (Head) - 后1/3" 
-                labelCol={isMobile ? { span: 24 } : undefined}
-                wrapperCol={isMobile ? { span: 24 } : undefined}
-              >
-                <div style={{ 
-                  padding: '8px 12px', 
-                  background: 'rgba(255, 215, 0, 0.1)', 
-                  border: '1px solid rgba(255, 215, 0, 0.3)',
-                  borderRadius: '6px'
-                }}>
-                  <Space wrap>
-                    {cigarDatabaseData.headTasteNotes?.map((item, idx) => (
-                      <Tag key={idx} color="purple">
-                        {item.value} ({item.percentage.toFixed(0)}%)
-                      </Tag>
-                    )) || <span style={{ color: '#888' }}>-</span>}
-                  </Space>
-                </div>
-              </Form.Item>
-            </>
-          ) : (
-            <>
           <Form.Item 
             label="脚部 (Foot) - 前1/3" 
             name="footTasteNotes"
@@ -4960,8 +4718,6 @@ const AdminInventory: React.FC = () => {
               tokenSeparators={[',']}
             />
           </Form.Item>
-            </>
-          )}
           
           
           <div style={{ 
@@ -4993,28 +4749,6 @@ const AdminInventory: React.FC = () => {
             }} />
           </div>
           
-          {cigarDatabaseData ? (
-            <Form.Item 
-              label="标签/风味特征" 
-              labelCol={isMobile ? { span: 24 } : undefined}
-              wrapperCol={isMobile ? { span: 24 } : undefined}
-            >
-              <div style={{ 
-                padding: '8px 12px', 
-                background: 'rgba(255, 215, 0, 0.1)', 
-                border: '1px solid rgba(255, 215, 0, 0.3)',
-                borderRadius: '6px'
-              }}>
-                <Space wrap>
-                  {cigarDatabaseData.flavorProfile?.map((item, idx) => (
-                    <Tag key={idx} color="gold">
-                      {item.value} ({item.percentage.toFixed(0)}%)
-                    </Tag>
-                  )) || <span style={{ color: '#888' }}>-</span>}
-                </Space>
-              </div>
-            </Form.Item>
-          ) : (
           <Form.Item 
             label="标签/风味特征" 
             name="tags"
@@ -5028,7 +4762,6 @@ const AdminInventory: React.FC = () => {
               tokenSeparators={[',']}
             />
           </Form.Item>
-          )}
         </Form>
       </Modal>
 
@@ -5152,7 +4885,9 @@ const AdminInventory: React.FC = () => {
         styles={getModalThemeStyles(isMobile, true)}
         zIndex={2000}
       >
-        {t('common.confirmDeleteProduct')} {(deleting as any)?.name}？{t('common.thisOperationCannotBeUndone')}
+        <div style={{ color: '#FFFFFF' }}>
+          {t('common.confirmDeleteProduct')} {(deleting as any)?.name}？{t('common.thisOperationCannotBeUndone')}
+        </div>
       </Modal>
 
       {/* 单号详情弹窗 */}
