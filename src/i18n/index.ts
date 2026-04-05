@@ -24,7 +24,7 @@ const getStoredLanguage = (): string => {
   } catch (error) {
     // 忽略localStorage访问错误
   }
-  return 'zh-CN' // 默认中文
+  return 'en-US' // 默认英文
 }
 
 i18n
@@ -32,7 +32,7 @@ i18n
   .init({
     resources,
     lng: getStoredLanguage(), // 使用保存的语言或默认语言
-    fallbackLng: 'zh-CN',
+    fallbackLng: 'en-US',
     debug: false, // 禁用调试日志
     
     // 禁用缺失键的警告

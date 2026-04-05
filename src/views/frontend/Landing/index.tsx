@@ -18,7 +18,8 @@ import {
   GoogleOutlined,
   EyeOutlined,
   EyeInvisibleOutlined,
-  GiftOutlined
+  GiftOutlined,
+  CloseOutlined
 } from '@ant-design/icons'
 import { getBrands, getUpcomingEvents } from '../../../services/firebase/firestore'
 import { loginWithEmailOrPhone, registerUser, loginWithGoogle } from '../../../services/firebase/auth'
@@ -42,6 +43,7 @@ const Landing: React.FC = () => {
   const [loginForm] = Form.useForm()
   const [registerForm] = Form.useForm()
   const [loginError, setLoginError] = useState<string>('')
+  const [mobileMenuVisible, setMobileMenuVisible] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -313,10 +315,10 @@ const Landing: React.FC = () => {
 
           {!isMobile && (
             <Space size={40}>
-              <a href="#home" className="nav-link">Home</a>
-              <a href="#problem-solution" className="nav-link">About</a>
-              <a href="#offerings" className="nav-link">Collections</a>
-              <a href="#trust" className="nav-link">Salon Events</a>
+              <a href="#home" className="nav-link">{t('navigation.home')}</a>
+              <a href="#problem-solution" className="nav-link">{t('navigation.about')}</a>
+              <a href="#offerings" className="nav-link">{t('navigation.collections')}</a>
+              <a href="#trust" className="nav-link">{t('navigation.salonEvents')}</a>
             </Space>
           )}
 
@@ -335,17 +337,24 @@ const Landing: React.FC = () => {
             >
               Contact Us
             </a>
-            <Button
-              className="btn-gold"
-              onClick={() => {
-                setAuthMode('login')
-                setAuthModalVisible(true)
-              }}
-              style={{ height: '40px', fontSize: '12px' }}
-            >
-              {isMobile ? 'Join' : 'Become a Member'}
-            </Button>
-            {isMobile && <MenuOutlined style={{ fontSize: '24px', color: 'var(--gold)', marginLeft: '12px' }} />}
+            {!isMobile && (
+              <Button
+                className="btn-gold"
+                onClick={() => {
+                  setAuthMode('login')
+                  setAuthModalVisible(true)
+                }}
+                style={{ height: '40px', fontSize: '12px' }}
+              >
+                Become a Member
+              </Button>
+            )}
+            {isMobile && (
+              <MenuOutlined
+                onClick={() => setMobileMenuVisible(true)}
+                style={{ fontSize: '24px', color: 'var(--gold)', marginLeft: '12px', cursor: 'pointer' }}
+              />
+            )}
           </Space>
         </div>
       </nav>
@@ -402,7 +411,7 @@ const Landing: React.FC = () => {
           padding: '0 24px',
           textAlign: 'center'
         }}>
-          <p className="animate-fade-in-up" style={{ color: 'rgba(197, 165, 90, 0.6)', fontSize: '12px', letterSpacing: '0.4em', textTransform: 'uppercase', marginBottom: '32px' }}>#BeyondBusiness</p>
+          <p className="animate-fade-in-up" style={{ color: 'rgba(197, 165, 90, 0.6)', fontSize: '12px', letterSpacing: '0.4em', textTransform: 'uppercase', marginTop: '64px' }}>#BeyondBusiness</p>
           <h1 className="font-serif animate-fade-in-up" style={{
             fontSize: isMobile ? '36px' : '64px',
             fontWeight: 700,
@@ -473,9 +482,9 @@ const Landing: React.FC = () => {
 
           <Row gutter={[24, 24]}>
             {[
-              { title: 'The Shelf-Life Issue', desc: 'Generic hampers are forgotten in 48 hours. Your thoughtful gesture becomes just another item on a shelf.', stat: '48h', statUnit: 'Average memory span' },
-              { title: 'The Connection Gap', desc: "Standard gifts don't start conversations. They arrive, get acknowledged with a polite thank-you, and the relationship stays flat.", stat: '0', statUnit: 'Conversations started' },
-              { title: 'The Social Catalyst', desc: "A cigar ceremony creates a 1-hour bonding window. It's not just a gift—it's an invitation to slow down and connect.", stat: '60min', statUnit: 'Of genuine connection' }
+              { title: 'The Shelf-Life Issue', desc: 'Generic hampers are forgotten in 48 hours. Your thoughtful gesture becomes just another item on a shelf.', stat: '48h', statUnit: 'Average memory span', icon: <ClockCircleOutlined /> },
+              { title: 'The Connection Gap', desc: "Standard gifts don't start conversations. They arrive, get acknowledged with a polite thank-you, and the relationship stays flat.", stat: '0', statUnit: 'Conversations started', icon: <MessageOutlined /> },
+              { title: 'The Social Catalyst', desc: "A cigar ceremony creates a 1-hour bonding window. It's not just a gift—it's an invitation to slow down and connect.", stat: '60min', statUnit: 'Of genuine connection', icon: <ThunderboltOutlined /> }
             ].map((card, i) => (
               <Col key={i} xs={24} md={8}>
                 <div className="card-glow" style={{
@@ -727,6 +736,96 @@ const Landing: React.FC = () => {
           </div>
         </div>
       </footer>
+
+      {/* Mobile Menu Overlay */}
+      <div style={{
+        position: 'fixed',
+        top: mobileMenuVisible ? 0 : '-100%',
+        left: 0,
+        width: '100%',
+        height: '100vh',
+        background: 'rgba(0, 0, 0, 0.85)',
+        backdropFilter: 'blur(15px)',
+        zIndex: 2000,
+        transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+        opacity: mobileMenuVisible ? 1 : 0,
+        visibility: mobileMenuVisible ? 'visible' : 'hidden',
+        padding: '24px'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '60px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span className="font-serif" style={{ fontSize: '24px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#E5E5E5' }}>
+              <span style={{ color: 'var(--gold)' }}>GENTLEMEN</span>CLUB
+            </span>
+            <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', letterSpacing: '0.3em', marginTop: '4px' }}>#BEYONDBUSINESS</span>
+          </div>
+          <CloseOutlined
+            onClick={() => setMobileMenuVisible(false)}
+            style={{ fontSize: '24px', color: 'var(--gold)', cursor: 'pointer' }}
+          />
+        </div>
+
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '32px',
+          padding: '0 10px'
+        }}>
+          <a href="#home" onClick={() => setMobileMenuVisible(false)} style={{ color: '#fff', fontSize: '16px', letterSpacing: '0.15em', textDecoration: 'none', fontWeight: 500 }}>
+            {t('navigation.home').toUpperCase()}
+          </a>
+          <a href="#problem-solution" onClick={() => setMobileMenuVisible(false)} style={{ color: '#fff', fontSize: '16px', letterSpacing: '0.15em', textDecoration: 'none', fontWeight: 500 }}>
+            {t('navigation.about').toUpperCase()}
+          </a>
+          <a href="#offerings" onClick={() => setMobileMenuVisible(false)} style={{ color: '#fff', fontSize: '16px', letterSpacing: '0.15em', textDecoration: 'none', fontWeight: 500 }}>
+            {t('navigation.collections').toUpperCase()}
+          </a>
+          <a href="#trust" onClick={() => setMobileMenuVisible(false)} style={{ color: '#fff', fontSize: '16px', letterSpacing: '0.15em', textDecoration: 'none', fontWeight: 500 }}>
+            {t('navigation.salonEvents').toUpperCase()}
+          </a>
+
+          <div style={{ marginTop: '40px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <Button
+              className="btn-gold"
+              onClick={() => {
+                setAuthMode('login')
+                setAuthModalVisible(true)
+                setMobileMenuVisible(false)
+              }}
+              style={{
+                width: '100%',
+                height: '48px',
+                fontSize: '14px',
+                letterSpacing: '0.1em',
+                fontWeight: 600
+              }}
+            >
+              BECOME A MEMBER
+            </Button>
+
+            <a
+              href="https://wa.me/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'block',
+                width: '100%',
+                padding: '12px',
+                textAlign: 'center',
+                border: '1px solid var(--gold)',
+                color: 'var(--gold)',
+                textDecoration: 'none',
+                fontSize: '14px',
+                letterSpacing: '0.1em',
+                transition: 'all 0.3s ease'
+              }}
+              className="btn-outline-gold"
+            >
+              {t('navigation.contact').toUpperCase()}
+            </a>
+          </div>
+        </div>
+      </div>
 
       {/* Auth Modal */}
       <Modal
