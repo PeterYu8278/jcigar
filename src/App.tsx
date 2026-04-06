@@ -229,7 +229,7 @@ const AppContent: React.FC = () => {
         flexDirection: 'column',
         background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2d2d2d 100%)',
         position: 'relative',
-        overflow: isLandingPage ? 'visible' : (needsPadding ? 'auto' : 'hidden')
+        overflow: isLandingPage ? 'visible' : 'hidden'
       }}>
         {/* 全局背景装饰 */}
         <div style={{
@@ -269,7 +269,7 @@ const AppContent: React.FC = () => {
                 paddingBottom: needsPadding ? 12 : 0,
                 paddingLeft: needsPadding ? 12 : 0,
                 margin: 0,
-                flex: (needsPadding || isLandingPage) ? 'none' : 1,
+                flex: isLandingPage ? 'none' : 1,
                 background: isLandingPage ? 'transparent' : 'radial-gradient(ellipse at top, #3c2f1a, #121212)' ,
                 boxShadow: isLandingPage ? 'none' : '0 8px 32px rgba(0, 0, 0, 0.3)',
                 backdropFilter: isLandingPage ? 'none' : 'blur(10px)',
