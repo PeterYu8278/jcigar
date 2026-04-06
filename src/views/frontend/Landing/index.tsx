@@ -324,7 +324,7 @@ const Landing: React.FC = () => {
 
           <Space>
             <a
-              href="https://wa.me/"
+              href="https://api.whatsapp.com/send?phone=601157288278&text=Name%3A%0AContact%3A%0ABudget%3A%0APreferred%20date%3A%0A/"
               target="_blank"
               rel="noopener noreferrer"
               className="btn-outline-gold"
@@ -437,8 +437,7 @@ const Landing: React.FC = () => {
             className="btn-gold animate-fade-in-up"
             style={{ height: '60px', padding: '0 48px', fontSize: '16px', animationDelay: '0.3s' }}
             onClick={() => {
-              setAuthMode('register')
-              setAuthModalVisible(true)
+              window.open('https://api.whatsapp.com/send?phone=601157288278&text=Name%3A%0AContact%3A%0ABudget%3A%0APreferred%20date%3A%0A/', '_blank')
             }}
           >
             Explore Your Exclusive Taste <ArrowRightOutlined />
@@ -482,9 +481,9 @@ const Landing: React.FC = () => {
 
           <Row gutter={[24, 24]}>
             {[
-              { title: 'The Shelf-Life Issue', desc: 'Generic hampers are forgotten in 48 hours. Your thoughtful gesture becomes just another item on a shelf.', stat: '48h', statUnit: 'Average memory span', icon: <ClockCircleOutlined /> },
-              { title: 'The Connection Gap', desc: "Standard gifts don't start conversations. They arrive, get acknowledged with a polite thank-you, and the relationship stays flat.", stat: '0', statUnit: 'Conversations started', icon: <MessageOutlined /> },
-              { title: 'The Social Catalyst', desc: "A cigar ceremony creates a 1-hour bonding window. It's not just a gift—it's an invitation to slow down and connect.", stat: '60min', statUnit: 'Of genuine connection', icon: <ThunderboltOutlined /> }
+              { title: 'The Shelf-Life Issue', desc: 'Generic hampers are forgotten in 48 hours. Your thoughtful gesture becomes just another item on a shelf.', stat: '48h', statUnit: 'Average memory span' },
+              { title: 'The Connection Gap', desc: "Standard gifts don't start conversations. They arrive, get acknowledged with a polite thank-you, and the relationship stays flat.", stat: '0', statUnit: 'Conversations started' },
+              { title: 'The Social Catalyst', desc: "A cigar ceremony creates a 1-hour bonding window. It's not just a gift—it's an invitation to slow down and connect.", stat: '60min', statUnit: 'Of genuine connection' }
             ].map((card, i) => (
               <Col key={i} xs={24} md={8}>
                 <div className="card-glow" style={{
@@ -499,7 +498,6 @@ const Landing: React.FC = () => {
                     <span style={{ fontSize: '48px', fontWeight: 700, color: i === 2 ? 'var(--gold)' : '#2F2F2F', display: 'block' }}>{card.stat}</span>
                     <span style={{ color: '#52525B', fontSize: '12px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{card.statUnit}</span>
                   </div>
-                  <div style={{ color: 'var(--gold)', fontSize: '24px', marginBottom: '16px' }}>{card.icon}</div>
                   <h3 className="font-serif" style={{ fontSize: '22px', marginBottom: '16px' }}>{card.title}</h3>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6 }}>{card.desc}</p>
                 </div>
@@ -528,7 +526,7 @@ const Landing: React.FC = () => {
                 tag: 'Signature Collection',
                 title: 'Elite Social Key Gift Box',
                 desc: "More than a gift—it's a key to unlock high-end social circles. Featuring hand-selected premium cigars and private sommelier service.",
-                img: 'https://images.pexels.com/photos/3326125/pexels-photo-3326125.jpeg'
+                img: 'https://images.unsplash.com/photo-1760804876166-aae5861ec7c1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2OTV8MHwxfHNlYXJjaHwxfHxwcmVtaXVtJTIwY2lnYXIlMjBnaWZ0JTIwYm94JTIwcGFja2FnaW5nJTIwYmxhY2slMjBnb2xkfGVufDB8fHx8MTc3MTc4OTQ0N3ww&ixlib=rb-4.1.0&q=85'
               },
               {
                 tag: 'Discovery Series',
@@ -566,8 +564,7 @@ const Landing: React.FC = () => {
                       className="btn-outline-gold"
                       style={{ height: '48px', width: '100%' }}
                       onClick={() => {
-                        setAuthMode('register')
-                        setAuthModalVisible(true)
+                        window.open('https://api.whatsapp.com/send?phone=601157288278&text=Name%3A%0AContact%3A%0ABudget%3A%0APreferred%20date%3A%0A/', '_blank')
                       }}
                     >
                       Customize Your Key <ArrowRightOutlined />
@@ -692,11 +689,7 @@ const Landing: React.FC = () => {
               <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.8, maxWidth: '400px', marginBottom: '32px' }}>
                 The world's leading community for refined tobacco enthusiasts and discerning connoisseurs. We believe in the art of connection through the cigar ceremony.
               </p>
-              <div style={{ display: 'flex', gap: '16px' }}>
-                <a href="#" className="nav-link" style={{ fontSize: '18px' }}><CrownOutlined /></a>
-                <a href="#" className="nav-link" style={{ fontSize: '18px' }}><ThunderboltOutlined /></a>
-                <a href="#" className="nav-link" style={{ fontSize: '18px' }}><UserOutlined /></a>
-              </div>
+
             </Col>
             <Col xs={24} md={14}>
               <Row gutter={[24, 24]}>
@@ -723,7 +716,15 @@ const Landing: React.FC = () => {
                   <Space direction="vertical">
                     <Text style={{ color: 'var(--text-secondary)', fontSize: '13px' }}><EnvironmentOutlined /> Kuala Lumpur, MY</Text>
                     <Text style={{ color: 'var(--text-secondary)', fontSize: '13px' }}><CalendarOutlined /> Mon - Fri: 9am - 6pm</Text>
-                    <Button className="btn-gold" style={{ height: '40px', width: '100%', marginTop: '16px' }}>Contact Us</Button>
+                    <Button
+                      className="btn-gold"
+                      style={{ height: '40px', width: '100%', marginTop: '16px' }}
+                      onClick={() => {
+                        window.open('https://api.whatsapp.com/send?phone=601157288278&text=Name%3A%0AContact%3A%0ABudget%3A%0APreferred%20date%3A%0A/', '_blank')
+                      }}
+                    >
+                      Contact Us
+                    </Button>
                   </Space>
                 </Col>
               </Row>
@@ -804,7 +805,7 @@ const Landing: React.FC = () => {
             </Button>
 
             <a
-              href="https://wa.me/"
+              href="https://api.whatsapp.com/send?phone=601157288278&text=Name%3A%0AContact%3A%0ABudget%3A%0APreferred%20date%3A%0A"
               target="_blank"
               rel="noopener noreferrer"
               style={{
