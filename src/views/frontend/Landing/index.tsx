@@ -35,7 +35,9 @@ const Landing: React.FC = () => {
   const [brands, setBrands] = useState<Brand[]>([])
   const [events, setEvents] = useState<CigarEvent[]>([])
   const [scrolled, setScrolled] = useState(false)
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 992)
+  const [mobileMenuVisible, setMobileMenuVisible] = useState(false)
+  const [salonModalVisible, setSalonModalVisible] = useState(false)
   const [authModalVisible, setAuthModalVisible] = useState(false)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
   const [authLoading, setAuthLoading] = useState(false)
@@ -43,7 +45,14 @@ const Landing: React.FC = () => {
   const [loginForm] = Form.useForm()
   const [registerForm] = Form.useForm()
   const [loginError, setLoginError] = useState<string>('')
-  const [mobileMenuVisible, setMobileMenuVisible] = useState(false)
+
+  useEffect(() => {
+    // 延迟 1.5 秒弹出沙龙广告
+    const timer = setTimeout(() => {
+      setSalonModalVisible(true)
+    }, 1500)
+    return () => clearTimeout(timer)
+  }, [])
 
   useEffect(() => {
     const handleScroll = () => {
@@ -1179,6 +1188,77 @@ const Landing: React.FC = () => {
               </Form>
             )}
           </Space>
+        </div>
+      </Modal>
+
+      {/* Salon Special Offer Modal */}
+      <Modal
+        open={salonModalVisible}
+        onCancel={() => setSalonModalVisible(false)}
+        footer={null}
+        width={500}
+        centered
+        styles={{
+          mask: { backdropFilter: 'blur(12px)', background: 'rgba(0, 0, 0, 0.6)' },
+          content: { 
+            padding: 0, 
+            background: '#111', 
+            borderRadius: '24px', 
+            overflow: 'hidden',
+            border: '1px solid rgba(197, 165, 90, 0.4)' 
+          }
+        }}
+      >
+        <div style={{ position: 'relative' }}>
+          <div style={{ height: '300px', overflow: 'hidden' }}>
+            <img 
+              src="https://images.pexels.com/photos/25747045/pexels-photo-25747045.jpeg" 
+              alt="Monthly Taste Salon" 
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+            />
+            {/* Tag Overlay */}
+            <div style={{ 
+              position: 'absolute', 
+              top: '20px', 
+              left: '20px', 
+              background: 'var(--gold)', 
+              color: '#000', 
+              padding: '6px 16px', 
+              fontSize: '12px', 
+              fontWeight: 700, 
+              letterSpacing: '0.1em',
+              borderRadius: '20px'
+            }}>
+              SPECIAL OFFER
+            </div>
+          </div>
+          
+          <div style={{ padding: '40px 32px', textAlign: 'center' }}>
+            <p style={{ color: 'var(--gold)', fontSize: '14px', letterSpacing: '0.4em', textTransform: 'uppercase', marginBottom: '16px' }}>Exclusive Experience</p>
+            <h2 className="font-serif" style={{ fontSize: '36px', marginBottom: '16px', color: '#FFF' }}>Monthly Taste <span className="gold-text">Salon</span></h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '16px', lineHeight: 1.8, marginBottom: '32px' }}>
+              Join our monthly gathering of connoisseurs. Indulge in premium cigars, curated food, and spirits for only <span style={{ color: '#FFF', fontWeight: 600 }}>RM 150</span>.
+            </p>
+            
+            <Button
+              className="btn-gold"
+              style={{ height: '54px', width: '100%', fontSize: '16px', fontWeight: 600, letterSpacing: '0.1em' }}
+              onClick={() => {
+                window.open('https://api.whatsapp.com/send?phone=601157288278&text=I%20am%20interested%20in%20joining%20the%20Monthly%20Taste%20Salon!/', '_blank');
+                setSalonModalVisible(false);
+              }}
+            >
+              BOOK YOUR SEAT NOW
+            </Button>
+            
+            <a 
+              className="nav-link" 
+              style={{ marginTop: '20px', display: 'inline-block', fontSize: '14px', opacity: 0.6 }}
+              onClick={() => setSalonModalVisible(false)}
+            >
+              Maybe later
+            </a>
+          </div>
         </div>
       </Modal>
 
