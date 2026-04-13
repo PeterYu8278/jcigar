@@ -679,6 +679,12 @@ const AdminInventory: React.FC = () => {
     { title: t('inventory.type'), dataIndex: 'type', key: 'type', render: (type: string) => type === 'in' ? t('inventory.stockIn') : t('inventory.stockOut') },
     { title: t('inventory.quantity'), dataIndex: 'quantity', key: 'quantity' },
     { 
+      title: t('inventory.unitPrice'), 
+      dataIndex: 'unitPrice', 
+      key: 'unitPrice', 
+      render: (v: number) => v ? `RM${v.toFixed(2)}` : '-' 
+    },
+    { 
       title: t('inventory.referenceNo'), 
       dataIndex: 'referenceNo', 
       key: 'referenceNo', 
@@ -4989,6 +4995,7 @@ const AdminInventory: React.FC = () => {
               title: t('inventory.quantity'), 
               dataIndex: 'quantity', 
               key: 'quantity',
+              width: 90,
               render: (quantity: number, record: any) => {
                 const color = record.type === 'in' ? 'green' : record.type === 'out' ? 'red' : 'blue'
                 const prefix = record.type === 'in' ? '+' : record.type === 'out' ? '-' : ''
@@ -4997,6 +5004,14 @@ const AdminInventory: React.FC = () => {
                 </span>
               },
               sorter: (a: any, b: any) => a.quantity - b.quantity
+            },
+            { 
+              title: t('inventory.unitPrice'), 
+              dataIndex: 'unitPrice', 
+              key: 'unitPrice', 
+              width: 100,
+              render: (v: number) => v ? `RM${v.toFixed(2)}` : '-',
+              sorter: (a: any, b: any) => (a.unitPrice || 0) - (b.unitPrice || 0)
             },
             { 
               title: t('inventory.referenceNo'), 
@@ -5183,15 +5198,30 @@ const AdminInventory: React.FC = () => {
                       {typeText}
                     </div>
                     
-                    {/* 数量 - 突出显示 */}
+                    {/* 数量与单价 - 突出显示 */}
                     <div style={{ 
-                      fontSize: 24, 
-                      fontWeight: 700, 
-                      color: typeColor,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'baseline',
                       marginBottom: 8,
                       marginTop: 4
                     }}>
-                      {isIn ? '+' : isOut ? '-' : ''}{log.quantity}
+                      <div style={{ 
+                        fontSize: 24, 
+                        fontWeight: 700, 
+                        color: typeColor
+                      }}>
+                        {isIn ? '+' : isOut ? '-' : ''}{log.quantity}
+                      </div>
+                      {log.unitPrice && (
+                        <div style={{ 
+                          fontSize: 14, 
+                          fontWeight: 600, 
+                          color: '#f4af25'
+                        }}>
+                          RM{log.unitPrice.toFixed(2)}
+                        </div>
+                      )}
                     </div>
                     
                     {/* 信息网格 */}
