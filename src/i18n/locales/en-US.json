@@ -733,6 +733,8 @@
     "recentRecords": "Recent Records",
     "totalInStock": "Total In Stock",
     "totalOutStock": "Total Out Stock",
+    "totalInValue": "Total Inbound Value",
+    "totalOutValue": "Total Outbound Value",
     "totalIn": "Total In",
     "totalOut": "Total Out",
     "adjustment": "Adjustment",

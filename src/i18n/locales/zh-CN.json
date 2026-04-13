@@ -730,6 +730,8 @@
     "recentRecords": "最近记录",
     "totalInStock": "总入库",
     "totalOutStock": "总出库",
+    "totalInValue": "总进货额",
+    "totalOutValue": "总出货额",
     "totalIn": "总入库",
     "totalOut": "总出库",
     "adjustment": "调整",

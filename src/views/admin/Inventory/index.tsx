@@ -679,12 +679,6 @@ const AdminInventory: React.FC = () => {
     { title: t('inventory.type'), dataIndex: 'type', key: 'type', render: (type: string) => type === 'in' ? t('inventory.stockIn') : t('inventory.stockOut') },
     { title: t('inventory.quantity'), dataIndex: 'quantity', key: 'quantity' },
     { 
-      title: t('inventory.unitPrice'), 
-      dataIndex: 'unitPrice', 
-      key: 'unitPrice', 
-      render: (v: number) => v ? `RM${v.toFixed(2)}` : '-' 
-    },
-    { 
       title: t('inventory.referenceNo'), 
       dataIndex: 'referenceNo', 
       key: 'referenceNo', 
@@ -704,9 +698,26 @@ const AdminInventory: React.FC = () => {
       .map(m => {
         // 获取操作人信息
         let operatorId = 'system'
+        let price = m.unitPrice
+
         if (m.inboundOrderId) {
           const order = inboundOrders.find(o => o.id === m.inboundOrderId)
-          if (order) operatorId = order.operatorId
+          if (order) {
+            operatorId = order.operatorId
+            if (price === undefined || price === null || price === 0) {
+              const item = order.items.find(it => it.cigarId === m.cigarId)
+              if (item?.unitPrice) price = item.unitPrice
+            }
+          }
+        }
+
+        if ((price === undefined || price === null || price === 0) && m.referenceNo) {
+          const legacyOrder = orders.find(o => o.id === m.referenceNo)
+          if (legacyOrder) {
+            const item = legacyOrder.items?.find((it: any) => it.id === m.cigarId || it.cigarId === m.cigarId)
+            if (item?.price) price = item.price
+            else if (item?.unitPrice) price = item.unitPrice
+          }
         }
         
         return {
@@ -716,14 +727,14 @@ const AdminInventory: React.FC = () => {
           itemType: m.itemType,
           type: m.type,
           quantity: m.quantity,
-          unitPrice: m.unitPrice,
+          unitPrice: price,
           referenceNo: m.referenceNo,
           reason: m.reason,
           operatorId: operatorId,
           createdAt: m.createdAt
         }
       })
-  }, [inventoryMovements, inboundOrders])
+  }, [inventoryMovements, inboundOrders, orders])
   
   const outLogs = useMemo(() => {
     return inventoryMovements
@@ -731,9 +742,26 @@ const AdminInventory: React.FC = () => {
       .map(m => {
         // 获取操作人信息
         let operatorId = 'system'
+        let price = m.unitPrice
+
         if (m.outboundOrderId) {
           const order = outboundOrders.find(o => o.id === m.outboundOrderId)
-          if (order) operatorId = order.operatorId
+          if (order) {
+            operatorId = order.operatorId
+            if (price === undefined || price === null || price === 0) {
+              const item = order.items.find(it => it.cigarId === m.cigarId)
+              if (item?.unitPrice) price = item.unitPrice
+            }
+          }
+        }
+
+        if ((price === undefined || price === null || price === 0) && m.referenceNo) {
+          const legacyOrder = orders.find(o => o.id === m.referenceNo)
+          if (legacyOrder) {
+            const item = legacyOrder.items?.find((it: any) => it.id === m.cigarId || it.cigarId === m.cigarId)
+            if (item?.price) price = item.price
+            else if (item?.unitPrice) price = item.unitPrice
+          }
         }
         
         return {
@@ -743,14 +771,14 @@ const AdminInventory: React.FC = () => {
           itemType: m.itemType,
           type: m.type,
           quantity: m.quantity,
-          unitPrice: m.unitPrice,
+          unitPrice: price,
           referenceNo: m.referenceNo,
           reason: m.reason,
           operatorId: operatorId,
           createdAt: m.createdAt
         }
       })
-  }, [inventoryMovements, outboundOrders])
+  }, [inventoryMovements, outboundOrders, orders])
   
   // 入库记录筛选
   const filteredInLogs = useMemo(() => {
@@ -1028,12 +1056,38 @@ const AdminInventory: React.FC = () => {
       .map((movement: InventoryMovement) => {
         // 获取操作人信息（从关联的订单中获取）
         let operatorId = 'system'
+        let price = movement.unitPrice
+
         if (movement.inboundOrderId) {
           const order = inboundOrders.find(o => o.id === movement.inboundOrderId)
-          if (order) operatorId = order.operatorId
+          if (order) {
+            operatorId = order.operatorId
+            // 如果日志本身没存单价，尝试从入库单中查找
+            if (price === undefined || price === null || price === 0) {
+              const item = order.items.find(it => it.cigarId === movement.cigarId)
+              if (item?.unitPrice) price = item.unitPrice
+            }
+          }
         } else if (movement.outboundOrderId) {
           const order = outboundOrders.find(o => o.id === movement.outboundOrderId)
-          if (order) operatorId = order.operatorId
+          if (order) {
+            operatorId = order.operatorId
+            // 如果日志本身没存单价，尝试从出库单中查找
+            if (price === undefined || price === null || price === 0) {
+              const item = order.items.find(it => it.cigarId === movement.cigarId)
+              if (item?.unitPrice) price = item.unitPrice
+            }
+          }
+        }
+
+        // 如果还是没找到单价（可能是旧版数据只有 referenceNo），尝试从 orders 中查找
+        if ((price === undefined || price === null || price === 0) && movement.referenceNo) {
+          const legacyOrder = orders.find(o => o.id === movement.referenceNo)
+          if (legacyOrder) {
+            const item = legacyOrder.items?.find((it: any) => it.id === movement.cigarId || it.cigarId === movement.cigarId)
+            if (item?.price) price = item.price
+            else if (item?.unitPrice) price = item.unitPrice
+          }
         }
         
         return {
@@ -1043,7 +1097,7 @@ const AdminInventory: React.FC = () => {
           itemType: movement.itemType,
           type: movement.type,
           quantity: movement.quantity,
-          unitPrice: movement.unitPrice,
+          unitPrice: price,
           referenceNo: movement.referenceNo,
           reason: movement.reason,
           operatorId: operatorId,
@@ -4995,7 +5049,6 @@ const AdminInventory: React.FC = () => {
               title: t('inventory.quantity'), 
               dataIndex: 'quantity', 
               key: 'quantity',
-              width: 90,
               render: (quantity: number, record: any) => {
                 const color = record.type === 'in' ? 'green' : record.type === 'out' ? 'red' : 'blue'
                 const prefix = record.type === 'in' ? '+' : record.type === 'out' ? '-' : ''
@@ -5008,10 +5061,8 @@ const AdminInventory: React.FC = () => {
             { 
               title: t('inventory.unitPrice'), 
               dataIndex: 'unitPrice', 
-              key: 'unitPrice', 
-              width: 100,
-              render: (v: number) => v ? `RM${v.toFixed(2)}` : '-',
-              sorter: (a: any, b: any) => (a.unitPrice || 0) - (b.unitPrice || 0)
+              key: 'unitPrice',
+              render: (price: number) => price ? `RM${price.toFixed(2)}` : '-'
             },
             { 
               title: t('inventory.referenceNo'), 
@@ -5083,10 +5134,22 @@ const AdminInventory: React.FC = () => {
           backdropFilter: 'blur(10px)'
         }}>
           <div style={{ fontWeight: 'bold', marginBottom: 8, color: '#FFFFFF' }}>{t('inventory.summary')}</div>
-          <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.totalRecords')}：{currentProductLogs.length} {t('inventory.records')}</div>
-          <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.totalInStock')}：{currentProductLogs.filter(log => log.type === 'in').reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
-          <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.totalOutStock')}：{currentProductLogs.filter(log => log.type === 'out').reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
-          <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.currentStock')}：{getComputedStock(viewingProductLogs || '')} {t('inventory.sticks')}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '8px 24px' }}>
+            <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.totalRecords')}：{currentProductLogs.length} {t('inventory.records')}</div>
+            <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.currentStock')}：{getComputedStock(viewingProductLogs || '')} {t('inventory.sticks')}</div>
+            
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', gridColumn: '1 / -1', margin: '4px 0' }} />
+            
+            <div>
+              <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.totalInStock')}：{currentProductLogs.filter(log => log.type === 'in').reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
+              <div style={{ color: '#52c41a', fontWeight: 600, fontSize: 13 }}>{t('inventory.totalInValue')}：RM{currentProductLogs.filter(log => log.type === 'in').reduce((sum, log) => sum + ((log.quantity || 0) * (log.unitPrice || 0)), 0).toFixed(2)}</div>
+            </div>
+            
+            <div>
+              <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.totalOutStock')}：{currentProductLogs.filter(log => log.type === 'out').reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
+              <div style={{ color: '#ff4d4f', fontWeight: 600, fontSize: 13 }}>{t('inventory.totalOutValue')}：RM{currentProductLogs.filter(log => log.type === 'out').reduce((sum, log) => sum + ((log.quantity || 0) * (log.unitPrice || 0)), 0).toFixed(2)}</div>
+            </div>
+          </div>
         </div>
           </>
         ) : (
@@ -5124,11 +5187,17 @@ const AdminInventory: React.FC = () => {
                   <div style={{ fontSize: 16, fontWeight: 600, color: '#52c41a' }}>
                     +{currentProductLogs.filter(log => log.type === 'in').reduce((sum, log) => sum + (log.quantity || 0), 0)}
                   </div>
+                  <div style={{ fontSize: 11, color: '#52c41a', opacity: 0.8 }}>
+                    RM{currentProductLogs.filter(log => log.type === 'in').reduce((sum, log) => sum + ((log.quantity || 0) * (log.unitPrice || 0)), 0).toFixed(2)}
+                  </div>
                 </div>
                 <div>
                   <div style={{ color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>{t('inventory.totalOutStock')}</div>
                   <div style={{ fontSize: 16, fontWeight: 600, color: '#ff4d4f' }}>
                     -{currentProductLogs.filter(log => log.type === 'out').reduce((sum, log) => sum + (log.quantity || 0), 0)}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#ff4d4f', opacity: 0.8 }}>
+                    RM{currentProductLogs.filter(log => log.type === 'out').reduce((sum, log) => sum + ((log.quantity || 0) * (log.unitPrice || 0)), 0).toFixed(2)}
                   </div>
                 </div>
               </div>
@@ -5209,7 +5278,7 @@ const AdminInventory: React.FC = () => {
                       <div style={{ 
                         fontSize: 24, 
                         fontWeight: 700, 
-                        color: typeColor
+                        color: typeColor,
                       }}>
                         {isIn ? '+' : isOut ? '-' : ''}{log.quantity}
                       </div>
