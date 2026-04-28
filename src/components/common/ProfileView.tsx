@@ -361,11 +361,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         }}>
           <Button
             type="default"
-            icon={<DatabaseOutlined style={{ 
+            icon={<DatabaseOutlined style={{
               background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
+              backgroundClip: 'text',
+              color: 'transparent'
             }} />}
             onClick={() => navigate('/ai-cigar-history')}
             style={{
