@@ -131,7 +131,7 @@ const AdminDashboard: React.FC = () => {
 
 
   return (
-    <div style={{ minHeight: '100vh', marginBottom: 30 }}>
+    <div style={{ minHeight: '100vh', marginBottom: 100 }}>
       {/* 顶部 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
 

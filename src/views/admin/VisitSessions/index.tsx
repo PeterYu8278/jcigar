@@ -2,11 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Space, Tag, Modal, message, Input, Typography, App, Form, Select, InputNumber, Spin } from 'antd';
 import { ReloadOutlined, CheckOutlined, ClockCircleOutlined, QrcodeOutlined, LoginOutlined, LogoutOutlined, GiftOutlined, PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import { 
-  getUserVisitSessions, 
+import {
+  getUserVisitSessions,
   getAllPendingVisitSessions,
   getAllVisitSessions,
-  getExpiredVisitSessions, 
+  getExpiredVisitSessions,
   completeVisitSession,
   addRedemptionToSession
 } from '../../../services/firebase/visitSessions';
@@ -28,7 +28,7 @@ const VisitSessionsPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [sessions, setSessions] = useState<VisitSession[]>([]); // 保留用于搜索
   const [searchUserId, setSearchUserId] = useState<string>('');
-  
+
   // 不再使用服务端分页，改为加载所有数据并使用客户端分页
   const [qrScannerVisible, setQrScannerVisible] = useState(false);
   const [qrScannerMode, setQrScannerMode] = useState<'checkin' | 'checkout'>('checkin');
@@ -89,7 +89,7 @@ const VisitSessionsPage: React.FC = () => {
     setLoading(true);
     try {
       let allSessions: VisitSession[] = [];
-      
+
       if (statusFilter === 'pending') {
         // 只加载待处理的记录
         allSessions = await getAllPendingVisitSessions();
@@ -101,7 +101,7 @@ const VisitSessionsPage: React.FC = () => {
           allSessions = allSessions.filter(session => session.status === statusFilter);
         }
       }
-      
+
       setSessions(allSessions);
     } catch (error) {
       console.error('加载驻店记录失败:', error);
@@ -130,18 +130,18 @@ const VisitSessionsPage: React.FC = () => {
   };
 
   const handleManualCheckout = async (sessionId: string, forceHours?: number) => {
-    
+
     if (!user?.id) {
       message.error('请先登录');
       return;
     }
 
-    const content = forceHours 
+    const content = forceHours
       ? `是否按 ${forceHours} 小时强制结算此驻店记录？`
       : '是否结算此驻店记录？';
 
     try {
-      
+
       modal.confirm({
         title: '确认结算',
         content: content,
@@ -170,7 +170,7 @@ const VisitSessionsPage: React.FC = () => {
         onCancel: () => {
         }
       });
-      
+
     } catch (error: any) {
       console.error('[handleManualCheckout] modal.confirm 异常', error);
       message.error('无法打开确认对话框: ' + (error.message || '未知错误'));
@@ -265,7 +265,7 @@ const VisitSessionsPage: React.FC = () => {
           expired: { color: 'red', text: '已过期' }
         };
         const statusInfo = statusMap[status] || { color: 'default', text: status };
-        
+
         // 检查是否超过24小时
         if (status === 'pending') {
           const now = new Date();
@@ -275,7 +275,7 @@ const VisitSessionsPage: React.FC = () => {
             return <Tag color="red">过期待处理</Tag>;
           }
         }
-        
+
         return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
       }
     },
@@ -287,7 +287,7 @@ const VisitSessionsPage: React.FC = () => {
         if (record.status !== 'pending') {
           return null;
         }
-        
+
         return (
           <Space>
             <Button
@@ -331,17 +331,17 @@ const VisitSessionsPage: React.FC = () => {
   return (
     <div style={{ paddingBottom: isMobile ? '80px' : '0' }}>
       {/* 标题 */}
-      <h1 style={{ 
-        fontSize: 22, 
-        fontWeight: 800, 
-        backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
-        WebkitBackgroundClip: 'text', 
-        color: 'transparent', 
-        marginBottom: 12 
+      <h1 style={{
+        fontSize: 22,
+        fontWeight: 800,
+        backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+        WebkitBackgroundClip: 'text',
+        color: 'transparent',
+        marginBottom: 12
       }}>
         驻店记录管理
       </h1>
-      <Text style={{ color: 'rgba(255, 255, 255, 0.6)', display: 'block'}}>
+      <Text style={{ color: 'rgba(255, 255, 255, 0.6)', display: 'block' }}>
         查看和管理所有驻店记录
       </Text>
       <div>
@@ -363,7 +363,7 @@ const VisitSessionsPage: React.FC = () => {
                   boxShadow: '0 4px 15px rgba(244,175,37,0.35)'
                 }}
               >
-                QR Check-in
+                Check-in
               </Button>
               <Button
                 icon={<LogoutOutlined />}
@@ -379,9 +379,9 @@ const VisitSessionsPage: React.FC = () => {
                   boxShadow: '0 4px 15px rgba(244,175,37,0.35)'
                 }}
               >
-                QR Check-out
+                Check-out
               </Button>
-              
+
               <Button
                 icon={<ReloadOutlined />}
                 onClick={async () => {
@@ -415,7 +415,7 @@ const VisitSessionsPage: React.FC = () => {
             />
             <Space wrap>
               <Text style={{ color: 'rgba(255, 255, 255, 0.85)' }}>状态筛选：</Text>
-              <Button 
+              <Button
                 onClick={() => setStatusFilter('all')}
                 style={statusFilter === 'all' ? {
                   background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
@@ -430,7 +430,7 @@ const VisitSessionsPage: React.FC = () => {
               >
                 全部
               </Button>
-              <Button 
+              <Button
                 onClick={() => setStatusFilter('pending')}
                 style={statusFilter === 'pending' ? {
                   background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
@@ -445,7 +445,7 @@ const VisitSessionsPage: React.FC = () => {
               >
                 待处理
               </Button>
-              <Button 
+              <Button
                 onClick={() => setStatusFilter('completed')}
                 style={statusFilter === 'completed' ? {
                   background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
@@ -460,182 +460,182 @@ const VisitSessionsPage: React.FC = () => {
               >
                 已完成
               </Button>
-              
+
             </Space>
           </div>
 
           {!isMobile ? (
             <div className="points-config-form">
-          <Table
-            columns={columns}
-            dataSource={sessions}
-            rowKey="id"
-            loading={loading}
-            scroll={{
-              y: 'calc(100vh - 350px)', // 启用虚拟滚动
-              x: 'max-content'
-            }}
-            pagination={{
-              pageSize: isMobile ? 10 : 20,
-              total: sessions.length,
-              showSizeChanger: true,
-              showQuickJumper: true,
-              showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
-              pageSizeOptions: ['10', '20', '50', '100'],
-            }}
+              <Table
+                columns={columns}
+                dataSource={sessions}
+                rowKey="id"
+                loading={loading}
+                scroll={{
+                  y: 'calc(100vh - 350px)', // 启用虚拟滚动
+                  x: 'max-content'
+                }}
+                pagination={{
+                  pageSize: isMobile ? 10 : 20,
+                  total: sessions.length,
+                  showSizeChanger: true,
+                  showQuickJumper: true,
+                  showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+                  pageSizeOptions: ['10', '20', '50', '100'],
+                }}
                 style={{
                   background: 'transparent'
                 }}
-            expandable={{
-              expandedRowRender: (record: VisitSession) => {
-                // 从 redemptionRecords state 中获取该 session 的所有兑换记录（包括待处理和已完成）
-                const allRedemptionRecords = redemptionRecords.get(record.id) || [];
-                
-                // 如果还没有加载，则加载
-                if (allRedemptionRecords.length === 0 && record.status === 'pending') {
-                  loadRedemptionRecords(record.id);
-                }
-                
-                return (
-                  <div style={{ padding: '16px', background: 'rgba(255, 255, 255, 0.05)', marginLeft: 24, borderRadius: 8, border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                      <div style={{ fontWeight: 600, color: '#FFD700' }}>
-                        <GiftOutlined style={{ marginRight: 8 }} />
-                        兑换记录 ({allRedemptionRecords.length} 项)
+                expandable={{
+                  expandedRowRender: (record: VisitSession) => {
+                    // 从 redemptionRecords state 中获取该 session 的所有兑换记录（包括待处理和已完成）
+                    const allRedemptionRecords = redemptionRecords.get(record.id) || [];
+
+                    // 如果还没有加载，则加载
+                    if (allRedemptionRecords.length === 0 && record.status === 'pending') {
+                      loadRedemptionRecords(record.id);
+                    }
+
+                    return (
+                      <div style={{ padding: '16px', background: 'rgba(255, 255, 255, 0.05)', marginLeft: 24, borderRadius: 8, border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                          <div style={{ fontWeight: 600, color: '#FFD700' }}>
+                            <GiftOutlined style={{ marginRight: 8 }} />
+                            兑换记录 ({allRedemptionRecords.length} 项)
+                          </div>
+                          {record.status === 'pending' && (
+                            <Button
+                              size="small"
+                              icon={<PlusOutlined />}
+                              onClick={() => {
+                                setSelectedSession(record);
+                                form.setFieldsValue({ items: [{ cigarId: undefined, quantity: 1 }] });
+                                setAddRedemptionModalVisible(true);
+                              }}
+                              style={{
+                                background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                                border: 'none',
+                                color: '#111',
+                                fontWeight: 700
+                              }}
+                            >
+                              添加兑换记录
+                            </Button>
+                          )}
+                        </div>
+
+                        {allRedemptionRecords.length === 0 ? (
+                          <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>暂无兑换记录</Text>
+                        ) : (
+                          <div className="points-config-form">
+                            <Table
+                              dataSource={allRedemptionRecords}
+                              rowKey={(item) => item.id || `${record.id}-${item.createdAt}`}
+                              pagination={false}
+                              size="small"
+                              style={{
+                                background: 'transparent'
+                              }}
+                              columns={[
+                                {
+                                  title: '状态',
+                                  dataIndex: 'status',
+                                  key: 'status',
+                                  width: 100,
+                                  render: (status: string) => {
+                                    if (status === 'pending') {
+                                      return <Tag color="orange">待选择</Tag>;
+                                    }
+                                    return <Tag color="green">已完成</Tag>;
+                                  }
+                                },
+                                {
+                                  title: '雪茄名称',
+                                  dataIndex: 'cigarName',
+                                  key: 'cigarName',
+                                  width: 200,
+                                  render: (name: string, record: any) => {
+                                    if (record.status === 'pending') {
+                                      return <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>待选择</Text>;
+                                    }
+                                    return <Text strong style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{name}</Text>;
+                                  }
+                                },
+                                {
+                                  title: '数量',
+                                  dataIndex: 'quantity',
+                                  key: 'quantity',
+                                  width: 100,
+                                  align: 'center' as const,
+                                  render: (quantity: number) => (
+                                    <Tag color="blue">{quantity} 支</Tag>
+                                  )
+                                },
+                                {
+                                  title: '兑换时间',
+                                  dataIndex: 'redeemedAt',
+                                  key: 'redeemedAt',
+                                  width: 180,
+                                  render: (date: Date) => {
+                                    if (!date) return '-';
+                                    // 处理 Firestore Timestamp 或 Date
+                                    const dateObj = date instanceof Date ? date : (date as any)?.toDate?.() || new Date(date);
+                                    return dayjs(dateObj).format('YYYY-MM-DD HH:mm:ss');
+                                  }
+                                },
+                                {
+                                  title: '操作人',
+                                  dataIndex: 'redeemedBy',
+                                  key: 'redeemedBy',
+                                  width: 150,
+                                  render: (userId: string) => userId || '-'
+                                },
+                                {
+                                  title: '操作',
+                                  key: 'action',
+                                  width: 100,
+                                  render: (_: any, redemptionRecord: any) => {
+                                    // 允许管理员编辑所有兑换记录（无论状态如何）
+                                    return (
+                                      <Button
+                                        type="link"
+                                        size="small"
+                                        icon={<EditOutlined />}
+                                        onClick={() => {
+                                          setSelectedRedemptionRecord(redemptionRecord);
+                                          setSelectedSession(record);
+                                          form.setFieldsValue({
+                                            cigarId: redemptionRecord.cigarId || undefined,
+                                            quantity: redemptionRecord.quantity || 1
+                                          });
+                                          setEditRedemptionModalVisible(true);
+                                        }}
+                                      >
+                                        编辑
+                                      </Button>
+                                    );
+                                  }
+                                }
+                              ]}
+                            />
+                          </div>
+                        )}
                       </div>
-                      {record.status === 'pending' && (
-                        <Button
-                          size="small"
-                          icon={<PlusOutlined />}
-                          onClick={() => {
-                            setSelectedSession(record);
-                            form.setFieldsValue({ items: [{ cigarId: undefined, quantity: 1 }] });
-                            setAddRedemptionModalVisible(true);
-                          }}
-                          style={{
-                            background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                            border: 'none',
-                            color: '#111',
-                            fontWeight: 700
-                          }}
-                        >
-                          添加兑换记录
-                        </Button>
-                      )}
-                    </div>
-                    
-                    {allRedemptionRecords.length === 0 ? (
-                      <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>暂无兑换记录</Text>
-                    ) : (
-                      <div className="points-config-form">
-                      <Table
-                        dataSource={allRedemptionRecords}
-                        rowKey={(item) => item.id || `${record.id}-${item.createdAt}`}
-                        pagination={false}
-                        size="small"
-                          style={{
-                            background: 'transparent'
-                          }}
-                        columns={[
-                          {
-                            title: '状态',
-                            dataIndex: 'status',
-                            key: 'status',
-                            width: 100,
-                            render: (status: string) => {
-                              if (status === 'pending') {
-                                return <Tag color="orange">待选择</Tag>;
-                              }
-                              return <Tag color="green">已完成</Tag>;
-                            }
-                          },
-                          {
-                            title: '雪茄名称',
-                            dataIndex: 'cigarName',
-                            key: 'cigarName',
-                            width: 200,
-                            render: (name: string, record: any) => {
-                              if (record.status === 'pending') {
-                                return <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>待选择</Text>;
-                              }
-                              return <Text strong style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{name}</Text>;
-                            }
-                          },
-                          {
-                            title: '数量',
-                            dataIndex: 'quantity',
-                            key: 'quantity',
-                            width: 100,
-                            align: 'center' as const,
-                            render: (quantity: number) => (
-                              <Tag color="blue">{quantity} 支</Tag>
-                            )
-                          },
-                          {
-                            title: '兑换时间',
-                            dataIndex: 'redeemedAt',
-                            key: 'redeemedAt',
-                            width: 180,
-                            render: (date: Date) => {
-                              if (!date) return '-';
-                              // 处理 Firestore Timestamp 或 Date
-                              const dateObj = date instanceof Date ? date : (date as any)?.toDate?.() || new Date(date);
-                              return dayjs(dateObj).format('YYYY-MM-DD HH:mm:ss');
-                            }
-                          },
-                          {
-                            title: '操作人',
-                            dataIndex: 'redeemedBy',
-                            key: 'redeemedBy',
-                            width: 150,
-                            render: (userId: string) => userId || '-'
-                          },
-                          {
-                            title: '操作',
-                            key: 'action',
-                            width: 100,
-                            render: (_: any, redemptionRecord: any) => {
-                              // 允许管理员编辑所有兑换记录（无论状态如何）
-                              return (
-                                <Button
-                                  type="link"
-                                  size="small"
-                                  icon={<EditOutlined />}
-                                  onClick={() => {
-                                    setSelectedRedemptionRecord(redemptionRecord);
-                                    setSelectedSession(record);
-                                    form.setFieldsValue({
-                                      cigarId: redemptionRecord.cigarId || undefined,
-                                      quantity: redemptionRecord.quantity || 1
-                                    });
-                                    setEditRedemptionModalVisible(true);
-                                  }}
-                                >
-                                  编辑
-                                </Button>
-                              );
-                            }
-                          }
-                        ]}
-                      />
-                      </div>
-                    )}
-                  </div>
-                );
-              },
-              onExpand: (expanded, record) => {
-                if (expanded) {
-                  // 展开时加载兑换记录
-                  loadRedemptionRecords(record.id);
-                }
-              },
-              rowExpandable: (record: VisitSession) => {
-                // 如果有兑换记录或状态为pending，可以展开
-                return true; // 总是可以展开，以便查看是否有待处理的记录
-              }
-            }}
-          />
-          </div>
+                    );
+                  },
+                  onExpand: (expanded, record) => {
+                    if (expanded) {
+                      // 展开时加载兑换记录
+                      loadRedemptionRecords(record.id);
+                    }
+                  },
+                  rowExpandable: (record: VisitSession) => {
+                    // 如果有兑换记录或状态为pending，可以展开
+                    return true; // 总是可以展开，以便查看是否有待处理的记录
+                  }
+                }}
+              />
+            </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {loading ? (
@@ -731,7 +731,7 @@ const VisitSessionsPage: React.FC = () => {
                             borderRadius: 4,
                             background: statusInfo.color === '#fb923c' ? 'rgba(251,146,60,0.2)' :
                               statusInfo.color === '#34d399' ? 'rgba(52,211,153,0.2)' :
-                              'rgba(248,113,113,0.2)',
+                                'rgba(248,113,113,0.2)',
                             color: statusInfo.color,
                             fontWeight: 600,
                             marginBottom: 8
@@ -829,9 +829,9 @@ const VisitSessionsPage: React.FC = () => {
                             )}
                           </div>
                           {allRedemptionRecords.length === 0 ? (
-                            <div style={{ 
-                              padding: 16, 
-                              textAlign: 'center', 
+                            <div style={{
+                              padding: 16,
+                              textAlign: 'center',
                               color: 'rgba(255, 255, 255, 0.5)',
                               fontSize: 12
                             }}>
@@ -839,12 +839,12 @@ const VisitSessionsPage: React.FC = () => {
                             </div>
                           ) : (
                             allRedemptionRecords.map((redemptionRecord) => {
-                              const redeemedAt = redemptionRecord.redeemedAt 
-                                ? (redemptionRecord.redeemedAt instanceof Date 
-                                  ? redemptionRecord.redeemedAt 
+                              const redeemedAt = redemptionRecord.redeemedAt
+                                ? (redemptionRecord.redeemedAt instanceof Date
+                                  ? redemptionRecord.redeemedAt
                                   : (redemptionRecord.redeemedAt as any)?.toDate?.() || new Date(redemptionRecord.redeemedAt))
                                 : null;
-                              
+
                               return (
                                 <div
                                   key={redemptionRecord.id || `${record.id}-${redemptionRecord.createdAt}`}
@@ -980,7 +980,7 @@ const VisitSessionsPage: React.FC = () => {
           try {
             const values = await form.validateFields();
             const items = values.items || [];
-            
+
             if (items.length === 0) {
               message.warning('请至少添加一项兑换记录');
               return;
@@ -1017,12 +1017,12 @@ const VisitSessionsPage: React.FC = () => {
             setSelectedSession(null);
             form.resetFields();
             await loadAllSessions();
-            
+
             // 如果选中的 session 有展开，刷新其兑换记录
             if (selectedSession) {
               await loadRedemptionRecords(selectedSession.id);
             }
-            
+
             // 提示：用户端数据会在下次自动刷新时更新（每10秒）
           } catch (error: any) {
             if (error.errorFields) {
@@ -1178,7 +1178,7 @@ const VisitSessionsPage: React.FC = () => {
             setSelectedRedemptionRecord(null);
             setSelectedSession(null);
             form.resetFields();
-            
+
             // 刷新兑换记录
             if (selectedSession) {
               await loadRedemptionRecords(selectedSession.id);
@@ -1276,7 +1276,7 @@ const VisitSessionsPage: React.FC = () => {
           try {
             const values = await forceCheckoutForm.validateFields();
             const forceHours = values.forceHours;
-            
+
             if (forceHours <= 0) {
               message.error('结算时长必须大于0');
               return;
@@ -1286,7 +1286,7 @@ const VisitSessionsPage: React.FC = () => {
             const sessionId = selectedSession.id;
             setSelectedSession(null);
             forceCheckoutForm.resetFields();
-            
+
             // 调用结算函数
             await handleManualCheckout(sessionId, forceHours);
           } catch (error: any) {

@@ -39,7 +39,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
   const [countdownSeconds, setCountdownSeconds] = useState<number | null>(null); // 倒计时剩余秒数
   const [annualFeeAmount, setAnnualFeeAmount] = useState<number | null>(null); // 年费金额
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
-  
+
   // 加载倒计时状态（从localStorage）
   useEffect(() => {
     if (!user?.id) {
@@ -49,15 +49,15 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
 
     const storageKey = `redeem_countdown_${user.id}`;
     const savedTimestamp = localStorage.getItem(storageKey);
-    
-    
+
+
     if (savedTimestamp) {
       const lastClickTime = parseInt(savedTimestamp, 10);
       const now = Date.now();
       const elapsed = Math.floor((now - lastClickTime) / 1000); // 已过秒数
       const remaining = Math.max(0, 3600 - elapsed); // 1小时 = 3600秒
-      
-      
+
+
       if (remaining > 0) {
         setCountdownSeconds(remaining);
       } else {
@@ -99,7 +99,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
       clearInterval(interval);
     };
   }, [countdownSeconds, user?.id]);
-  
+
   // 计算基于小时数的兑换限额（每50小时+25支）
   const calculateCigarLimitFromHours = (hours: number): number => {
     const baseLimit = 25; // 基础25支
@@ -163,31 +163,31 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
       const { getUserMembershipPeriod } = await import('../../services/firebase/membershipFee');
       const { getUserVisitSessions } = await import('../../services/firebase/visitSessions');
       const period = await getUserMembershipPeriod(userId);
-      
-      const sessions = await getUserVisitSessions(userId);
-      
-      if (!period) {
-          setTotalHours(0);
-          return;
-        }
 
-        
-        const periodSessions = sessions.filter(session => {
-          if (session.status !== 'completed' || !session.checkOutAt) {
-            return false;
-          }
-          const inPeriod = session.checkOutAt >= period.startDate && session.checkOutAt < period.endDate;
-          return inPeriod;
-        });
-        
-        
-        const hours = periodSessions.reduce((sum, session) => sum + (session.durationHours || 0), 0);
-        
-        setTotalHours(hours);
-      } catch (error) {
+      const sessions = await getUserVisitSessions(userId);
+
+      if (!period) {
         setTotalHours(0);
+        return;
       }
-    };
+
+
+      const periodSessions = sessions.filter(session => {
+        if (session.status !== 'completed' || !session.checkOutAt) {
+          return false;
+        }
+        const inPeriod = session.checkOutAt >= period.startDate && session.checkOutAt < period.endDate;
+        return inPeriod;
+      });
+
+
+      const hours = periodSessions.reduce((sum, session) => sum + (session.durationHours || 0), 0);
+
+      setTotalHours(hours);
+    } catch (error) {
+      setTotalHours(0);
+    }
+  };
 
   // 加载应用配置
   useEffect(() => {
@@ -216,54 +216,54 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
       await loadTotalHours();
 
       const userLimits = await getUserRedemptionLimits(userId);
-      
-        setLimits({
-          dailyLimit: userLimits.dailyLimit,
-          totalLimit: userLimits.totalLimit,
-          hourlyLimit: userLimits.hourlyLimit
-        });
 
-        const config = await getRedemptionConfig();
-        if (config) {
-          setCutoffTime(config.cutoffTime);
-          
-          // 设置目标为150小时（固定里程碑）
-          setTargetHours(150);
-          
-          // 生成固定里程碑（50, 100, 150小时）
-          setMilestones([
-            { hoursRequired: 50, dailyLimitBonus: 1 },
-            { hoursRequired: 100, dailyLimitBonus: 2 },
-            { hoursRequired: 150, dailyLimitBonus: 3 }
-          ]);
-        }
+      setLimits({
+        dailyLimit: userLimits.dailyLimit,
+        totalLimit: userLimits.totalLimit,
+        hourlyLimit: userLimits.hourlyLimit
+      });
 
-        // 获取当日兑换记录（只计算已完成的记录）
-        const today = new Date().toISOString().split('T')[0];
-        const dailyRedemptions = await getDailyRedemptions(userId, today);
-        const completedDailyRedemptions = dailyRedemptions.filter(r => r.status === 'completed');
-        const dailyCountValue = completedDailyRedemptions.reduce((sum, r) => sum + r.quantity, 0);
-        setDailyCount(dailyCountValue);
-        
+      const config = await getRedemptionConfig();
+      if (config) {
+        setCutoffTime(config.cutoffTime);
 
-        // 获取总兑换记录（只计算已完成的记录）
-        const totalRedemptions = await getTotalRedemptions(userId);
-        const completedTotalRedemptions = totalRedemptions.filter(r => r.status === 'completed');
-        const totalCountValue = completedTotalRedemptions.reduce((sum, r) => sum + r.quantity, 0);
-        setTotalCount(totalCountValue);
+        // 设置目标为150小时（固定里程碑）
+        setTargetHours(150);
 
-        // 获取本小时兑换记录（用于检查每小时限制）
-        try {
-          const now = new Date();
-          const hourKey = now.toISOString().split(':')[0]; // YYYY-MM-DDTHH
-          const hourlyRedemptions = await getHourlyRedemptions(userId, hourKey);
+        // 生成固定里程碑（50, 100, 150小时）
+        setMilestones([
+          { hoursRequired: 50, dailyLimitBonus: 1 },
+          { hoursRequired: 100, dailyLimitBonus: 2 },
+          { hoursRequired: 150, dailyLimitBonus: 3 }
+        ]);
+      }
+
+      // 获取当日兑换记录（只计算已完成的记录）
+      const today = new Date().toISOString().split('T')[0];
+      const dailyRedemptions = await getDailyRedemptions(userId, today);
+      const completedDailyRedemptions = dailyRedemptions.filter(r => r.status === 'completed');
+      const dailyCountValue = completedDailyRedemptions.reduce((sum, r) => sum + r.quantity, 0);
+      setDailyCount(dailyCountValue);
+
+
+      // 获取总兑换记录（只计算已完成的记录）
+      const totalRedemptions = await getTotalRedemptions(userId);
+      const completedTotalRedemptions = totalRedemptions.filter(r => r.status === 'completed');
+      const totalCountValue = completedTotalRedemptions.reduce((sum, r) => sum + r.quantity, 0);
+      setTotalCount(totalCountValue);
+
+      // 获取本小时兑换记录（用于检查每小时限制）
+      try {
+        const now = new Date();
+        const hourKey = now.toISOString().split(':')[0]; // YYYY-MM-DDTHH
+        const hourlyRedemptions = await getHourlyRedemptions(userId, hourKey);
         const currentHourlyCount = hourlyRedemptions.reduce((sum, r) => sum + r.quantity, 0);
         setHourlyCount(currentHourlyCount);
-        
+
         // 检查本小时是否还可以兑换（默认每小时只能兑换1次）
         const effectiveHourlyLimit = userLimits.hourlyLimit !== undefined ? userLimits.hourlyLimit : 1;
         setCanRedeemThisHour(currentHourlyCount < effectiveHourlyLimit);
-        
+
       } catch (error) {
         // 如果获取失败，默认允许兑换（避免因为查询失败而禁用按钮）
         setCanRedeemThisHour(true);
@@ -316,9 +316,9 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
       const { getUserMembershipFeeRecords } = await import('../../services/firebase/membershipFee');
       const existingRecords = await getUserMembershipFeeRecords(user.id, 10);
       const pendingRecord = existingRecords.find(r => r.status === 'pending' && r.renewalType === 'initial');
-      
+
       let recordId: string;
-      
+
       if (pendingRecord) {
         // 如果已存在 pending 状态的首次开通记录，使用该记录
         recordId = pendingRecord.id;
@@ -336,7 +336,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
           setLoading(false);
           return;
         }
-        
+
         recordId = result.recordId;
       }
 
@@ -344,12 +344,12 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
       const currentPoints = user?.membership?.points || 0;
       const { getCurrentAnnualFeeAmount } = await import('../../services/firebase/membershipFee');
       const annualFee = await getCurrentAnnualFeeAmount(new Date());
-      
+
       if (currentPoints < annualFee) {
         // ✅ 积分不足，显示友好提示并引导充值
         const shortage = annualFee - currentPoints;
         setLoading(false);
-        
+
         // 检查 modal 实例是否存在
         if (!modal || typeof modal.confirm !== 'function') {
           message.warning(`积分不足！需要 ${annualFee} 积分，当前只有 ${currentPoints} 积分，还需 ${shortage} 积分。`);
@@ -363,7 +363,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
           title: <span style={{ color: '#FFFFFF', fontSize: 18, fontWeight: 600 }}>积分不足</span>,
           content: (
             <div style={{ marginTop: 16 }}>
-              <div style={{ 
+              <div style={{
                 padding: 16,
                 background: 'rgba(255, 255, 255, 0.05)',
                 borderRadius: 12,
@@ -380,10 +380,10 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                     <Text style={{ color: 'rgba(255, 255, 255, 0.85)' }}>当前积分：</Text>
                     <Text strong style={{ color: '#FFFFFF', fontSize: 20 }}>{currentPoints}</Text>
                   </div>
-                  <div style={{ 
-                    height: 1, 
-                    background: 'rgba(244, 175, 37, 0.6)', 
-                    margin: '12px 0' 
+                  <div style={{
+                    height: 1,
+                    background: 'rgba(244, 175, 37, 0.6)',
+                    margin: '12px 0'
                   }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Text style={{ color: 'rgba(255, 255, 255, 0.85)' }}>缺少积分：</Text>
@@ -391,9 +391,9 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                   </div>
                 </Space>
               </div>
-              
-              <div style={{ 
-                padding: 12, 
+
+              <div style={{
+                padding: 12,
                 background: 'rgba(244, 175, 37, 0.15)',
                 borderRadius: 8,
                 border: '1px solid rgba(244, 175, 37, 0.6)',
@@ -459,7 +459,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
             navigate('/reload');
           }
         });
-        
+
         return;
       }
 
@@ -468,7 +468,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
 
       if (deductResult.success) {
         message.success('会员开通成功！');
-        
+
         // 刷新用户信息
         try {
           const updatedUser = await getUserData(user.id);
@@ -478,12 +478,12 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
         } catch (error) {
           // 刷新用户信息失败，静默处理
         }
-        
+
         // 重新加载数据
         await loadData();
       } else {
         // 其他错误
-          message.error(deductResult.error || '扣除年费失败，请稍后重试');
+        message.error(deductResult.error || '扣除年费失败，请稍后重试');
       }
     } catch (error: any) {
       message.error(error.message || '开通会员失败，请重试');
@@ -524,17 +524,17 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
       // 创建待处理的兑换记录（等待管理员选择雪茄）
       const { createPendingRedemptionRecord } = await import('../../services/firebase/redemption');
       const result = await createPendingRedemptionRecord(user.id, session.id, 1);
-      
+
       if (result.success) {
         message.success('兑换请求已提交，请等待管理员选择雪茄产品');
-        
+
         // 开始1小时倒计时
         const storageKey = `redeem_countdown_${user.id}`;
         const now = Date.now();
         localStorage.setItem(storageKey, now.toString());
         setCountdownSeconds(3600); // 1小时 = 3600秒
-        
-        
+
+
         // 数据会在管理员确认后，通过定时刷新（每30秒）自动更新
       } else {
         message.error(result.error || '提交兑换请求失败');
@@ -571,7 +571,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
   const maxCigarLimit = calculateCigarLimitFromHours(targetHours); // 150小时时的限额（仅用于进度条显示）
   const hoursPercent = targetHours > 0 ? Math.min(100, (totalHours / targetHours) * 100) : 0;
   const cigarPercent = currentCigarLimit > 0 ? Math.min(100, (totalCount / currentCigarLimit) * 100) : 0;
-  
+
   // 生成里程碑（每50小时一个）
   const generateMilestones = (maxHours: number) => {
     const milestones = [];
@@ -581,7 +581,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
     }
     return milestones;
   };
-  
+
   const progressMilestones = generateMilestones(targetHours);
 
   return (
@@ -611,7 +611,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                   </Text>
                 </div>
               )}
-              
+
               {/* Stay Duration Timer */}
               <div>
                 <Title level={3} style={{ margin: 0, color: '#FFFFFF', fontFamily: 'monospace' }}>
@@ -637,12 +637,12 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
 
               // 检查用户会员状态
               const isActiveMember = user?.status === 'active';
-              
+
               // 如果不是活跃会员，显示开通会员按钮
               if (!isActiveMember) {
                 const currentPoints = user?.membership?.points || 0;
                 const hasEnoughPoints = annualFeeAmount !== null && currentPoints >= annualFeeAmount;
-                
+
                 return (
                   <>
                     <button
@@ -650,7 +650,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                       onClick={handleActivateMembership}
                       disabled={loading || annualFeeAmount === null}
                       style={{
-                        background: appConfig?.colorTheme?.primaryButton 
+                        background: appConfig?.colorTheme?.primaryButton
                           ? `linear-gradient(135deg, ${appConfig.colorTheme.primaryButton.startColor} 0%, ${appConfig.colorTheme.primaryButton.endColor} 100%)`
                           : 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
                         color: '#111',
@@ -693,7 +693,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
               let buttonIcon: React.ReactNode = undefined;
               let buttonOnClick: () => void | Promise<void> = handleRedeem;
               let buttonStyle: React.CSSProperties = {
-                background: appConfig?.colorTheme?.primaryButton 
+                background: appConfig?.colorTheme?.primaryButton
                   ? `linear-gradient(135deg, ${appConfig.colorTheme.primaryButton.startColor} 0%, ${appConfig.colorTheme.primaryButton.endColor} 100%)`
                   : 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
                 border: 'none',
@@ -758,9 +758,9 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                           ? '今日兑换限额已用完'
                           : countdownSeconds !== null && countdownSeconds > 0
                             ? `请等待 ${formatCountdown(countdownSeconds)} 后再次兑换`
-                            : !currentSession 
-                              ? '请先check-in才能兑换' 
-                              : !isBeforeCutoff 
+                            : !currentSession
+                              ? '请先check-in才能兑换'
+                              : !isBeforeCutoff
                                 ? `兑换截止时间为 ${cutoffTime}，请明日再试`
                                 : undefined
                     }
@@ -792,7 +792,6 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 24 }}>🏆</span>
                 <Title level={5} style={{ margin: 0, color: '#FFFFFF', fontSize: 18, fontWeight: 700 }}>
                   Complimentary Cigars
                 </Title>
@@ -827,7 +826,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                   <Text style={{ fontSize: 16, fontWeight: 400, color: '#9ca3af' }}>/ {currentCigarLimit} Cigars</Text>
                 </div>
               </div>
-              
+
               {/* 合并的进度条 */}
               <div style={{ position: 'relative', marginBottom: 12 }}>
                 <div style={{ height: 12, width: '100%', borderRadius: 9999, backgroundColor: '#374151', overflow: 'visible', position: 'relative' }}>
@@ -840,27 +839,27 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                       transition: 'width 0.3s ease'
                     }}
                   />
-                  
+
                   {/* 里程碑标记（每50小时）- 显示在进度条宽度范围内 */}
                   {progressMilestones.length > 0 && (
-                    <div style={{ 
-                      position: 'absolute', 
+                    <div style={{
+                      position: 'absolute',
                       top: 0,
                       left: 0,
                       right: 0,
                       bottom: 0,
-                      display: 'flex', 
+                      display: 'flex',
                       alignItems: 'center',
                       pointerEvents: 'none'
                     }}>
                       {progressMilestones.map((milestone, index) => {
                         const position = (milestone.hours / targetHours) * 93;
                         const isCompleted = totalHours >= milestone.hours;
-                        
+
                         return (
-                          <div 
-                            key={index} 
-                            style={{ 
+                          <div
+                            key={index}
+                            style={{
                               position: 'absolute',
                               left: `${position}%`,
                               transform: 'translateX(-50%)',
@@ -870,14 +869,14 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                               width: '1px'
                             }}
                           >
-                            <div style={{ 
-                              height: '12px', 
-                              width: '1px', 
+                            <div style={{
+                              height: '12px',
+                              width: '1px',
                               backgroundColor: 'transparent',
                               marginBottom: '4px'
                             }} />
-                            <Text style={{ 
-                              fontSize: 11, 
+                            <Text style={{
+                              fontSize: 11,
                               color: isCompleted ? '#000000' : '#9ca3af',
                               whiteSpace: 'nowrap',
                               marginTop: '4px',
@@ -885,9 +884,9 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                             }}>
                               {milestone.hours}hrs
                             </Text>
-                            <TrophyOutlined 
-                              style={{ 
-                                fontSize: 18, 
+                            <TrophyOutlined
+                              style={{
+                                fontSize: 18,
                                 color: isCompleted ? '#C48D3A' : '#9ca3af',
                                 marginTop: '4px'
                               }}
@@ -909,12 +908,12 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
             </div>
 
             {/* 截止提示 */}
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: 8, 
-              borderRadius: 6, 
-              backgroundColor: 'rgba(255, 255, 255, 0.05)', 
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              borderRadius: 6,
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
               padding: 8,
               textAlign: 'center'
             }}>

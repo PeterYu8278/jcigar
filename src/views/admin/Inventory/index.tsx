@@ -42,7 +42,7 @@ const AdminInventory: React.FC = () => {
   const [users, setUsers] = useState<any[]>([])
   const [transactions, setTransactions] = useState<any[]>([])
   const [events, setEvents] = useState<Event[]>([])
-  
+
   // 新架构数据
   const [inboundOrders, setInboundOrders] = useState<InboundOrder[]>([])
   const [outboundOrders, setOutboundOrders] = useState<OutboundOrder[]>([])
@@ -71,7 +71,7 @@ const AdminInventory: React.FC = () => {
   const [outBrandFilter, setOutBrandFilter] = useState<string | undefined>()
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [deleteTargetOrder, setDeleteTargetOrder] = useState<{ id: string; referenceNo: string; productCount: number } | null>(null)
-  
+
   // 文件上传相关
   const { upload: cloudinaryUpload, uploading: uploadingFile } = useCloudinary()
   const [attachmentFileList, setAttachmentFileList] = useState<UploadFile[]>([])
@@ -81,7 +81,7 @@ const AdminInventory: React.FC = () => {
     filename: string
     uploadedAt: Date
   }>>([])
-  
+
   // 编辑订单的附件状态
   const [editAttachmentFileList, setEditAttachmentFileList] = useState<UploadFile[]>([])
   const [editUploadedAttachments, setEditUploadedAttachments] = useState<Array<{
@@ -90,7 +90,7 @@ const AdminInventory: React.FC = () => {
     filename: string
     uploadedAt: Date
   }>>([])
-  
+
   const toDateSafe = (val: any): Date | null => {
     if (!val) return null
     let v: any = val
@@ -115,7 +115,7 @@ const AdminInventory: React.FC = () => {
   const [outPageSize, setOutPageSize] = useState<number>(() => {
     try { return Number(localStorage.getItem('inventory_out_page_size') || 10) || 10 } catch { return 10 }
   })
-  
+
   // 品牌管理相关状态
   const [brandList, setBrandList] = useState<Brand[]>([])
   const [creatingBrand, setCreatingBrand] = useState(false)
@@ -156,12 +156,12 @@ const AdminInventory: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    ;(async () => {
+    ; (async () => {
       setLoading(true)
       try {
         const list = await getCigars()
         setItems(list)
-        
+
         // 加载新架构数据
         const [inOrders, outOrders, movements, os, us, bs, txs, evts] = await Promise.all([
           getAllInboundOrders(),
@@ -173,7 +173,7 @@ const AdminInventory: React.FC = () => {
           getAllTransactions(),
           getEvents()
         ])
-        
+
         setInboundOrders(inOrders)
         setOutboundOrders(outOrders)
         setInventoryMovements(movements)
@@ -182,7 +182,7 @@ const AdminInventory: React.FC = () => {
         setBrandList(bs)
         setTransactions(txs)
         setEvents(evts)
-        
+
         // 初始化分页（本地持久化）
         try {
           const raw = localStorage.getItem('inventory_pagination')
@@ -192,7 +192,7 @@ const AdminInventory: React.FC = () => {
               setPagination({ current: Number(saved.current) || 1, pageSize: Number(saved.pageSize) || 10 })
             }
           }
-        } catch {}
+        } catch { }
       } finally {
         setLoading(false)
       }
@@ -238,11 +238,11 @@ const AdminInventory: React.FC = () => {
           }, 0)
           return
         }
-        
+
         const productName = generateProductName(editing.brand, editing.name)
         const aggregatedData = await getAggregatedCigarData(productName)
         setCigarDatabaseData(aggregatedData)
-        
+
         // 使用 setTimeout 确保 Modal 已经打开，Form 已经渲染
         setTimeout(() => {
           // 优先使用 cigar_database 的数据，如果没有则使用现有数据
@@ -265,7 +265,7 @@ const AdminInventory: React.FC = () => {
             rating: !aggregatedData ? (editing.metadata?.rating || null) : undefined, // 只在没有cigar_database数据时设置rating到表单
           })
           setCigarImages(editing.images || [])
-          
+
           // 设置评分（优先使用 cigar_database 的评分）
           if (aggregatedData?.rating !== null && aggregatedData?.rating !== undefined) {
             setAiRating(aggregatedData.rating)
@@ -277,7 +277,7 @@ const AdminInventory: React.FC = () => {
         // 如果加载失败，使用产品文档的数据
         console.error('加载 cigar_database 数据失败:', error)
         setCigarDatabaseData(null)
-        
+
         setTimeout(() => {
           form.setFieldsValue({
             name: editing.name,
@@ -337,9 +337,9 @@ const AdminInventory: React.FC = () => {
 
   // 标准雪茄规格名称列表
   const STANDARD_VITOLAS = [
-    'Cigarillo', 'Perfecto', 'Rerla', 'Petit Robusto', 'Petit Edmundo', 'Robusto', 
+    'Cigarillo', 'Perfecto', 'Rerla', 'Petit Robusto', 'Petit Edmundo', 'Robusto',
     'Torpedo', 'Churchill', 'Corona', 'Petit Corona',
-    'Toro', 'Gordo', 'Lancero', 'Panatela', 'Belicoso', 'Pyramid', 
+    'Toro', 'Gordo', 'Lancero', 'Panatela', 'Belicoso', 'Pyramid',
     'Culebra', 'Double Corona', 'Short Robusto', 'Toro Extra',
     'Corona Gorda', 'Lonsdale', 'Toro Grande', 'Nub', 'Figurado', 'Salomon',
     'Diadema', 'Presidente', 'Gran Corona',
@@ -350,21 +350,21 @@ const AdminInventory: React.FC = () => {
   // 提取标准规格名称的辅助函数
   const extractStandardVitola = (text: string): string | null => {
     if (!text) return null
-    
+
     const normalizedText = text.trim()
-    
+
     // 特殊处理：Club 10 通常是 Cigarillo
     if (normalizedText.toLowerCase().includes('club') && normalizedText.toLowerCase().includes('10')) {
       return 'Cigarillo'
     }
-    
+
     // 检查是否完全匹配标准规格名称（不区分大小写）
     for (const vitola of STANDARD_VITOLAS) {
       if (normalizedText.toLowerCase() === vitola.toLowerCase()) {
         return vitola
       }
     }
-    
+
     // 检查是否包含标准规格名称（不区分大小写）
     for (const vitola of STANDARD_VITOLAS) {
       const regex = new RegExp(`\\b${vitola}\\b`, 'i')
@@ -372,7 +372,7 @@ const AdminInventory: React.FC = () => {
         return vitola
       }
     }
-    
+
     // 如果找不到标准规格，返回null
     return null
   }
@@ -408,15 +408,15 @@ const AdminInventory: React.FC = () => {
   const stockByCigarId = useMemo(() => {
     // 精确计算：sum(IN) - sum(OUT)，不在逐步相减时夹0，避免顺序依赖
     const map = new Map<string, number>()
-    
+
     for (const movement of inventoryMovements) {
       const id = movement.cigarId
       if (!id) continue
-      
+
       // 只统计雪茄产品
       const itemType = movement.itemType
       if (itemType && itemType !== 'cigar') continue
-      
+
       // 过滤掉已取消订单的库存变动
       if (movement.inboundOrderId) {
         const order = inboundOrders.find(o => o.id === movement.inboundOrderId)
@@ -426,7 +426,7 @@ const AdminInventory: React.FC = () => {
         const order = outboundOrders.find(o => o.id === movement.outboundOrderId)
         if (order && order.status === 'cancelled') continue
       }
-      
+
       const type = movement.type
       const qty = Number.isFinite(movement.quantity) ? Math.floor(movement.quantity) : 0
       const prev = map.get(id) ?? 0
@@ -436,7 +436,7 @@ const AdminInventory: React.FC = () => {
         map.set(id, prev - qty)
       }
     }
-    
+
     return map
   }, [inventoryMovements, inboundOrders, outboundOrders])
 
@@ -450,15 +450,15 @@ const AdminInventory: React.FC = () => {
   // 每个商品的总入库/总出库数量（只统计雪茄产品）
   const totalsByCigarId = useMemo(() => {
     const map = new Map<string, { totalIn: number; totalOut: number }>()
-    
+
     for (const movement of inventoryMovements) {
       const id = movement.cigarId
       if (!id) continue
-      
+
       // 只统计雪茄产品
       const itemType = movement.itemType
       if (itemType && itemType !== 'cigar') continue
-      
+
       // 过滤已取消订单
       if (movement.inboundOrderId) {
         const order = inboundOrders.find(o => o.id === movement.inboundOrderId)
@@ -468,7 +468,7 @@ const AdminInventory: React.FC = () => {
         const order = outboundOrders.find(o => o.id === movement.outboundOrderId)
         if (order && order.status === 'cancelled') continue
       }
-      
+
       const type = movement.type
       const qtyRaw = movement.quantity ?? 0
       const qty = Number.isFinite(qtyRaw) ? Math.max(0, Math.floor(Math.abs(qtyRaw))) : 0
@@ -477,7 +477,7 @@ const AdminInventory: React.FC = () => {
       else if (type === 'out') prev.totalOut += qty
       map.set(id, prev)
     }
-    
+
     return map
   }, [inventoryMovements, inboundOrders, outboundOrders])
 
@@ -520,12 +520,12 @@ const AdminInventory: React.FC = () => {
           <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
             {/* 产品图像 */}
             <div style={{ position: 'relative', flexShrink: 0 }}>
-              <img 
-                src={productImage} 
-                alt={name} 
-                style={{ 
-                  width: '60px', 
-                  height: '100px', 
+              <img
+                src={productImage}
+                alt={name}
+                style={{
+                  width: '60px',
+                  height: '100px',
                   objectFit: 'cover',
                   borderRadius: '8px',
                   border: '2px solid rgba(244, 175, 37, 0.3)',
@@ -576,72 +576,72 @@ const AdminInventory: React.FC = () => {
       render: (_: any, record: any) => {
         const currentStock = getComputedStock((record as any)?.id)
         const isNegative = currentStock < 0
-        
+
         const { totalIn, totalOut } = getTotals((record as any)?.id)
-        
+
         return (
-        <div style={{ display: 'flex', gap: 12 }}>
-          {/* 左侧：总入库和总出库 */}
-          <div style={{ flex: 1 }}>
-            <div style={{ marginBottom: 4, fontSize: 13 }}>
-              <span style={{ color: '#52c41a' }}>
-                {t('inventory.totalIn')}: {totalIn}
-              </span>
-          </div>
-            
-            {/* 分隔线 */}
-            <div style={{ borderTop: '1px solid #e8e8e8', margin: '4px 0' }} />
-            
-            <div style={{ marginTop: 4 }}>
-              <span style={{ color: '#ff4d4f', fontSize: 13 }}>
-                {t('inventory.totalOut')}: {totalOut}
-              </span>
-          </div>
-          </div>
-          
-          {/* 右侧：当前库存（大字体，跨越两行） */}
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            minWidth: 80,
-            borderLeft: '2px solid #e8e8e8',
-            paddingLeft: 12
-          }}>
-            <div style={{ 
-              fontSize: 11, 
-              color: 'rgba(255, 255, 255, 0.6)',
-              marginBottom: 2
-            }}>
-              {t('inventory.currentStock')}
+          <div style={{ display: 'flex', gap: 12 }}>
+            {/* 左侧：总入库和总出库 */}
+            <div style={{ flex: 1 }}>
+              <div style={{ marginBottom: 4, fontSize: 13 }}>
+                <span style={{ color: '#52c41a' }}>
+                  {t('inventory.totalIn')}: {totalIn}
+                </span>
+              </div>
+
+              {/* 分隔线 */}
+              <div style={{ borderTop: '1px solid #e8e8e8', margin: '4px 0' }} />
+
+              <div style={{ marginTop: 4 }}>
+                <span style={{ color: '#ff4d4f', fontSize: 13 }}>
+                  {t('inventory.totalOut')}: {totalOut}
+                </span>
+              </div>
             </div>
-            <div style={{ 
-              fontSize: 24,
-              fontWeight: 700,
-              color: isNegative ? '#ff4d4f' : '#1890ff',
-              lineHeight: 1
+
+            {/* 右侧：当前库存（大字体，跨越两行） */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minWidth: 80,
+              borderLeft: '2px solid #e8e8e8',
+              paddingLeft: 12
             }}>
-              {isNegative && <WarningOutlined style={{ marginRight: 4, fontSize: 16 }} />}
-              {currentStock}
+              <div style={{
+                fontSize: 11,
+                color: 'rgba(255, 255, 255, 0.6)',
+                marginBottom: 2
+              }}>
+                {t('inventory.currentStock')}
+              </div>
+              <div style={{
+                fontSize: 24,
+                fontWeight: 700,
+                color: isNegative ? '#ff4d4f' : '#1890ff',
+                lineHeight: 1
+              }}>
+                {isNegative && <WarningOutlined style={{ marginRight: 4, fontSize: 16 }} />}
+                {currentStock}
+              </div>
+              <div style={{ marginTop: 6 }}>
+                <Tag color={getStatusColor(
+                  currentStock < 0 ? 'negative' :
+                    currentStock <= ((record as any)?.inventory?.minStock ?? 0) ? 'critical' :
+                      currentStock <= (((record as any)?.inventory?.minStock ?? 0) * 1.5) ? 'low' :
+                        'normal'
+                )} style={{ fontSize: 11 }}>
+                  {getStatusText(
+                    currentStock < 0 ? 'negative' :
+                      currentStock <= ((record as any)?.inventory?.minStock ?? 0) ? 'critical' :
+                        currentStock <= (((record as any)?.inventory?.minStock ?? 0) * 1.5) ? 'low' :
+                          'normal'
+                  )}
+                </Tag>
+              </div>
             </div>
-            <div style={{ marginTop: 6 }}>
-              <Tag color={getStatusColor(
-                currentStock < 0 ? 'negative' : 
-                currentStock <= ((record as any)?.inventory?.minStock ?? 0) ? 'critical' : 
-                currentStock <= (((record as any)?.inventory?.minStock ?? 0) * 1.5) ? 'low' : 
-                'normal'
-              )} style={{ fontSize: 11 }}>
-                {getStatusText(
-                  currentStock < 0 ? 'negative' : 
-                  currentStock <= ((record as any)?.inventory?.minStock ?? 0) ? 'critical' : 
-                  currentStock <= (((record as any)?.inventory?.minStock ?? 0) * 1.5) ? 'low' : 
-                  'normal'
-                )}
-          </Tag>
-        </div>
           </div>
-        </div>
         )
       },
     },
@@ -667,10 +667,10 @@ const AdminInventory: React.FC = () => {
 
   const logColumns = [
     { title: t('inventory.time'), dataIndex: 'createdAt', key: 'createdAt', render: (v: any) => formatYMD(toDateSafe(v)) },
-    { 
-      title: t('inventory.product'), 
-      dataIndex: 'cigarId', 
-      key: 'cigarId', 
+    {
+      title: t('inventory.product'),
+      dataIndex: 'cigarId',
+      key: 'cigarId',
       render: (id: string, record: any) => {
         // 优先使用保存的雪茄名称，避免雪茄被删除后无法显示
         return record.cigarName || items.find(i => i.id === id)?.name || id
@@ -678,10 +678,10 @@ const AdminInventory: React.FC = () => {
     },
     { title: t('inventory.type'), dataIndex: 'type', key: 'type', render: (type: string) => type === 'in' ? t('inventory.stockIn') : t('inventory.stockOut') },
     { title: t('inventory.quantity'), dataIndex: 'quantity', key: 'quantity' },
-    { 
-      title: t('inventory.referenceNo'), 
-      dataIndex: 'referenceNo', 
-      key: 'referenceNo', 
+    {
+      title: t('inventory.referenceNo'),
+      dataIndex: 'referenceNo',
+      key: 'referenceNo',
       render: (v: any) => v ? (
         <Button type="link" onClick={() => setViewingReference(v)}>
           {v}
@@ -719,7 +719,7 @@ const AdminInventory: React.FC = () => {
             else if (item?.unitPrice) price = item.unitPrice
           }
         }
-        
+
         return {
           id: m.id,
           cigarId: m.cigarId,
@@ -735,7 +735,7 @@ const AdminInventory: React.FC = () => {
         }
       })
   }, [inventoryMovements, inboundOrders, orders])
-  
+
   const outLogs = useMemo(() => {
     return inventoryMovements
       .filter(m => m.type === 'out')
@@ -763,7 +763,7 @@ const AdminInventory: React.FC = () => {
             else if (item?.unitPrice) price = item.unitPrice
           }
         }
-        
+
         return {
           id: m.id,
           cigarId: m.cigarId,
@@ -779,7 +779,7 @@ const AdminInventory: React.FC = () => {
         }
       })
   }, [inventoryMovements, outboundOrders, orders])
-  
+
   // 入库记录筛选
   const filteredInLogs = useMemo(() => {
     return inLogs.filter(log => {
@@ -788,7 +788,7 @@ const AdminInventory: React.FC = () => {
         const cigar = items.find(c => c.id === log.cigarId)
         if (cigar?.brand !== inBrandFilter) return false
       }
-      
+
       // 关键字搜索
       if (inSearchKeyword) {
         const kw = inSearchKeyword.toLowerCase()
@@ -796,26 +796,26 @@ const AdminInventory: React.FC = () => {
         const cigarName = cigar?.name?.toLowerCase() || ''
         const reason = ((log as any).reason || '').toLowerCase()
         const refNo = ((log as any).referenceNo || '').toLowerCase()
-        
+
         if (!cigarName.includes(kw) && !reason.includes(kw) && !refNo.includes(kw)) {
           return false
         }
       }
-      
+
       return true
     })
   }, [inLogs, inSearchKeyword, inBrandFilter, items])
-  
+
   // 计算入库单号的财务匹配状态
   const getInboundReferenceMatchStatus = (referenceNo: string) => {
     if (!referenceNo) return { matched: 0, total: 0, status: 'none' }
-    
+
     // 从 inboundOrders 获取总价值
     const order = inboundOrders.find(o => o.referenceNo === referenceNo)
     const totalValue = order ? (order.totalValue || order.items.reduce((sum, item) => {
       return sum + (Number(item.quantity || 0) * Number(item.unitPrice || 0))
     }, 0)) : 0
-    
+
     // 查找匹配该单号的交易记录
     const matchedAmount = transactions
       .filter((t: any) => {
@@ -827,13 +827,13 @@ const AdminInventory: React.FC = () => {
         const refMatch = relatedOrders.find((ro: any) => ro.orderId === referenceNo)
         return sum + (refMatch ? Number(refMatch.amount || 0) : 0)
       }, 0)
-    
+
     if (totalValue === 0) {
       return { matched: matchedAmount, total: 0, status: 'none' }
     }
-    
+
     const matchPercentage = (matchedAmount / totalValue) * 100
-    
+
     if (matchPercentage >= 99) {
       return { matched: matchedAmount, total: totalValue, status: 'fully' }
     } else if (matchedAmount > 0) {
@@ -855,21 +855,21 @@ const AdminInventory: React.FC = () => {
           })
           if (!hasBrand) return false
         }
-        
+
         // 关键字搜索
         if (inSearchKeyword) {
           const kw = inSearchKeyword.toLowerCase()
           const refNo = order.referenceNo.toLowerCase()
           const reason = order.reason.toLowerCase()
-          const hasMatchingProduct = order.items.some(item => 
+          const hasMatchingProduct = order.items.some(item =>
             item.cigarName.toLowerCase().includes(kw)
           )
-          
+
           if (!refNo.includes(kw) && !reason.includes(kw) && !hasMatchingProduct) {
             return false
           }
         }
-        
+
         return true
       })
       .map(order => ({
@@ -899,7 +899,7 @@ const AdminInventory: React.FC = () => {
         return dateB - dateA;
       });
   }, [inboundOrders, items, inSearchKeyword, inBrandFilter])
-  
+
   // 出库记录筛选
   const filteredOutLogs = useMemo(() => {
     return outLogs.filter(log => {
@@ -908,7 +908,7 @@ const AdminInventory: React.FC = () => {
         const cigar = items.find(c => c.id === log.cigarId)
         if (cigar?.brand !== outBrandFilter) return false
       }
-      
+
       // 关键字搜索
       if (outSearchKeyword) {
         const kw = outSearchKeyword.toLowerCase()
@@ -916,46 +916,46 @@ const AdminInventory: React.FC = () => {
         const cigarName = cigar?.name?.toLowerCase() || ''
         const reason = ((log as any).reason || '').toLowerCase()
         const refNo = ((log as any).referenceNo || '').toLowerCase()
-        
+
         if (!cigarName.includes(kw) && !reason.includes(kw) && !refNo.includes(kw)) {
           return false
         }
       }
-      
+
       return true
     })
   }, [outLogs, outSearchKeyword, outBrandFilter, items])
-  
+
   // 入库统计（包含品牌和产品详情）
   const inStats = useMemo(() => {
-    const brandMap = new Map<string, { 
-      quantity: number; 
-      records: number; 
+    const brandMap = new Map<string, {
+      quantity: number;
+      records: number;
       totalValue: number;
       products: Map<string, { cigar: any; quantity: number; records: number; totalValue: number }>
     }>()
-    
+
     inLogs.forEach(log => {
       const cigar = items.find(c => c.id === log.cigarId)
       const brand = cigar?.brand || 'Unknown'
       const quantity = Number(log.quantity || 0)
       const unitPrice = Number((log as any).unitPrice || 0)
       const value = quantity * unitPrice
-      
+
       if (!brandMap.has(brand)) {
-        brandMap.set(brand, { 
-          quantity: 0, 
-          records: 0, 
+        brandMap.set(brand, {
+          quantity: 0,
+          records: 0,
           totalValue: 0,
           products: new Map()
         })
       }
-      
+
       const brandData = brandMap.get(brand)!
       brandData.quantity += quantity
       brandData.records += 1
       brandData.totalValue += value
-      
+
       // 产品级别统计
       if (cigar) {
         const productKey = log.cigarId
@@ -973,10 +973,10 @@ const AdminInventory: React.FC = () => {
         productData.totalValue += value
       }
     })
-    
+
     return Array.from(brandMap.entries())
-      .map(([brand, data]) => ({ 
-        brand, 
+      .map(([brand, data]) => ({
+        brand,
         quantity: data.quantity,
         records: data.records,
         totalValue: data.totalValue,
@@ -1025,7 +1025,7 @@ const AdminInventory: React.FC = () => {
       }))
       .sort((a, b) => b.quantity - a.quantity)
   }, [outLogs, items])
-  
+
   // 按单号分组的入库记录
   const referenceGroups = useMemo(() => {
     const groups: Record<string, any[]> = {}
@@ -1040,7 +1040,7 @@ const AdminInventory: React.FC = () => {
     })
     return groups
   }, [inLogs])
-  
+
   // 当前查看的单号相关记录
   const currentReferenceLogs = useMemo(() => {
     if (!viewingReference) return []
@@ -1050,7 +1050,7 @@ const AdminInventory: React.FC = () => {
   // 当前查看的产品相关记录
   const currentProductLogs = useMemo(() => {
     if (!viewingProductLogs) return []
-    
+
     return inventoryMovements
       .filter((movement: InventoryMovement) => movement.cigarId === viewingProductLogs)
       .map((movement: InventoryMovement) => {
@@ -1089,7 +1089,7 @@ const AdminInventory: React.FC = () => {
             else if (item?.unitPrice) price = item.unitPrice
           }
         }
-        
+
         return {
           id: movement.id,
           cigarId: movement.cigarId,
@@ -1166,22 +1166,22 @@ const AdminInventory: React.FC = () => {
       const source = (o as any).source?.type || 'direct'
       for (const it of (o.items || [])) {
         const cigar = cigarMap.get(it.cigarId)
-        
+
         // 应用品牌筛选
         if (outBrandFilter && cigar?.brand !== outBrandFilter) continue
-        
+
         // 应用搜索筛选
         if (outSearchKeyword) {
           const kw = outSearchKeyword.toLowerCase()
           const cigarName = cigar?.name?.toLowerCase() || ''
           const userName = user ? `${user.displayName} ${(user as any)?.profile?.phone || user.email}`.toLowerCase() : o.userId.toLowerCase()
           const orderId = o.id.toLowerCase()
-          
+
           if (!cigarName.includes(kw) && !userName.includes(kw) && !orderId.includes(kw)) {
             continue
           }
         }
-        
+
         // 查找对应的出库订单（通过订单ID匹配出库订单的referenceNo）
         const outboundOrder = outboundOrders.find((outOrder: any) => outOrder.referenceNo === o.id)
         const eventId = (o as any).source?.eventId
@@ -1249,11 +1249,11 @@ const AdminInventory: React.FC = () => {
     { title: t('inventory.user'), dataIndex: 'user', key: 'user', width: 220 },
     { title: t('inventory.product'), dataIndex: 'cigarName', key: 'cigarName', width: 220 },
     { title: t('inventory.quantity'), dataIndex: 'quantity', key: 'quantity', width: 100 },
-    { 
-      title: t('inventory.source'), 
-      dataIndex: 'source', 
-      key: 'source', 
-      width: 120, 
+    {
+      title: t('inventory.source'),
+      dataIndex: 'source',
+      key: 'source',
+      width: 120,
       render: (s: string, record: any) => {
         if (s === 'event' && record.eventId) {
           const event = eventMap.get(record.eventId)
@@ -1357,9 +1357,9 @@ const AdminInventory: React.FC = () => {
         overflow: isMobile ? 'hidden' : 'visible'
       }}
     >
-      
-           <h1 style={{ fontSize: 22, fontWeight: 800, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', paddingInline: 0, marginBottom: 12 }}>{t('navigation.inventory')}</h1>
- 
+
+      <h1 style={{ fontSize: 22, fontWeight: 800, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', paddingInline: 0, marginBottom: 12 }}>{t('navigation.inventory')}</h1>
+
       {/* 自定义标签页 */}
       <div style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', borderBottom: '1px solid rgba(244,175,37,0.2)' }}>
@@ -1396,7 +1396,7 @@ const AdminInventory: React.FC = () => {
               </button>
             )
           })}
-      </div>
+        </div>
         <div>
           {activeTab === 'list' && (
             <div>
@@ -1404,18 +1404,18 @@ const AdminInventory: React.FC = () => {
                 <Space>
                   {selectedRowKeys.length > 1 && (
                     <>
-                      <Button 
+                      <Button
                         onClick={async () => {
-                        setLoading(true)
-                        try {
-                          await Promise.all(selectedRowKeys.map(id => updateDocument(COLLECTIONS.CIGARS, String(id), { status: 'inactive' } as any)))
-                          message.success(t('inventory.batchDisabled'))
-                          const list = await getCigars()
-                          setItems(list)
-                          setSelectedRowKeys([])
-                        } finally {
-                          setLoading(false)
-                        }
+                          setLoading(true)
+                          try {
+                            await Promise.all(selectedRowKeys.map(id => updateDocument(COLLECTIONS.CIGARS, String(id), { status: 'inactive' } as any)))
+                            message.success(t('inventory.batchDisabled'))
+                            const list = await getCigars()
+                            setItems(list)
+                            setSelectedRowKeys([])
+                          } finally {
+                            setLoading(false)
+                          }
                         }}
                         style={{
                           background: 'rgba(255, 255, 255, 0.1)',
@@ -1425,150 +1425,150 @@ const AdminInventory: React.FC = () => {
                       >
                         {t('inventory.batchDisable')}
                       </Button>
-                      <Button 
+                      <Button
                         onClick={async () => {
-                        
-                        const confirmed = window.confirm(`确定要删除选中的 ${selectedRowKeys.length} 个产品吗？`)
-                        
-                        if (confirmed) {
+
+                          const confirmed = window.confirm(`确定要删除选中的 ${selectedRowKeys.length} 个产品吗？`)
+
+                          if (confirmed) {
                             setLoading(true)
                             try {
-                            
-                            const ids = selectedRowKeys.map(id => String(id))
-                            
-                            const blocked = ids.filter(id => hasInventoryHistory(id))
-                            const allowed = ids.filter(id => !hasInventoryHistory(id))
-                            
-                            
-                            if (blocked.length > 0) {
-                              message.warning(t('inventory.deleteBlockedDueToLogs'))
-                            }
-                            
-                            if (allowed.length === 0) {
-                              return
-                            }
-                            
-                            await Promise.all(allowed.map(id => deleteDocument(COLLECTIONS.CIGARS, id)))
-                            
+
+                              const ids = selectedRowKeys.map(id => String(id))
+
+                              const blocked = ids.filter(id => hasInventoryHistory(id))
+                              const allowed = ids.filter(id => !hasInventoryHistory(id))
+
+
+                              if (blocked.length > 0) {
+                                message.warning(t('inventory.deleteBlockedDueToLogs'))
+                              }
+
+                              if (allowed.length === 0) {
+                                return
+                              }
+
+                              await Promise.all(allowed.map(id => deleteDocument(COLLECTIONS.CIGARS, id)))
+
                               message.success(t('inventory.batchDeleted'))
-                            
+
                               const list = await getCigars()
                               setItems(list)
                               setSelectedRowKeys([])
-                          } catch (error) {
-                            message.error(t('inventory.batchDeleteFailed') + ': ' + (error as Error).message)
+                            } catch (error) {
+                              message.error(t('inventory.batchDeleteFailed') + ': ' + (error as Error).message)
                             } finally {
                               setLoading(false)
                             }
-                        } else {
+                          } else {
                           }
-                      }}
-                      style={{
-                        background: 'rgba(255, 77, 79, 0.8)',
-                        border: 'none',
-                        color: '#FFFFFF',
-                        fontWeight: 700
-                      }}
-                    >
-                      {t('inventory.batchDelete')}
-                    </Button>
+                        }}
+                        style={{
+                          background: 'rgba(255, 77, 79, 0.8)',
+                          border: 'none',
+                          color: '#FFFFFF',
+                          fontWeight: 700
+                        }}
+                      >
+                        {t('inventory.batchDelete')}
+                      </Button>
                     </>
                   )}
                 </Space>
               </div>
 
               {!isMobile && (
-              <div
-                style={{
-                  position: 'sticky',
-                  top: 0,
-                  zIndex: 100,
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)',
-                  borderBottom: '1px solid rgba(244,175,37,0.2)',
-                  border: '1px solid rgba(244,175,37,0.2)',
-                  borderRadius: 12,
-                  marginBottom: 8,
-                  padding: 16
-                }}
-              >
-                <Space size="middle" wrap>
-                  <Search
-               placeholder={t('inventory.search')}
-                    allowClear
-                    style={{ width: 300 }}
-                    prefix={<SearchOutlined />}
-                    value={keyword}
-                    onChange={(e) => setKeyword(e.target.value)}
-                    className="points-config-form"
-                  />
-                   <Select 
-                     placeholder={t('inventory.brand')} 
-                     style={{ width: 140 }} 
-                     allowClear 
-                     value={brandFilter} 
-                     onChange={setBrandFilter}
-                     className="points-config-form"
-                   >
-                    {Array.from(new Set(items.map(i => i.brand))).sort().map(brand => (
-                      <Option key={brand} value={brand}>{brand}</Option>
+                <div
+                  style={{
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 100,
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
+                    borderBottom: '1px solid rgba(244,175,37,0.2)',
+                    border: '1px solid rgba(244,175,37,0.2)',
+                    borderRadius: 12,
+                    marginBottom: 8,
+                    padding: 16
+                  }}
+                >
+                  <Space size="middle" wrap>
+                    <Search
+                      placeholder={t('inventory.search')}
+                      allowClear
+                      style={{ width: 300 }}
+                      prefix={<SearchOutlined />}
+                      value={keyword}
+                      onChange={(e) => setKeyword(e.target.value)}
+                      className="points-config-form"
+                    />
+                    <Select
+                      placeholder={t('inventory.brand')}
+                      style={{ width: 140 }}
+                      allowClear
+                      value={brandFilter}
+                      onChange={setBrandFilter}
+                      className="points-config-form"
+                    >
+                      {Array.from(new Set(items.map(i => i.brand))).sort().map(brand => (
+                        <Option key={brand} value={brand}>{brand}</Option>
                       ))}
-                  </Select>
-                   <Select 
-                     placeholder={t('inventory.origin')} 
-                     style={{ width: 140 }} 
-                     allowClear 
-                     value={originFilter} 
-                     onChange={setOriginFilter}
-                     className="points-config-form"
-                   >
-                    {[...new Set(items.map(i => i.origin).filter(Boolean))].map(org => (
-                      <Option key={org} value={org}>{org}</Option>
-                    ))}
-                  </Select>
-                   <Select 
-                     placeholder={t('inventory.strength')} 
-                     style={{ width: 120 }} 
-                     allowClear 
-                     value={strengthFilter} 
-                     onChange={setStrengthFilter}
-                     className="points-config-form"
-                   >
-             <Option value="mild">{t('inventory.mild')} </Option>
-             <Option value="mild-medium">{t('inventory.mildMedium')}</Option>
-             <Option value="medium">{t('inventory.medium')}</Option>
-             <Option value="medium-full">{t('inventory.mediumFull')}</Option>
-             <Option value="full">{t('inventory.full')}</Option>
-                  </Select>
-                   <Select 
-                     placeholder= {t('inventory.stockStatus')} 
-                     style={{ width: 140 }} 
-                     allowClear 
-                     value={statusFilter} 
-                     onChange={setStatusFilter}
-                     className="points-config-form"
-                   >
-             <Option value="normal">{t('inventory.stockNormal')}</Option>
-             <Option value="low">{t('inventory.stockLow')}</Option>
-             <Option value="critical">{t('inventory.stockCritical')}</Option>
-                  </Select>
-           <Button 
-             onClick={() => { setKeyword(''); setBrandFilter(undefined); setOriginFilter(undefined); setStrengthFilter(undefined); setStatusFilter(undefined); setSelectedRowKeys([]) }} 
-             style={{ 
-               background: 'rgba(255, 255, 255, 0.1)',
-               border: '1px solid rgba(255, 255, 255, 0.2)',
-               color: '#FFFFFF' 
-             }}
-           >
-             {t('common.resetFilters')}
-           </Button>
-           <button onClick={() => { setCreating(true); form.resetFields(); setCigarImages([]); setCigarDatabaseData(null); }} style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 8, padding: '8px 16px', background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, cursor: 'pointer' }}>
-             <PlusOutlined />
-             {t('inventory.addProduct')}
-           </button>
-                </Space>
-              </div>
+                    </Select>
+                    <Select
+                      placeholder={t('inventory.origin')}
+                      style={{ width: 140 }}
+                      allowClear
+                      value={originFilter}
+                      onChange={setOriginFilter}
+                      className="points-config-form"
+                    >
+                      {[...new Set(items.map(i => i.origin).filter(Boolean))].map(org => (
+                        <Option key={org} value={org}>{org}</Option>
+                      ))}
+                    </Select>
+                    <Select
+                      placeholder={t('inventory.strength')}
+                      style={{ width: 120 }}
+                      allowClear
+                      value={strengthFilter}
+                      onChange={setStrengthFilter}
+                      className="points-config-form"
+                    >
+                      <Option value="mild">{t('inventory.mild')} </Option>
+                      <Option value="mild-medium">{t('inventory.mildMedium')}</Option>
+                      <Option value="medium">{t('inventory.medium')}</Option>
+                      <Option value="medium-full">{t('inventory.mediumFull')}</Option>
+                      <Option value="full">{t('inventory.full')}</Option>
+                    </Select>
+                    <Select
+                      placeholder={t('inventory.stockStatus')}
+                      style={{ width: 140 }}
+                      allowClear
+                      value={statusFilter}
+                      onChange={setStatusFilter}
+                      className="points-config-form"
+                    >
+                      <Option value="normal">{t('inventory.stockNormal')}</Option>
+                      <Option value="low">{t('inventory.stockLow')}</Option>
+                      <Option value="critical">{t('inventory.stockCritical')}</Option>
+                    </Select>
+                    <Button
+                      onClick={() => { setKeyword(''); setBrandFilter(undefined); setOriginFilter(undefined); setStrengthFilter(undefined); setStatusFilter(undefined); setSelectedRowKeys([]) }}
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        color: '#FFFFFF'
+                      }}
+                    >
+                      {t('common.resetFilters')}
+                    </Button>
+                    <button onClick={() => { setCreating(true); form.resetFields(); setCigarImages([]); setCigarDatabaseData(null); }} style={{ display: 'flex', alignItems: 'center', gap: 8, borderRadius: 8, padding: '8px 16px', background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, cursor: 'pointer' }}>
+                      <PlusOutlined />
+                      {t('inventory.addProduct')}
+                    </button>
+                  </Space>
+                </div>
               )}
 
               {/* Mobile search + pills */}
@@ -1588,7 +1588,7 @@ const AdminInventory: React.FC = () => {
                   {/* 第一行：搜索栏 + 添加产品 */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', boxSizing: 'border-box' }}>
                     <Search
-                      placeholder= {t('inventory.search')}
+                      placeholder={t('inventory.search')}
                       allowClear
                       style={{ flex: 1, minWidth: 0 }}
                       prefix={<SearchOutlined style={{ color: '#f4af25' }} />}
@@ -1596,18 +1596,18 @@ const AdminInventory: React.FC = () => {
                       onChange={(e) => setKeyword(e.target.value)}
                       className="points-config-form"
                     />
-                    <button 
-                      onClick={() => { setCreating(true); form.resetFields(); setCigarImages([]); setAiRating(null); }} 
-                      style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
+                    <button
+                      onClick={() => { setCreating(true); form.resetFields(); setCigarImages([]); setAiRating(null); }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
                         justifyContent: 'center',
-                        gap: 8, 
-                        borderRadius: 8, 
-                        padding: '8px 16px', 
-                        background: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
-                        color: '#111', 
-                        fontWeight: 700, 
+                        gap: 8,
+                        borderRadius: 8,
+                        padding: '8px 16px',
+                        background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                        color: '#111',
+                        fontWeight: 700,
                         cursor: 'pointer',
                         flex: '0 0 calc(33.333% - 6px)',
                         border: 'none',
@@ -1645,9 +1645,9 @@ const AdminInventory: React.FC = () => {
                       <Option value="low">{t('inventory.stockLow')}</Option>
                       <Option value="critical">{t('inventory.stockCritical')}</Option>
                     </Select>
-                    <Button 
-                      onClick={() => { setKeyword(''); setBrandFilter(undefined); setStrengthFilter(undefined); setStatusFilter(undefined); setSelectedRowKeys([]) }} 
-                      style={{ 
+                    <Button
+                      onClick={() => { setKeyword(''); setBrandFilter(undefined); setStrengthFilter(undefined); setStatusFilter(undefined); setSelectedRowKeys([]) }}
+                      style={{
                         background: 'rgba(255, 255, 255, 0.1)',
                         border: '1px solid rgba(255, 255, 255, 0.2)',
                         color: '#FFFFFF',
@@ -1671,163 +1671,165 @@ const AdminInventory: React.FC = () => {
                   paddingBottom: 16
                 }}
               >
-              {!isMobile ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  {groupedByBrand.map(group => (
-                    <div key={group.key} style={{ border: '1px solid rgba(244,175,37,0.2)', borderRadius: 12, overflow: 'hidden', background: 'rgba(255, 255, 255, 0.05)', backdropFilter: 'blur(10px)' }}>
-                      <div style={{ padding: '8px 12px', background: 'rgba(244,175,37,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ fontWeight: 700, color: '#FFFFFF' }}>{group.key}</div>
-                        <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>{t('inventory.productTypes')}：{group.items.length}</div>
+                {!isMobile ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {groupedByBrand.map(group => (
+                      <div key={group.key} style={{ border: '1px solid rgba(244,175,37,0.2)', borderRadius: 12, overflow: 'hidden', background: 'rgba(255, 255, 255, 0.05)', backdropFilter: 'blur(10px)' }}>
+                        <div style={{ padding: '8px 12px', background: 'rgba(244,175,37,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ fontWeight: 700, color: '#FFFFFF' }}>{group.key}</div>
+                          <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>{t('inventory.productTypes')}：{group.items.length}</div>
+                        </div>
+                        <div style={{ padding: 12 }}>
+                          <div className="points-config-form">
+                            <Table
+                              columns={columns}
+                              dataSource={group.items}
+                              rowKey="id"
+                              size="small"
+                              loading={loading}
+                              rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys, preserveSelectedRowKeys: true }}
+                              pagination={false}
+                              style={{
+                                background: 'transparent'
+                              }}
+                            />
+                          </div>
+                        </div>
                       </div>
-                      <div style={{ padding: 12 }}>
-                      <div className="points-config-form">
-              <Table
-                columns={columns}
-                          dataSource={group.items}
-                rowKey="id"
-                          size="small"
-                loading={loading}
-                          rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys, preserveSelectedRowKeys: true }}
-                          pagination={false}
-                          style={{
-                            background: 'transparent'
-                          }}
-                        />
-                      </div>
-                      </div>
-                    </div>
-                  ))}
-                  {groupedByBrand.length === 0 && (
-                    <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
-                  )}
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                  {groupedByBrand.map(group => (
-                    <div key={group.key} style={{ border: '1px solid rgba(244,175,37,0.2)', borderRadius: 16, overflow: 'hidden', background: 'rgba(0,0,0,0.2)', boxShadow: '0 10px 30px rgba(0,0,0,0.25)' }}>
-                      <div style={{ padding: 12, background: 'rgba(0,0,0,0.3)' }}>
-                        <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>{group.key}</div>
-                      </div>
-                      <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        {group.items.map(record => (
-                          <div key={record.id} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            {/* 产品名称（顶部，全宽） */}
-                            <div style={{ fontWeight: 700, color: '#fff', fontSize: 16, marginBottom: 4 }}>{record.name}</div>
-                            
-                            {/* 图片、信息和按钮（水平布局） */}
-                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                            <div style={{ width: 60, height: 80, borderRadius: 10, overflow: 'hidden', background: 'rgba(255,255,255,0.08)', flexShrink: 0 }}>
-                              <img 
-                                src={(record as any).images && (record as any).images.length > 0 ? (record as any).images[0] : DEFAULT_CIGAR_IMAGE}
-                                alt={record.name}
-                                style={{ 
-                                  width: '100%', 
-                                  height: '100%', 
-                                  objectFit: 'cover'
-                                }}
-                              />
-                            </div>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: 12, color: 'rgba(224,214,196,0.6)', display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
-                                {record.size && <span>{record.size}</span>}
-                                {record.size && record.origin && <span>|</span>}
-                                {record.origin && <span>{record.origin}</span>}
-                                {(record.size || record.origin) && record.strength && <span>|</span>}
-                                {record.strength && (
-                                  <Tag color={getStrengthColor(record.strength)} style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px' }}>
-                                    {getStrengthText(record.strength)}
-                                  </Tag>
-                                )}
-                              </div>
-                              <div style={{ fontWeight: 700, color: '#f4af25', marginTop: 2 }}>RM{record.price?.toLocaleString?.() || record.price}</div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, marginTop: 4 }}>
-                                {(() => { const { totalIn, totalOut } = getTotals((record as any)?.id); return (
-                                  <>
-                                    <span style={{ color: 'rgba(224,214,196,0.8)' }}>{t('inventory.totalIn')}: <span style={{ color: '#fff' }}>{totalIn}</span></span>
-                                    <span style={{ color: 'rgba(224,214,196,0.8)' }}>{t('inventory.totalOut')}: <span style={{ color: '#fff' }}>{totalOut}</span></span>
-                                  </>
-                                ) })()}
-                              </div>
-                            </div>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
-                                {/* 按钮区域（水平排列） */}
-                                <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-                                  <button 
-                                    style={{ 
-                                      padding: '4px 8px', 
-                                      borderRadius: 6, 
-                                      background: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
-                                      color: '#111', 
-                                      fontWeight: 600, 
-                                      fontSize: 12, 
-                                      cursor: 'pointer', 
-                                      transition: 'all 0.2s ease',
-                                      border: '1px solid transparent',
-                                      whiteSpace: 'nowrap',
-                                      flexShrink: 0
-                                    }} 
+                    ))}
+                    {groupedByBrand.length === 0 && (
+                      <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                    {groupedByBrand.map(group => (
+                      <div key={group.key} style={{ border: '1px solid rgba(244,175,37,0.2)', borderRadius: 16, overflow: 'hidden', background: 'rgba(0,0,0,0.2)', boxShadow: '0 10px 30px rgba(0,0,0,0.25)' }}>
+                        <div style={{ padding: 12, background: 'rgba(0,0,0,0.3)' }}>
+                          <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>{group.key}</div>
+                        </div>
+                        <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                          {group.items.map(record => (
+                            <div key={record.id} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              {/* 产品名称（顶部，全宽） */}
+                              <div style={{ fontWeight: 700, color: '#fff', fontSize: 16, marginBottom: 4 }}>{record.name}</div>
+
+                              {/* 图片、信息和按钮（水平布局） */}
+                              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                                <div style={{ width: 60, height: 80, borderRadius: 10, overflow: 'hidden', background: 'rgba(255,255,255,0.08)', flexShrink: 0 }}>
+                                  <img
+                                    src={(record as any).images && (record as any).images.length > 0 ? (record as any).images[0] : DEFAULT_CIGAR_IMAGE}
+                                    alt={record.name}
+                                    style={{
+                                      width: '100%',
+                                      height: '100%',
+                                      objectFit: 'cover'
+                                    }}
+                                  />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontSize: 12, color: 'rgba(224,214,196,0.6)', display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+                                    {record.size && <span>{record.size}</span>}
+                                    {record.size && record.origin && <span>|</span>}
+                                    {record.origin && <span>{record.origin}</span>}
+                                    {(record.size || record.origin) && record.strength && <span>|</span>}
+                                    {record.strength && (
+                                      <Tag color={getStrengthColor(record.strength)} style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px' }}>
+                                        {getStrengthText(record.strength)}
+                                      </Tag>
+                                    )}
+                                  </div>
+                                  <div style={{ fontWeight: 700, color: '#f4af25', marginTop: 2 }}>RM{record.price?.toLocaleString?.() || record.price}</div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, marginTop: 4 }}>
+                                    {(() => {
+                                      const { totalIn, totalOut } = getTotals((record as any)?.id); return (
+                                        <>
+                                          <span style={{ color: 'rgba(224,214,196,0.8)' }}>{t('inventory.totalIn')}: <span style={{ color: '#fff' }}>{totalIn}</span></span>
+                                          <span style={{ color: 'rgba(224,214,196,0.8)' }}>{t('inventory.totalOut')}: <span style={{ color: '#fff' }}>{totalOut}</span></span>
+                                        </>
+                                      )
+                                    })()}
+                                  </div>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+                                  {/* 按钮区域（水平排列） */}
+                                  <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+                                    <button
+                                      style={{
+                                        padding: '4px 8px',
+                                        borderRadius: 6,
+                                        background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                                        color: '#111',
+                                        fontWeight: 600,
+                                        fontSize: 12,
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s ease',
+                                        border: '1px solid transparent',
+                                        whiteSpace: 'nowrap',
+                                        flexShrink: 0
+                                      }}
+                                      onClick={() => {
+                                        setEditing(record)
+                                      }}
+                                    >
+                                      {t('common.edit')}
+                                    </button>
+                                  </div>
+                                  {/* 库存数量（可点击查看详情，用颜色表示状态，字体高度与价格+总入库/出库的总高度一致） */}
+                                  <div
+                                    style={{
+                                      textAlign: 'right',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      minHeight: 40,
+                                      cursor: 'pointer',
+                                      transition: 'opacity 0.2s ease'
+                                    }}
                                     onClick={() => {
-                              setEditing(record)
+                                      setViewingProductLogs((record as any)?.id)
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.opacity = '0.8'
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.opacity = '1'
                                     }}
                                   >
-                              {t('common.edit')}
-                                </button>
-                                </div>
-                                {/* 库存数量（可点击查看详情，用颜色表示状态，字体高度与价格+总入库/出库的总高度一致） */}
-                                <div 
-                                  style={{ 
-                                    textAlign: 'right', 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    minHeight: 40,
-                                    cursor: 'pointer',
-                                    transition: 'opacity 0.2s ease'
-                                  }}
-                                  onClick={() => {
-                                    setViewingProductLogs((record as any)?.id)
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.opacity = '0.8'
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.opacity = '1'
-                                  }}
-                                >
-                                  {(() => {
-                                    const computed = getComputedStock((record as any)?.id)
-                                    const min = ((record as any)?.inventory?.minStock ?? 0)
-                                    const st = (computed <= min) ? 'critical' : (computed <= (min * 1.5)) ? 'low' : 'normal'
-                                    const color = st === 'normal' ? '#16a34a' : st === 'low' ? '#f59e0b' : '#ef4444'
-                                    return (
-                                      <span style={{ 
-                                        color, 
-                                        fontSize: 38, 
-                                        fontWeight: 700,
-                                        lineHeight: 1
-                                      }}>
-                                        {computed}
-                                      </span>
-                                    )
-                                  })()}
+                                    {(() => {
+                                      const computed = getComputedStock((record as any)?.id)
+                                      const min = ((record as any)?.inventory?.minStock ?? 0)
+                                      const st = (computed <= min) ? 'critical' : (computed <= (min * 1.5)) ? 'low' : 'normal'
+                                      const color = st === 'normal' ? '#16a34a' : st === 'low' ? '#f59e0b' : '#ef4444'
+                                      return (
+                                        <span style={{
+                                          color,
+                                          fontSize: 38,
+                                          fontWeight: 700,
+                                          lineHeight: 1
+                                        }}>
+                                          {computed}
+                                        </span>
+                                      )
+                                    })()}
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                  {groupedByBrand.length === 0 && (
-                    <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
-                  )}
-                </div>
-              )}
+                    ))}
+                    {groupedByBrand.length === 0 && (
+                      <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
           {activeTab === 'brand' && (
             <div>
-              
+
               {/* 筛选区（置顶）：搜索框 + 添加品牌（同排显示） */}
               <div
                 style={{
@@ -1874,7 +1876,7 @@ const AdminInventory: React.FC = () => {
               </div>
 
               {/* 添加品牌按钮单独区块已移除 */}
-              
+
               {/* 品牌列表（滚动容器） */}
               <div
                 style={{
@@ -1887,10 +1889,10 @@ const AdminInventory: React.FC = () => {
                 }}
               >
                 {brandList.length === 0 ? (
-                  <div style={{ 
-                    textAlign: 'center', 
-                    padding: '60px 0', 
-                    color: 'rgba(255,255,255,0.6)' 
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '60px 0',
+                    color: 'rgba(255,255,255,0.6)'
                   }}>
                     <div style={{ fontSize: '48px', marginBottom: '16px' }}></div>
                     <div style={{ fontSize: '16px', marginBottom: '8px' }}>{t('inventory.noBrandsFound')}</div>
@@ -1921,25 +1923,25 @@ const AdminInventory: React.FC = () => {
                             e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
                           }}
                         >
-                          <div style={{ 
-                            display: 'flex', 
-                            alignItems: 'flex-start', 
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
                             justifyContent: 'space-between',
                             gap: '16px'
                           }}>
                             <div style={{ flex: 1 }}>
-                              <div style={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
                                 gap: '12px'
                               }}>
                                 {brand.logo ? (
-                                  <img 
-                                    src={brand.logo} 
-                                    alt={brand.name} 
-                                    style={{ 
-                                      width: '50px', 
-                                      height: '50px', 
+                                  <img
+                                    src={brand.logo}
+                                    alt={brand.name}
+                                    style={{
+                                      width: '50px',
+                                      height: '50px',
                                       borderRadius: '8px',
                                       objectFit: 'cover',
                                       border: '2px solid rgba(244,175,37,0.3)'
@@ -1966,7 +1968,7 @@ const AdminInventory: React.FC = () => {
                                   </div>
                                 )}
                                 <div>
-                                  <h3 style={{ 
+                                  <h3 style={{
                                     fontWeight: 'bold',
                                     background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
                                     WebkitBackgroundClip: 'text',
@@ -1977,23 +1979,23 @@ const AdminInventory: React.FC = () => {
                                     {brand.name}
                                   </h3>
                                   {isMobile ? (
-                                    <div style={{ 
-                                      display: 'flex', 
+                                    <div style={{
+                                      display: 'flex',
                                       flexDirection: 'column',
                                       gap: 4,
                                       fontSize: '12px',
                                       color: 'rgba(255,255,255,0.7)'
                                     }}>
                                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
-                                        <svg 
-                                          style={{ color: '#f4af25' }} 
-                                          fill="none" 
-                                          height="14"                                         
-                                          stroke="currentColor" 
-                                          strokeLinecap="round" 
-                                          strokeLinejoin="round" 
-                                          strokeWidth="2" 
-                                          viewBox="0 0 24 24" 
+                                        <svg
+                                          style={{ color: '#f4af25' }}
+                                          fill="none"
+                                          height="14"
+                                          stroke="currentColor"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth="2"
+                                          viewBox="0 0 24 24"
                                           width="14"
                                         >
                                           <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
@@ -2004,15 +2006,15 @@ const AdminInventory: React.FC = () => {
                                         </span>
                                       </div>
                                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
-                                        <svg 
-                                          style={{ color: '#f4af25' }} 
-                                          fill="none" 
-                                          height="14" 
-                                          stroke="currentColor" 
-                                          strokeLinecap="round" 
-                                          strokeLinejoin="round" 
-                                          strokeWidth="2" 
-                                          viewBox="0 0 24 24" 
+                                        <svg
+                                          style={{ color: '#f4af25' }}
+                                          fill="none"
+                                          height="14"
+                                          stroke="currentColor"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth="2"
+                                          viewBox="0 0 24 24"
                                           width="14"
                                         >
                                           <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
@@ -2025,23 +2027,23 @@ const AdminInventory: React.FC = () => {
                                       </div>
                                     </div>
                                   ) : (
-                                    <div style={{ 
-                                      display: 'flex', 
-                                      alignItems: 'center', 
+                                    <div style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
                                       gap: '16px',
                                       fontSize: '12px',
                                       color: 'rgba(255,255,255,0.7)'
                                     }}>
                                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        <svg 
-                                          style={{ color: '#f4af25' }} 
-                                          fill="none" 
-                                          height="14"                                         
-                                          stroke="currentColor" 
-                                          strokeLinecap="round" 
-                                          strokeLinejoin="round" 
-                                          strokeWidth="2" 
-                                          viewBox="0 0 24 24" 
+                                        <svg
+                                          style={{ color: '#f4af25' }}
+                                          fill="none"
+                                          height="14"
+                                          stroke="currentColor"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth="2"
+                                          viewBox="0 0 24 24"
                                           width="14"
                                         >
                                           <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
@@ -2050,15 +2052,15 @@ const AdminInventory: React.FC = () => {
                                         <span>{t('inventory.origin')}：{brand.country || '-'}</span>
                                       </div>
                                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        <svg 
-                                          style={{ color: '#f4af25' }} 
-                                          fill="none" 
-                                          height="14" 
-                                          stroke="currentColor" 
-                                          strokeLinecap="round" 
-                                          strokeLinejoin="round" 
-                                          strokeWidth="2" 
-                                          viewBox="0 0 24 24" 
+                                        <svg
+                                          style={{ color: '#f4af25' }}
+                                          fill="none"
+                                          height="14"
+                                          stroke="currentColor"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth="2"
+                                          viewBox="0 0 24 24"
                                           width="14"
                                         >
                                           <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
@@ -2073,7 +2075,7 @@ const AdminInventory: React.FC = () => {
                               </div>
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
-                            <Button 
+                              <Button
                                 onClick={() => setEditingBrand(brand)}
                                 style={{
                                   width: '40px',
@@ -2099,18 +2101,18 @@ const AdminInventory: React.FC = () => {
                                 }}
                               >
                                 <EditOutlined style={{ fontSize: '18px' }} />
-                            </Button>
-                            <Button 
+                              </Button>
+                              <Button
                                 onClick={async () => {
-                                  
+
                                   const confirmed = window.confirm(`确定要删除品牌 "${brand.name}" 吗？`)
-                                  
+
                                   if (confirmed) {
                                     try {
                                       setLoading(true)
-                                      
+
                                       const result = await deleteDocument(COLLECTIONS.BRANDS, brand.id)
-                                      
+
                                       if (result.success) {
                                         message.success(t('inventory.brandDeleted'))
                                         setBrandList(await getBrands())
@@ -2149,7 +2151,7 @@ const AdminInventory: React.FC = () => {
                                 }}
                               >
                                 <DeleteOutlined style={{ fontSize: '18px' }} />
-                            </Button>
+                              </Button>
                             </div>
                           </div>
                         </div>
@@ -2177,58 +2179,58 @@ const AdminInventory: React.FC = () => {
               >
                 {/* 第一行：搜索框 */}
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                <Search
-                  placeholder={t('inventory.searchInLogs')}
-                  value={inSearchKeyword}
-                  onChange={(e) => setInSearchKeyword(e.target.value)}
+                  <Search
+                    placeholder={t('inventory.searchInLogs')}
+                    value={inSearchKeyword}
+                    onChange={(e) => setInSearchKeyword(e.target.value)}
                     style={{ flex: 1 }}
-                  allowClear
-                  className="points-config-form"
-                />
+                    allowClear
+                    className="points-config-form"
+                  />
                 </div>
-                
+
                 {/* 第二行：品牌筛选 + 入库统计 + 创建入库 */}
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                <Select
-                  placeholder={t('inventory.filterByBrand')}
-                  value={inBrandFilter}
-                  onChange={setInBrandFilter}
+                  <Select
+                    placeholder={t('inventory.filterByBrand')}
+                    value={inBrandFilter}
+                    onChange={setInBrandFilter}
                     style={{ flex: 1 }}
-                  allowClear
-                  className="points-config-form"
-                >
-                  {Array.from(new Set(items.map(i => i.brand))).sort().map(brand => (
-                    <Option key={brand} value={brand}>{brand}</Option>
-                  ))}
-                </Select>
-                <button 
-                  onClick={() => setInStatsOpen(true)}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: 8,
-                    border: '1px solid rgba(244, 175, 37, 0.6)',
-                    background: 'rgba(244, 175, 37, 0.1)',
-                    color: '#f4af25',
-                    cursor: 'pointer',
-                    fontSize: 14,
+                    allowClear
+                    className="points-config-form"
+                  >
+                    {Array.from(new Set(items.map(i => i.brand))).sort().map(brand => (
+                      <Option key={brand} value={brand}>{brand}</Option>
+                    ))}
+                  </Select>
+                  <button
+                    onClick={() => setInStatsOpen(true)}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: 8,
+                      border: '1px solid rgba(244, 175, 37, 0.6)',
+                      background: 'rgba(244, 175, 37, 0.1)',
+                      color: '#f4af25',
+                      cursor: 'pointer',
+                      fontSize: 14,
                       fontWeight: 600,
                       whiteSpace: 'nowrap'
-                  }}
-                >
-                  {t('inventory.inStats')}
-                </button>
-                <button
-                  onClick={() => setInModalOpen(true)}
-                  className="cigar-btn-gradient"
+                    }}
+                  >
+                    {t('inventory.inStats')}
+                  </button>
+                  <button
+                    onClick={() => setInModalOpen(true)}
+                    className="cigar-btn-gradient"
                     style={{ padding: '6px 14px', borderRadius: 8, whiteSpace: 'nowrap' }}
-                >
-                  {t('inventory.inStock')}
-                </button>
-              </div>
+                  >
+                    {t('inventory.inStock')}
+                  </button>
+                </div>
               </div>
 
               {/* 入库列表渲染在后文（我们将在实际列表处包裹滚动容器） */}
-              
+
               <Modal
                 title={editingOrder ? "编辑入库订单" : t('inventory.inStockRecord')}
                 open={inModalOpen || !!editingOrder}
@@ -2245,11 +2247,11 @@ const AdminInventory: React.FC = () => {
                 footer={null}
                 {...getResponsiveModalConfig(isMobile, true, 900)}
                 style={{ top: 20 }}
-                styles={{ 
+                styles={{
                   ...getModalThemeStyles(isMobile, true),
                   body: {
                     background: 'rgba(24, 22, 17, 0.95)',
-                    maxHeight: 'calc(100vh - 180px)', 
+                    maxHeight: 'calc(100vh - 180px)',
                     overflowY: 'auto',
                     overflowX: 'hidden',
                     paddingBottom: 16
@@ -2263,7 +2265,7 @@ const AdminInventory: React.FC = () => {
                       reason: editingOrder.reason,
                       items: editingOrder.items
                     })
-                    
+
                     const existingAttachments = editingOrder.attachments || []
                     setUploadedAttachments(existingAttachments)
                     setAttachmentFileList(
@@ -2277,511 +2279,511 @@ const AdminInventory: React.FC = () => {
                   }
                 }}
               >
-              <Form form={inForm} layout="vertical" className="dark-theme-form" onFinish={async (values: { referenceNo?: string; reason?: string; items: { itemType?: string; cigarId?: string; customName?: string; quantity: number; unitPrice?: number }[] }) => {
-                const lines = (values.items || []).filter(it => it?.quantity > 0 && (it?.cigarId || it?.customName))
-                if (lines.length === 0) { message.warning(t('inventory.pleaseAddAtLeastOneInStockDetail')); return }
-                
-                // 检查单号
-                if (!values.referenceNo || !values.referenceNo.trim()) {
-                  message.error(t('inventory.pleaseInputReferenceNo'))
-                  return
-                }
-                
-                setLoading(true)
-                try {
-                  const orderItems = []
-                  let totalQuantity = 0
-                  let totalValue = 0
-                  
-                  for (const line of lines) {
-                    const lineItemType = line.itemType || 'cigar'
-                    const qty = Math.max(1, Math.floor(line.quantity || 1))
-                    let cigarId = ''
-                    let cigarName = ''
-                    
-                    if (lineItemType === 'cigar') {
-                    const target = items.find(i => i.id === line.cigarId) as any
-                    if (!target) continue
-                      cigarId = target.id
-                      cigarName = target.name
-                    } else {
-                      if (!line.customName || !line.customName.trim()) continue
-                      const prefixMap: { [key: string]: string } = {
-                        'activity': 'ACTIVITY:',
-                        'gift': 'GIFT:',
-                        'service': 'SERVICE:',
-                        'other': 'OTHER:'
+                <Form form={inForm} layout="vertical" className="dark-theme-form" onFinish={async (values: { referenceNo?: string; reason?: string; items: { itemType?: string; cigarId?: string; customName?: string; quantity: number; unitPrice?: number }[] }) => {
+                  const lines = (values.items || []).filter(it => it?.quantity > 0 && (it?.cigarId || it?.customName))
+                  if (lines.length === 0) { message.warning(t('inventory.pleaseAddAtLeastOneInStockDetail')); return }
+
+                  // 检查单号
+                  if (!values.referenceNo || !values.referenceNo.trim()) {
+                    message.error(t('inventory.pleaseInputReferenceNo'))
+                    return
+                  }
+
+                  setLoading(true)
+                  try {
+                    const orderItems = []
+                    let totalQuantity = 0
+                    let totalValue = 0
+
+                    for (const line of lines) {
+                      const lineItemType = line.itemType || 'cigar'
+                      const qty = Math.max(1, Math.floor(line.quantity || 1))
+                      let cigarId = ''
+                      let cigarName = ''
+
+                      if (lineItemType === 'cigar') {
+                        const target = items.find(i => i.id === line.cigarId) as any
+                        if (!target) continue
+                        cigarId = target.id
+                        cigarName = target.name
+                      } else {
+                        if (!line.customName || !line.customName.trim()) continue
+                        const prefixMap: { [key: string]: string } = {
+                          'activity': 'ACTIVITY:',
+                          'gift': 'GIFT:',
+                          'service': 'SERVICE:',
+                          'other': 'OTHER:'
+                        }
+                        const prefix = prefixMap[lineItemType] || 'OTHER:'
+                        cigarId = `${prefix}${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                        cigarName = line.customName.trim()
                       }
-                      const prefix = prefixMap[lineItemType] || 'OTHER:'
-                      cigarId = `${prefix}${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-                      cigarName = line.customName.trim()
+
+                      const orderItem: any = {
+                        cigarId,
+                        cigarName,
+                        itemType: lineItemType as any,
+                        quantity: qty
+                      }
+
+                      if (line.unitPrice != null) {
+                        const unitPrice = Number(line.unitPrice)
+                        orderItem.unitPrice = unitPrice
+                        orderItem.subtotal = unitPrice * qty
+                      }
+
+                      orderItems.push(orderItem)
+                      totalQuantity += qty
+                      if (orderItem.subtotal) {
+                        totalValue += orderItem.subtotal
+                      }
                     }
-                    
-                    const orderItem: any = {
-                      cigarId,
-                      cigarName,
-                      itemType: lineItemType as any,
-                      quantity: qty
-                    }
-                    
-                    if (line.unitPrice != null) {
-                      const unitPrice = Number(line.unitPrice)
-                      orderItem.unitPrice = unitPrice
-                      orderItem.subtotal = unitPrice * qty
-                    }
-                    
-                    orderItems.push(orderItem)
-                    totalQuantity += qty
-                    if (orderItem.subtotal) {
-                      totalValue += orderItem.subtotal
-                    }
-                  }
-                  
-                  // 检查是否是编辑模式
-                  if (editingOrder) {
-                    // 编辑模式：更新现有订单
-                    const updateData = {
-                      referenceNo: values.referenceNo.trim(),
-                      reason: values.reason || t('inventory.inStock'),
-                      items: orderItems,
-                      totalQuantity,
-                      totalValue,
-                      attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
-                      // 保留原有状态，除非需要更改
-                      status: editingOrder.status,
-                      // 保留原有类型和操作员
-                      type: editingOrder.type,
-                      operatorId: editingOrder.operatorId
-                    }
-                    
-                    // 更新订单
-                    await updateInboundOrder(editingOrder.id, updateData)
-                    
-                    // 删除旧的 inventory_movements
-                    const oldMovements = inventoryMovements.filter(m => m.inboundOrderId === editingOrder.id)
-                    await Promise.all(oldMovements.map(m => deleteDocument(COLLECTIONS.INVENTORY_MOVEMENTS, m.id)))
-                    
-                    // 创建新的 inventory_movements 以匹配更新后的订单
-                    const createdAt = editingOrder.createdAt instanceof Date ? editingOrder.createdAt : (editingOrder.createdAt ? new Date(editingOrder.createdAt) : new Date())
-                    for (const item of orderItems) {
-                      await createDocument(COLLECTIONS.INVENTORY_MOVEMENTS, {
-                        cigarId: item.cigarId,
-                        cigarName: item.cigarName,
-                        itemType: item.itemType,
-                        type: 'in' as const,
-                        quantity: item.quantity,
+
+                    // 检查是否是编辑模式
+                    if (editingOrder) {
+                      // 编辑模式：更新现有订单
+                      const updateData = {
                         referenceNo: values.referenceNo.trim(),
-                        orderType: 'inbound' as const,
-                        inboundOrderId: editingOrder.id,
                         reason: values.reason || t('inventory.inStock'),
-                        unitPrice: item.unitPrice,
-                        createdAt: createdAt
-                      })
+                        items: orderItems,
+                        totalQuantity,
+                        totalValue,
+                        attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
+                        // 保留原有状态，除非需要更改
+                        status: editingOrder.status,
+                        // 保留原有类型和操作员
+                        type: editingOrder.type,
+                        operatorId: editingOrder.operatorId
+                      }
+
+                      // 更新订单
+                      await updateInboundOrder(editingOrder.id, updateData)
+
+                      // 删除旧的 inventory_movements
+                      const oldMovements = inventoryMovements.filter(m => m.inboundOrderId === editingOrder.id)
+                      await Promise.all(oldMovements.map(m => deleteDocument(COLLECTIONS.INVENTORY_MOVEMENTS, m.id)))
+
+                      // 创建新的 inventory_movements 以匹配更新后的订单
+                      const createdAt = editingOrder.createdAt instanceof Date ? editingOrder.createdAt : (editingOrder.createdAt ? new Date(editingOrder.createdAt) : new Date())
+                      for (const item of orderItems) {
+                        await createDocument(COLLECTIONS.INVENTORY_MOVEMENTS, {
+                          cigarId: item.cigarId,
+                          cigarName: item.cigarName,
+                          itemType: item.itemType,
+                          type: 'in' as const,
+                          quantity: item.quantity,
+                          referenceNo: values.referenceNo.trim(),
+                          orderType: 'inbound' as const,
+                          inboundOrderId: editingOrder.id,
+                          reason: values.reason || t('inventory.inStock'),
+                          unitPrice: item.unitPrice,
+                          createdAt: createdAt
+                        })
+                      }
+
+                      message.success('订单已更新')
+                    } else {
+                      // 创建模式：创建新订单
+                      const inboundOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
+                        referenceNo: values.referenceNo.trim(),
+                        type: 'purchase',
+                        reason: values.reason || t('inventory.inStock'),
+                        items: orderItems,
+                        totalQuantity,
+                        totalValue,
+                        attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
+                        status: 'completed',
+                        operatorId: 'system',
+                        createdAt: new Date()
+                      }
+
+                      await createInboundOrder(inboundOrderData)
+                      message.success(t('inventory.inStockSuccess'))
                     }
-                    
-                    message.success('订单已更新')
-                  } else {
-                    // 创建模式：创建新订单
-                    const inboundOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
-                      referenceNo: values.referenceNo.trim(),
-                      type: 'purchase',
-                      reason: values.reason || t('inventory.inStock'),
-                      items: orderItems,
-                      totalQuantity,
-                      totalValue,
-                      attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
-                      status: 'completed',
-                      operatorId: 'system',
-                      createdAt: new Date()
+
+                    inForm.resetFields()
+                    setItems(await getCigars())
+                    setInboundOrders(await getAllInboundOrders())
+                    setInventoryMovements(await getAllInventoryMovements())
+                    setInModalOpen(false)
+                    setEditingOrder(null)
+                    setAttachmentFileList([])
+                    setUploadedAttachments([])
+                  } finally {
+                    setLoading(false)
                   }
-                    
-                    await createInboundOrder(inboundOrderData)
-                  message.success(t('inventory.inStockSuccess'))
-                  }
-                  
-                  inForm.resetFields()
-                  setItems(await getCigars())
-                  setInboundOrders(await getAllInboundOrders())
-                  setInventoryMovements(await getAllInventoryMovements())
-                  setInModalOpen(false)
-                  setEditingOrder(null)
-                  setAttachmentFileList([])
-                  setUploadedAttachments([])
-                } finally {
-                  setLoading(false)
-                }
-              }}>
-                <div style={{ width: '100%', overflow: 'hidden' }}>
-                  {/* 左右分栏布局 */}
-                  <Row gutter={16}>
-                    {/* 左侧：单号和原因 */}
-                    <Col span={12}>
-                    <Form.Item label={t('inventory.referenceNo')} name="referenceNo" style={{ marginBottom: 12 }}>
-                      <Input placeholder={t('inventory.pleaseInputReferenceNo')} />
-                    </Form.Item>
-                    <Form.Item label={t('inventory.reason')} name="reason" style={{ marginBottom: 12 }}>
-                      <Input placeholder={t('inventory.forExample') + t('inventory.purchaseInStock')} />
-                    </Form.Item>
-                  </Col>
-                  
-                  {/* 右侧：附件上传 */}
-                  <Col span={12}>
-                    <Form.Item label={t('inventory.attachments')} style={{ marginBottom: 12 }}>
-                      <Upload
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        fileList={attachmentFileList}
-                        beforeUpload={(file) => {
-                          const isPDF = file.type === 'application/pdf'
-                          const isImage = file.type.startsWith('image/')
-                          if (!isPDF && !isImage) {
-                            message.error(t('inventory.supportedFormats'))
-                            return Upload.LIST_IGNORE
-                          }
-                          const isLt10M = file.size / 1024 / 1024 < 10
-                          if (!isLt10M) {
-                            message.error(t('inventory.maxFileSize'))
-                            return Upload.LIST_IGNORE
-                          }
-                          return false
-                        }}
-                        onChange={async (info) => {
-                          setAttachmentFileList(info.fileList)
-                          
-                          const file = info.file
-                          if (file.originFileObj && file.status === undefined) {
-                            try {
-                              const uploadResult = await cloudinaryUpload(file.originFileObj, {
-                                folder: 'inventory_documents'
-                              })
-                              
+                }}>
+                  <div style={{ width: '100%', overflow: 'hidden' }}>
+                    {/* 左右分栏布局 */}
+                    <Row gutter={16}>
+                      {/* 左侧：单号和原因 */}
+                      <Col span={12}>
+                        <Form.Item label={t('inventory.referenceNo')} name="referenceNo" style={{ marginBottom: 12 }}>
+                          <Input placeholder={t('inventory.pleaseInputReferenceNo')} />
+                        </Form.Item>
+                        <Form.Item label={t('inventory.reason')} name="reason" style={{ marginBottom: 12 }}>
+                          <Input placeholder={t('inventory.forExample') + t('inventory.purchaseInStock')} />
+                        </Form.Item>
+                      </Col>
+
+                      {/* 右侧：附件上传 */}
+                      <Col span={12}>
+                        <Form.Item label={t('inventory.attachments')} style={{ marginBottom: 12 }}>
+                          <Upload
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            fileList={attachmentFileList}
+                            beforeUpload={(file) => {
                               const isPDF = file.type === 'application/pdf'
-                              const newAttachment = {
-                                url: uploadResult.secure_url,
-                                type: (isPDF ? 'pdf' : 'image') as 'pdf' | 'image',
-                                filename: file.name,
-                                uploadedAt: new Date()
+                              const isImage = file.type.startsWith('image/')
+                              if (!isPDF && !isImage) {
+                                message.error(t('inventory.supportedFormats'))
+                                return Upload.LIST_IGNORE
                               }
-                              
-                              setUploadedAttachments(prev => [...prev, newAttachment])
-                              
-                              setAttachmentFileList(prev => 
-                                prev.map(f => 
-                                  f.uid === file.uid 
-                                    ? { ...f, status: 'done', url: uploadResult.secure_url }
-                                    : f
-                                )
-                              )
-                              
-                              message.success(t('inventory.uploadSuccess'))
-                            } catch (error) {
-                              message.error(t('inventory.uploadFailed'))
-                              setAttachmentFileList(prev => prev.filter(f => f.uid !== file.uid))
-                            }
-                          }
-                        }}
-                        onRemove={(file) => {
-                          const fileUrl = file.url
-                          if (fileUrl) {
-                            setUploadedAttachments(prev => prev.filter(att => att.url !== fileUrl))
-                          }
-                        }}
-                        listType="picture"
-                        maxCount={1}
-                      >
-                        <Button icon={<UploadOutlined />} loading={uploadingFile}>
-                          {t('inventory.uploadOrderDocument')}
-                        </Button>
-                      </Upload>
-                      <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 4 }}>
-                        {t('inventory.supportedFormats')} · {t('inventory.maxFileSize')}
-                      </div>
-                    </Form.Item>
-                  </Col>
-                </Row>
-                
-                <Form.List name="items" initialValue={[{ itemType: 'cigar', cigarId: undefined, quantity: 1 }]}> 
-                  {(fields, { add, remove }) => (
-                    <div>
-                      {fields.map((field) => {
-                        const { key, name, fieldKey, ...restField } = field
-                        return (
-                        <div key={key} style={{ 
-                          marginBottom: 12, 
-                          padding: 10, 
-                          border: '1px solid rgba(255, 255, 255, 0.1)', 
-                          borderRadius: 8,
-                          background: 'rgba(0, 0, 0, 0.2)'
-                        }}>
-                          {/* 电脑端：一行显示所有字段 */}
-                          {!isMobile ? (
-                            <Row gutter={12} align="middle">
-                              <Col flex="100px">
-                                <Form.Item
-                                  {...restField}
-                                  name={[name, 'itemType']}
-                                  fieldKey={fieldKey}
-                                  initialValue="cigar"
-                                  style={{ marginBottom: 0 }}
-                                >
-                                  <Select 
-                                    placeholder={t('inventory.selectItemType')}
-                                    onChange={() => {
-                                      const currentValues = inForm.getFieldValue('items')
-                                      if (currentValues && currentValues[name]) {
-                                        currentValues[name].cigarId = undefined
-                                        currentValues[name].customName = undefined
-                                        inForm.setFieldsValue({ items: currentValues })
-                                      }
-                                    }}
-                                  >
-                                    <Option value="cigar">{t('inventory.itemTypeCigar')}</Option>
-                                    <Option value="activity">{t('inventory.itemTypeActivity')}</Option>
-                                    <Option value="gift">{t('inventory.itemTypeGift')}</Option>
-                                    <Option value="service">💼 {t('inventory.itemTypeService')}</Option>
-                                    <Option value="other">📦 {t('inventory.itemTypeOther')}</Option>
-                                  </Select>
-                                </Form.Item>
-                              </Col>
-                              
-                              <Col flex="200px">
-                                <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => {
-                                  const prev = prevValues.items?.[name]?.itemType
-                                  const curr = currentValues.items?.[name]?.itemType
-                                  return prev !== curr
-                                }}>
-                                  {({ getFieldValue }) => {
-                                    const itemType = getFieldValue(['items', name, 'itemType']) || 'cigar'
-                                    
-                                    return itemType === 'cigar' ? (
-                          <Form.Item
-                            {...restField}
-                            name={[name, 'cigarId']}
-                                        fieldKey={fieldKey}
-                            rules={[{ required: true, message: t('inventory.pleaseSelectProduct') }]}
-                                        style={{ marginBottom: 0 }}
+                              const isLt10M = file.size / 1024 / 1024 < 10
+                              if (!isLt10M) {
+                                message.error(t('inventory.maxFileSize'))
+                                return Upload.LIST_IGNORE
+                              }
+                              return false
+                            }}
+                            onChange={async (info) => {
+                              setAttachmentFileList(info.fileList)
+
+                              const file = info.file
+                              if (file.originFileObj && file.status === undefined) {
+                                try {
+                                  const uploadResult = await cloudinaryUpload(file.originFileObj, {
+                                    folder: 'inventory_documents'
+                                  })
+
+                                  const isPDF = file.type === 'application/pdf'
+                                  const newAttachment = {
+                                    url: uploadResult.secure_url,
+                                    type: (isPDF ? 'pdf' : 'image') as 'pdf' | 'image',
+                                    filename: file.name,
+                                    uploadedAt: new Date()
+                                  }
+
+                                  setUploadedAttachments(prev => [...prev, newAttachment])
+
+                                  setAttachmentFileList(prev =>
+                                    prev.map(f =>
+                                      f.uid === file.uid
+                                        ? { ...f, status: 'done', url: uploadResult.secure_url }
+                                        : f
+                                    )
+                                  )
+
+                                  message.success(t('inventory.uploadSuccess'))
+                                } catch (error) {
+                                  message.error(t('inventory.uploadFailed'))
+                                  setAttachmentFileList(prev => prev.filter(f => f.uid !== file.uid))
+                                }
+                              }
+                            }}
+                            onRemove={(file) => {
+                              const fileUrl = file.url
+                              if (fileUrl) {
+                                setUploadedAttachments(prev => prev.filter(att => att.url !== fileUrl))
+                              }
+                            }}
+                            listType="picture"
+                            maxCount={1}
                           >
-                            <Select
-                              placeholder={t('inventory.pleaseSelectProduct')}
-                              showSearch
-                              optionFilterProp="children"
-                              filterOption={(input, option) => {
-                                const kw = (input || '').toLowerCase()
-                                const text = String((option?.children as any) || '').toLowerCase()
-                                return text.includes(kw)
-                              }}
-                            >
-                              {groupedCigars.map(group => (
-                                <Select.OptGroup key={group.brand} label={group.brand}>
-                                  {group.list.map(i => (
-                                    <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（{t('inventory.stock')}：{getComputedStock(i.id)}）</Option>
-                                  ))}
-                                </Select.OptGroup>
-                              ))}
-                            </Select>
-                          </Form.Item>
-                                    ) : (
+                            <Button icon={<UploadOutlined />} loading={uploadingFile}>
+                              {t('inventory.uploadOrderDocument')}
+                            </Button>
+                          </Upload>
+                          <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 4 }}>
+                            {t('inventory.supportedFormats')} · {t('inventory.maxFileSize')}
+                          </div>
+                        </Form.Item>
+                      </Col>
+                    </Row>
+
+                    <Form.List name="items" initialValue={[{ itemType: 'cigar', cigarId: undefined, quantity: 1 }]}>
+                      {(fields, { add, remove }) => (
+                        <div>
+                          {fields.map((field) => {
+                            const { key, name, fieldKey, ...restField } = field
+                            return (
+                              <div key={key} style={{
+                                marginBottom: 12,
+                                padding: 10,
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                borderRadius: 8,
+                                background: 'rgba(0, 0, 0, 0.2)'
+                              }}>
+                                {/* 电脑端：一行显示所有字段 */}
+                                {!isMobile ? (
+                                  <Row gutter={12} align="middle">
+                                    <Col flex="100px">
                                       <Form.Item
                                         {...restField}
-                                        name={[name, 'customName']}
+                                        name={[name, 'itemType']}
                                         fieldKey={fieldKey}
-                                        rules={[{ required: true, message: t('inventory.itemNameRequired') }]}
+                                        initialValue="cigar"
                                         style={{ marginBottom: 0 }}
                                       >
-                                        <Input placeholder={t('inventory.itemNamePlaceholder')} />
+                                        <Select
+                                          placeholder={t('inventory.selectItemType')}
+                                          onChange={() => {
+                                            const currentValues = inForm.getFieldValue('items')
+                                            if (currentValues && currentValues[name]) {
+                                              currentValues[name].cigarId = undefined
+                                              currentValues[name].customName = undefined
+                                              inForm.setFieldsValue({ items: currentValues })
+                                            }
+                                          }}
+                                        >
+                                          <Option value="cigar">{t('inventory.itemTypeCigar')}</Option>
+                                          <Option value="activity">{t('inventory.itemTypeActivity')}</Option>
+                                          <Option value="gift">{t('inventory.itemTypeGift')}</Option>
+                                          <Option value="service">💼 {t('inventory.itemTypeService')}</Option>
+                                          <Option value="other">📦 {t('inventory.itemTypeOther')}</Option>
+                                        </Select>
                                       </Form.Item>
-                                    )
-                                  }}
-                                </Form.Item>
-                              </Col>
-                              
-                              <Col flex="80px">
-                          <Form.Item
-                            {...restField}
-                            name={[name, 'quantity']}
-                                  fieldKey={fieldKey}
-                            rules={[{ required: true, message: t('inventory.pleaseInputQuantity') }]}
-                                  style={{ marginBottom: 0 }}
-                          >
-                                  <InputNumber min={1} placeholder={t('inventory.quantity')} style={{ width: '100%' }} />
-                          </Form.Item>
-                              </Col>
-                              
-                              <Col flex="100px">
-                          <Form.Item
-                            {...restField}
-                            name={[name, 'unitPrice']}
-                                  fieldKey={fieldKey}
-                                  style={{ marginBottom: 0 }}
-                          >
-                                  <InputNumber min={0} step={0.01} placeholder={t('inventory.price')} style={{ width: '100%' }} />
-                          </Form.Item>
-                              </Col>
-                              
-                              <Col flex="60px">
-                          {fields.length > 1 && (
-                                  <Button
-                                    type="link"
-                                    danger
-                                    size="small"
-                                    icon={<MinusCircleOutlined />}
-                                    onClick={() => remove(name)}
-                                    style={{ padding: 0 }}
-                                  >
-                                    删除
-                                  </Button>
-                          )}
-                              </Col>
-                            </Row>
-                          ) : (
-                            <>
-                              {/* 移动端：保持两行布局 */}
-                              <Row gutter={12} style={{ marginBottom: 8 }}>
-                                <Col flex="140px">
-                                  <Form.Item
-                                    {...restField}
-                                    name={[name, 'itemType']}
-                                    fieldKey={fieldKey}
-                                    initialValue="cigar"
-                                    style={{ marginBottom: 0 }}
-                                  >
-                                    <Select 
-                                      placeholder={t('inventory.selectItemType')}
-                                      onChange={() => {
-                                        const currentValues = inForm.getFieldValue('items')
-                                        if (currentValues && currentValues[name]) {
-                                          currentValues[name].cigarId = undefined
-                                          currentValues[name].customName = undefined
-                                          inForm.setFieldsValue({ items: currentValues })
-                                        }
-                                      }}
-                                    >
-                                      <Option value="cigar">🎯 {t('inventory.itemTypeCigar')}</Option>
-                                      <Option value="activity">🎪 {t('inventory.itemTypeActivity')}</Option>
-                                      <Option value="gift">🎁 {t('inventory.itemTypeGift')}</Option>
-                                      <Option value="service">💼 {t('inventory.itemTypeService')}</Option>
-                                      <Option value="other">📦 {t('inventory.itemTypeOther')}</Option>
-                                    </Select>
-                                  </Form.Item>
-                                </Col>
-                                
-                                <Col flex="auto">
-                                  <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => {
-                                    const prev = prevValues.items?.[name]?.itemType
-                                    const curr = currentValues.items?.[name]?.itemType
-                                    return prev !== curr
-                                  }}>
-                                    {({ getFieldValue }) => {
-                                      const itemType = getFieldValue(['items', name, 'itemType']) || 'cigar'
-                                      
-                                      return itemType === 'cigar' ? (
+                                    </Col>
+
+                                    <Col flex="200px">
+                                      <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => {
+                                        const prev = prevValues.items?.[name]?.itemType
+                                        const curr = currentValues.items?.[name]?.itemType
+                                        return prev !== curr
+                                      }}>
+                                        {({ getFieldValue }) => {
+                                          const itemType = getFieldValue(['items', name, 'itemType']) || 'cigar'
+
+                                          return itemType === 'cigar' ? (
+                                            <Form.Item
+                                              {...restField}
+                                              name={[name, 'cigarId']}
+                                              fieldKey={fieldKey}
+                                              rules={[{ required: true, message: t('inventory.pleaseSelectProduct') }]}
+                                              style={{ marginBottom: 0 }}
+                                            >
+                                              <Select
+                                                placeholder={t('inventory.pleaseSelectProduct')}
+                                                showSearch
+                                                optionFilterProp="children"
+                                                filterOption={(input, option) => {
+                                                  const kw = (input || '').toLowerCase()
+                                                  const text = String((option?.children as any) || '').toLowerCase()
+                                                  return text.includes(kw)
+                                                }}
+                                              >
+                                                {groupedCigars.map(group => (
+                                                  <Select.OptGroup key={group.brand} label={group.brand}>
+                                                    {group.list.map(i => (
+                                                      <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（{t('inventory.stock')}：{getComputedStock(i.id)}）</Option>
+                                                    ))}
+                                                  </Select.OptGroup>
+                                                ))}
+                                              </Select>
+                                            </Form.Item>
+                                          ) : (
+                                            <Form.Item
+                                              {...restField}
+                                              name={[name, 'customName']}
+                                              fieldKey={fieldKey}
+                                              rules={[{ required: true, message: t('inventory.itemNameRequired') }]}
+                                              style={{ marginBottom: 0 }}
+                                            >
+                                              <Input placeholder={t('inventory.itemNamePlaceholder')} />
+                                            </Form.Item>
+                                          )
+                                        }}
+                                      </Form.Item>
+                                    </Col>
+
+                                    <Col flex="80px">
+                                      <Form.Item
+                                        {...restField}
+                                        name={[name, 'quantity']}
+                                        fieldKey={fieldKey}
+                                        rules={[{ required: true, message: t('inventory.pleaseInputQuantity') }]}
+                                        style={{ marginBottom: 0 }}
+                                      >
+                                        <InputNumber min={1} placeholder={t('inventory.quantity')} style={{ width: '100%' }} />
+                                      </Form.Item>
+                                    </Col>
+
+                                    <Col flex="100px">
+                                      <Form.Item
+                                        {...restField}
+                                        name={[name, 'unitPrice']}
+                                        fieldKey={fieldKey}
+                                        style={{ marginBottom: 0 }}
+                                      >
+                                        <InputNumber min={0} step={0.01} placeholder={t('inventory.price')} style={{ width: '100%' }} />
+                                      </Form.Item>
+                                    </Col>
+
+                                    <Col flex="60px">
+                                      {fields.length > 1 && (
+                                        <Button
+                                          type="link"
+                                          danger
+                                          size="small"
+                                          icon={<MinusCircleOutlined />}
+                                          onClick={() => remove(name)}
+                                          style={{ padding: 0 }}
+                                        >
+                                          删除
+                                        </Button>
+                                      )}
+                                    </Col>
+                                  </Row>
+                                ) : (
+                                  <>
+                                    {/* 移动端：保持两行布局 */}
+                                    <Row gutter={12} style={{ marginBottom: 8 }}>
+                                      <Col flex="140px">
                                         <Form.Item
                                           {...restField}
-                                          name={[name, 'cigarId']}
+                                          name={[name, 'itemType']}
                                           fieldKey={fieldKey}
-                                          rules={[{ required: true, message: t('inventory.pleaseSelectProduct') }]}
+                                          initialValue="cigar"
                                           style={{ marginBottom: 0 }}
                                         >
                                           <Select
-                                            placeholder={t('inventory.pleaseSelectProduct')}
-                                            showSearch
-                                            optionFilterProp="children"
-                                            filterOption={(input, option) => {
-                                              const kw = (input || '').toLowerCase()
-                                              const text = String((option?.children as any) || '').toLowerCase()
-                                              return text.includes(kw)
+                                            placeholder={t('inventory.selectItemType')}
+                                            onChange={() => {
+                                              const currentValues = inForm.getFieldValue('items')
+                                              if (currentValues && currentValues[name]) {
+                                                currentValues[name].cigarId = undefined
+                                                currentValues[name].customName = undefined
+                                                inForm.setFieldsValue({ items: currentValues })
+                                              }
                                             }}
                                           >
-                                            {groupedCigars.map(group => (
-                                              <Select.OptGroup key={group.brand} label={group.brand}>
-                                                {group.list.map(i => (
-                                                  <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（{t('inventory.stock')}：{getComputedStock(i.id)}）</Option>
-                                                ))}
-                                              </Select.OptGroup>
-                                            ))}
+                                            <Option value="cigar">🎯 {t('inventory.itemTypeCigar')}</Option>
+                                            <Option value="activity">🎪 {t('inventory.itemTypeActivity')}</Option>
+                                            <Option value="gift">🎁 {t('inventory.itemTypeGift')}</Option>
+                                            <Option value="service">💼 {t('inventory.itemTypeService')}</Option>
+                                            <Option value="other">📦 {t('inventory.itemTypeOther')}</Option>
                                           </Select>
                                         </Form.Item>
-                                      ) : (
+                                      </Col>
+
+                                      <Col flex="auto">
+                                        <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => {
+                                          const prev = prevValues.items?.[name]?.itemType
+                                          const curr = currentValues.items?.[name]?.itemType
+                                          return prev !== curr
+                                        }}>
+                                          {({ getFieldValue }) => {
+                                            const itemType = getFieldValue(['items', name, 'itemType']) || 'cigar'
+
+                                            return itemType === 'cigar' ? (
+                                              <Form.Item
+                                                {...restField}
+                                                name={[name, 'cigarId']}
+                                                fieldKey={fieldKey}
+                                                rules={[{ required: true, message: t('inventory.pleaseSelectProduct') }]}
+                                                style={{ marginBottom: 0 }}
+                                              >
+                                                <Select
+                                                  placeholder={t('inventory.pleaseSelectProduct')}
+                                                  showSearch
+                                                  optionFilterProp="children"
+                                                  filterOption={(input, option) => {
+                                                    const kw = (input || '').toLowerCase()
+                                                    const text = String((option?.children as any) || '').toLowerCase()
+                                                    return text.includes(kw)
+                                                  }}
+                                                >
+                                                  {groupedCigars.map(group => (
+                                                    <Select.OptGroup key={group.brand} label={group.brand}>
+                                                      {group.list.map(i => (
+                                                        <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（{t('inventory.stock')}：{getComputedStock(i.id)}）</Option>
+                                                      ))}
+                                                    </Select.OptGroup>
+                                                  ))}
+                                                </Select>
+                                              </Form.Item>
+                                            ) : (
+                                              <Form.Item
+                                                {...restField}
+                                                name={[name, 'customName']}
+                                                fieldKey={fieldKey}
+                                                rules={[{ required: true, message: t('inventory.itemNameRequired') }]}
+                                                style={{ marginBottom: 0 }}
+                                              >
+                                                <Input placeholder={t('inventory.itemNamePlaceholder')} />
+                                              </Form.Item>
+                                            )
+                                          }}
+                                        </Form.Item>
+                                      </Col>
+                                    </Row>
+
+                                    <Row gutter={12} align="middle">
+                                      <Col flex="100px">
                                         <Form.Item
                                           {...restField}
-                                          name={[name, 'customName']}
+                                          name={[name, 'quantity']}
                                           fieldKey={fieldKey}
-                                          rules={[{ required: true, message: t('inventory.itemNameRequired') }]}
+                                          rules={[{ required: true, message: t('inventory.pleaseInputQuantity') }]}
                                           style={{ marginBottom: 0 }}
                                         >
-                                          <Input placeholder={t('inventory.itemNamePlaceholder')} />
+                                          <InputNumber min={1} placeholder={t('inventory.quantity')} style={{ width: '100%' }} />
                                         </Form.Item>
-                                      )
-                                    }}
-                                  </Form.Item>
-                                </Col>
-                              </Row>
-                              
-                              <Row gutter={12} align="middle">
-                                <Col flex="100px">
-                                  <Form.Item
-                                    {...restField}
-                                    name={[name, 'quantity']}
-                                    fieldKey={fieldKey}
-                                    rules={[{ required: true, message: t('inventory.pleaseInputQuantity') }]}
-                                    style={{ marginBottom: 0 }}
-                                  >
-                                    <InputNumber min={1} placeholder={t('inventory.quantity')} style={{ width: '100%' }} />
-                                  </Form.Item>
-                                </Col>
-                                <Col flex="120px">
-                                  <Form.Item
-                                    {...restField}
-                                    name={[name, 'unitPrice']}
-                                    fieldKey={fieldKey}
-                                    style={{ marginBottom: 0 }}
-                                  >
-                                    <InputNumber min={0} step={0.01} placeholder={t('inventory.price')} style={{ width: '100%' }} />
-                                  </Form.Item>
-                                </Col>
-                                <Col flex="auto">
-                                  {fields.length > 1 && (
-                                    <Button
-                                      type="link"
-                                      danger
-                                      size="small"
-                                      icon={<MinusCircleOutlined />}
-                                      onClick={() => remove(name)}
-                                    >
-                                      删除
-                                    </Button>
-                                  )}
-                                </Col>
-                              </Row>
-                            </>
-                          )}
+                                      </Col>
+                                      <Col flex="120px">
+                                        <Form.Item
+                                          {...restField}
+                                          name={[name, 'unitPrice']}
+                                          fieldKey={fieldKey}
+                                          style={{ marginBottom: 0 }}
+                                        >
+                                          <InputNumber min={0} step={0.01} placeholder={t('inventory.price')} style={{ width: '100%' }} />
+                                        </Form.Item>
+                                      </Col>
+                                      <Col flex="auto">
+                                        {fields.length > 1 && (
+                                          <Button
+                                            type="link"
+                                            danger
+                                            size="small"
+                                            icon={<MinusCircleOutlined />}
+                                            onClick={() => remove(name)}
+                                          >
+                                            删除
+                                          </Button>
+                                        )}
+                                      </Col>
+                                    </Row>
+                                  </>
+                                )}
+                              </div>
+                            )
+                          })}
+                          <Form.Item style={{ marginBottom: 0 }}>
+                            <Button type="dashed" onClick={() => add({ itemType: 'cigar', quantity: 1 })} icon={<PlusOutlined />} style={{ width: '100%' }}>
+                              {t('inventory.addDetail')}
+                            </Button>
+                          </Form.Item>
                         </div>
-                        )
-                      })}
-                      <Form.Item style={{ marginBottom: 0 }}>
-                        <Button type="dashed" onClick={() => add({ itemType: 'cigar', quantity: 1 })} icon={<PlusOutlined />} style={{ width: '100%' }}>
-                          {t('inventory.addDetail')}
+                      )}
+                    </Form.List>
+
+                    <Form.Item style={{ marginTop: 16, marginBottom: 0 }}>
+                      <Space>
+                        <Button onClick={() => {
+                          setInModalOpen(false)
+                          setEditingOrder(null)
+                          inForm.resetFields()
+                          setAttachmentFileList([])
+                          setUploadedAttachments([])
+                        }}>{t('common.cancel')}</Button>
+                        <Button type="primary" htmlType="submit" loading={loading}>
+                          {editingOrder ? "保存修改" : t('inventory.confirmInStock')}
                         </Button>
-                      </Form.Item>
-                    </div>
-                  )}
-                </Form.List>
-                
-                <Form.Item style={{ marginTop: 16, marginBottom: 0 }}>
-                  <Space>
-                    <Button onClick={() => {
-                      setInModalOpen(false)
-                      setEditingOrder(null)
-                      inForm.resetFields()
-                      setAttachmentFileList([])
-                      setUploadedAttachments([])
-                    }}>{t('common.cancel')}</Button>
-                    <Button type="primary" htmlType="submit" loading={loading}>
-                      {editingOrder ? "保存修改" : t('inventory.confirmInStock')}
-                    </Button>
-                  </Space>
-                </Form.Item>
-                </div>
-              </Form>
+                      </Space>
+                    </Form.Item>
+                  </div>
+                </Form>
               </Modal>
               {/* 入库列表（滚动容器） */}
               <div
@@ -2793,469 +2795,468 @@ const AdminInventory: React.FC = () => {
                   paddingBottom: 84
                 }}
               >
-              {!isMobile ? (
-              <div className="points-config-form">
-              <Table
-                  style={{ marginTop: 1, background: 'transparent' }}
-                title={() => t('inventory.inStockRecord')}
-                  dataSource={inLogsGroupedByReference}
-                  rowKey={(record) => record.id || `ref-${record.referenceNo}` || 'no-ref'}
-                  pagination={{ 
-                    pageSize: inPageSize,
-                    showSizeChanger: true,
-                    showQuickJumper: false,
-                    pageSizeOptions: ['5','10','20','50'],
-                    onChange: (_page, size) => {
-                      const next = size || inPageSize
-                      setInPageSize(next)
-                      try { localStorage.setItem('inventory_in_page_size', String(next)) } catch {}
-                    }
-                  }}
-                  expandable={{
-                    expandedRowKeys: inLogsExpandedKeys,
-                    onExpandedRowsChange: (keys) => setInLogsExpandedKeys([...keys]),
-                    expandedRowRender: (record: any) => (
-                      <div className="points-config-form">
-                      <Table
-                        dataSource={record.logs}
-                        rowKey="id"
-                        pagination={false}
-                        size="small"
-                        showHeader={true}
-                          style={{ marginLeft: 20, background: 'transparent' }}
-                        columns={[
-                          { 
-                            title: t('inventory.product'), 
-                            dataIndex: 'cigarId', 
-                            key: 'cigarId', 
-                            render: (id: string, rec: any) => {
-                              const cigar = items.find(i => i.id === id)
-                              const itemType = rec.itemType || 'cigar'
-                              const itemTypeIcons: { [key: string]: string } = {
-                                'cigar': '',
-                                'activity': '',
-                                'gift': '',
-                                'service': '',
-                                'other': ''
-                              }
-                              const itemTypeColors: { [key: string]: string } = {
-                                'cigar': '#52c41a',
-                                'activity': '#722ed1',
-                                'gift': '#faad14',
-                                'service': '#1890ff',
-                                'other': '#8c8c8c'
-                              }
-                              const icon = itemTypeIcons[itemType] || ''
-                              const color = itemTypeColors[itemType] || '#52c41a'
-                              const displayName = rec.cigarName || cigar?.name || id
-                              
-                              return (
-                                <span>
-                                  <span style={{ marginRight: 8 }}>{icon}</span>
-                                  <span style={{ color: itemType !== 'cigar' ? color : undefined }}>
-                                    {displayName}
-                                  </span>
-                                </span>
-                              )
-                            }
-                          },
-                          { 
-                            title: t('inventory.quantity'), 
-                            dataIndex: 'quantity', 
-                            key: 'quantity',
-                            render: (qty: number) => (
-                              <span style={{ color: '#52c41a', fontWeight: 600 }}>+{qty}</span>
-                            )
-                          },
-                          { 
-                            title: t('inventory.unitPrice'), 
-                            dataIndex: 'unitPrice', 
-                            key: 'unitPrice',
-                            render: (price: number) => price ? `RM ${price.toFixed(2)}` : '-'
-                          },
-                          { 
-                            title: t('inventory.totalValue'), 
-                            key: 'totalValue',
-                            render: (_: any, rec: any) => {
-                              const val = Number(rec.quantity || 0) * Number(rec.unitPrice || 0)
-                              return val > 0 ? `RM ${val.toFixed(2)}` : '-'
-                            }
-                          },
-                          { 
-                            title: t('inventory.time'), 
-                            dataIndex: 'createdAt', 
-                            key: 'createdAt', 
-                            render: (v: any) => {
-                              const d = toDateSafe(v)
-                              return d ? d.toLocaleString('zh-CN', { 
-                                month: '2-digit', 
-                                day: '2-digit', 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
-                              }) : '-'
-                            }
-                          },
-                          {
-                            title: t('inventory.attachments'),
-                            key: 'attachments',
-                            width: 120,
-                            render: (_: any, rec: any) => {
-                              const attachments = rec.attachments || []
-                              if (attachments.length === 0) {
-                                return <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>-</span>
-                              }
-                              return (
-                                <Space size="small">
-                                  {attachments.map((att: any, idx: number) => {
-                                    const isPDF = att.type === 'pdf'
+                {!isMobile ? (
+                  <div className="points-config-form">
+                    <Table
+                      style={{ marginTop: 1, background: 'transparent' }}
+                      dataSource={inLogsGroupedByReference}
+                      rowKey={(record) => record.id || `ref-${record.referenceNo}` || 'no-ref'}
+                      pagination={{
+                        pageSize: inPageSize,
+                        showSizeChanger: true,
+                        showQuickJumper: false,
+                        pageSizeOptions: ['5', '10', '20', '50'],
+                        onChange: (_page, size) => {
+                          const next = size || inPageSize
+                          setInPageSize(next)
+                          try { localStorage.setItem('inventory_in_page_size', String(next)) } catch { }
+                        }
+                      }}
+                      expandable={{
+                        expandedRowKeys: inLogsExpandedKeys,
+                        onExpandedRowsChange: (keys) => setInLogsExpandedKeys([...keys]),
+                        expandedRowRender: (record: any) => (
+                          <div className="points-config-form">
+                            <Table
+                              dataSource={record.logs}
+                              rowKey="id"
+                              pagination={false}
+                              size="small"
+                              showHeader={true}
+                              style={{ marginLeft: 20, background: 'transparent' }}
+                              columns={[
+                                {
+                                  title: t('inventory.product'),
+                                  dataIndex: 'cigarId',
+                                  key: 'cigarId',
+                                  render: (id: string, rec: any) => {
+                                    const cigar = items.find(i => i.id === id)
+                                    const itemType = rec.itemType || 'cigar'
+                                    const itemTypeIcons: { [key: string]: string } = {
+                                      'cigar': '',
+                                      'activity': '',
+                                      'gift': '',
+                                      'service': '',
+                                      'other': ''
+                                    }
+                                    const itemTypeColors: { [key: string]: string } = {
+                                      'cigar': '#52c41a',
+                                      'activity': '#722ed1',
+                                      'gift': '#faad14',
+                                      'service': '#1890ff',
+                                      'other': '#8c8c8c'
+                                    }
+                                    const icon = itemTypeIcons[itemType] || ''
+                                    const color = itemTypeColors[itemType] || '#52c41a'
+                                    const displayName = rec.cigarName || cigar?.name || id
+
                                     return (
-                                      <Button
-                                        key={idx}
-                                        type="link"
-                                        size="small"
-                                        icon={isPDF ? <FilePdfOutlined /> : <FileImageOutlined />}
-                                        onClick={() => window.open(att.url, '_blank')}
-                                        title={att.filename}
-                                      >
-                                        {isPDF ? 'PDF' : t('common.image')}
-                                      </Button>
+                                      <span>
+                                        <span style={{ marginRight: 8 }}>{icon}</span>
+                                        <span style={{ color: itemType !== 'cigar' ? color : undefined }}>
+                                          {displayName}
+                                        </span>
+                                      </span>
                                     )
-                                  })}
-                                </Space>
+                                  }
+                                },
+                                {
+                                  title: t('inventory.quantity'),
+                                  dataIndex: 'quantity',
+                                  key: 'quantity',
+                                  render: (qty: number) => (
+                                    <span style={{ color: '#52c41a', fontWeight: 600 }}>+{qty}</span>
+                                  )
+                                },
+                                {
+                                  title: t('inventory.unitPrice'),
+                                  dataIndex: 'unitPrice',
+                                  key: 'unitPrice',
+                                  render: (price: number) => price ? `RM ${price.toFixed(2)}` : '-'
+                                },
+                                {
+                                  title: t('inventory.totalValue'),
+                                  key: 'totalValue',
+                                  render: (_: any, rec: any) => {
+                                    const val = Number(rec.quantity || 0) * Number(rec.unitPrice || 0)
+                                    return val > 0 ? `RM ${val.toFixed(2)}` : '-'
+                                  }
+                                },
+                                {
+                                  title: t('inventory.time'),
+                                  dataIndex: 'createdAt',
+                                  key: 'createdAt',
+                                  render: (v: any) => {
+                                    const d = toDateSafe(v)
+                                    return d ? d.toLocaleString('zh-CN', {
+                                      month: '2-digit',
+                                      day: '2-digit',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    }) : '-'
+                                  }
+                                },
+                                {
+                                  title: t('inventory.attachments'),
+                                  key: 'attachments',
+                                  width: 120,
+                                  render: (_: any, rec: any) => {
+                                    const attachments = rec.attachments || []
+                                    if (attachments.length === 0) {
+                                      return <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>-</span>
+                                    }
+                                    return (
+                                      <Space size="small">
+                                        {attachments.map((att: any, idx: number) => {
+                                          const isPDF = att.type === 'pdf'
+                                          return (
+                                            <Button
+                                              key={idx}
+                                              type="link"
+                                              size="small"
+                                              icon={isPDF ? <FilePdfOutlined /> : <FileImageOutlined />}
+                                              onClick={() => window.open(att.url, '_blank')}
+                                              title={att.filename}
+                                            >
+                                              {isPDF ? 'PDF' : t('common.image')}
+                                            </Button>
+                                          )
+                                        })}
+                                      </Space>
+                                    )
+                                  }
+                                },
+                                // ✅ 新架构：移除产品级别的编辑/删除（订单应不可变）
+                                // 如需修改，请使用"取消订单"或"创建反向订单"
+                              ]}
+                            />
+                          </div>
+                        ),
+                        columnWidth: 60,
+                        columnTitle: (
+                          <div style={{ display: 'flex', justifyContent: 'center' }}>
+                            <button
+                              onClick={() => {
+                                if (inLogsExpandedKeys.length > 0) {
+                                  setInLogsExpandedKeys([])
+                                } else {
+                                  setInLogsExpandedKeys(inLogsGroupedByReference.map(g => g.id || `ref-${g.referenceNo}` || 'no-ref'))
+                                }
+                              }}
+                              style={{
+                                padding: '2px 8px',
+                                fontSize: 12,
+                                background: 'rgba(244, 175, 37, 0.1)',
+                                border: '1px solid rgba(244, 175, 37, 0.6)',
+                                borderRadius: 4,
+                                color: '#f4af25',
+                                cursor: 'pointer',
+                                fontWeight: 600
+                              }}
+                            >
+                              {inLogsExpandedKeys.length > 0 ? t('inventory.collapseAll') : t('inventory.expandAll')}
+                            </button>
+                          </div>
+                        )
+                      }}
+                      columns={[
+                        {
+                          title: t('inventory.referenceNo'),
+                          dataIndex: 'referenceNo',
+                          key: 'referenceNo',
+                          render: (refNo: string) => (
+                            <span style={{
+                              fontFamily: 'monospace',
+                              fontWeight: 600,
+                              color: refNo === t('inventory.unassignedReference') ? 'rgba(255, 255, 255, 0.6)' : '#1890ff'
+                            }}>
+                              {refNo}
+                            </span>
+                          )
+                        },
+                        {
+                          title: t('inventory.time'),
+                          dataIndex: 'date',
+                          key: 'date',
+                          render: (date: Date | null) => formatYMD(date),
+                          sorter: (a: any, b: any) => {
+                            const dateA = a.date?.getTime() || 0;
+                            const dateB = b.date?.getTime() || 0;
+                            return dateA - dateB;
+                          }
+                        },
+                        {
+                          title: t('inventory.totalQuantity'),
+                          dataIndex: 'totalQuantity',
+                          key: 'totalQuantity',
+                          render: (qty: number) => (
+                            <span style={{ color: '#52c41a', fontWeight: 600 }}>+{qty}</span>
+                          )
+                        },
+                        {
+                          title: t('inventory.totalValue'),
+                          dataIndex: 'totalValue',
+                          key: 'totalValue',
+                          render: (val: number) => val > 0 ? `RM ${val.toFixed(2)}` : '-'
+                        },
+                        {
+                          title: t('inventory.reason'),
+                          dataIndex: 'reason',
+                          key: 'reason',
+                          render: (reason: string) => reason || '-'
+                        },
+                        {
+                          title: t('common.status'),
+                          key: 'orderStatus',
+                          width: 100,
+                          render: (_: any, group: any) => {
+                            const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
+                            if (!order) return null
+
+                            if (order.status === 'completed') {
+                              return <Tag color="success">✓ {t('common.completed')}</Tag>
+                            } else if (order.status === 'cancelled') {
+                              return <Tag color="error">✕ {t('common.cancelled')}</Tag>
+                            } else if (order.status === 'pending') {
+                              return <Tag color="warning">⏳ {t('common.pending')}</Tag>
+                            }
+                            return null
+                          }
+                        },
+                        {
+                          title: t('inventory.paymentStatus'),
+                          key: 'paymentStatus',
+                          width: 120,
+                          render: (_: any, group: any) => {
+                            const status = getInboundReferenceMatchStatus(group.referenceNo)
+
+                            if (status.status === 'none' || status.total === 0) {
+                              return <Tag color="default">{t('inventory.unpaid')}</Tag>
+                            } else if (status.status === 'fully') {
+                              return (
+                                <Tag color="success">
+                                  ✓ {t('inventory.fullyPaid')}
+                                </Tag>
+                              )
+                            } else if (status.status === 'partial') {
+                              return (
+                                <Tag color="warning">
+                                  {t('inventory.partiallyPaid')} ({Math.round((status.matched / status.total) * 100)}%)
+                                </Tag>
                               )
                             }
-                          },
-                          // ✅ 新架构：移除产品级别的编辑/删除（订单应不可变）
-                          // 如需修改，请使用"取消订单"或"创建反向订单"
-                        ]}
-                      />
-                      </div>
-                    ),
-                    columnWidth: 60,
-                    columnTitle: (
-                      <div style={{ display: 'flex', justifyContent: 'center' }}>
-                        <button
-                          onClick={() => {
-                            if (inLogsExpandedKeys.length > 0) {
-                              setInLogsExpandedKeys([])
-                            } else {
-                              setInLogsExpandedKeys(inLogsGroupedByReference.map(g => g.id || `ref-${g.referenceNo}` || 'no-ref'))
-                            }
-                          }}
+                            return null
+                          }
+                        },
+                        {
+                          title: t('inventory.actions'),
+                          key: 'actions',
+                          width: 150,
+                          render: (_: any, group: any) => (
+                            <Space size="small">
+                              {/* 编辑订单 */}
+                              <Button
+                                type="link"
+                                icon={<EditOutlined />}
+                                size="small"
+                                onClick={() => {
+                                  // 使用 group.id 直接查找订单，而不是通过 referenceNo
+                                  const order = inboundOrders.find(o => o.id === group.id)
+
+                                  if (order) {
+                                    setEditingOrder(order)
+                                    orderEditForm.setFieldsValue({
+                                      referenceNo: order.referenceNo,
+                                      reason: order.reason,
+                                      items: order.items
+                                    })
+                                  } else {
+                                    message.error('订单未找到')
+                                  }
+                                }}
+                              >
+                                编辑
+                              </Button>
+
+                              {/* 取消订单（标记为cancelled，不删除） */}
+                              <Button
+                                type="link"
+                                size="small"
+                                style={{ color: '#faad14' }}
+                                onClick={() => {
+
+                                  Modal.confirm({
+                                    title: '取消订单',
+                                    content: (
+                                      <div>
+                                        <p>将订单 <strong>{group.referenceNo}</strong> 标记为已取消状态</p>
+                                        <p style={{ marginTop: 8, fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>• 订单数据将被保留（用于审计）</p>
+                                        <p style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>• 库存计算将忽略此订单</p>
+                                        <p style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>• 可以通过"退货"功能创建反向订单来冲销库存</p>
+                                      </div>
+                                    ),
+                                    okText: '确认取消',
+                                    cancelText: '返回',
+                                    onOk: async () => {
+                                      setLoading(true)
+                                      try {
+                                        // 使用 group.id 直接查找订单，而不是通过 referenceNo
+                                        const order = inboundOrders.find(o => o.id === group.id)
+
+                                        if (order) {
+                                          await updateInboundOrder(order.id, { status: 'cancelled' })
+                                          message.success('✅ 订单已取消')
+                                          setInboundOrders(await getAllInboundOrders())
+                                        } else {
+                                          message.error('订单未找到')
+                                        }
+                                      } catch (error: any) {
+                                        message.error('操作失败: ' + error.message)
+                                      } finally {
+                                        setLoading(false)
+                                      }
+                                    },
+                                    onCancel: () => {
+                                    }
+                                  })
+                                }}
+                              >
+                                取消
+                              </Button>
+
+                              {/* 反向订单（退货/红冲） */}
+                              <Button
+                                type="link"
+                                size="small"
+                                style={{ color: '#ff7a45' }}
+                                onClick={() => {
+
+                                  Modal.confirm({
+                                    title: '🔄 创建反向订单',
+                                    content: (
+                                      <div>
+                                        <p>将为订单 <strong>{group.referenceNo}</strong> 创建反向订单（退货）</p>
+                                        <p>• 原订单数量：<span style={{ color: '#52c41a' }}>+{group.totalQuantity}</span></p>
+                                        <p>• 反向订单数量：<span style={{ color: '#ff4d4f' }}>-{group.totalQuantity}</span></p>
+                                        <p style={{ marginTop: 12, color: '#faad14' }}>此操作将创建一个负数量的退货订单，用于冲销原订单的库存影响。</p>
+                                      </div>
+                                    ),
+                                    okText: '确认创建',
+                                    cancelText: '取消',
+                                    onOk: async () => {
+                                      setLoading(true)
+                                      try {
+                                        // 使用 group.id 直接查找订单，而不是通过 referenceNo
+                                        const order = inboundOrders.find(o => o.id === group.id)
+
+                                        if (!order) {
+                                          message.error('原订单未找到')
+                                          return
+                                        }
+
+                                        // 创建反向订单（退货）
+                                        const returnReferenceNo = `RETURN-${group.referenceNo}-${Date.now()}`
+                                        const returnOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
+                                          referenceNo: returnReferenceNo,
+                                          type: 'return',
+                                          reason: `退货冲销: ${group.referenceNo}`,
+                                          items: order.items.map(item => ({
+                                            ...item,
+                                            quantity: -item.quantity
+                                          })),
+                                          totalQuantity: -order.totalQuantity,
+                                          totalValue: -order.totalValue,
+                                          status: 'completed',
+                                          operatorId: 'system',
+                                          createdAt: new Date()
+                                        }
+
+                                        await createInboundOrder(returnOrderData)
+                                        message.success('反向订单已创建')
+                                        setInboundOrders(await getAllInboundOrders())
+                                        setInventoryMovements(await getAllInventoryMovements())
+                                      } catch (error: any) {
+                                        message.error('创建失败: ' + error.message)
+                                      } finally {
+                                        setLoading(false)
+                                      }
+                                    },
+                                    onCancel: () => {
+                                    }
+                                  })
+                                }}
+                              >
+                                🔄 退货
+                              </Button>
+
+                              {/* 删除订单 */}
+                              <Button
+                                type="link"
+                                icon={<DeleteOutlined />}
+                                size="small"
+                                danger
+                                onClick={() => {
+
+                                  // 使用受控的 Modal 替代 modal.confirm，以解决 React 19 兼容性问题
+                                  setDeleteTargetOrder({
+                                    id: group.id,
+                                    referenceNo: group.referenceNo,
+                                    productCount: group.productCount
+                                  })
+                                  setDeleteConfirmOpen(true)
+                                }}
+                              />
+                            </Space>
+                          )
+                        }
+                      ]}
+                    />
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {inLogsGroupedByReference.map((group: any) => {
+                      const isExpanded = inLogsExpandedKeys.includes(group.id || `ref-${group.referenceNo}` || 'no-ref')
+                      return (
+                        <div
+                          key={group.id || `ref-${group.referenceNo}` || 'no-ref'}
                           style={{
-                            padding: '2px 8px',
-                            fontSize: 12,
-                            background: 'rgba(244, 175, 37, 0.1)',
+                            borderRadius: 16,
+                            background: 'rgba(0, 0, 0, 0.2)',
                             border: '1px solid rgba(244, 175, 37, 0.6)',
-                            borderRadius: 4,
-                            color: '#f4af25',
-                            cursor: 'pointer',
-                            fontWeight: 600
+                            overflow: 'hidden',
+                            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.25)'
                           }}
                         >
-                          {inLogsExpandedKeys.length > 0 ? t('inventory.collapseAll') : t('inventory.expandAll')}
-                        </button>
-                      </div>
-                    )
-                  }}
-                  columns={[
-                    {
-                      title: t('inventory.referenceNo'),
-                      dataIndex: 'referenceNo',
-                      key: 'referenceNo',
-                      render: (refNo: string) => (
-                        <span style={{ 
-                          fontFamily: 'monospace', 
-                          fontWeight: 600,
-                          color: refNo === t('inventory.unassignedReference') ? 'rgba(255, 255, 255, 0.6)' : '#1890ff'
-                        }}>
-                          {refNo}
-                        </span>
-                      )
-                    },
-                    {
-                      title: t('inventory.time'),
-                      dataIndex: 'date',
-                      key: 'date',
-                      render: (date: Date | null) => formatYMD(date),
-                      sorter: (a: any, b: any) => {
-                        const dateA = a.date?.getTime() || 0;
-                        const dateB = b.date?.getTime() || 0;
-                        return dateA - dateB;
-                      }
-                    },
-                    {
-                      title: t('inventory.totalQuantity'),
-                      dataIndex: 'totalQuantity',
-                      key: 'totalQuantity',
-                      render: (qty: number) => (
-                        <span style={{ color: '#52c41a', fontWeight: 600 }}>+{qty}</span>
-                      )
-                    },
-                    {
-                      title: t('inventory.totalValue'),
-                      dataIndex: 'totalValue',
-                      key: 'totalValue',
-                      render: (val: number) => val > 0 ? `RM ${val.toFixed(2)}` : '-'
-                    },
-                    {
-                      title: t('inventory.reason'),
-                      dataIndex: 'reason',
-                      key: 'reason',
-                      render: (reason: string) => reason || '-'
-                    },
-                    {
-                      title: t('common.status'),
-                      key: 'orderStatus',
-                      width: 100,
-                      render: (_: any, group: any) => {
-                        const order = inboundOrders.find(o => o.referenceNo === group.referenceNo)
-                        if (!order) return null
-                        
-                        if (order.status === 'completed') {
-                          return <Tag color="success">✓ {t('common.completed')}</Tag>
-                        } else if (order.status === 'cancelled') {
-                          return <Tag color="error">✕ {t('common.cancelled')}</Tag>
-                        } else if (order.status === 'pending') {
-                          return <Tag color="warning">⏳ {t('common.pending')}</Tag>
-                        }
-                        return null
-                      }
-                    },
-                    {
-                      title: t('inventory.paymentStatus'),
-                      key: 'paymentStatus',
-                      width: 120,
-                      render: (_: any, group: any) => {
-                        const status = getInboundReferenceMatchStatus(group.referenceNo)
-                        
-                        if (status.status === 'none' || status.total === 0) {
-                          return <Tag color="default">{t('inventory.unpaid')}</Tag>
-                        } else if (status.status === 'fully') {
-                          return (
-                            <Tag color="success">
-                              ✓ {t('inventory.fullyPaid')}
-                            </Tag>
-                          )
-                        } else if (status.status === 'partial') {
-                          return (
-                            <Tag color="warning">
-                              {t('inventory.partiallyPaid')} ({Math.round((status.matched / status.total) * 100)}%)
-                            </Tag>
-                          )
-                        }
-                        return null
-                      }
-                    },
-                    {
-                      title: t('inventory.actions'),
-                      key: 'actions',
-                      width: 150,
-                      render: (_: any, group: any) => (
-                        <Space size="small">
-                          {/* 编辑订单 */}
-                          <Button 
-                            type="link" 
-                            icon={<EditOutlined />}
-                            size="small"
+                          {/* 单号头部 */}
+                          <div
                             onClick={() => {
-                              // 使用 group.id 直接查找订单，而不是通过 referenceNo
-                              const order = inboundOrders.find(o => o.id === group.id)
-                              
-                              if (order) {
-                                setEditingOrder(order)
-                                orderEditForm.setFieldsValue({
-                                  referenceNo: order.referenceNo,
-                                  reason: order.reason,
-                                  items: order.items
-                                })
+                              const key = group.id || `ref-${group.referenceNo}` || 'no-ref'
+                              if (isExpanded) {
+                                setInLogsExpandedKeys(prev => prev.filter(k => k !== key))
                               } else {
-                                message.error('订单未找到')
+                                setInLogsExpandedKeys(prev => [...prev, key])
                               }
                             }}
-                          >
-                            编辑
-                          </Button>
-                          
-                          {/* 取消订单（标记为cancelled，不删除） */}
-                          <Button 
-                            type="link" 
-                            size="small"
-                            style={{ color: '#faad14' }}
-                            onClick={() => {
-                              
-                              Modal.confirm({
-                                title: '取消订单',
-                                content: (
-                                  <div>
-                                    <p>将订单 <strong>{group.referenceNo}</strong> 标记为已取消状态</p>
-                                    <p style={{ marginTop: 8, fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>• 订单数据将被保留（用于审计）</p>
-                                    <p style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>• 库存计算将忽略此订单</p>
-                                    <p style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>• 可以通过"退货"功能创建反向订单来冲销库存</p>
-                                  </div>
-                                ),
-                                okText: '确认取消',
-                                cancelText: '返回',
-                                onOk: async () => {
-                                  setLoading(true)
-                                  try {
-                                    // 使用 group.id 直接查找订单，而不是通过 referenceNo
-                                    const order = inboundOrders.find(o => o.id === group.id)
-                                    
-                                    if (order) {
-                                      await updateInboundOrder(order.id, { status: 'cancelled' })
-                                      message.success('✅ 订单已取消')
-                                      setInboundOrders(await getAllInboundOrders())
-                                    } else {
-                                      message.error('订单未找到')
-                                    }
-                                  } catch (error: any) {
-                                    message.error('操作失败: ' + error.message)
-                                  } finally {
-                                    setLoading(false)
-                                  }
-                                },
-                                onCancel: () => {
-                                }
-                              })
+                            style={{
+                              padding: 12,
+                              background: 'rgba(0, 0, 0, 0.3)',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center'
                             }}
                           >
-                            取消
-                          </Button>
-                          
-                          {/* 反向订单（退货/红冲） */}
-                          <Button 
-                            type="link" 
-                            size="small"
-                            style={{ color: '#ff7a45' }}
-                            onClick={() => {
-                              
-                              Modal.confirm({
-                                title: '🔄 创建反向订单',
-                                content: (
-                                  <div>
-                                    <p>将为订单 <strong>{group.referenceNo}</strong> 创建反向订单（退货）</p>
-                                    <p>• 原订单数量：<span style={{ color: '#52c41a' }}>+{group.totalQuantity}</span></p>
-                                    <p>• 反向订单数量：<span style={{ color: '#ff4d4f' }}>-{group.totalQuantity}</span></p>
-                                    <p style={{ marginTop: 12, color: '#faad14' }}>此操作将创建一个负数量的退货订单，用于冲销原订单的库存影响。</p>
-                                  </div>
-                                ),
-                                okText: '确认创建',
-                                cancelText: '取消',
-                                onOk: async () => {
-                                  setLoading(true)
-                                  try {
-                                    // 使用 group.id 直接查找订单，而不是通过 referenceNo
-                                    const order = inboundOrders.find(o => o.id === group.id)
-                                    
-                                    if (!order) {
-                                      message.error('原订单未找到')
-                                      return
-                                    }
-                                    
-                                    // 创建反向订单（退货）
-                                    const returnReferenceNo = `RETURN-${group.referenceNo}-${Date.now()}`
-                                    const returnOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
-                                      referenceNo: returnReferenceNo,
-                                      type: 'return',
-                                      reason: `退货冲销: ${group.referenceNo}`,
-                                      items: order.items.map(item => ({
-                                        ...item,
-                                        quantity: -item.quantity
-                                      })),
-                                      totalQuantity: -order.totalQuantity,
-                                      totalValue: -order.totalValue,
-                                      status: 'completed',
-                                      operatorId: 'system',
-                                      createdAt: new Date()
-                                    }
-                                    
-                                    await createInboundOrder(returnOrderData)
-                                    message.success('反向订单已创建')
-                                    setInboundOrders(await getAllInboundOrders())
-                                    setInventoryMovements(await getAllInventoryMovements())
-                                  } catch (error: any) {
-                                    message.error('创建失败: ' + error.message)
-                                  } finally {
-                                    setLoading(false)
-                                  }
-                                },
-                                onCancel: () => {
-                                }
-                              })
-                            }}
-                          >
-                            🔄 退货
-                          </Button>
-                          
-                          {/* 删除订单 */}
-                          <Button 
-                            type="link" 
-                            icon={<DeleteOutlined />} 
-                            size="small"
-                            danger
-                            onClick={() => {
-                              
-                              // 使用受控的 Modal 替代 modal.confirm，以解决 React 19 兼容性问题
-                              setDeleteTargetOrder({
-                                id: group.id,
-                                referenceNo: group.referenceNo,
-                                productCount: group.productCount
-                              })
-                              setDeleteConfirmOpen(true)
-                            }}
-                          />
-                        </Space>
-                      )
-                    }
-                  ]}
-                />
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {inLogsGroupedByReference.map((group: any) => {
-                    const isExpanded = inLogsExpandedKeys.includes(group.id || `ref-${group.referenceNo}` || 'no-ref')
-                    return (
-                      <div 
-                        key={group.id || `ref-${group.referenceNo}` || 'no-ref'} 
-                        style={{
-                          borderRadius: 16,
-                          background: 'rgba(0, 0, 0, 0.2)',
-                          border: '1px solid rgba(244, 175, 37, 0.6)',
-                          overflow: 'hidden',
-                          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.25)'
-                        }}
-                      >
-                        {/* 单号头部 */}
-                        <div 
-                          onClick={() => {
-                            const key = group.id || `ref-${group.referenceNo}` || 'no-ref'
-                            if (isExpanded) {
-                              setInLogsExpandedKeys(prev => prev.filter(k => k !== key))
-                            } else {
-                              setInLogsExpandedKeys(prev => [...prev, key])
-                            }
-                          }}
-                          style={{
-                            padding: 12,
-                            background: 'rgba(0, 0, 0, 0.3)',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
-                          }}
-                        >
                             <div style={{ flex: 1 }}>
-                              <div style={{ 
-                        display: 'flex',
-                        alignItems: 'center',
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
                                 gap: 6,
                                 marginBottom: 4,
                                 flexWrap: 'wrap'
                               }}>
-                                <div style={{ 
-                                  fontSize: 16, 
-                                  fontWeight: 700, 
+                                <div style={{
+                                  fontSize: 16,
+                                  fontWeight: 700,
                                   color: '#fff',
                                   fontFamily: 'monospace'
                                 }}>
@@ -3344,8 +3345,8 @@ const AdminInventory: React.FC = () => {
                                   return null
                                 })()}
                               </div>
-                              <div style={{ 
-                                fontSize: 12, 
+                              <div style={{
+                                fontSize: 12,
                                 color: 'rgba(255,255,255,0.7)',
                                 marginTop: 4
                               }}>
@@ -3363,340 +3364,340 @@ const AdminInventory: React.FC = () => {
                                 })()}
                               </div>
                             </div>
-                            <div style={{ 
-                              fontSize: 20, 
-                              fontWeight: 700, 
+                            <div style={{
+                              fontSize: 20,
+                              fontWeight: 700,
                               color: '#f4af25',
                               marginLeft: 8
                             }}>
                               {isExpanded ? '▲' : '▼'}
                             </div>
                           </div>
-                        
-                        {/* 展开的产品列表 */}
-                        {isExpanded && (
-                          <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            {/* 操作按钮组 */}
-                            <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-                              {/* 编辑订单按钮 */}
-                              <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                // 使用 group.id 直接查找订单，而不是通过 referenceNo
-                                const order = inboundOrders.find(o => o.id === group.id)
-                                
-                                if (order) {
-                                  setEditingOrder(order)
-                                  orderEditForm.setFieldsValue({
-                                    referenceNo: order.referenceNo,
-                                    reason: order.reason,
-                                    items: order.items
-                                  })
-                                } else {
-                                  message.error('订单未找到')
-                                }
-                              }}
-                              style={{
-                                flex: 1,
-                                padding: '8px 12px',
-                                borderRadius: 8,
-                                background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                                color: '#111',
-                                fontSize: 12,
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                border: 'none'
-                              }}
-                            >
-                              编辑
-                            </button>
-                            
-                            {/* 取消订单按钮 */}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                
-                                Modal.confirm({
-                                  title: '取消订单',
-                                  content: (
-                                    <div>
-                                      <p>将订单 <strong>{group.referenceNo}</strong> 标记为已取消状态</p>
-                                      <p style={{ marginTop: 8, fontSize: 12, color: '#8c8c8c' }}>• 订单数据将被保留</p>
-                                      <p style={{ fontSize: 12, color: '#8c8c8c' }}>• 库存计算将忽略此订单</p>
-                                    </div>
-                                  ),
-                                  okText: '确认取消',
-                                  cancelText: '返回',
-                                  onOk: async () => {
-                                    setLoading(true)
-                                    try {
-                                      // 使用 group.id 直接查找订单，而不是通过 referenceNo
-                                      const order = inboundOrders.find(o => o.id === group.id)
-                                      
-                                      if (order) {
-                                        await updateInboundOrder(order.id, { status: 'cancelled' })
-                                        message.success('✅ 订单已取消')
-                                        setInboundOrders(await getAllInboundOrders())
-                                      } else {
-                                        message.error('订单未找到')
-                                      }
-                                    } catch (error: any) {
-                                      message.error('操作失败: ' + error.message)
-                                    } finally {
-                                      setLoading(false)
+
+                          {/* 展开的产品列表 */}
+                          {isExpanded && (
+                            <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              {/* 操作按钮组 */}
+                              <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                                {/* 编辑订单按钮 */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    // 使用 group.id 直接查找订单，而不是通过 referenceNo
+                                    const order = inboundOrders.find(o => o.id === group.id)
+
+                                    if (order) {
+                                      setEditingOrder(order)
+                                      orderEditForm.setFieldsValue({
+                                        referenceNo: order.referenceNo,
+                                        reason: order.reason,
+                                        items: order.items
+                                      })
+                                    } else {
+                                      message.error('订单未找到')
                                     }
-                                  },
-                                  onCancel: () => {
-                                  }
-                                })
-                              }}
-                              style={{
-                                flex: 1,
-                                padding: '8px 12px',
-                                borderRadius: 8,
-                                background: 'rgba(255, 255, 255, 0.1)',
-                                color: '#faad14',
-                                fontSize: 12,
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                border: '1px solid rgba(255, 255, 255, 0.2)'
-                              }}
-                            >
-                              取消
-                            </button>
-                            
-                            {/* 退货按钮 */}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                
-                                Modal.confirm({
-                                  title: '🔄 创建反向订单',
-                                  content: (
-                                    <div>
-                                      <p>将为订单 <strong>{group.referenceNo}</strong> 创建反向订单（退货）</p>
-                                      <p>• 原订单数量：<span style={{ color: '#52c41a' }}>+{group.totalQuantity}</span></p>
-                                      <p>• 反向订单数量：<span style={{ color: '#ff4d4f' }}>-{group.totalQuantity}</span></p>
-                                      <p style={{ marginTop: 12, color: '#faad14', fontSize: 12 }}>⚠️ 此操作将创建一个负数量的退货订单，用于冲销原订单的库存影响。</p>
-                                    </div>
-                                  ),
-                                  okText: '确认创建',
-                                  cancelText: '取消',
-                                  onOk: async () => {
-                                    setLoading(true)
-                                    try {
-                                      // 使用 group.id 直接查找订单，而不是通过 referenceNo
-                                      const order = inboundOrders.find(o => o.id === group.id)
-                                      
-                                      if (!order) {
-                                        message.error('原订单未找到')
-                                        return
-                                      }
-                                      
-                                      const returnReferenceNo = `RETURN-${group.referenceNo}-${Date.now()}`
-                                      const returnOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
-                                        referenceNo: returnReferenceNo,
-                                        type: 'return',
-                                        reason: `退货冲销: ${group.referenceNo}`,
-                                        items: order.items.map(item => ({
-                                          ...item,
-                                          quantity: -item.quantity
-                                        })),
-                                        totalQuantity: -order.totalQuantity,
-                                        totalValue: -order.totalValue,
-                                        status: 'completed',
-                                        operatorId: 'system',
-                                        createdAt: new Date()
-                                      }
-                                      
-                                      await createInboundOrder(returnOrderData)
-                                      message.success('反向订单已创建')
-                                      setInboundOrders(await getAllInboundOrders())
-                                      setInventoryMovements(await getAllInventoryMovements())
-                                    } catch (error: any) {
-                                      message.error('创建失败: ' + error.message)
-                                    } finally {
-                                      setLoading(false)
-                                    }
-                                  },
-                                  onCancel: () => {
-                                  }
-                                })
-                              }}
-                              style={{
-                                flex: 1,
-                                padding: '8px 12px',
-                                borderRadius: 8,
-                                background: 'rgba(255, 255, 255, 0.1)',
-                                color: '#ff7a45',
-                                fontSize: 12,
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                border: '1px solid rgba(255, 255, 255, 0.2)'
-                              }}
-                            >
-                              🔄 退货
-                            </button>
-                            
-                            {/* 删除订单按钮 */}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                
-                                // 使用受控的 Modal 替代 modal.confirm，以解决 React 19 兼容性问题
-                                setDeleteTargetOrder({
-                                  id: group.id,
-                                  referenceNo: group.referenceNo,
-                                  productCount: group.productCount
-                                })
-                                setDeleteConfirmOpen(true)
-                              }}
-                              style={{
-                                flex: 1,
-                                padding: '8px 12px',
-                                borderRadius: 8,
-                                background: 'rgba(255, 255, 255, 0.1)',
-                                color: '#ff4d4f',
-                                fontSize: 12,
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                border: '1px solid rgba(255, 255, 255, 0.2)'
-                              }}
-                            >
-                              删除
-                            </button>
-                            </div>
-                            {group.logs.map((log: any) => {
-                    const cigar = items.find(i => i.id === log.cigarId)
-                              const itemValue = Number(log.quantity || 0) * Number(log.unitPrice || 0)
-                    return (
-                                <div 
-                                  key={log.id}
+                                  }}
                                   style={{
-                                    display: 'flex',
-                                    alignItems: 'flex-start',
-                                    gap: 12,
-                        padding: 12,
-                                    background: 'rgba(255,255,255,0.03)',
-                                    borderRadius: 12,
-                                    border: '1px solid rgba(255, 255, 255, 0.1)'
+                                    flex: 1,
+                                    padding: '8px 12px',
+                                    borderRadius: 8,
+                                    background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                                    color: '#111',
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    border: 'none'
                                   }}
                                 >
-                                  {/* 左侧图片占位 */}
-                                  <div style={{
-                                    width: 80,
-                                    height: 80,
-                        borderRadius: 10,
-                                    overflow: 'hidden',
-                                    background: 'rgba(255, 255, 255, 0.08)',
-                                    flexShrink: 0
-                                  }}>
-                                    <div style={{
-                                      width: '100%',
-                                      height: '100%',
-                                      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02))'
-                                    }} />
-                          </div>
-                                  
-                                  {/* 右侧信息 */}
-                                  <div style={{ flex: 1 }}>
-                                    {/* 产品名称 */}
-                                    <div style={{
-                                      fontSize: 15,
-                                      fontWeight: 700,
-                                      color: '#fff',
-                                      marginBottom: 4
-                                    }}>
-                                      {log.cigarName || cigar?.name || log.cigarId}
-                          </div>
-                                    
-                                    {/* SKU */}
-                                    <div style={{
-                                      fontSize: 12,
-                                      color: 'rgba(224, 214, 196, 0.6)',
-                                      marginBottom: 6
-                                    }}>
-                                      {cigar?.size || ''} {cigar?.size ? '|' : ''} SKU: {log.cigarId}
-                                    </div>
-                                    
-                                    {/* 单价 */}
-                                    <div style={{
-                                      fontSize: 14,
-                                      fontWeight: 700,
-                                      color: '#f4af25',
-                                      marginBottom: 6
-                                    }}>
-                                      RM {log.unitPrice?.toFixed(2) || '0.00'}
-                                    </div>
-                                    
-                                    {/* 数量和小计 */}
-                                    <div style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: 12,
-                                      fontSize: 12
-                                    }}>
-                                      <span style={{ color: '#52c41a', fontWeight: 600 }}>
-                                        +{log.quantity} {t('inventory.sticks')}
-                                      </span>
-                                      <span style={{ color: 'rgba(224, 214, 196, 0.6)' }}>·</span>
-                                      <span style={{ color: 'rgba(224, 214, 196, 0.8)' }}>
-                                        {t('inventory.subtotal')}: <span style={{ color: '#fff', fontWeight: 600 }}>RM {itemValue.toFixed(2)}</span>
-                                      </span>
-                                    </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                            
-                            {/* 单号汇总 */}
-                            <div style={{
-                              marginTop: 4,
-                              padding: 10,
-                              background: 'rgba(82, 196, 26, 0.1)',
-                              borderRadius: 8,
-                              border: '1px solid rgba(82, 196, 26, 0.3)'
-                            }}>
-                              <div style={{ 
-                                display: 'flex', 
-                                justifyContent: 'space-between',
-                                fontSize: 12,
-                                color: '#fff',
-                                fontWeight: 600
-                              }}>
-                                <div>{t('inventory.summary')}</div>
-                                <div style={{ color: '#52c41a' }}>
-                                  +{group.totalQuantity} {t('inventory.sticks')}
-                                  {group.totalValue > 0 ? ` · RM ${group.totalValue.toFixed(2)}` : ''}
-                                </div>
+                                  编辑
+                                </button>
+
+                                {/* 取消订单按钮 */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+
+                                    Modal.confirm({
+                                      title: '取消订单',
+                                      content: (
+                                        <div>
+                                          <p>将订单 <strong>{group.referenceNo}</strong> 标记为已取消状态</p>
+                                          <p style={{ marginTop: 8, fontSize: 12, color: '#8c8c8c' }}>• 订单数据将被保留</p>
+                                          <p style={{ fontSize: 12, color: '#8c8c8c' }}>• 库存计算将忽略此订单</p>
+                                        </div>
+                                      ),
+                                      okText: '确认取消',
+                                      cancelText: '返回',
+                                      onOk: async () => {
+                                        setLoading(true)
+                                        try {
+                                          // 使用 group.id 直接查找订单，而不是通过 referenceNo
+                                          const order = inboundOrders.find(o => o.id === group.id)
+
+                                          if (order) {
+                                            await updateInboundOrder(order.id, { status: 'cancelled' })
+                                            message.success('✅ 订单已取消')
+                                            setInboundOrders(await getAllInboundOrders())
+                                          } else {
+                                            message.error('订单未找到')
+                                          }
+                                        } catch (error: any) {
+                                          message.error('操作失败: ' + error.message)
+                                        } finally {
+                                          setLoading(false)
+                                        }
+                                      },
+                                      onCancel: () => {
+                                      }
+                                    })
+                                  }}
+                                  style={{
+                                    flex: 1,
+                                    padding: '8px 12px',
+                                    borderRadius: 8,
+                                    background: 'rgba(255, 255, 255, 0.1)',
+                                    color: '#faad14',
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    border: '1px solid rgba(255, 255, 255, 0.2)'
+                                  }}
+                                >
+                                  取消
+                                </button>
+
+                                {/* 退货按钮 */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+
+                                    Modal.confirm({
+                                      title: '🔄 创建反向订单',
+                                      content: (
+                                        <div>
+                                          <p>将为订单 <strong>{group.referenceNo}</strong> 创建反向订单（退货）</p>
+                                          <p>• 原订单数量：<span style={{ color: '#52c41a' }}>+{group.totalQuantity}</span></p>
+                                          <p>• 反向订单数量：<span style={{ color: '#ff4d4f' }}>-{group.totalQuantity}</span></p>
+                                          <p style={{ marginTop: 12, color: '#faad14', fontSize: 12 }}>⚠️ 此操作将创建一个负数量的退货订单，用于冲销原订单的库存影响。</p>
+                                        </div>
+                                      ),
+                                      okText: '确认创建',
+                                      cancelText: '取消',
+                                      onOk: async () => {
+                                        setLoading(true)
+                                        try {
+                                          // 使用 group.id 直接查找订单，而不是通过 referenceNo
+                                          const order = inboundOrders.find(o => o.id === group.id)
+
+                                          if (!order) {
+                                            message.error('原订单未找到')
+                                            return
+                                          }
+
+                                          const returnReferenceNo = `RETURN-${group.referenceNo}-${Date.now()}`
+                                          const returnOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
+                                            referenceNo: returnReferenceNo,
+                                            type: 'return',
+                                            reason: `退货冲销: ${group.referenceNo}`,
+                                            items: order.items.map(item => ({
+                                              ...item,
+                                              quantity: -item.quantity
+                                            })),
+                                            totalQuantity: -order.totalQuantity,
+                                            totalValue: -order.totalValue,
+                                            status: 'completed',
+                                            operatorId: 'system',
+                                            createdAt: new Date()
+                                          }
+
+                                          await createInboundOrder(returnOrderData)
+                                          message.success('反向订单已创建')
+                                          setInboundOrders(await getAllInboundOrders())
+                                          setInventoryMovements(await getAllInventoryMovements())
+                                        } catch (error: any) {
+                                          message.error('创建失败: ' + error.message)
+                                        } finally {
+                                          setLoading(false)
+                                        }
+                                      },
+                                      onCancel: () => {
+                                      }
+                                    })
+                                  }}
+                                  style={{
+                                    flex: 1,
+                                    padding: '8px 12px',
+                                    borderRadius: 8,
+                                    background: 'rgba(255, 255, 255, 0.1)',
+                                    color: '#ff7a45',
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    border: '1px solid rgba(255, 255, 255, 0.2)'
+                                  }}
+                                >
+                                  🔄 退货
+                                </button>
+
+                                {/* 删除订单按钮 */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+
+                                    // 使用受控的 Modal 替代 modal.confirm，以解决 React 19 兼容性问题
+                                    setDeleteTargetOrder({
+                                      id: group.id,
+                                      referenceNo: group.referenceNo,
+                                      productCount: group.productCount
+                                    })
+                                    setDeleteConfirmOpen(true)
+                                  }}
+                                  style={{
+                                    flex: 1,
+                                    padding: '8px 12px',
+                                    borderRadius: 8,
+                                    background: 'rgba(255, 255, 255, 0.1)',
+                                    color: '#ff4d4f',
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    border: '1px solid rgba(255, 255, 255, 0.2)'
+                                  }}
+                                >
+                                  删除
+                                </button>
                               </div>
-                              {group.reason && group.reason !== '-' && (
-                                <div style={{ 
-                                  marginTop: 4,
-                                  fontSize: 11, 
-                                  color: 'rgba(255,255,255,0.6)' 
+                              {group.logs.map((log: any) => {
+                                const cigar = items.find(i => i.id === log.cigarId)
+                                const itemValue = Number(log.quantity || 0) * Number(log.unitPrice || 0)
+                                return (
+                                  <div
+                                    key={log.id}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'flex-start',
+                                      gap: 12,
+                                      padding: 12,
+                                      background: 'rgba(255,255,255,0.03)',
+                                      borderRadius: 12,
+                                      border: '1px solid rgba(255, 255, 255, 0.1)'
+                                    }}
+                                  >
+                                    {/* 左侧图片占位 */}
+                                    <div style={{
+                                      width: 80,
+                                      height: 80,
+                                      borderRadius: 10,
+                                      overflow: 'hidden',
+                                      background: 'rgba(255, 255, 255, 0.08)',
+                                      flexShrink: 0
+                                    }}>
+                                      <div style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02))'
+                                      }} />
+                                    </div>
+
+                                    {/* 右侧信息 */}
+                                    <div style={{ flex: 1 }}>
+                                      {/* 产品名称 */}
+                                      <div style={{
+                                        fontSize: 15,
+                                        fontWeight: 700,
+                                        color: '#fff',
+                                        marginBottom: 4
+                                      }}>
+                                        {log.cigarName || cigar?.name || log.cigarId}
+                                      </div>
+
+                                      {/* SKU */}
+                                      <div style={{
+                                        fontSize: 12,
+                                        color: 'rgba(224, 214, 196, 0.6)',
+                                        marginBottom: 6
+                                      }}>
+                                        {cigar?.size || ''} {cigar?.size ? '|' : ''} SKU: {log.cigarId}
+                                      </div>
+
+                                      {/* 单价 */}
+                                      <div style={{
+                                        fontSize: 14,
+                                        fontWeight: 700,
+                                        color: '#f4af25',
+                                        marginBottom: 6
+                                      }}>
+                                        RM {log.unitPrice?.toFixed(2) || '0.00'}
+                                      </div>
+
+                                      {/* 数量和小计 */}
+                                      <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 12,
+                                        fontSize: 12
+                                      }}>
+                                        <span style={{ color: '#52c41a', fontWeight: 600 }}>
+                                          +{log.quantity} {t('inventory.sticks')}
+                                        </span>
+                                        <span style={{ color: 'rgba(224, 214, 196, 0.6)' }}>·</span>
+                                        <span style={{ color: 'rgba(224, 214, 196, 0.8)' }}>
+                                          {t('inventory.subtotal')}: <span style={{ color: '#fff', fontWeight: 600 }}>RM {itemValue.toFixed(2)}</span>
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )
+                              })}
+
+                              {/* 单号汇总 */}
+                              <div style={{
+                                marginTop: 4,
+                                padding: 10,
+                                background: 'rgba(82, 196, 26, 0.1)',
+                                borderRadius: 8,
+                                border: '1px solid rgba(82, 196, 26, 0.3)'
+                              }}>
+                                <div style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  fontSize: 12,
+                                  color: '#fff',
+                                  fontWeight: 600
                                 }}>
-                                  {group.reason}
-                </div>
-              )}
+                                  <div>{t('inventory.summary')}</div>
+                                  <div style={{ color: '#52c41a' }}>
+                                    +{group.totalQuantity} {t('inventory.sticks')}
+                                    {group.totalValue > 0 ? ` · RM ${group.totalValue.toFixed(2)}` : ''}
+                                  </div>
+                                </div>
+                                {group.reason && group.reason !== '-' && (
+                                  <div style={{
+                                    marginTop: 4,
+                                    fontSize: 11,
+                                    color: 'rgba(255,255,255,0.6)'
+                                  }}>
+                                    {group.reason}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
+                      )
+                    })}
+                    {inLogsGroupedByReference.length === 0 && (
+                      <div style={{
+                        padding: 40,
+                        textAlign: 'center',
+                        color: 'rgba(255,255,255,0.4)',
+                        fontSize: 14
+                      }}>
+                        {t('common.noData')}
                       </div>
-                    )
-                  })}
-                  {inLogsGroupedByReference.length === 0 && (
-                    <div style={{ 
-                      padding: 40, 
-                      textAlign: 'center', 
-                      color: 'rgba(255,255,255,0.4)',
-                      fontSize: 14
-                    }}>
-                      {t('common.noData')}
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -3742,7 +3743,7 @@ const AdminInventory: React.FC = () => {
                       <Option key={brand} value={brand}>{brand}</Option>
                     ))}
                   </Select>
-                  <button 
+                  <button
                     onClick={() => setOutStatsOpen(true)}
                     style={{
                       padding: '6px 14px',
@@ -3775,7 +3776,7 @@ const AdminInventory: React.FC = () => {
                 onCancel={() => setOutModalOpen(false)}
                 footer={null}
                 {...getResponsiveModalConfig(isMobile, true, 720)}
-                styles={{ 
+                styles={{
                   body: {
                     overflowX: 'hidden',
                     paddingBottom: 16
@@ -3785,24 +3786,24 @@ const AdminInventory: React.FC = () => {
                 <Form form={outForm} layout="vertical" className="dark-theme-form" onFinish={async (values: { referenceNo?: string; reason?: string; items: { cigarId: string; quantity: number }[] }) => {
                   const lines = (values.items || []).filter(it => it?.cigarId && it?.quantity > 0)
                   if (lines.length === 0) { message.warning(t('inventory.pleaseAddAtLeastOneOutStockDetail')); return }
-                  
+
                   // 检查单号
                   if (!values.referenceNo || !values.referenceNo.trim()) {
                     message.error(t('inventory.pleaseInputReferenceNo'))
                     return
                   }
-                  
+
                   setLoading(true)
                   try {
                     const orderItems = []
                     let totalQuantity = 0
                     let totalValue = 0
-                    
+
                     for (const line of lines) {
                       const target = items.find(i => i.id === line.cigarId) as any
                       if (!target) continue
                       const qty = Math.max(1, Math.floor(line.quantity || 1))
-                      
+
                       const orderItem = {
                         cigarId: target.id,
                         cigarName: target.name,
@@ -3811,24 +3812,24 @@ const AdminInventory: React.FC = () => {
                         unitPrice: target.price,
                         subtotal: qty * target.price
                       }
-                      
+
                       orderItems.push(orderItem)
                       totalQuantity += qty
                       totalValue += orderItem.subtotal
                     }
-                    
+
                     const outboundOrderData: Omit<OutboundOrder, 'id' | 'updatedAt'> = {
                       referenceNo: values.referenceNo.trim(),
                       type: 'other',
-                        reason: values.reason || t('inventory.outStock'),
+                      reason: values.reason || t('inventory.outStock'),
                       items: orderItems,
                       totalQuantity,
                       totalValue,
                       status: 'completed',
-                        operatorId: 'system',
+                      operatorId: 'system',
                       createdAt: new Date()
                     }
-                    
+
                     await createOutboundOrder(outboundOrderData)
                     message.success(t('inventory.outStockSuccess'))
                     outForm.resetFields()
@@ -3854,91 +3855,91 @@ const AdminInventory: React.FC = () => {
                         </Form.Item>
                       </Col>
                     </Row>
-                    
+
                     {/* 产品列表 */}
-                  <Form.List name="items" initialValue={[{ cigarId: undefined, quantity: 1 }]}> 
-                    {(fields, { add, remove }) => (
-                      <div>
+                    <Form.List name="items" initialValue={[{ cigarId: undefined, quantity: 1 }]}>
+                      {(fields, { add, remove }) => (
+                        <div>
                           {fields.map((field) => {
                             const { key, name, fieldKey, ...restField } = field
                             return (
-                            <div key={key} style={{ 
-                              marginBottom: 12, 
-                              padding: 10, 
-                              border: '1px solid rgba(255, 255, 255, 0.1)', 
-                              borderRadius: 8,
-                              background: 'rgba(0, 0, 0, 0.2)'
-                            }}>
-                              {/* 第一行：产品选择 */}
-                              <Row gutter={12} style={{ marginBottom: 8 }}>
-                                <Col flex="auto">
-                            <Form.Item
-                              {...restField}
-                              name={[name, 'cigarId']}
-                                    fieldKey={fieldKey}
-                              rules={[{ required: true, message: t('inventory.pleaseSelectProduct') }]}
-                                    style={{ marginBottom: 0 }}
-                            >
-                              <Select 
-                                placeholder={t('inventory.pleaseSelectProduct')}
-                                showSearch
-                                optionFilterProp="children"
-                                filterOption={(input, option) => {
-                                  const kw = (input || '').toLowerCase()
-                                  const text = String((option?.children as any) || '').toLowerCase()
-                                  return text.includes(kw)
-                                }}
-                              >
-                                {groupedCigars.map(group => (
-                                  <Select.OptGroup key={group.brand} label={group.brand}>
-                                    {group.list.map(i => (
-                                      <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（{t('inventory.stock')}：{getComputedStock(i.id)}）</Option>
-                                    ))}
-                                  </Select.OptGroup>
-                                ))}
-                              </Select>
-                            </Form.Item>
-                                </Col>
-                              </Row>
-                              
-                              {/* 第二行：数量 + 删除 */}
-                              <Row gutter={12} align="middle">
-                                <Col flex="120px">
-                            <Form.Item
-                              {...restField}
-                              name={[name, 'quantity']}
-                              rules={[{ required: true, message: t('inventory.pleaseInputQuantity') }]}
-                                    style={{ marginBottom: 0 }}
-                            >
-                                    <InputNumber min={1} placeholder={t('inventory.quantity')} style={{ width: '100%' }} />
-                            </Form.Item>
-                                </Col>
-                                <Col flex="auto">
-                            {fields.length > 1 && (
-                                    <Button
-                                      type="link"
-                                      danger
-                                      size="small"
-                                      icon={<MinusCircleOutlined />}
-                                      onClick={() => remove(name)}
+                              <div key={key} style={{
+                                marginBottom: 12,
+                                padding: 10,
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                borderRadius: 8,
+                                background: 'rgba(0, 0, 0, 0.2)'
+                              }}>
+                                {/* 第一行：产品选择 */}
+                                <Row gutter={12} style={{ marginBottom: 8 }}>
+                                  <Col flex="auto">
+                                    <Form.Item
+                                      {...restField}
+                                      name={[name, 'cigarId']}
+                                      fieldKey={fieldKey}
+                                      rules={[{ required: true, message: t('inventory.pleaseSelectProduct') }]}
+                                      style={{ marginBottom: 0 }}
                                     >
-                                      删除
-                                    </Button>
-                            )}
-                                </Col>
-                              </Row>
-                            </div>
+                                      <Select
+                                        placeholder={t('inventory.pleaseSelectProduct')}
+                                        showSearch
+                                        optionFilterProp="children"
+                                        filterOption={(input, option) => {
+                                          const kw = (input || '').toLowerCase()
+                                          const text = String((option?.children as any) || '').toLowerCase()
+                                          return text.includes(kw)
+                                        }}
+                                      >
+                                        {groupedCigars.map(group => (
+                                          <Select.OptGroup key={group.brand} label={group.brand}>
+                                            {group.list.map(i => (
+                                              <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（{t('inventory.stock')}：{getComputedStock(i.id)}）</Option>
+                                            ))}
+                                          </Select.OptGroup>
+                                        ))}
+                                      </Select>
+                                    </Form.Item>
+                                  </Col>
+                                </Row>
+
+                                {/* 第二行：数量 + 删除 */}
+                                <Row gutter={12} align="middle">
+                                  <Col flex="120px">
+                                    <Form.Item
+                                      {...restField}
+                                      name={[name, 'quantity']}
+                                      rules={[{ required: true, message: t('inventory.pleaseInputQuantity') }]}
+                                      style={{ marginBottom: 0 }}
+                                    >
+                                      <InputNumber min={1} placeholder={t('inventory.quantity')} style={{ width: '100%' }} />
+                                    </Form.Item>
+                                  </Col>
+                                  <Col flex="auto">
+                                    {fields.length > 1 && (
+                                      <Button
+                                        type="link"
+                                        danger
+                                        size="small"
+                                        icon={<MinusCircleOutlined />}
+                                        onClick={() => remove(name)}
+                                      >
+                                        删除
+                                      </Button>
+                                    )}
+                                  </Col>
+                                </Row>
+                              </div>
                             )
                           })}
                           <Form.Item style={{ marginBottom: 0 }}>
                             <Button type="dashed" onClick={() => add({ quantity: 1 })} icon={<PlusOutlined />} style={{ width: '100%' }}>
                               {t('inventory.addDetail')}
                             </Button>
-                        </Form.Item>
-                      </div>
-                    )}
-                  </Form.List>
-                    
+                          </Form.Item>
+                        </div>
+                      )}
+                    </Form.List>
+
                     <Form.Item style={{ marginTop: 16, marginBottom: 0 }}>
                       <Space>
                         <Button onClick={() => {
@@ -3949,11 +3950,11 @@ const AdminInventory: React.FC = () => {
                           {t('inventory.confirmOutStock')}
                         </Button>
                       </Space>
-                  </Form.Item>
-                    </div>
+                    </Form.Item>
+                  </div>
                 </Form>
               </Modal>
-              
+
               {/* 出库列表（滚动容器） */}
               <div
                 style={{
@@ -3966,82 +3967,81 @@ const AdminInventory: React.FC = () => {
               >
                 {!isMobile ? (
                   <div className="points-config-form">
-                  <Table
-                    title={() => t('inventory.outStockRecord')}
-                    columns={unifiedOutColumns}
-                    dataSource={unifiedOutRows}
-                    rowKey="id"
+                    <Table
+                      columns={unifiedOutColumns}
+                      dataSource={unifiedOutRows}
+                      rowKey="id"
                       style={{
                         background: 'transparent'
                       }}
-                    pagination={{ 
-                      pageSize: outPageSize,
-                      showSizeChanger: true,
-                      showQuickJumper: false,
-                      pageSizeOptions: ['5','10','20','50'],
-                      onChange: (_page, size) => {
-                        const next = size || outPageSize
-                        setOutPageSize(next)
-                        try { localStorage.setItem('inventory_out_page_size', String(next)) } catch {}
-                      }
-                    }}
-                  />
+                      pagination={{
+                        pageSize: outPageSize,
+                        showSizeChanger: true,
+                        showQuickJumper: false,
+                        pageSizeOptions: ['5', '10', '20', '50'],
+                        onChange: (_page, size) => {
+                          const next = size || outPageSize
+                          setOutPageSize(next)
+                          try { localStorage.setItem('inventory_out_page_size', String(next)) } catch { }
+                        }
+                      }}
+                    />
                   </div>
                 ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {unifiedOutRows.map((log: any) => {
-                    const cigar = items.find(i => i.id === log.cigarId)
-                    const user = users.find((u: any) => u.id === log.userId)
-                    const userName = user?.displayName || user?.email || log.userId || '-'
-                    return (
-                      <div key={log.id} style={{
-                        borderRadius: 12,
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        background: 'rgba(255,255,255,0.05)',
-                        padding: 12,
-                        backdropFilter: 'blur(6px)'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <div style={{ fontWeight: 700, color: '#f0f0f0' }}>{cigar?.name || log.cigarId}</div>
-                              <span style={{ borderRadius: 999, background: 'rgba(255, 77, 79, 0.2)', padding: '2px 8px', fontSize: 12, color: '#ff4d4f' }}>
-                                -{log.quantity}
-                              </span>
-                          </div>
-                            <div style={{ marginTop: 4, fontSize: 12, color: '#aaa' }}>
-                              {t('inventory.referenceNo')}: {log.referenceNo || '-'}
-                          </div>
-                            <div style={{ marginTop: 4, fontSize: 12, color: '#aaa' }}>
-                            {log.source === 'event' && log.eventId ? (
-                              (() => {
-                                const event = eventMap.get(log.eventId)
-                                return event ? (
-                                  <span>{t('inventory.source')}: {event.title}</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {unifiedOutRows.map((log: any) => {
+                      const cigar = items.find(i => i.id === log.cigarId)
+                      const user = users.find((u: any) => u.id === log.userId)
+                      const userName = user?.displayName || user?.email || log.userId || '-'
+                      return (
+                        <div key={log.id} style={{
+                          borderRadius: 12,
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          background: 'rgba(255,255,255,0.05)',
+                          padding: 12,
+                          backdropFilter: 'blur(6px)'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <div style={{ fontWeight: 700, color: '#f0f0f0' }}>{cigar?.name || log.cigarId}</div>
+                                <span style={{ borderRadius: 999, background: 'rgba(255, 77, 79, 0.2)', padding: '2px 8px', fontSize: 12, color: '#ff4d4f' }}>
+                                  -{log.quantity}
+                                </span>
+                              </div>
+                              <div style={{ marginTop: 4, fontSize: 12, color: '#aaa' }}>
+                                {t('inventory.referenceNo')}: {log.referenceNo || '-'}
+                              </div>
+                              <div style={{ marginTop: 4, fontSize: 12, color: '#aaa' }}>
+                                {log.source === 'event' && log.eventId ? (
+                                  (() => {
+                                    const event = eventMap.get(log.eventId)
+                                    return event ? (
+                                      <span>{t('inventory.source')}: {event.title}</span>
+                                    ) : (
+                                      <span>{t('inventory.activityOrderOutbound')}: {userName}</span>
+                                    )
+                                  })()
+                                ) : log.source === 'direct' ? (
+                                  <span>{t('inventory.source')}: {t('inventory.directSale')}</span>
+                                ) : log.source === 'manual' ? (
+                                  <span>{t('inventory.source')}: {t('inventory.manual')}</span>
                                 ) : (
-                              <span>{t('inventory.activityOrderOutbound')}: {userName}</span>
-                                )
-                              })()
-                            ) : log.source === 'direct' ? (
-                              <span>{t('inventory.source')}: {t('inventory.directSale')}</span>
-                            ) : log.source === 'manual' ? (
-                              <span>{t('inventory.source')}: {t('inventory.manual')}</span>
-                            ) : (
-                              <span>{t('inventory.reason')}: {log.reason || '-'}</span>
-                            )}
-                            </div>
-                            <div style={{ marginTop: 6, fontSize: 11, color: '#888' }}>
-                              {formatYMD(toDateSafe(log.createdAt))}
+                                  <span>{t('inventory.reason')}: {log.reason || '-'}</span>
+                                )}
+                              </div>
+                              <div style={{ marginTop: 6, fontSize: 11, color: '#888' }}>
+                                {formatYMD(toDateSafe(log.createdAt))}
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    )
-                  })}
-                  {unifiedOutRows.length === 0 && (
-                    <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
-                  )}
-                </div>
+                      )
+                    })}
+                    {unifiedOutRows.length === 0 && (
+                      <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -4053,8 +4053,8 @@ const AdminInventory: React.FC = () => {
       <Modal
         title={editing ? t('common.edit') : t('common.add')}
         open={creating || !!editing}
-        onCancel={() => { 
-          setCreating(false); 
+        onCancel={() => {
+          setCreating(false);
           setEditing(null);
           form.resetFields();
           setAiRating(null); // 重置AI识别的rating
@@ -4073,13 +4073,13 @@ const AdminInventory: React.FC = () => {
                   <Button danger onClick={() => {
                     const productId = (editing as any)?.id
                     const productName = (editing as any)?.name || ''
-                    
+
                     if (hasInventoryHistory(productId)) {
                       // 显示有库存记录的提示窗
                       const relatedMovements = inventoryMovements.filter(m => m.cigarId === productId)
                       const inCount = relatedMovements.filter(m => m.type === 'in').length
                       const outCount = relatedMovements.filter(m => m.type === 'out').length
-                      
+
                       Modal.info({
                         title: t('inventory.deleteBlocked'),
                         content: (
@@ -4099,7 +4099,7 @@ const AdminInventory: React.FC = () => {
                       })
                       return
                     }
-                    
+
                     // 使用受控 Modal 替代 modal.confirm，以解决 React 19 兼容性问题
                     setDeleting(editing)
                   }}>{t('common.delete')}</Button>
@@ -4107,8 +4107,8 @@ const AdminInventory: React.FC = () => {
               )}
             </Space>
             <Space>
-              <Button onClick={() => { 
-                setCreating(false); 
+              <Button onClick={() => {
+                setCreating(false);
                 setEditing(null);
                 form.resetFields();
                 setCigarImages([]);
@@ -4125,19 +4125,19 @@ const AdminInventory: React.FC = () => {
           try {
             // 根据品牌名称找到对应的品牌ID
             const selectedBrand = brandList.find(brand => brand.name === values.brand)
-            
+
             // 构建构造信息（基于表单值）
             const construction: any = {};
             if (values.wrapper) construction.wrapper = values.wrapper;
             if (values.binder) construction.binder = values.binder;
             if (values.filler) construction.filler = values.filler;
-            
+
             // 构建品吸笔记（基于表单值）
             const tastingNotes: any = {};
             if (values.footTasteNotes && values.footTasteNotes.length > 0) tastingNotes.foot = Array.isArray(values.footTasteNotes) ? values.footTasteNotes : [];
             if (values.bodyTasteNotes && values.bodyTasteNotes.length > 0) tastingNotes.body = Array.isArray(values.bodyTasteNotes) ? values.bodyTasteNotes : [];
             if (values.headTasteNotes && values.headTasteNotes.length > 0) tastingNotes.head = Array.isArray(values.headTasteNotes) ? values.headTasteNotes : [];
-            
+
             // 构建元数据
             // Rating优先级：aiRating（来自cigar_database）> 手动输入（values.rating）> 原有值
             let finalRating = 0;
@@ -4148,49 +4148,49 @@ const AdminInventory: React.FC = () => {
             } else if (editing?.metadata?.rating !== null && editing?.metadata?.rating !== undefined) {
               finalRating = editing.metadata.rating;
             }
-            
+
             // 标签（基于表单值）
             let tags: string[] = [];
             if (Array.isArray(values.tags) && values.tags.length > 0) {
               tags = values.tags;
             }
-            
+
             const metadata: any = {
               rating: finalRating,
               reviews: editing?.metadata?.reviews ?? 0,
               tags: tags,
             };
-            
+
             // 完全使用表单输入值（方案 B 放开编辑权）
             const brand = values.brand || '';
             const finalSelectedBrand = brandList.find(b => b.name === brand) || selectedBrand;
             const description = values.description || '';
             const origin = values.origin || finalSelectedBrand?.country || '';
             const strength = values.strength || '';
-            
+
             // 强制更新智库数据
             try {
-                if (values.name && brand) {
-                    await forceUpdateCigarDatabase({
-                        name: values.name,
-                        brand: brand,
-                        origin: origin,
-                        strength: strength,
-                        description: description,
-                        rating: finalRating,
-                        wrapper: construction.wrapper,
-                        binder: construction.binder,
-                        filler: construction.filler,
-                        flavorProfile: tags,
-                        footTasteNotes: tastingNotes.foot,
-                        bodyTasteNotes: tastingNotes.body,
-                        headTasteNotes: tastingNotes.head,
-                    });
-                }
+              if (values.name && brand) {
+                await forceUpdateCigarDatabase({
+                  name: values.name,
+                  brand: brand,
+                  origin: origin,
+                  strength: strength,
+                  description: description,
+                  rating: finalRating,
+                  wrapper: construction.wrapper,
+                  binder: construction.binder,
+                  filler: construction.filler,
+                  flavorProfile: tags,
+                  footTasteNotes: tastingNotes.foot,
+                  bodyTasteNotes: tastingNotes.body,
+                  headTasteNotes: tastingNotes.head,
+                });
+              }
             } catch (e) {
-                console.error('更新智库数据失败', e);
+              console.error('更新智库数据失败', e);
             }
-            
+
             const payload: Partial<Cigar> = {
               name: values.name,
               brand: brand,
@@ -4211,12 +4211,12 @@ const AdminInventory: React.FC = () => {
               metadata,
               updatedAt: new Date(),
             } as any;
-            
+
             // 添加构造信息（如果有）
             if (Object.keys(construction).length > 0) {
               payload.construction = construction;
             }
-            
+
             // 添加品吸笔记（如果有）
             if (Object.keys(tastingNotes).length > 0) {
               payload.tastingNotes = tastingNotes;
@@ -4290,9 +4290,9 @@ const AdminInventory: React.FC = () => {
               </div>
             </div>
           </Form.Item>
-          <Form.Item 
-            label={<span>{t('inventory.productName')} <span style={{ color: '#ff4d4f' }}>*</span></span>} 
-            required={false} 
+          <Form.Item
+            label={<span>{t('inventory.productName')} <span style={{ color: '#ff4d4f' }}>*</span></span>}
+            required={false}
             style={{ marginBottom: 0 }}
           >
             <Space.Compact style={{ width: '100%' }}>
@@ -4308,17 +4308,17 @@ const AdminInventory: React.FC = () => {
                   }
                   onSelect={async (value: string) => {
                     if (!value || editing) return; // 只在创建模式下自动查询
-                    
+
                     // 用户选择了下拉选项，从 cigar_database 查询数据
                     try {
                       const aggregatedData = await getAggregatedCigarData(value);
-                      
+
                       if (aggregatedData) {
                         setCigarDatabaseData(aggregatedData);
-                        
+
                         // 自动填充表单字段
                         const updates: any = {};
-                        
+
                         if (aggregatedData.brand) updates.brand = aggregatedData.brand;
                         if (aggregatedData.origin) updates.origin = aggregatedData.origin;
                         if (aggregatedData.strength) updates.strength = aggregatedData.strength;
@@ -4330,13 +4330,13 @@ const AdminInventory: React.FC = () => {
                         if (aggregatedData.bodyTasteNotes?.length) updates.bodyTasteNotes = aggregatedData.bodyTasteNotes.map(item => item.value);
                         if (aggregatedData.headTasteNotes?.length) updates.headTasteNotes = aggregatedData.headTasteNotes.map(item => item.value);
                         if (aggregatedData.flavorProfile?.length) updates.tags = aggregatedData.flavorProfile.map(item => item.value);
-                        
+
                         form.setFieldsValue(updates);
-                        
+
                         if (aggregatedData.rating !== null && aggregatedData.rating !== undefined) {
                           setAiRating(aggregatedData.rating);
                         }
-                        
+
                         message.success(`已从数据库加载 "${value}" 的信息（基于 ${aggregatedData.totalRecognitions} 次AI识别）`);
                       }
                     } catch (error) {
@@ -4347,17 +4347,17 @@ const AdminInventory: React.FC = () => {
                   onBlur={async (e: any) => {
                     const productName = e.target.value?.trim();
                     if (!productName || editing) return; // 只在创建模式下自动查询
-                    
+
                     // 用户手动输入后失焦，从 cigar_database 查询数据
                     try {
                       const aggregatedData = await getAggregatedCigarData(productName);
-                      
+
                       if (aggregatedData) {
                         setCigarDatabaseData(aggregatedData);
-                        
+
                         // 自动填充表单字段
                         const updates: any = {};
-                        
+
                         if (aggregatedData.brand) updates.brand = aggregatedData.brand;
                         if (aggregatedData.origin) updates.origin = aggregatedData.origin;
                         if (aggregatedData.strength) updates.strength = aggregatedData.strength;
@@ -4369,13 +4369,13 @@ const AdminInventory: React.FC = () => {
                         if (aggregatedData.bodyTasteNotes?.length) updates.bodyTasteNotes = aggregatedData.bodyTasteNotes.map(item => item.value);
                         if (aggregatedData.headTasteNotes?.length) updates.headTasteNotes = aggregatedData.headTasteNotes.map(item => item.value);
                         if (aggregatedData.flavorProfile?.length) updates.tags = aggregatedData.flavorProfile.map(item => item.value);
-                        
+
                         form.setFieldsValue(updates);
-                        
+
                         if (aggregatedData.rating !== null && aggregatedData.rating !== undefined) {
                           setAiRating(aggregatedData.rating);
                         }
-                        
+
                         message.success(`已从数据库加载 "${productName}" 的信息（基于 ${aggregatedData.totalRecognitions} 次AI识别）`);
                       } else {
                         // 未找到数据，清空 cigarDatabaseData 以允许手动输入
@@ -4402,34 +4402,34 @@ const AdminInventory: React.FC = () => {
                     message.warning('请先输入产品名称')
                     return
                   }
-                  
+
                   // 获取品牌信息（如果已选择）
                   const selectedBrand = form.getFieldValue('brand')
-                  const brandName = selectedBrand && typeof selectedBrand === 'string' 
-                    ? selectedBrand.trim() 
+                  const brandName = selectedBrand && typeof selectedBrand === 'string'
+                    ? selectedBrand.trim()
                     : undefined
-                  
+
                   setAiRecognizing(true)
                   try {
                     const result = await analyzeCigarByName(productName.trim(), brandName)
-                    
+
                     // 填充表单字段
                     const updates: any = {}
-                    
+
                     // 规格提取逻辑（优先使用AI返回的size字段，并识别标准规格名称）
                     let extractedSize: string | null = null
-                    
+
                     // 辅助函数：从文本中提取标准规格
                     const tryExtractFromText = (text: string): string | null => {
                       if (!text) return null
                       return extractStandardVitola(text.trim())
                     }
-                    
+
                     // 1. 优先使用AI返回的size字段
                     if (result.size && result.size.trim()) {
                       extractedSize = tryExtractFromText(result.size)
                     }
-                    
+
                     // 2. 如果AI没有返回size或提取失败，从result.name中提取（移除品牌名称）
                     if (!extractedSize && result.name) {
                       const brandMatch = result.name.match(new RegExp(`^${result.brand}\\s+(.+)`, 'i'))
@@ -4442,12 +4442,12 @@ const AdminInventory: React.FC = () => {
                         }
                       }
                     }
-                    
+
                     // 3. 如果仍然没有提取到，从原始产品名称中提取
                     if (!extractedSize) {
                       // 先尝试整个产品名称
                       extractedSize = tryExtractFromText(productName.trim())
-                      
+
                       // 如果还是没找到，尝试逐个单词匹配
                       if (!extractedSize) {
                         const productNameParts = productName.trim().split(/\s+/)
@@ -4457,12 +4457,12 @@ const AdminInventory: React.FC = () => {
                         }
                       }
                     }
-                    
+
                     // 设置规格
                     if (extractedSize) {
                       updates.size = extractedSize
                     }
-                    
+
                     // 强度（转换格式）
                     const strengthMap: Record<string, string> = {
                       'Mild': 'mild',
@@ -4475,12 +4475,12 @@ const AdminInventory: React.FC = () => {
                     if (result.strength) {
                       updates.strength = strengthMap[result.strength] || 'medium'
                     }
-                    
+
                     // 描述
                     if (result.description) {
                       updates.description = result.description
                     }
-                    
+
                     // 构造信息
                     if (result.wrapper) {
                       updates.wrapper = result.wrapper
@@ -4491,7 +4491,7 @@ const AdminInventory: React.FC = () => {
                     if (result.filler) {
                       updates.filler = result.filler
                     }
-                    
+
                     // 品吸笔记
                     if (result.footTasteNotes && result.footTasteNotes.length > 0) {
                       updates.footTasteNotes = result.footTasteNotes
@@ -4502,47 +4502,47 @@ const AdminInventory: React.FC = () => {
                     if (result.headTasteNotes && result.headTasteNotes.length > 0) {
                       updates.headTasteNotes = result.headTasteNotes
                     }
-                    
+
                     // 风味特征（标签）
                     if (result.flavorProfile && result.flavorProfile.length > 0) {
                       updates.tags = result.flavorProfile
                     }
-                    
+
                     // 品牌（优先使用AI识别的品牌）
                     if (result.brand) {
                       updates.brand = result.brand
                     }
-                    
+
                     // 产地（直接填充识别到的产地）
                     if (result.origin) {
                       updates.origin = result.origin
                     }
-                    
+
                     // 评分（存储到状态中，在表单提交时使用）
                     if (result.rating !== undefined && result.rating !== null) {
                       setAiRating(result.rating)
                     } else {
                       setAiRating(null)
                     }
-                    
+
                     // 批量设置表单值
                     form.setFieldsValue(updates)
-                    
+
                     // 保存到 cigar_database（AI识笳按钮仅保存到 cigar_database，不保存到 cigars）
                     try {
                       await saveRecognitionToCigarDatabase(result)
-                      
+
                       // 重新加载聚合数据
                       const fullProductName = generateProductName(result.brand, result.name)
                       const aggregatedData = await getAggregatedCigarData(fullProductName)
-                      
+
                       if (aggregatedData) {
                         setCigarDatabaseData(aggregatedData)
-                        
+
                         // 如果在编辑模式，使用聚合数据覆盖表单字段
                         if (editing) {
                           const dbUpdates: any = {}
-                          
+
                           if (aggregatedData.brand) dbUpdates.brand = aggregatedData.brand
                           if (aggregatedData.origin) dbUpdates.origin = aggregatedData.origin
                           if (aggregatedData.strength) dbUpdates.strength = aggregatedData.strength
@@ -4554,15 +4554,15 @@ const AdminInventory: React.FC = () => {
                           if (aggregatedData.bodyTasteNotes?.length) dbUpdates.bodyTasteNotes = aggregatedData.bodyTasteNotes.map(item => item.value)
                           if (aggregatedData.headTasteNotes?.length) dbUpdates.headTasteNotes = aggregatedData.headTasteNotes.map(item => item.value)
                           if (aggregatedData.flavorProfile?.length) dbUpdates.tags = aggregatedData.flavorProfile.map(item => item.value)
-                          
+
                           form.setFieldsValue(dbUpdates)
-                          
+
                           if (aggregatedData.rating !== null && aggregatedData.rating !== undefined) {
                             setAiRating(aggregatedData.rating)
                           }
                         }
                       }
-                      
+
                       message.success(`AI识别完成并已保存到数据库！可信度: ${Math.round(result.confidence * 100)}%`)
                     } catch (dbError: any) {
                       message.error(`保存到数据库失败: ${dbError.message || '未知错误'}`)
@@ -4573,7 +4573,7 @@ const AdminInventory: React.FC = () => {
                     setAiRecognizing(false)
                   }
                 }}
-                style={{ 
+                style={{
                   color: '#f4af25'
                 }}
                 title="AI识笳"
@@ -4586,32 +4586,32 @@ const AdminInventory: React.FC = () => {
             <Select
               placeholder={t('inventory.pleaseSelectBrand')}
               showSearch
-                allowClear={false}
+              allowClear={false}
               filterOption={(input, option) => {
-                  // 使用 option.value（品牌名称）进行筛选
-                  const brandName = String(option?.value || '')
-                  const inputLower = input.toLowerCase()
-                  
-                  // 筛选品牌名称
-                  if (brandName.toLowerCase().includes(inputLower)) {
-                    return true
-                  }
-                  
-                  // 同时筛选国家（查找对应的品牌对象）
-                  const brand = brandList.find(b => b.name === brandName)
-                  if (brand?.country && brand.country.toLowerCase().includes(inputLower)) {
-                    return true
+                // 使用 option.value（品牌名称）进行筛选
+                const brandName = String(option?.value || '')
+                const inputLower = input.toLowerCase()
+
+                // 筛选品牌名称
+                if (brandName.toLowerCase().includes(inputLower)) {
+                  return true
                 }
-                  
+
+                // 同时筛选国家（查找对应的品牌对象）
+                const brand = brandList.find(b => b.name === brandName)
+                if (brand?.country && brand.country.toLowerCase().includes(inputLower)) {
+                  return true
+                }
+
                 return false
               }}
               onChange={(val) => {
                 const b = brandList.find(brand => brand.name === val)
                 if (b?.country) {
-                  try { form.setFieldsValue({ origin: b.country }) } catch {}
+                  try { form.setFieldsValue({ origin: b.country }) } catch { }
                 }
               }}
-                getPopupContainer={(triggerNode) => triggerNode.parentElement || document.body}
+              getPopupContainer={(triggerNode) => triggerNode.parentElement || document.body}
             >
               {brandList
                 .filter(brand => brand.status === 'active')
@@ -4620,9 +4620,9 @@ const AdminInventory: React.FC = () => {
                   <Option key={brand.id} value={brand.name}>
                     <Space align="center">
                       {brand.logo && (
-                        <img 
-                          src={brand.logo} 
-                          alt={brand.name} 
+                        <img
+                          src={brand.logo}
+                          alt={brand.name}
                           style={{ width: 20, height: 20, borderRadius: 2, display: 'block' }}
                         />
                       )}
@@ -4636,7 +4636,7 @@ const AdminInventory: React.FC = () => {
           <Form.Item label={<span>{t('inventory.origin')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="origin" required={false} rules={[{ required: true, message: t('common.pleaseInputOrigin') }]}>
             <Input />
           </Form.Item>
-          <Form.Item label={<span>{isMobile ? t('inventory.specification') : t('inventory.size')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="size" required={false} rules={[{ required: true, message: t('common.pleaseInputSize') }]}> 
+          <Form.Item label={<span>{isMobile ? t('inventory.specification') : t('inventory.size')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="size" required={false} rules={[{ required: true, message: t('common.pleaseInputSize') }]}>
             <Input />
           </Form.Item>
           <Form.Item label={<span>{t('inventory.strength')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="strength" required={false} rules={[{ required: true, message: t('common.pleaseSelectStrength') }]}>
@@ -4648,26 +4648,26 @@ const AdminInventory: React.FC = () => {
               <Option value="full">{t('inventory.full')}</Option>
             </Select>
           </Form.Item>
-          
+
           <Form.Item label="评分" name="rating">
-              <InputNumber 
-                min={0} 
-                max={100} 
-                step={0.1}
-                style={{ width: '100%' }} 
-                placeholder="0-100"
-              />
-            </Form.Item>
-          
-          <Form.Item label={<span>{t('inventory.price')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="price" required={false} rules={[{ required: true, message: t('common.pleaseInputPrice') }]}> 
+            <InputNumber
+              min={0}
+              max={100}
+              step={0.1}
+              style={{ width: '100%' }}
+              placeholder="0-100"
+            />
+          </Form.Item>
+
+          <Form.Item label={<span>{t('inventory.price')} <span style={{ color: '#ff4d4f' }}>*</span></span>} name="price" required={false} rules={[{ required: true, message: t('common.pleaseInputPrice') }]}>
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
-          
+
           <Form.Item label={t('common.description') || '描述'} name="description">
             <Input.TextArea rows={3} placeholder="请输入雪茄描述" />
           </Form.Item>
-          
-          <div style={{ 
+
+          <div style={{
             margin: '16px 0',
             display: 'flex',
             alignItems: 'center',
@@ -4679,9 +4679,9 @@ const AdminInventory: React.FC = () => {
               height: '1px',
               background: 'linear-gradient(to right, transparent, #FDE08D, #C48D3A)'
             }} />
-            <span style={{ 
-              background: 'linear-gradient(to right, #FDE08D, #C48D3A)', 
-              WebkitBackgroundClip: 'text', 
+            <span style={{
+              background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+              WebkitBackgroundClip: 'text',
               backgroundClip: 'text',
               color: 'transparent',
               fontWeight: 600,
@@ -4695,20 +4695,20 @@ const AdminInventory: React.FC = () => {
               background: 'linear-gradient(to left, transparent, #FDE08D, #C48D3A)'
             }} />
           </div>
-          
+
           <Form.Item label="茄衣" name="wrapper">
             <Input placeholder="例如: Habano, Connecticut, Maduro" />
           </Form.Item>
-          
+
           <Form.Item label="茄套" name="binder">
             <Input placeholder="例如: Nicaraguan, Ecuadorian" />
           </Form.Item>
-          
+
           <Form.Item label="茄芯" name="filler">
             <Input placeholder="例如: Cuban, Nicaraguan, Dominican" />
           </Form.Item>
-          
-          <div style={{ 
+
+          <div style={{
             margin: '16px 0',
             display: 'flex',
             alignItems: 'center',
@@ -4720,9 +4720,9 @@ const AdminInventory: React.FC = () => {
               height: '1px',
               background: 'linear-gradient(to right, transparent, #FDE08D, #C48D3A)'
             }} />
-            <span style={{ 
-              background: 'linear-gradient(to right, #FDE08D, #C48D3A)', 
-              WebkitBackgroundClip: 'text', 
+            <span style={{
+              background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+              WebkitBackgroundClip: 'text',
               backgroundClip: 'text',
               color: 'transparent',
               fontWeight: 600,
@@ -4736,9 +4736,9 @@ const AdminInventory: React.FC = () => {
               background: 'linear-gradient(to left, transparent, #FDE08D, #C48D3A)'
             }} />
           </div>
-          
-          <Form.Item 
-            label="脚部 (Foot) - 前1/3" 
+
+          <Form.Item
+            label="脚部 (Foot) - 前1/3"
             name="footTasteNotes"
             labelCol={isMobile ? { span: 24 } : undefined}
             wrapperCol={isMobile ? { span: 24 } : undefined}
@@ -4750,9 +4750,9 @@ const AdminInventory: React.FC = () => {
               tokenSeparators={[',']}
             />
           </Form.Item>
-          
-          <Form.Item 
-            label="主体 (Body) - 中1/3" 
+
+          <Form.Item
+            label="主体 (Body) - 中1/3"
             name="bodyTasteNotes"
             labelCol={isMobile ? { span: 24 } : undefined}
             wrapperCol={isMobile ? { span: 24 } : undefined}
@@ -4764,9 +4764,9 @@ const AdminInventory: React.FC = () => {
               tokenSeparators={[',']}
             />
           </Form.Item>
-          
-          <Form.Item 
-            label="头部 (Head) - 后1/3" 
+
+          <Form.Item
+            label="头部 (Head) - 后1/3"
             name="headTasteNotes"
             labelCol={isMobile ? { span: 24 } : undefined}
             wrapperCol={isMobile ? { span: 24 } : undefined}
@@ -4778,9 +4778,9 @@ const AdminInventory: React.FC = () => {
               tokenSeparators={[',']}
             />
           </Form.Item>
-          
-          
-          <div style={{ 
+
+
+          <div style={{
             margin: '16px 0',
             display: 'flex',
             alignItems: 'center',
@@ -4792,9 +4792,9 @@ const AdminInventory: React.FC = () => {
               height: '1px',
               background: 'linear-gradient(to right, transparent, #FDE08D, #C48D3A)'
             }} />
-            <span style={{ 
-              background: 'linear-gradient(to right, #FDE08D, #C48D3A)', 
-              WebkitBackgroundClip: 'text', 
+            <span style={{
+              background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+              WebkitBackgroundClip: 'text',
               backgroundClip: 'text',
               color: 'transparent',
               fontWeight: 600,
@@ -4808,9 +4808,9 @@ const AdminInventory: React.FC = () => {
               background: 'linear-gradient(to left, transparent, #FDE08D, #C48D3A)'
             }} />
           </div>
-          
-          <Form.Item 
-            label="标签/风味特征" 
+
+          <Form.Item
+            label="标签/风味特征"
             name="tags"
             labelCol={isMobile ? { span: 24 } : undefined}
             wrapperCol={isMobile ? { span: 24 } : undefined}
@@ -4838,7 +4838,7 @@ const AdminInventory: React.FC = () => {
           if (!target) return
           const qty = Math.max(1, Math.floor(values.quantity || 1))
           const isInbound = !!adjustingIn
-          
+
           setLoading(true)
           try {
             const referenceNo = values.referenceNo || `ADJ-${Date.now()}`
@@ -4850,7 +4850,7 @@ const AdminInventory: React.FC = () => {
               unitPrice: (target as any).price,
               subtotal: qty * (target as any).price
             }
-            
+
             if (isInbound) {
               const inboundOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
                 referenceNo,
@@ -4860,7 +4860,7 @@ const AdminInventory: React.FC = () => {
                 totalQuantity: qty,
                 totalValue: orderItem.subtotal,
                 status: 'completed',
-              operatorId: 'system',
+                operatorId: 'system',
                 createdAt: new Date()
               }
               await createInboundOrder(inboundOrderData)
@@ -4878,7 +4878,7 @@ const AdminInventory: React.FC = () => {
               }
               await createOutboundOrder(outboundOrderData)
             }
-            
+
             message.success(t('inventory.stockUpdated'))
             setItems(await getCigars())
             setInboundOrders(await getAllInboundOrders())
@@ -4911,12 +4911,12 @@ const AdminInventory: React.FC = () => {
         onCancel={() => setDeleting(null)}
         onOk={async () => {
           if (!deleting) return
-          
+
           setLoading(true)
           try {
             const productId = (deleting as any).id
             const res = await deleteDocument(COLLECTIONS.CIGARS, productId)
-            
+
             if (res.success) {
               message.success(t('common.deleted'))
               setItems(await getCigars())
@@ -4959,27 +4959,27 @@ const AdminInventory: React.FC = () => {
         width={800}
       >
         <div className="points-config-form">
-        <Table
-          columns={[
-            { title: t('inventory.time'), dataIndex: 'createdAt', key: 'createdAt', render: (v: any) => { const d = toDateSafe(v); return d ? d.toLocaleString() : '-' } },
-            { title: t('inventory.product'), dataIndex: 'cigarId', key: 'cigarId', render: (id: string) => items.find(i => i.id === id)?.name || id },
-            { title: t('inventory.quantity'), dataIndex: 'quantity', key: 'quantity' },
-            { title: t('inventory.reason'), dataIndex: 'reason', key: 'reason', render: (v: any) => v || '-' },
-            { title: t('inventory.operator'), dataIndex: 'operatorId', key: 'operatorId', render: (v: any) => v || '-' },
-          ]}
-          dataSource={currentReferenceLogs}
-          rowKey="id"
-          pagination={false}
-          size="small"
+          <Table
+            columns={[
+              { title: t('inventory.time'), dataIndex: 'createdAt', key: 'createdAt', render: (v: any) => { const d = toDateSafe(v); return d ? d.toLocaleString() : '-' } },
+              { title: t('inventory.product'), dataIndex: 'cigarId', key: 'cigarId', render: (id: string) => items.find(i => i.id === id)?.name || id },
+              { title: t('inventory.quantity'), dataIndex: 'quantity', key: 'quantity' },
+              { title: t('inventory.reason'), dataIndex: 'reason', key: 'reason', render: (v: any) => v || '-' },
+              { title: t('inventory.operator'), dataIndex: 'operatorId', key: 'operatorId', render: (v: any) => v || '-' },
+            ]}
+            dataSource={currentReferenceLogs}
+            rowKey="id"
+            pagination={false}
+            size="small"
             style={{
               background: 'transparent'
             }}
-        />
+          />
         </div>
-        <div style={{ 
-          marginTop: 16, 
-          padding: 12, 
-          background: 'rgba(255, 255, 255, 0.05)', 
+        <div style={{
+          marginTop: 16,
+          padding: 12,
+          background: 'rgba(255, 255, 255, 0.05)',
           borderRadius: 12,
           border: '1px solid rgba(244,175,37,0.2)',
           backdropFilter: 'blur(10px)'
@@ -5012,160 +5012,160 @@ const AdminInventory: React.FC = () => {
         {!isMobile ? (
           // 电脑端 - 使用表格
           <>
-        <div className="points-config-form">
-        <Table
-          columns={[
-            { 
-              title: t('inventory.time'), 
-              dataIndex: 'createdAt', 
-              key: 'createdAt', 
-              render: (v: any) => { 
-                const d = toDateSafe(v); 
-                return d ? d.toLocaleString() : '-' 
-              },
-              sorter: (a: any, b: any) => {
-                const da = toDateSafe(a.createdAt)?.getTime() || 0
-                const db = toDateSafe(b.createdAt)?.getTime() || 0
-                return da - db
-              }
-            },
-            { 
-              title: t('inventory.type'), 
-              dataIndex: 'type', 
-              key: 'type', 
-              render: (type: string) => {
-                const color = type === 'in' ? 'green' : type === 'out' ? 'red' : 'blue'
-                const text = type === 'in' ? t('inventory.stockIn') : type === 'out' ? t('inventory.stockOut') : t('inventory.adjustment')
-                return <Tag color={color}>{text}</Tag>
-              },
-              filters: [
-                { text: t('inventory.stockIn'), value: 'in' },
-                { text: t('inventory.stockOut'), value: 'out' },
-                { text: t('inventory.adjustment'), value: 'adjustment' }
-              ],
-              onFilter: (value: any, record: any) => record.type === value
-            },
-            { 
-              title: t('inventory.quantity'), 
-              dataIndex: 'quantity', 
-              key: 'quantity',
-              render: (quantity: number, record: any) => {
-                const color = record.type === 'in' ? 'green' : record.type === 'out' ? 'red' : 'blue'
-                const prefix = record.type === 'in' ? '+' : record.type === 'out' ? '-' : ''
-                return <span style={{ color: color === 'green' ? '#52c41a' : color === 'red' ? '#ff4d4f' : '#1890ff' }}>
-                  {prefix}{quantity}
-                </span>
-              },
-              sorter: (a: any, b: any) => a.quantity - b.quantity
-            },
-            { 
-              title: t('inventory.unitPrice'), 
-              dataIndex: 'unitPrice', 
-              key: 'unitPrice',
-              render: (price: number) => price ? `RM${price.toFixed(2)}` : '-'
-            },
-            { 
-              title: t('inventory.referenceNo'), 
-              dataIndex: 'referenceNo', 
-              key: 'referenceNo', 
-              render: (v: any) => v || '-'
-            },
-            { 
-              title: t('inventory.reason'), 
-              dataIndex: 'reason', 
-              key: 'reason', 
-              render: (v: any) => v || '-'
-            },
-                { 
-                  title: t('inventory.customer'), 
-                  dataIndex: 'userId', 
-                  key: 'userId', 
-                  render: (userId: string, record: any) => {
-                    // 1. 优先使用记录中直接保存的 userName
-                    if (record.userName) return record.userName;
-                    
-                    // 2. 如果有 userId，从 users 列表查找
-                    if (userId) {
-                      const user = users.find(u => u.id === userId);
-                      if (user?.displayName) return user.displayName;
+            <div className="points-config-form">
+              <Table
+                columns={[
+                  {
+                    title: t('inventory.time'),
+                    dataIndex: 'createdAt',
+                    key: 'createdAt',
+                    render: (v: any) => {
+                      const d = toDateSafe(v);
+                      return d ? d.toLocaleString() : '-'
+                    },
+                    sorter: (a: any, b: any) => {
+                      const da = toDateSafe(a.createdAt)?.getTime() || 0
+                      const db = toDateSafe(b.createdAt)?.getTime() || 0
+                      return da - db
                     }
-                    
-                    // 3. 尝试从 referenceNo 查找订单关联的用户
-                    if (record.referenceNo) {
-                      const order = orders.find(o => o.id === record.referenceNo);
-                      if (order?.userId) {
-                        const user = users.find(u => u.id === order.userId);
+                  },
+                  {
+                    title: t('inventory.type'),
+                    dataIndex: 'type',
+                    key: 'type',
+                    render: (type: string) => {
+                      const color = type === 'in' ? 'green' : type === 'out' ? 'red' : 'blue'
+                      const text = type === 'in' ? t('inventory.stockIn') : type === 'out' ? t('inventory.stockOut') : t('inventory.adjustment')
+                      return <Tag color={color}>{text}</Tag>
+                    },
+                    filters: [
+                      { text: t('inventory.stockIn'), value: 'in' },
+                      { text: t('inventory.stockOut'), value: 'out' },
+                      { text: t('inventory.adjustment'), value: 'adjustment' }
+                    ],
+                    onFilter: (value: any, record: any) => record.type === value
+                  },
+                  {
+                    title: t('inventory.quantity'),
+                    dataIndex: 'quantity',
+                    key: 'quantity',
+                    render: (quantity: number, record: any) => {
+                      const color = record.type === 'in' ? 'green' : record.type === 'out' ? 'red' : 'blue'
+                      const prefix = record.type === 'in' ? '+' : record.type === 'out' ? '-' : ''
+                      return <span style={{ color: color === 'green' ? '#52c41a' : color === 'red' ? '#ff4d4f' : '#1890ff' }}>
+                        {prefix}{quantity}
+                      </span>
+                    },
+                    sorter: (a: any, b: any) => a.quantity - b.quantity
+                  },
+                  {
+                    title: t('inventory.unitPrice'),
+                    dataIndex: 'unitPrice',
+                    key: 'unitPrice',
+                    render: (price: number) => price ? `RM${price.toFixed(2)}` : '-'
+                  },
+                  {
+                    title: t('inventory.referenceNo'),
+                    dataIndex: 'referenceNo',
+                    key: 'referenceNo',
+                    render: (v: any) => v || '-'
+                  },
+                  {
+                    title: t('inventory.reason'),
+                    dataIndex: 'reason',
+                    key: 'reason',
+                    render: (v: any) => v || '-'
+                  },
+                  {
+                    title: t('inventory.customer'),
+                    dataIndex: 'userId',
+                    key: 'userId',
+                    render: (userId: string, record: any) => {
+                      // 1. 优先使用记录中直接保存的 userName
+                      if (record.userName) return record.userName;
+
+                      // 2. 如果有 userId，从 users 列表查找
+                      if (userId) {
+                        const user = users.find(u => u.id === userId);
                         if (user?.displayName) return user.displayName;
-                        return order.userId;
                       }
+
+                      // 3. 尝试从 referenceNo 查找订单关联的用户
+                      if (record.referenceNo) {
+                        const order = orders.find(o => o.id === record.referenceNo);
+                        if (order?.userId) {
+                          const user = users.find(u => u.id === order.userId);
+                          if (user?.displayName) return user.displayName;
+                          return order.userId;
+                        }
+                      }
+
+                      // 4. 都没有则显示 -
+                      return '-';
                     }
-                    
-                    // 4. 都没有则显示 -
-                    return '-';
-                  }
-            },
-            { 
-              title: t('inventory.operator'), 
-              dataIndex: 'operatorId', 
-              key: 'operatorId', 
-              render: (v: any) => v || '-'
-            },
-          ]}
-          dataSource={currentProductLogs}
-          rowKey="id"
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total })
-          }}
-          size="small"
-          style={{
-            background: 'transparent'
-          }}
-        />
-        </div>
-        <div style={{ 
-          marginTop: 16, 
-          padding: 12, 
-          background: 'rgba(255, 255, 255, 0.05)', 
-          borderRadius: 12,
-          border: '1px solid rgba(244,175,37,0.2)',
-          backdropFilter: 'blur(10px)'
-        }}>
-          <div style={{ fontWeight: 'bold', marginBottom: 8, color: '#FFFFFF' }}>{t('inventory.summary')}</div>
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '8px 24px' }}>
-            <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.totalRecords')}：{currentProductLogs.length} {t('inventory.records')}</div>
-            <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.currentStock')}：{getComputedStock(viewingProductLogs || '')} {t('inventory.sticks')}</div>
-            
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', gridColumn: '1 / -1', margin: '4px 0' }} />
-            
-            <div>
-              <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.totalInStock')}：{currentProductLogs.filter(log => log.type === 'in').reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
-              <div style={{ color: '#52c41a', fontWeight: 600, fontSize: 13 }}>{t('inventory.totalInValue')}：RM{currentProductLogs.filter(log => log.type === 'in').reduce((sum, log) => sum + ((log.quantity || 0) * (log.unitPrice || 0)), 0).toFixed(2)}</div>
+                  },
+                  {
+                    title: t('inventory.operator'),
+                    dataIndex: 'operatorId',
+                    key: 'operatorId',
+                    render: (v: any) => v || '-'
+                  },
+                ]}
+                dataSource={currentProductLogs}
+                rowKey="id"
+                pagination={{
+                  pageSize: 10,
+                  showSizeChanger: true,
+                  showQuickJumper: true,
+                  showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total })
+                }}
+                size="small"
+                style={{
+                  background: 'transparent'
+                }}
+              />
             </div>
-            
-            <div>
-              <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.totalOutStock')}：{currentProductLogs.filter(log => log.type === 'out').reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
-              <div style={{ color: '#ff4d4f', fontWeight: 600, fontSize: 13 }}>{t('inventory.totalOutValue')}：RM{currentProductLogs.filter(log => log.type === 'out').reduce((sum, log) => sum + ((log.quantity || 0) * (log.unitPrice || 0)), 0).toFixed(2)}</div>
+            <div style={{
+              marginTop: 16,
+              padding: 12,
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: 12,
+              border: '1px solid rgba(244,175,37,0.2)',
+              backdropFilter: 'blur(10px)'
+            }}>
+              <div style={{ fontWeight: 'bold', marginBottom: 8, color: '#FFFFFF' }}>{t('inventory.summary')}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '8px 24px' }}>
+                <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.totalRecords')}：{currentProductLogs.length} {t('inventory.records')}</div>
+                <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.currentStock')}：{getComputedStock(viewingProductLogs || '')} {t('inventory.sticks')}</div>
+
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', gridColumn: '1 / -1', margin: '4px 0' }} />
+
+                <div>
+                  <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.totalInStock')}：{currentProductLogs.filter(log => log.type === 'in').reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
+                  <div style={{ color: '#52c41a', fontWeight: 600, fontSize: 13 }}>{t('inventory.totalInValue')}：RM{currentProductLogs.filter(log => log.type === 'in').reduce((sum, log) => sum + ((log.quantity || 0) * (log.unitPrice || 0)), 0).toFixed(2)}</div>
+                </div>
+
+                <div>
+                  <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.totalOutStock')}：{currentProductLogs.filter(log => log.type === 'out').reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
+                  <div style={{ color: '#ff4d4f', fontWeight: 600, fontSize: 13 }}>{t('inventory.totalOutValue')}：RM{currentProductLogs.filter(log => log.type === 'out').reduce((sum, log) => sum + ((log.quantity || 0) * (log.unitPrice || 0)), 0).toFixed(2)}</div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
           </>
         ) : (
           // 手机端 - 使用卡片式布局
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {/* 统计摘要 */}
-            <div style={{ 
-              padding: 16, 
-              background: 'linear-gradient(135deg, rgba(244,175,37,0.1) 0%, rgba(244,175,37,0.05) 100%)', 
+            <div style={{
+              padding: 16,
+              background: 'linear-gradient(135deg, rgba(244,175,37,0.1) 0%, rgba(244,175,37,0.05) 100%)',
               borderRadius: 12,
               border: '1px solid rgba(244,175,37,0.2)'
             }}>
-              <div style={{ 
-                fontSize: 14, 
-                fontWeight: 700, 
-                color: '#f4af25', 
+              <div style={{
+                fontSize: 14,
+                fontWeight: 700,
+                color: '#f4af25',
                 marginBottom: 12,
                 display: 'flex',
                 alignItems: 'center',
@@ -5207,11 +5207,11 @@ const AdminInventory: React.FC = () => {
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 4 }}>
               {t('inventory.recentRecords')} ({currentProductLogs.length})
             </div>
-            
+
             {currentProductLogs.length === 0 ? (
-              <div style={{ 
-                padding: 40, 
-                textAlign: 'center', 
+              <div style={{
+                padding: 40,
+                textAlign: 'center',
                 color: 'rgba(255,255,255,0.4)',
                 fontSize: 14
               }}>
@@ -5224,7 +5224,7 @@ const AdminInventory: React.FC = () => {
                 const typeColor = isIn ? '#52c41a' : isOut ? '#ff4d4f' : '#1890ff'
                 const typeText = isIn ? t('inventory.stockIn') : isOut ? t('inventory.stockOut') : t('inventory.adjustment')
                 const d = toDateSafe(log.createdAt)
-                
+
                 // 获取客户名称
                 let customerName = '-'
                 if (log.userName) {
@@ -5239,11 +5239,11 @@ const AdminInventory: React.FC = () => {
                     if (user?.displayName) customerName = user.displayName
                   }
                 }
-                
+
                 return (
-                  <div 
-                    key={log.id} 
-                    style={{ 
+                  <div
+                    key={log.id}
+                    style={{
                       padding: 12,
                       background: 'rgba(255,255,255,0.05)',
                       borderRadius: 10,
@@ -5252,7 +5252,7 @@ const AdminInventory: React.FC = () => {
                     }}
                   >
                     {/* 类型标签 */}
-                    <div style={{ 
+                    <div style={{
                       position: 'absolute',
                       top: -8,
                       right: 12,
@@ -5266,47 +5266,47 @@ const AdminInventory: React.FC = () => {
                     }}>
                       {typeText}
                     </div>
-                    
+
                     {/* 数量与单价 - 突出显示 */}
-                    <div style={{ 
+                    <div style={{
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'baseline',
                       marginBottom: 8,
                       marginTop: 4
                     }}>
-                      <div style={{ 
-                        fontSize: 24, 
-                        fontWeight: 700, 
+                      <div style={{
+                        fontSize: 24,
+                        fontWeight: 700,
                         color: typeColor,
                       }}>
                         {isIn ? '+' : isOut ? '-' : ''}{log.quantity}
                       </div>
                       {log.unitPrice && (
-                        <div style={{ 
-                          fontSize: 14, 
-                          fontWeight: 600, 
+                        <div style={{
+                          fontSize: 14,
+                          fontWeight: 600,
                           color: '#f4af25'
                         }}>
                           RM{log.unitPrice.toFixed(2)}
                         </div>
                       )}
                     </div>
-                    
+
                     {/* 信息网格 */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ color: 'rgba(255,255,255,0.5)' }}>⏰ {t('inventory.time')}</span>
                         <span style={{ color: '#fff', fontWeight: 500 }}>
-                          {d ? d.toLocaleString('zh-CN', { 
-                            month: '2-digit', 
-                            day: '2-digit', 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
+                          {d ? d.toLocaleString('zh-CN', {
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
                           }) : '-'}
                         </span>
                       </div>
-                      
+
                       {log.reason && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ color: 'rgba(255,255,255,0.5)' }}>{t('inventory.reason')}</span>
@@ -5315,12 +5315,12 @@ const AdminInventory: React.FC = () => {
                           </span>
                         </div>
                       )}
-                      
+
                       {log.referenceNo && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ color: 'rgba(255,255,255,0.5)' }}>🔖 {t('inventory.referenceNo')}</span>
-                          <span style={{ 
-                            color: '#f4af25', 
+                          <span style={{
+                            color: '#f4af25',
                             fontWeight: 500,
                             fontSize: 11,
                             fontFamily: 'monospace'
@@ -5329,14 +5329,14 @@ const AdminInventory: React.FC = () => {
                           </span>
                         </div>
                       )}
-                      
+
                       {customerName !== '-' && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ color: 'rgba(255,255,255,0.5)' }}>👤 {t('inventory.customer')}</span>
                           <span style={{ color: '#fff', fontWeight: 500 }}>{customerName}</span>
                         </div>
                       )}
-                      
+
                       {log.operatorId && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ color: 'rgba(255,255,255,0.5)' }}>👨‍💼 {t('inventory.operator')}</span>
@@ -5432,17 +5432,17 @@ const AdminInventory: React.FC = () => {
           >
             <Input placeholder={t('inventory.pleaseInputBrandName')} />
           </Form.Item>
-          
+
           <Form.Item
             label={t('inventory.brandDescription')}
             name="description"
           >
-            <Input.TextArea 
-              rows={3} 
-              placeholder={t('inventory.pleaseInputBrandDescription')} 
+            <Input.TextArea
+              rows={3}
+              placeholder={t('inventory.pleaseInputBrandDescription')}
             />
           </Form.Item>
-          
+
           <Form.Item
             label={t('inventory.brandLogo')}
             name="logo"
@@ -5455,7 +5455,7 @@ const AdminInventory: React.FC = () => {
               showPreview={true}
             />
           </Form.Item>
-          
+
           <Form.Item
             label={t('inventory.brandWebsite')}
             name="website"
@@ -5468,7 +5468,7 @@ const AdminInventory: React.FC = () => {
           >
             <Input placeholder="https://example.com" />
           </Form.Item>
-          
+
           <Form.Item
             label={t('inventory.brandCountry')}
             name="country"
@@ -5476,7 +5476,7 @@ const AdminInventory: React.FC = () => {
           >
             <Input placeholder={t('inventory.pleaseInputBrandCountry')} />
           </Form.Item>
-          
+
           <Form.Item
             label={t('inventory.foundedYear')}
             name="foundedYear"
@@ -5489,7 +5489,7 @@ const AdminInventory: React.FC = () => {
           >
             <Input placeholder="1990" />
           </Form.Item>
-          
+
           <Form.Item
             label={t('inventory.brandStatus')}
             name="status"
@@ -5537,181 +5537,181 @@ const AdminInventory: React.FC = () => {
         {...getResponsiveModalConfig(isMobile, true, 800)}
       >
         <div style={getModalTheme().content as React.CSSProperties}>
-        {/* 入库总体统计 */}
-        <div style={{ 
-          marginBottom: 16, 
-          padding: 16, 
-          background: '#f8f9fa', 
-          borderRadius: 8,
-          border: '1px solid #e9ecef'
-        }}>
-          <div style={{ fontSize: 16, fontWeight: 600, color: '#FFFFFF', marginBottom: 8 }}>
-            {t('inventory.inSummary')}
+          {/* 入库总体统计 */}
+          <div style={{
+            marginBottom: 16,
+            padding: 16,
+            background: '#f8f9fa',
+            borderRadius: 8,
+            border: '1px solid #e9ecef'
+          }}>
+            <div style={{ fontSize: 16, fontWeight: 600, color: '#FFFFFF', marginBottom: 8 }}>
+              {t('inventory.inSummary')}
+            </div>
+            <div style={{ display: 'flex', gap: 24 }}>
+              <div>
+                <div style={{ fontSize: 12, color: '#6c757d' }}>{t('inventory.totalRecords')}</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#52c41a' }}>
+                  {inLogs.length}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 12, color: '#6c757d' }}>{t('inventory.totalInStock')}</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#52c41a' }}>
+                  {inLogs.reduce((sum, log) => sum + Number(log.quantity || 0), 0)} {t('inventory.sticks')}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 12, color: '#6c757d' }}>{t('inventory.totalValue')}</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#52c41a' }}>
+                  RM{inLogs.reduce((sum, log) => sum + (Number(log.quantity || 0) * Number((log as any).unitPrice || 0)), 0).toFixed(2)}
+                </div>
+              </div>
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: 24 }}>
-            <div>
-              <div style={{ fontSize: 12, color: '#6c757d' }}>{t('inventory.totalRecords')}</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: '#52c41a' }}>
-                {inLogs.length}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 12, color: '#6c757d' }}>{t('inventory.totalInStock')}</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: '#52c41a' }}>
-                {inLogs.reduce((sum, log) => sum + Number(log.quantity || 0), 0)} {t('inventory.sticks')}
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 12, color: '#6c757d' }}>{t('inventory.totalValue')}</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: '#52c41a' }}>
-                RM{inLogs.reduce((sum, log) => sum + (Number(log.quantity || 0) * Number((log as any).unitPrice || 0)), 0).toFixed(2)}
-              </div>
-            </div>
-          </div>
-        </div>
 
-        {/* 品牌入库统计表格 */}
-        <div className="points-config-form">
-        <Table
-          dataSource={inStats}
-          rowKey="brand"
-          pagination={false}
-          size="small"
-            style={{
-              background: 'transparent'
-            }}
-          expandable={{
-            columnWidth: 60,
-            columnTitle: (
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <button
-                onClick={() => {
-                  if (inStatsExpandedKeys.length > 0) {
-                    setInStatsExpandedKeys([])
-                  } else {
-                    setInStatsExpandedKeys(inStats.map(s => s.brand))
-                  }
-                }}
-                style={{
-                  padding: '2px 8px',
-                  borderRadius: 4,
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  cursor: 'pointer',
-                  fontSize: 16,
-                  fontWeight: 600,
-                  color: 'rgba(255, 255, 255, 0.6)',
-                  lineHeight: 1,
-                  minWidth: 28,
-                  height: 28
-                }}
-                title={inStatsExpandedKeys.length > 0 ? t('inventory.collapseAll') : t('inventory.expandAll')}
-              >
-                {inStatsExpandedKeys.length > 0 ? '-' : '+'}
-              </button>
-              </div>
-            ),
-            expandedRowKeys: inStatsExpandedKeys,
-            onExpandedRowsChange: (keys) => setInStatsExpandedKeys([...keys]),
-            expandedRowRender: (record: any) => (
-              <div className="points-config-form">
-              <Table
-                dataSource={record.products}
-                rowKey={(p: any) => p.cigar.id}
-                pagination={false}
-                size="small"
-                showHeader={true}
-                  style={{ marginLeft: 20, background: 'transparent' }}
-                columns={[
-                  {
-                    title: t('inventory.productName'),
-                    dataIndex: 'cigar',
-                    key: 'name',
-                    render: (cigar: any) => (
-                      <div style={{ paddingLeft: 8 }}>
-                        <div style={{ fontWeight: 500 }}>{cigar.name}</div>
-                        <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>{cigar.specification || '-'}</div>
-    </div>
-                    )
-                  },
-                  {
-                    title: t('inventory.inQuantity'),
-                    dataIndex: 'quantity',
-                    key: 'quantity',
-                    width: 150,
-                    align: 'right' as const,
-                    render: (quantity: number) => (
-                      <span style={{ color: '#52c41a' }}>{quantity} {t('inventory.sticks')}</span>
-                    )
-                  },
-                  {
-                    title: t('inventory.recordCount'),
-                    dataIndex: 'records',
-                    key: 'records',
-                    width: 120,
-                    align: 'center' as const,
-                    render: (records: number) => <span>{records}</span>
-                  },
-                  {
-                    title: t('inventory.totalValue'),
-                    dataIndex: 'totalValue',
-                    key: 'totalValue',
-                    width: 150,
-                    align: 'right' as const,
-                    render: (value: number) => (
-                      <span style={{ color: '#1890ff' }}>RM{value.toFixed(2)}</span>
-                    )
-                  }
-                ]}
-              />
-              </div>
-            ),
-            rowExpandable: (record: any) => record.products && record.products.length > 0,
-        }}
-        columns={[
-            {
-              title: t('inventory.brand'),
-              dataIndex: 'brand',
-              key: 'brand',
-              render: (brand: string, record: any) => (
-                <span style={{ fontWeight: 600 }}>
-                  {brand} ({record.products?.length || 0} {t('inventory.products')})
-                </span>
-              )
-            },
-            {
-              title: t('inventory.inQuantity'),
-              dataIndex: 'quantity',
-              key: 'quantity',
-              width: 150,
-              align: 'right' as const,
-              render: (quantity: number) => (
-                <span style={{ fontWeight: 600, color: '#52c41a' }}>{quantity} {t('inventory.sticks')}</span>
-              )
-            },
-            {
-              title: t('inventory.recordCount'),
-              dataIndex: 'records',
-              key: 'records',
-              width: 120,
-              align: 'center' as const,
-              render: (records: number) => (
-                <span>{records}</span>
-              )
-            },
-            {
-              title: t('inventory.totalValue'),
-              dataIndex: 'totalValue',
-              key: 'totalValue',
-              width: 150,
-              align: 'right' as const,
-              render: (value: number) => (
-                <span style={{ fontWeight: 600, color: '#1890ff' }}>RM{value.toFixed(2)}</span>
-              )
-            }
-          ]}
-        />
-        </div>
+          {/* 品牌入库统计表格 */}
+          <div className="points-config-form">
+            <Table
+              dataSource={inStats}
+              rowKey="brand"
+              pagination={false}
+              size="small"
+              style={{
+                background: 'transparent'
+              }}
+              expandable={{
+                columnWidth: 60,
+                columnTitle: (
+                  <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <button
+                      onClick={() => {
+                        if (inStatsExpandedKeys.length > 0) {
+                          setInStatsExpandedKeys([])
+                        } else {
+                          setInStatsExpandedKeys(inStats.map(s => s.brand))
+                        }
+                      }}
+                      style={{
+                        padding: '2px 8px',
+                        borderRadius: 4,
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        cursor: 'pointer',
+                        fontSize: 16,
+                        fontWeight: 600,
+                        color: 'rgba(255, 255, 255, 0.6)',
+                        lineHeight: 1,
+                        minWidth: 28,
+                        height: 28
+                      }}
+                      title={inStatsExpandedKeys.length > 0 ? t('inventory.collapseAll') : t('inventory.expandAll')}
+                    >
+                      {inStatsExpandedKeys.length > 0 ? '-' : '+'}
+                    </button>
+                  </div>
+                ),
+                expandedRowKeys: inStatsExpandedKeys,
+                onExpandedRowsChange: (keys) => setInStatsExpandedKeys([...keys]),
+                expandedRowRender: (record: any) => (
+                  <div className="points-config-form">
+                    <Table
+                      dataSource={record.products}
+                      rowKey={(p: any) => p.cigar.id}
+                      pagination={false}
+                      size="small"
+                      showHeader={true}
+                      style={{ marginLeft: 20, background: 'transparent' }}
+                      columns={[
+                        {
+                          title: t('inventory.productName'),
+                          dataIndex: 'cigar',
+                          key: 'name',
+                          render: (cigar: any) => (
+                            <div style={{ paddingLeft: 8 }}>
+                              <div style={{ fontWeight: 500 }}>{cigar.name}</div>
+                              <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>{cigar.specification || '-'}</div>
+                            </div>
+                          )
+                        },
+                        {
+                          title: t('inventory.inQuantity'),
+                          dataIndex: 'quantity',
+                          key: 'quantity',
+                          width: 150,
+                          align: 'right' as const,
+                          render: (quantity: number) => (
+                            <span style={{ color: '#52c41a' }}>{quantity} {t('inventory.sticks')}</span>
+                          )
+                        },
+                        {
+                          title: t('inventory.recordCount'),
+                          dataIndex: 'records',
+                          key: 'records',
+                          width: 120,
+                          align: 'center' as const,
+                          render: (records: number) => <span>{records}</span>
+                        },
+                        {
+                          title: t('inventory.totalValue'),
+                          dataIndex: 'totalValue',
+                          key: 'totalValue',
+                          width: 150,
+                          align: 'right' as const,
+                          render: (value: number) => (
+                            <span style={{ color: '#1890ff' }}>RM{value.toFixed(2)}</span>
+                          )
+                        }
+                      ]}
+                    />
+                  </div>
+                ),
+                rowExpandable: (record: any) => record.products && record.products.length > 0,
+              }}
+              columns={[
+                {
+                  title: t('inventory.brand'),
+                  dataIndex: 'brand',
+                  key: 'brand',
+                  render: (brand: string, record: any) => (
+                    <span style={{ fontWeight: 600 }}>
+                      {brand} ({record.products?.length || 0} {t('inventory.products')})
+                    </span>
+                  )
+                },
+                {
+                  title: t('inventory.inQuantity'),
+                  dataIndex: 'quantity',
+                  key: 'quantity',
+                  width: 150,
+                  align: 'right' as const,
+                  render: (quantity: number) => (
+                    <span style={{ fontWeight: 600, color: '#52c41a' }}>{quantity} {t('inventory.sticks')}</span>
+                  )
+                },
+                {
+                  title: t('inventory.recordCount'),
+                  dataIndex: 'records',
+                  key: 'records',
+                  width: 120,
+                  align: 'center' as const,
+                  render: (records: number) => (
+                    <span>{records}</span>
+                  )
+                },
+                {
+                  title: t('inventory.totalValue'),
+                  dataIndex: 'totalValue',
+                  key: 'totalValue',
+                  width: 150,
+                  align: 'right' as const,
+                  render: (value: number) => (
+                    <span style={{ fontWeight: 600, color: '#1890ff' }}>RM{value.toFixed(2)}</span>
+                  )
+                }
+              ]}
+            />
+          </div>
         </div>
       </Modal>
 
@@ -5724,158 +5724,158 @@ const AdminInventory: React.FC = () => {
         {...getResponsiveModalConfig(isMobile, true, 800)}
       >
         <div style={getModalTheme().content as React.CSSProperties}>
-        {/* 出库总体统计 */}
-        <div style={{ 
-          marginBottom: 16, 
-          padding: 16, 
-          background: '#f8f9fa', 
-          borderRadius: 8,
-          border: '1px solid #e9ecef'
-        }}>
-          <div style={{ fontSize: 16, fontWeight: 600, color: '#FFFFFF', marginBottom: 8 }}>
-            {t('inventory.outSummary')}
-          </div>
-          <div style={{ display: 'flex', gap: 24 }}>
-            <div>
-              <div style={{ fontSize: 12, color: '#6c757d' }}>{t('inventory.totalRecords')}</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: '#f5222d' }}>
-                {outLogs.length}
+          {/* 出库总体统计 */}
+          <div style={{
+            marginBottom: 16,
+            padding: 16,
+            background: '#f8f9fa',
+            borderRadius: 8,
+            border: '1px solid #e9ecef'
+          }}>
+            <div style={{ fontSize: 16, fontWeight: 600, color: '#FFFFFF', marginBottom: 8 }}>
+              {t('inventory.outSummary')}
+            </div>
+            <div style={{ display: 'flex', gap: 24 }}>
+              <div>
+                <div style={{ fontSize: 12, color: '#6c757d' }}>{t('inventory.totalRecords')}</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#f5222d' }}>
+                  {outLogs.length}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 12, color: '#6c757d' }}>{t('inventory.totalOutStock')}</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#f5222d' }}>
+                  {outLogs.reduce((sum, log) => sum + Number(log.quantity || 0), 0)} {t('inventory.sticks')}
+                </div>
               </div>
             </div>
-            <div>
-              <div style={{ fontSize: 12, color: '#6c757d' }}>{t('inventory.totalOutStock')}</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: '#f5222d' }}>
-                {outLogs.reduce((sum, log) => sum + Number(log.quantity || 0), 0)} {t('inventory.sticks')}
-              </div>
-            </div>
           </div>
-        </div>
 
-        {/* 品牌出库统计表格（可展开产品明细） */}
-        <div className="points-config-form">
-        <Table
-          dataSource={outStats}
-          rowKey="brand"
-          pagination={false}
-          size="small"
-            style={{
-              background: 'transparent'
-            }}
-          expandable={{
-            columnWidth: 60,
-            columnTitle: (
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <button
-                  onClick={() => {
-                    if (outStatsExpandedKeys.length > 0) {
-                      setOutStatsExpandedKeys([])
-                    } else {
-                      setOutStatsExpandedKeys(outStats.map(s => s.brand))
-                    }
-                  }}
-                  style={{
-                    padding: '2px 8px',
-                    borderRadius: 4,
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    cursor: 'pointer',
-                    fontSize: 16,
-                    fontWeight: 600,
-                    color: 'rgba(255, 255, 255, 0.6)',
-                    lineHeight: 1,
-                    minWidth: 28,
-                    height: 28
-                  }}
-                  title={outStatsExpandedKeys.length > 0 ? t('inventory.collapseAll') : t('inventory.expandAll')}
-                >
-                  {outStatsExpandedKeys.length > 0 ? '-' : '+'}
-                </button>
-              </div>
-            ),
-            expandedRowKeys: outStatsExpandedKeys,
-            onExpandedRowsChange: (keys) => setOutStatsExpandedKeys([...keys]),
-            expandedRowRender: (record: any) => (
-              <div className="points-config-form">
-              <Table
-                dataSource={record.products}
-                rowKey={(p: any) => p.cigar.id}
-                pagination={false}
-                size="small"
-                showHeader={true}
-                  style={{ marginLeft: 20, background: 'transparent' }}
-                columns={[
-                  {
-                    title: t('inventory.productName'),
-                    dataIndex: 'cigar',
-                    key: 'name',
-                    render: (cigar: any) => (
-                      <div style={{ paddingLeft: 8 }}>
-                        <div style={{ fontWeight: 500 }}>{cigar.name}</div>
-                        <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>{cigar.specification || '-'}</div>
-                      </div>
-                    )
-                  },
-                  {
-                    title: t('inventory.outQuantity'),
-                    dataIndex: 'quantity',
-                    key: 'quantity',
-                    width: 150,
-                    align: 'right' as const,
-                    render: (quantity: number) => (
-                      <span style={{ color: '#f5222d' }}>{quantity} {t('inventory.sticks')}</span>
-                    )
-                  },
-                  {
-                    title: t('inventory.recordCount'),
-                    dataIndex: 'records',
-                    key: 'records',
-                    width: 120,
-                    align: 'center' as const,
-                    render: (records: number) => <span>{records}</span>
-                  }
-                ]}
-              />
-              </div>
-            ),
-            rowExpandable: (record: any) => record.products && record.products.length > 0,
-          }}
-          columns={[
-            {
-              title: t('inventory.brand'),
-              dataIndex: 'brand',
-              key: 'brand',
-              render: (brand: string, record: any) => (
-                <span style={{ fontWeight: 600 }}>
-                  {brand} ({record.products?.length || 0} {t('inventory.products')})
-                </span>
-              )
-            },
-            {
-              title: t('inventory.outQuantity'),
-              dataIndex: 'quantity',
-              key: 'quantity',
-              width: 150,
-              align: 'right' as const,
-              render: (quantity: number) => (
-                <span style={{ fontWeight: 600, color: '#f5222d' }}>{quantity} {t('inventory.sticks')}</span>
-              )
-            },
-            {
-              title: t('inventory.recordCount'),
-              dataIndex: 'records',
-              key: 'records',
-              width: 120,
-              align: 'center' as const,
-              render: (records: number) => (
-                <span>{records}</span>
-              )
-            }
-          ]}
-        />
-        </div>
+          {/* 品牌出库统计表格（可展开产品明细） */}
+          <div className="points-config-form">
+            <Table
+              dataSource={outStats}
+              rowKey="brand"
+              pagination={false}
+              size="small"
+              style={{
+                background: 'transparent'
+              }}
+              expandable={{
+                columnWidth: 60,
+                columnTitle: (
+                  <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <button
+                      onClick={() => {
+                        if (outStatsExpandedKeys.length > 0) {
+                          setOutStatsExpandedKeys([])
+                        } else {
+                          setOutStatsExpandedKeys(outStats.map(s => s.brand))
+                        }
+                      }}
+                      style={{
+                        padding: '2px 8px',
+                        borderRadius: 4,
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        cursor: 'pointer',
+                        fontSize: 16,
+                        fontWeight: 600,
+                        color: 'rgba(255, 255, 255, 0.6)',
+                        lineHeight: 1,
+                        minWidth: 28,
+                        height: 28
+                      }}
+                      title={outStatsExpandedKeys.length > 0 ? t('inventory.collapseAll') : t('inventory.expandAll')}
+                    >
+                      {outStatsExpandedKeys.length > 0 ? '-' : '+'}
+                    </button>
+                  </div>
+                ),
+                expandedRowKeys: outStatsExpandedKeys,
+                onExpandedRowsChange: (keys) => setOutStatsExpandedKeys([...keys]),
+                expandedRowRender: (record: any) => (
+                  <div className="points-config-form">
+                    <Table
+                      dataSource={record.products}
+                      rowKey={(p: any) => p.cigar.id}
+                      pagination={false}
+                      size="small"
+                      showHeader={true}
+                      style={{ marginLeft: 20, background: 'transparent' }}
+                      columns={[
+                        {
+                          title: t('inventory.productName'),
+                          dataIndex: 'cigar',
+                          key: 'name',
+                          render: (cigar: any) => (
+                            <div style={{ paddingLeft: 8 }}>
+                              <div style={{ fontWeight: 500 }}>{cigar.name}</div>
+                              <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>{cigar.specification || '-'}</div>
+                            </div>
+                          )
+                        },
+                        {
+                          title: t('inventory.outQuantity'),
+                          dataIndex: 'quantity',
+                          key: 'quantity',
+                          width: 150,
+                          align: 'right' as const,
+                          render: (quantity: number) => (
+                            <span style={{ color: '#f5222d' }}>{quantity} {t('inventory.sticks')}</span>
+                          )
+                        },
+                        {
+                          title: t('inventory.recordCount'),
+                          dataIndex: 'records',
+                          key: 'records',
+                          width: 120,
+                          align: 'center' as const,
+                          render: (records: number) => <span>{records}</span>
+                        }
+                      ]}
+                    />
+                  </div>
+                ),
+                rowExpandable: (record: any) => record.products && record.products.length > 0,
+              }}
+              columns={[
+                {
+                  title: t('inventory.brand'),
+                  dataIndex: 'brand',
+                  key: 'brand',
+                  render: (brand: string, record: any) => (
+                    <span style={{ fontWeight: 600 }}>
+                      {brand} ({record.products?.length || 0} {t('inventory.products')})
+                    </span>
+                  )
+                },
+                {
+                  title: t('inventory.outQuantity'),
+                  dataIndex: 'quantity',
+                  key: 'quantity',
+                  width: 150,
+                  align: 'right' as const,
+                  render: (quantity: number) => (
+                    <span style={{ fontWeight: 600, color: '#f5222d' }}>{quantity} {t('inventory.sticks')}</span>
+                  )
+                },
+                {
+                  title: t('inventory.recordCount'),
+                  dataIndex: 'records',
+                  key: 'records',
+                  width: 120,
+                  align: 'center' as const,
+                  render: (records: number) => (
+                    <span>{records}</span>
+                  )
+                }
+              ]}
+            />
+          </div>
         </div>
       </Modal>
-      
+
       {/* 订单编辑Modal */}
       <Modal
         title="编辑入库订单"
@@ -5909,12 +5909,12 @@ const AdminInventory: React.FC = () => {
           layout="vertical"
           onFinish={async (values) => {
             if (!editingOrder) return
-            
+
             setLoading(true)
             try {
               // 重新计算汇总
               const items = values.items || []
-              const totalQuantity = items.reduce((sum: number, item: any) => 
+              const totalQuantity = items.reduce((sum: number, item: any) =>
                 sum + (Number(item.quantity) || 0), 0
               )
               const totalValue = items.reduce((sum: number, item: any) => {
@@ -5922,7 +5922,7 @@ const AdminInventory: React.FC = () => {
                 const price = Number(item.unitPrice) || 0
                 return sum + (qty * price)
               }, 0)
-              
+
               // 更新订单
               await updateInboundOrder(editingOrder.id, {
                 referenceNo: values.referenceNo,
@@ -5941,16 +5941,16 @@ const AdminInventory: React.FC = () => {
                 totalValue,
                 attachments: editUploadedAttachments.length > 0 ? editUploadedAttachments : undefined
               })
-              
+
               // 同步更新 inventory_movements
               // 先删除旧的 movements
-              const oldMovements = inventoryMovements.filter(m => 
+              const oldMovements = inventoryMovements.filter(m =>
                 m.inboundOrderId === editingOrder.id
               )
               for (const m of oldMovements) {
                 await deleteDocument(COLLECTIONS.INVENTORY_MOVEMENTS, m.id)
               }
-              
+
               // 创建新的 movements
               for (const item of items) {
                 const movement = {
@@ -5968,7 +5968,7 @@ const AdminInventory: React.FC = () => {
                 }
                 await createDocument(COLLECTIONS.INVENTORY_MOVEMENTS, movement)
               }
-              
+
               message.success('✅ 订单已更新')
               setEditingOrder(null)
               orderEditForm.resetFields()
@@ -5994,7 +5994,7 @@ const AdminInventory: React.FC = () => {
               >
                 <Input placeholder="例如: YI-001" />
               </Form.Item>
-              
+
               <Form.Item
                 label="原因"
                 name="reason"
@@ -6002,7 +6002,7 @@ const AdminInventory: React.FC = () => {
                 <Input placeholder="例如: 入库" />
               </Form.Item>
             </Col>
-            
+
             {/* 右侧：附件上传 */}
             <Col span={12}>
               <Form.Item label={t('inventory.attachments')}>
@@ -6025,14 +6025,14 @@ const AdminInventory: React.FC = () => {
                   }}
                   onChange={async (info) => {
                     setEditAttachmentFileList(info.fileList)
-                    
+
                     const file = info.file
                     if (file.originFileObj && file.status === undefined) {
                       try {
                         const uploadResult = await cloudinaryUpload(file.originFileObj, {
                           folder: 'inventory_documents'
                         })
-                        
+
                         const isPDF = file.type === 'application/pdf'
                         const newAttachment = {
                           url: uploadResult.secure_url,
@@ -6040,17 +6040,17 @@ const AdminInventory: React.FC = () => {
                           filename: file.name,
                           uploadedAt: new Date()
                         }
-                        
+
                         setEditUploadedAttachments(prev => [...prev, newAttachment])
-                        
-                        setEditAttachmentFileList(prev => 
-                          prev.map(f => 
-                            f.uid === file.uid 
+
+                        setEditAttachmentFileList(prev =>
+                          prev.map(f =>
+                            f.uid === file.uid
                               ? { ...f, status: 'done', url: uploadResult.secure_url }
                               : f
                           )
                         )
-                        
+
                         message.success(t('inventory.uploadSuccess'))
                       } catch (error) {
                         message.error(t('inventory.uploadFailed'))
@@ -6077,7 +6077,7 @@ const AdminInventory: React.FC = () => {
               </Form.Item>
             </Col>
           </Row>
-          
+
           <Form.List name="items">
             {(fields, { add, remove }) => (
               <>
@@ -6092,7 +6092,7 @@ const AdminInventory: React.FC = () => {
                     添加产品
                   </Button>
                 </div>
-                
+
                 {fields.map((field, index) => {
                   const { key, ...restField } = field
                   return (
@@ -6109,7 +6109,7 @@ const AdminInventory: React.FC = () => {
                       >
                         <Input />
                       </Form.Item>
-                      
+
                       <Form.Item
                         {...restField}
                         name={[field.name, 'itemType']}
@@ -6118,7 +6118,7 @@ const AdminInventory: React.FC = () => {
                       >
                         <Input />
                       </Form.Item>
-                      
+
                       {/* 产品标题、产品选择、数量、单价、删除按钮 - 全部同行显示 */}
                       <Row gutter={12} align="middle">
                         <Col flex="80px">
@@ -6203,7 +6203,7 @@ const AdminInventory: React.FC = () => {
               </>
             )}
           </Form.List>
-          
+
           <Form.Item style={{ marginTop: 24, marginBottom: 0 }}>
             <Space>
               <Button type="primary" htmlType="submit" loading={loading}>
@@ -6221,15 +6221,15 @@ const AdminInventory: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-      
+
       {/* 删除确认对话框 - 使用受控 Modal 替代 modal.confirm 以解决 React 19 兼容性问题 */}
       <Modal
         title={t('inventory.deleteReferenceGroup')}
         open={deleteConfirmOpen}
         onOk={async () => {
           if (!deleteTargetOrder) return
-          
-          
+
+
           setLoading(true)
           try {
             // 使用 deleteTargetOrder.id 直接查找订单
@@ -6264,9 +6264,9 @@ const AdminInventory: React.FC = () => {
       >
         {deleteTargetOrder && (
           <div>
-            {t('inventory.deleteReferenceGroupConfirm', { 
-              referenceNo: deleteTargetOrder.referenceNo, 
-              count: deleteTargetOrder.productCount 
+            {t('inventory.deleteReferenceGroupConfirm', {
+              referenceNo: deleteTargetOrder.referenceNo,
+              count: deleteTargetOrder.productCount
             })}
           </div>
         )}

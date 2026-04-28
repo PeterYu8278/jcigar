@@ -2965,15 +2965,11 @@ const AdminFinance: React.FC = () => {
           setProductExpandedKeys([])
         }}
         footer={null}
-        width={getModalWidth(isMobile, 1000)}
+        width={getModalWidth(isMobile, 800)}
         destroyOnHidden
+        centered
         getContainer={false}
-        style={{ top: 0, height: '100vh', maxWidth: '100vw', margin: 0, paddingBottom: 0 }}
-        styles={{
-          ...getModalThemeStyles(isMobile, true),
-          content: { height: '100vh', borderRadius: 0, display: 'flex', flexDirection: 'column' },
-          body: { flex: 1, overflowY: 'auto', padding: isMobile ? '12px' : '24px' }
-        }}
+        styles={getModalThemeStyles(isMobile, true)}
       >
         {selectedBrand && (
           <>
