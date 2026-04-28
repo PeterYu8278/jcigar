@@ -1,8 +1,8 @@
 // 财务管理页面
 import React, { useEffect, useState, useMemo } from 'react'
-import { 
-  Table, Card, Row, Col, Statistic, Typography, DatePicker, Select, Button, 
-  Space, message, Modal, Form, InputNumber, Input, Spin, Drawer, Tooltip, Pagination 
+import {
+  Table, Card, Row, Col, Statistic, Typography, DatePicker, Select, Button,
+  Space, message, Modal, Form, InputNumber, Input, Spin, Drawer, Tooltip, Pagination
 } from 'antd'
 import { DollarOutlined, ShoppingOutlined, CalendarOutlined, ArrowUpOutlined, ArrowDownOutlined, PlusOutlined, EyeOutlined, BarChartOutlined, PieChartOutlined, DeleteOutlined, CheckOutlined, SearchOutlined, CloseOutlined } from '@ant-design/icons'
 import OrderDetails from '../Orders/OrderDetails'
@@ -964,7 +964,7 @@ const AdminFinance: React.FC = () => {
   // 已移除类别统计
 
   return (
-    <div>
+    <div style={{ minHeight: '100vh', marginBottom: 100 }}>
       <h1 style={{ fontSize: 22, fontWeight: 800, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', paddingInline: 0, marginBottom: 12 }}>{t('financeAdmin.title')}</h1>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -1308,9 +1308,9 @@ const AdminFinance: React.FC = () => {
                         width: `${stat.percentage}%`,
                         height: '100%',
                         background: `linear-gradient(to right, ${index === 0 ? '#f4af25' :
-                            index === 1 ? '#d28e19' :
-                              index === 2 ? '#b87315' :
-                                index === 3 ? '#a0680a' : '#8a5a08'
+                          index === 1 ? '#d28e19' :
+                            index === 2 ? '#b87315' :
+                              index === 3 ? '#a0680a' : '#8a5a08'
                           }, ${index === 0 ? '#d28e19' :
                             index === 1 ? '#b87315' :
                               index === 2 ? '#a0680a' :
@@ -1400,10 +1400,10 @@ const AdminFinance: React.FC = () => {
                 {profitData.trendData.map((d, i) => {
                   const barMonth = dayjs(d.date)
                   // 检查当前是否选中了该月份（高亮逻辑）
-                  const isActive = dateRange && 
-                    dateRange[0] && 
-                    dateRange[0].isSame(barMonth, 'month') && 
-                    dateRange[1] && 
+                  const isActive = dateRange &&
+                    dateRange[0] &&
+                    dateRange[0].isSame(barMonth, 'month') &&
+                    dateRange[1] &&
                     dateRange[1].isSame(barMonth, 'month')
 
                   // 计算高度：预留顶部空间给数字显示
@@ -1418,7 +1418,7 @@ const AdminFinance: React.FC = () => {
                   }
 
                   return (
-                    <div 
+                    <div
                       key={i}
                       style={{
                         flex: 1,
@@ -1466,12 +1466,12 @@ const AdminFinance: React.FC = () => {
                         overlayInnerStyle={{ backdropFilter: 'blur(12px)', background: 'rgba(34, 28, 16, 0.98)', border: '1px solid rgba(244, 175, 37, 0.5)', borderRadius: 8 }}
                         color="transparent"
                       >
-                        <div style={{ 
-                          display: 'flex', 
-                          alignItems: 'flex-end', 
-                          gap: 3, 
-                          width: '100%', 
-                          justifyContent: 'center', 
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'flex-end',
+                          gap: 3,
+                          width: '100%',
+                          justifyContent: 'center',
                           paddingBottom: 4,
                           position: 'relative',
                           zIndex: 2
@@ -1691,7 +1691,7 @@ const AdminFinance: React.FC = () => {
                   </div>
                 )
               })}
-              
+
               <div style={{ display: 'flex', justifyContent: 'center', margin: '16px 0' }}>
                 <Pagination
                   simple
@@ -1723,7 +1723,7 @@ const AdminFinance: React.FC = () => {
                       const status = getOrderMatchStatus(v)
                       let statusColor = 'rgba(255,255,255,0.4)'
                       let statusText = t('financeAdmin.status.unmatched') || '未对账'
-                      
+
                       if (status.status === 'fully') {
                         statusColor = '#52c41a'
                         statusText = t('financeAdmin.status.paid') || '已结清'
@@ -1750,12 +1750,12 @@ const AdminFinance: React.FC = () => {
                           >
                             {v || '-'}
                           </span>
-                          <div style={{ 
-                            fontSize: 10, 
-                            padding: '1px 6px', 
-                            borderRadius: 4, 
-                            background: `${statusColor}15`, 
-                            color: statusColor, 
+                          <div style={{
+                            fontSize: 10,
+                            padding: '1px 6px',
+                            borderRadius: 4,
+                            background: `${statusColor}15`,
+                            color: statusColor,
                             border: `1px solid ${statusColor}33`,
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -1787,8 +1787,8 @@ const AdminFinance: React.FC = () => {
                     render: (_: any, r: any) => (
                       <div>
                         {r.items.map((it: any, idx: number) => (
-                          <div key={it.id || idx} style={{ 
-                            padding: '6px 0', 
+                          <div key={it.id || idx} style={{
+                            padding: '6px 0',
                             borderBottom: idx === r.items.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)',
                             minHeight: 32,
                             display: 'flex',
@@ -1798,11 +1798,11 @@ const AdminFinance: React.FC = () => {
                           </div>
                         ))}
                         {r.items.length > 1 && (
-                          <div style={{ 
-                            borderTop: '1px solid transparent', 
-                            marginTop: 4, 
-                            paddingTop: 4, 
-                            fontWeight: 700, 
+                          <div style={{
+                            borderTop: '1px solid transparent',
+                            marginTop: 4,
+                            paddingTop: 4,
+                            fontWeight: 700,
                             color: 'rgba(255,255,255,0.4)',
                             minHeight: 25,
                             display: 'flex',
@@ -1821,8 +1821,8 @@ const AdminFinance: React.FC = () => {
                     render: (_: any, r: any) => (
                       <div>
                         {r.items.map((it: any, idx: number) => (
-                          <div key={it.id || idx} style={{ 
-                            padding: '6px 0', 
+                          <div key={it.id || idx} style={{
+                            padding: '6px 0',
                             borderBottom: idx === r.items.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)',
                             minHeight: 32,
                             textAlign: 'right',
@@ -1834,10 +1834,10 @@ const AdminFinance: React.FC = () => {
                           </div>
                         ))}
                         {r.items.length > 1 && (
-                          <div style={{ 
-                            borderTop: '1px solid transparent', 
-                            marginTop: 4, 
-                            paddingTop: 4, 
+                          <div style={{
+                            borderTop: '1px solid transparent',
+                            marginTop: 4,
+                            paddingTop: 4,
                             fontWeight: 700,
                             minHeight: 25,
                             display: 'flex',
@@ -1857,8 +1857,8 @@ const AdminFinance: React.FC = () => {
                     render: (_: any, r: any) => (
                       <div>
                         {r.items.map((it: any, idx: number) => (
-                          <div key={it.id || idx} style={{ 
-                            padding: '6px 0', 
+                          <div key={it.id || idx} style={{
+                            padding: '6px 0',
                             borderBottom: idx === r.items.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)',
                             minHeight: 32,
                             display: 'flex',
@@ -1869,11 +1869,11 @@ const AdminFinance: React.FC = () => {
                           </div>
                         ))}
                         {r.items.length > 1 && (
-                          <div style={{ 
-                            borderTop: '1px solid #f4af25', 
-                            marginTop: 4, 
-                            paddingTop: 4, 
-                            fontWeight: 700, 
+                          <div style={{
+                            borderTop: '1px solid #f4af25',
+                            marginTop: 4,
+                            paddingTop: 4,
+                            fontWeight: 700,
                             color: '#f4af25',
                             minHeight: 25,
                             display: 'flex',
@@ -1893,8 +1893,8 @@ const AdminFinance: React.FC = () => {
                     render: (_: any, r: any) => (
                       <div>
                         {r.items.map((it: any, idx: number) => (
-                          <div key={it.id || idx} style={{ 
-                            padding: '6px 0', 
+                          <div key={it.id || idx} style={{
+                            padding: '6px 0',
                             borderBottom: idx === r.items.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)',
                             minHeight: 32,
                             display: 'flex',
@@ -1905,10 +1905,10 @@ const AdminFinance: React.FC = () => {
                           </div>
                         ))}
                         {r.items.length > 1 && (
-                          <div style={{ 
-                            borderTop: '1px solid rgba(255,255,255,0.2)', 
-                            marginTop: 4, 
-                            paddingTop: 4, 
+                          <div style={{
+                            borderTop: '1px solid rgba(255,255,255,0.2)',
+                            marginTop: 4,
+                            paddingTop: 4,
                             fontWeight: 700,
                             minHeight: 25,
                             display: 'flex',
@@ -1930,8 +1930,8 @@ const AdminFinance: React.FC = () => {
                         {r.items.map((it: any, idx: number) => {
                           const p = it.profit;
                           return (
-                            <div key={it.id || idx} style={{ 
-                              padding: '6px 0', 
+                            <div key={it.id || idx} style={{
+                              padding: '6px 0',
                               borderBottom: idx === r.items.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)',
                               minHeight: 32,
                               display: 'flex',
@@ -1945,10 +1945,10 @@ const AdminFinance: React.FC = () => {
                           )
                         })}
                         {r.items.length > 1 && (
-                          <div style={{ 
-                            borderTop: '1px solid rgba(255,255,255,0.2)', 
-                            marginTop: 4, 
-                            paddingTop: 4, 
+                          <div style={{
+                            borderTop: '1px solid rgba(255,255,255,0.2)',
+                            marginTop: 4,
+                            paddingTop: 4,
                             fontWeight: 800,
                             color: r.totalProfit >= 0 ? '#52c41a' : '#f5222d',
                             minHeight: 25,
@@ -2965,11 +2965,15 @@ const AdminFinance: React.FC = () => {
           setProductExpandedKeys([])
         }}
         footer={null}
-        width={getModalWidth(isMobile, 800)}
+        width={getModalWidth(isMobile, 1000)}
         destroyOnHidden
-        centered
         getContainer={false}
-        styles={getModalThemeStyles(isMobile, true)}
+        style={{ top: 0, height: '100vh', maxWidth: '100vw', margin: 0, paddingBottom: 0 }}
+        styles={{
+          ...getModalThemeStyles(isMobile, true),
+          content: { height: '100vh', borderRadius: 0, display: 'flex', flexDirection: 'column' },
+          body: { flex: 1, overflowY: 'auto', padding: isMobile ? '12px' : '24px' }
+        }}
       >
         {selectedBrand && (
           <>
