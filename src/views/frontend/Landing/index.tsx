@@ -1200,46 +1200,46 @@ const Landing: React.FC = () => {
         centered
         styles={{
           mask: { backdropFilter: 'blur(12px)', background: 'rgba(0, 0, 0, 0.6)' },
-          content: { 
-            padding: 0, 
-            background: '#111', 
-            borderRadius: '24px', 
+          content: {
+            padding: 0,
+            background: '#111',
+            borderRadius: '24px',
             overflow: 'hidden',
-            border: '1px solid rgba(197, 165, 90, 0.4)' 
+            border: '1px solid rgba(197, 165, 90, 0.4)'
           }
         }}
       >
         <div style={{ position: 'relative' }}>
           <div style={{ height: '300px', overflow: 'hidden' }}>
-            <img 
-              src="https://images.pexels.com/photos/25747045/pexels-photo-25747045.jpeg" 
-              alt="Monthly Taste Salon" 
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+            <img
+              src="https://images.pexels.com/photos/25747045/pexels-photo-25747045.jpeg"
+              alt="Monthly Taste Salon"
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
             {/* Tag Overlay */}
-            <div style={{ 
-              position: 'absolute', 
-              top: '20px', 
-              left: '20px', 
-              background: 'var(--gold)', 
-              color: '#000', 
-              padding: '6px 16px', 
-              fontSize: '12px', 
-              fontWeight: 700, 
+            <div style={{
+              position: 'absolute',
+              top: '20px',
+              left: '20px',
+              background: 'var(--gold)',
+              color: '#000',
+              padding: '6px 16px',
+              fontSize: '12px',
+              fontWeight: 700,
               letterSpacing: '0.1em',
               borderRadius: '20px'
             }}>
               SPECIAL OFFER
             </div>
           </div>
-          
+
           <div style={{ padding: '40px 32px', textAlign: 'center' }}>
             <p style={{ color: 'var(--gold)', fontSize: '14px', letterSpacing: '0.4em', textTransform: 'uppercase', marginBottom: '16px' }}>Exclusive Experience</p>
             <h2 className="font-serif" style={{ fontSize: '36px', marginBottom: '16px', color: '#FFF' }}>Monthly Taste <span className="gold-text">Salon</span></h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '16px', lineHeight: 1.8, marginBottom: '32px' }}>
               Join our monthly gathering of connoisseurs. Indulge in premium cigars, curated food, and spirits for only <span style={{ color: '#FFF', fontWeight: 600 }}>RM 150</span>.
             </p>
-            
+
             <Button
               className="btn-gold"
               style={{ height: '54px', width: '100%', fontSize: '16px', fontWeight: 600, letterSpacing: '0.1em' }}
@@ -1250,9 +1250,9 @@ const Landing: React.FC = () => {
             >
               BOOK YOUR SEAT NOW
             </Button>
-            
-            <a 
-              className="nav-link" 
+
+            <a
+              className="nav-link"
               style={{ marginTop: '20px', display: 'inline-block', fontSize: '14px', opacity: 0.6 }}
               onClick={() => setSalonModalVisible(false)}
             >

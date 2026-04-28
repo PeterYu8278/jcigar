@@ -34,7 +34,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
   const { t } = useTranslation()
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
   const [pointsConfig, setPointsConfig] = useState<PointsConfig | null>(null)
-  
+
   // 3D旋转动画状态
   const [isRotating, setIsRotating] = useState(false)
   const [rotationDirection, setRotationDirection] = useState<'left' | 'right'>('right')
@@ -100,20 +100,20 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
       q,
       (querySnapshot) => {
         const hasPendingSession = !querySnapshot.empty
-        
+
         // 首次回调：只初始化状态，不关闭模态框
         if (isFirstCallbackRef.current) {
           prevHasPendingSessionRef.current = hasPendingSession
           isFirstCallbackRef.current = false
           return
         }
-        
+
         // 后续回调：检测到用户被 check-in（从没有 pending session 变为有 pending session）
         if (prevHasPendingSessionRef.current === false && hasPendingSession) {
           // 关闭引荐码分享模态框
           setQrModalVisible(false)
         }
-        
+
         // 更新 ref 为当前状态
         prevHasPendingSessionRef.current = hasPendingSession
       },
@@ -144,7 +144,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
       message.error(t('profile.referralCodeNotFound'))
       return
     }
-    
+
     try {
       await navigator.clipboard.writeText(user.memberId)
       message.success(t('profile.referralCodeCopied'))
@@ -172,10 +172,10 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
       message.error(t('profile.referralCodeNotFound'))
       return
     }
-    
+
     const baseUrl = window.location.origin
     const shareLink = `${baseUrl}/register?ref=${user.memberId}`
-    
+
     try {
       await navigator.clipboard.writeText(shareLink)
       message.success(t('profile.inviteTextCopied'))
@@ -203,11 +203,11 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
       message.error(t('profile.referralCodeNotFound'))
       return
     }
-    
+
     const baseUrl = window.location.origin
     const shareLink = `${baseUrl}/register?ref=${user.memberId}`
     const shareText = t('profile.shareText', { code: user.memberId })
-    
+
     if (navigator.share) {
       try {
         await navigator.share({
@@ -239,13 +239,9 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
 
   const handleTouchEnd = () => {
     if (!touchStart || !touchEnd || isRotating) return
-    
-    // 如果启用了QR modal且显示会员卡，触摸时打开QR modal
-    if (enableQrModal && showMemberCard) {
-      setQrModalVisible(true)
-      return
-    }
-    
+
+    // 移除全卡片点击打开QR modal的逻辑，改为只在点击QR码区域时打开
+
     const distance = touchStart - touchEnd
     const isLeftSwipe = distance > 50
     const isRightSwipe = distance < -50
@@ -268,17 +264,20 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
   // 点击事件处理函数
   const handleClick = (e: React.MouseEvent) => {
     if (isRotating) return
-    
-    // 如果启用了QR modal且显示会员卡，点击时打开QR modal
-    if (enableQrModal && showMemberCard) {
-      setQrModalVisible(true)
-      return
+
+    // 检查点击目标是否是 QR 码区域
+    const target = e.target as HTMLElement;
+    if (target.closest('.qr-code-clickable')) {
+      if (enableQrModal) {
+        setQrModalVisible(true);
+      }
+      return;
     }
     
     const rect = e.currentTarget.getBoundingClientRect()
     const clickX = e.clientX - rect.left
     const centerX = rect.width / 2
-    
+
     if (clickX < centerX) {
       // 点击左边：头像从左往右转动消失，名片从左往右显示
       setRotationDirection('left')
@@ -286,7 +285,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
       // 点击右边：头像从右往左转动消失，名片从右往左显示
       setRotationDirection('right')
     }
-    
+
     setIsRotating(true)
     onToggleMemberCard(!showMemberCard)
     setTimeout(() => setIsRotating(false), 600)
@@ -353,7 +352,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
       >
         {showMemberCard ? (
           /* 会员卡显示 - 应用3D效果和精美样式 */
-          <div 
+          <div
             className="card-3d-effect"
             style={{
               position: 'relative',
@@ -369,12 +368,12 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
               maxWidth: '85.6mm',
               maxHeight: '54mm',
               transformStyle: 'preserve-3d',
-              transform: isRotating 
+              transform: isRotating
                 ? `perspective(1000px) rotateY(${rotationDirection === 'left' ? '0deg' : '0deg'})`
                 : 'perspective(1000px) rotateY(0deg)',
               transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
               transformOrigin: 'center center',
-              animation: isRotating 
+              animation: isRotating
                 ? `cardSlideIn${rotationDirection === 'left' ? 'Left' : 'Right'} 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards`
                 : 'none',
               // 3D阴影效果
@@ -417,36 +416,41 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
               inset: 0,
               background: 'radial-gradient(circle at 15% 25%, rgba(212,175,55,0.15), transparent 40%), radial-gradient(circle at 85% 75%, rgba(212,175,55,0.1), transparent 40%)'
             }} />
-            
+
             <div style={{ position: 'relative', zIndex: 1, padding: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                 <div>
-                  <div style={{ 
-                    fontSize: 22, 
-                    fontWeight: 700, 
-                    letterSpacing: 1, 
+                  <div style={{
+                    fontSize: 22,
+                    fontWeight: 700,
+                    letterSpacing: 1,
                     textAlign: 'left',
                     WebkitBackgroundClip: 'text',
                     backgroundClip: 'text',
                     color: 'transparent',
                     backgroundImage: 'linear-gradient(to bottom, #F0E68C, #D4AF37)'
                   }}>{appConfig?.appName || 'Cigar Club'}</div>
-                  <div style={{ 
-                    fontSize: 12, 
-                    fontWeight: 700, 
-                    color: '#D4AF37', 
-                    letterSpacing: 2, 
+                  <div style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: '#D4AF37',
+                    letterSpacing: 2,
                     textAlign: 'left',
                     textShadow: '0 1px 2px rgba(0,0,0,0.5)'
                   }}>CIGAR World</div>
                 </div>
-                <QRCodeDisplay
-                  qrCodeDataURL={qrCodeDataURL}
-                  loading={qrLoading}
-                  error={qrError}
-                  size={54}
-                  showPlaceholder={true}
-                />
+                <div 
+                  className="qr-code-clickable"
+                  style={{ cursor: 'pointer', position: 'relative', zIndex: 10 }}
+                >
+                  <QRCodeDisplay
+                    qrCodeDataURL={qrCodeDataURL}
+                    loading={qrLoading}
+                    error={qrError}
+                    size={54}
+                    showPlaceholder={true}
+                  />
+                </div>
               </div>
               <div style={{ marginTop: 24, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -461,59 +465,59 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
                     boxShadow: '0 6px 16px rgba(0,0,0,0.5)'
                   }} />
                   <div>
-                    <div style={{ 
-                      color: '#ffffff', 
-                      fontSize: 20, 
-                      fontWeight: 700, 
+                    <div style={{
+                      color: '#ffffff',
+                      fontSize: 20,
+                      fontWeight: 700,
                       textAlign: 'left',
                       textShadow: '0 2px 4px rgba(0,0,0,0.7)',
                       fontFamily: "'Noto Sans SC', sans-serif"
                     }}>{user?.displayName || t('common.member')}</div>
-                    <div style={{ 
-                      color: '#D4AF37', 
-                      fontSize: 12, 
-                      fontWeight: 700, 
+                    <div style={{
+                      color: '#D4AF37',
+                      fontSize: 12,
+                      fontWeight: 700,
                       textAlign: 'left',
                       textShadow: '0 1px 2px rgba(0,0,0,0.5)',
                       fontFamily: "'Noto Sans SC', sans-serif"
                     }}>
                       {user?.role === 'developer'
                         ? t('auth.developer', { defaultValue: '开发者' })
-                        : user?.role === 'admin' 
-                        ? t('auth.admin', { defaultValue: '管理员' })
-                        : user?.role === 'vip'
-                        ? t('auth.vip', { defaultValue: 'VIP' })
-                        : t('auth.member', { defaultValue: '会员' })}
+                        : user?.role === 'admin'
+                          ? t('auth.admin', { defaultValue: '管理员' })
+                          : user?.role === 'vip'
+                            ? t('auth.vip', { defaultValue: 'VIP' })
+                            : t('auth.member', { defaultValue: '会员' })}
                     </div>
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ 
-                    color: 'rgba(255,255,255,0.7)', 
+                  <div style={{
+                    color: 'rgba(255,255,255,0.7)',
                     fontSize: 11,
                     fontFamily: "'Noto Sans SC', sans-serif",
                     textShadow: '0 1px 2px rgba(0,0,0,0.5)'
                   }}>{t('usersAdmin.memberId')}</div>
-                  <div style={{ 
-                    color: '#ffffff', 
-                    fontSize: 16, 
-                    fontWeight: 700, 
+                  <div style={{
+                    color: '#ffffff',
+                    fontSize: 16,
+                    fontWeight: 700,
                     letterSpacing: 2,
                     textShadow: '0 2px 4px rgba(0,0,0,0.7)',
                     fontFamily: "'Noto Sans SC', sans-serif"
                   }}>
                     {user?.memberId || '000000'}
                   </div>
-                  <div style={{ 
-                    color: 'rgba(255,255,255,0.7)', 
-                    fontSize: 11, 
+                  <div style={{
+                    color: 'rgba(255,255,255,0.7)',
+                    fontSize: 11,
                     marginTop: 4,
                     fontFamily: "'Noto Sans SC', sans-serif",
                     textShadow: '0 1px 2px rgba(0,0,0,0.5)'
                   }}>{t('usersAdmin.points')}</div>
-                  <div style={{ 
-                    color: '#D4AF37', 
-                    fontSize: 14, 
+                  <div style={{
+                    color: '#D4AF37',
+                    fontSize: 14,
                     fontWeight: 700,
                     textShadow: '0 1px 2px rgba(0,0,0,0.5)',
                     fontFamily: "'Noto Sans SC', sans-serif"
@@ -523,7 +527,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
                 </div>
               </div>
             </div>
-            
+
             {/* 切换提示 */}
             <div style={{
               position: 'absolute',
@@ -541,14 +545,14 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
           </div>
         ) : (
           /* 头像显示 */
-          <div style={{ 
+          <div style={{
             position: 'relative',
-            transform: isRotating 
+            transform: isRotating
               ? `perspective(1000px) rotateY(${rotationDirection === 'left' ? '-90deg' : '90deg'})`
               : 'perspective(1000px) rotateY(0deg)',
             transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
             transformOrigin: 'center center',
-            animation: isRotating 
+            animation: isRotating
               ? `avatarSlideOut${rotationDirection === 'left' ? 'Left' : 'Right'} 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards`
               : 'none'
           }}>
@@ -616,7 +620,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
           </div>
         )}
       </div>
-      
+
       {/* 引荐码分享模态框 */}
       <Modal
         title={null}
@@ -630,7 +634,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
             background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 50%, #D4AF37 100%)',
             borderRadius: '12px',
             padding: '1px',
-            boxShadow: 
+            boxShadow:
               '0 0 20px rgba(212, 175, 55, 0.3), 0 0 40px rgba(212, 175, 55, 0.2), 0 0 60px rgba(212, 175, 55, 0.1), 0 8px 32px rgba(0, 0, 0, 0.5)'
           },
           body: {
@@ -648,14 +652,14 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
           background: 'rgba(0, 0, 0, 0.8)'
         }}
       >
-        <div style={{ 
+        <div style={{
           textAlign: 'center',
           width: '100%'
         }}>
           {/* 标题 */}
-          <div style={{ 
-            fontSize: 16, 
-            fontWeight: 600, 
+          <div style={{
+            fontSize: 16,
+            fontWeight: 600,
             color: 'rgba(255, 255, 255, 0.8)',
             marginBottom: 16,
             fontFamily: "'Noto Sans SC', sans-serif"
