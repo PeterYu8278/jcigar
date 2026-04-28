@@ -1,7 +1,7 @@
 // 通用用户档案视图组件
 import React, { useMemo, useState, useEffect } from 'react'
 import { Row, Col, Card, Typography, Tag, Button, Space, Spin, message } from 'antd'
-import { 
+import {
   CalendarOutlined,
   ShoppingOutlined,
   TrophyOutlined,
@@ -127,10 +127,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           getOrdersByUser(user.id),
           getCigars()
         ])
-        
+
         // 创建雪茄ID到名称的映射
         const cigarMap = new Map(cigars.map(c => [c.id, c.name]))
-        
+
         // 为每个订单项填充雪茄名称
         const ordersWithNames = orders.map(order => ({
           ...order,
@@ -139,7 +139,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             name: item.name || cigarMap.get(item.cigarId) || item.cigarId
           }))
         }))
-        
+
         setUserOrders(ordersWithNames)
       } catch (error) {
         console.error('Error loading orders:', error)
@@ -157,12 +157,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         setReferredUsers([])
         return
       }
-      
+
       setLoadingReferrals(true)
       try {
         const allUsers = await getUsers()
         // 筛选出引荐的用户（兼容新旧格式：string[] 或对象数组）
-        const referralUserIds = user.referral.referrals.map((r: any) => 
+        const referralUserIds = user.referral.referrals.map((r: any) =>
           typeof r === 'string' ? r : r.userId
         );
         const referred = allUsers.filter(u => referralUserIds.includes(u.id))
@@ -189,7 +189,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         setPointsRecords([])
         return
       }
-      
+
       setLoadingPointsRecords(true)
       try {
         const records = await getUserPointsRecords(user.id, 50)
@@ -327,10 +327,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       </div>
 
       {/* Stats Section */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(3, 1fr)', 
-        gap: '10px', 
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: '10px',
         marginBottom: '24px',
         maxWidth: '640px',
         margin: '0 auto 24px auto'
@@ -355,13 +355,18 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       {/* 🆕 AI 识茄历史记录入口 */}
       {user?.id === authUser?.id && (
-        <div style={{ 
+        <div style={{
           maxWidth: '640px',
           margin: '0 auto 24px auto'
         }}>
           <Button
             type="default"
-            icon={<DatabaseOutlined />}
+            icon={<DatabaseOutlined style={{ 
+              background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text'
+            }} />}
             onClick={() => navigate('/ai-cigar-history')}
             style={{
               width: '100%',
@@ -403,63 +408,63 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               return true
             })
             .map((tabKey) => {
-            const isActive = activeTab === tabKey
-            const baseStyle: React.CSSProperties = {
-              flex: 1,
-              padding: '10px 0',
-              fontWeight: 800,
-              fontSize: 12,
-              outline: 'none',
-              borderBottom: isActive ? '2px solid transparent' : '2px solid transparent',
-              cursor: 'pointer',
-              border: 'none',
-              background: 'none',
-              position: 'relative' as const,
-            }
-            const activeStyle: React.CSSProperties = {
-              color: 'transparent',
-              background: 'none',
-              backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent'
-            }
-            const inactiveStyle: React.CSSProperties = {
-              color: '#A0A0A0'
-            }
-            
-            const getTabLabel = (key: string) => {
-              switch (key) {
-                case 'cigar': return t('usersAdmin.cigarRecords')
-                case 'points': return t('usersAdmin.pointsRecords')
-                case 'activity': return t('usersAdmin.activityRecords')
-                case 'referral': return t('usersAdmin.referralRecords')
-                default: return ''
+              const isActive = activeTab === tabKey
+              const baseStyle: React.CSSProperties = {
+                flex: 1,
+                padding: '10px 0',
+                fontWeight: 800,
+                fontSize: 12,
+                outline: 'none',
+                borderBottom: isActive ? '2px solid transparent' : '2px solid transparent',
+                cursor: 'pointer',
+                border: 'none',
+                background: 'none',
+                position: 'relative' as const,
               }
-            }
+              const activeStyle: React.CSSProperties = {
+                color: 'transparent',
+                background: 'none',
+                backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }
+              const inactiveStyle: React.CSSProperties = {
+                color: '#A0A0A0'
+              }
 
-            return (
-              <button
-                key={tabKey}
-                style={{
-                  ...baseStyle,
-                  ...(isActive ? activeStyle : inactiveStyle),
-                }}
-                onClick={() => setActiveTab(tabKey)}
-              >
-                {getTabLabel(tabKey)}
-                {isActive && (
-                  <div style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    height: '2px',
-                    background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-                  }} />
-                )}
-              </button>
-            )
-          })}
+              const getTabLabel = (key: string) => {
+                switch (key) {
+                  case 'cigar': return t('usersAdmin.cigarRecords')
+                  case 'points': return t('usersAdmin.pointsRecords')
+                  case 'activity': return t('usersAdmin.activityRecords')
+                  case 'referral': return t('usersAdmin.referralRecords')
+                  default: return ''
+                }
+              }
+
+              return (
+                <button
+                  key={tabKey}
+                  style={{
+                    ...baseStyle,
+                    ...(isActive ? activeStyle : inactiveStyle),
+                  }}
+                  onClick={() => setActiveTab(tabKey)}
+                >
+                  {getTabLabel(tabKey)}
+                  {isActive && (
+                    <div style={{
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      height: '2px',
+                      background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                    }} />
+                  )}
+                </button>
+              )
+            })}
         </div>
 
         {/* Records List */}
@@ -489,14 +494,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             ) : (
               <Space direction="vertical" size="middle" style={{ width: '100%' }}>
                 {userOrders.map((order) => {
-                  const orderDate = order.createdAt instanceof Date 
-                    ? order.createdAt 
-                    : (order.createdAt as any)?.toDate 
-                      ? (order.createdAt as any).toDate() 
+                  const orderDate = order.createdAt instanceof Date
+                    ? order.createdAt
+                    : (order.createdAt as any)?.toDate
+                      ? (order.createdAt as any).toDate()
                       : new Date(order.createdAt)
-                  
+
                   const totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0)
-                  
+
                   return (
                     <Card
                       key={order.id}
@@ -518,21 +523,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                           </div>
                         </div>
                         <Tag color={order.status === 'completed' ? 'success' : order.status === 'pending' ? 'warning' : 'default'}>
-                          {order.status === 'completed' ? t('ordersAdmin.status.completed') : 
-                           order.status === 'pending' ? t('ordersAdmin.status.pending') : 
-                           order.status === 'cancelled' ? t('ordersAdmin.status.cancelled') : order.status}
+                          {order.status === 'completed' ? t('ordersAdmin.status.completed') :
+                            order.status === 'pending' ? t('ordersAdmin.status.pending') :
+                              order.status === 'cancelled' ? t('ordersAdmin.status.cancelled') : order.status}
                         </Tag>
                       </div>
-                      
+
                       <Space direction="vertical" size="small" style={{ width: '100%' }}>
                         {order.items.map((item, index) => {
-                          const displayName = item.cigarId.startsWith('FEE:') 
+                          const displayName = item.cigarId.startsWith('FEE:')
                             ? t('eventsAdmin.eventFee')
                             : (item.name || item.cigarId)
-                          
+
                           return (
-                            <div key={index} style={{ 
-                              display: 'flex', 
+                            <div key={index} style={{
+                              display: 'flex',
                               justifyContent: 'space-between',
                               padding: '8px 0',
                               borderTop: index > 0 ? '1px solid rgba(255, 255, 255, 0.05)' : 'none'
@@ -547,10 +552,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                           )
                         })}
                       </Space>
-                      
-                      <div style={{ 
-                        marginTop: '12px', 
-                        paddingTop: '12px', 
+
+                      <div style={{
+                        marginTop: '12px',
+                        paddingTop: '12px',
                         borderTop: '1px solid rgba(255, 255, 255, 0.1)',
                         display: 'flex',
                         justifyContent: 'space-between',
@@ -583,24 +588,24 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </Space>
               </div>
             ) : pointsRecords.length === 0 ? (
-            <div style={{
-              textAlign: 'center',
-              padding: '40px 20px',
-              color: 'rgba(255, 255, 255, 0.6)'
-            }}>
-              <p style={{ margin: 0, fontSize: '14px' }}>
-                {t('usersAdmin.noPointsRecords')}
-              </p>
-            </div>
+              <div style={{
+                textAlign: 'center',
+                padding: '40px 20px',
+                color: 'rgba(255, 255, 255, 0.6)'
+              }}>
+                <p style={{ margin: 0, fontSize: '14px' }}>
+                  {t('usersAdmin.noPointsRecords')}
+                </p>
+              </div>
             ) : (
               <Space direction="vertical" size="middle" style={{ width: '100%' }}>
                 {pointsRecords.map((record) => {
-                  const recordDate = record.createdAt instanceof Date 
-                    ? record.createdAt 
-                    : (record.createdAt as any)?.toDate 
-                      ? (record.createdAt as any).toDate() 
+                  const recordDate = record.createdAt instanceof Date
+                    ? record.createdAt
+                    : (record.createdAt as any)?.toDate
+                      ? (record.createdAt as any).toDate()
                       : new Date(record.createdAt)
-                  
+
                   const getSourceText = (source: string) => {
                     const sourceMap: Record<string, string> = {
                       registration: t('pointsConfig.records.sources.registration'),
@@ -617,7 +622,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     }
                     return sourceMap[source] || source
                   }
-                  
+
                   return (
                     <Card
                       key={record.id}
@@ -631,9 +636,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         <div style={{ flex: 1 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                             <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
-                              {recordDate.toLocaleString('zh-CN', { 
-                                year: 'numeric', 
-                                month: '2-digit', 
+                              {recordDate.toLocaleString('zh-CN', {
+                                year: 'numeric',
+                                month: '2-digit',
                                 day: '2-digit',
                                 hour: '2-digit',
                                 minute: '2-digit'
@@ -649,10 +654,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                           </Text>
                         </div>
                         <div style={{ textAlign: 'right', marginLeft: '16px' }}>
-                          <Text 
-                            strong 
-                            style={{ 
-                              color: record.type === 'earn' ? '#52c41a' : '#ff4d4f', 
+                          <Text
+                            strong
+                            style={{
+                              color: record.type === 'earn' ? '#52c41a' : '#ff4d4f',
                               fontSize: '18px',
                               display: 'block'
                             }}
@@ -693,15 +698,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             ) : (
               <Space direction="vertical" size={12} style={{ width: '100%' }}>
                 {userEvents.map((event) => {
-                  const startDate = event.schedule.startDate instanceof Date 
-                    ? event.schedule.startDate 
-                    : (event.schedule.startDate as any)?.toDate 
-                      ? (event.schedule.startDate as any).toDate() 
+                  const startDate = event.schedule.startDate instanceof Date
+                    ? event.schedule.startDate
+                    : (event.schedule.startDate as any)?.toDate
+                      ? (event.schedule.startDate as any).toDate()
                       : new Date(event.schedule.startDate);
-                  
+
                   const isRegistered = event.participants?.registered?.includes(user?.id || '');
                   const isCheckedIn = event.participants?.checkedIn?.includes(user?.id || '');
-                  
+
                   return (
                     <div
                       key={event.id}
@@ -724,8 +729,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         background: 'rgba(255, 255, 255, 0.1)'
                       }}>
                         {event.coverImage ? (
-                          <img 
-                            src={event.coverImage} 
+                          <img
+                            src={event.coverImage}
                             alt={event.title}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />
@@ -742,7 +747,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                           </div>
                         )}
                       </div>
-                      
+
                       {/* 活动信息 */}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{
@@ -756,7 +761,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         }}>
                           {event.title}
                         </div>
-                        
+
                         <div style={{
                           fontSize: '12px',
                           color: 'rgba(255, 255, 255, 0.6)',
@@ -768,26 +773,26 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                             day: 'numeric'
                           })}
                         </div>
-                        
+
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                           {/* 状态标签 */}
-                          <Tag 
+                          <Tag
                             color={
                               event.status === 'upcoming' ? 'blue' :
-                              event.status === 'ongoing' ? 'green' :
-                              event.status === 'completed' ? 'default' :
-                              'red'
+                                event.status === 'ongoing' ? 'green' :
+                                  event.status === 'completed' ? 'default' :
+                                    'red'
                             }
                             style={{ margin: 0, fontSize: '11px' }}
                           >
                             {
                               event.status === 'upcoming' ? t('profile.eventStatus.upcoming') :
-                              event.status === 'ongoing' ? t('profile.eventStatus.ongoing') :
-                              event.status === 'completed' ? t('profile.eventStatus.completed') :
-                              t('profile.eventStatus.cancelled')
+                                event.status === 'ongoing' ? t('profile.eventStatus.ongoing') :
+                                  event.status === 'completed' ? t('profile.eventStatus.completed') :
+                                    t('profile.eventStatus.cancelled')
                             }
                           </Tag>
-                          
+
                           {/* 参与状态标签 */}
                           {isCheckedIn && (
                             <Tag color="success" style={{ margin: 0, fontSize: '11px' }}>
@@ -864,12 +869,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               ) : (
                 <Space direction="vertical" size={12} style={{ width: '100%' }}>
                   {referredUsers.map((referred) => {
-                    const joinDate = referred.createdAt instanceof Date 
-                      ? referred.createdAt 
-                      : (referred.createdAt as any)?.toDate 
-                        ? (referred.createdAt as any).toDate() 
+                    const joinDate = referred.createdAt instanceof Date
+                      ? referred.createdAt
+                      : (referred.createdAt as any)?.toDate
+                        ? (referred.createdAt as any).toDate()
                         : new Date(referred.createdAt);
-                    
+
                     return (
                       <div key={referred.id} style={{
                         background: 'rgba(255, 255, 255, 0.05)',
@@ -896,7 +901,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         }}>
                           {referred.displayName?.charAt(0) || '?'}
                         </div>
-                        
+
                         {/* 用户信息 */}
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: '16px', fontWeight: '600', color: '#fff' }}>
@@ -909,7 +914,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                             {t('profile.memberNumber')}: {referred.memberId || '-'}
                           </div>
                         </div>
-                        
+
                         {/* 会员等级标签 */}
                         <Tag color={getMembershipColor(referred.membership?.level || 'bronze')}>
                           {getMembershipText(referred.membership?.level || 'bronze')}
