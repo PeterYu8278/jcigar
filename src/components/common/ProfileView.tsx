@@ -467,7 +467,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             loadingOrders ? (
               <div style={{ textAlign: 'center', padding: '40px 20px' }}>
                 <Space direction="vertical" size="middle">
-                  <div style={{ fontSize: '24px', color: '#ffd700' }}>
+                  <div style={{ 
+                    fontSize: '24px',
+                    background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text'
+                  }}>
                     <ShoppingOutlined spin />
                   </div>
                   <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
@@ -507,8 +513,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                         <div>
-                          <Text strong style={{ color: '#ffd700', fontSize: '14px' }}>
-                            {t('ordersAdmin.order')} #{order.id.slice(-6).toUpperCase()}
+                          <Text strong style={{ fontSize: '14px', display: 'block' }}>
+                            <span style={{
+                              background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                              WebkitBackgroundClip: 'text',
+                              WebkitTextFillColor: 'transparent',
+                              backgroundClip: 'text'
+                            }}>
+                              {t('ordersAdmin.order')} #{order.id.slice(-6).toUpperCase()}
+                            </span>
                           </Text>
                           <div style={{ marginTop: '4px' }}>
                             <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
@@ -558,8 +571,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
                           {t('ordersAdmin.totalQuantity')}: {totalQuantity}
                         </Text>
-                        <Text strong style={{ color: '#ffd700', fontSize: '16px' }}>
-                          RM {order.total.toFixed(2)}
+                        <Text strong style={{ fontSize: '16px' }}>
+                          <span style={{
+                            background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            backgroundClip: 'text'
+                          }}>
+                            RM {order.total.toFixed(2)}
+                          </span>
                         </Text>
                       </div>
                     </Card>
