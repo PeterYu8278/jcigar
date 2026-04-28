@@ -144,53 +144,66 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
 
   // 根据功能可见性过滤菜单项（developer 不受限制）
   const frontendMenuItems = useMemo(() => {
-    if (isDeveloper) {
-      return frontendMenuItemsBase
-    }
+    if (isDeveloper) return frontendMenuItemsBase
     return frontendMenuItemsBase.filter(item => {
       const featureKey = getFeatureKeyByRoute(item.key)
       return featureKey ? (featuresVisibility[featureKey] ?? true) : true
     })
-  }, [featuresVisibility, isDeveloper, t])
+  }, [featuresVisibility, isDeveloper])
 
-  const adminMenuItems = useMemo(() => {
+  // 最终合并所有菜单项，并添加分组和分割线
+  const menuItems = useMemo(() => {
+    const items: any[] = [...frontendMenuItems]
+
+    // 管理后台分组
+    if (isAdmin) {
+      const filteredAdminBase = adminMenuItemsBase.filter(item => {
+        if (isDeveloper) return true
+        const featureKey = getFeatureKeyByRoute(item.key)
+        return featureKey ? (featuresVisibility[featureKey] ?? true) : true
+      })
+
+      if (filteredAdminBase.length > 0) {
+        items.push({ type: 'divider' })
+        items.push({
+          key: 'admin-section',
+          label: !collapsed ? 'ADMIN' : '',
+          type: 'group',
+          children: filteredAdminBase
+        })
+      }
+    }
+
+    // 开发者/系统管理分组
+    const developerItems: any[] = []
     if (isDeveloper) {
-      const items = [...adminMenuItemsBase]
-      items.push({
+      developerItems.push({
         key: '/developer/feature-management',
         icon: <SettingOutlined />,
         label: t('navigation.featureManagement', { defaultValue: '功能管理' }),
       })
-      items.push({
+    }
+    // 发票模板：管理员和开发者均可见
+    if (isAdmin || isDeveloper) {
+      developerItems.push({
         key: '/developer/invoice-template',
         icon: <FileTextOutlined />,
         label: t('navigation.invoiceTemplate', { defaultValue: '发票模板' }),
       })
-      return items
     }
-    const items = adminMenuItemsBase.filter(item => {
-      const featureKey = getFeatureKeyByRoute(item.key)
-      return featureKey ? (featuresVisibility[featureKey] ?? true) : true
-    })
 
-    // admin 也允许配置发票模板（保存到 app_config）
-    if (isAdmin) {
+    if (developerItems.length > 0) {
+      items.push({ type: 'divider' })
       items.push({
-        key: '/developer/invoice-template',
-        icon: <FileTextOutlined />,
-        label: t('navigation.invoiceTemplate', { defaultValue: '发票模板' }),
+        key: 'developer-section',
+        label: !collapsed ? 'DEVELOPER' : '',
+        type: 'group',
+        children: developerItems
       })
     }
-    
+
     return items
-  }, [featuresVisibility, isDeveloper, isAdmin, t])
-
-  // 为管理员合并前端和管理后台菜单
-  const menuItems = isAdmin ? [
-    ...frontendMenuItems,
-    { type: 'divider' as const },
-    ...adminMenuItems
-  ] : frontendMenuItems
+  }, [frontendMenuItems, adminMenuItemsBase, featuresVisibility, isAdmin, isDeveloper, collapsed, t])
 
   const handleMenuClick = ({ key }: { key: string }) => {
     navigate(key)
@@ -265,6 +278,54 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
         />
       </div>
       
+      <style>{`
+        .cigar-sidebar-menu .ant-menu-item-group-title {
+          background: linear-gradient(to right, #FDE08D, #C48D3A);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          font-weight: 800;
+          font-size: 11px;
+          letter-spacing: 2px;
+          padding-top: 16px;
+          padding-bottom: 8px;
+          opacity: 0.8;
+          text-transform: uppercase;
+        }
+        .cigar-sidebar-menu .ant-menu-item-group-list {
+          padding: 0 4px;
+        }
+        .cigar-sidebar-menu .ant-menu-divider {
+          border-color: rgba(255, 215, 0, 0.15) !important;
+          margin: 8px 16px !important;
+        }
+        /* Hover and Active Styles */
+        .cigar-sidebar-menu .ant-menu-item:hover,
+        .cigar-sidebar-menu .ant-menu-item-active {
+          background: linear-gradient(to right, #FDE08D, #C48D3A) !important;
+          color: #000000 !important;
+          font-weight: 700 !important;
+        }
+        .cigar-sidebar-menu .ant-menu-item:hover .anticon,
+        .cigar-sidebar-menu .ant-menu-item-active .anticon {
+          color: #000000 !important;
+        }
+        /* Selected State */
+        .cigar-sidebar-menu .ant-tabs-tab-active,
+        .cigar-sidebar-menu .ant-menu-item-selected {
+          background: linear-gradient(to right, #FDE08D, #C48D3A) !important;
+          color: #000000 !important;
+          font-weight: 700 !important;
+        }
+        .cigar-sidebar-menu .ant-menu-item-selected .anticon {
+          color: #000000 !important;
+        }
+        /* Default item text color */
+        .cigar-sidebar-menu .ant-menu-item {
+          color: rgba(255, 255, 255, 0.75);
+          transition: all 0.3s ease;
+        }
+      `}</style>
       <Menu
         mode="inline"
         selectedKeys={[location.pathname]}

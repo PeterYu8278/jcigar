@@ -1,6 +1,6 @@
 // 引荐关系图组件
 import React, { useMemo, useState, useEffect } from 'react'
-import { Card, Space, Input, Select, Button, Typography, Spin, message, Tag } from 'antd'
+import { Card, Space, Input, Select, Button, Typography, Spin, message, Tag, Dropdown } from 'antd'
 import { SearchOutlined, UserOutlined, ExpandOutlined, ShrinkOutlined, ReloadOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import type { User } from '../../types'
@@ -30,6 +30,25 @@ export const ReferralTreeView: React.FC<ReferralTreeViewProps> = ({ users: propU
   const [filterType, setFilterType] = useState<'all' | 'hasReferrer' | 'hasReferrals'>('all')
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+  const [activeIndex, setActiveIndex] = useState<string>('')
+  const [showBubble, setShowBubble] = useState(false)
+  const [bubbleLetter, setBubbleLetter] = useState('')
+  const alphaIndex = useMemo(() => {
+    const letters = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i))
+    return [...letters, '#']
+  }, [])
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    return window.innerWidth < 768
+  })
+
+  // 监听窗口大小变化
+  useEffect(() => {
+    const update = () => setIsMobile(window.innerWidth < 768)
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
 
   // 加载用户数据
   useEffect(() => {
@@ -111,41 +130,102 @@ export const ReferralTreeView: React.FC<ReferralTreeViewProps> = ({ users: propU
 
   // 过滤和搜索
   const filteredTree = useMemo(() => {
-    const filterNode = (node: ReferralNode): ReferralNode | null => {
+    /**
+     * 递归过滤函数
+     * @param node 当前处理的节点
+     * @param isParentMatch 父节点是否已匹配筛选条件（用于显示匹配项的子节点）
+     */
+    const filterNode = (node: ReferralNode, isParentMatch: boolean = false): ReferralNode | null => {
       const user = node.user
       const keyword = searchKeyword.trim().toLowerCase()
 
-      // 搜索过滤
+      // 1. 搜索关键字匹配
       const matchSearch = !keyword ||
         user.displayName?.toLowerCase().includes(keyword) ||
         user.email?.toLowerCase().includes(keyword) ||
         user.memberId?.toLowerCase().includes(keyword)
 
-      // 类型过滤
-      let matchFilter = true
+      // 2. 类型筛选匹配
+      let matchType = true
       if (filterType === 'hasReferrer') {
-        matchFilter = !!user.referral?.referredByUserId
+        matchType = !!user.referral?.referredByUserId
       } else if (filterType === 'hasReferrals') {
-        matchFilter = (user.referral?.referrals?.length || 0) > 0
+        matchType = (user.referral?.referrals?.length || 0) > 0
       }
 
-      if (!matchSearch || !matchFilter) {
-        return null
-      }
+      const currentMatches = matchSearch && matchType
+      
+      // 如果自身匹配，或者作为匹配项的子节点被包含
+      const shouldIncludeSelf = currentMatches || isParentMatch
 
-      // 过滤子节点
+      // 3. 递归处理子节点
+      // 如果没有关键字搜索，且当前节点匹配了类型筛选（如“有推荐”），则允许显示其子节点
+      const childrenToPassMatch = !keyword && currentMatches
+      
       const filteredChildren = node.children
-        .map(filterNode)
+        .map(child => filterNode(child, childrenToPassMatch))
         .filter((child): child is ReferralNode => child !== null)
 
-      return {
-        ...node,
-        children: filteredChildren
+      // 4. 决定保留逻辑：自身符合显示条件，或者子孙节点中有符合条件的
+      if (shouldIncludeSelf || filteredChildren.length > 0) {
+        return {
+          ...node,
+          children: filteredChildren
+        }
+      }
+
+      return null
+    }
+
+    return referralTree.map(n => filterNode(n)).filter((node): node is ReferralNode => node !== null)
+  }, [referralTree, searchKeyword, filterType])
+
+  // 按首字母对根节点分组
+  const groupedRoots = useMemo(() => {
+    const groups: { key: string; items: ReferralNode[] }[] = []
+    const map: Record<string, ReferralNode[]> = {}
+
+    filteredTree.forEach(node => {
+      const name = node.user.displayName || ''
+      let initial = name.charAt(0).toUpperCase()
+      if (!/[A-Z]/.test(initial)) initial = '#'
+      
+      if (!map[initial]) map[initial] = []
+      map[initial].push(node)
+    })
+
+    alphaIndex.forEach(letter => {
+      if (map[letter]) {
+        groups.push({ key: letter, items: map[letter] })
+      }
+    })
+
+    return groups
+  }, [filteredTree, alphaIndex])
+
+  // 监听滚动更新高亮字母
+  useEffect(() => {
+    if (!isMobile) return
+
+    const scrollArea = document.querySelector('.referral-scroll-area')
+    if (!scrollArea) return
+
+    const handleScroll = () => {
+      for (const group of groupedRoots) {
+        const el = document.getElementById(`ref-group-${group.key}`)
+        if (el) {
+          const rect = el.getBoundingClientRect()
+          if (rect.top >= 0 && rect.top < 200) {
+            setActiveIndex(group.key)
+            break
+          }
+        }
       }
     }
 
-    return referralTree.map(filterNode).filter((node): node is ReferralNode => node !== null)
-  }, [referralTree, searchKeyword, filterType])
+    scrollArea.addEventListener('scroll', handleScroll)
+    return () => scrollArea.removeEventListener('scroll', handleScroll)
+  }, [groupedRoots, isMobile])
 
   // 展开/折叠节点
   const toggleNode = (nodeId: string) => {
@@ -158,24 +238,23 @@ export const ReferralTreeView: React.FC<ReferralTreeViewProps> = ({ users: propU
     setExpandedNodes(newExpanded)
   }
 
-  // 展开全部
-  const expandAll = () => {
-    const allIds = new Set<string>()
-    const collectIds = (nodes: ReferralNode[]) => {
-      nodes.forEach(node => {
-        allIds.add(node.user.id)
-        if (node.children.length > 0) {
-          collectIds(node.children)
-        }
-      })
+  // 切换全部展开/折叠
+  const toggleAll = () => {
+    if (expandedNodes.size > 0) {
+      setExpandedNodes(new Set())
+    } else {
+      const allIds = new Set<string>()
+      const collectIds = (nodes: ReferralNode[]) => {
+        nodes.forEach(node => {
+          allIds.add(node.user.id)
+          if (node.children.length > 0) {
+            collectIds(node.children)
+          }
+        })
+      }
+      collectIds(referralTree) // 使用 referralTree 而不是 filteredTree 以便展开所有
+      setExpandedNodes(allIds)
     }
-    collectIds(filteredTree)
-    setExpandedNodes(allIds)
-  }
-
-  // 折叠全部
-  const collapseAll = () => {
-    setExpandedNodes(new Set())
   }
 
   // 渲染节点
@@ -331,23 +410,56 @@ export const ReferralTreeView: React.FC<ReferralTreeViewProps> = ({ users: propU
         borderRadius: 12,
         border: '1px solid rgba(244, 175, 37, 0.6)'
       }}>
-        <div style={{ textAlign: 'center', flex: 1 }}>
+        <div 
+          onClick={() => setFilterType('all')}
+          style={{ 
+            textAlign: 'center', 
+            flex: 1, 
+            cursor: 'pointer', 
+            borderRadius: 8, 
+            padding: '4px 0', 
+            background: filterType === 'all' ? 'rgba(244, 175, 37, 0.2)' : 'transparent',
+            transition: 'all 0.3s ease'
+          }}
+        >
           <div style={{ fontSize: 20, fontWeight: 800, color: '#FFD700' }}>{stats.totalUsers}</div>
           <div style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.2 }}>{t('usersAdmin.totalUsers')}</div>
         </div>
-        <div style={{ textAlign: 'center', flex: 1 }}>
+        <div 
+          onClick={() => setFilterType('hasReferrer')}
+          style={{ 
+            textAlign: 'center', 
+            flex: 1, 
+            cursor: 'pointer', 
+            borderRadius: 8, 
+            padding: '4px 0', 
+            background: filterType === 'hasReferrer' ? 'rgba(244, 175, 37, 0.2)' : 'transparent',
+            transition: 'all 0.3s ease'
+          }}
+        >
           <div style={{ fontSize: 20, fontWeight: 800, color: '#FFD700' }}>{stats.hasReferral}</div>
           <div style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.2 }}>{t('usersAdmin.hasReferrer')}</div>
         </div>
-        <div style={{ textAlign: 'center', flex: 1 }}>
+        <div 
+          onClick={() => setFilterType('hasReferrals')}
+          style={{ 
+            textAlign: 'center', 
+            flex: 1, 
+            cursor: 'pointer', 
+            borderRadius: 8, 
+            padding: '4px 0', 
+            background: filterType === 'hasReferrals' ? 'rgba(244, 175, 37, 0.2)' : 'transparent',
+            transition: 'all 0.3s ease'
+          }}
+        >
           <div style={{ fontSize: 20, fontWeight: 800, color: '#FFD700' }}>{stats.hasReferrals}</div>
           <div style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.2 }}>{t('usersAdmin.hasReferrals')}</div>
         </div>
-        <div style={{ textAlign: 'center', flex: 1 }}>
+        <div style={{ textAlign: 'center', flex: 1, padding: '4px 0' }}>
           <div style={{ fontSize: 20, fontWeight: 800, color: '#FFD700' }}>{stats.maxDepth}</div>
           <div style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.2 }}>{t('usersAdmin.maxDepth')}</div>
         </div>
-        <div style={{ textAlign: 'center', flex: 1 }}>
+        <div style={{ textAlign: 'center', flex: 1, padding: '4px 0' }}>
           <div style={{ fontSize: 20, fontWeight: 800, color: '#FFD700' }}>{stats.totalReferralPoints}</div>
           <div style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.2 }}>{t('usersAdmin.totalReferralPoints')}</div>
         </div>
@@ -355,70 +467,211 @@ export const ReferralTreeView: React.FC<ReferralTreeViewProps> = ({ users: propU
 
       {/* 搜索和筛选 */}
       <div style={{ marginBottom: 16 }}>
-        {/* 搜索框 */}
-        <Search
-          placeholder={t('usersAdmin.searchByNameOrEmail')}
-          allowClear
-          style={{ width: '100%', marginBottom: 12 }}
-          prefix={<SearchOutlined />}
-          value={searchKeyword}
-          onChange={(e) => setSearchKeyword(e.target.value)}
-        />
-
-        {/* 筛选和操作按钮 */}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <Select
-            value={filterType}
-            style={{ flex: '1 1 150px', minWidth: 120 }}
-            onChange={setFilterType}
-          >
-            <Option value="all">{t('common.all')}</Option>
-            <Option value="hasReferrer">{t('usersAdmin.hasReferrer')}</Option>
-            <Option value="hasReferrals">{t('usersAdmin.hasReferrals')}</Option>
-          </Select>
-          <Button
-            icon={<ExpandOutlined />}
-            onClick={expandAll}
-            style={{ flex: '1 1 auto' }}
-          >
-            {t('usersAdmin.expandAll')}
-          </Button>
-          <Button
-            icon={<ShrinkOutlined />}
-            onClick={collapseAll}
-            style={{ flex: '1 1 auto' }}
-          >
-            {t('usersAdmin.collapseAll')}
-          </Button>
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={() => window.location.reload()}
-            style={{ flex: '1 1 auto' }}
-          >
-            {t('common.refresh')}
-          </Button>
-        </div>
+        {!isMobile ? (
+          /* 桌面端：筛选区 */
+          <div style={{ 
+            padding: '16px', 
+            background: 'rgba(255, 255, 255, 0.05)', 
+            borderRadius: 12,
+            border: '1px solid rgba(244, 175, 37, 0.6)',
+            backdropFilter: 'blur(10px)'
+          }}>
+            <Space size="middle" wrap>
+              <Search
+                placeholder={t('usersAdmin.searchByNameOrEmail')}
+                allowClear
+                style={{ width: 260 }}
+                prefix={<SearchOutlined />}
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                className="points-config-form"
+              />
+              <Button
+                icon={expandedNodes.size > 0 ? <ShrinkOutlined /> : <ExpandOutlined />}
+                onClick={toggleAll}
+                style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.2)', color: '#FFFFFF' }}
+              >
+                {expandedNodes.size > 0 ? t('usersAdmin.collapseAll') : t('usersAdmin.expandAll')}
+              </Button>
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={() => window.location.reload()}
+                style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.2)', color: '#FFFFFF' }}
+              >
+                {t('common.refresh')}
+              </Button>
+            </Space>
+          </div>
+        ) : (
+          /* 移动端：筛选区 - 同排显示 */
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 8, 
+            paddingBottom: 12,
+            borderBottom: '2px solid rgba(255, 215, 0, 0.2)'
+          }}>
+            <div style={{ flex: 1 }}>
+              <Search
+                placeholder={t('usersAdmin.searchByNameOrEmail')}
+                allowClear
+                style={{ width: '100%' }}
+                prefix={<SearchOutlined />}
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                className="points-config-form"
+              />
+            </div>
+            <Button 
+              size="small" 
+              shape="round" 
+              icon={expandedNodes.size > 0 ? <ShrinkOutlined /> : <ExpandOutlined />}
+              onClick={toggleAll}
+              style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.2)', color: '#FFFFFF' }}
+            />
+            <Button 
+              size="small" 
+              shape="round" 
+              icon={<ReloadOutlined />}
+              onClick={() => window.location.reload()}
+              style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.2)', color: '#FFFFFF' }}
+            />
+          </div>
+        )}
       </div>
 
-      {/* 关系图 */}
-      <div style={{
-        minHeight: 400,
-        maxHeight: 'calc(100vh - 400px)',
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        WebkitOverflowScrolling: 'touch',
-        paddingRight: 4
-      }}>
+      <div 
+        className="referral-scroll-area"
+        style={{
+          minHeight: 400,
+          maxHeight: isMobile ? 'calc(100vh - 350px)' : 'calc(100vh - 400px)',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          WebkitOverflowScrolling: 'touch',
+          paddingRight: isMobile ? 30 : 4,
+          position: 'relative'
+        }}
+      >
         {filteredTree.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 20px', color: 'rgba(255, 255, 255, 0.6)' }}>
             {t('usersAdmin.noReferralData')}
           </div>
         ) : (
           <div>
-            {filteredTree.map(node => renderNode(node, true))}
+            {!isMobile ? (
+              filteredTree.map(node => renderNode(node, true))
+            ) : (
+              groupedRoots.map(group => (
+                <div key={group.key} id={`ref-group-${group.key}`} style={{ marginBottom: 20 }}>
+                  <div style={{ color: '#f4af25', fontWeight: 600, marginBottom: 12, paddingLeft: 4, borderLeft: '3px solid #f4af25' }}>
+                    {group.key}
+                  </div>
+                  {group.items.map(node => renderNode(node, true))}
+                </div>
+              ))
+            )}
           </div>
         )}
       </div>
+
+      {/* 右侧字母索引（固定居中） */}
+      {isMobile && (
+        <div
+          style={{
+            position: 'fixed',
+            right: 7,
+            top: '48%',
+            transform: 'translateY(-50%)',
+            maxHeight: '90vh',
+            padding: 4,
+            zIndex: 1000,
+            background: 'rgba(0,0,0,0.35)',
+            border: '1px solid rgba(255,215,0,0.25)',
+            borderRadius: 12,
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
+            boxShadow: '0 6px 20px rgba(0,0,0,0.25)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center'
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 600 }}>
+            {alphaIndex.map(letter => {
+              const enabled = groupedRoots.some(g => g.key === letter)
+              const isActive = letter === activeIndex
+              return (
+                <a
+                  key={letter}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    if (!enabled) return
+
+                    if (navigator.vibrate) navigator.vibrate(10)
+
+                    setBubbleLetter(letter)
+                    setShowBubble(true)
+                    setTimeout(() => setShowBubble(false), 500)
+
+                    const el = document.getElementById(`ref-group-${letter}`)
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }}
+                  style={{
+                    color: isActive ? '#fff' : enabled ? '#f4af25' : '#777',
+                    background: isActive ? 'rgba(244, 175, 37, 0.8)' : 'transparent',
+                    textDecoration: 'none',
+                    padding: '1px 3px',
+                    borderRadius: '3px',
+                    cursor: enabled ? 'pointer' : 'default',
+                    transition: 'all 0.3s ease',
+                    fontWeight: isActive ? 700 : 600,
+                    lineHeight: 1
+                  }}
+                >
+                  {letter}
+                </a>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 字母气泡提示 */}
+      {showBubble && isMobile && (
+        <div style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '80px',
+          height: '80px',
+          background: 'rgba(244, 175, 37, 0.95)',
+          borderRadius: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '40px',
+          fontWeight: 'bold',
+          color: '#111',
+          zIndex: 9999,
+          pointerEvents: 'none',
+          boxShadow: '0 8px 32px rgba(244, 175, 37, 0.6)',
+          animation: 'bubblePop 0.3s ease-out'
+        }}>
+          {bubbleLetter}
+        </div>
+      )}
+
+      <style>{`
+        @keyframes bubblePop {
+          0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+          100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+        .referral-scroll-area::-webkit-scrollbar {
+          width: 0px;
+          background: transparent;
+        }
+      `}</style>
     </div>
   )
 }

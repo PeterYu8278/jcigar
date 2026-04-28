@@ -46,6 +46,7 @@ interface InvoiceManagementTabProps {
   cigars: Cigar[]
   appConfig: AppConfig | null
   loading: boolean
+  isMobile: boolean
   onRefresh: () => Promise<void>
 }
 
@@ -55,6 +56,7 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
   cigars,
   appConfig,
   loading,
+  isMobile,
   onRefresh,
 }) => {
   const { t } = useTranslation()
@@ -138,7 +140,7 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
       dataIndex: 'total',
       key: 'total',
       width: 140,
-      render: (v: number) => `RM${Number(v || 0).toFixed(2)}`,
+      render: (v: number) => <span style={{ fontWeight: 800, color: '#f4af25' }}>RM{Number(v || 0).toFixed(2)}</span>,
     },
     {
       title: t('ordersAdmin.status.title'),
@@ -182,6 +184,11 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
           <Button
             size="small"
             type="default"
+            style={{
+              background: 'rgba(255,255,255,0.1)',
+              color: '#fff',
+              border: '1px solid rgba(255,255,255,0.2)'
+            }}
             onClick={async () => {
               const inv = (record as any)?.invoice as OrderInvoiceMeta | undefined
               if (!inv) {
@@ -196,6 +203,11 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
           <Button
             size="small"
             type="default"
+            style={{
+              background: 'rgba(255,255,255,0.1)',
+              color: '#fff',
+              border: '1px solid rgba(255,255,255,0.2)'
+            }}
             onClick={async () => {
               const inv = (record as any)?.invoice as OrderInvoiceMeta | undefined
               if (!inv) {
@@ -210,6 +222,12 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
           <Button
             size="small"
             type="primary"
+            style={{
+              background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+              border: 'none',
+              color: '#111',
+              fontWeight: 700
+            }}
             onClick={() => {
               setActiveOrder(record)
               const inv = (record as any)?.invoice as OrderInvoiceMeta | undefined
@@ -274,55 +292,244 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
   }
 
   return (
-    <div style={{ paddingTop: 8 }}>
-      <Space style={{ marginBottom: 12 }} wrap>
-        <Select
-          value={invoiceFilter}
-          onChange={setInvoiceFilter}
-          style={{ width: 180 }}
-          options={[
-            { value: 'all', label: t('ordersAdmin.invoice.filterAll') },
-            { value: 'invoiced', label: t('ordersAdmin.invoice.filterInvoiced') },
-            { value: 'notInvoiced', label: t('ordersAdmin.invoice.filterNotInvoiced') },
-          ]}
-        />
-        <Button
-          disabled={selectedRowKeys.length !== 1}
-          onClick={() => {
-            if (selectedRowKeys.length !== 1) {
-              message.info(t('ordersAdmin.invoice.selectOneOrder'))
-              return
-            }
-            const id = String(selectedRowKeys[0])
-            const order = filteredOrders.find(o => o.id === id)
-            if (!order) return
-            setActiveOrder(order)
-            const inv = (order as any)?.invoice as OrderInvoiceMeta | undefined
-            const defaultDate = inv?.invoiceDate ? dayjs(toDateSafe(inv.invoiceDate)) : dayjs()
-            form.setFieldsValue({
-              invoiceNo: inv?.invoiceNo || guessInvoiceNo(order, defaultDate.toDate()),
-              invoiceDate: defaultDate,
-              invoiceToName: inv?.invoiceTo?.name || getUserName(order.userId, users),
-              invoiceToAddress: inv?.invoiceTo?.address || (order as any)?.shipping?.address || '',
-              invoiceToPhone: inv?.invoiceTo?.phone || getUserPhone(order.userId, users) || '',
-              terms: inv?.terms || 'CASH',
-            })
-            setModalOpen(true)
-          }}
-        >
-          {t('ordersAdmin.invoice.generate')}
-        </Button>
-      </Space>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{
+        marginBottom: 10,
+        padding: isMobile ? '0' : '16px',
+        background: isMobile ? 'transparent' : 'rgba(255, 255, 255, 0.05)',
+        borderRadius: 12,
+        border: isMobile ? 'none' : '1px solid rgba(244, 175, 37, 0.6)',
+        backdropFilter: isMobile ? 'none' : 'blur(10px)',
+        flexShrink: 0
+      }}>
+        {!isMobile ? (
+          <Space size="middle">
+            <Select
+              value={invoiceFilter}
+              onChange={setInvoiceFilter}
+              style={{ width: 180 }}
+              className="points-config-form"
+              options={[
+                { value: 'all', label: t('ordersAdmin.invoice.filterAll') },
+                { value: 'invoiced', label: t('ordersAdmin.invoice.filterInvoiced') },
+                { value: 'notInvoiced', label: t('ordersAdmin.invoice.filterNotInvoiced') },
+              ]}
+            />
+            <Button
+              disabled={selectedRowKeys.length !== 1}
+              className="points-config-form"
+              style={{
+                background: selectedRowKeys.length === 1 ? 'linear-gradient(to right,#FDE08D,#C48D3A)' : 'rgba(255,255,255,0.1)',
+                border: 'none',
+                color: selectedRowKeys.length === 1 ? '#111' : 'rgba(255,255,255,0.3)',
+                fontWeight: 700
+              }}
+              onClick={() => {
+                if (selectedRowKeys.length !== 1) {
+                  message.info(t('ordersAdmin.invoice.selectOneOrder'))
+                  return
+                }
+                const id = String(selectedRowKeys[0])
+                const order = filteredOrders.find(o => o.id === id)
+                if (!order) return
+                setActiveOrder(order)
+                const inv = (order as any)?.invoice as OrderInvoiceMeta | undefined
+                const defaultDate = inv?.invoiceDate ? dayjs(toDateSafe(inv.invoiceDate)) : dayjs()
+                form.setFieldsValue({
+                  invoiceNo: inv?.invoiceNo || guessInvoiceNo(order, defaultDate.toDate()),
+                  invoiceDate: defaultDate,
+                  invoiceToName: inv?.invoiceTo?.name || getUserName(order.userId, users),
+                  invoiceToAddress: inv?.invoiceTo?.address || (order as any)?.shipping?.address || '',
+                  invoiceToPhone: inv?.invoiceTo?.phone || getUserPhone(order.userId, users) || '',
+                  terms: inv?.terms || 'CASH',
+                })
+                setModalOpen(true)
+              }}
+            >
+              {t('ordersAdmin.invoice.generate')}
+            </Button>
+          </Space>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <Select
+              value={invoiceFilter}
+              onChange={setInvoiceFilter}
+              style={{ width: '100%' }}
+              className="points-config-form"
+              options={[
+                { value: 'all', label: t('ordersAdmin.invoice.filterAll') },
+                { value: 'invoiced', label: t('ordersAdmin.invoice.filterInvoiced') },
+                { value: 'notInvoiced', label: t('ordersAdmin.invoice.filterNotInvoiced') },
+              ]}
+            />
+            {selectedRowKeys.length === 1 && (
+              <Button
+                block
+                className="points-config-form"
+                style={{
+                  background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                  border: 'none',
+                  color: '#111',
+                  fontWeight: 700
+                }}
+                onClick={() => {
+                  const id = String(selectedRowKeys[0])
+                  const order = filteredOrders.find(o => o.id === id)
+                  if (!order) return
+                  setActiveOrder(order)
+                  const inv = (order as any)?.invoice as OrderInvoiceMeta | undefined
+                  const defaultDate = inv?.invoiceDate ? dayjs(toDateSafe(inv.invoiceDate)) : dayjs()
+                  form.setFieldsValue({
+                    invoiceNo: inv?.invoiceNo || guessInvoiceNo(order, defaultDate.toDate()),
+                    invoiceDate: defaultDate,
+                    invoiceToName: inv?.invoiceTo?.name || getUserName(order.userId, users),
+                    invoiceToAddress: inv?.invoiceTo?.address || (order as any)?.shipping?.address || '',
+                    invoiceToPhone: inv?.invoiceTo?.phone || getUserPhone(order.userId, users) || '',
+                    terms: inv?.terms || 'CASH',
+                  })
+                  setModalOpen(true)
+                }}
+              >
+                {t('ordersAdmin.invoice.generateSelected')}
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
 
-      <Table
-        columns={columns}
-        dataSource={filteredOrders}
-        rowKey="id"
-        loading={loading}
-        rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
-        pagination={{ pageSize: 20 }}
-        scroll={{ x: 'max-content', y: 'calc(100vh - 360px)' }}
-      />
+      {!isMobile ? (
+        <div className="points-config-form">
+          <Table
+            columns={columns}
+            dataSource={filteredOrders}
+            rowKey="id"
+            loading={loading}
+            rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
+            pagination={{ pageSize: 20 }}
+            scroll={{ x: 'max-content', y: 'calc(100vh - 400px)' }}
+            style={{
+              background: 'transparent',
+              borderRadius: 12,
+              border: '1px solid rgba(244, 175, 37, 0.2)',
+              overflow: 'hidden'
+            }}
+          />
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto', flex: 1, paddingBottom: 16 }}>
+          {filteredOrders.map(record => {
+            const inv = (record as any)?.invoice as OrderInvoiceMeta | undefined
+            return (
+              <div key={record.id} style={{
+                border: '1px solid rgba(244,175,37,0.2)',
+                borderRadius: 12,
+                padding: 12,
+                background: 'rgba(34,28,16,0.5)',
+                backdropFilter: 'blur(10px)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', fontFamily: 'monospace' }}>
+                    {record.id.substring(0, 30)}
+                  </div>
+                  <Tag color={getStatusColor(record.status)} style={{ margin: 0 }}>
+                    {getStatusText(record.status, t)}
+                  </Tag>
+                </div>
+
+                <div style={{ marginBottom: 8 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{getUserName(record.userId, users)}</div>
+                  <div style={{ fontSize: 11, opacity: 0.6, color: '#fff' }}>{getUserPhone(record.userId, users) || '-'}</div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: '#f4af25' }}>RM{Number(record.total || 0).toFixed(2)}</div>
+                  {inv ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Tag color="green" style={{ margin: 0 }}>{t('ordersAdmin.invoice.generated')}</Tag>
+                      <span style={{ fontSize: 11, color: '#FDE08D', fontFamily: 'monospace' }}>{inv.invoiceNo}</span>
+                    </div>
+                  ) : (
+                    <Tag style={{ margin: 0 }}>{t('ordersAdmin.invoice.notGenerated')}</Tag>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <Button
+                      style={{
+                        flex: 1,
+                        height: 36,
+                        background: 'rgba(255,255,255,0.1)',
+                        color: '#fff',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        borderRadius: 8,
+                        fontSize: 12,
+                        fontWeight: 600
+                      }}
+                      onClick={async () => {
+                        if (!inv) { message.info(t('ordersAdmin.invoice.needGenerateFirst')); return }
+                        await previewInvoicePdf(record, inv)
+                      }}
+                    >
+                      {t('ordersAdmin.invoice.view')}
+                    </Button>
+                    <Button
+                      style={{
+                        flex: 1,
+                        height: 36,
+                        background: 'rgba(255,255,255,0.1)',
+                        color: '#fff',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        borderRadius: 8,
+                        fontSize: 12,
+                        fontWeight: 600
+                      }}
+                      onClick={async () => {
+                        if (!inv) { message.info(t('ordersAdmin.invoice.needGenerateFirst')); return }
+                        await downloadInvoicePdf(record, inv)
+                      }}
+                    >
+                      {t('ordersAdmin.invoice.print')}
+                    </Button>
+                  </div>
+                  <Button
+                    type="primary"
+                    style={{
+                      width: '100%',
+                      height: 42,
+                      background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                      border: 'none',
+                      color: '#111',
+                      fontWeight: 700,
+                      borderRadius: 8,
+                      fontSize: 14,
+                      boxShadow: '0 4px 12px rgba(196, 141, 58, 0.2)'
+                    }}
+                    onClick={() => {
+                      setActiveOrder(record)
+                      const defaultDate = inv?.invoiceDate ? dayjs(toDateSafe(inv.invoiceDate)) : dayjs()
+                      form.setFieldsValue({
+                        invoiceNo: inv?.invoiceNo || guessInvoiceNo(record, defaultDate.toDate()),
+                        invoiceDate: defaultDate,
+                        invoiceToName: inv?.invoiceTo?.name || getUserName(record.userId, users),
+                        invoiceToAddress: inv?.invoiceTo?.address || (record as any)?.shipping?.address || '',
+                        invoiceToPhone: inv?.invoiceTo?.phone || getUserPhone(record.userId, users) || '',
+                        terms: inv?.terms || 'CASH',
+                      })
+                      setModalOpen(true)
+                    }}
+                  >
+                    {t('ordersAdmin.invoice.generate')}
+                  </Button>
+                </div>
+              </div>
+            )
+          })}
+          {filteredOrders.length === 0 && (
+            <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
+          )}
+        </div>
+      )}
 
       <Modal
         title={t('ordersAdmin.invoice.modalTitle')}
@@ -334,49 +541,75 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
         onOk={generateAndPrint}
         okText={t('ordersAdmin.invoice.downloadPdf')}
         cancelText={t('common.cancel')}
-        destroyOnClose
+        width={isMobile ? '100%' : 600}
+        style={{ top: isMobile ? 0 : 100 }}
+        styles={{
+          mask: {
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+          },
+          content: {
+            background: isMobile ? 'linear-gradient(180deg, #221c10 0%, #181611 100%)' : '#1a1a1a',
+            color: '#fff',
+            border: isMobile ? 'none' : '1px solid rgba(244,175,37,0.3)',
+            borderRadius: isMobile ? 0 : 12,
+            height: isMobile ? '100vh' : 'auto',
+            padding: isMobile ? '12px' : '24px'
+          },
+          header: {
+            background: 'transparent',
+            borderBottom: '1px solid rgba(244, 175, 37, 0.6)'
+          },
+          body: {
+            background: 'transparent'
+          },
+          footer: {
+            background: 'transparent',
+            borderTop: '1px solid rgba(244, 175, 37, 0.6)'
+          }
+        }}
       >
-        <div style={{ marginBottom: 8, fontSize: 12, opacity: 0.8 }}>
+        <div style={{ marginBottom: 16, fontSize: 13, color: 'rgba(255, 255, 255, 0.6)' }}>
           {t('ordersAdmin.invoice.printHint')}
         </div>
         <Form form={form} layout="vertical">
           <Form.Item
-            label={t('ordersAdmin.invoice.invoiceNo')}
+            label={<span style={{ color: '#fff' }}>{t('ordersAdmin.invoice.invoiceNo')}</span>}
             name="invoiceNo"
             rules={[{ required: true, message: t('ordersAdmin.invoice.invoiceNoRequired') }]}
           >
-            <Input />
+            <Input className="points-config-form" />
           </Form.Item>
           <Form.Item
-            label={t('ordersAdmin.invoice.invoiceDate')}
+            label={<span style={{ color: '#fff' }}>{t('ordersAdmin.invoice.invoiceDate')}</span>}
             name="invoiceDate"
             rules={[{ required: true, message: t('ordersAdmin.invoice.invoiceDateRequired') }]}
           >
-            <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+            <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" className="points-config-form" />
           </Form.Item>
           <Form.Item
-            label={t('ordersAdmin.invoice.invoiceTo')}
+            label={<span style={{ color: '#fff' }}>{t('ordersAdmin.invoice.invoiceTo')}</span>}
             name="invoiceToName"
             rules={[{ required: true, message: t('ordersAdmin.invoice.invoiceToRequired') }]}
           >
-            <Input />
+            <Input className="points-config-form" />
           </Form.Item>
           <Form.Item
-            label={t('ordersAdmin.invoice.phone')}
+            label={<span style={{ color: '#fff' }}>{t('ordersAdmin.invoice.phone')}</span>}
             name="invoiceToPhone"
             rules={[{ required: true, message: t('ordersAdmin.invoice.phoneRequired') }]}
           >
-            <Input />
+            <Input className="points-config-form" />
           </Form.Item>
           <Form.Item
-            label={t('ordersAdmin.invoice.address')}
+            label={<span style={{ color: '#fff' }}>{t('ordersAdmin.invoice.address')}</span>}
             name="invoiceToAddress"
             rules={[{ required: true, message: t('ordersAdmin.invoice.addressRequired') }]}
           >
-            <Input.TextArea rows={3} />
+            <Input.TextArea rows={3} className="points-config-form" />
           </Form.Item>
-          <Form.Item label={t('ordersAdmin.invoice.terms')} name="terms">
-            <Input />
+          <Form.Item label={<span style={{ color: '#fff' }}>{t('ordersAdmin.invoice.terms')}</span>} name="terms">
+            <Input className="points-config-form" />
           </Form.Item>
         </Form>
       </Modal>

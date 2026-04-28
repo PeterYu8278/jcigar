@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import { Table, Space, Input, Select, DatePicker, message, Modal, Tabs } from 'antd'
-import { SearchOutlined, CheckOutlined, ClockCircleOutlined } from '@ant-design/icons'
+import { SearchOutlined, CheckOutlined, ClockCircleOutlined, PlusOutlined } from '@ant-design/icons'
 import BatchDeleteButton from '../../../components/common/BatchDeleteButton'
 import CreateButton from '../../../components/common/CreateButton'
 import OrderDetails from './OrderDetails'
@@ -26,8 +26,18 @@ const AdminOrders: React.FC = () => {
   const [mainTab, setMainTab] = useState<'orders' | 'invoices'>('orders')
   const [orders, setOrders] = useState<Order[]>([]) // 保留用于搜索和筛选
   const [loading, setLoading] = useState(false)
-  const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
-  
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    return window.innerWidth < 768
+  })
+
+  useEffect(() => {
+    const update = () => setIsMobile(window.innerWidth < 768)
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+
   // 服务端分页
   const {
     data: paginatedOrders,
@@ -72,7 +82,7 @@ const AdminOrders: React.FC = () => {
     }
     return { current: 1, pageSize: 10, total: 0 }
   })
-  
+
 
   useEffect(() => {
     loadData() // 加载关联数据
@@ -108,7 +118,7 @@ const AdminOrders: React.FC = () => {
       filters.startDate = dateRange[0].toDate()
       filters.endDate = dateRange[1].toDate()
     }
-    
+
     loadPage(1, Object.keys(filters).length > 0 ? filters : undefined)
   }, [statusFilter, paymentFilter, dateRange]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -135,7 +145,7 @@ const AdminOrders: React.FC = () => {
   useEffect(() => {
     // 判断是否有筛选条件
     const hasFilters = statusFilter || paymentFilter || (dateRange && dateRange[0] && dateRange[1])
-    
+
     if (keyword.trim() || !hasFilters) {
       // 有搜索关键词或没有筛选条件时，加载所有订单
       setLoading(true)
@@ -158,7 +168,7 @@ const AdminOrders: React.FC = () => {
   // 分页处理函数
   const handlePaginationChange = async (page: number, pageSize?: number) => {
     const hasFilters = statusFilter || paymentFilter || (dateRange && dateRange[0] && dateRange[1])
-    
+
     const newPagination = {
       current: page,
       pageSize: pageSize || pagination.pageSize,
@@ -166,7 +176,7 @@ const AdminOrders: React.FC = () => {
     }
     setPagination(newPagination)
     localStorage.setItem('orders-pagination', JSON.stringify(newPagination))
-    
+
     // 如果有筛选条件但没有搜索关键词，需要加载服务端分页数据
     if (hasFilters && !keyword.trim()) {
       const filters: any = {}
@@ -184,15 +194,15 @@ const AdminOrders: React.FC = () => {
   const deleteOrderOutboundRecords = async (orderId: string) => {
     try {
       const outboundOrders = await getAllOutboundOrders()
-      
+
       // 查找匹配的出库订单
-      const relatedOutboundOrders = outboundOrders.filter((order: OutboundOrder) => 
+      const relatedOutboundOrders = outboundOrders.filter((order: OutboundOrder) =>
         order.referenceNo === orderId
       )
-      
+
       // 删除出库订单（会自动删除关联的 inventory_movements）
       if (relatedOutboundOrders.length > 0) {
-        await Promise.all(relatedOutboundOrders.map((order: OutboundOrder) => 
+        await Promise.all(relatedOutboundOrders.map((order: OutboundOrder) =>
           deleteOutboundOrder(order.id)
         ))
       }
@@ -208,14 +218,14 @@ const AdminOrders: React.FC = () => {
       // 获取所有活动
       const { getEvents } = await import('../../../services/firebase/firestore')
       const events = await getEvents()
-      
+
       // 查找包含该订单ID的活动
       for (const event of events) {
         const allocations = (event as any)?.allocations
         if (allocations) {
           let hasChanges = false
           const updatedAllocations = { ...allocations }
-          
+
           // 遍历所有分配记录，移除包含该订单ID的记录
           for (const [userId, allocation] of Object.entries(allocations)) {
             if ((allocation as any)?.orderId === orderId) {
@@ -227,7 +237,7 @@ const AdminOrders: React.FC = () => {
               hasChanges = true
             }
           }
-          
+
           // 如果有变化，更新活动文档
           if (hasChanges) {
             await updateDocument(COLLECTIONS.EVENTS, event.id, {
@@ -282,7 +292,7 @@ const AdminOrders: React.FC = () => {
   const getOrderMatchStatus = (orderId: string) => {
     const order = orders.find(o => o.id === orderId)
     if (!order) return { matched: 0, total: 0, status: 'none' }
-    
+
     const orderTotal = Number(order.total || 0)
     const matchedAmount = transactions
       .filter(t => {
@@ -294,7 +304,7 @@ const AdminOrders: React.FC = () => {
         const orderMatch = relatedOrders.find((ro: any) => ro.orderId === orderId)
         return sum + (orderMatch ? Number(orderMatch.amount || 0) : 0)
       }, 0)
-    
+
     if (matchedAmount >= orderTotal) {
       return { matched: matchedAmount, total: orderTotal, status: 'fully' }
     } else if (matchedAmount > 0) {
@@ -313,7 +323,7 @@ const AdminOrders: React.FC = () => {
   const filtered = useMemo(() => {
     // 判断是否有筛选条件
     const hasFilters = statusFilter || paymentFilter || (dateRange && dateRange[0] && dateRange[1])
-    
+
     // 确定使用的数据源
     let dataSource: Order[]
     if (keyword.trim() || !hasFilters) {
@@ -323,25 +333,25 @@ const AdminOrders: React.FC = () => {
       // 有筛选条件但没有搜索关键词时，使用分页数据
       dataSource = paginatedOrders
     }
-    
+
     // 如果有搜索关键词，进行客户端筛选
     if (keyword.trim()) {
       dataSource = filterOrders(dataSource, users, keyword, undefined, undefined, undefined, cigars)
     }
-    
+
     // 按匹配状态筛选
-      if (matchStatusTab === 'matched') {
+    if (matchStatusTab === 'matched') {
       dataSource = dataSource.filter(order => {
-          const matchStatus = getOrderMatchStatus(order.id)
-          return matchStatus.status === 'fully'
-        })
-      } else if (matchStatusTab === 'unmatched') {
+        const matchStatus = getOrderMatchStatus(order.id)
+        return matchStatus.status === 'fully'
+      })
+    } else if (matchStatusTab === 'unmatched') {
       dataSource = dataSource.filter(order => {
-          const matchStatus = getOrderMatchStatus(order.id)
-          return matchStatus.status !== 'fully'
-        })
-      }
-      
+        const matchStatus = getOrderMatchStatus(order.id)
+        return matchStatus.status !== 'fully'
+      })
+    }
+
     return dataSource
   }, [orders, paginatedOrders, users, keyword, cigars, matchStatusTab, transactions, statusFilter, paymentFilter, dateRange])
 
@@ -386,44 +396,42 @@ const AdminOrders: React.FC = () => {
   return (
     <div
       style={{
-        height: isMobile ? '90vh' : 'auto',
+        height: isMobile ? '90vh' : 'calc(100vh - 100px)',
         display: 'flex',
         flexDirection: 'column',
-        overflow: isMobile ? 'hidden' : 'visible'
+        overflow: 'hidden'
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{t('navigation.orders')}</h1>
-      
-        <Space>
-          {mainTab === 'orders' && (
-            <CreateButton
-              onCreate={() => setCreating(true)}
-              buttonText={t('ordersAdmin.createManual')}
-              size="middle"
-              type="default"
-              showIcon={true}
-              style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 8, 
-                borderRadius: 8, 
-                padding: '8px 16px', 
-                background: appConfig?.colorTheme?.primaryButton 
-                  ? `linear-gradient(to right, ${appConfig.colorTheme.primaryButton.startColor}, ${appConfig.colorTheme.primaryButton.endColor})`
-                  : 'linear-gradient(to right,#FDE08D,#C48D3A)', 
-                color: '#111', 
-                fontWeight: 700, 
-                border: 'none',
-                cursor: 'pointer' 
-              }}
-            />
-          )}
-        </Space>
-      </div>
+      <style>{`
+        .orders-management-tabs {
+          display: flex;
+          flex-direction: column;
+        }
+        .orders-management-tabs .ant-tabs-content {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+        .orders-management-tabs .ant-tabs-tabpane-active {
+          display: flex;
+          flex-direction: column;
+          flex: 1;
+          overflow: hidden;
+        }
+        .orders-management-tabs .ant-tabs-content-holder {
+          display: flex;
+          flex-direction: column;
+          flex: 1;
+          overflow: hidden;
+        }
+      `}</style>
+
 
       <Tabs
         activeKey={mainTab}
+        className="orders-management-tabs"
+        style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
         onChange={(k) => {
           setMainTab(k as any)
           if (k === 'invoices') {
@@ -436,7 +444,7 @@ const AdminOrders: React.FC = () => {
             key: 'orders',
             label: t('ordersAdmin.tabs.orders'),
             children: (
-              <>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 {/* 置顶筛选区开始 */}
                 <div
                   style={{
@@ -445,216 +453,188 @@ const AdminOrders: React.FC = () => {
                     zIndex: 100,
                     background: 'transparent',
                     backdropFilter: 'blur(8px)',
-                    WebkitBackdropFilter: 'blur(8px)',
-                    borderBottom: '1px solid rgba(244,175,37,0.2)'
+                    WebkitBackdropFilter: 'blur(8px)'
                   }}
                 >
-                {/* 财务匹配状态标签 */}
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid rgba(244,175,37,0.2)' }}>
-                    {(['all', 'matched', 'unmatched'] as const).map((tabKey) => {
-                      const isActive = matchStatusTab === tabKey
-                      const matchedCount = orders.filter(o => getOrderMatchStatus(o.id).status === 'fully').length
-                      const unmatchedCount = orders.length - matchedCount
-                      
-                      const getTabLabel = () => {
-                        switch (tabKey) {
-                          case 'all':
-                            return `${t('common.all')} (${orders.length})`
-                          case 'matched':
-                            return `${t('financeAdmin.fullyMatched')} (${matchedCount})`
-                          case 'unmatched':
-                            return `${t('financeAdmin.partialMatched')} (${unmatchedCount})`
-                        }
-                      }
-                      
-                      const getTabIcon = () => {
-                        switch (tabKey) {
-                          case 'matched':
-                            return <CheckOutlined style={{ color: isActive ? '#52c41a' : '#A0A0A0', fontSize: 14 }} />
-                          case 'unmatched':
-                            return <ClockCircleOutlined style={{ color: isActive ? '#faad14' : '#A0A0A0', fontSize: 14 }} />
-                          default:
-                            return null
-                        }
-                      }
-                      
-                      const baseStyle: React.CSSProperties = {
-                        padding: '12px 12px',
-                        background: 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: 13,
-                        fontWeight: 600,
-                        position: 'relative',
-                        transition: 'all 0.3s ease',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6
-                      }
-                      
-                      const activeStyle: React.CSSProperties = {
-                        color: '#FDE08D',
-                      }
-                      
-                      const inactiveStyle: React.CSSProperties = {
-                        color: '#A0A0A0',
-                      }
-                      
-                      return (
-                        <button
-                          key={tabKey}
-                          onClick={() => setMatchStatusTab(tabKey)}
-                          style={{ ...baseStyle, ...(isActive ? activeStyle : inactiveStyle) }}
-                        >
-                          {getTabIcon()}
-                          {getTabLabel()}
-                          {isActive && (
-                            <div style={{
-                              position: 'absolute',
-                              bottom: 0,
-                              left: 0,
-                              right: 0,
-                              height: '2px',
-                              background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-                              borderRadius: '1px'
-                            }} />
-                          )}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
+                  {/* 搜索和筛选 */}
+                  {(() => {
+                    const matchedCount = orders.filter(o => getOrderMatchStatus(o.id).status === 'fully').length
+                    const unmatchedCount = orders.length - matchedCount
 
-                {/* 搜索和筛选 */}
-                {!isMobile ? (
-                <div style={{ 
-                  marginBottom: 16, 
-                  padding: '16px', 
-                  background: 'rgba(255, 255, 255, 0.05)', 
-                  borderRadius: 12,
-                  border: '1px solid rgba(244, 175, 37, 0.6)',
-                  backdropFilter: 'blur(10px)'
-                }}>
-                  <Space size="middle" wrap>
-                    <Search
-                        placeholder={t('ordersAdmin.searchPlaceholder')}
-                      allowClear
-                      style={{ width: 300 }}
-                      prefix={<SearchOutlined />}
-                      value={keyword}
-                      onChange={(e) => setKeyword(e.target.value)}
-                      className="points-config-form"
-                    />
-                      <Select 
-                        placeholder={t('ordersAdmin.selectStatus')} 
-                        style={{ width: 120 }} 
-                        allowClear 
-                        value={statusFilter} 
-                        onChange={setStatusFilter}
-                        className="points-config-form"
-                      >
-                        <Option value="pending">{t('ordersAdmin.status.pending')}</Option>
-                        <Option value="confirmed">{t('ordersAdmin.status.confirmed')}</Option>
-                        <Option value="shipped">{t('ordersAdmin.status.shipped')}</Option>
-                        <Option value="delivered">{t('ordersAdmin.status.delivered')}</Option>
-                        <Option value="cancelled">{t('ordersAdmin.status.cancelled')}</Option>
-                    </Select>
-                      <Select 
-                        placeholder={t('ordersAdmin.payment.title')} 
-                        style={{ width: 120 }} 
-                        allowClear 
-                        value={paymentFilter} 
-                        onChange={setPaymentFilter}
-                        className="points-config-form"
-                      >
-                        <Option value="credit">{t('ordersAdmin.payment.credit')}</Option>
-                      <Option value="paypal">PayPal</Option>
-                        <Option value="bank_transfer">{t('ordersAdmin.payment.bankTransfer')}</Option>
-                    </Select>
-                    <DatePicker.RangePicker 
-                        placeholder={[t('common.startDate'), t('common.endDate')]}
-                      value={dateRange}
-                      onChange={setDateRange}
-                      className="points-config-form"
-                    />
-                    <button 
-                      type="button"
-                      onClick={() => { 
-                        setKeyword('')
-                        setStatusFilter(undefined)
-                        setPaymentFilter(undefined)
-                        setDateRange(null)
-                        setSelectedRowKeys([])
-                      }}
-                      style={{ 
-                        padding: '6px 12px', 
-                        borderRadius: 6, 
-                        border: '1px solid rgba(255, 255, 255, 0.2)', 
-                        background: 'rgba(255, 255, 255, 0.1)', 
-                        color: '#FFFFFF',
-                        cursor: 'pointer' 
-                      }}
-                    >
-                      {t('common.resetFilters')}
-                    </button>
-                  </Space>
-                </div>
-                ) : (
-                  <div style={{ marginBottom: 12 }}>
-                    <div style={{ marginBottom: 8 }}>
-                      <Search
-                        placeholder={t('ordersAdmin.searchPlaceholder')}
-                        allowClear
-                        value={keyword}
-                        onChange={(e) => setKeyword(e.target.value)}
-                        className="points-config-form"
-                      />
-                    </div>
-                    <div style={{ marginBottom: 8 }}>
-                      <DatePicker.RangePicker
-                        style={{ width: '100%' }}
-                        placeholder={[t('common.startDate'), t('common.endDate')]}
-                        value={dateRange}
-                        onChange={setDateRange}
-                        className="points-config-form"
-                      />
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                    <div style={{ position: 'relative', width: '48%' }}>
-                      <Select
-                        placeholder={t('ordersAdmin.allStatus')}
-                        allowClear
-                        value={statusFilter}
-                        onChange={setStatusFilter}
-                        style={{ width: '100%' }}
-                        className="points-config-form"
-                      >
-                        <Option value="pending">{t('ordersAdmin.status.pending')}</Option>
-                        <Option value="confirmed">{t('ordersAdmin.status.confirmed')}</Option>
-                        <Option value="shipped">{t('ordersAdmin.status.shipped')}</Option>
-                        <Option value="delivered">{t('ordersAdmin.status.delivered')}</Option>
-                        <Option value="cancelled">{t('ordersAdmin.status.cancelled')}</Option>
-                      </Select>
-                    </div>
-                    <div style={{ position: 'relative', width: '48%' }}>
-                      <Select
-                        placeholder={t('ordersAdmin.payment.title')}
-                        allowClear
-                        value={paymentFilter}
-                        onChange={setPaymentFilter}
-                        style={{ width: '100%' }}
-                        className="points-config-form"
-                      >
-                        <Option value="bank_transfer">{t('ordersAdmin.payment.bankTransfer')}</Option>
-                        <Option value="credit">{t('ordersAdmin.payment.credit')}</Option>
-                        <Option value="paypal">PayPal</Option>
-                      </Select>
-                    </div>
-                      
-                    </div>
-                  </div>
-                )}
+                    return !isMobile ? (
+                      <div style={{
+                        marginBottom: 10,
+                        padding: '16px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: 12,
+                        border: '1px solid rgba(244, 175, 37, 0.6)',
+                        backdropFilter: 'blur(10px)'
+                      }}>
+                        <Space size={8}>
+                          <Search
+                            placeholder={t('ordersAdmin.searchPlaceholder')}
+                            allowClear
+                            style={{ width: 220 }}
+                            prefix={<SearchOutlined />}
+                            value={keyword}
+                            onChange={(e) => setKeyword(e.target.value)}
+                            className="points-config-form"
+                          />
+                          <Select
+                            placeholder={t('ordersAdmin.selectStatus')}
+                            style={{ width: 110 }}
+                            allowClear
+                            value={statusFilter}
+                            onChange={setStatusFilter}
+                            className="points-config-form"
+                          >
+                            <Option value="pending">{t('ordersAdmin.status.pending')}</Option>
+                            <Option value="confirmed">{t('ordersAdmin.status.confirmed')}</Option>
+                            <Option value="shipped">{t('ordersAdmin.status.shipped')}</Option>
+                            <Option value="delivered">{t('ordersAdmin.status.delivered')}</Option>
+                            <Option value="cancelled">{t('ordersAdmin.status.cancelled')}</Option>
+                          </Select>
+                          <Select
+                            placeholder={t('ordersAdmin.payment.title')}
+                            style={{ width: 110 }}
+                            allowClear
+                            value={paymentFilter}
+                            onChange={setPaymentFilter}
+                            className="points-config-form"
+                          >
+                            <Option value="credit">{t('ordersAdmin.payment.credit')}</Option>
+                            <Option value="paypal">PayPal</Option>
+                            <Option value="bank_transfer">{t('ordersAdmin.payment.bankTransfer')}</Option>
+                          </Select>
+                          <Select
+                            placeholder="财务状态"
+                            style={{ width: 140 }}
+                            value={matchStatusTab}
+                            onChange={setMatchStatusTab}
+                            className="points-config-form"
+                          >
+                            <Option value="all">{t('common.all')} ({orders.length})</Option>
+                            <Option value="matched">{t('financeAdmin.fullyMatched')} ({matchedCount})</Option>
+                            <Option value="unmatched">{t('financeAdmin.partialMatched')} ({unmatchedCount})</Option>
+                          </Select>
+                          <DatePicker.RangePicker
+                            placeholder={[t('common.startDate'), t('common.endDate')]}
+                            value={dateRange}
+                            onChange={setDateRange}
+                            className="points-config-form"
+                          />
+                          <CreateButton
+                            onCreate={() => setCreating(true)}
+                            buttonText={t('ordersAdmin.createManual')}
+                            size="middle"
+                            type="default"
+                            showIcon={true}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 8,
+                              borderRadius: 8,
+                              padding: '8px 16px',
+                              background: appConfig?.colorTheme?.primaryButton
+                                ? `linear-gradient(to right, ${appConfig.colorTheme.primaryButton.startColor}, ${appConfig.colorTheme.primaryButton.endColor})`
+                                : 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                              color: '#111',
+                              fontWeight: 700,
+                              border: 'none',
+                              cursor: 'pointer'
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setKeyword('')
+                              setStatusFilter(undefined)
+                              setPaymentFilter(undefined)
+                              setMatchStatusTab('all')
+                              setDateRange(null)
+                              setSelectedRowKeys([])
+                            }}
+                            style={{
+                              padding: '6px 12px',
+                              borderRadius: 6,
+                              border: '1px solid rgba(255, 255, 255, 0.2)',
+                              background: 'rgba(255, 255, 255, 0.1)',
+                              color: '#FFFFFF',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {t('common.resetFilters')}
+                          </button>
+                        </Space>
+                      </div>
+                    ) : (
+                      <div style={{ marginBottom: 12 }}>
+                        <div style={{ marginBottom: 8 }}>
+                          <Search
+                            placeholder={t('ordersAdmin.searchPlaceholder')}
+                            allowClear
+                            value={keyword}
+                            onChange={(e) => setKeyword(e.target.value)}
+                            className="points-config-form"
+                          />
+                        </div>
+                        <div style={{ marginBottom: 8 }}>
+                          <DatePicker.RangePicker
+                            style={{ width: '100%' }}
+                            placeholder={[t('common.startDate'), t('common.endDate')]}
+                            value={dateRange}
+                            onChange={setDateRange}
+                            className="points-config-form"
+                          />
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                          <div style={{ position: 'relative', width: 'calc(50% - 4px)' }}>
+                            <Select
+                              placeholder={t('ordersAdmin.allStatus')}
+                              allowClear
+                              value={statusFilter}
+                              onChange={setStatusFilter}
+                              style={{ width: '100%' }}
+                              className="points-config-form"
+                            >
+                              <Option value="pending">{t('ordersAdmin.status.pending')}</Option>
+                              <Option value="confirmed">{t('ordersAdmin.status.confirmed')}</Option>
+                              <Option value="shipped">{t('ordersAdmin.status.shipped')}</Option>
+                              <Option value="delivered">{t('ordersAdmin.status.delivered')}</Option>
+                              <Option value="cancelled">{t('ordersAdmin.status.cancelled')}</Option>
+                            </Select>
+                          </div>
+                          <div style={{ position: 'relative', width: 'calc(50% - 4px)' }}>
+                            <Select
+                              placeholder={t('ordersAdmin.payment.title')}
+                              allowClear
+                              value={paymentFilter}
+                              onChange={setPaymentFilter}
+                              style={{ width: '100%' }}
+                              className="points-config-form"
+                            >
+                              <Option value="bank_transfer">{t('ordersAdmin.payment.bankTransfer')}</Option>
+                              <Option value="credit">{t('ordersAdmin.payment.credit')}</Option>
+                              <Option value="paypal">PayPal</Option>
+                            </Select>
+                          </div>
+                          <div style={{ position: 'relative', width: '100%' }}>
+                            <Select
+                              placeholder="财务状态"
+                              value={matchStatusTab}
+                              onChange={setMatchStatusTab}
+                              style={{ width: '100%' }}
+                              className="points-config-form"
+                            >
+                              <Option value="all">{t('common.all')} ({orders.length})</Option>
+                              <Option value="matched">{t('financeAdmin.fullyMatched')} ({matchedCount})</Option>
+                              <Option value="unmatched">{t('financeAdmin.partialMatched')} ({unmatchedCount})</Option>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })()}
                 </div>
 
                 {/* 列表滚动容器开始：仅列表滚动 */}
@@ -663,234 +643,123 @@ const AdminOrders: React.FC = () => {
                     flex: 1,
                     overflowY: 'auto',
                     overflowX: 'hidden',
-                    paddingTop: 8,
                     paddingBottom: 16
                   }}
                 >
-                {!isMobile ? (
-                <div className="points-config-form">
-                <Table
-                  columns={columns}
-                    dataSource={filteredSorted}
-                  rowKey="id"
-                  loading={loading || paginatedLoading}
-                  rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
-                  scroll={{
-                    y: 'calc(100vh - 350px)', // 启用虚拟滚动
-                    x: 'max-content'
-                  }}
-                  title={() => (
-                    <Space>
-                        <button 
-                          type="button" 
-                          disabled={selectedRowKeys.length === 0} 
-                          onClick={async () => {
-                        setLoading(true)
-                        try {
-                          await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'confirmed' } as any)))
-                            message.success(t('ordersAdmin.batchConfirmed'))
-                          await refreshPaginated()
-                          setSelectedRowKeys([])
-                        } finally {
-                          setLoading(false)
-                        }
-                          }} 
-                          style={{ 
-                            padding: '6px 12px', 
-                            borderRadius: 6, 
-                            border: '1px solid rgba(255, 255, 255, 0.2)', 
-                            background: selectedRowKeys.length === 0 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.1)', 
-                            color: '#FFFFFF',
-                            cursor: selectedRowKeys.length === 0 ? 'not-allowed' : 'pointer', 
-                            opacity: selectedRowKeys.length === 0 ? 0.6 : 1 
-                          }}
-                        >
-                          {t('ordersAdmin.batchConfirm')}
-                      </button>
-                        <button 
-                          type="button" 
-                          disabled={selectedRowKeys.length === 0} 
-                          onClick={async () => {
-                          setLoading(true)
-                          try {
-                            await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'delivered' } as any)))
-                            message.success(t('ordersAdmin.batchDelivered'))
-                          await refreshPaginated()
-                          setSelectedRowKeys([])
-                        } finally {
-                          setLoading(false)
-                        }
-                          }} 
-                          style={{ 
-                            padding: '6px 12px', 
-                            borderRadius: 6, 
-                            border: '1px solid rgba(255, 255, 255, 0.2)', 
-                            background: selectedRowKeys.length === 0 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.1)', 
-                            color: '#FFFFFF',
-                            cursor: selectedRowKeys.length === 0 ? 'not-allowed' : 'pointer', 
-                            opacity: selectedRowKeys.length === 0 ? 0.6 : 1 
-                          }}
-                        >
-                          {t('ordersAdmin.batchDeliver')}
-                      </button>
-                        <button 
-                          type="button" 
-                          disabled={selectedRowKeys.length === 0} 
-                          onClick={async () => {
-                        setLoading(true)
-                        try {
-                            await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'cancelled' } as any)))
-                            message.success(t('ordersAdmin.batchCancelled'))
-                          await refreshPaginated()
-                          setSelectedRowKeys([])
-                        } finally {
-                          setLoading(false)
-                        }
-                          }} 
-                          style={{ 
-                            padding: '6px 12px', 
-                            borderRadius: 6, 
-                            border: '1px solid rgba(255, 255, 255, 0.2)', 
-                            background: selectedRowKeys.length === 0 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.1)', 
-                            color: '#FFFFFF',
-                            cursor: selectedRowKeys.length === 0 ? 'not-allowed' : 'pointer', 
-                            opacity: selectedRowKeys.length === 0 ? 0.6 : 1 
-                          }}
-                        >
-                          {t('ordersAdmin.batchCancel')}
-                      </button>
-                      <BatchDeleteButton
-                        selectedIds={selectedRowKeys}
-                        confirmTitle={t('ordersAdmin.batchDeleteConfirm')}
-                        confirmContent={t('ordersAdmin.batchDeleteContent', { count: selectedRowKeys.length })}
-                        onBatchDelete={async (ids) => {
-                          // 先批量清理活动分配记录中的订单资料（单次更新/每个活动，避免覆盖）
-                          await deleteOrdersFromEventAllocations(ids.map(String))
-                          // 再删除相关的出库记录
-                          await Promise.all(ids.map(id => deleteOrderOutboundRecords(id)))
-                          // 最后删除订单
-                          await Promise.all(ids.map(id => deleteDocument(COLLECTIONS.ORDERS, id)))
-                          return { success: true }
+                  {!isMobile ? (
+                    <div className="points-config-form">
+                      <Table
+                        columns={columns}
+                        dataSource={filteredSorted}
+                        rowKey="id"
+                        loading={loading || paginatedLoading}
+                        rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
+                        scroll={{
+                          y: 'calc(100vh - 350px)', // 启用虚拟滚动
+                          x: 'max-content'
                         }}
-                        onSuccess={async () => {
-                              await refreshPaginated()
-                              setSelectedRowKeys([])
+
+                        pagination={{
+                          current: pagination.current,
+                          pageSize: pagination.pageSize,
+                          total: filteredSorted.length,
+                          showSizeChanger: true,
+                          showQuickJumper: false,
+                          showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
+                          onChange: handlePaginationChange,
+                          onShowSizeChange: handlePaginationChange,
+                          pageSizeOptions: ['10', '20', '50', '100'],
+                          style: { color: '#fff' }
                         }}
-                        itemTypeName="订单"
-                        size="middle"
-                        type="default"
-                        danger={true}
-                        showIcon={true}
                         style={{
-                          background: 'rgba(255, 77, 79, 0.8)',
-                          border: 'none',
-                          color: '#FFFFFF',
-                          fontWeight: 700
+                          background: 'transparent'
                         }}
                       />
-                    </Space>
-                  )}
-                  pagination={{
-                    current: pagination.current,
-                    pageSize: pagination.pageSize,
-                      total: filteredSorted.length,
-                    showSizeChanger: true,
-                    showQuickJumper: false,
-                    showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
-                    onChange: handlePaginationChange,
-                    onShowSizeChange: handlePaginationChange,
-                    pageSizeOptions: ['10', '20', '50', '100'],
-                    style: { color: '#fff' }
-                  }}
-                  style={{
-                    background: 'transparent'
-                  }}
-                />
-                </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {filteredSorted.map(order => {
-                      const matchStatus = getOrderMatchStatus(order.id)
-                      const createdDate = order.createdAt ? 
-                        (typeof (order.createdAt as any).toDate === 'function' ? (order.createdAt as any).toDate() : order.createdAt) 
-                        : new Date()
-                      const formattedDate = dayjs(createdDate).isValid() ? dayjs(createdDate).format('YYYY-MM-DD') : '-'
-                      
-                      return (
-                        <div key={order.id} style={{ border: '1px solid rgba(244,175,37,0.2)', borderRadius: 12, padding: 12, background: 'rgba(34,28,16,0.5)', backdropFilter: 'blur(10px)' }}>
-                          {/* 订单号和日期同行 */}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
-                              {t('ordersAdmin.orderNo')}: {order.id.substring(0, 20)}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {filteredSorted.map(order => {
+                        const matchStatus = getOrderMatchStatus(order.id)
+                        const createdDate = order.createdAt ?
+                          (typeof (order.createdAt as any).toDate === 'function' ? (order.createdAt as any).toDate() : order.createdAt)
+                          : new Date()
+                        const formattedDate = dayjs(createdDate).isValid() ? dayjs(createdDate).format('YYYY-MM-DD') : '-'
+
+                        return (
+                          <div key={order.id} style={{ border: '1px solid rgba(244,175,37,0.2)', borderRadius: 12, padding: 12, background: 'rgba(34,28,16,0.5)', backdropFilter: 'blur(10px)' }}>
+                            {/* 订单号和日期同行 */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
+                                {t('ordersAdmin.orderNo')}: {order.id.substring(0, 20)}
+                              </div>
+                              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+                                {formattedDate}
+                              </div>
                             </div>
-                            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
-                              {formattedDate}
+
+                            {/* 用户名和状态同行 */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>
+                                {getUserName(order.userId, users)}
+                              </div>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: getStatusColor(order.status) === 'green' ? '#34d399' : getStatusColor(order.status) === 'red' ? '#f87171' : getStatusColor(order.status) === 'orange' ? '#fb923c' : getStatusColor(order.status) === 'blue' ? '#60a5fa' : '#a78bfa' }}>
+                                {getStatusText(order.status, t)}
+                              </span>
                             </div>
-                          </div>
-                          
-                          {/* 用户名和状态同行 */}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>
-                              {getUserName(order.userId, users)}
+
+                            {/* 手机号和查看按钮同行 */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
+                                {getUserPhone(order.userId, users) || '-'}
+                              </div>
+                              <button style={{ padding: '4px 8px', borderRadius: 6, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10', fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => { setViewing(order); setIsEditingInView(false) }}>
+                                {t('common.viewDetails')}
+                              </button>
                             </div>
-                            <span style={{ fontSize: 12, fontWeight: 600, color: getStatusColor(order.status) === 'green' ? '#34d399' : getStatusColor(order.status) === 'red' ? '#f87171' : getStatusColor(order.status) === 'orange' ? '#fb923c' : getStatusColor(order.status) === 'blue' ? '#60a5fa' : '#a78bfa' }}>
-                              {getStatusText(order.status, t)}
-                            </span>
-                          </div>
-                          
-                          {/* 手机号和查看按钮同行 */}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
-                              {getUserPhone(order.userId, users) || '-'}
-                            </div>
-                            <button style={{ padding: '4px 8px', borderRadius: 6, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10', fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => { setViewing(order); setIsEditingInView(false) }}>
-                              {t('common.viewDetails')}
-                            </button>
-                          </div>
-                          
-                          {/* 商品列表和金额 */}
-                          <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(244,175,37,0.1)', display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                            {/* 商品列表 */}
-                            <div style={{ flex: 1 }}>
-                              {order.items.slice(0, 2).map((item, index) => (
-                                <div key={`${order.id}_${item.cigarId}_${index}`} style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginBottom: 4 }}>
-                                  • {getCigarName(item.cigarId)} × {item.quantity}
-                                </div>
-                              ))}
-                              {order.items.length > 2 && (
-                                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>
-                                  +{order.items.length - 2} {t('common.more')}
-                                </div>
-                              )}
-                            </div>
-                            
-                            {/* 金额和财务匹配状态 */}
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <div style={{ fontSize: 16, fontWeight: 800, color: '#f4af25' }}>RM {order.total.toFixed(2)}</div>
-                                {/* 财务匹配状态 */}
-                                {matchStatus.status === 'fully' && (
-                                  <CheckOutlined style={{ color: '#34d399', fontSize: '16px' }} />
+
+                            {/* 商品列表和金额 */}
+                            <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(244,175,37,0.1)', display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                              {/* 商品列表 */}
+                              <div style={{ flex: 1 }}>
+                                {order.items.slice(0, 2).map((item, index) => (
+                                  <div key={`${order.id}_${item.cigarId}_${index}`} style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginBottom: 4 }}>
+                                    • {getCigarName(item.cigarId)} × {item.quantity}
+                                  </div>
+                                ))}
+                                {order.items.length > 2 && (
+                                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>
+                                    +{order.items.length - 2} {t('common.more')}
+                                  </div>
                                 )}
                               </div>
-                              {matchStatus.status === 'partial' && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                                  <ClockCircleOutlined style={{ color: '#fb923c', fontSize: '14px' }} />
-                                  <span style={{ fontSize: 10, color: '#fb923c' }}>RM{matchStatus.matched.toFixed(2)}</span>
+
+                              {/* 金额和财务匹配状态 */}
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <div style={{ fontSize: 16, fontWeight: 800, color: '#f4af25' }}>RM {order.total.toFixed(2)}</div>
+                                  {/* 财务匹配状态 */}
+                                  {matchStatus.status === 'fully' && (
+                                    <CheckOutlined style={{ color: '#34d399', fontSize: '16px' }} />
+                                  )}
                                 </div>
-                              )}
+                                {matchStatus.status === 'partial' && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                                    <ClockCircleOutlined style={{ color: '#fb923c', fontSize: '14px' }} />
+                                    <span style={{ fontSize: 10, color: '#fb923c' }}>RM{matchStatus.matched.toFixed(2)}</span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      )
-                    })}
-                    {filteredSorted.length === 0 && (
-                      <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
-                    )}
-                  </div>
-                )}
+                        )
+                      })}
+                      {filteredSorted.length === 0 && (
+                        <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              </>
+              </div>
             )
           },
           {
@@ -903,6 +772,7 @@ const AdminOrders: React.FC = () => {
                 cigars={cigars}
                 appConfig={appConfig}
                 loading={loading || paginatedLoading}
+                isMobile={isMobile}
                 onRefresh={refreshAllOrders}
               />
             ),
@@ -917,7 +787,7 @@ const AdminOrders: React.FC = () => {
         onCancel={() => { setViewing(null); setIsEditingInView(false) }}
         footer={null}
         width={isMobile ? '100%' : 820}
-        style={{ 
+        style={{
           top: isMobile ? 0 : 20,
         }}
         styles={getModalThemeStyles(isMobile, true)}
@@ -945,38 +815,38 @@ const AdminOrders: React.FC = () => {
         title={t('ordersAdmin.createManual')}
         open={creating}
         onCancel={() => setCreating(false)}
-        onOk={() => {/* Form submission handled by CreateOrderForm */}}
+        onOk={() => {/* Form submission handled by CreateOrderForm */ }}
         confirmLoading={loading}
         {...getResponsiveModalConfig(isMobile, true, 960)}
         className="create-order-modal"
         footer={[
-          <button 
-            key="cancel" 
-            type="button" 
-            onClick={() => setCreating(false)} 
-            style={{ 
-              padding: '6px 14px', 
-              borderRadius: 8, 
-              border: '1px solid rgba(255, 255, 255, 0.2)', 
-              background: 'rgba(255, 255, 255, 0.1)', 
+          <button
+            key="cancel"
+            type="button"
+            onClick={() => setCreating(false)}
+            style={{
+              padding: '6px 14px',
+              borderRadius: 8,
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              background: 'rgba(255, 255, 255, 0.1)',
               color: '#FFFFFF',
-              cursor: 'pointer' 
+              cursor: 'pointer'
             }}
           >
             {t('common.cancel')}
           </button>,
-          <button 
-            key="submit" 
-            type="button" 
-            className="cigar-btn-gradient" 
+          <button
+            key="submit"
+            type="button"
+            className="cigar-btn-gradient"
             onClick={() => {
-            const formEl = document.getElementById('createOrderForm') as HTMLFormElement | null
-            if (formEl) formEl.requestSubmit()
-            }} 
-            style={{ 
-              padding: '6px 14px', 
-              borderRadius: 8, 
-              cursor: 'pointer' 
+              const formEl = document.getElementById('createOrderForm') as HTMLFormElement | null
+              if (formEl) formEl.requestSubmit()
+            }}
+            style={{
+              padding: '6px 14px',
+              borderRadius: 8,
+              cursor: 'pointer'
             }}
           >
             {t('common.create')}
@@ -1019,9 +889,9 @@ const AdminOrders: React.FC = () => {
           users={users}
           cigars={cigars}
           onCreateSuccess={async () => {
-              message.success(t('ordersAdmin.created'))
-              setCreating(false)
-              await refreshPaginated()
+            message.success(t('ordersAdmin.created'))
+            setCreating(false)
+            await refreshPaginated()
           }}
           onCreateError={(error) => {
             message.error(error)
@@ -1030,6 +900,205 @@ const AdminOrders: React.FC = () => {
           loading={loading}
         />
       </Modal>
+      {/* 移动端悬浮创建按钮 */}
+      {isMobile && mainTab === 'orders' && (
+        <button
+          onClick={() => setCreating(true)}
+          style={{
+            position: 'fixed',
+            right: 20,
+            bottom: (selectedRowKeys.length > 0 && mainTab === 'orders') ? 100 : 80,
+            width: 56,
+            height: 56,
+            borderRadius: '50%',
+            background: appConfig?.colorTheme?.primaryButton
+              ? `linear-gradient(to right, ${appConfig.colorTheme.primaryButton.startColor}, ${appConfig.colorTheme.primaryButton.endColor})`
+              : 'linear-gradient(to right,#FDE08D,#C48D3A)',
+            border: 'none',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+            color: '#111',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            cursor: 'pointer'
+          }}
+        >
+          <PlusOutlined style={{ fontSize: 24, fontWeight: 'bold' }} />
+        </button>
+      )}
+      {/* 批量操作底部工具栏 */}
+      {selectedRowKeys.length > 0 && (
+        <div style={{
+          position: 'fixed',
+          bottom: isMobile ? 20 : 30,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: isMobile ? 'calc(100% - 32px)' : 'auto',
+          minWidth: isMobile ? 0 : 700,
+          background: 'rgba(24, 28, 16, 0.95)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(244, 175, 37, 0.5)',
+          borderRadius: 16,
+          padding: isMobile ? '12px 16px' : '12px 32px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+          zIndex: 1100,
+          animation: 'slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#111',
+              fontWeight: 800,
+              fontSize: 14
+            }}>
+              {selectedRowKeys.length}
+            </div>
+            <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14, fontWeight: 600 }}>
+              {isMobile ? `已选 ${selectedRowKeys.length} 项` : t('common.itemsSelected', { count: selectedRowKeys.length })}
+            </div>
+          </div>
+
+          <Space size={isMobile ? 'small' : 'middle'} wrap>
+            <button
+              onClick={async () => {
+                setLoading(true)
+                try {
+                  await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'confirmed' } as any)))
+                  message.success(t('ordersAdmin.batchConfirmed'))
+                  await refreshPaginated()
+                  setSelectedRowKeys([])
+                } finally {
+                  setLoading(false)
+                }
+              }}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 8,
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                background: 'rgba(255, 255, 255, 0.05)',
+                color: '#FFFFFF',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 600,
+                transition: 'all 0.2s'
+              }}
+            >
+              {t('ordersAdmin.batchConfirm')}
+            </button>
+            <button
+              onClick={async () => {
+                setLoading(true)
+                try {
+                  await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'delivered' } as any)))
+                  message.success(t('ordersAdmin.batchDelivered'))
+                  await refreshPaginated()
+                  setSelectedRowKeys([])
+                } finally {
+                  setLoading(false)
+                }
+              }}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 8,
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                background: 'rgba(255, 255, 255, 0.05)',
+                color: '#FFFFFF',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 600,
+                transition: 'all 0.2s'
+              }}
+            >
+              {t('ordersAdmin.batchDeliver')}
+            </button>
+            <button
+              onClick={async () => {
+                setLoading(true)
+                try {
+                  await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'cancelled' } as any)))
+                  message.success(t('ordersAdmin.batchCancelled'))
+                  await refreshPaginated()
+                  setSelectedRowKeys([])
+                } finally {
+                  setLoading(false)
+                }
+              }}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 8,
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                background: 'rgba(255, 255, 255, 0.05)',
+                color: '#FFFFFF',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 600,
+                transition: 'all 0.2s'
+              }}
+            >
+              {t('ordersAdmin.batchCancel')}
+            </button>
+            <BatchDeleteButton
+              selectedIds={selectedRowKeys}
+              confirmTitle={t('ordersAdmin.batchDeleteConfirm')}
+              confirmContent={t('ordersAdmin.batchDeleteContent', { count: selectedRowKeys.length })}
+              onBatchDelete={async (ids) => {
+                await deleteOrdersFromEventAllocations(ids.map(String))
+                await Promise.all(ids.map(id => deleteOrderOutboundRecords(id)))
+                await Promise.all(ids.map(id => deleteDocument(COLLECTIONS.ORDERS, id)))
+                return { success: true }
+              }}
+              onSuccess={async () => {
+                await refreshPaginated()
+                setSelectedRowKeys([])
+              }}
+              itemTypeName="订单"
+              size="middle"
+              type="default"
+              danger={true}
+              showIcon={true}
+              style={{
+                background: 'rgba(255, 77, 79, 0.8)',
+                border: 'none',
+                color: '#FFFFFF',
+                fontWeight: 700,
+                borderRadius: 8,
+                padding: '8px 16px'
+              }}
+            />
+            <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} />
+            <button
+              onClick={() => setSelectedRowKeys([])}
+              style={{
+                padding: '8px 12px',
+                background: 'transparent',
+                border: 'none',
+                color: 'rgba(255,255,255,0.5)',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 600
+              }}
+            >
+              {t('common.cancel')}
+            </button>
+          </Space>
+        </div>
+      )}
+      <style>{`
+        @keyframes slideUp {
+          from { transform: translate(-50%, 100%); opacity: 0; }
+          to { transform: translate(-50%, 0); opacity: 1; }
+        }
+      `}</style>
     </div>
   )
 }
