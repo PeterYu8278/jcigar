@@ -71,7 +71,7 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
     try {
       const width = collapsed ? '64px' : '240px'
       document.documentElement.style.setProperty('--sider-width', width)
-    } catch {}
+    } catch { }
   }
 
   // 前端菜单项
@@ -210,15 +210,16 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
   }
 
   return (
-    <Sider 
-      trigger={null} 
-      collapsible 
+    <Sider
+      trigger={null}
+      collapsible
       collapsed={collapsed}
       width={240}
       collapsedWidth={64}
+      className="cigar-sider-scroll"
       style={{
         background: 'linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%)',
-        borderRight: '1px solid #ffd700',
+        borderRight: '2px solid #ffd700',
         boxShadow: '2px 0 8px rgba(0, 0, 0, 0.3)',
         position: 'fixed',
         top: 0,
@@ -237,10 +238,10 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
         background: 'linear-gradient(180deg, rgba(255, 215, 0, 0.03) 0%, transparent 100%)',
         pointerEvents: 'none'
       }} />
-      
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
         padding: '16px',
         borderBottom: '1px solid #333333',
@@ -249,8 +250,8 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
         {!collapsed && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <FireOutlined style={{ color: '#ffd700', fontSize: '18px' }} />
-            <Text style={{ 
-              fontWeight: 'bold', 
+            <Text style={{
+              fontWeight: 'bold',
               background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
@@ -266,18 +267,16 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
           type="text"
           icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
           onClick={() => handleCollapseChange(!collapsed)}
-          style={{ 
-            fontSize: '16px', 
-            width: 48, 
-            height: 48,
-            color: '#c0c0c0',
-            border: '1px solid #333333',
-            borderRadius: '8px'
+          style={{
+            fontSize: '16px',
+            width: 28,
+            height: 28,
+            color: '#c0c0c0'
           }}
           className="sider-toggle-button"
         />
       </div>
-      
+
       <style>{`
         .cigar-sidebar-menu .ant-menu-item-group-title {
           background: linear-gradient(to right, #FDE08D, #C48D3A);
@@ -325,20 +324,42 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
           color: rgba(255, 255, 255, 0.75);
           transition: all 0.3s ease;
         }
+        /* Layout flex and scroll management */
+        .ant-layout-sider-children {
+          display: flex !important;
+          flex-direction: column !important;
+        }
+        .cigar-menu-wrapper {
+          flex: 1;
+          overflow-y: auto;
+          overflow-x: hidden;
+        }
+        /* Hide scrollbar for the menu wrapper */
+        .cigar-menu-wrapper::-webkit-scrollbar {
+          width: 0px;
+          display: none;
+          background: transparent;
+        }
+        .cigar-menu-wrapper {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
       `}</style>
-      <Menu
-        mode="inline"
-        selectedKeys={[location.pathname]}
-        items={menuItems}
-        onClick={handleMenuClick}
-        style={{ 
-          borderRight: 0,
-          background: 'transparent',
-          marginTop: '8px'
-        }}
-        className="cigar-sidebar-menu"
-      />
-      
+      <div className="cigar-menu-wrapper">
+        <Menu
+          mode="inline"
+          selectedKeys={[location.pathname]}
+          items={menuItems}
+          onClick={handleMenuClick}
+          style={{
+            borderRight: 0,
+            background: 'transparent',
+            marginTop: '8px'
+          }}
+          className="cigar-sidebar-menu"
+        />
+      </div>
+
     </Sider>
   )
 }

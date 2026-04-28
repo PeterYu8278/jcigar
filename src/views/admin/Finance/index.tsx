@@ -1000,7 +1000,7 @@ const AdminFinance: React.FC = () => {
       </div>
 
       {/* 自定义标签 */}
-      <div style={{ display: 'flex', borderBottom: '1px solid rgba(244,175,37,0.2)', marginBottom: 24 }}>
+      <div style={{ display: 'flex', borderBottom: '1px solid rgba(244,175,37,0.2)', marginBottom: 10 }}>
         {(['overview', 'transactions', 'profit'] as const).map((tabKey) => {
           const isActive = activeTab === tabKey
           const baseStyle: React.CSSProperties = {
@@ -1345,36 +1345,63 @@ const AdminFinance: React.FC = () => {
       {activeTab === 'profit' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           {/* 利润概览卡片 */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)',
-            gap: 16
-          }}>
-            {[
-              { label: t('financeAdmin.totalProfit'), value: profitData.totalProfit, color: '#f4af25', icon: <DollarOutlined /> },
-              { label: t('financeAdmin.totalRevenue'), value: profitData.totalRevenue, color: '#fff', icon: <BarChartOutlined /> },
-              { label: t('financeAdmin.totalCogs'), value: profitData.totalCogs, color: '#fff', icon: <ShoppingOutlined /> },
-              { label: t('financeAdmin.profitMargin'), value: `${profitData.margin.toFixed(1)}%`, color: '#0bda19', icon: <ArrowUpOutlined /> },
-            ].map((item, idx) => (
-              <div key={idx} style={{
-                padding: 20,
-                borderRadius: 12,
-                background: 'rgba(57, 51, 40, 0.5)',
-                border: '1px solid rgba(244, 175, 37, 0.3)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 8
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>
-                  {item.icon}
-                  {item.label}
+          {isMobile ? (
+            <div style={{
+              padding: 12,
+              borderRadius: 12,
+              background: 'rgba(57, 51, 40, 0.5)',
+              border: '1px solid rgba(244, 175, 37, 0.3)',
+              display: 'flex',
+              gap: 8
+            }}>
+              {[
+                { label: t('financeAdmin.totalProfit'), value: profitData.totalProfit, color: '#f4af25', isRM: true },
+                { label: t('financeAdmin.totalRevenue'), value: profitData.totalRevenue, color: '#fff', isRM: true },
+                { label: t('financeAdmin.totalCogs'), value: profitData.totalCogs, color: '#fff', isRM: true },
+                { label: t('financeAdmin.profitMargin'), value: `${profitData.margin.toFixed(1)}%`, color: '#0bda19', isRM: false },
+              ].map((item, idx) => (
+                <div key={idx} style={{ textAlign: 'center', flex: 1 }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: item.color }}>
+                    {item.isRM ? `${(item.value as number).toFixed(0)}` : item.value}
+                  </div>
+                  <div style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.2 }}>
+                    {item.label}
+                  </div>
                 </div>
-                <div style={{ fontSize: 24, fontWeight: 700, color: item.color }}>
-                  {typeof item.value === 'number' ? `RM${item.value.toFixed(2)}` : item.value}
+              ))}
+            </div>
+          ) : (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, 1fr)',
+              gap: 16
+            }}>
+              {[
+                { label: t('financeAdmin.totalProfit'), value: profitData.totalProfit, color: '#f4af25', icon: <DollarOutlined /> },
+                { label: t('financeAdmin.totalRevenue'), value: profitData.totalRevenue, color: '#fff', icon: <BarChartOutlined /> },
+                { label: t('financeAdmin.totalCogs'), value: profitData.totalCogs, color: '#fff', icon: <ShoppingOutlined /> },
+                { label: t('financeAdmin.profitMargin'), value: `${profitData.margin.toFixed(1)}%`, color: '#0bda19', icon: <ArrowUpOutlined /> },
+              ].map((item, idx) => (
+                <div key={idx} style={{
+                  padding: 20,
+                  borderRadius: 12,
+                  background: 'rgba(57, 51, 40, 0.5)',
+                  border: '1px solid rgba(244, 175, 37, 0.3)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>
+                    {item.icon}
+                    {item.label}
+                  </div>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: item.color }}>
+                    {typeof item.value === 'number' ? `RM${item.value.toFixed(2)}` : item.value}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* 趋势图表 - 现代风格 */}
           <div style={{
