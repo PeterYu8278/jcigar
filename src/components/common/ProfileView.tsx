@@ -374,7 +374,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               fontWeight: 500
             }}
           >
-            查看我的 AI 识茄历史
+            <span style={{
+              background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              fontWeight: 'bold'
+            }}>
+              查看我的 AI 识茄历史
+            </span>
           </Button>
         </div>
       )}

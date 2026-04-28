@@ -204,13 +204,13 @@ const FeatureManagement: React.FC = () => {
             primaryButton: { startColor: '#FDE08D', endColor: '#C48D3A' },
             secondaryButton: { backgroundColor: 'rgba(255,255,255,0.1)', borderColor: '#444444', textColor: '#ffffff' },
             warningButton: { backgroundColor: '#faad14', borderColor: '#faad14', textColor: '#ffffff' },
-              border: { primary: '#333333', secondary: '#444444' },
-              tag: {
-                success: { backgroundColor: '#52c41a', textColor: '#ffffff' },
-                warning: { backgroundColor: '#faad14', textColor: '#ffffff' },
-                error: { backgroundColor: '#ff4d4f', textColor: '#ffffff' },
-              },
-              text: { primary: '#f8f8f8', secondary: '#c0c0c0', tertiary: '#999999' },
+            border: { primary: '#333333', secondary: '#444444' },
+            tag: {
+              success: { backgroundColor: '#52c41a', textColor: '#ffffff' },
+              warning: { backgroundColor: '#faad14', textColor: '#ffffff' },
+              error: { backgroundColor: '#ff4d4f', textColor: '#ffffff' },
+            },
+            text: { primary: '#f8f8f8', secondary: '#c0c0c0', tertiary: '#999999' },
             icon: { primary: '#ffd700' },
           },
         };
@@ -258,7 +258,7 @@ const FeatureManagement: React.FC = () => {
     try {
       // 计算需要更新的功能
       const updates: Partial<FeatureVisibilityConfig['features']> = {};
-      
+
       Object.entries(localFeatures).forEach(([key, visible]) => {
         const currentVisible = config?.features[key]?.visible ?? FEATURE_DEFINITIONS.find(f => f.key === key)?.defaultVisible ?? true;
         if (currentVisible !== visible) {
@@ -329,20 +329,20 @@ const FeatureManagement: React.FC = () => {
       // 合并待保存的颜色更改
       const finalColorTheme = appConfig?.colorTheme
         ? {
-            ...appConfig.colorTheme,
-            ...pendingColorChanges,
-          }
+          ...appConfig.colorTheme,
+          ...pendingColorChanges,
+        }
         : undefined;
-      
+
       const authConfig = {
         disableGoogleLogin: Boolean(values.disableGoogleLogin),
         disableEmailLogin: Boolean(values.disableEmailLogin),
       };
-      
+
       const geminiConfig = values.geminiModels && values.geminiModels.length > 0
         ? { models: values.geminiModels }
         : undefined;
-      
+
       const result = await updateAppConfig(
         {
           logoUrl: values.logoUrl,
@@ -354,11 +354,11 @@ const FeatureManagement: React.FC = () => {
         },
         user.id
       );
-      
+
       if (result.success) {
         message.success('应用配置已保存');
         setPendingColorChanges({}); // 清空待保存的更改
-        
+
         // 直接更新本地 appConfig 状态，保留其他字段（如 aiCigar、whapi）
         if (appConfig) {
           setAppConfig({
@@ -393,7 +393,7 @@ const FeatureManagement: React.FC = () => {
       if (result.success) {
         message.success('已重置为默认配置');
         setPendingColorChanges({}); // 清空待保存的颜色更改
-        
+
         // 重新加载配置（重置操作需要完整重载）
         await loadAppConfig();
       } else {
@@ -415,35 +415,35 @@ const FeatureManagement: React.FC = () => {
     firebaseMeasurementId: string;
   }> => {
     const config: any = {};
-    
+
     // 提取 apiKey
     const apiKeyMatch = code.match(/apiKey:\s*["']([^"']+)["']/);
     if (apiKeyMatch) config.firebaseApiKey = apiKeyMatch[1];
-    
+
     // 提取 authDomain
     const authDomainMatch = code.match(/authDomain:\s*["']([^"']+)["']/);
     if (authDomainMatch) config.firebaseAuthDomain = authDomainMatch[1];
-    
+
     // 提取 projectId
     const projectIdMatch = code.match(/projectId:\s*["']([^"']+)["']/);
     if (projectIdMatch) config.firebaseProjectId = projectIdMatch[1];
-    
+
     // 提取 storageBucket
     const storageBucketMatch = code.match(/storageBucket:\s*["']([^"']+)["']/);
     if (storageBucketMatch) config.firebaseStorageBucket = storageBucketMatch[1];
-    
+
     // 提取 messagingSenderId
     const messagingSenderIdMatch = code.match(/messagingSenderId:\s*["']([^"']+)["']/);
     if (messagingSenderIdMatch) config.firebaseMessagingSenderId = messagingSenderIdMatch[1];
-    
+
     // 提取 appId
     const appIdMatch = code.match(/appId:\s*["']([^"']+)["']/);
     if (appIdMatch) config.firebaseAppId = appIdMatch[1];
-    
+
     // 提取 measurementId（可选）
     const measurementIdMatch = code.match(/measurementId:\s*["']([^"']+)["']/);
     if (measurementIdMatch) config.firebaseMeasurementId = measurementIdMatch[1];
-    
+
     return config;
   };
 
@@ -452,12 +452,12 @@ const FeatureManagement: React.FC = () => {
     try {
       const config = parseFirebaseConfig(code);
       const extractedKeys = Object.keys(config);
-      
+
       if (extractedKeys.length === 0) {
         message.error('未能从粘贴的代码中提取到配置信息，请检查代码格式');
         return;
       }
-      
+
       // 填充表单字段
       envForm.setFieldsValue(config);
       message.success(`已自动填充 ${extractedKeys.length} 个配置项`);
@@ -485,34 +485,34 @@ const FeatureManagement: React.FC = () => {
     fcmVapidKey?: string;
     geminiApiKey?: string;
   }): string => {
-    const measurementIdLine = values.firebaseMeasurementId 
+    const measurementIdLine = values.firebaseMeasurementId
       ? `VITE_FIREBASE_MEASUREMENT_ID=${values.firebaseMeasurementId}\n`
       : '';
-    
+
     const fcmVapidKeyLine = values.fcmVapidKey
       ? `# FCM 配置\nVITE_FCM_VAPID_KEY=${values.fcmVapidKey}`
       : '';
-    
+
     const geminiApiKeyLine = values.geminiApiKey
       ? `\n# Gemini API 配置\nVITE_GEMINI_API_KEY=${values.geminiApiKey}`
       : '';
-    
+
     // FIREBASE_SERVICE_ACCOUNT 是服务器端环境变量，需要单独处理（JSON 格式）
     const serviceAccountLine = values.firebaseServiceAccount
       ? (() => {
-          try {
-            // 尝试解析并压缩 JSON
-            const parsed = JSON.parse(values.firebaseServiceAccount.trim());
-            const compressed = JSON.stringify(parsed);
-            return `\n# Firebase Service Account (用于 Netlify Functions)\n# 注意：这是服务器端环境变量，不会自动部署到 Netlify\n# 需要在 Netlify 控制台的 Environment variables 中手动设置 FIREBASE_SERVICE_ACCOUNT\n# 值为以下 JSON 内容（已压缩为单行）：\nFIREBASE_SERVICE_ACCOUNT=${compressed}`;
-          } catch {
-            // 如果解析失败，使用原始值（压缩空格和换行）
-            const compressed = values.firebaseServiceAccount.trim().replace(/\s+/g, ' ').replace(/\n/g, '');
-            return `\n# Firebase Service Account (用于 Netlify Functions)\n# 注意：这是服务器端环境变量，不会自动部署到 Netlify\n# 需要在 Netlify 控制台的 Environment variables 中手动设置 FIREBASE_SERVICE_ACCOUNT\n# 值为以下 JSON 内容（已压缩为单行）：\nFIREBASE_SERVICE_ACCOUNT=${compressed}`;
-          }
-        })()
+        try {
+          // 尝试解析并压缩 JSON
+          const parsed = JSON.parse(values.firebaseServiceAccount.trim());
+          const compressed = JSON.stringify(parsed);
+          return `\n# Firebase Service Account (用于 Netlify Functions)\n# 注意：这是服务器端环境变量，不会自动部署到 Netlify\n# 需要在 Netlify 控制台的 Environment variables 中手动设置 FIREBASE_SERVICE_ACCOUNT\n# 值为以下 JSON 内容（已压缩为单行）：\nFIREBASE_SERVICE_ACCOUNT=${compressed}`;
+        } catch {
+          // 如果解析失败，使用原始值（压缩空格和换行）
+          const compressed = values.firebaseServiceAccount.trim().replace(/\s+/g, ' ').replace(/\n/g, '');
+          return `\n# Firebase Service Account (用于 Netlify Functions)\n# 注意：这是服务器端环境变量，不会自动部署到 Netlify\n# 需要在 Netlify 控制台的 Environment variables 中手动设置 FIREBASE_SERVICE_ACCOUNT\n# 值为以下 JSON 内容（已压缩为单行）：\nFIREBASE_SERVICE_ACCOUNT=${compressed}`;
+        }
+      })()
       : '';
-    
+
     return `# Firebase配置
 VITE_FIREBASE_API_KEY=${values.firebaseApiKey}
 VITE_FIREBASE_AUTH_DOMAIN=${values.firebaseAuthDomain}
@@ -623,7 +623,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
         });
 
         message.success('环境变量已更新，部署已触发');
-        
+
         // 轮询部署状态
         if (result.deploy?.id) {
           pollDeployStatus(netlifyAccessToken, netlifySiteId, result.deploy.id);
@@ -808,7 +808,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
       ...prev,
       ...colors,
     }));
-    
+
     // 实时更新本地状态以预览效果
     if (appConfig?.colorTheme) {
       setAppConfig({
@@ -885,7 +885,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
   // 获取过滤后的功能列表
   const getFilteredFeatures = (): FeatureDefinition[] => {
     let features = FEATURE_DEFINITIONS.filter(f => f.category === activeTab);
-    
+
     if (searchText) {
       const searchLower = searchText.toLowerCase();
       features = features.filter(f => {
@@ -894,7 +894,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
         return name.toLowerCase().includes(searchLower) || desc.toLowerCase().includes(searchLower);
       });
     }
-    
+
     return features;
   };
 
@@ -975,19 +975,19 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                 }}
                 onClick={() => setActiveTab(tabKey)}
               >
-                {tabKey === 'frontend' 
+                {tabKey === 'frontend'
                   ? t('featureManagement.frontendFeatures', { defaultValue: '前端功能' })
                   : tabKey === 'admin'
-                  ? t('featureManagement.adminFeatures', { defaultValue: '管理后台功能' })
-                  : tabKey === 'cigar-database'
-                  ? t('featureManagement.cigarDatabase', { defaultValue: '雪茄数据库' })
-                  : tabKey === 'tools'
-                  ? t('featureManagement.tools', { defaultValue: '工具' })
-                  : tabKey === 'app'
-                  ? t('featureManagement.appSettings', { defaultValue: '应用配置' })
-                  : tabKey === 'whapi'
-                  ? t('featureManagement.whapiSettings', { defaultValue: 'WhatsApp 管理' })
-                  : t('featureManagement.envSettings', { defaultValue: '环境配置' })}
+                    ? t('featureManagement.adminFeatures', { defaultValue: '管理后台功能' })
+                    : tabKey === 'cigar-database'
+                      ? t('featureManagement.cigarDatabase', { defaultValue: '雪茄数据库' })
+                      : tabKey === 'tools'
+                        ? t('featureManagement.tools', { defaultValue: '工具' })
+                        : tabKey === 'app'
+                          ? t('featureManagement.appSettings', { defaultValue: '应用配置' })
+                          : tabKey === 'whapi'
+                            ? t('featureManagement.whapiSettings', { defaultValue: 'WhatsApp 管理' })
+                            : t('featureManagement.envSettings', { defaultValue: '环境配置' })}
               </button>
             );
           })}
@@ -1125,7 +1125,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginTop: 8, marginBottom: 16 }}>
                 选择用于 AI 雪茄识别的 Gemini 模型列表。系统会按顺序尝试这些模型，直到找到一个可用的模型。
               </Text>
-              
+
               <Form.Item
                 label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>可用模型</span>}
                 name="geminiModels"
@@ -1146,71 +1146,71 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                   }}
                   options={[
                     // 🥇 最佳选择（100%成功率, 极快 1.8-2.2s）
-                    { 
-                      label: 'gemini-flash-lite-latest (1.8s, 最佳推荐)', 
-                      value: 'gemini-flash-lite-latest' 
+                    {
+                      label: 'gemini-flash-lite-latest (1.8s, 最佳推荐)',
+                      value: 'gemini-flash-lite-latest'
                     },
-                    { 
-                      label: 'gemini-2.5-flash-lite-preview-09-2025 (2.2s)', 
-                      value: 'gemini-2.5-flash-lite-preview-09-2025' 
+                    {
+                      label: 'gemini-2.5-flash-lite-preview-09-2025 (2.2s)',
+                      value: 'gemini-2.5-flash-lite-preview-09-2025'
                     },
-                    
+
                     // 🥈 优秀选择（100%成功率, 快速 3.5-9.7s）
-                    { 
-                      label: 'gemini-2.0-flash-001 (3.5s)', 
-                      value: 'gemini-2.0-flash-001' 
+                    {
+                      label: 'gemini-2.0-flash-001 (3.5s)',
+                      value: 'gemini-2.0-flash-001'
                     },
-                    { 
-                      label: 'gemini-2.0-flash (3.9s)', 
-                      value: 'gemini-2.0-flash' 
+                    {
+                      label: 'gemini-2.0-flash (3.9s)',
+                      value: 'gemini-2.0-flash'
                     },
-                    { 
-                      label: 'gemini-2.5-flash (9.7s)', 
-                      value: 'gemini-2.5-flash' 
+                    {
+                      label: 'gemini-2.5-flash (9.7s)',
+                      value: 'gemini-2.5-flash'
                     },
-                    
+
                     // 🥉 稳定选择（100%成功率, 较慢 15-17s）
-                    { 
-                      label: 'gemini-pro-latest (15.5s)', 
-                      value: 'gemini-pro-latest' 
+                    {
+                      label: 'gemini-pro-latest (15.5s)',
+                      value: 'gemini-pro-latest'
                     },
-                    { 
-                      label: 'gemini-robotics-er-1.5-preview (16.7s)', 
-                      value: 'gemini-robotics-er-1.5-preview' 
+                    {
+                      label: 'gemini-robotics-er-1.5-preview (16.7s)',
+                      value: 'gemini-robotics-er-1.5-preview'
                     },
-                    
+
                     // 备选方案（60-80%成功率）
-                    { 
-                      label: 'gemini-2.5-flash-lite (60%成功率)', 
-                      value: 'gemini-2.5-flash-lite' 
+                    {
+                      label: 'gemini-2.5-flash-lite (60%成功率)',
+                      value: 'gemini-2.5-flash-lite'
                     },
-                    { 
-                      label: 'gemini-flash-latest (80%成功率)', 
-                      value: 'gemini-flash-latest' 
+                    {
+                      label: 'gemini-flash-latest (80%成功率)',
+                      value: 'gemini-flash-latest'
                     },
-                    { 
-                      label: 'gemini-2.0-flash-lite (60%成功率)', 
-                      value: 'gemini-2.0-flash-lite' 
+                    {
+                      label: 'gemini-2.0-flash-lite (60%成功率)',
+                      value: 'gemini-2.0-flash-lite'
                     },
-                    { 
-                      label: 'gemini-2.0-flash-lite-001 (40%成功率, 52.8s)', 
-                      value: 'gemini-2.0-flash-lite-001' 
+                    {
+                      label: 'gemini-2.0-flash-lite-001 (40%成功率, 52.8s)',
+                      value: 'gemini-2.0-flash-lite-001'
                     },
-                    { 
-                      label: 'gemini-2.0-flash-lite-preview (60%成功率)', 
-                      value: 'gemini-2.0-flash-lite-preview' 
+                    {
+                      label: 'gemini-2.0-flash-lite-preview (60%成功率)',
+                      value: 'gemini-2.0-flash-lite-preview'
                     },
-                    { 
-                      label: 'gemini-2.5-pro (60%成功率, 每分钟限2次)', 
-                      value: 'gemini-2.5-pro' 
+                    {
+                      label: 'gemini-2.5-pro (60%成功率, 每分钟限2次)',
+                      value: 'gemini-2.5-pro'
                     },
-                    { 
-                      label: 'gemini-2.5-flash-preview-09-2025 (60%成功率)', 
-                      value: 'gemini-2.5-flash-preview-09-2025' 
+                    {
+                      label: 'gemini-2.5-flash-preview-09-2025 (60%成功率)',
+                      value: 'gemini-2.5-flash-preview-09-2025'
                     },
-                    { 
-                      label: 'gemini-2.0-flash-lite-preview-02-05 (80%成功率)', 
-                      value: 'gemini-2.0-flash-lite-preview-02-05' 
+                    {
+                      label: 'gemini-2.0-flash-lite-preview-02-05 (80%成功率)',
+                      value: 'gemini-2.0-flash-lite-preview-02-05'
                     },
                   ]}
                   dropdownStyle={{
@@ -1219,7 +1219,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                   }}
                 />
               </Form.Item>
-              
+
               {/* 应用推荐配置按钮 */}
               <div style={{ marginTop: 16, marginBottom: 16 }}>
                 <Button
@@ -1250,16 +1250,16 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
 
             {/* 颜色主题管理 */}
             <div style={{ marginTop: 32 }}>
-              <div style={{ 
-                marginBottom: 16, 
-                paddingBottom: 12, 
-                borderBottom: '1px solid rgba(244, 175, 37, 0.2)' 
+              <div style={{
+                marginBottom: 16,
+                paddingBottom: 12,
+                borderBottom: '1px solid rgba(244, 175, 37, 0.2)'
               }}>
                 <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600 }}>
                   颜色主题管理
                 </Text>
               </div>
-              
+
               <MockAppInterface
                 colorTheme={appConfig?.colorTheme || DEFAULT_COLOR_THEME}
                 onColorChange={handleColorChange}
@@ -1335,7 +1335,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
 
                   if (result.success) {
                     message.success('WhatsApp 配置已保存');
-                    
+
                     // 直接更新本地 appConfig 状态，避免重新加载导致其他字段被重置
                     if (appConfig) {
                       setAppConfig({
@@ -1343,7 +1343,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                         whapi: whapiConfig,
                       });
                     }
-                    
+
                     // 重新初始化 Whapi 客户端
                     const { initWhapiClient } = await import('../../../services/whapi');
                     await initWhapiClient(whapiConfig);
@@ -1539,7 +1539,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 16 }}>
                 可在 <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Firebase 控制台</a> 的项目设置中找到这些配置信息。进入项目设置 &gt; 常规 &gt; 您的应用，即可查看所有配置值。Measurement ID（可选）用于 Google Analytics，可在项目设置 &gt; 集成 &gt; Google Analytics 中找到。
               </Text>
-              
+
               {/* Firebase 配置代码粘贴区域 */}
               <div style={{ marginBottom: 16 }}>
                 <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 8 }}>
@@ -1580,7 +1580,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                   </Button>
                 </div>
               </div>
-              
+
               <Form.Item
                 label={<span style={{ color: '#c0c0c0' }}>API Key</span>}
                 name="firebaseApiKey"
@@ -1727,11 +1727,11 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                     type="text"
                     icon={showSecrets.firebaseServiceAccount ? <EyeOutlined style={{ color: '#ffd700' }} /> : <EyeInvisibleOutlined style={{ color: '#ffd700' }} />}
                     onClick={() => setShowSecrets(prev => ({ ...prev, firebaseServiceAccount: !prev.firebaseServiceAccount }))}
-                    style={{ 
-                      position: 'absolute', 
-                      right: 8, 
+                    style={{
+                      position: 'absolute',
+                      right: 8,
                       top: 8,
-                      border: 'none', 
+                      border: 'none',
                       color: '#ffd700',
                       zIndex: 1
                     }}
@@ -1750,7 +1750,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 16 }}>
                 可在 <a href="https://console.cloudinary.com" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Cloudinary 控制台</a> 的仪表板中找到这些配置信息。登录后，在仪表板页面即可查看 Cloud Name、API Key 和 API Secret。Upload Preset 可在设置 &gt; 上传预设中创建或查看，Base Folder 是上传文件的默认文件夹路径。
               </Text>
-              
+
               <Form.Item
                 label={<span style={{ color: '#c0c0c0' }}>Cloud Name</span>}
                 name="cloudinaryCloudName"
@@ -1852,7 +1852,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600, display: 'block', marginBottom: 16 }}>
                 应用配置
               </Text>
-              
+
               <Form.Item
                 label={<span style={{ color: '#c0c0c0' }}>App Name</span>}
                 name="appName"
@@ -1879,7 +1879,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 16 }}>
                 可在 <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Firebase 控制台</a> 的项目设置中找到 VAPID Key。进入项目设置 &gt; 云消息传递 &gt; Web 配置，即可查看 VAPID 密钥。此配置为可选，仅在使用推送通知功能时需要。
               </Text>
-              
+
               <Form.Item
                 label={<span style={{ color: '#c0c0c0' }}>VAPID Key</span>}
                 name="fcmVapidKey"
@@ -1915,7 +1915,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 16 }}>
                 可在 <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Google AI Studio</a> 中获取 Gemini API Key。此配置用于 AI 雪茄识别功能。
               </Text>
-              
+
               <Form.Item
                 label={<span style={{ color: '#c0c0c0' }}>API Key</span>}
                 name="geminiApiKey"
@@ -1949,9 +1949,9 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                 Netlify 配置（可选）
               </Text>
               <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 16 }}>
-                  用于将环境变量部署到 Netlify。Access Token 可在 <a href="https://app.netlify.com/user/applications" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Netlify 用户设置</a> 中生成，Site ID 可在站点设置中找到。此配置为可选，仅在需要部署到 Netlify 时需要。
-                </Text>
-              
+                用于将环境变量部署到 Netlify。Access Token 可在 <a href="https://app.netlify.com/user/applications" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Netlify 用户设置</a> 中生成，Site ID 可在站点设置中找到。此配置为可选，仅在需要部署到 Netlify 时需要。
+              </Text>
+
               <Form.Item
                 label={<span style={{ color: '#c0c0c0' }}>Access Token</span>}
                 name="netlifyAccessToken"
@@ -2010,17 +2010,17 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                   }
                   type={
                     deployStatus.state === 'success' ? 'success' :
-                    deployStatus.state === 'error' ? 'error' : 'info'
+                      deployStatus.state === 'error' ? 'error' : 'info'
                   }
                   showIcon={false}
                   style={{
                     marginBottom: 16,
                     background: deployStatus.state === 'success' ? 'rgba(82, 196, 26, 0.1)' :
-                               deployStatus.state === 'error' ? 'rgba(255, 77, 79, 0.1)' :
-                               'rgba(24, 144, 255, 0.1)',
+                      deployStatus.state === 'error' ? 'rgba(255, 77, 79, 0.1)' :
+                        'rgba(24, 144, 255, 0.1)',
                     border: deployStatus.state === 'success' ? '1px solid rgba(82, 196, 26, 0.3)' :
-                           deployStatus.state === 'error' ? '1px solid rgba(255, 77, 79, 0.3)' :
-                           '1px solid rgba(24, 144, 255, 0.3)',
+                      deployStatus.state === 'error' ? '1px solid rgba(255, 77, 79, 0.3)' :
+                        '1px solid rgba(24, 144, 255, 0.3)',
                   }}
                   description={
                     deployStatus.deployUrl ? (
@@ -2182,17 +2182,17 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                   }
                   type={
                     indexDeployStatus.state === 'success' ? 'success' :
-                    indexDeployStatus.state === 'error' ? 'error' : 'info'
+                      indexDeployStatus.state === 'error' ? 'error' : 'info'
                   }
                   showIcon={false}
                   style={{
                     marginBottom: 16,
                     background: indexDeployStatus.state === 'success' ? 'rgba(82, 196, 26, 0.1)' :
-                               indexDeployStatus.state === 'error' ? 'rgba(255, 77, 79, 0.1)' :
-                               'rgba(24, 144, 255, 0.1)',
+                      indexDeployStatus.state === 'error' ? 'rgba(255, 77, 79, 0.1)' :
+                        'rgba(24, 144, 255, 0.1)',
                     border: indexDeployStatus.state === 'success' ? '1px solid rgba(82, 196, 26, 0.3)' :
-                           indexDeployStatus.state === 'error' ? '1px solid rgba(255, 77, 79, 0.3)' :
-                           '1px solid rgba(24, 144, 255, 0.3)',
+                      indexDeployStatus.state === 'error' ? '1px solid rgba(255, 77, 79, 0.3)' :
+                        '1px solid rgba(24, 144, 255, 0.3)',
                   }}
                   description={
                     <div style={{ marginTop: 8 }}>
@@ -2202,9 +2202,9 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                           <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 4 }}>
                             部署摘要：
                           </Text>
-                          <div style={{ 
-                            display: 'flex', 
-                            gap: 16, 
+                          <div style={{
+                            display: 'flex',
+                            gap: 16,
                             flexWrap: 'wrap',
                             fontSize: '12px',
                             color: '#c0c0c0'
@@ -2226,7 +2226,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                           </div>
                         </div>
                       )}
-                      
+
                       {/* 详细结果 */}
                       {indexDeployStatus.results && indexDeployStatus.results.length > 0 && (
                         <div style={{ marginBottom: 12 }}>
@@ -2242,14 +2242,14 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                             fontSize: '11px'
                           }}>
                             {indexDeployStatus.results.map((result, idx) => (
-                              <div 
-                                key={idx} 
-                                style={{ 
+                              <div
+                                key={idx}
+                                style={{
                                   marginBottom: 4,
                                   padding: '4px 8px',
                                   borderRadius: '4px',
-                                  background: result.success 
-                                    ? 'rgba(82, 196, 26, 0.1)' 
+                                  background: result.success
+                                    ? 'rgba(82, 196, 26, 0.1)'
                                     : 'rgba(255, 77, 79, 0.1)',
                                   border: `1px solid ${result.success ? 'rgba(82, 196, 26, 0.3)' : 'rgba(255, 77, 79, 0.3)'}`
                                 }}
@@ -2266,7 +2266,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                                   <span style={{ color: '#c0c0c0' }}>
                                     ({result.index.fields.map((f: any) => `${f.fieldPath}(${f.order})`).join(', ')})
                                   </span>
-                                  <span style={{ 
+                                  <span style={{
                                     color: result.success ? '#52c41a' : '#ff4d4f',
                                     marginLeft: 'auto',
                                     fontSize: '10px'
@@ -2275,9 +2275,9 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                                   </span>
                                 </div>
                                 {result.error && (
-                                  <div style={{ 
-                                    color: '#ff4d4f', 
-                                    fontSize: '10px', 
+                                  <div style={{
+                                    color: '#ff4d4f',
+                                    fontSize: '10px',
                                     marginTop: 4,
                                     marginLeft: 20
                                   }}>
@@ -2289,7 +2289,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                           </div>
                         </div>
                       )}
-                      
+
                       {/* Firebase Console 链接 */}
                       {indexDeployStatus.consoleUrl && (
                         <div>
@@ -2303,7 +2303,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                           </a>
                         </div>
                       )}
-                      
+
                       {/* 备用链接（如果没有 consoleUrl） */}
                       {indexDeployStatus.links && indexDeployStatus.links.length > 0 && !indexDeployStatus.consoleUrl && (
                         <div style={{ marginTop: 8 }}>
@@ -2354,7 +2354,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               <Space direction="vertical" size="middle" style={{ width: '100%' }}>
                 {filteredFeatures.map(feature => {
                   const isVisible = localFeatures[feature.key] ?? feature.defaultVisible;
-                  
+
                   return (
                     <div
                       key={feature.key}
@@ -2517,7 +2517,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                               <Text style={{ color: '#999', fontSize: '12px', display: 'block', marginTop: '4px' }}>
                                 控制AI识茄功能是否自动搜索雪茄图片URL（Google + Gemini）
                               </Text>
-                              
+
                               {/* 搜索引擎顺序选择器（仅在启用图片搜索时显示） */}
                               {aiCigarImageSearchEnabled && (
                                 <div style={{ marginTop: '8px' }}>
@@ -2529,7 +2529,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                                     onChange={async (value: 'google-first' | 'gemini-first') => {
                                       const previousValue = aiCigarImageSearchOrder;
                                       setAiCigarImageSearchOrder(value);
-                                      
+
                                       // 立即保存配置
                                       if (user?.id) {
                                         try {
@@ -2580,7 +2580,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                                     </Select.Option>
                                   </Select>
                                   <Text style={{ color: '#999', fontSize: '11px', display: 'block', marginTop: '4px' }}>
-                                    {aiCigarImageSearchOrder === 'google-first' 
+                                    {aiCigarImageSearchOrder === 'google-first'
                                       ? '优先使用 Google Custom Search，失败时回退到 Gemini'
                                       : '优先使用 Gemini，失败时回退到 Google Custom Search'}
                                   </Text>
@@ -2600,7 +2600,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                               borderColor: isVisible ? undefined : '#444',
                             }}
                           >
-                            {isVisible 
+                            {isVisible
                               ? t('featureManagement.visible', { defaultValue: '显示' })
                               : t('featureManagement.hidden', { defaultValue: '隐藏' })}
                           </Button>

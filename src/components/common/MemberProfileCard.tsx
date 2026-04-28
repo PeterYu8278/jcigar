@@ -265,14 +265,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
   const handleClick = (e: React.MouseEvent) => {
     if (isRotating) return
 
-    // 检查点击目标是否是 QR 码区域
-    const target = e.target as HTMLElement;
-    if (target.closest('.qr-code-clickable')) {
-      if (enableQrModal) {
-        setQrModalVisible(true);
-      }
-      return;
-    }
+    // 移除 parent 的 QR 点击检测，改回子元素直接处理
     
     const rect = e.currentTarget.getBoundingClientRect()
     const clickX = e.clientX - rect.left
@@ -441,7 +434,14 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
                 </div>
                 <div 
                   className="qr-code-clickable"
-                  style={{ cursor: 'pointer', position: 'relative', zIndex: 10 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (enableQrModal) {
+                      setQrModalVisible(true);
+                    }
+                  }}
+                  onDragStart={(e) => e.preventDefault()}
+                  style={{ cursor: 'pointer', position: 'relative', zIndex: 100, userSelect: 'none' }}
                 >
                   <QRCodeDisplay
                     qrCodeDataURL={qrCodeDataURL}
