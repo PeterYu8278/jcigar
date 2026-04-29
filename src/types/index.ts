@@ -514,8 +514,16 @@ export interface AppConfig {
   };
   subscription?: {
     isActive: boolean;
-    plan: 'basic' | 'pro' | 'premium';
+    plan: 'basic' | 'pro' | 'premium'; // Legacy
+    planId?: string; // ID of the selected plan from plans array
     expiryDate: Date;
+    plans?: Array<{
+      id: string;
+      name: string;
+      fee: number;
+      maxMembers: number;
+      validPeriodMonth: number;
+    }>;
   };
   updatedAt: Date;
   updatedBy: string;       // 最后更新的开发者ID
@@ -826,5 +834,21 @@ export interface ReferralRecord {
   
   createdAt: Date;              // 引荐关系建立日期
   updatedAt: Date;              // 最后更新时间
+}
+
+export interface SubscriptionRequest {
+  id: string;
+  planId: string;
+  planName: string;
+  validPeriodMonth?: number;
+  requestedBy: string; // admin/merchant userId
+  status: 'pending' | 'approved' | 'rejected';
+  proofUrl?: string; // Optional payment proof
+  createdAt: Date;
+  updatedAt: Date;
+  verifiedBy?: string; // developer userId
+  adminNotes?: string;
+  developerNotes?: string;
+  expiryDate?: Date;
 }
 

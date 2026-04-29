@@ -484,7 +484,14 @@ const AdminUsers: React.FC = () => {
       const nameA = (a.displayName || '').toLowerCase()
       const nameB = (b.displayName || '').toLowerCase()
       return nameA.localeCompare(nameB)
-    }).slice(0, appConfig?.subscription?.isActive ? (appConfig.subscription.plan === 'premium' ? 300 : (appConfig.subscription.plan === 'pro' ? 150 : 50)) : undefined)
+    }).slice(0, (() => {
+      if (!appConfig?.subscription?.isActive) return undefined;
+      const activePlanId = appConfig.subscription.planId || appConfig.subscription.plan;
+      const activePlan = appConfig.subscription.plans?.find((p: any) => p.id === activePlanId);
+      if (activePlan) return activePlan.maxMembers;
+      // 回退到旧的硬编码值
+      return appConfig.subscription.plan === 'premium' ? 300 : (appConfig.subscription.plan === 'pro' ? 150 : 50);
+    })())
   }, [users, keyword, statusFilter, roleFilter, levelFilter, statusMap, currentUser?.role, appConfig])
 
   const groupedByInitial = useMemo(() => {

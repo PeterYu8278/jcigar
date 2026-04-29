@@ -45,8 +45,9 @@ export const GLOBAL_COLLECTIONS = {
   /** 应用配置集合 */
   APP_CONFIG: 'app_config',
   /** Whapi 消息记录集合 */
-  WHAPI_MESSAGES: 'whapi_messages'
+  WHAPI_MESSAGES: 'whapi_messages',
+  /** 订阅激活请求 */
+  SUBSCRIPTION_REQUESTS: 'subscription_requests'
 } as const
 
 export type CollectionName = typeof GLOBAL_COLLECTIONS[keyof typeof GLOBAL_COLLECTIONS]
-

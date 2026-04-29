@@ -177,6 +177,7 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
         isActive: data.subscription.isActive ?? false,
         plan: data.subscription.plan || 'basic',
         expiryDate: data.subscription.expiryDate?.toDate?.() || new Date(data.subscription.expiryDate),
+        plans: data.subscription.plans || []
       } : undefined,
       updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
       updatedBy: data.updatedBy || '',
@@ -264,6 +265,7 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
               isActive: data.subscription.isActive ?? false,
               plan: data.subscription.plan || 'basic',
               expiryDate: data.subscription.expiryDate?.toDate?.() || new Date(data.subscription.expiryDate),
+              plans: data.subscription.plans || []
             } : undefined,
             updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
             updatedBy: data.updatedBy || '',

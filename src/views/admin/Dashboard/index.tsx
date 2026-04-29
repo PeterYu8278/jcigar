@@ -1,6 +1,6 @@
 // 管理后台仪表板（自定义样式版本）
 import React, { useEffect, useState } from 'react'
-import { Typography, Button, message, Spin } from 'antd'
+import { Typography, Button, message, Spin, Modal, Form, Select, Input, Alert } from 'antd'
 import { ReloadOutlined, PlusOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
@@ -11,13 +11,94 @@ import {
   getAllTransactions,
   getCigars
 } from '../../../services/firebase/firestore'
-import type { User, Order, Event, Transaction, Cigar, AppConfig } from '../../../types'
+import { db } from '../../../config/firebase'
+import { GLOBAL_COLLECTIONS } from '../../../config/globalCollections'
+import { collection, addDoc } from 'firebase/firestore'
+import type { User, Order, Event, Transaction, Cigar, AppConfig, SubscriptionRequest } from '../../../types'
 import { useTranslation } from 'react-i18next'
 import { isFeatureVisible } from '../../../services/firebase/featureVisibility'
 import { useAuthStore } from '../../../store/modules/auth'
 import { getAppConfig } from '../../../services/firebase/appConfig'
 
 const { Title } = Typography
+
+const PlanSelector: React.FC<{ value?: string; onChange?: (val: string) => void; plans: any[] }> = ({ value, onChange, plans }) => {
+  const isMobile = window.innerWidth < 768;
+
+  if (!plans || plans.length === 0) {
+    return (
+      <div style={{ padding: 20, textAlign: 'center', color: '#666', border: '1px dashed #444', borderRadius: 12 }}>
+        No subscription plans available. Please contact admin.
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ 
+      display: isMobile ? 'flex' : 'grid', 
+      flexDirection: isMobile ? 'column' : 'unset',
+      gridTemplateColumns: isMobile ? 'unset' : 'repeat(auto-fit, minmax(220px, 1fr))',
+      gap: 12 
+    }}>
+      {plans.map((p: any) => {
+        const isSelected = value === p.id;
+        return (
+          <div 
+            key={p.id}
+            onClick={() => onChange?.(p.id)}
+            style={{
+              padding: '16px',
+              borderRadius: 12,
+              cursor: 'pointer',
+              background: isSelected ? 'rgba(253,224,141,0.08)' : 'rgba(255,255,255,0.03)',
+              border: isSelected ? '2px solid #FDE08D' : '1px solid rgba(255,255,255,0.1)',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              boxShadow: isSelected ? '0 0 15px rgba(253,224,141,0.2)' : 'none',
+              minHeight: 140
+            }}
+            onMouseEnter={(e) => {
+              if (!isSelected) {
+                e.currentTarget.style.borderColor = 'rgba(253,224,141,0.5)';
+                e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isSelected) {
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+              }
+            }}
+          >
+            <div>
+              <div style={{ color: isSelected ? '#FDE08D' : '#fff', fontWeight: 800, fontSize: 16, marginBottom: 4 }}>
+                {p.name}
+              </div>
+              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>
+                <span style={{ color: '#aaa' }}>{p.maxMembers}</span> Members<br/>
+                <span style={{ color: '#aaa' }}>{p.validPeriodMonth}</span> Months
+              </div>
+            </div>
+            <div style={{ textAlign: 'right', marginTop: 12 }}>
+              <div style={{ 
+                fontSize: 20, 
+                fontWeight: 800,
+                backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
+                WebkitBackgroundClip: 'text', 
+                color: 'transparent' 
+              }}>
+                RM {p.fee}
+              </div>
+              <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 9, letterSpacing: 1 }}>ANNUAL</div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate()
@@ -33,6 +114,8 @@ const AdminDashboard: React.FC = () => {
   const [eventsAdminFeatureVisible, setEventsAdminFeatureVisible] = useState<boolean>(true)
   const [ordersFeatureVisible, setOrdersFeatureVisible] = useState<boolean>(true)
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
+  const [showRenewModal, setShowRenewModal] = useState(false)
+  const [renewLoading, setRenewLoading] = useState(false)
 
   // 检查功能可见性（developer 不受限制）
   useEffect(() => {
@@ -129,6 +212,34 @@ const AdminDashboard: React.FC = () => {
     return count + (stock <= min ? 1 : 0)
   }, 0)
 
+  const handleRenewSubmit = async (values: any) => {
+    try {
+      setRenewLoading(true)
+      const plan = appConfig?.subscription?.plans?.find(p => p.id === values.planId)
+
+      const requestData: Omit<SubscriptionRequest, 'id'> = {
+        planId: values.planId,
+        planName: plan?.name || values.planId,
+        validPeriodMonth: plan?.validPeriodMonth || 12,
+        requestedBy: user?.displayName || user?.id || 'Admin',
+        status: 'pending',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        adminNotes: values.adminNotes || ''
+      }
+
+      await addDoc(collection(db, GLOBAL_COLLECTIONS.SUBSCRIPTION_REQUESTS), requestData)
+
+      message.success('Activation request submitted successfully. Waiting for developer verification.')
+      setShowRenewModal(false)
+    } catch (error) {
+      console.error('Failed to submit renewal request:', error)
+      message.error('Failed to submit request')
+    } finally {
+      setRenewLoading(false)
+    }
+  }
+
 
   return (
     <div style={{ minHeight: '100vh', marginBottom: 100 }}>
@@ -140,36 +251,176 @@ const AdminDashboard: React.FC = () => {
       <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', marginBottom: 12 }}>{t('dashboard.overview')}</h1>
 
       {/* 概览卡片 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 12, marginBottom: 16 }}>
+      <div style={window.innerWidth < 768 ? {
+        backgroundColor: 'rgba(57, 51, 40, 0.5)',
+        backdropFilter: 'blur(10px)',
+        borderRadius: 12,
+        padding: '16px 8px',
+        border: '1px solid rgba(244, 175, 37, 0.3)',
+        display: 'flex',
+        gap: 4,
+        marginBottom: 16,
+        justifyContent: 'space-around'
+      } : {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+        gap: 12,
+        marginBottom: 16
+      }}>
         {(() => {
-          const cards = [
-            { label: t('dashboard.totalMembers'), value: totalUsers.toLocaleString() }, 
-            { label: t('dashboard.monthlyOrders'), value: monthlyOrders.toLocaleString() }, 
-            { label: t('dashboard.monthlyRevenue'), value: `RM${monthlyRevenue.toLocaleString()}` }
-          ];
+          const { isActive, planId, plan, expiryDate, plans } = appConfig?.subscription || {};
+          const currentPlan = plans?.find((p: any) => p.id === (planId || plan)) || { name: (planId || plan || 'Free').toUpperCase(), maxMembers: 50 };
 
-          if (appConfig?.subscription?.isActive) {
-            const plan = appConfig.subscription.plan;
-            const expiryDate = new Date(appConfig.subscription.expiryDate);
-            const daysLeft = Math.max(0, Math.ceil((expiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
-            let statusText = `${plan.toUpperCase()}`;
-            if (daysLeft === 0) statusText += ' (Expired)';
-            else statusText += ` (${daysLeft}d)`;
+          let statusValue = currentPlan.name;
+          let subText = '';
+          let isExpired = false;
 
-            cards.push({
-              label: 'Subscription',
-              value: statusText
-            });
+          if (!isActive && appConfig?.subscription) {
+            statusValue = 'Inactive';
+          } else if (expiryDate) {
+            const exp = (expiryDate as any).toDate ? (expiryDate as any).toDate() : new Date(expiryDate);
+            const daysLeft = Math.max(0, Math.ceil((exp.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
+            isExpired = daysLeft === 0;
+            const dateStr = dayjs(exp).format('YYYY-MM-DD');
+            subText = `(${dateStr})`;
           }
 
-          return cards.map((card, idx) => (
-            <div key={idx} style={{ borderRadius: 12, padding: 12, textAlign: 'center', backgroundColor: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)' }}>
-              <div style={{ fontSize: 12, color: '#A0A0A0' }}>{card.label}</div>
-              <div style={{ marginTop: 6, fontSize: card.label === 'Subscription' ? 18 : 24, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{card.value}</div>
+          const cards: Array<{
+            label: string;
+            value: string;
+            subText?: string;
+            isSubscription?: boolean;
+            isExpired?: boolean;
+            extraInfo?: string;
+          }> = [
+              { label: t('dashboard.totalMembers'), value: totalUsers.toLocaleString() },
+              { label: '', value: statusValue, subText, isSubscription: true, isExpired: isExpired || !isActive, extraInfo: `${totalUsers}/${currentPlan.maxMembers || 50}` },
+              { label: t('dashboard.monthlyOrders'), value: monthlyOrders.toLocaleString() },
+              { label: t('dashboard.monthlyRevenue'), value: `RM${monthlyRevenue.toLocaleString()}` }
+            ];
+
+          const isMobile = window.innerWidth < 768;
+
+          return cards.map((card: any, idx) => (
+            <div key={idx} style={{
+              flex: 1,
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: isMobile ? 'flex-start' : 'center',
+              minHeight: isMobile ? 'auto' : 110,
+              padding: isMobile ? '0 2px' : 12,
+              backgroundColor: isMobile ? 'transparent' : 'rgba(255,255,255,0.05)',
+              borderRadius: isMobile ? 0 : 12,
+              border: isMobile ? 'none' : '1px solid rgba(255,255,255,0.05)',
+              borderRight: isMobile && idx !== cards.length - 1 ? '1px solid rgba(244, 175, 37, 0.2)' : (isMobile ? 'none' : '1px solid rgba(255,255,255,0.05)'),
+              position: 'relative'
+            }}>
+              {!isMobile && <div style={{ fontSize: 12, color: '#A0A0A0', marginBottom: 4 }}>{card.label}</div>}
+
+              <div style={{
+                fontSize: isMobile ? (card.isSubscription ? 11 : 16) : (card.isSubscription ? 18 : 24),
+                fontWeight: 800,
+                backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                WebkitBackgroundClip: 'text',
+                color: 'transparent',
+                lineHeight: 1.2
+              }}>
+                {card.value}
+              </div>
+
+              {card.subText && (
+                <div style={{
+                  fontSize: isMobile ? 8 : 10,
+                  color: card.isExpired ? '#ff4d4f' : '#A0A0A0',
+                  marginTop: isMobile ? 2 : 0
+                }}>
+                  {card.subText}
+                </div>
+              )}
+
+              {card.extraInfo && (
+                <div style={{
+                  fontSize: isMobile ? 8 : 11,
+                  color: '#888',
+                  marginTop: 2
+                }}>
+                  {card.extraInfo}
+                </div>
+              )}
+
+              {isMobile && !card.isSubscription && (
+                <div style={{ fontSize: 9, color: 'rgba(255, 255, 255, 0.6)', marginTop: 2 }}>
+                  {card.label.split(' ').pop()}
+                </div>
+              )}
+
+              {card.isSubscription && (
+                <Button
+                  size="small"
+                  type="primary"
+                  onClick={() => setShowRenewModal(true)}
+                  style={{
+                    marginTop: 6,
+                    fontSize: isMobile ? 8 : 11,
+                    height: isMobile ? 16 : 22,
+                    padding: isMobile ? '0 4px' : '0 12px',
+                    background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                    color: '#111',
+                    border: 'none',
+                    fontWeight: 600,
+                    width: 'auto',
+                    marginInline: 'auto'
+                  }}
+                >
+                  {totalUsers > (currentPlan.maxMembers || 50) ? 'Upgrade' : (card.isExpired ? 'Activate' : 'Renew')}
+                </Button>
+              )}
             </div>
           ));
         })()}
       </div>
+
+      {/* Subscription Renewal Modal */}
+      <Modal
+        title={<span style={{ color: '#FDE08D' }}>Subscription Activation / Renewal</span>}
+        open={showRenewModal}
+        onCancel={() => setShowRenewModal(false)}
+        footer={null}
+        centered
+        width={window.innerWidth < 768 ? '95%' : 800}
+        styles={{ content: { background: '#1a1a1a', border: '1px solid #C48D3A' } }}
+      >
+        <Form layout="vertical" onFinish={handleRenewSubmit}>
+          <Form.Item
+            name="planId"
+            label={<span style={{ color: '#ccc' }}>Choose Your Plan</span>}
+            rules={[{ required: true, message: 'Please select a plan' }]}
+            initialValue={appConfig?.subscription?.planId || appConfig?.subscription?.plan || 'basic'}
+          >
+            <PlanSelector plans={appConfig?.subscription?.plans || []} />
+          </Form.Item>
+
+          <Form.Item name="adminNotes" label={<span style={{ color: '#ccc' }}>Notes (Optional)</span>}>
+            <Input.TextArea placeholder="Any payment notes or special requests..." />
+          </Form.Item>
+
+          <Alert
+            message="Activation Process"
+            description="After submitting, our developer will verify your payment and activate your subscription. Reference the member reload mechanism for proof submission if required."
+            type="info"
+            showIcon
+            style={{ marginBottom: 16, background: 'rgba(255,255,255,0.05)', border: '1px solid #C48D3A' }}
+          />
+
+          <div style={{ textAlign: 'right' }}>
+            <Button onClick={() => setShowRenewModal(false)} style={{ marginRight: 8, background: 'transparent', color: '#fff', border: '1px solid #444' }}>Cancel</Button>
+            <Button type="primary" htmlType="submit" loading={renewLoading} style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', border: 'none', fontWeight: 600 }}>
+              Submit Request
+            </Button>
+          </div>
+        </Form>
+      </Modal>
 
       {/* 快速操作 */}
       <div style={{ marginBottom: 16 }}>
@@ -184,8 +435,7 @@ const AdminDashboard: React.FC = () => {
             const optionalButtons = (eventsAdminFeatureVisible ? 1 : 0) + (ordersFeatureVisible ? 1 : 0) + (inventoryFeatureVisible ? 1 : 0)
             const totalButtons = baseButtons + optionalButtons
             return `repeat(${totalButtons}, 1fr)`
-          })(),
-          gap: '8px'
+          })()
         }}>
           {eventsAdminFeatureVisible && (
             <button onClick={() => navigate('/admin/events')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 12, padding: 8, background: appConfig?.colorTheme?.primaryButton ? `linear-gradient(to right, ${appConfig.colorTheme.primaryButton.startColor}, ${appConfig.colorTheme.primaryButton.endColor})` : 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, boxShadow: '0 4px 15px rgba(244,175,37,0.35)', cursor: 'pointer' }}>
