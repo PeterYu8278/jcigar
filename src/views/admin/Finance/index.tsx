@@ -1400,11 +1400,11 @@ const AdminFinance: React.FC = () => {
           <div className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, paddingRight: isMobile ? 0 : 4 }}>
             {/* 趋势图表 - 现代风格 */}
             <div style={{
-              padding: 24,
+              padding: '24px 24px 40px 24px',
               borderRadius: 12,
               background: 'rgba(57, 51, 40, 0.5)',
               border: '1px solid rgba(244, 175, 37, 0.6)',
-              minHeight: 300
+              minHeight: 320
             }}>
               <div style={{ color: '#fff', fontSize: 18, fontWeight: 700, marginBottom: 10 }}>
                 {t('financeAdmin.profitTrend')} (FIFO)
@@ -1434,9 +1434,9 @@ const AdminFinance: React.FC = () => {
                   {/* 可横向滚动的柱状图区域 */}
                   <div style={{
                     overflowX: 'auto',
-                    overflowY: 'hidden',
+                    overflowY: 'visible',
                     WebkitOverflowScrolling: 'touch',
-                    paddingBottom: 8
+                    paddingBottom: 20
                   }}>
                     <div style={{
                       height: 250,
@@ -1561,19 +1561,24 @@ const AdminFinance: React.FC = () => {
 
                             {/* 月份底栏文字 */}
                             <div style={{
-                              marginTop: 12,
-                              fontSize: 10,
+                              marginTop: 14,
+                              fontSize: 9,
                               fontWeight: isActive ? 800 : 500,
                               color: isActive ? '#FDE08D' : '#bab09c',
-                              transform: 'rotate(-45deg) translateX(-8px)',
-                              whiteSpace: 'nowrap',
-                              transition: 'all 0.3s ease'
+                              textAlign: 'center',
+                              lineHeight: 1.1,
+                              transition: 'all 0.3s ease',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center'
                             }}>
-                              {barMonth.format('MMM YY')}
+                              <div style={{ fontWeight: 700 }}>{barMonth.format('MMM')}</div>
+                              <div style={{ opacity: 0.7, fontSize: 8 }}>{barMonth.format('YYYY')}</div>
                             </div>
                           </div>
                         )
-                      })}                  </div>
+                      })}
+                    </div>
                   </div>
                 </div>
               ) : (
