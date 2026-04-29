@@ -1336,7 +1336,7 @@ const AdminFinance: React.FC = () => {
 
       {/* 利润分析标签内容 */}
       {activeTab === 'profit' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: isMobile ? 'calc(100vh - 190px)' : '80vh', overflow: 'hidden' }}>
           {/* 利润概览卡片 */}
           {isMobile ? (
             <div style={{
@@ -1396,612 +1396,615 @@ const AdminFinance: React.FC = () => {
             </div>
           )}
 
-          {/* 趋势图表 - 现代风格 */}
-          <div style={{
-            padding: 24,
-            borderRadius: 12,
-            background: 'rgba(57, 51, 40, 0.5)',
-            border: '1px solid rgba(244, 175, 37, 0.6)',
-            minHeight: 300
-          }}>
-            <div style={{ color: '#fff', fontSize: 18, fontWeight: 700, marginBottom: 10 }}>
-              {t('financeAdmin.profitTrend')} (FIFO)
-            </div>
+          {/* 滚动内容区 */}
+          <div className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, paddingRight: isMobile ? 0 : 4 }}>
+            {/* 趋势图表 - 现代风格 */}
+            <div style={{
+              padding: 24,
+              borderRadius: 12,
+              background: 'rgba(57, 51, 40, 0.5)',
+              border: '1px solid rgba(244, 175, 37, 0.6)',
+              minHeight: 300
+            }}>
+              <div style={{ color: '#fff', fontSize: 18, fontWeight: 700, marginBottom: 10 }}>
+                {t('financeAdmin.profitTrend')} (FIFO)
+              </div>
 
-            {profitData.trendData.length > 0 ? (
-              <div style={{ position: 'relative' }}>
-                {/* 悬浮提示说明 (Legend) */}
-                <div style={{
-                  display: 'flex',
-                  gap: 16,
-                  fontSize: 12,
-                  color: 'rgba(255,255,255,0.6)',
-                  justifyContent: 'flex-end',
-                  marginBottom: 12
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <div style={{ width: 12, height: 12, background: 'linear-gradient(to top, #C48D3A, #FDE08D)', borderRadius: 3 }} />
-                    {t('financeAdmin.totalRevenue')}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <div style={{ width: 12, height: 12, background: 'linear-gradient(to top, #237804, #52c41a)', borderRadius: 3 }} />
-                    {t('financeAdmin.profit')}
-                  </div>
-                </div>
-
-                {/* 可横向滚动的柱状图区域 */}
-                <div style={{
-                  overflowX: 'auto',
-                  overflowY: 'hidden',
-                  WebkitOverflowScrolling: 'touch',
-                  paddingBottom: 8
-                }}>
+              {profitData.trendData.length > 0 ? (
+                <div style={{ position: 'relative' }}>
+                  {/* 悬浮提示说明 (Legend) */}
                   <div style={{
-                    height: 250,
                     display: 'flex',
-                    alignItems: 'flex-end',
-                    gap: isMobile ? 8 : 16,
-                    paddingBottom: 40,
-                    minWidth: isMobile ? Math.max(profitData.trendData.length * 56, 300) : 'auto'
+                    gap: 16,
+                    fontSize: 12,
+                    color: 'rgba(255,255,255,0.6)',
+                    justifyContent: isMobile ? 'center' : 'flex-end',
+                    marginBottom: 20
                   }}>
-                    {profitData.trendData.map((d, i) => {
-                      const barMonth = dayjs(d.date)
-                      const isActive = dateRange &&
-                        dateRange[0] &&
-                        dateRange[0].isSame(barMonth, 'month') &&
-                        dateRange[1] &&
-                        dateRange[1].isSame(barMonth, 'month')
-
-                      const chartMaxHeight = 160
-                      const revHeight = (d.revenue / profitData.maxVal) * chartMaxHeight
-                      const proHeight = (d.profit / profitData.maxVal) * chartMaxHeight
-
-                      const formatVal = (val: number) => {
-                        if (val >= 1000) return `${(val / 1000).toFixed(1)}k`
-                        return Math.round(val).toString()
-                      }
-
-                      return (
-                        <div
-                          key={i}
-                          style={{
-                            flex: isMobile ? 'none' : 1,
-                            minWidth: isMobile ? 48 : 'auto',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'flex-end',
-                            height: '100%',
-                            position: 'relative',
-                            cursor: 'pointer',
-                            transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                            transform: isActive ? 'scale(1.05) translateY(-5px)' : 'none',
-                            opacity: (dateRange && !isActive) ? 0.35 : 1
-                          }}
-                          onClick={() => {
-                            if (isActive) {
-                              setDateRange(null)
-                              setSelectedDateRange(null)
-                              message.info(t('financeAdmin.resetFilters'))
-                            } else {
-                              const start = barMonth.startOf('month')
-                              const end = barMonth.endOf('month')
-                              setDateRange([start, end])
-                              setSelectedDateRange(null)
-                              message.info(`${t('common.month')}: ${barMonth.format('MMM YYYY')}`)
-                            }
-                          }}
-                        >
-                          <Tooltip
-                            title={
-                              <div style={{ padding: '8px' }}>
-                                <div style={{ fontWeight: 800, marginBottom: 8, borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: 4 }}>
-                                  {barMonth.format('MMMM YYYY')}
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24, marginBottom: 4 }}>
-                                  <span style={{ color: 'rgba(255,255,255,0.7)' }}>{t('financeAdmin.totalRevenue')}:</span>
-                                  <span style={{ color: '#FDE08D', fontWeight: 700 }}>RM{d.revenue.toLocaleString()}</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24 }}>
-                                  <span style={{ color: 'rgba(255,255,255,0.7)' }}>{t('financeAdmin.profit')}:</span>
-                                  <span style={{ color: '#52c41a', fontWeight: 700 }}>RM{d.profit.toLocaleString()}</span>
-                                </div>
-                              </div>
-                            }
-                            overlayInnerStyle={{ backdropFilter: 'blur(12px)', background: 'rgba(34, 28, 16, 0.98)', border: '1px solid rgba(244, 175, 37, 0.5)', borderRadius: 8 }}
-                            color="transparent"
-                          >
-                            <div style={{
-                              display: 'flex',
-                              alignItems: 'flex-end',
-                              gap: 3,
-                              width: '100%',
-                              justifyContent: 'center',
-                              paddingBottom: 4,
-                              position: 'relative',
-                              zIndex: 2
-                            }}>
-                              {/* 收入柱 */}
-                              <div style={{ width: isMobile ? '40%' : '35%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                {d.revenue > 0 && (
-                                  <div style={{ fontSize: 9, color: '#FDE08D', fontWeight: 800, marginBottom: 4, whiteSpace: 'nowrap' }}>
-                                    {formatVal(d.revenue)}
-                                  </div>
-                                )}
-                                <div style={{
-                                  height: Math.max(revHeight, 2),
-                                  width: '100%',
-                                  background: isActive ? '#FDE08D' : 'linear-gradient(to top, #C48D3A, #FDE08D)',
-                                  borderRadius: '3px 3px 0 0',
-                                  boxShadow: isActive ? '0 0 15px rgba(253,224,141,0.5)' : 'none',
-                                  transition: 'all 0.3s ease'
-                                }} />
-                              </div>
-
-                              {/* 利润柱 */}
-                              <div style={{ width: isMobile ? '40%' : '35%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                {d.profit > 0 && (
-                                  <div style={{ fontSize: 9, color: '#52c41a', fontWeight: 800, marginBottom: 4, whiteSpace: 'nowrap' }}>
-                                    {formatVal(d.profit)}
-                                  </div>
-                                )}
-                                <div style={{
-                                  height: Math.max(proHeight, 2),
-                                  width: '100%',
-                                  background: isActive ? '#52c41a' : 'linear-gradient(to top, #237804, #52c41a)',
-                                  borderRadius: '3px 3px 0 0',
-                                  boxShadow: isActive ? '0 0 15px rgba(82,196,26,0.4)' : 'none',
-                                  transition: 'all 0.3s ease'
-                                }} />
-                              </div>
-                            </div>
-                          </Tooltip>
-
-                          {/* 月份底栏文字 */}
-                          <div style={{
-                            marginTop: 12,
-                            fontSize: 10,
-                            fontWeight: isActive ? 800 : 500,
-                            color: isActive ? '#FDE08D' : '#bab09c',
-                            transform: 'rotate(-45deg) translateX(-8px)',
-                            whiteSpace: 'nowrap',
-                            transition: 'all 0.3s ease'
-                          }}>
-                            {barMonth.format('MMM YY')}
-                          </div>
-                        </div>
-                      )
-                    })}                  </div>
-                </div>
-              </div>
-            ) : (
-              <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.3)' }}>
-                {t('financeAdmin.noSalesData')}
-              </div>
-            )}
-          </div>
-
-          {/* 利润明细搜索和表格 */}
-          <div style={{
-            padding: 16,
-            background: 'rgba(57, 51, 40, 0.5)',
-            border: '1px solid rgba(244, 175, 37, 0.6)',
-            borderRadius: 12,
-            marginBottom: 16,
-            display: 'flex',
-            flexDirection: isMobile ? 'column' : 'row',
-            alignItems: isMobile ? 'flex-start' : 'center',
-            justifyContent: 'space-between',
-            gap: 16
-          }}>
-            <div style={{ color: '#fff', fontSize: 16, fontWeight: 700 }}>{t('financeAdmin.profit')} {t('common.details')}</div>
-            <Search
-              placeholder={t('financeAdmin.searchPlaceholder')}
-              allowClear
-              style={{ width: isMobile ? '100%' : 350 }}
-              prefix={<SearchOutlined />}
-              value={keyword}
-              onChange={(e) => {
-                setKeyword(e.target.value)
-                setProfitPage(1) // 搜索时重置分页
-              }}
-              className="points-config-form"
-            />
-          </div>
-
-          {/* 利润明细表格 */}
-          {isMobile ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {profitData.records.slice((profitPage - 1) * 10, profitPage * 10).map((r: any) => {
-                const user = users.find(u => u.id === r.userId)
-                const status = getOrderMatchStatus(r.referenceNo)
-                let statusColor = 'rgba(255,255,255,0.4)'
-                let statusText = t('financeAdmin.status.unmatched') || '未对账'
-
-                if (status.status === 'fully') {
-                  statusColor = '#52c41a'
-                  statusText = t('financeAdmin.status.paid') || '已结清'
-                } else if (status.status === 'partial') {
-                  statusColor = '#1890ff'
-                  statusText = t('financeAdmin.status.partial') || '部分'
-                }
-
-                return (
-                  <div key={r.id} style={{
-                    padding: 16,
-                    background: 'rgba(57, 51, 40, 0.5)',
-                    border: '1px solid rgba(244, 175, 37, 0.3)',
-                    borderRadius: 12,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 12
-                  }}>
-                    {/* 卡片头部 */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>{formatYMD(toDateSafe(r.date))}</div>
-                        <div
-                          style={{ color: '#f4af25', fontWeight: 700, fontSize: 15, textDecoration: 'underline', cursor: 'pointer' }}
-                          onClick={() => {
-                            const order = orders.find(o => o.id === r.referenceNo)
-                            if (order) setViewingOrder(order)
-                            else message.warning(t('common.noData'))
-                          }}
-                        >
-                          {r.referenceNo}
-                        </div>
-                      </div>
-                      <div style={{
-                        fontSize: 10,
-                        padding: '2px 8px',
-                        borderRadius: 4,
-                        background: `${statusColor}15`,
-                        color: statusColor,
-                        border: `1px solid ${statusColor}33`,
-                        fontWeight: 800
-                      }}>
-                        {statusText}
-                      </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ width: 12, height: 12, background: 'linear-gradient(to top, #C48D3A, #FDE08D)', borderRadius: 3 }} />
+                      {t('financeAdmin.totalRevenue')}
                     </div>
-
-                    <div style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>
-                      👤 {user?.displayName || user?.email || r.userId || '-'}
-                    </div>
-
-                    {/* 商品列表 */}
-                    <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 8, padding: 8 }}>
-                      {r.items.map((it: any, idx: number) => (
-                        <div key={it.id || idx} style={{
-                          padding: '8px 0',
-                          borderBottom: idx === r.items.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)'
-                        }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                            <span style={{ color: '#fff', fontSize: 13, fontWeight: 500, flex: 1, marginRight: 8 }}>
-                              {cigars.find(c => c.id === it.cigarId)?.name || it.cigarName || it.cigarId}
-                            </span>
-                            <span style={{ color: '#f4af25', fontWeight: 700 }}>x{it.quantity}</span>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                            <span style={{ color: 'rgba(255,255,255,0.4)' }}>
-                              RM{it.revenue.toFixed(2)} - RM{it.cogs.toFixed(2)}
-                            </span>
-                            <span style={{ color: it.profit >= 0 ? '#52c41a' : '#f5222d', fontWeight: 600 }}>
-                              {it.profit >= 0 ? '+' : ''}RM{it.profit.toFixed(2)}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* 卡片底部：总计 */}
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      paddingTop: 8,
-                      borderTop: '1px solid rgba(255,255,255,0.1)'
-                    }}>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>{t('ordersAdmin.orderTotal')}</span>
-                        <span style={{ color: '#f4af25', fontSize: 15, fontWeight: 800 }}>RM{r.totalRevenue.toFixed(2)}</span>
-                      </div>
-                      <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ color: r.totalProfit >= 0 ? '#52c41a' : '#f5222d', fontSize: 15, fontWeight: 800 }}>
-                          {r.totalProfit >= 0 ? '+' : ''}RM{r.totalProfit.toFixed(2)}
-                        </span>
-                        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 600 }}>
-                          Margin: {r.totalRevenue > 0 ? ((r.totalProfit / r.totalRevenue) * 100).toFixed(1) : 0}%
-                        </span>
-                      </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ width: 12, height: 12, background: 'linear-gradient(to top, #237804, #52c41a)', borderRadius: 3 }} />
+                      {t('financeAdmin.profit')}
                     </div>
                   </div>
-                )
-              })}
 
-              <div style={{ display: 'flex', justifyContent: 'center', margin: '16px 0' }}>
-                <Pagination
-                  simple
-                  current={profitPage}
-                  pageSize={10}
-                  total={profitData.records.length}
-                  onChange={(page) => setProfitPage(page)}
-                  className="ant-pagination-dark"
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="points-config-form">
-              <Table
-                dataSource={profitData.records}
-                rowKey="id"
-                size="small"
-                pagination={{ pageSize: 10 }}
-                columns={[
-                  {
-                    title: t('financeAdmin.transactionDate'),
-                    dataIndex: 'date',
-                    render: (d: any) => formatYMD(toDateSafe(d)),
-                  },
-                  {
-                    title: t('ordersAdmin.orderNo'),
-                    dataIndex: 'referenceNo',
-                    render: (v: string) => {
-                      const status = getOrderMatchStatus(v)
-                      let statusColor = 'rgba(255,255,255,0.4)'
-                      let statusText = t('financeAdmin.status.unmatched') || '未对账'
+                  {/* 可横向滚动的柱状图区域 */}
+                  <div style={{
+                    overflowX: 'auto',
+                    overflowY: 'hidden',
+                    WebkitOverflowScrolling: 'touch',
+                    paddingBottom: 8
+                  }}>
+                    <div style={{
+                      height: 250,
+                      display: 'flex',
+                      alignItems: 'flex-end',
+                      gap: isMobile ? 8 : 16,
+                      paddingBottom: 60, // Increased to avoid labels overlap
+                      minWidth: isMobile ? Math.max(profitData.trendData.length * 56, 300) : 'auto'
+                    }}>
+                      {profitData.trendData.map((d, i) => {
+                        const barMonth = dayjs(d.date)
+                        const isActive = dateRange &&
+                          dateRange[0] &&
+                          dateRange[0].isSame(barMonth, 'month') &&
+                          dateRange[1] &&
+                          dateRange[1].isSame(barMonth, 'month')
 
-                      if (status.status === 'fully') {
-                        statusColor = '#52c41a'
-                        statusText = t('financeAdmin.status.paid') || '已结清'
-                      } else if (status.status === 'partial') {
-                        statusColor = '#1890ff'
-                        statusText = t('financeAdmin.status.partial') || '部分'
-                      }
+                        const chartMaxHeight = 160
+                        const revHeight = (d.revenue / profitData.maxVal) * chartMaxHeight
+                        const proHeight = (d.profit / profitData.maxVal) * chartMaxHeight
 
-                      return (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          <span
+                        const formatVal = (val: number) => {
+                          if (val >= 1000) return `${(val / 1000).toFixed(1)}k`
+                          return Math.round(val).toString()
+                        }
+
+                        return (
+                          <div
+                            key={i}
                             style={{
-                              fontWeight: 700,
-                              color: '#f4af25',
+                              flex: isMobile ? 'none' : 1,
+                              minWidth: isMobile ? 48 : 'auto',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'flex-end',
+                              height: '100%',
+                              position: 'relative',
                               cursor: 'pointer',
-                              textDecoration: 'underline',
-                              fontSize: 13
+                              transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                              transform: isActive ? 'scale(1.05) translateY(-5px)' : 'none',
+                              opacity: (dateRange && !isActive) ? 0.35 : 1
                             }}
                             onClick={() => {
-                              const order = orders.find(o => o.id === v)
+                              if (isActive) {
+                                setDateRange(null)
+                                setSelectedDateRange(null)
+                                message.info(t('financeAdmin.resetFilters'))
+                              } else {
+                                const start = barMonth.startOf('month')
+                                const end = barMonth.endOf('month')
+                                setDateRange([start, end])
+                                setSelectedDateRange(null)
+                                message.info(`${t('common.month')}: ${barMonth.format('MMM YYYY')}`)
+                              }
+                            }}
+                          >
+                            <Tooltip
+                              title={
+                                <div style={{ padding: '8px' }}>
+                                  <div style={{ fontWeight: 800, marginBottom: 8, borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: 4 }}>
+                                    {barMonth.format('MMMM YYYY')}
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24, marginBottom: 4 }}>
+                                    <span style={{ color: 'rgba(255,255,255,0.7)' }}>{t('financeAdmin.totalRevenue')}:</span>
+                                    <span style={{ color: '#FDE08D', fontWeight: 700 }}>RM{d.revenue.toLocaleString()}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24 }}>
+                                    <span style={{ color: 'rgba(255,255,255,0.7)' }}>{t('financeAdmin.profit')}:</span>
+                                    <span style={{ color: '#52c41a', fontWeight: 700 }}>RM{d.profit.toLocaleString()}</span>
+                                  </div>
+                                </div>
+                              }
+                              overlayInnerStyle={{ backdropFilter: 'blur(12px)', background: 'rgba(34, 28, 16, 0.98)', border: '1px solid rgba(244, 175, 37, 0.5)', borderRadius: 8 }}
+                              color="transparent"
+                            >
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'flex-end',
+                                gap: 3,
+                                width: '100%',
+                                justifyContent: 'center',
+                                paddingBottom: 4,
+                                position: 'relative',
+                                zIndex: 2
+                              }}>
+                                {/* 收入柱 */}
+                                <div style={{ width: isMobile ? '40%' : '35%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                  {d.revenue > 0 && (
+                                    <div style={{ fontSize: 9, color: '#FDE08D', fontWeight: 800, marginBottom: 4, whiteSpace: 'nowrap' }}>
+                                      {formatVal(d.revenue)}
+                                    </div>
+                                  )}
+                                  <div style={{
+                                    height: Math.max(revHeight, 2),
+                                    width: '100%',
+                                    background: isActive ? '#FDE08D' : 'linear-gradient(to top, #C48D3A, #FDE08D)',
+                                    borderRadius: '3px 3px 0 0',
+                                    boxShadow: isActive ? '0 0 15px rgba(253,224,141,0.5)' : 'none',
+                                    transition: 'all 0.3s ease'
+                                  }} />
+                                </div>
+
+                                {/* 利润柱 */}
+                                <div style={{ width: isMobile ? '40%' : '35%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                  {d.profit > 0 && (
+                                    <div style={{ fontSize: 9, color: '#52c41a', fontWeight: 800, marginBottom: 4, whiteSpace: 'nowrap' }}>
+                                      {formatVal(d.profit)}
+                                    </div>
+                                  )}
+                                  <div style={{
+                                    height: Math.max(proHeight, 2),
+                                    width: '100%',
+                                    background: isActive ? '#52c41a' : 'linear-gradient(to top, #237804, #52c41a)',
+                                    borderRadius: '3px 3px 0 0',
+                                    boxShadow: isActive ? '0 0 15px rgba(82,196,26,0.4)' : 'none',
+                                    transition: 'all 0.3s ease'
+                                  }} />
+                                </div>
+                              </div>
+                            </Tooltip>
+
+                            {/* 月份底栏文字 */}
+                            <div style={{
+                              marginTop: 12,
+                              fontSize: 10,
+                              fontWeight: isActive ? 800 : 500,
+                              color: isActive ? '#FDE08D' : '#bab09c',
+                              transform: 'rotate(-45deg) translateX(-8px)',
+                              whiteSpace: 'nowrap',
+                              transition: 'all 0.3s ease'
+                            }}>
+                              {barMonth.format('MMM YY')}
+                            </div>
+                          </div>
+                        )
+                      })}                  </div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.3)' }}>
+                  {t('financeAdmin.noSalesData')}
+                </div>
+              )}
+            </div>
+
+            {/* 利润明细搜索和表格 */}
+            <div style={{
+              padding: 16,
+              background: 'rgba(57, 51, 40, 0.5)',
+              border: '1px solid rgba(244, 175, 37, 0.6)',
+              borderRadius: 12,
+              marginBottom: 16,
+              display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
+              alignItems: isMobile ? 'flex-start' : 'center',
+              justifyContent: 'space-between',
+              gap: 16,
+              marginTop: 10 // Added space between chart and details
+            }}>
+              <Search
+                placeholder={t('financeAdmin.searchPlaceholder')}
+                allowClear
+                style={{ width: isMobile ? '100%' : 350 }}
+                prefix={<SearchOutlined />}
+                value={keyword}
+                onChange={(e) => {
+                  setKeyword(e.target.value)
+                  setProfitPage(1) // 搜索时重置分页
+                }}
+                className="points-config-form"
+              />
+            </div>
+
+            {/* 利润明细表格 */}
+            {isMobile ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {profitData.records.slice((profitPage - 1) * 10, profitPage * 10).map((r: any) => {
+                  const user = users.find(u => u.id === r.userId)
+                  const status = getOrderMatchStatus(r.referenceNo)
+                  let statusColor = 'rgba(255,255,255,0.4)'
+                  let statusText = t('financeAdmin.status.unmatched') || '未对账'
+
+                  if (status.status === 'fully') {
+                    statusColor = '#52c41a'
+                    statusText = t('financeAdmin.status.paid') || '已结清'
+                  } else if (status.status === 'partial') {
+                    statusColor = '#1890ff'
+                    statusText = t('financeAdmin.status.partial') || '部分'
+                  }
+
+                  return (
+                    <div key={r.id} style={{
+                      padding: 16,
+                      background: 'rgba(57, 51, 40, 0.5)',
+                      border: '1px solid rgba(244, 175, 37, 0.3)',
+                      borderRadius: 12,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 12
+                    }}>
+                      {/* 卡片头部 */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>{formatYMD(toDateSafe(r.date))}</div>
+                          <div
+                            style={{ color: '#f4af25', fontWeight: 700, fontSize: 15, textDecoration: 'underline', cursor: 'pointer' }}
+                            onClick={() => {
+                              const order = orders.find(o => o.id === r.referenceNo)
                               if (order) setViewingOrder(order)
                               else message.warning(t('common.noData'))
                             }}
                           >
-                            {v || '-'}
+                            {r.referenceNo}
+                          </div>
+                        </div>
+                        <div style={{
+                          fontSize: 10,
+                          padding: '2px 8px',
+                          borderRadius: 4,
+                          background: `${statusColor}15`,
+                          color: statusColor,
+                          border: `1px solid ${statusColor}33`,
+                          fontWeight: 800
+                        }}>
+                          {statusText}
+                        </div>
+                      </div>
+
+                      <div style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>
+                        👤 {user?.displayName || user?.email || r.userId || '-'}
+                      </div>
+
+                      {/* 商品列表 */}
+                      <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 8, padding: 8 }}>
+                        {r.items.map((it: any, idx: number) => (
+                          <div key={it.id || idx} style={{
+                            padding: '8px 0',
+                            borderBottom: idx === r.items.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)'
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                              <span style={{ color: '#fff', fontSize: 13, fontWeight: 500, flex: 1, marginRight: 8 }}>
+                                {cigars.find(c => c.id === it.cigarId)?.name || it.cigarName || it.cigarId}
+                              </span>
+                              <span style={{ color: '#f4af25', fontWeight: 700 }}>x{it.quantity}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                              <span style={{ color: 'rgba(255,255,255,0.4)' }}>
+                                RM{it.revenue.toFixed(2)} - RM{it.cogs.toFixed(2)}
+                              </span>
+                              <span style={{ color: it.profit >= 0 ? '#52c41a' : '#f5222d', fontWeight: 600 }}>
+                                {it.profit >= 0 ? '+' : ''}RM{it.profit.toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* 卡片底部：总计 */}
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        paddingTop: 8,
+                        borderTop: '1px solid rgba(255,255,255,0.1)'
+                      }}>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>{t('ordersAdmin.orderTotal')}</span>
+                          <span style={{ color: '#f4af25', fontSize: 15, fontWeight: 800 }}>RM{r.totalRevenue.toFixed(2)}</span>
+                        </div>
+                        <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ color: r.totalProfit >= 0 ? '#52c41a' : '#f5222d', fontSize: 15, fontWeight: 800 }}>
+                            {r.totalProfit >= 0 ? '+' : ''}RM{r.totalProfit.toFixed(2)}
                           </span>
-                          <div style={{
-                            fontSize: 10,
-                            padding: '1px 6px',
-                            borderRadius: 4,
-                            background: `${statusColor}15`,
-                            color: statusColor,
-                            border: `1px solid ${statusColor}33`,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            width: 'fit-content',
-                            fontWeight: 800,
-                            lineHeight: 1.2
-                          }}>
-                            {statusText}
-                          </div>
+                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 600 }}>
+                            Margin: {r.totalRevenue > 0 ? ((r.totalProfit / r.totalRevenue) * 100).toFixed(1) : 0}%
+                          </span>
                         </div>
-                      )
-                    }
-                  },
-                  {
-                    title: t('ordersAdmin.user'),
-                    key: 'customer',
-                    render: (_: any, r: any) => {
-                      const user = users.find(u => u.id === r.userId)
-                      return (
+                      </div>
+                    </div>
+                  )
+                })}
+
+                <div style={{ display: 'flex', justifyContent: 'center', margin: '16px 0' }}>
+                  <Pagination
+                    simple
+                    current={profitPage}
+                    pageSize={10}
+                    total={profitData.records.length}
+                    onChange={(page) => setProfitPage(page)}
+                    className="ant-pagination-dark"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="points-config-form">
+                <Table
+                  dataSource={profitData.records}
+                  rowKey="id"
+                  size="small"
+                  pagination={{ pageSize: 10 }}
+                  columns={[
+                    {
+                      title: t('financeAdmin.transactionDate'),
+                      dataIndex: 'date',
+                      render: (d: any) => formatYMD(toDateSafe(d)),
+                    },
+                    {
+                      title: t('ordersAdmin.orderNo'),
+                      dataIndex: 'referenceNo',
+                      render: (v: string) => {
+                        const status = getOrderMatchStatus(v)
+                        let statusColor = 'rgba(255,255,255,0.4)'
+                        let statusText = t('financeAdmin.status.unmatched') || '未对账'
+
+                        if (status.status === 'fully') {
+                          statusColor = '#52c41a'
+                          statusText = t('financeAdmin.status.paid') || '已结清'
+                        } else if (status.status === 'partial') {
+                          statusColor = '#1890ff'
+                          statusText = t('financeAdmin.status.partial') || '部分'
+                        }
+
+                        return (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <span
+                              style={{
+                                fontWeight: 700,
+                                color: '#f4af25',
+                                cursor: 'pointer',
+                                textDecoration: 'underline',
+                                fontSize: 13
+                              }}
+                              onClick={() => {
+                                const order = orders.find(o => o.id === v)
+                                if (order) setViewingOrder(order)
+                                else message.warning(t('common.noData'))
+                              }}
+                            >
+                              {v || '-'}
+                            </span>
+                            <div style={{
+                              fontSize: 10,
+                              padding: '1px 6px',
+                              borderRadius: 4,
+                              background: `${statusColor}15`,
+                              color: statusColor,
+                              border: `1px solid ${statusColor}33`,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              width: 'fit-content',
+                              fontWeight: 800,
+                              lineHeight: 1.2
+                            }}>
+                              {statusText}
+                            </div>
+                          </div>
+                        )
+                      }
+                    },
+                    {
+                      title: t('ordersAdmin.user'),
+                      key: 'customer',
+                      render: (_: any, r: any) => {
+                        const user = users.find(u => u.id === r.userId)
+                        return (
+                          <div>
+                            <div style={{ fontWeight: 600, color: '#fff' }}>{user?.displayName || user?.email || r.userId || '-'}</div>
+                          </div>
+                        )
+                      }
+                    },
+                    {
+                      title: t('financeAdmin.productName'),
+                      key: 'productName',
+                      render: (_: any, r: any) => (
                         <div>
-                          <div style={{ fontWeight: 600, color: '#fff' }}>{user?.displayName || user?.email || r.userId || '-'}</div>
+                          {r.items.map((it: any, idx: number) => (
+                            <div key={it.id || idx} style={{
+                              padding: '6px 0',
+                              borderBottom: idx === r.items.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)',
+                              minHeight: 32,
+                              display: 'flex',
+                              alignItems: 'center'
+                            }}>
+                              {cigars.find(c => c.id === it.cigarId)?.name || it.cigarName || it.cigarId}
+                            </div>
+                          ))}
+                          {r.items.length > 1 && (
+                            <div style={{
+                              borderTop: '1px solid transparent',
+                              marginTop: 4,
+                              paddingTop: 4,
+                              fontWeight: 700,
+                              color: 'rgba(255,255,255,0.4)',
+                              minHeight: 25,
+                              display: 'flex',
+                              alignItems: 'center'
+                            }}>
+                              {t('ordersAdmin.orderTotal') || '订单总计'}
+                            </div>
+                          )}
                         </div>
                       )
-                    }
-                  },
-                  {
-                    title: t('financeAdmin.productName'),
-                    key: 'productName',
-                    render: (_: any, r: any) => (
-                      <div>
-                        {r.items.map((it: any, idx: number) => (
-                          <div key={it.id || idx} style={{
-                            padding: '6px 0',
-                            borderBottom: idx === r.items.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)',
-                            minHeight: 32,
-                            display: 'flex',
-                            alignItems: 'center'
-                          }}>
-                            {cigars.find(c => c.id === it.cigarId)?.name || it.cigarName || it.cigarId}
-                          </div>
-                        ))}
-                        {r.items.length > 1 && (
-                          <div style={{
-                            borderTop: '1px solid transparent',
-                            marginTop: 4,
-                            paddingTop: 4,
-                            fontWeight: 700,
-                            color: 'rgba(255,255,255,0.4)',
-                            minHeight: 25,
-                            display: 'flex',
-                            alignItems: 'center'
-                          }}>
-                            {t('ordersAdmin.orderTotal') || '订单总计'}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  },
-                  {
-                    title: t('financeAdmin.quantity'),
-                    key: 'quantity',
-                    align: 'right',
-                    render: (_: any, r: any) => (
-                      <div>
-                        {r.items.map((it: any, idx: number) => (
-                          <div key={it.id || idx} style={{
-                            padding: '6px 0',
-                            borderBottom: idx === r.items.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)',
-                            minHeight: 32,
-                            textAlign: 'right',
-                            display: 'flex',
-                            justifyContent: 'flex-end',
-                            alignItems: 'center'
-                          }}>
-                            {it.quantity}
-                          </div>
-                        ))}
-                        {r.items.length > 1 && (
-                          <div style={{
-                            borderTop: '1px solid transparent',
-                            marginTop: 4,
-                            paddingTop: 4,
-                            fontWeight: 700,
-                            minHeight: 25,
-                            display: 'flex',
-                            justifyContent: 'flex-end',
-                            alignItems: 'center'
-                          }}>
-                            {r.totalQty}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  },
-                  {
-                    title: t('financeAdmin.revenue'),
-                    key: 'revenue',
-                    align: 'right',
-                    render: (_: any, r: any) => (
-                      <div>
-                        {r.items.map((it: any, idx: number) => (
-                          <div key={it.id || idx} style={{
-                            padding: '6px 0',
-                            borderBottom: idx === r.items.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)',
-                            minHeight: 32,
-                            display: 'flex',
-                            justifyContent: 'flex-end',
-                            alignItems: 'center'
-                          }}>
-                            RM{it.revenue.toFixed(2)}
-                          </div>
-                        ))}
-                        {r.items.length > 1 && (
-                          <div style={{
-                            borderTop: '1px solid #f4af25',
-                            marginTop: 4,
-                            paddingTop: 4,
-                            fontWeight: 700,
-                            color: '#f4af25',
-                            minHeight: 25,
-                            display: 'flex',
-                            justifyContent: 'flex-end',
-                            alignItems: 'center'
-                          }}>
-                            RM{r.totalRevenue.toFixed(2)}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  },
-                  {
-                    title: t('financeAdmin.cost'),
-                    key: 'cost',
-                    align: 'right',
-                    render: (_: any, r: any) => (
-                      <div>
-                        {r.items.map((it: any, idx: number) => (
-                          <div key={it.id || idx} style={{
-                            padding: '6px 0',
-                            borderBottom: idx === r.items.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)',
-                            minHeight: 32,
-                            display: 'flex',
-                            justifyContent: 'flex-end',
-                            alignItems: 'center'
-                          }}>
-                            RM{it.cogs.toFixed(2)}
-                          </div>
-                        ))}
-                        {r.items.length > 1 && (
-                          <div style={{
-                            borderTop: '1px solid rgba(255,255,255,0.2)',
-                            marginTop: 4,
-                            paddingTop: 4,
-                            fontWeight: 700,
-                            minHeight: 25,
-                            display: 'flex',
-                            justifyContent: 'flex-end',
-                            alignItems: 'center'
-                          }}>
-                            RM{r.totalCogs.toFixed(2)}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  },
-                  {
-                    title: t('financeAdmin.profit'),
-                    key: 'profit',
-                    align: 'right',
-                    render: (_: any, r: any) => (
-                      <div>
-                        {r.items.map((it: any, idx: number) => {
-                          const p = it.profit;
-                          return (
+                    },
+                    {
+                      title: t('financeAdmin.quantity'),
+                      key: 'quantity',
+                      align: 'right',
+                      render: (_: any, r: any) => (
+                        <div>
+                          {r.items.map((it: any, idx: number) => (
+                            <div key={it.id || idx} style={{
+                              padding: '6px 0',
+                              borderBottom: idx === r.items.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)',
+                              minHeight: 32,
+                              textAlign: 'right',
+                              display: 'flex',
+                              justifyContent: 'flex-end',
+                              alignItems: 'center'
+                            }}>
+                              {it.quantity}
+                            </div>
+                          ))}
+                          {r.items.length > 1 && (
+                            <div style={{
+                              borderTop: '1px solid transparent',
+                              marginTop: 4,
+                              paddingTop: 4,
+                              fontWeight: 700,
+                              minHeight: 25,
+                              display: 'flex',
+                              justifyContent: 'flex-end',
+                              alignItems: 'center'
+                            }}>
+                              {r.totalQty}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    },
+                    {
+                      title: t('financeAdmin.revenue'),
+                      key: 'revenue',
+                      align: 'right',
+                      render: (_: any, r: any) => (
+                        <div>
+                          {r.items.map((it: any, idx: number) => (
                             <div key={it.id || idx} style={{
                               padding: '6px 0',
                               borderBottom: idx === r.items.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)',
                               minHeight: 32,
                               display: 'flex',
                               justifyContent: 'flex-end',
-                              alignItems: 'center',
-                              color: p >= 0 ? '#52c41a' : '#f5222d',
-                              fontWeight: 600
+                              alignItems: 'center'
                             }}>
-                              RM{p.toFixed(2)}
+                              RM{it.revenue.toFixed(2)}
                             </div>
-                          )
-                        })}
-                        {r.items.length > 1 && (
-                          <div style={{
-                            borderTop: '1px solid rgba(255,255,255,0.2)',
-                            marginTop: 4,
-                            paddingTop: 4,
-                            fontWeight: 800,
-                            color: r.totalProfit >= 0 ? '#52c41a' : '#f5222d',
-                            minHeight: 25,
-                            display: 'flex',
-                            justifyContent: 'flex-end',
-                            alignItems: 'center'
-                          }}>
-                            RM{r.totalProfit.toFixed(2)}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  },
-                  {
-                    title: t('financeAdmin.margin'),
-                    key: 'margin',
-                    align: 'right',
-                    render: (_: any, r: any) => (
-                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>
-                        {r.totalRevenue > 0 ? ((r.totalProfit / r.totalRevenue) * 100).toFixed(1) : 0}%
-                      </span>
-                    )
-                  }
-                ]}
-              />
-            </div>
-          )}
+                          ))}
+                          {r.items.length > 1 && (
+                            <div style={{
+                              borderTop: '1px solid #f4af25',
+                              marginTop: 4,
+                              paddingTop: 4,
+                              fontWeight: 700,
+                              color: '#f4af25',
+                              minHeight: 25,
+                              display: 'flex',
+                              justifyContent: 'flex-end',
+                              alignItems: 'center'
+                            }}>
+                              RM{r.totalRevenue.toFixed(2)}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    },
+                    {
+                      title: t('financeAdmin.cost'),
+                      key: 'cost',
+                      align: 'right',
+                      render: (_: any, r: any) => (
+                        <div>
+                          {r.items.map((it: any, idx: number) => (
+                            <div key={it.id || idx} style={{
+                              padding: '6px 0',
+                              borderBottom: idx === r.items.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)',
+                              minHeight: 32,
+                              display: 'flex',
+                              justifyContent: 'flex-end',
+                              alignItems: 'center'
+                            }}>
+                              RM{it.cogs.toFixed(2)}
+                            </div>
+                          ))}
+                          {r.items.length > 1 && (
+                            <div style={{
+                              borderTop: '1px solid rgba(255,255,255,0.2)',
+                              marginTop: 4,
+                              paddingTop: 4,
+                              fontWeight: 700,
+                              minHeight: 25,
+                              display: 'flex',
+                              justifyContent: 'flex-end',
+                              alignItems: 'center'
+                            }}>
+                              RM{r.totalCogs.toFixed(2)}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    },
+                    {
+                      title: t('financeAdmin.profit'),
+                      key: 'profit',
+                      align: 'right',
+                      render: (_: any, r: any) => (
+                        <div>
+                          {r.items.map((it: any, idx: number) => {
+                            const p = it.profit;
+                            return (
+                              <div key={it.id || idx} style={{
+                                padding: '6px 0',
+                                borderBottom: idx === r.items.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)',
+                                minHeight: 32,
+                                display: 'flex',
+                                justifyContent: 'flex-end',
+                                alignItems: 'center',
+                                color: p >= 0 ? '#52c41a' : '#f5222d',
+                                fontWeight: 600
+                              }}>
+                                RM{p.toFixed(2)}
+                              </div>
+                            )
+                          })}
+                          {r.items.length > 1 && (
+                            <div style={{
+                              borderTop: '1px solid rgba(255,255,255,0.2)',
+                              marginTop: 4,
+                              paddingTop: 4,
+                              fontWeight: 800,
+                              color: r.totalProfit >= 0 ? '#52c41a' : '#f5222d',
+                              minHeight: 25,
+                              display: 'flex',
+                              justifyContent: 'flex-end',
+                              alignItems: 'center'
+                            }}>
+                              RM{r.totalProfit.toFixed(2)}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    },
+                    {
+                      title: t('financeAdmin.margin'),
+                      key: 'margin',
+                      align: 'right',
+                      render: (_: any, r: any) => (
+                        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>
+                          {r.totalRevenue > 0 ? ((r.totalProfit / r.totalRevenue) * 100).toFixed(1) : 0}%
+                        </span>
+                      )
+                    }
+                  ]}
+                />
+              </div>
+            )}
+          </div>
         </div>
       )}
 

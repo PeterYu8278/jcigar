@@ -302,6 +302,8 @@ export const updateAppConfig = async (
     const stripUndefinedDeep = (input: any): any => {
       if (input === undefined) return undefined
       if (input === null) return null
+      // 保持 Date 和 Timestamp 对象不变
+      if (input instanceof Date || input instanceof Timestamp) return input
       if (Array.isArray(input)) {
         const arr = input
           .map(v => stripUndefinedDeep(v))
@@ -321,7 +323,13 @@ export const updateAppConfig = async (
     
     // 处理所有更新字段
     Object.keys(updates).forEach(key => {
-      const value = stripUndefinedDeep((updates as any)[key]);
+      let value = stripUndefinedDeep((updates as any)[key]);
+      
+      // 强制将订阅到期时间转换为 Firestore Timestamp，避免存为普通 Map
+      if (key === 'subscription' && value?.expiryDate instanceof Date) {
+        value.expiryDate = Timestamp.fromDate(value.expiryDate);
+      }
+
       if (value !== undefined) {
         updateData[key] = value;
       }

@@ -34,20 +34,26 @@ const PlanSelector: React.FC<{ value?: string; onChange?: (val: string) => void;
   }
 
   return (
-    <div style={{ 
-      display: isMobile ? 'flex' : 'grid', 
-      flexDirection: isMobile ? 'column' : 'unset',
-      gridTemplateColumns: isMobile ? 'unset' : 'repeat(auto-fit, minmax(220px, 1fr))',
-      gap: 12 
+    <div style={{
+      display: isMobile ? 'flex' : 'grid',
+      flexDirection: isMobile ? 'row' : 'unset',
+      overflowX: isMobile ? 'auto' : 'visible',
+      gridTemplateColumns: isMobile ? 'unset' : 'repeat(auto-fit, minmax(200px, 1fr))',
+      gap: isMobile ? 8 : 12,
+      paddingBottom: isMobile ? 4 : 0,
+      width: '100%',
+      maxWidth: '100%'
     }}>
       {plans.map((p: any) => {
         const isSelected = value === p.id;
         return (
-          <div 
+          <div
             key={p.id}
             onClick={() => onChange?.(p.id)}
             style={{
-              padding: '16px',
+              flex: isMobile ? '1 1 0' : 'unset',
+              minWidth: isMobile ? '100px' : 'unset',
+              padding: isMobile ? '12px 8px' : '16px',
               borderRadius: 12,
               cursor: 'pointer',
               background: isSelected ? 'rgba(253,224,141,0.08)' : 'rgba(255,255,255,0.03)',
@@ -57,7 +63,7 @@ const PlanSelector: React.FC<{ value?: string; onChange?: (val: string) => void;
               flexDirection: 'column',
               justifyContent: 'space-between',
               boxShadow: isSelected ? '0 0 15px rgba(253,224,141,0.2)' : 'none',
-              minHeight: 140
+              minHeight: isMobile ? 120 : 140
             }}
             onMouseEnter={(e) => {
               if (!isSelected) {
@@ -77,17 +83,17 @@ const PlanSelector: React.FC<{ value?: string; onChange?: (val: string) => void;
                 {p.name}
               </div>
               <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>
-                <span style={{ color: '#aaa' }}>{p.maxMembers}</span> Members<br/>
+                <span style={{ color: '#aaa' }}>{p.maxMembers}</span> Members<br />
                 <span style={{ color: '#aaa' }}>{p.validPeriodMonth}</span> Months
               </div>
             </div>
             <div style={{ textAlign: 'right', marginTop: 12 }}>
-              <div style={{ 
-                fontSize: 20, 
+              <div style={{
+                fontSize: 20,
                 fontWeight: 800,
-                backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
-                WebkitBackgroundClip: 'text', 
-                color: 'transparent' 
+                backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                WebkitBackgroundClip: 'text',
+                color: 'transparent'
               }}>
                 RM {p.fee}
               </div>
@@ -274,16 +280,27 @@ const AdminDashboard: React.FC = () => {
           let statusValue = currentPlan.name;
           let subText = '';
           let isExpired = false;
+          let daysLeft = 999;
 
           if (!isActive && appConfig?.subscription) {
             statusValue = 'Inactive';
+            isExpired = true;
           } else if (expiryDate) {
-            const exp = (expiryDate as any).toDate ? (expiryDate as any).toDate() : new Date(expiryDate);
-            const daysLeft = Math.max(0, Math.ceil((exp.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
-            isExpired = daysLeft === 0;
-            const dateStr = dayjs(exp).format('YYYY-MM-DD');
-            subText = `(${dateStr})`;
+            try {
+              const exp = (expiryDate as any).toDate ? (expiryDate as any).toDate() : new Date(expiryDate as any);
+              if (!isNaN(exp.getTime())) {
+                daysLeft = Math.max(0, Math.ceil((exp.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
+                isExpired = daysLeft === 0;
+                const dateStr = dayjs(exp).format('YYYY-MM-DD');
+                subText = `Exp: ${dateStr}`;
+              }
+            } catch (e) {
+              console.warn('Invalid expiry date format', e);
+            }
           }
+
+          const isOverlimit = totalUsers > (currentPlan.maxMembers || 50);
+          const showButton = isOverlimit || isExpired || daysLeft <= 30;
 
           const cards: Array<{
             label: string;
@@ -292,9 +309,10 @@ const AdminDashboard: React.FC = () => {
             isSubscription?: boolean;
             isExpired?: boolean;
             extraInfo?: string;
+            showButton?: boolean;
           }> = [
-              { label: t('dashboard.totalMembers'), value: totalUsers.toLocaleString() },
-              { label: '', value: statusValue, subText, isSubscription: true, isExpired: isExpired || !isActive, extraInfo: `${totalUsers}/${currentPlan.maxMembers || 50}` },
+              { label: t('dashboard.totalMembers'), value: `${totalUsers}/${currentPlan.maxMembers || 50}` },
+              { label: '', value: statusValue, subText, isSubscription: true, isExpired: isExpired || !isActive, showButton },
               { label: t('dashboard.monthlyOrders'), value: monthlyOrders.toLocaleString() },
               { label: t('dashboard.monthlyRevenue'), value: `RM${monthlyRevenue.toLocaleString()}` }
             ];
@@ -324,16 +342,33 @@ const AdminDashboard: React.FC = () => {
                 backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
                 WebkitBackgroundClip: 'text',
                 color: 'transparent',
-                lineHeight: 1.2
+                lineHeight: 1.2,
+                display: 'flex',
+                alignItems: 'baseline',
+                justifyContent: 'center'
               }}>
-                {card.value}
+                {typeof card.value === 'string' && card.value.includes('/') ? (
+                  <>
+                    <span>{card.value.split('/')[0]}</span>
+                    <span style={{ 
+                      fontSize: isMobile ? '10px' : '14px', 
+                      color: 'rgba(255,255,255,0.7)', 
+                      WebkitTextFillColor: 'rgba(255,255,255,0.7)',
+                      marginLeft: 2,
+                      fontWeight: 500
+                    }}>
+                      /{card.value.split('/')[1]}
+                    </span>
+                  </>
+                ) : card.value}
               </div>
 
               {card.subText && (
                 <div style={{
-                  fontSize: isMobile ? 8 : 10,
-                  color: card.isExpired ? '#ff4d4f' : '#A0A0A0',
-                  marginTop: isMobile ? 2 : 0
+                  fontSize: isMobile ? 9 : 12,
+                  color: card.isExpired ? '#ff4d4f' : '#EAEAEA',
+                  marginTop: isMobile ? 2 : 4,
+                  fontWeight: 600
                 }}>
                   {card.subText}
                 </div>
@@ -355,7 +390,7 @@ const AdminDashboard: React.FC = () => {
                 </div>
               )}
 
-              {card.isSubscription && (
+              {card.isSubscription && card.showButton && (
                 <Button
                   size="small"
                   type="primary"
@@ -373,7 +408,7 @@ const AdminDashboard: React.FC = () => {
                     marginInline: 'auto'
                   }}
                 >
-                  {totalUsers > (currentPlan.maxMembers || 50) ? 'Upgrade' : (card.isExpired ? 'Activate' : 'Renew')}
+                  {isOverlimit ? 'Upgrade' : (isExpired ? 'Activate' : 'Renew')}
                 </Button>
               )}
             </div>

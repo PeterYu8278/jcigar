@@ -273,19 +273,35 @@ export const SubscriptionSettings: React.FC = () => {
                     </Select>
                   </Form.Item>
                   
-                  {appConfig?.subscription?.expiryDate && (
-                    <div style={{ 
-                      color: '#FDE08D', 
-                      fontSize: '14px', 
-                      padding: '12px', 
-                      background: 'rgba(253,224,141,0.1)', 
-                      borderRadius: 8,
-                      border: '1px solid rgba(253,224,141,0.2)'
-                    }}>
-                      <span style={{ color: '#aaa', marginRight: 8 }}>Current Expiry:</span>
-                      {dayjs((appConfig.subscription.expiryDate as any).toDate ? (appConfig.subscription.expiryDate as any).toDate() : appConfig.subscription.expiryDate).format('YYYY-MM-DD')}
-                    </div>
-                  )}
+                  {appConfig?.subscription?.expiryDate && (() => {
+                    let dateStr = '';
+                    try {
+                      const exp = (appConfig.subscription.expiryDate as any).toDate 
+                        ? (appConfig.subscription.expiryDate as any).toDate() 
+                        : new Date(appConfig.subscription.expiryDate as any);
+                      if (!isNaN(exp.getTime())) {
+                        dateStr = dayjs(exp).format('YYYY-MM-DD');
+                      }
+                    } catch (e) {
+                      console.warn('Invalid expiry date in settings', e);
+                    }
+                    
+                    if (!dateStr) return null;
+
+                    return (
+                      <div style={{ 
+                        color: '#FDE08D', 
+                        fontSize: '14px', 
+                        padding: '12px', 
+                        background: 'rgba(253,224,141,0.1)', 
+                        borderRadius: 8,
+                        border: '1px solid rgba(253,224,141,0.2)'
+                      }}>
+                        <span style={{ color: '#aaa', marginRight: 8 }}>Current Expiry:</span>
+                        {dateStr}
+                      </div>
+                    );
+                  })()}
                 </Card>
               </div>
               
