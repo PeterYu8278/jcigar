@@ -512,6 +512,11 @@ export interface AppConfig {
     enableImageSearch?: boolean;  // AI识茄是否启用图片URL搜索（默认 true）
     imageSearchOrder?: 'google-first' | 'gemini-first';  // 图片URL搜索引擎顺序（默认 'google-first'）
   };
+  subscription?: {
+    isActive: boolean;
+    plan: 'basic' | 'pro' | 'premium';
+    expiryDate: Date;
+  };
   updatedAt: Date;
   updatedBy: string;       // 最后更新的开发者ID
 }

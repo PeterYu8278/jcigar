@@ -1351,15 +1351,12 @@ const AdminInventory: React.FC = () => {
   return (
     <div
       style={{
-        height: isMobile ? '90vh' : 'auto',
+        height: isMobile ? '80vh' : 'auto',
         display: 'flex',
         flexDirection: 'column',
         overflow: isMobile ? 'hidden' : 'visible'
       }}
     >
-
-      <h1 style={{ fontSize: 22, fontWeight: 800, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', paddingInline: 0, marginBottom: 12 }}>{t('navigation.inventory')}</h1>
-
       {/* 自定义标签页 */}
       <div style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', borderBottom: '1px solid rgba(244,175,37,0.2)' }}>

@@ -964,40 +964,32 @@ const AdminFinance: React.FC = () => {
   // 已移除类别统计
 
   return (
-    <div style={{ minHeight: '100vh', marginBottom: 100 }}>
-      <h1 style={{ fontSize: 22, fontWeight: 800, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', paddingInline: 0, marginBottom: 12 }}>{t('financeAdmin.title')}</h1>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <div style={{ flex: 1 }} />
-        <Space>
-          <Button
-            icon={<BarChartOutlined />}
-            onClick={() => {
-              // TODO: 实现财务报表功能
-              message.info(t('financeAdmin.financialReportDeveloping'))
-            }}
-          >
-            {t('financeAdmin.financialReport')}
-          </Button>
-          <Button
-            icon={<PieChartOutlined />}
-            onClick={() => {
-              // TODO: 实现收入分析功能
-              message.info(t('financeAdmin.revenueAnalysisDeveloping'))
-            }}
-          >
-            {t('financeAdmin.revenueAnalysis')}
-          </Button>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => setCreating(true)}
-            style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10' }}
-          >
-            {t('financeAdmin.addTransaction')}
-          </Button>
-        </Space>
-      </div>
+    <div style={{ minHeight: '80vh' }}>
+      {/* 手机端悬浮按钮 */}
+      {isMobile && activeTab === 'transactions' && (
+        <Button
+          type="primary"
+          shape="circle"
+          icon={<PlusOutlined style={{ fontSize: 24, display: 'flex', justifyContent: 'center', alignItems: 'center' }} />}
+          onClick={() => setCreating(true)}
+          style={{
+            position: 'fixed',
+            right: 20,
+            bottom: 80,
+            width: 56,
+            height: 56,
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+            color: '#221c10',
+            border: 'none',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+            padding: 0
+          }}
+        />
+      )}
 
       {/* 自定义标签 */}
       <div style={{ display: 'flex', borderBottom: '1px solid rgba(244,175,37,0.2)', marginBottom: 10 }}>
@@ -1040,124 +1032,125 @@ const AdminFinance: React.FC = () => {
       {activeTab === 'overview' && (
         <>
           {/* 统计卡片 - Glassmorphism风格 */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(3, 1fr)',
-            gap: 16,
-            marginBottom: 24
-          }}>
-            {/* 总收入卡片 */}
+          {isMobile ? (
             <div style={{
-              padding: isMobile ? 12 : 24,
+              padding: 12,
               borderRadius: 12,
-              background: isMobile ? 'rgba(255,255,255,0.05)' : 'rgba(57, 51, 40, 0.5)',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-              border: isMobile ? 'none' : '1px solid rgba(244, 175, 37, 0.6)',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(244, 175, 37, 0.3)',
               display: 'flex',
-              flexDirection: 'column',
               gap: 8,
-              textAlign: isMobile ? 'center' : 'left'
+              marginBottom: 10
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: isMobile ? 'center' : 'flex-start' }}>
-                <DollarOutlined style={{ color: '#f4af25', fontSize: 20 }} />
-                <span style={{ color: isMobile ? '#A0A0A0' : '#fff', fontSize: isMobile ? 12 : 16, fontWeight: 500 }}>{t('financeAdmin.totalRevenue')}</span>
+              <div style={{ textAlign: 'center', flex: 1 }}>
+                <div style={{ fontSize: 20, fontWeight: 800, color: '#FFD700' }}>
+                  {totalRevenue.toFixed(0)}
+                </div>
+                <div style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.2 }}>
+                  {t('financeAdmin.totalRevenue')}
+                </div>
               </div>
-              <div style={{
-                color: isMobile ? 'transparent' : '#fff',
-                fontSize: isMobile ? 24 : 32,
-                fontWeight: 700,
-                letterSpacing: '-0.5px',
-                ...(isMobile ? {
-                  backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-                  WebkitBackgroundClip: 'text'
-                } : {
-                  background: 'none'
-                })
-              }}>
-                RM{totalRevenue.toFixed(2)}
+              <div style={{ textAlign: 'center', flex: 1 }}>
+                <div style={{ fontSize: 20, fontWeight: 800, color: '#FFD700' }}>
+                  {totalExpenses.toFixed(0)}
+                </div>
+                <div style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.2 }}>
+                  {t('financeAdmin.totalExpenses')}
+                </div>
+              </div>
+              <div style={{ textAlign: 'center', flex: 1 }}>
+                <div style={{ fontSize: 20, fontWeight: 800, color: netProfit >= 0 ? '#0bda19' : '#fa3f38' }}>
+                  {netProfit.toFixed(0)}
+                </div>
+                <div style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.2 }}>
+                  {t('financeAdmin.netProfit')}
+                </div>
               </div>
             </div>
+          ) : (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: 16,
+              marginBottom: 10
+            }}>
+              {/* 总收入卡片 */}
+              <div style={{
+                padding: 24,
+                borderRadius: 12,
+                background: 'rgba(57, 51, 40, 0.5)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                border: '1px solid rgba(244, 175, 37, 0.6)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <DollarOutlined style={{ color: '#f4af25', fontSize: 20 }} />
+                  <span style={{ color: '#fff', fontSize: 16, fontWeight: 500 }}>{t('financeAdmin.totalRevenue')}</span>
+                </div>
+                <div style={{ color: '#fff', fontSize: 32, fontWeight: 700, letterSpacing: '-0.5px' }}>
+                  RM{totalRevenue.toFixed(2)}
+                </div>
+              </div>
 
-            {/* 总支出卡片 */}
-            <div style={{
-              padding: isMobile ? 12 : 24,
-              borderRadius: 12,
-              background: isMobile ? 'rgba(255,255,255,0.05)' : 'rgba(57, 51, 40, 0.5)',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-              border: isMobile ? 'none' : '1px solid rgba(244, 175, 37, 0.6)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 8,
-              textAlign: isMobile ? 'center' : 'left'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: isMobile ? 'center' : 'flex-start' }}>
-                <ShoppingOutlined style={{ color: '#f4af25', fontSize: 20 }} />
-                <span style={{ color: isMobile ? '#A0A0A0' : '#fff', fontSize: isMobile ? 12 : 16, fontWeight: 500 }}>{t('financeAdmin.totalExpenses')}</span>
-              </div>
+              {/* 总支出卡片 */}
               <div style={{
-                color: isMobile ? 'transparent' : '#fff',
-                fontSize: isMobile ? 24 : 32,
-                fontWeight: 700,
-                letterSpacing: '-0.5px',
-                ...(isMobile ? {
-                  backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-                  WebkitBackgroundClip: 'text'
-                } : {
-                  background: 'none'
-                })
+                padding: 24,
+                borderRadius: 12,
+                background: 'rgba(57, 51, 40, 0.5)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                border: '1px solid rgba(244, 175, 37, 0.6)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8
               }}>
-                RM{totalExpenses.toFixed(2)}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <ShoppingOutlined style={{ color: '#f4af25', fontSize: 20 }} />
+                  <span style={{ color: '#fff', fontSize: 16, fontWeight: 500 }}>{t('financeAdmin.totalExpenses')}</span>
+                </div>
+                <div style={{ color: '#fff', fontSize: 32, fontWeight: 700, letterSpacing: '-0.5px' }}>
+                  RM{totalExpenses.toFixed(2)}
+                </div>
               </div>
-            </div>
 
-            {/* 净利润卡片 */}
-            <div style={{
-              padding: isMobile ? 12 : 24,
-              borderRadius: 12,
-              background: isMobile ? 'rgba(255,255,255,0.05)' : 'rgba(57, 51, 40, 0.5)',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-              border: isMobile ? 'none' : '1px solid rgba(244, 175, 37, 0.6)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 8,
-              textAlign: isMobile ? 'center' : 'left'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: isMobile ? 'center' : 'flex-start' }}>
-                {netProfit >= 0 ? <ArrowUpOutlined style={{ color: '#f4af25', fontSize: 20 }} /> : <ArrowDownOutlined style={{ color: '#f4af25', fontSize: 20 }} />}
-                <span style={{ color: isMobile ? '#A0A0A0' : '#fff', fontSize: isMobile ? 12 : 16, fontWeight: 500 }}>{t('financeAdmin.netProfit')}</span>
-              </div>
+              {/* 净利润卡片 */}
               <div style={{
-                color: isMobile ? 'transparent' : '#fff',
-                fontSize: isMobile ? 24 : 32,
-                fontWeight: 700,
-                letterSpacing: '-0.5px',
-                ...(isMobile ? {
-                  backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-                  WebkitBackgroundClip: 'text'
-                } : {
-                  background: 'none'
-                })
+                padding: 24,
+                borderRadius: 12,
+                background: 'rgba(57, 51, 40, 0.5)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                border: '1px solid rgba(244, 175, 37, 0.6)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8
               }}>
-                RM{netProfit.toFixed(2)}
-              </div>
-              <div style={{
-                color: isMobile ? '#A0A0A0' : (netProfit >= 0 ? '#0bda19' : '#fa3f38'),
-                fontSize: isMobile ? 12 : 16,
-                fontWeight: 500
-              }}>
-                {netProfit >= 0 ? '+' : ''}{totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : 0}%
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {netProfit >= 0 ? <ArrowUpOutlined style={{ color: '#f4af25', fontSize: 20 }} /> : <ArrowDownOutlined style={{ color: '#f4af25', fontSize: 20 }} />}
+                  <span style={{ color: '#fff', fontSize: 16, fontWeight: 500 }}>{t('financeAdmin.netProfit')}</span>
+                </div>
+                <div style={{ color: '#fff', fontSize: 32, fontWeight: 700, letterSpacing: '-0.5px' }}>
+                  RM{netProfit.toFixed(2)}
+                </div>
+                <div style={{
+                  color: netProfit >= 0 ? '#0bda19' : '#fa3f38',
+                  fontSize: 16,
+                  fontWeight: 500
+                }}>
+                  {netProfit >= 0 ? '+' : ''}{totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : 0}%
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* 日期范围选择器 */}
           <div style={{
             display: 'flex',
             gap: isMobile ? 8 : 12,
-            marginBottom: 24,
+            marginBottom: 10,
             overflowX: 'auto',
             paddingBottom: 4,
             justifyContent: isMobile ? 'center' : 'flex-start'
@@ -1270,12 +1263,12 @@ const AdminFinance: React.FC = () => {
             backdropFilter: 'blur(10px)',
             WebkitBackdropFilter: 'blur(10px)',
             border: '1px solid rgba(244, 175, 37, 0.6)',
-            marginBottom: 24
+            marginBottom: 10
           }}>
             <div style={{ color: '#fff', fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
               {t('financeAdmin.brandSalesChart')}
             </div>
-            <div style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 14, marginBottom: 24 }}>
+            <div style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 14, marginBottom: 10 }}>
               {t('financeAdmin.top5Brands')}
             </div>
 
@@ -1343,7 +1336,7 @@ const AdminFinance: React.FC = () => {
 
       {/* 利润分析标签内容 */}
       {activeTab === 'profit' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {/* 利润概览卡片 */}
           {isMobile ? (
             <div style={{
@@ -1411,159 +1404,20 @@ const AdminFinance: React.FC = () => {
             border: '1px solid rgba(244, 175, 37, 0.6)',
             minHeight: 300
           }}>
-            <div style={{ color: '#fff', fontSize: 18, fontWeight: 700, marginBottom: 24 }}>
+            <div style={{ color: '#fff', fontSize: 18, fontWeight: 700, marginBottom: 10 }}>
               {t('financeAdmin.profitTrend')} (FIFO)
             </div>
 
             {profitData.trendData.length > 0 ? (
-              <div style={{
-                height: 250,
-                display: 'flex',
-                alignItems: 'flex-end',
-                gap: isMobile ? 8 : 16,
-                paddingBottom: 40,
-                position: 'relative'
-              }}>
-                {profitData.trendData.map((d, i) => {
-                  const barMonth = dayjs(d.date)
-                  // 检查当前是否选中了该月份（高亮逻辑）
-                  const isActive = dateRange &&
-                    dateRange[0] &&
-                    dateRange[0].isSame(barMonth, 'month') &&
-                    dateRange[1] &&
-                    dateRange[1].isSame(barMonth, 'month')
-
-                  // 计算高度：预留顶部空间给数字显示
-                  const chartMaxHeight = 160
-                  const revHeight = (d.revenue / profitData.maxVal) * chartMaxHeight
-                  const proHeight = (d.profit / profitData.maxVal) * chartMaxHeight
-
-                  // 数字格式化
-                  const formatVal = (val: number) => {
-                    if (val >= 1000) return `${(val / 1000).toFixed(1)}k`
-                    return Math.round(val).toString()
-                  }
-
-                  return (
-                    <div
-                      key={i}
-                      style={{
-                        flex: 1,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'flex-end',
-                        height: '100%',
-                        position: 'relative',
-                        cursor: 'pointer',
-                        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                        transform: isActive ? 'scale(1.05) translateY(-5px)' : 'none',
-                        opacity: (dateRange && !isActive) ? 0.35 : 1
-                      }}
-                      onClick={() => {
-                        if (isActive) {
-                          setDateRange(null)
-                          setSelectedDateRange(null)
-                          message.info(t('financeAdmin.resetFilters'))
-                        } else {
-                          const start = barMonth.startOf('month')
-                          const end = barMonth.endOf('month')
-                          setDateRange([start, end])
-                          setSelectedDateRange(null)
-                          message.info(`${t('common.month')}: ${barMonth.format('MMM YYYY')}`)
-                        }
-                      }}
-                    >
-                      <Tooltip
-                        title={
-                          <div style={{ padding: '8px' }}>
-                            <div style={{ fontWeight: 800, marginBottom: 8, borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: 4 }}>
-                              {barMonth.format('MMMM YYYY')}
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24, marginBottom: 4 }}>
-                              <span style={{ color: 'rgba(255,255,255,0.7)' }}>{t('financeAdmin.totalRevenue')}:</span>
-                              <span style={{ color: '#FDE08D', fontWeight: 700 }}>RM{d.revenue.toLocaleString()}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24 }}>
-                              <span style={{ color: 'rgba(255,255,255,0.7)' }}>{t('financeAdmin.profit')}:</span>
-                              <span style={{ color: '#52c41a', fontWeight: 700 }}>RM{d.profit.toLocaleString()}</span>
-                            </div>
-                          </div>
-                        }
-                        overlayInnerStyle={{ backdropFilter: 'blur(12px)', background: 'rgba(34, 28, 16, 0.98)', border: '1px solid rgba(244, 175, 37, 0.5)', borderRadius: 8 }}
-                        color="transparent"
-                      >
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'flex-end',
-                          gap: 3,
-                          width: '100%',
-                          justifyContent: 'center',
-                          paddingBottom: 4,
-                          position: 'relative',
-                          zIndex: 2
-                        }}>
-                          {/* 收入柱 */}
-                          <div style={{ width: isMobile ? '40%' : '35%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                            {d.revenue > 0 && (
-                              <div style={{ fontSize: 9, color: '#FDE08D', fontWeight: 800, marginBottom: 4, whiteSpace: 'nowrap' }}>
-                                {formatVal(d.revenue)}
-                              </div>
-                            )}
-                            <div style={{
-                              height: Math.max(revHeight, 2),
-                              width: '100%',
-                              background: isActive ? '#FDE08D' : 'linear-gradient(to top, #C48D3A, #FDE08D)',
-                              borderRadius: '3px 3px 0 0',
-                              boxShadow: isActive ? '0 0 15px rgba(253,224,141,0.5)' : 'none',
-                              transition: 'all 0.3s ease'
-                            }} />
-                          </div>
-
-                          {/* 利润柱 */}
-                          <div style={{ width: isMobile ? '40%' : '35%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                            {d.profit > 0 && (
-                              <div style={{ fontSize: 9, color: '#52c41a', fontWeight: 800, marginBottom: 4, whiteSpace: 'nowrap' }}>
-                                {formatVal(d.profit)}
-                              </div>
-                            )}
-                            <div style={{
-                              height: Math.max(proHeight, 2),
-                              width: '100%',
-                              background: isActive ? '#52c41a' : 'linear-gradient(to top, #237804, #52c41a)',
-                              borderRadius: '3px 3px 0 0',
-                              boxShadow: isActive ? '0 0 15px rgba(82,196,26,0.4)' : 'none',
-                              transition: 'all 0.3s ease'
-                            }} />
-                          </div>
-                        </div>
-                      </Tooltip>
-
-                      {/* 月份底栏文字 */}
-                      <div style={{
-                        marginTop: 12,
-                        fontSize: 10,
-                        fontWeight: isActive ? 800 : 500,
-                        color: isActive ? '#FDE08D' : '#bab09c',
-                        transform: 'rotate(-45deg) translateX(-8px)',
-                        whiteSpace: 'nowrap',
-                        transition: 'all 0.3s ease'
-                      }}>
-                        {barMonth.format('MMM YY')}
-                      </div>
-                    </div>
-                  )
-                })}
+              <div style={{ position: 'relative' }}>
                 {/* 悬浮提示说明 (Legend) */}
                 <div style={{
-                  position: 'absolute',
-                  top: -10,
-                  right: 0,
                   display: 'flex',
                   gap: 16,
                   fontSize: 12,
                   color: 'rgba(255,255,255,0.6)',
-                  zIndex: 5
+                  justifyContent: 'flex-end',
+                  marginBottom: 12
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <div style={{ width: 12, height: 12, background: 'linear-gradient(to top, #C48D3A, #FDE08D)', borderRadius: 3 }} />
@@ -1573,6 +1427,151 @@ const AdminFinance: React.FC = () => {
                     <div style={{ width: 12, height: 12, background: 'linear-gradient(to top, #237804, #52c41a)', borderRadius: 3 }} />
                     {t('financeAdmin.profit')}
                   </div>
+                </div>
+
+                {/* 可横向滚动的柱状图区域 */}
+                <div style={{
+                  overflowX: 'auto',
+                  overflowY: 'hidden',
+                  WebkitOverflowScrolling: 'touch',
+                  paddingBottom: 8
+                }}>
+                  <div style={{
+                    height: 250,
+                    display: 'flex',
+                    alignItems: 'flex-end',
+                    gap: isMobile ? 8 : 16,
+                    paddingBottom: 40,
+                    minWidth: isMobile ? Math.max(profitData.trendData.length * 56, 300) : 'auto'
+                  }}>
+                    {profitData.trendData.map((d, i) => {
+                      const barMonth = dayjs(d.date)
+                      const isActive = dateRange &&
+                        dateRange[0] &&
+                        dateRange[0].isSame(barMonth, 'month') &&
+                        dateRange[1] &&
+                        dateRange[1].isSame(barMonth, 'month')
+
+                      const chartMaxHeight = 160
+                      const revHeight = (d.revenue / profitData.maxVal) * chartMaxHeight
+                      const proHeight = (d.profit / profitData.maxVal) * chartMaxHeight
+
+                      const formatVal = (val: number) => {
+                        if (val >= 1000) return `${(val / 1000).toFixed(1)}k`
+                        return Math.round(val).toString()
+                      }
+
+                      return (
+                        <div
+                          key={i}
+                          style={{
+                            flex: isMobile ? 'none' : 1,
+                            minWidth: isMobile ? 48 : 'auto',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'flex-end',
+                            height: '100%',
+                            position: 'relative',
+                            cursor: 'pointer',
+                            transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                            transform: isActive ? 'scale(1.05) translateY(-5px)' : 'none',
+                            opacity: (dateRange && !isActive) ? 0.35 : 1
+                          }}
+                          onClick={() => {
+                            if (isActive) {
+                              setDateRange(null)
+                              setSelectedDateRange(null)
+                              message.info(t('financeAdmin.resetFilters'))
+                            } else {
+                              const start = barMonth.startOf('month')
+                              const end = barMonth.endOf('month')
+                              setDateRange([start, end])
+                              setSelectedDateRange(null)
+                              message.info(`${t('common.month')}: ${barMonth.format('MMM YYYY')}`)
+                            }
+                          }}
+                        >
+                          <Tooltip
+                            title={
+                              <div style={{ padding: '8px' }}>
+                                <div style={{ fontWeight: 800, marginBottom: 8, borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: 4 }}>
+                                  {barMonth.format('MMMM YYYY')}
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24, marginBottom: 4 }}>
+                                  <span style={{ color: 'rgba(255,255,255,0.7)' }}>{t('financeAdmin.totalRevenue')}:</span>
+                                  <span style={{ color: '#FDE08D', fontWeight: 700 }}>RM{d.revenue.toLocaleString()}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24 }}>
+                                  <span style={{ color: 'rgba(255,255,255,0.7)' }}>{t('financeAdmin.profit')}:</span>
+                                  <span style={{ color: '#52c41a', fontWeight: 700 }}>RM{d.profit.toLocaleString()}</span>
+                                </div>
+                              </div>
+                            }
+                            overlayInnerStyle={{ backdropFilter: 'blur(12px)', background: 'rgba(34, 28, 16, 0.98)', border: '1px solid rgba(244, 175, 37, 0.5)', borderRadius: 8 }}
+                            color="transparent"
+                          >
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'flex-end',
+                              gap: 3,
+                              width: '100%',
+                              justifyContent: 'center',
+                              paddingBottom: 4,
+                              position: 'relative',
+                              zIndex: 2
+                            }}>
+                              {/* 收入柱 */}
+                              <div style={{ width: isMobile ? '40%' : '35%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                {d.revenue > 0 && (
+                                  <div style={{ fontSize: 9, color: '#FDE08D', fontWeight: 800, marginBottom: 4, whiteSpace: 'nowrap' }}>
+                                    {formatVal(d.revenue)}
+                                  </div>
+                                )}
+                                <div style={{
+                                  height: Math.max(revHeight, 2),
+                                  width: '100%',
+                                  background: isActive ? '#FDE08D' : 'linear-gradient(to top, #C48D3A, #FDE08D)',
+                                  borderRadius: '3px 3px 0 0',
+                                  boxShadow: isActive ? '0 0 15px rgba(253,224,141,0.5)' : 'none',
+                                  transition: 'all 0.3s ease'
+                                }} />
+                              </div>
+
+                              {/* 利润柱 */}
+                              <div style={{ width: isMobile ? '40%' : '35%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                {d.profit > 0 && (
+                                  <div style={{ fontSize: 9, color: '#52c41a', fontWeight: 800, marginBottom: 4, whiteSpace: 'nowrap' }}>
+                                    {formatVal(d.profit)}
+                                  </div>
+                                )}
+                                <div style={{
+                                  height: Math.max(proHeight, 2),
+                                  width: '100%',
+                                  background: isActive ? '#52c41a' : 'linear-gradient(to top, #237804, #52c41a)',
+                                  borderRadius: '3px 3px 0 0',
+                                  boxShadow: isActive ? '0 0 15px rgba(82,196,26,0.4)' : 'none',
+                                  transition: 'all 0.3s ease'
+                                }} />
+                              </div>
+                            </div>
+                          </Tooltip>
+
+                          {/* 月份底栏文字 */}
+                          <div style={{
+                            marginTop: 12,
+                            fontSize: 10,
+                            fontWeight: isActive ? 800 : 500,
+                            color: isActive ? '#FDE08D' : '#bab09c',
+                            transform: 'rotate(-45deg) translateX(-8px)',
+                            whiteSpace: 'nowrap',
+                            transition: 'all 0.3s ease'
+                          }}>
+                            {barMonth.format('MMM YY')}
+                          </div>
+                        </div>
+                      )
+                    })}                  </div>
                 </div>
               </div>
             ) : (
@@ -2010,91 +2009,171 @@ const AdminFinance: React.FC = () => {
       {activeTab === 'transactions' && (
         <>
           {/* 筛选器 */}
-          <div style={{
-            marginBottom: 16,
-            padding: '16px',
-            background: 'rgba(255, 255, 255, 0.05)',
-            borderRadius: 12,
-            border: '1px solid rgba(244, 175, 37, 0.6)',
-            backdropFilter: 'blur(10px)'
-          }}>
-            <Space size="middle" wrap>
-              <Search
-                placeholder={t('financeAdmin.searchPlaceholder')}
-                allowClear
-                style={{ width: isMobile ? '100%' : 300 }}
-                prefix={<SearchOutlined />}
-                value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
-                className="points-config-form"
-              />
-              <RangePicker
-                placeholder={[t('financeAdmin.startDate'), t('financeAdmin.endDate')]}
-                value={dateRange}
-                onChange={(dates) => {
-                  setDateRange(dates)
-                  // 手动选择日期时清除快捷按钮状态
-                  if (dates) {
-                    setSelectedDateRange(null)
-                  }
-                }}
-                className="points-config-form"
-              />
-              {/* 移除交易类别筛选 */}
-              {/* 移除货币筛选 */}
-              <Button
-                onClick={() => {
-                  setKeyword('')
-                  setDateRange(null)
-
-                }}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  color: '#FFFFFF'
-                }}
-              >
-                {t('financeAdmin.resetFilters')}
-              </Button>
-              <Button
-                onClick={() => {
-                  const header = ['id', 'income', 'expense', 'description', 'transactionDate']
-                  const rows = filteredTransactions.map(t => [
-                    t.id,
-                    t.amount > 0 ? t.amount : 0,
-                    t.amount < 0 ? Math.abs(t.amount) : 0,
-                    t.description,
-                    dayjs(t.createdAt).format('YYYY-MM-DD HH:mm')
-                  ])
-                  const csv = [header.join(','), ...rows.map(r => r.map(x => `"${String(x ?? '').replace(/"/g, '""')}"`).join(','))].join('\n')
-                  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-                  const url = URL.createObjectURL(blob)
-                  const a = document.createElement('a')
-                  a.href = url
-                  a.download = 'transactions.csv'
-                  a.click()
-                  URL.revokeObjectURL(url)
-                }}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  color: '#FFFFFF'
-                }}
-              >
-                {t('financeAdmin.exportReport')}
-              </Button>
-              <Button
-                onClick={() => setImporting(true)}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  color: '#FFFFFF'
-                }}
-              >
-                {t('financeAdmin.pasteImport')}
-              </Button>
-            </Space>
-          </div>
+          {!isMobile ? (
+            <div style={{
+              marginBottom: 16,
+              padding: '16px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: 12,
+              border: '1px solid rgba(244, 175, 37, 0.6)',
+              backdropFilter: 'blur(10px)'
+            }}>
+              <Space size="middle" wrap>
+                <Search
+                  placeholder={t('financeAdmin.searchPlaceholder')}
+                  allowClear
+                  style={{ width: 300 }}
+                  prefix={<SearchOutlined />}
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  className="points-config-form"
+                />
+                <RangePicker
+                  placeholder={[t('financeAdmin.startDate'), t('financeAdmin.endDate')]}
+                  value={dateRange}
+                  onChange={(dates) => {
+                    setDateRange(dates)
+                    // 手动选择日期时清除快捷按钮状态
+                    if (dates) {
+                      setSelectedDateRange(null)
+                    }
+                  }}
+                  className="points-config-form"
+                />
+                <Button
+                  onClick={() => {
+                    setKeyword('')
+                    setDateRange(null)
+                  }}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#FFFFFF'
+                  }}
+                >
+                  {t('financeAdmin.resetFilters')}
+                </Button>
+                <Button
+                  onClick={() => {
+                    const header = ['id', 'income', 'expense', 'description', 'transactionDate']
+                    const rows = filteredTransactions.map(t => [
+                      t.id,
+                      t.amount > 0 ? t.amount : 0,
+                      t.amount < 0 ? Math.abs(t.amount) : 0,
+                      t.description,
+                      dayjs(t.createdAt).format('YYYY-MM-DD HH:mm')
+                    ])
+                    const csv = [header.join(','), ...rows.map(r => r.map(x => `"${String(x ?? '').replace(/"/g, '""')}"`).join(','))].join('\n')
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = 'transactions.csv'
+                    a.click()
+                    URL.revokeObjectURL(url)
+                  }}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#FFFFFF'
+                  }}
+                >
+                  {t('financeAdmin.exportReport')}
+                </Button>
+                <Button
+                  onClick={() => setImporting(true)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#FFFFFF'
+                  }}
+                >
+                  {t('financeAdmin.pasteImport')}
+                </Button>
+              </Space>
+            </div>
+          ) : (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ marginBottom: 8 }}>
+                <Search
+                  placeholder={t('financeAdmin.searchPlaceholder')}
+                  allowClear
+                  style={{ width: '100%' }}
+                  prefix={<SearchOutlined />}
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  className="points-config-form"
+                />
+              </div>
+              <div style={{ marginBottom: 8 }}>
+                <RangePicker
+                  style={{ width: '100%' }}
+                  placeholder={[t('financeAdmin.startDate'), t('financeAdmin.endDate')]}
+                  value={dateRange}
+                  onChange={(dates) => {
+                    setDateRange(dates)
+                    if (dates) setSelectedDateRange(null)
+                  }}
+                  className="points-config-form"
+                />
+              </div>
+              <div style={{ display: 'flex' }}>
+                <Button
+                  onClick={() => {
+                    setKeyword('')
+                    setDateRange(null)
+                  }}
+                  style={{
+                    flex: 1,
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#FFFFFF'
+                  }}
+                >
+                  {t('financeAdmin.resetShort')}
+                </Button>
+                <Button
+                  onClick={() => {
+                    const header = ['id', 'income', 'expense', 'description', 'transactionDate']
+                    const rows = filteredTransactions.map(t => [
+                      t.id,
+                      t.amount > 0 ? t.amount : 0,
+                      t.amount < 0 ? Math.abs(t.amount) : 0,
+                      t.description,
+                      dayjs(t.createdAt).format('YYYY-MM-DD HH:mm')
+                    ])
+                    const csv = [header.join(','), ...rows.map(r => r.map(x => `"${String(x ?? '').replace(/"/g, '""')}"`).join(','))].join('\n')
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = 'transactions.csv'
+                    a.click()
+                    URL.revokeObjectURL(url)
+                  }}
+                  style={{
+                    flex: 1,
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#FFFFFF'
+                  }}
+                >
+                  {t('financeAdmin.exportShort')}
+                </Button>
+                <Button
+                  onClick={() => setImporting(true)}
+                  style={{
+                    flex: 1,
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#FFFFFF'
+                  }}
+                >
+                  {t('financeAdmin.importShort')}
+                </Button>
+              </div>
+            </div>
+          )}
 
           {!isMobile ? (
             <div className="points-config-form">
@@ -2121,7 +2200,18 @@ const AdminFinance: React.FC = () => {
               />
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div
+              style={{
+                overflowY: 'auto',
+                overflowX: 'hidden',
+                maxHeight: 'calc(100vh - 300px)',
+                paddingTop: 8,
+                paddingBottom: 80, // Add extra padding to avoid overlap with FAB
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8
+              }}
+            >
               {enriched.map((transaction: any) => (
                 <div key={transaction.id} style={{
                   display: 'flex',

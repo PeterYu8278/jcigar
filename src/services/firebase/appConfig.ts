@@ -173,6 +173,11 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
         enableImageSearch: data.aiCigar.enableImageSearch ?? true,
         imageSearchOrder: data.aiCigar.imageSearchOrder || 'google-first',
       } : undefined,
+      subscription: data.subscription ? {
+        isActive: data.subscription.isActive ?? false,
+        plan: data.subscription.plan || 'basic',
+        expiryDate: data.subscription.expiryDate?.toDate?.() || new Date(data.subscription.expiryDate),
+      } : undefined,
       updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
       updatedBy: data.updatedBy || '',
     };
