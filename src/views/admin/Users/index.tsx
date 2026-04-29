@@ -118,17 +118,20 @@ const AdminUsers: React.FC = () => {
   const [showBubble, setShowBubble] = useState(false) // 字母气泡显示
   const [bubbleLetter, setBubbleLetter] = useState('') // 气泡字母
 
-  // 筛选条件变化时不需要重新加载数据（因为现在使用客户端筛选）
   // 数据加载已在下面的 useEffect 中处理
+  const [appConfig, setAppConfig] = useState<any>(null)
 
   // 加载所有用户数据（用于显示和搜索）
   useEffect(() => {
     ; (async () => {
       try {
         setLoading(true)
-        // 始终加载所有用户数据，以便显示完整列表和进行客户端搜索/筛选
-        const list = await getUsers()
+        const [list, config] = await Promise.all([
+          getUsers(),
+          import('../../../services/firebase/appConfig').then(m => m.getAppConfig())
+        ])
         setUsers(list)
+        setAppConfig(config)
       } catch (e) {
         message.error(t('messages.dataLoadFailed'))
       } finally {
@@ -481,8 +484,8 @@ const AdminUsers: React.FC = () => {
       const nameA = (a.displayName || '').toLowerCase()
       const nameB = (b.displayName || '').toLowerCase()
       return nameA.localeCompare(nameB)
-    })
-  }, [users, keyword, statusFilter, roleFilter, levelFilter, statusMap, currentUser?.role])
+    }).slice(0, appConfig?.subscription?.isActive ? (appConfig.subscription.plan === 'premium' ? 300 : (appConfig.subscription.plan === 'pro' ? 150 : 50)) : undefined)
+  }, [users, keyword, statusFilter, roleFilter, levelFilter, statusMap, currentUser?.role, appConfig])
 
   const groupedByInitial = useMemo(() => {
     const groups: Record<string, User[]> = {}

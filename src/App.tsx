@@ -40,6 +40,7 @@ import TestDataGenerator from './views/admin/TestDataGenerator'
 import CigarDatabase from './views/admin/CigarDatabase'
 import GeminiModelTester from './views/admin/GeminiModelTester'
 import InvoiceTemplateEditor from './views/admin/InvoiceTemplate'
+import { SubscriptionSettings } from './views/admin/SubscriptionSettings'
 
 // 认证页面
 import Login from './views/auth/Login'
@@ -319,6 +320,7 @@ const AppContent: React.FC = () => {
                 <Route path="/developer/orphaned-users" element={<ProtectedRoute roles={['developer']}><OrphanedUserCleanup /></ProtectedRoute>} />
                 <Route path="/developer/performance" element={<ProtectedRoute roles={['developer']}><PerformanceMonitor /></ProtectedRoute>} />
                 <Route path="/developer/feature-management" element={<ProtectedRoute roles={['developer']}><FeatureManagement /></ProtectedRoute>} />
+                <Route path="/developer/subscription" element={<ProtectedRoute roles={['developer']}><SubscriptionSettings /></ProtectedRoute>} />
                 <Route path="/developer/invoice-template" element={<ProtectedRoute roles={['admin', 'developer']}><InvoiceTemplateEditor /></ProtectedRoute>} />
                 <Route path="/developer/cigar-database" element={<ProtectedRoute roles={['developer']}><CigarDatabase /></ProtectedRoute>} />
                 <Route path="/developer/gemini-tester" element={<ProtectedRoute roles={['developer']}><GeminiModelTester /></ProtectedRoute>} />

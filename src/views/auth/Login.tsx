@@ -207,9 +207,26 @@ const Login: React.FC = () => {
     checkRedirectResult()
   }, [navigate, t])
 
+  const checkSubscription = (): boolean => {
+    if (appConfig?.subscription?.isActive) {
+      const expiryDate = new Date(appConfig.subscription.expiryDate);
+      if (new Date() > expiryDate) {
+        setLoginError('System Access Suspended: Subscription Expired');
+        return false;
+      }
+    }
+    return true;
+  };
+
   const onFinish = async (values: { email: string; password: string }) => {
     setLoading(true)
     setLoginError('') // 清除之前的错误
+
+    if (!checkSubscription()) {
+      setLoading(false);
+      return;
+    }
+
     try {
       const result = await loginWithEmailOrPhone(values.email, values.password)
       if (result.success) {
@@ -229,6 +246,12 @@ const Login: React.FC = () => {
   const onGoogle = async () => {
     setLoading(true)
     setLoginError('') // 清除之前的错误
+
+    if (!checkSubscription()) {
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await loginWithGoogle()
 

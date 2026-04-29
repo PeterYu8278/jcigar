@@ -260,6 +260,11 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
               enableImageSearch: data.aiCigar.enableImageSearch ?? true,
               imageSearchOrder: data.aiCigar.imageSearchOrder || 'google-first',
             } : undefined,
+            subscription: data.subscription ? {
+              isActive: data.subscription.isActive ?? false,
+              plan: data.subscription.plan || 'basic',
+              expiryDate: data.subscription.expiryDate?.toDate?.() || new Date(data.subscription.expiryDate),
+            } : undefined,
             updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
             updatedBy: data.updatedBy || '',
           };
@@ -278,7 +283,7 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
  * 更新应用配置
  */
 export const updateAppConfig = async (
-  updates: Partial<Pick<AppConfig, 'logoUrl' | 'appName' | 'hideFooter' | 'colorTheme' | 'invoice' | 'invoiceTemplate' | 'whapi' | 'whapiTemplates' | 'auth' | 'gemini' | 'aiCigar'>>,
+  updates: Partial<Pick<AppConfig, 'logoUrl' | 'appName' | 'hideFooter' | 'colorTheme' | 'invoice' | 'invoiceTemplate' | 'whapi' | 'whapiTemplates' | 'auth' | 'gemini' | 'aiCigar' | 'subscription'>>,
   updatedBy: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {

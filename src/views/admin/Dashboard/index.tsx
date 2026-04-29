@@ -139,14 +139,36 @@ const AdminDashboard: React.FC = () => {
 
       <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', marginBottom: 12 }}>{t('dashboard.overview')}</h1>
 
-      {/* 三个概览卡片 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
-        {[{ label: t('dashboard.totalMembers'), value: totalUsers.toLocaleString() }, { label: t('dashboard.monthlyOrders'), value: monthlyOrders.toLocaleString() }, { label: t('dashboard.monthlyRevenue'), value: `RM${monthlyRevenue.toLocaleString()}` }].map((card, idx) => (
-          <div key={idx} style={{ borderRadius: 12, padding: 12, textAlign: 'center', backgroundColor: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)' }}>
-            <div style={{ fontSize: 12, color: '#A0A0A0' }}>{card.label}</div>
-            <div style={{ marginTop: 6, fontSize: 24, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{card.value}</div>
-          </div>
-        ))}
+      {/* 概览卡片 */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 12, marginBottom: 16 }}>
+        {(() => {
+          const cards = [
+            { label: t('dashboard.totalMembers'), value: totalUsers.toLocaleString() }, 
+            { label: t('dashboard.monthlyOrders'), value: monthlyOrders.toLocaleString() }, 
+            { label: t('dashboard.monthlyRevenue'), value: `RM${monthlyRevenue.toLocaleString()}` }
+          ];
+
+          if (appConfig?.subscription?.isActive) {
+            const plan = appConfig.subscription.plan;
+            const expiryDate = new Date(appConfig.subscription.expiryDate);
+            const daysLeft = Math.max(0, Math.ceil((expiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
+            let statusText = `${plan.toUpperCase()}`;
+            if (daysLeft === 0) statusText += ' (Expired)';
+            else statusText += ` (${daysLeft}d)`;
+
+            cards.push({
+              label: 'Subscription',
+              value: statusText
+            });
+          }
+
+          return cards.map((card, idx) => (
+            <div key={idx} style={{ borderRadius: 12, padding: 12, textAlign: 'center', backgroundColor: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)' }}>
+              <div style={{ fontSize: 12, color: '#A0A0A0' }}>{card.label}</div>
+              <div style={{ marginTop: 6, fontSize: card.label === 'Subscription' ? 18 : 24, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{card.value}</div>
+            </div>
+          ));
+        })()}
       </div>
 
       {/* 快速操作 */}

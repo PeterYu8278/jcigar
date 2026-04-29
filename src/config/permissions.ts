@@ -93,6 +93,7 @@ export const ROUTE_PERMISSIONS = {
   '/developer/orphaned-users': ['developer'],
   '/developer/debug-orders': ['developer'],
   '/developer/test-data-generator': ['developer'],
+  '/developer/subscription': ['developer'],
 };
 
 // 权限检查函数

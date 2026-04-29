@@ -182,6 +182,11 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
         icon: <SettingOutlined />,
         label: t('navigation.featureManagement', { defaultValue: '功能管理' }),
       })
+      developerItems.push({
+        key: '/developer/subscription',
+        icon: <SettingOutlined />,
+        label: t('navigation.subscription', { defaultValue: '订阅设置' }),
+      })
     }
     // 发票模板：管理员和开发者均可见
     if (isAdmin || isDeveloper) {
