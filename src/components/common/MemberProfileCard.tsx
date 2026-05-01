@@ -11,6 +11,8 @@ import { db } from '../../config/firebase'
 import { GLOBAL_COLLECTIONS } from '../../config/globalCollections'
 import { getAppConfig } from '../../services/firebase/appConfig'
 import { getPointsConfig } from '../../services/firebase/pointsConfig'
+import { getUserMembershipPeriod } from '../../services/firebase/membershipFee'
+import dayjs from 'dayjs'
 
 interface MemberProfileCardProps {
   user: User | null
@@ -46,6 +48,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
   const prevHasPendingSessionRef = useRef<boolean | null>(null)
   // 用于标记是否是首次回调
   const isFirstCallbackRef = useRef<boolean>(true)
+  const [membershipPeriod, setMembershipPeriod] = useState<{ startDate: Date, endDate: Date } | null>(null)
 
   // 加载应用配置
   useEffect(() => {
@@ -68,6 +71,19 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
     }
     loadPointsConfig()
   }, [])
+
+  // 加载会员有效期
+  useEffect(() => {
+    const loadMembershipPeriod = async () => {
+      if (user?.id) {
+        const period = await getUserMembershipPeriod(user.id)
+        setMembershipPeriod(period)
+      } else {
+        setMembershipPeriod(null)
+      }
+    }
+    loadMembershipPeriod()
+  }, [user?.id])
 
   // 使用 onSnapshot 实时监听用户 check-in 状态
   useEffect(() => {
@@ -266,7 +282,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
     if (isRotating) return
 
     // 移除 parent 的 QR 点击检测，改回子元素直接处理
-    
+
     const rect = e.currentTarget.getBoundingClientRect()
     const clickX = e.clientX - rect.left
     const centerX = rect.width / 2
@@ -432,7 +448,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
                     textShadow: '0 1px 2px rgba(0,0,0,0.5)'
                   }}>CIGAR World</div>
                 </div>
-                <div 
+                <div
                   className="qr-code-clickable"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -452,7 +468,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
                   />
                 </div>
               </div>
-              <div style={{ marginTop: 24, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+              <div style={{ marginTop: 40, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{
                     width: 56,
@@ -492,12 +508,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{
-                    color: 'rgba(255,255,255,0.7)',
-                    fontSize: 11,
-                    fontFamily: "'Noto Sans SC', sans-serif",
-                    textShadow: '0 1px 2px rgba(0,0,0,0.5)'
-                  }}>{t('usersAdmin.memberId')}</div>
+
                   <div style={{
                     color: '#ffffff',
                     fontSize: 16,
@@ -508,13 +519,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
                   }}>
                     {user?.memberId || '000000'}
                   </div>
-                  <div style={{
-                    color: 'rgba(255,255,255,0.7)',
-                    fontSize: 11,
-                    marginTop: 4,
-                    fontFamily: "'Noto Sans SC', sans-serif",
-                    textShadow: '0 1px 2px rgba(0,0,0,0.5)'
-                  }}>{t('usersAdmin.points')}</div>
+
                   <div style={{
                     color: '#D4AF37',
                     fontSize: 14,
@@ -524,6 +529,37 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
                   }}>
                     {(user?.membership as any)?.points || 0}
                   </div>
+                  <div>
+
+                    <div style={{
+                      color: membershipPeriod ? '#ffffff' : 'rgba(255,255,255,0.4)',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      fontFamily: "'Noto Sans SC', sans-serif",
+                      textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+                    }}>
+                      {membershipPeriod ? dayjs(membershipPeriod.startDate).format('YYYY-MM-DD') : '未开通会员'}
+                    </div>
+                  </div>
+                  {membershipPeriod && (
+                    <div>
+                      <div style={{
+                        color: 'rgba(255,255,255,0.7)',
+                        fontSize: 10,
+                        fontFamily: "'Noto Sans SC', sans-serif",
+                        textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+                      }}>VALID THRU</div>
+                      <div style={{
+                        color: '#ffffff',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        fontFamily: "'Noto Sans SC', sans-serif",
+                        textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+                      }}>
+                        {dayjs(membershipPeriod.endDate).format('YYYY-MM-DD')}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

@@ -1,6 +1,6 @@
 // 合并后的驻店计时器和兑换模块组件
 import React, { useState, useEffect } from 'react';
-import { Card, Typography, Space, Progress, message, Image, App } from 'antd';
+import { Card, Typography, Space, Progress, message, Image, App, Modal, Table, Tag } from 'antd';
 import { ClockCircleOutlined, GiftOutlined, ShoppingCartOutlined, TrophyOutlined, ReloadOutlined, WalletOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../store/modules/auth';
 import { getPendingVisitSession } from '../../services/firebase/visitSessions';
@@ -39,6 +39,9 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
   const [countdownSeconds, setCountdownSeconds] = useState<number | null>(null); // 倒计时剩余秒数
   const [annualFeeAmount, setAnnualFeeAmount] = useState<number | null>(null); // 年费金额
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
+  const [historyModalVisible, setHistoryModalVisible] = useState(false);
+  const [redemptionHistory, setRedemptionHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // 加载倒计时状态（从localStorage）
   useEffect(() => {
@@ -165,26 +168,30 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
       const period = await getUserMembershipPeriod(userId);
 
       const sessions = await getUserVisitSessions(userId);
-
+      
       if (!period) {
-        setTotalHours(0);
+        // 如果没有找到会员期限记录（可能是新系统迁移前的活跃用户），则计算所有已完成记录
+        const allHours = sessions
+          .filter(s => s.status === 'completed' && s.durationHours)
+          .reduce((sum, s) => sum + (s.durationHours || 0), 0);
+        setTotalHours(allHours);
         return;
       }
-
 
       const periodSessions = sessions.filter(session => {
         if (session.status !== 'completed' || !session.checkOutAt) {
           return false;
         }
-        const inPeriod = session.checkOutAt >= period.startDate && session.checkOutAt < period.endDate;
+        // 确保 checkOutAt 是 Date 对象
+        const checkOutDate = session.checkOutAt instanceof Date ? session.checkOutAt : new Date(session.checkOutAt);
+        const inPeriod = checkOutDate.getTime() >= period.startDate.getTime() && checkOutDate.getTime() < period.endDate.getTime();
         return inPeriod;
       });
 
-
       const hours = periodSessions.reduce((sum, session) => sum + (session.durationHours || 0), 0);
-
       setTotalHours(hours);
     } catch (error) {
+      console.error('[loadTotalHours] Error:', error);
       setTotalHours(0);
     }
   };
@@ -797,7 +804,26 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                 </Title>
               </div>
               <div
-                onClick={() => navigate('/profile')}
+                onClick={async () => {
+                  setHistoryModalVisible(true);
+                  if (user?.id) {
+                    setHistoryLoading(true);
+                    try {
+                      const history = await getTotalRedemptions(user.id);
+                      // getTotalRedemptions 已经返回了拍平后的 RedemptionRecord[]
+                      const sortedHistory = [...history].sort((a, b) => {
+                        const dateA = a.redeemedAt instanceof Date ? a.redeemedAt : new Date(a.redeemedAt);
+                        const dateB = b.redeemedAt instanceof Date ? b.redeemedAt : new Date(b.redeemedAt);
+                        return dateB.getTime() - dateA.getTime();
+                      });
+                      setRedemptionHistory(sortedHistory);
+                    } catch (error) {
+                      message.error('加载历史记录失败');
+                    } finally {
+                      setHistoryLoading(false);
+                    }
+                  }
+                }}
                 style={{
                   background: 'none',
                   padding: 0,
@@ -925,14 +951,100 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
           </div>
         </div>
       </Space>
+
+      <Modal
+        title={
+          <Space>
+            <GiftOutlined style={{ color: '#FDE08D' }} />
+            <span style={{ color: '#FDE08D' }}>Redemption History</span>
+          </Space>
+        }
+        open={historyModalVisible}
+        onCancel={() => setHistoryModalVisible(false)}
+        footer={null}
+        width={500}
+        centered
+        styles={{
+          mask: { backdropFilter: 'blur(4px)' },
+          content: {
+            background: '#1a1612',
+            border: '1px solid rgba(244, 175, 37, 0.3)',
+            borderRadius: 16
+          },
+          header: {
+            background: 'transparent',
+            borderBottom: '1px solid rgba(244, 175, 37, 0.2)',
+            paddingBottom: 16
+          }
+        }}
+      >
+        <Table
+          dataSource={redemptionHistory}
+          loading={historyLoading}
+          rowKey={(record, index) => record.id || `history-${index}`}
+          pagination={{ pageSize: 5, simple: true }}
+          size="small"
+          columns={[
+            {
+              title: 'Date',
+              dataIndex: 'redeemedAt',
+              key: 'redeemedAt',
+              render: (ts) => {
+                const date = ts instanceof Date ? ts : new Date(ts);
+                return <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13 }}>{dayjs(date).format('MM-DD HH:mm')}</Text>
+              }
+            },
+            {
+              title: 'Cigar',
+              dataIndex: 'cigarName',
+              key: 'cigarName',
+              render: (name) => <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13 }}>{name || '-'}</Text>
+            },
+            {
+              title: 'Qty',
+              dataIndex: 'quantity',
+              key: 'quantity',
+              render: (qty) => <Text style={{ color: '#FDE08D', fontWeight: 600 }}>{qty}</Text>
+            },
+            {
+              title: 'Status',
+              dataIndex: 'status',
+              key: 'status',
+              render: (status) => (
+                <Tag color={status === 'completed' ? 'gold' : 'default'} style={{ borderRadius: 4 }}>
+                  {status?.toUpperCase() || 'COMPLETED'}
+                </Tag>
+              )
+            }
+          ]}
+          locale={{
+            emptyText: <Text style={{ color: 'rgba(255,255,255,0.45)' }}>No redemption records found</Text>
+          }}
+          style={{ background: 'transparent' }}
+          className="dark-table"
+        />
+        <style>{`
+          .dark-table .ant-table { background: transparent !important; color: #fff !important; }
+          .dark-table .ant-table-thead > tr > th { 
+            background: rgba(255, 255, 255, 0.05) !important; 
+            color: rgba(255, 255, 255, 0.65) !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+          }
+          .dark-table .ant-table-tbody > tr > td { 
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+          }
+          .dark-table .ant-table-tbody > tr:hover > td {
+            background: rgba(255, 255, 255, 0.02) !important;
+          }
+          .dark-table .ant-pagination-item-link, .dark-table .ant-pagination-item a { color: #fff !important; }
+        `}</style>
+      </Modal>
     </Card>
   );
 };
 
 // 格式化小时显示（例如：02:32）
 function formatHours(hours: number): string {
-  const wholeHours = Math.floor(hours);
-  const minutes = Math.floor((hours - wholeHours) * 60);
-  return `${String(wholeHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  return String(Math.floor(hours));
 }
 

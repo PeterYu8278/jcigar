@@ -27,8 +27,8 @@ const LanguageSwitcher: React.FC = () => {
       onClick={handleToggleLanguage}
       icon={<GlobalOutlined />}
       size="small"
-      style={{ 
-        minWidth: 100,
+      style={{
+        minWidth: 70,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

@@ -53,7 +53,6 @@ const AdminInventory: React.FC = () => {
   const [pagination, setPagination] = useState<{ current: number; pageSize: number }>({ current: 1, pageSize: 10 })
   const [cigarImages, setCigarImages] = useState<string[]>([]) // 雪茄图片列表
   const [aiRecognizing, setAiRecognizing] = useState(false) // AI识别状态
-  const [aiRating, setAiRating] = useState<number | null>(null) // AI识别的评分
   const [cigarDatabaseData, setCigarDatabaseData] = useState<AggregatedCigarData | null>(null) // 从 cigar_database 读取的数据
   const [cigarDatabaseOptions, setCigarDatabaseOptions] = useState<string[]>([]) // cigar_database 产品名称列表
   const [inModalOpen, setInModalOpen] = useState(false)
@@ -204,7 +203,6 @@ const AdminInventory: React.FC = () => {
     if (!editing) {
       // 重置状态
       setCigarDatabaseData(null)
-      setAiRating(null)
       return
     }
 
@@ -234,7 +232,6 @@ const AdminInventory: React.FC = () => {
               rating: editing.metadata?.rating || null,
             })
             setCigarImages(editing.images || [])
-            setAiRating(editing.metadata?.rating || null)
           }, 0)
           return
         }
@@ -262,16 +259,9 @@ const AdminInventory: React.FC = () => {
             bodyTasteNotes: aggregatedData?.bodyTasteNotes?.map(item => item.value) || editing.tastingNotes?.body || [],
             headTasteNotes: aggregatedData?.headTasteNotes?.map(item => item.value) || editing.tastingNotes?.head || [],
             tags: aggregatedData?.flavorProfile?.map(item => item.value) || editing.metadata?.tags || [],
-            rating: !aggregatedData ? (editing.metadata?.rating || null) : undefined, // 只在没有cigar_database数据时设置rating到表单
+            rating: aggregatedData?.rating ?? editing.metadata?.rating ?? null,
           })
           setCigarImages(editing.images || [])
-
-          // 设置评分（优先使用 cigar_database 的评分）
-          if (aggregatedData?.rating !== null && aggregatedData?.rating !== undefined) {
-            setAiRating(aggregatedData.rating)
-          } else {
-            setAiRating(editing.metadata?.rating || null)
-          }
         }, 0)
       } catch (error) {
         // 如果加载失败，使用产品文档的数据
@@ -298,7 +288,6 @@ const AdminInventory: React.FC = () => {
             rating: editing.metadata?.rating || null,
           })
           setCigarImages(editing.images || [])
-          setAiRating(editing.metadata?.rating || null)
         }, 0)
       }
     }
@@ -313,8 +302,9 @@ const AdminInventory: React.FC = () => {
     }
   }, [cigarDatabaseData, form])
 
-  const getStrengthColor = (strength: string) => {
-    switch (strength) {
+  const getStrengthColor = (strength?: string) => {
+    if (!strength) return 'default'
+    switch (strength.toLowerCase()) {
       case 'mild': return 'green'
       case 'mild-medium': return 'lime'
       case 'medium': return 'orange'
@@ -324,14 +314,15 @@ const AdminInventory: React.FC = () => {
     }
   }
 
-  const getStrengthText = (strength: string) => {
-    switch (strength) {
+  const getStrengthText = (strength?: string) => {
+    if (!strength) return t('profile.unknown')
+    switch (strength.toLowerCase()) {
       case 'mild': return t('shop.mild')
       case 'mild-medium': return t('shop.mildMedium')
       case 'medium': return t('shop.medium')
       case 'medium-full': return t('shop.mediumFull')
       case 'full': return t('shop.full')
-      default: return t('profile.unknown')
+      default: return strength // Fallback to raw string
     }
   }
 
@@ -1594,7 +1585,7 @@ const AdminInventory: React.FC = () => {
                       className="points-config-form"
                     />
                     <button
-                      onClick={() => { setCreating(true); form.resetFields(); setCigarImages([]); setAiRating(null); }}
+                      onClick={() => { setCreating(true); form.resetFields(); setCigarImages([]); }}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -1658,169 +1649,400 @@ const AdminInventory: React.FC = () => {
                 </div>
               )}
 
-              {/* 列表滚动容器：仅列表滚动 */}
-              <div
-                style={{
-                  overflowY: 'auto',
-                  overflowX: 'hidden',
-                  maxHeight: isMobile ? 'calc(100vh - 300px)' : 'calc(100vh - 260px)',
-                  paddingTop: 8,
-                  paddingBottom: 16
-                }}
-              >
-                {!isMobile ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                    {groupedByBrand.map(group => (
-                      <div key={group.key} style={{ border: '1px solid rgba(244,175,37,0.2)', borderRadius: 12, overflow: 'hidden', background: 'rgba(255, 255, 255, 0.05)', backdropFilter: 'blur(10px)' }}>
-                        <div style={{ padding: '8px 12px', background: 'rgba(244,175,37,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <div style={{ fontWeight: 700, color: '#FFFFFF' }}>{group.key}</div>
-                          <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>{t('inventory.productTypes')}：{group.items.length}</div>
-                        </div>
-                        <div style={{ padding: 12 }}>
-                          <div className="points-config-form">
-                            <Table
-                              columns={columns}
-                              dataSource={group.items}
-                              rowKey="id"
-                              size="small"
-                              loading={loading}
-                              rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys, preserveSelectedRowKeys: true }}
-                              pagination={false}
-                              style={{
-                                background: 'transparent'
-                              }}
-                            />
-                          </div>
+              {/* 主体容器：包含可选的侧边栏和列表容器 */}
+              <div style={{ display: 'flex', gap: isMobile ? 0 : 16 }}>
+                {/* 桌面端品牌侧边栏 */}
+                {!isMobile && (
+                  <div
+                    className="shop-sidebar"
+                    style={{
+                      width: '100px',
+                      background: 'linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%)',
+                      borderRight: '1px solid rgba(255, 215, 0, 0.1)',
+                      borderRadius: 12,
+                      overflowY: 'auto',
+                      overflowX: 'hidden',
+                      paddingBottom: '20px',
+                      height: 'calc(100vh - 260px)',
+                      flexShrink: 0
+                    }}
+                  >
+                    {/* 全部分类 */}
+                    <div
+                      onClick={() => setBrandFilter(undefined)}
+                      style={{
+                        padding: '16px 12px',
+                        cursor: 'pointer',
+                        borderLeft: !brandFilter ? '3px solid #F4AF25' : '3px solid transparent',
+                        background: !brandFilter ? 'rgba(244, 175, 37, 0.1)' : 'transparent',
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          color: !brandFilter ? '#F4AF25' : '#c0c0c0',
+                          textAlign: 'center',
+                          lineHeight: 1.2
+                        }}>
+                          {t('inventory.allBrands', '全部')}
                         </div>
                       </div>
-                    ))}
-                    {groupedByBrand.length === 0 && (
-                      <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
-                    )}
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                    {groupedByBrand.map(group => (
-                      <div key={group.key} style={{ border: '1px solid rgba(244,175,37,0.2)', borderRadius: 16, overflow: 'hidden', background: 'rgba(0,0,0,0.2)', boxShadow: '0 10px 30px rgba(0,0,0,0.25)' }}>
-                        <div style={{ padding: 12, background: 'rgba(0,0,0,0.3)' }}>
-                          <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>{group.key}</div>
-                        </div>
-                        <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                          {group.items.map(record => (
-                            <div key={record.id} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                              {/* 产品名称（顶部，全宽） */}
-                              <div style={{ fontWeight: 700, color: '#fff', fontSize: 16, marginBottom: 4 }}>{record.name}</div>
+                    </div>
 
-                              {/* 图片、信息和按钮（水平布局） */}
-                              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                                <div style={{ width: 60, height: 80, borderRadius: 10, overflow: 'hidden', background: 'rgba(255,255,255,0.08)', flexShrink: 0 }}>
-                                  <img
-                                    src={(record as any).images && (record as any).images.length > 0 ? (record as any).images[0] : DEFAULT_CIGAR_IMAGE}
-                                    alt={record.name}
-                                    style={{
-                                      width: '100%',
-                                      height: '100%',
-                                      objectFit: 'cover'
-                                    }}
-                                  />
+                    {/* 品牌列表 */}
+                    {(() => {
+                      const activeCigarBrands = new Set(items.map(i => i.brand).filter(Boolean))
+
+                      const cubanBrands = brandList
+                        .filter(brand =>
+                          brand.status === 'active' &&
+                          (brand.country?.toLowerCase() === 'cuba' || brand.country?.toLowerCase() === 'cuban') &&
+                          activeCigarBrands.has(brand.name)
+                        )
+                        .sort((a, b) => a.name.localeCompare(b.name))
+
+                      const newWorldBrands = brandList
+                        .filter(brand =>
+                          brand.status === 'active' &&
+                          brand.country?.toLowerCase() !== 'cuba' &&
+                          brand.country?.toLowerCase() !== 'cuban' &&
+                          activeCigarBrands.has(brand.name)
+                        )
+                        .sort((a, b) => a.name.localeCompare(b.name))
+
+                      const renderBrandItem = (brand: Brand) => {
+                        const isSelected = brandFilter === brand.name;
+                        return (
+                          <div
+                            key={brand.id || brand.name}
+                            onClick={() => setBrandFilter(brand.name)}
+                            style={{
+                              padding: '16px 12px',
+                              cursor: 'pointer',
+                              borderLeft: isSelected ? '3px solid #F4AF25' : '3px solid transparent',
+                              background: isSelected ? 'rgba(244, 175, 37, 0.1)' : 'transparent',
+                              transition: 'all 0.3s ease'
+                            }}
+                          >
+                            <div style={{ textAlign: 'center' }}>
+                              <div style={{
+                                width: '48px',
+                                height: '48px',
+                                margin: '0 auto 8px',
+                                borderRadius: '50%',
+                                backgroundImage: brand.logo ? `url(${brand.logo})` : 'none',
+                                backgroundColor: brand.logo ? 'transparent' : 'rgba(255, 255, 255, 0.05)',
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '18px',
+                                fontWeight: 'bold',
+                                color: brand.logo ? 'transparent' : '#F4AF25',
+                                border: `2px solid ${isSelected ? '#F4AF25' : 'rgba(244, 175, 37, 0.6)'}`
+                              }}>
+                                {!brand.logo && brand.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div style={{
+                                fontSize: '11px',
+                                fontWeight: 600,
+                                color: isSelected ? '#F4AF25' : '#c0c0c0',
+                                textAlign: 'center',
+                                lineHeight: 1.2,
+                                wordWrap: 'break-word'
+                              }}>
+                                {brand.name}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      }
+
+                      return (
+                        <>
+                          {cubanBrands.length > 0 && (
+                            <div>
+                              <div style={{
+                                position: 'sticky',
+                                top: 0,
+                                zIndex: 10,
+                                padding: '12px 8px',
+                                background: 'rgba(139, 69, 19, 0.95)',
+                                backdropFilter: 'blur(8px)',
+                                borderLeft: '3px solid #8B4513',
+                                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+                              }}>
+                                <div style={{
+                                  fontSize: '10px',
+                                  fontWeight: 'bold',
+                                  color: '#F4AF25',
+                                  textAlign: 'center',
+                                  letterSpacing: '1px'
+                                }}>
+                                  CUBAN
                                 </div>
-                                <div style={{ flex: 1 }}>
-                                  <div style={{ fontSize: 12, color: 'rgba(224,214,196,0.6)', display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
-                                    {record.size && <span>{record.size}</span>}
-                                    {record.size && record.origin && <span>|</span>}
-                                    {record.origin && <span>{record.origin}</span>}
-                                    {(record.size || record.origin) && record.strength && <span>|</span>}
-                                    {record.strength && (
-                                      <Tag color={getStrengthColor(record.strength)} style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px' }}>
-                                        {getStrengthText(record.strength)}
-                                      </Tag>
-                                    )}
-                                  </div>
-                                  <div style={{ fontWeight: 700, color: '#f4af25', marginTop: 2 }}>RM{record.price?.toLocaleString?.() || record.price}</div>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, marginTop: 4 }}>
-                                    {(() => {
-                                      const { totalIn, totalOut } = getTotals((record as any)?.id); return (
-                                        <>
-                                          <span style={{ color: 'rgba(224,214,196,0.8)' }}>{t('inventory.totalIn')}: <span style={{ color: '#fff' }}>{totalIn}</span></span>
-                                          <span style={{ color: 'rgba(224,214,196,0.8)' }}>{t('inventory.totalOut')}: <span style={{ color: '#fff' }}>{totalOut}</span></span>
-                                        </>
-                                      )
-                                    })()}
+                              </div>
+                              {cubanBrands.map(renderBrandItem)}
+                            </div>
+                          )}
+
+                          {cubanBrands.length > 0 && newWorldBrands.length > 0 && (
+                            <div style={{
+                              height: '1px',
+                              background: 'linear-gradient(90deg, transparent 0%, rgba(244, 175, 37, 0.6) 50%, transparent 100%)',
+                              margin: '12px 0'
+                            }} />
+                          )}
+
+                          {newWorldBrands.length > 0 && (
+                            <div>
+                              <div style={{
+                                position: 'sticky',
+                                top: 0,
+                                zIndex: 10,
+                                padding: '12px 8px',
+                                background: 'rgba(34, 139, 34, 0.95)',
+                                backdropFilter: 'blur(8px)',
+                                borderLeft: '3px solid #228B22',
+                                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+                              }}>
+                                <div style={{
+                                  fontSize: '10px',
+                                  fontWeight: 'bold',
+                                  color: '#F4AF25',
+                                  textAlign: 'center',
+                                  letterSpacing: '1px'
+                                }}>
+                                  NEW WORLD
+                                </div>
+                              </div>
+                              {newWorldBrands.map(renderBrandItem)}
+                            </div>
+                          )}
+
+                          {(() => {
+                            const knownBrandNames = new Set(brandList.map(b => b.name))
+                            const otherBrands = Array.from(activeCigarBrands)
+                              .filter(name => !knownBrandNames.has(name as string))
+                              .sort()
+
+                            if (otherBrands.length === 0) return null;
+
+                            return (
+                              <div>
+                                {(cubanBrands.length > 0 || newWorldBrands.length > 0) && (
+                                  <div style={{
+                                    height: '1px',
+                                    background: 'linear-gradient(90deg, transparent 0%, rgba(244, 175, 37, 0.6) 50%, transparent 100%)',
+                                    margin: '12px 0'
+                                  }} />
+                                )}
+                                <div style={{
+                                  position: 'sticky',
+                                  top: 0,
+                                  zIndex: 10,
+                                  padding: '12px 8px',
+                                  background: 'rgba(80, 80, 80, 0.95)',
+                                  backdropFilter: 'blur(8px)',
+                                  borderLeft: '3px solid #505050',
+                                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+                                }}>
+                                  <div style={{
+                                    fontSize: '10px',
+                                    fontWeight: 'bold',
+                                    color: '#F4AF25',
+                                    textAlign: 'center',
+                                    letterSpacing: '1px'
+                                  }}>
+                                    OTHERS
                                   </div>
                                 </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
-                                  {/* 按钮区域（水平排列） */}
-                                  <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-                                    <button
+                                {otherBrands.map(brandName => renderBrandItem({
+                                  id: brandName as string,
+                                  name: brandName as string,
+                                  status: 'active'
+                                } as Brand))}
+                              </div>
+                            )
+                          })()}
+                        </>
+                      )
+                    })()}
+                  </div>
+                )}
+
+                {/* 列表滚动容器：仅列表滚动 */}
+                <div
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    overflowY: 'auto',
+                    overflowX: 'hidden',
+                    maxHeight: isMobile ? 'calc(100vh - 300px)' : 'calc(100vh - 260px)',
+                    paddingTop: 8,
+                    paddingBottom: 16
+                  }}
+                >
+                  {!isMobile ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                      {groupedByBrand.map(group => (
+                        <div key={group.key} style={{ border: '1px solid rgba(244,175,37,0.2)', borderRadius: 12, overflow: 'hidden', background: 'rgba(255, 255, 255, 0.05)', backdropFilter: 'blur(10px)' }}>
+                          <div style={{ padding: '8px 12px', background: 'linear-gradient(to right, #FDE08D, #C48D3A)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ fontWeight: 700, color: '#000' }}>{group.key}</div>
+                            <div style={{ fontSize: 12, color: 'rgba(0, 0, 0, 0.6)' }}>{t('inventory.productTypes')}：{group.items.length}</div>
+                          </div>
+                          <div style={{ padding: 12 }}>
+                            <div className="points-config-form">
+                              <Table
+                                columns={columns}
+                                dataSource={group.items}
+                                rowKey="id"
+                                size="small"
+                                loading={loading}
+                                rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys, preserveSelectedRowKeys: true }}
+                                pagination={false}
+                                style={{
+                                  background: 'transparent'
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {groupedByBrand.length === 0 && (
+                        <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                      {groupedByBrand.map(group => (
+                        <div key={group.key} style={{ border: '1px solid rgba(244,175,37,0.2)', borderRadius: 16, overflow: 'hidden', background: 'rgba(0,0,0,0.2)', boxShadow: '0 10px 30px rgba(0,0,0,0.25)' }}>
+                          <div style={{ padding: 12, background: 'linear-gradient(to right, #FDE08D, #C48D3A)' }}>
+                            <div style={{ fontSize: 18, fontWeight: 700, color: '#000' }}>{group.key}</div>
+                          </div>
+                          <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            {group.items.map(record => (
+                              <div key={record.id} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {/* 产品名称（顶部，全宽） */}
+                                <div style={{ fontWeight: 700, color: '#fff', fontSize: 16, marginBottom: 4 }}>{record.name}</div>
+
+                                {/* 图片、信息和按钮（水平布局） */}
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                                    <div style={{ width: 60, height: 80, borderRadius: 10, overflow: 'hidden', background: 'rgba(255,255,255,0.08)' }}>
+                                      <img
+                                        src={(record as any).images && (record as any).images.length > 0 ? (record as any).images[0] : DEFAULT_CIGAR_IMAGE}
+                                        alt={record.name}
+                                        style={{
+                                          width: '100%',
+                                          height: '100%',
+                                          objectFit: 'cover'
+                                        }}
+                                      />
+                                    </div>
+                                    <CigarRatingBadge rating={(record as any).metadata?.rating} size="small" />
+                                  </div>
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: 12, color: 'rgba(224,214,196,0.6)', display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+                                      {record.size && <span>{record.size}</span>}
+                                      {record.size && record.origin && <span>|</span>}
+                                      {record.origin && <span>{record.origin}</span>}
+                                      {(record.size || record.origin) && record.strength && <span>|</span>}
+                                      {record.strength && (
+                                        <Tag color={getStrengthColor(record.strength)} style={{ margin: 0, fontSize: 11, padding: '0 4px', lineHeight: '18px' }}>
+                                          {getStrengthText(record.strength)}
+                                        </Tag>
+                                      )}
+                                    </div>
+                                    <div style={{ fontWeight: 700, color: '#f4af25', marginTop: 2 }}>RM{record.price?.toLocaleString?.() || record.price}</div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, marginTop: 4 }}>
+                                      {(() => {
+                                        const { totalIn, totalOut } = getTotals((record as any)?.id); return (
+                                          <>
+                                            <span style={{ color: 'rgba(224,214,196,0.8)' }}>{t('inventory.totalIn')}: <span style={{ color: '#fff' }}>{totalIn}</span></span>
+                                            <span style={{ color: 'rgba(224,214,196,0.8)' }}>{t('inventory.totalOut')}: <span style={{ color: '#fff' }}>{totalOut}</span></span>
+                                          </>
+                                        )
+                                      })()}
+                                    </div>
+                                  </div>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+                                    {/* 按钮区域（水平排列） */}
+                                    <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+                                      <button
+                                        style={{
+                                          padding: '4px 8px',
+                                          borderRadius: 6,
+                                          background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                                          color: '#111',
+                                          fontWeight: 600,
+                                          fontSize: 12,
+                                          cursor: 'pointer',
+                                          transition: 'all 0.2s ease',
+                                          border: '1px solid transparent',
+                                          whiteSpace: 'nowrap',
+                                          flexShrink: 0
+                                        }}
+                                        onClick={() => {
+                                          setEditing(record)
+                                        }}
+                                      >
+                                        {t('common.edit')}
+                                      </button>
+                                    </div>
+                                    {/* 库存数量（可点击查看详情，用颜色表示状态，字体高度与价格+总入库/出库的总高度一致） */}
+                                    <div
                                       style={{
-                                        padding: '4px 8px',
-                                        borderRadius: 6,
-                                        background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-                                        color: '#111',
-                                        fontWeight: 600,
-                                        fontSize: 12,
+                                        textAlign: 'right',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        minHeight: 40,
                                         cursor: 'pointer',
-                                        transition: 'all 0.2s ease',
-                                        border: '1px solid transparent',
-                                        whiteSpace: 'nowrap',
-                                        flexShrink: 0
+                                        transition: 'opacity 0.2s ease'
                                       }}
                                       onClick={() => {
-                                        setEditing(record)
+                                        setViewingProductLogs((record as any)?.id)
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        e.currentTarget.style.opacity = '0.8'
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        e.currentTarget.style.opacity = '1'
                                       }}
                                     >
-                                      {t('common.edit')}
-                                    </button>
-                                  </div>
-                                  {/* 库存数量（可点击查看详情，用颜色表示状态，字体高度与价格+总入库/出库的总高度一致） */}
-                                  <div
-                                    style={{
-                                      textAlign: 'right',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      minHeight: 40,
-                                      cursor: 'pointer',
-                                      transition: 'opacity 0.2s ease'
-                                    }}
-                                    onClick={() => {
-                                      setViewingProductLogs((record as any)?.id)
-                                    }}
-                                    onMouseEnter={(e) => {
-                                      e.currentTarget.style.opacity = '0.8'
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      e.currentTarget.style.opacity = '1'
-                                    }}
-                                  >
-                                    {(() => {
-                                      const computed = getComputedStock((record as any)?.id)
-                                      const min = ((record as any)?.inventory?.minStock ?? 0)
-                                      const st = (computed <= min) ? 'critical' : (computed <= (min * 1.5)) ? 'low' : 'normal'
-                                      const color = st === 'normal' ? '#16a34a' : st === 'low' ? '#f59e0b' : '#ef4444'
-                                      return (
-                                        <span style={{
-                                          color,
-                                          fontSize: 38,
-                                          fontWeight: 700,
-                                          lineHeight: 1
-                                        }}>
-                                          {computed}
-                                        </span>
-                                      )
-                                    })()}
+                                      {(() => {
+                                        const computed = getComputedStock((record as any)?.id)
+                                        const min = ((record as any)?.inventory?.minStock ?? 0)
+                                        const st = (computed <= min) ? 'critical' : (computed <= (min * 1.5)) ? 'low' : 'normal'
+                                        const color = st === 'normal' ? '#16a34a' : st === 'low' ? '#f59e0b' : '#ef4444'
+                                        return (
+                                          <span style={{
+                                            color,
+                                            fontSize: 38,
+                                            fontWeight: 700,
+                                            lineHeight: 1
+                                          }}>
+                                            {computed}
+                                          </span>
+                                        )
+                                      })()}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                    {groupedByBrand.length === 0 && (
-                      <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
-                    )}
-                  </div>
-                )}
+                      ))}
+                      {groupedByBrand.length === 0 && (
+                        <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -4054,7 +4276,6 @@ const AdminInventory: React.FC = () => {
           setCreating(false);
           setEditing(null);
           form.resetFields();
-          setAiRating(null); // 重置AI识别的rating
           setCigarDatabaseData(null); // 重置 cigar_database 数据
         }}
         {...getResponsiveModalConfig(isMobile, true, 600)}
@@ -4109,7 +4330,6 @@ const AdminInventory: React.FC = () => {
                 setEditing(null);
                 form.resetFields();
                 setCigarImages([]);
-                setAiRating(null); // 重置AI识别的rating
                 setCigarDatabaseData(null); // 重置 cigar_database 数据
               }}>{t('common.cancel')}</Button>
               <button disabled={loading} onClick={() => form.submit()} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease', opacity: loading ? 0.6 : 1 }}>{t('common.confirm')}</button>
@@ -4135,12 +4355,9 @@ const AdminInventory: React.FC = () => {
             if (values.bodyTasteNotes && values.bodyTasteNotes.length > 0) tastingNotes.body = Array.isArray(values.bodyTasteNotes) ? values.bodyTasteNotes : [];
             if (values.headTasteNotes && values.headTasteNotes.length > 0) tastingNotes.head = Array.isArray(values.headTasteNotes) ? values.headTasteNotes : [];
 
-            // 构建元数据
-            // Rating优先级：aiRating（来自cigar_database）> 手动输入（values.rating）> 原有值
+            // Rating优先级：手动输入（values.rating） > 原有值
             let finalRating = 0;
-            if (aiRating !== null && aiRating !== undefined) {
-              finalRating = aiRating;
-            } else if (values.rating !== null && values.rating !== undefined) {
+            if (values.rating !== null && values.rating !== undefined) {
               finalRating = values.rating;
             } else if (editing?.metadata?.rating !== null && editing?.metadata?.rating !== undefined) {
               finalRating = editing.metadata.rating;
@@ -4231,7 +4448,6 @@ const AdminInventory: React.FC = () => {
             setEditing(null)
             form.resetFields()
             setCigarImages([])
-            setAiRating(null) // 重置AI识别的rating
             setCigarDatabaseData(null) // 重置 cigar_database 数据
           } finally {
             setLoading(false)
@@ -4239,24 +4455,24 @@ const AdminInventory: React.FC = () => {
         }}>
           <Form.Item label="图片" name="images">
             <div>
+              <style>{`
+                .cigar-modal-upload .ant-upload.ant-upload-select-picture-card,
+                .cigar-modal-upload .ant-upload-list-picture-card .ant-upload-list-item,
+                .cigar-modal-upload .ant-upload-list-picture-card .ant-upload-list-item::before {
+                  width: 104px !important;
+                  height: 104px !important;
+                }
+              `}</style>
               <Upload
                 listType="picture-card"
+                className="cigar-modal-upload"
                 fileList={cigarImages.map((url, idx) => ({
                   uid: `image-${idx}`,
                   name: `image-${idx + 1}.jpg`,
                   status: 'done' as const,
                   url: url
                 }))}
-                itemRender={(originNode, file, fileList, actions) => {
-                  return (
-                    <div style={{ position: 'relative' }}>
-                      {originNode}
-                      {editing?.metadata?.rating && file.status === 'done' && (
-                        <CigarRatingBadge rating={editing.metadata.rating} size="small" />
-                      )}
-                    </div>
-                  )
-                }}
+
                 beforeUpload={async (file) => {
                   try {
                     const result = await cloudinaryUpload(file, { folder: 'cigars' });
@@ -4276,7 +4492,7 @@ const AdminInventory: React.FC = () => {
                 accept="image/*"
               >
                 {cigarImages.length < 5 && (
-                  <div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                     <PlusOutlined style={{ color: '#FFFFFF' }} />
                     <div style={{ marginTop: 8, color: '#FFFFFF' }}>上传</div>
                   </div>
@@ -4327,12 +4543,9 @@ const AdminInventory: React.FC = () => {
                         if (aggregatedData.bodyTasteNotes?.length) updates.bodyTasteNotes = aggregatedData.bodyTasteNotes.map(item => item.value);
                         if (aggregatedData.headTasteNotes?.length) updates.headTasteNotes = aggregatedData.headTasteNotes.map(item => item.value);
                         if (aggregatedData.flavorProfile?.length) updates.tags = aggregatedData.flavorProfile.map(item => item.value);
+                        if (aggregatedData.rating !== null && aggregatedData.rating !== undefined) updates.rating = aggregatedData.rating;
 
                         form.setFieldsValue(updates);
-
-                        if (aggregatedData.rating !== null && aggregatedData.rating !== undefined) {
-                          setAiRating(aggregatedData.rating);
-                        }
 
                         message.success(`已从数据库加载 "${value}" 的信息（基于 ${aggregatedData.totalRecognitions} 次AI识别）`);
                       }
@@ -4366,12 +4579,9 @@ const AdminInventory: React.FC = () => {
                         if (aggregatedData.bodyTasteNotes?.length) updates.bodyTasteNotes = aggregatedData.bodyTasteNotes.map(item => item.value);
                         if (aggregatedData.headTasteNotes?.length) updates.headTasteNotes = aggregatedData.headTasteNotes.map(item => item.value);
                         if (aggregatedData.flavorProfile?.length) updates.tags = aggregatedData.flavorProfile.map(item => item.value);
+                        if (aggregatedData.rating !== null && aggregatedData.rating !== undefined) updates.rating = aggregatedData.rating;
 
                         form.setFieldsValue(updates);
-
-                        if (aggregatedData.rating !== null && aggregatedData.rating !== undefined) {
-                          setAiRating(aggregatedData.rating);
-                        }
 
                         message.success(`已从数据库加载 "${productName}" 的信息（基于 ${aggregatedData.totalRecognitions} 次AI识别）`);
                       } else {
@@ -4515,11 +4725,9 @@ const AdminInventory: React.FC = () => {
                       updates.origin = result.origin
                     }
 
-                    // 评分（存储到状态中，在表单提交时使用）
+                    // 评分
                     if (result.rating !== undefined && result.rating !== null) {
-                      setAiRating(result.rating)
-                    } else {
-                      setAiRating(null)
+                      updates.rating = result.rating
                     }
 
                     // 批量设置表单值
@@ -4551,12 +4759,9 @@ const AdminInventory: React.FC = () => {
                           if (aggregatedData.bodyTasteNotes?.length) dbUpdates.bodyTasteNotes = aggregatedData.bodyTasteNotes.map(item => item.value)
                           if (aggregatedData.headTasteNotes?.length) dbUpdates.headTasteNotes = aggregatedData.headTasteNotes.map(item => item.value)
                           if (aggregatedData.flavorProfile?.length) dbUpdates.tags = aggregatedData.flavorProfile.map(item => item.value)
+                          if (aggregatedData.rating !== null && aggregatedData.rating !== undefined) dbUpdates.rating = aggregatedData.rating
 
                           form.setFieldsValue(dbUpdates)
-
-                          if (aggregatedData.rating !== null && aggregatedData.rating !== undefined) {
-                            setAiRating(aggregatedData.rating)
-                          }
                         }
                       }
 
@@ -4923,7 +5128,6 @@ const AdminInventory: React.FC = () => {
                 setEditing(null)
                 form.resetFields()
                 setCigarImages([])
-                setAiRating(null)
                 setCigarDatabaseData(null)
               }
             } else {

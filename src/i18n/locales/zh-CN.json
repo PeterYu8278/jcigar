@@ -393,7 +393,6 @@
     "friendInvite": "好友邀请",
     "pointsExchange": "积分兑换"
   },
-  
   "dashboard": {
     "overview": "概况",
     "totalMembers": "总会员数",
@@ -494,7 +493,6 @@
     "collapseAll": "折叠全部",
     "noReferralData": "暂无引荐关系数据"
   },
-  
   "ordersAdmin": {
     "order": "订单",
     "orderId": "订单ID",
@@ -1210,8 +1208,8 @@
   "language": {
     "switch": "切换语言",
     "chinese": "中文",
-    "english": "English",
-    "zhCN": "简体中文",
-    "enUS": "English"
+    "english": "EN",
+    "zhCN": "中文",
+    "enUS": "EN"
   }
 }

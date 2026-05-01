@@ -98,11 +98,11 @@
     "locationName": "Location Name",
     "pleaseInputEventName": "Please input event name",
     "pleaseInputLocationName": "Please input location name",
-      "pleaseSelectStartDate": "Please select start date",
-      "pleaseSelectEndDate": "Please select end date",
-      "startDateCannotBeAfterEndDate": "Start date cannot be after end date",
-      "endDateCannotBeBeforeStartDate": "End date cannot be before start date",
-      "fee": "Fee",
+    "pleaseSelectStartDate": "Please select start date",
+    "pleaseSelectEndDate": "Please select end date",
+    "startDateCannotBeAfterEndDate": "Start date cannot be after end date",
+    "endDateCannotBeBeforeStartDate": "End date cannot be before start date",
+    "fee": "Fee",
     "maxParticipants": "Max Participants",
     "privateEvent": "Private Event",
     "status": "Status",
@@ -396,7 +396,6 @@
     "friendInvite": "Friend Invite",
     "pointsExchange": "Points Exchange"
   },
-  
   "dashboard": {
     "overview": "Overview",
     "totalMembers": "Total Members",
@@ -497,7 +496,6 @@
     "collapseAll": "Collapse All",
     "noReferralData": "No referral relationship data"
   },
-
   "ordersAdmin": {
     "order": "Order",
     "orderId": "Order ID",
@@ -1212,8 +1210,8 @@
   "language": {
     "switch": "Switch Language",
     "chinese": "中文",
-    "english": "English",
-    "zhCN": "简体中文",
-    "enUS": "English"
+    "english": "EN",
+    "zhCN": "中文",
+    "enUS": "EN"
   }
 }

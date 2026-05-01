@@ -70,27 +70,32 @@ export const updateRedemptionConfig = async (
 /**
  * 获取用户当前会员期限内的累计驻店时长
  */
-const getUserTotalVisitHoursInPeriod = async (userId: string): Promise<number> => {
+export const getUserTotalVisitHoursInPeriod = async (userId: string): Promise<number> => {
   try {
     // 获取会员期限
     const { getUserMembershipPeriod } = await import('./membershipFee');
     const period = await getUserMembershipPeriod(userId);
     
-    if (!period) {
-      // 如果没有会员期限，返回0
-      return 0;
-    }
-
-    // 查询当前会员期限内的completed sessions
+    // 获取驻店记录
     const { getUserVisitSessions } = await import('./visitSessions');
     const sessions = await getUserVisitSessions(userId);
-    
+
+    if (!period) {
+      // 如果没有会员期限，则计算所有已完成记录（兼容未缴纳年费或迁移数据）
+      const totalHours = sessions
+        .filter(s => s.status === 'completed' && s.durationHours)
+        .reduce((sum, s) => sum + (s.durationHours || 0), 0);
+      return totalHours;
+    }
+
     // 筛选出在会员期限内的completed sessions
     const periodSessions = sessions.filter(session => {
       if (session.status !== 'completed' || !session.checkOutAt) {
         return false;
       }
-      const inPeriod = session.checkOutAt >= period.startDate && session.checkOutAt < period.endDate;
+      // 确保日期对象比较正确
+      const checkOutDate = session.checkOutAt instanceof Date ? session.checkOutAt : new Date(session.checkOutAt);
+      const inPeriod = checkOutDate.getTime() >= period.startDate.getTime() && checkOutDate.getTime() < period.endDate.getTime();
       return inPeriod;
     });
     
@@ -99,6 +104,7 @@ const getUserTotalVisitHoursInPeriod = async (userId: string): Promise<number> =
     
     return totalHours;
   } catch (error) {
+    console.error('[getUserTotalVisitHoursInPeriod] Error:', error);
     return 0;
   }
 };
@@ -725,34 +731,51 @@ export const getTotalRedemptions = async (userId: string): Promise<RedemptionRec
     const { getUserMembershipPeriod } = await import('./membershipFee');
     const period = await getUserMembershipPeriod(userId);
     
+    // 注意：REDEMPTION_RECORDS 集合中的文档是按 visitSessionId 分组的
+    // 文档本身没有 redeemedAt 字段，该字段在 redemptions 数组项中
     const q = query(
       collection(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS),
-      where('userId', '==', userId),
-      orderBy('redeemedAt', 'asc')
+      where('userId', '==', userId)
     );
 
     const snapshot = await getDocs(q);
-    let records = snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-        status: data.status || 'completed',  // 兼容旧数据，默认为completed
-        redeemedAt: data.redeemedAt?.toDate?.() || new Date(data.redeemedAt),
-        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
-        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
-      } as RedemptionRecord;
+    let allRecords: RedemptionRecord[] = [];
+    
+    snapshot.docs.forEach(docSnap => {
+      const data = docSnap.data() as RedemptionRecordDocument;
+      const redemptions = data.redemptions || [];
+      
+      redemptions.forEach(item => {
+        // 转换日期
+        const redeemedAt = (item.redeemedAt as any)?.toDate?.() || (item.redeemedAt instanceof Date ? item.redeemedAt : new Date(item.redeemedAt as any));
+        const createdAt = (item.createdAt as any)?.toDate?.() || (item.createdAt instanceof Date ? item.createdAt : new Date(item.createdAt as any));
+        const updatedAt = (item.updatedAt as any)?.toDate?.() || (item.updatedAt instanceof Date ? item.updatedAt : item.updatedAt);
+        
+        allRecords.push({
+          ...item,
+          visitSessionId: data.visitSessionId,
+          redeemedAt,
+          createdAt,
+          updatedAt,
+          status: item.status || 'completed'
+        } as RedemptionRecord);
+      });
     });
     
     // 如果存在会员期限，过滤出在会员期限内的记录
     if (period) {
-      records = records.filter(record => {
-        return record.redeemedAt >= period.startDate && record.redeemedAt < period.endDate;
+      allRecords = allRecords.filter(record => {
+        const rDate = record.redeemedAt;
+        return rDate >= period.startDate && rDate < period.endDate;
       });
     }
     
-    return records;
+    // 按时间排序
+    allRecords.sort((a, b) => a.redeemedAt.getTime() - b.redeemedAt.getTime());
+    
+    return allRecords;
   } catch (error) {
+    console.error('[getTotalRedemptions] Error:', error);
     return [];
   }
 };

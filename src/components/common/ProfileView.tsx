@@ -12,6 +12,8 @@ import {
 const { Text } = Typography
 
 import { getEventsByUser, getUsers, getOrdersByUser, getCigars, getDocument } from '../../services/firebase/firestore'
+import { collection, getDocs } from 'firebase/firestore'
+import { db } from '../../config/firebase'
 import { getUserPointsRecords } from '../../services/firebase/pointsRecords'
 import type { User, Event, Order, Cigar, PointsRecord } from '../../types'
 import { useTranslation } from 'react-i18next'
@@ -19,6 +21,7 @@ import { useNavigate } from 'react-router-dom'
 import { MemberProfileCard } from './MemberProfileCard'
 import { isFeatureVisible } from '../../services/firebase/featureVisibility'
 import { useAuthStore } from '../../store/modules/auth'
+import { textTransform } from 'html2canvas/dist/types/css/property-descriptors/text-transform'
 
 interface ProfileViewProps {
   user?: User | null          // 直接传入用户对象
@@ -52,6 +55,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [pointsRecords, setPointsRecords] = useState<PointsRecord[]>([])
   const canViewDiscount = authUser?.role === 'developer' || authUser?.role === 'admin'
   const [loadingPointsRecords, setLoadingPointsRecords] = useState(false)
+  const [referralActivationMap, setReferralActivationMap] = useState<Record<string, Date | null>>({})
 
   // 如果传入userId，加载用户数据
   useEffect(() => {
@@ -180,6 +184,29 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       }
     }
     loadReferredUsers()
+
+    // 加载引荐子集合中的 membershipActivatedAt（基于会费开通）
+    const loadReferralActivations = async () => {
+      if (!user?.id) return
+      try {
+        const referralsRef = collection(db, 'users', user.id, 'referrals')
+        const snap = await getDocs(referralsRef)
+        const map: Record<string, Date | null> = {}
+        snap.docs.forEach(docSnap => {
+          const data = docSnap.data()
+          const activatedAt = data.membershipActivatedAt
+          if (activatedAt) {
+            map[docSnap.id] = activatedAt?.toDate?.() || (activatedAt instanceof Date ? activatedAt : new Date(activatedAt))
+          } else {
+            map[docSnap.id] = null
+          }
+        })
+        setReferralActivationMap(map)
+      } catch (error) {
+        console.error('[ProfileView] 加载引荐激活日期失败:', error)
+      }
+    }
+    loadReferralActivations()
   }, [user?.referral?.referrals])
 
   // 加载积分记录
@@ -259,7 +286,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   return (
     <div style={{ color: '#FFFFFF' }}>
       {/* User Profile Section */}
-      <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+      <div style={{ textAlign: 'center', marginBottom: '10px' }}>
         {/* Avatar/Member Card */}
         <MemberProfileCard
           user={user}
@@ -326,30 +353,40 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         )}
       </div>
 
-      {/* Stats Section */}
+      {/* Stats Section - Unified Card */}
       <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: '10px',
-        marginBottom: '24px',
+        marginBottom: '10px',
         maxWidth: '640px',
-        margin: '0 auto 24px auto'
+        margin: '0 auto 24px auto',
+        background: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: '12px',
+        border: '1px solid rgba(244, 175, 37, 0.6)',
+        padding: '16px 0',
+        display: 'flex',
+        alignItems: 'center'
       }}>
         {userStats.map((stat, index) => (
-          <div key={index} style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            borderRadius: '12px',
-            padding: '16px',
-            border: '1px solid rgba(244, 175, 37, 0.6)',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#FFFFFF', marginBottom: '4px' }}>
-              {stat.value}
+          <React.Fragment key={index}>
+            {index > 0 && (
+              <div style={{
+                width: '1px',
+                height: '36px',
+                background: 'rgba(244, 175, 37, 0.25)',
+                flexShrink: 0
+              }} />
+            )}
+            <div style={{
+              flex: 1,
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#FFFFFF', marginBottom: '4px' }}>
+                {stat.value}
+              </div>
+              <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                {stat.title}
+              </div>
             </div>
-            <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
-              {stat.title}
-            </div>
-          </div>
+          </React.Fragment>
         ))}
       </div>
 
@@ -467,7 +504,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             loadingOrders ? (
               <div style={{ textAlign: 'center', padding: '40px 20px' }}>
                 <Space direction="vertical" size="middle">
-                  <div style={{ 
+                  <div style={{
                     fontSize: '24px',
                     background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
                     WebkitBackgroundClip: 'text',
@@ -829,41 +866,39 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
           {activeTab === 'referral' && (
             <>
-              {/* 引荐统计 */}
-              <Row gutter={12} style={{ marginBottom: '16px' }}>
-                <Col span={12}>
-                  <div style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    borderRadius: '12px',
-                    padding: '16px',
-                    border: '1px solid rgba(244, 175, 37, 0.6)',
-                    textAlign: 'center'
-                  }}>
-                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ffd700' }}>
-                      {user?.referral?.referrals?.length || 0}
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
-                      {t('profile.totalReferred')}
-                    </div>
+              {/* 引荐统计 - Unified Card */}
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '12px',
+                border: '1px solid rgba(244, 175, 37, 0.6)',
+                padding: '16px 0',
+                display: 'flex',
+                alignItems: 'center',
+                marginBottom: '16px'
+              }}>
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ffd700' }}>
+                    {user?.referral?.referrals?.length || 0}
                   </div>
-                </Col>
-                <Col span={12}>
-                  <div style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    borderRadius: '12px',
-                    padding: '16px',
-                    border: '1px solid rgba(244, 175, 37, 0.6)',
-                    textAlign: 'center'
-                  }}>
-                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ffd700' }}>
-                      {user?.membership?.referralPoints || 0}
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
-                      {t('profile.referralPoints')}
-                    </div>
+                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
+                    {t('profile.totalReferred')}
                   </div>
-                </Col>
-              </Row>
+                </div>
+                <div style={{
+                  width: '1px',
+                  height: '36px',
+                  background: 'rgba(244, 175, 37, 0.25)',
+                  flexShrink: 0
+                }} />
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ffd700' }}>
+                    {user?.membership?.referralPoints || 0}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
+                    {t('profile.referralPoints')}
+                  </div>
+                </div>
+              </div>
 
               {/* 引荐记录列表 */}
               {loadingReferrals ? (
@@ -911,21 +946,40 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                           fontSize: '20px',
                           fontWeight: 'bold',
                           color: '#ffd700',
-                          border: '2px solid rgba(244, 175, 37, 0.6)'
+                          border: '2px solid rgba(244, 175, 37, 0.6)',
+                          textTransform: 'uppercase'
                         }}>
                           {referred.displayName?.charAt(0) || '?'}
                         </div>
 
                         {/* 用户信息 */}
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '16px', fontWeight: '600', color: '#fff' }}>
+                          <div style={{ fontSize: '16px', fontWeight: '600', color: '#fff', textTransform: 'uppercase' }}>
                             {referred.displayName || t('profile.unknownUser')}
                           </div>
                           <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '2px' }}>
-                            {joinDate.toLocaleDateString('zh-CN')} {t('profile.joined')}
+                            加入日期: {joinDate.toLocaleDateString('zh-CN')}
                           </div>
                           <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>
-                            {t('profile.memberNumber')}: {referred.memberId || '-'}
+                            Member ID: {referred.memberId || '-'}
+                          </div>
+                          <div style={{ fontSize: '12px', marginTop: '2px' }}>
+                            <span style={{ color: 'rgba(255,255,255,0.5)' }}>开通会员: </span>
+                            {(() => {
+                              const activatedAt = referralActivationMap[referred.id];
+                              if (activatedAt) {
+                                return (
+                                  <span style={{ color: '#52c41a' }}>
+                                    {activatedAt.toLocaleDateString('zh-CN')}
+                                  </span>
+                                );
+                              }
+                              return (
+                                <span style={{ color: 'rgba(255,255,255,0.35)' }}>
+                                  未开通会员
+                                </span>
+                              );
+                            })()}
                           </div>
                         </div>
 
