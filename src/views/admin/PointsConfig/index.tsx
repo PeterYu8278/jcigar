@@ -541,6 +541,84 @@ const PointsConfigPage: React.FC = () => {
                 )}
               </Row>
             </div>
+ 
+            {/* Day Pass 配置 */}
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.03)',
+              borderRadius: 8,
+              padding: 16,
+              marginBottom: 16,
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}>
+              <h3 style={{ 
+                fontSize: 16, 
+                fontWeight: 700, 
+                marginBottom: 16,
+                backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                WebkitBackgroundClip: 'text',
+                color: 'transparent'
+              }}>
+                Day Pass 配置
+              </h3>
+              <Row gutter={16}>
+                <Col xs={24} sm={6}>
+                  <Form.Item
+                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>购买价格</span>}
+                    name={['dayPass', 'cost']}
+                    rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
+                  >
+                    <InputNumber
+                      min={0}
+                      max={10000}
+                      style={{ width: '100%' }}
+                      addonAfter="积分"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={6}>
+                  <Form.Item
+                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>免费时长</span>}
+                    name={['dayPass', 'freeHours']}
+                    rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
+                  >
+                    <InputNumber
+                      min={0}
+                      max={24}
+                      style={{ width: '100%' }}
+                      addonAfter="小时"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={6}>
+                  <Form.Item
+                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>超时费用</span>}
+                    name={['dayPass', 'hourlyRateAfter']}
+                    rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
+                  >
+                    <InputNumber
+                      min={0}
+                      max={1000}
+                      style={{ width: '100%' }}
+                      addonAfter="积分/小时"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={6}>
+                  <Form.Item
+                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>可兑换雪茄数</span>}
+                    name={['dayPass', 'cigarAllowance']}
+                    rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
+                  >
+                    <InputNumber
+                      min={0}
+                      max={10}
+                      style={{ width: '100%' }}
+                      addonAfter="支"
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </div>
 
             {/* 年费配置（按日期范围） */}
             <div style={{

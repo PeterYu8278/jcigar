@@ -38,7 +38,11 @@ const processVisitSessionData = (data: any, docId: string): VisitSession => {
     calculatedAt: data.calculatedAt?.toDate?.() || data.calculatedAt,
     createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
     updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
-    redemptions: redemptions.length > 0 ? redemptions : undefined
+    redemptions: redemptions.length > 0 ? redemptions : undefined,
+    dayPass: data.dayPass ? {
+      ...data.dayPass,
+      purchasedAt: data.dayPass.purchasedAt?.toDate?.() || new Date(data.dayPass.purchasedAt)
+    } : undefined
   } as VisitSession;
 };
 
@@ -96,10 +100,13 @@ export const createVisitSession = async (
 
     const userData = userDoc.data() as User;
     
-    // 检查会员状态：undefined 或 'active' 都允许 check-in，只有明确设置为 'inactive' 或 'suspended' 才拒绝
-    if (userData.status && userData.status !== 'active') {
-      console.error('[createVisitSession] 会员状态不活跃:', userData.status);
-      return { success: false, error: `会员状态不活跃（当前状态：${userData.status}），无法check-in` };
+    // 检查会员状态：仅允许 'active' 会员手动签到
+    if (userData.status !== 'active') {
+      console.error('[createVisitSession] 非活跃会员尝试签到:', userData.status);
+      return { 
+        success: false, 
+        error: `签到失败：该用户会员状态为“${userData.status || '游客'}”。请引导用户开通会员或购买 Day Pass。` 
+      };
     }
 
     // 检查是否为续费后首次驻店
@@ -113,6 +120,7 @@ export const createVisitSession = async (
       checkInAt: now,
       checkInBy,
       status: 'pending',
+      checkInType: 'membership', // 默认记录为 Membership 签到
       isFirstVisitAfterRenewal: !!isFirstVisitAfterRenewal,
       createdAt: now,
       updatedAt: now
@@ -205,8 +213,17 @@ export const completeVisitSession = async (
     // 计算应扣除的积分
     let pointsDeducted = 0;
     if (!session.isFirstVisitAfterRenewal) {
-      // 非首次驻店，扣除积分
-      pointsDeducted = Math.round(durationHours * hourlyRate);
+      if (session.dayPass?.isPurchased) {
+        // 使用 Day Pass 逻辑
+        const freeHours = session.dayPass.config.freeHours || 3;
+        const rateAfter = session.dayPass.config.hourlyRateAfter || 30;
+        if (durationHours > freeHours) {
+          pointsDeducted = Math.round((durationHours - freeHours) * rateAfter);
+        }
+      } else {
+        // 非首次驻店，且无 Day Pass，按正常小时费率扣费
+        pointsDeducted = Math.round(durationHours * hourlyRate);
+      }
     }
 
     // 更新用户积分（允许负数）
@@ -219,17 +236,27 @@ export const completeVisitSession = async (
     const currentPoints = userData.membership?.points || 0;
     const newPoints = currentPoints - pointsDeducted;
 
-    // 创建积分记录
+    // 2. 创建积分记录
     let pointsRecordId: string | undefined;
     if (pointsDeducted > 0) {
       const { createPointsRecord } = await import('./pointsRecords');
+      
+      let description = `驻店时长费用 (${durationHours}小时 × ${hourlyRate}积分/小时)`;
+      if (session.dayPass?.isPurchased) {
+        const freeHours = session.dayPass.config.freeHours || 3;
+        const rateAfter = session.dayPass.config.hourlyRateAfter || 30;
+        description = `Day Pass 超时费用 (总${durationHours}h, 免${freeHours}h, 超时费${rateAfter}/h)`;
+      } else if (session.isFirstVisitAfterRenewal) {
+        description = `续费后首次驻店 (免单)`;
+      }
+
       const pointsRecord = await createPointsRecord({
         userId: session.userId,
         userName: session.userName,
         type: 'spend',
         amount: pointsDeducted,
         source: 'visit',
-        description: `驻店时长费用 (${durationHours}小时 × ${hourlyRate}积分/小时)`,
+        description: description,
         relatedId: sessionId,
         balance: newPoints,
         createdBy: checkOutBy
@@ -238,13 +265,18 @@ export const completeVisitSession = async (
     }
 
     // 更新用户积分和累计时长
-    const totalVisitHours = (userData.membership?.totalVisitHours || 0) + durationHours;
-    await updateDoc(doc(db, GLOBAL_COLLECTIONS.USERS, session.userId), {
+    const userUpdateData: any = {
       'membership.points': newPoints,
-      'membership.totalVisitHours': totalVisitHours,
       'membership.currentVisitSessionId': null,
       updatedAt: Timestamp.fromDate(now)
-    });
+    };
+
+    // 仅非 Day Pass 签到才计入累计时长
+    if (!session.dayPass?.isPurchased) {
+      userUpdateData['membership.totalVisitHours'] = (userData.membership?.totalVisitHours || 0) + durationHours;
+    }
+
+    await updateDoc(doc(db, GLOBAL_COLLECTIONS.USERS, session.userId), userUpdateData);
 
     // 处理兑换的雪茄：确保所有记录都保存到redemptionRecords集合，然后统计、创建订单和出库记录
     let orderId: string | undefined;
@@ -276,6 +308,7 @@ export const completeVisitSession = async (
           dayKey: string;
           hourKey: string;
           redemptionIndex: number;
+          isDayPass?: boolean;
           redeemedAt: Date;
           redeemedBy: string;
           createdAt: Date;
@@ -307,6 +340,7 @@ export const completeVisitSession = async (
               dayKey,
               hourKey,
               redemptionIndex,
+              isDayPass: !!session.dayPass?.isPurchased,
               redeemedAt: redemptionDate,
               redeemedBy: redemption.redeemedBy || checkOutBy,
               createdAt: redemptionDate
@@ -748,6 +782,156 @@ export const addRedemptionToSession = async (
   } catch (error: any) {
     console.error('[addRedemptionToSession] 添加兑换项失败:', error);
     return { success: false, error: error.message || '添加兑换项失败' };
+  }
+};
+ 
+/**
+ * 购买 Day Pass
+ * 如果未提供 sessionId，则自动创建新的驻店记录（Check-in）
+ */
+export const purchaseDayPass = async (
+  userId: string,
+  userName?: string,
+  sessionId?: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const userRef = doc(db, GLOBAL_COLLECTIONS.USERS, userId);
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) return { success: false, error: '用户不存在' };
+ 
+    const userData = userSnap.data() as User;
+    const currentPoints = userData.membership?.points || 0;
+ 
+    // 检查是否已有进行中的会话（如果未提供 sessionId）
+    let targetSessionId = sessionId;
+    if (!targetSessionId) {
+      const pendingSession = await getPendingVisitSession(userId);
+      if (pendingSession) {
+        targetSessionId = pendingSession.id;
+      }
+    }
+ 
+    // 获取 Day Pass 配置
+    const { getPointsConfig } = await import('./pointsConfig');
+    const pointsConfig = await getPointsConfig();
+    const dayPassConfig = pointsConfig?.dayPass || { cost: 100, freeHours: 3, hourlyRateAfter: 30, cigarAllowance: 1 };
+ 
+    if (currentPoints < dayPassConfig.cost) return { success: false, error: '积分不足' };
+ 
+    const now = new Date();
+    const nowTimestamp = Timestamp.fromDate(now);
+ 
+    await runTransaction(db, async (transaction) => {
+      // 1. 扣费
+      const newPoints = currentPoints - dayPassConfig.cost;
+      transaction.update(userRef, {
+        'membership.points': newPoints,
+        updatedAt: nowTimestamp
+      });
+ 
+      // 2. 如果没有会话，创建新会话；如果有，更新现有会话
+      let finalSessionId = targetSessionId;
+      if (!finalSessionId) {
+        const sessionRef = doc(collection(db, GLOBAL_COLLECTIONS.VISIT_SESSIONS));
+        finalSessionId = sessionRef.id;
+        
+        transaction.set(sessionRef, {
+          userId,
+          userName: userName || userData.displayName,
+          checkInAt: nowTimestamp,
+          checkInBy: userName || userData.displayName,
+          status: 'pending',
+          checkInType: 'daypass', // 明确记录为 Day Pass 签到
+          dayPass: {
+            isPurchased: true,
+            purchasedAt: nowTimestamp,
+            config: dayPassConfig
+          },
+          createdAt: nowTimestamp,
+          updatedAt: nowTimestamp
+        });
+ 
+        transaction.update(userRef, {
+          'membership.currentVisitSessionId': finalSessionId,
+          'membership.lastCheckInAt': nowTimestamp
+        });
+      } else {
+        const sessionRef = doc(db, GLOBAL_COLLECTIONS.VISIT_SESSIONS, finalSessionId);
+        transaction.update(sessionRef, {
+          checkInType: 'daypass', // 补录 Day Pass 类型
+          dayPass: {
+            isPurchased: true,
+            purchasedAt: nowTimestamp,
+            config: dayPassConfig
+          },
+          updatedAt: nowTimestamp
+        });
+      }
+ 
+      // 3. 创建积分记录
+      const pointsRecordRef = doc(collection(db, GLOBAL_COLLECTIONS.POINTS_RECORDS));
+      transaction.set(pointsRecordRef, {
+        userId,
+        userName: userName || userData.displayName,
+        type: 'spend',
+        amount: dayPassConfig.cost,
+        source: 'visit',
+        description: '购买 Day Pass',
+        relatedId: finalSessionId,
+        balance: newPoints,
+        createdAt: nowTimestamp
+      });
+ 
+      // 4. 自动创建兑换记录 (Redeem 1 cigar)
+      const dayKey = now.toISOString().split('T')[0];
+      const hourKey = now.toISOString().split(':')[0];
+      const recordItemId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      const redemptionRecordItem = {
+        id: recordItemId,
+        userId,
+        userName: userName || userData.displayName,
+        cigarId: '',
+        cigarName: '待选择 (Day Pass 赠送)',
+        quantity: 1,
+        status: 'pending',
+        dayKey,
+        hourKey,
+        redemptionIndex: 1, // Day Pass 通常是当日第一个
+        isDayPass: true,    // Day Pass 兑换不计入会员累计总数
+        redeemedAt: nowTimestamp,
+        redeemedBy: userId,
+        createdAt: nowTimestamp
+      };
+ 
+      const redemptionDocRef = doc(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS, finalSessionId);
+      transaction.set(redemptionDocRef, {
+        visitSessionId: finalSessionId,
+        userId,
+        userName: userName || userData.displayName,
+        redemptions: [redemptionRecordItem],
+        createdAt: nowTimestamp,
+        updatedAt: nowTimestamp
+      }, { merge: true });
+ 
+      // 同步更新 session 中的 redemptions
+      const sessionRef = doc(db, GLOBAL_COLLECTIONS.VISIT_SESSIONS, finalSessionId);
+      transaction.update(sessionRef, {
+        redemptions: arrayUnion({
+          recordId: recordItemId,
+          cigarId: '',
+          cigarName: '待选择 (Day Pass 赠送)',
+          quantity: 1,
+          redeemedBy: userId,
+          redeemedAt: nowTimestamp
+        })
+      });
+    });
+ 
+    return { success: true };
+  } catch (error: any) {
+    console.error('[purchaseDayPass] 失败:', error);
+    return { success: false, error: error.message || '购买失败' };
   }
 };
 

@@ -503,7 +503,9 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
                           ? t('auth.admin', { defaultValue: '管理员' })
                           : user?.role === 'vip'
                             ? t('auth.vip', { defaultValue: 'VIP' })
-                            : t('auth.member', { defaultValue: '会员' })}
+                            : user?.status === 'active'
+                              ? t('auth.member', { defaultValue: '会员' })
+                              : t('auth.guest', { defaultValue: '游客' })}
                     </div>
                   </div>
                 </div>
@@ -541,25 +543,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
                       {membershipPeriod ? dayjs(membershipPeriod.startDate).format('YYYY-MM-DD') : '未开通会员'}
                     </div>
                   </div>
-                  {membershipPeriod && (
-                    <div>
-                      <div style={{
-                        color: 'rgba(255,255,255,0.7)',
-                        fontSize: 10,
-                        fontFamily: "'Noto Sans SC', sans-serif",
-                        textShadow: '0 1px 2px rgba(0,0,0,0.5)'
-                      }}>VALID THRU</div>
-                      <div style={{
-                        color: '#ffffff',
-                        fontSize: 12,
-                        fontWeight: 600,
-                        fontFamily: "'Noto Sans SC', sans-serif",
-                        textShadow: '0 1px 2px rgba(0,0,0,0.5)'
-                      }}>
-                        {dayjs(membershipPeriod.endDate).format('YYYY-MM-DD')}
-                      </div>
-                    </div>
-                  )}
+
                 </div>
               </div>
             </div>

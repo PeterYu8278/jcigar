@@ -622,6 +622,14 @@ export interface PointsConfig {
     hourlyRate: number;        // 每小时扣除积分
   };
   
+  // Day Pass 配置
+  dayPass?: {
+    cost: number;              // 购买价格（积分）
+    freeHours: number;         // 包含的免费小时
+    hourlyRateAfter: number;   // 超出后的每小时费用（积分）
+    cigarAllowance: number;    // 允许兑换的雪茄数量
+  };
+  
   updatedAt: Date;
   updatedBy: string;  // 更新人的 userId
 }
@@ -681,8 +689,23 @@ export interface VisitSession {
   // 状态
   status: 'pending' | 'completed' | 'expired'; // expired = 忘记check-out后自动结算
   
+  // 签到类型
+  checkInType?: 'membership' | 'daypass';
+  
   // 特殊标记
   isFirstVisitAfterRenewal?: boolean; // 续费后首次驻店（不扣费）
+  
+  // Day Pass 相关
+  dayPass?: {
+    isPurchased: boolean;
+    purchasedAt: Date;
+    config: {
+      cost: number;
+      freeHours: number;
+      hourlyRateAfter: number;
+      cigarAllowance: number;
+    };
+  };
   
   createdAt: Date;
   updatedAt: Date;
@@ -792,6 +815,7 @@ export interface RedemptionRecordItem {
   dayKey: string;            // "2025-10-28" (YYYY-MM-DD)
   hourKey?: string;          // "2025-10-28-14" (YYYY-MM-DD-HH) 如果有每小时限额
   redemptionIndex: number;   // 当日第几次兑换
+  isDayPass?: boolean;       // 是否为 Day Pass 关联的兑换（不计入会员累计总数）
   
   redeemedAt: Date;
   redeemedBy: string;        // 用户ID（用户发起）或管理员ID（管理员创建/确认）

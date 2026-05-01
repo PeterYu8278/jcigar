@@ -1,6 +1,6 @@
 // 合并后的驻店计时器和兑换模块组件
 import React, { useState, useEffect } from 'react';
-import { Card, Typography, Space, Progress, message, Image, App, Modal, Table, Tag } from 'antd';
+import { Card, Typography, Space, Progress, message, Image, App, Modal, Table, Tag, Row, Col } from 'antd';
 import { ClockCircleOutlined, GiftOutlined, ShoppingCartOutlined, TrophyOutlined, ReloadOutlined, WalletOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../store/modules/auth';
 import { getPendingVisitSession } from '../../services/firebase/visitSessions';
@@ -38,8 +38,11 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
   const [canRedeemThisHour, setCanRedeemThisHour] = useState(true);
   const [countdownSeconds, setCountdownSeconds] = useState<number | null>(null); // 倒计时剩余秒数
   const [annualFeeAmount, setAnnualFeeAmount] = useState<number | null>(null); // 年费金额
+  const [dayPassConfig, setDayPassConfig] = useState<any>(null);
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   const [historyModalVisible, setHistoryModalVisible] = useState(false);
+  const [membershipModalVisible, setMembershipModalVisible] = useState(false);
+  const [selectedAccess, setSelectedAccess] = useState<'membership' | 'daypass' | null>(null);
   const [redemptionHistory, setRedemptionHistory] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
@@ -168,7 +171,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
       const period = await getUserMembershipPeriod(userId);
 
       const sessions = await getUserVisitSessions(userId);
-      
+
       if (!period) {
         // 如果没有找到会员期限记录（可能是新系统迁移前的活跃用户），则计算所有已完成记录
         const allHours = sessions
@@ -276,6 +279,17 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
         setCanRedeemThisHour(true);
         setHourlyCount(0);
       }
+
+      // 获取 Day Pass 配置
+      try {
+        const { getPointsConfig } = await import('../../services/firebase/pointsConfig');
+        const pointsConfig = await getPointsConfig();
+        if (pointsConfig?.dayPass) {
+          setDayPassConfig(pointsConfig.dayPass);
+        }
+      } catch (e) {
+        console.error('加载 Day Pass 配置失败:', e);
+      }
     } catch (error) {
       // 加载失败，静默处理
     }
@@ -313,7 +327,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
     }
 
     if (loading) {
-      return; // 防止重复点击
+      return;
     }
 
     setLoading(true);
@@ -327,10 +341,8 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
       let recordId: string;
 
       if (pendingRecord) {
-        // 如果已存在 pending 状态的首次开通记录，使用该记录
         recordId = pendingRecord.id;
       } else {
-        // 如果不存在，创建新的年费记录（dueDate设为今天，立即生效）
         const today = new Date();
         const result = await createMembershipFeeRecord(
           user.id,
@@ -347,129 +359,6 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
         recordId = result.recordId;
       }
 
-      // ✅ 在扣费前先检查积分是否充足
-      const currentPoints = user?.membership?.points || 0;
-      const { getCurrentAnnualFeeAmount } = await import('../../services/firebase/membershipFee');
-      const annualFee = await getCurrentAnnualFeeAmount(new Date());
-
-      if (currentPoints < annualFee) {
-        // ✅ 积分不足，显示友好提示并引导充值
-        const shortage = annualFee - currentPoints;
-        setLoading(false);
-
-        // 检查 modal 实例是否存在
-        if (!modal || typeof modal.confirm !== 'function') {
-          message.warning(`积分不足！需要 ${annualFee} 积分，当前只有 ${currentPoints} 积分，还需 ${shortage} 积分。`);
-          message.info('正在跳转到充值页面...', 2);
-          setTimeout(() => {
-            navigate('/reload');
-          }, 2000);
-          return;
-        }
-        modal.confirm({
-          title: <span style={{ color: '#FFFFFF', fontSize: 18, fontWeight: 600 }}>积分不足</span>,
-          content: (
-            <div style={{ marginTop: 16 }}>
-              <div style={{
-                padding: 16,
-                background: 'rgba(255, 255, 255, 0.05)',
-                borderRadius: 12,
-                border: '1px solid rgba(244, 175, 37, 0.6)',
-                marginBottom: 16,
-                backdropFilter: 'blur(10px)'
-              }}>
-                <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={{ color: 'rgba(255, 255, 255, 0.85)' }}>需要积分：</Text>
-                    <Text strong style={{ color: '#C48D3A', fontSize: 20 }}>{annualFee}</Text>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={{ color: 'rgba(255, 255, 255, 0.85)' }}>当前积分：</Text>
-                    <Text strong style={{ color: '#FFFFFF', fontSize: 20 }}>{currentPoints}</Text>
-                  </div>
-                  <div style={{
-                    height: 1,
-                    background: 'rgba(244, 175, 37, 0.6)',
-                    margin: '12px 0'
-                  }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={{ color: 'rgba(255, 255, 255, 0.85)' }}>缺少积分：</Text>
-                    <Text strong style={{ color: '#ff4d4f', fontSize: 20 }}>{shortage}</Text>
-                  </div>
-                </Space>
-              </div>
-
-              <div style={{
-                padding: 12,
-                background: 'rgba(244, 175, 37, 0.15)',
-                borderRadius: 8,
-                border: '1px solid rgba(244, 175, 37, 0.6)',
-                backdropFilter: 'blur(6px)'
-              }}>
-                <Text style={{ color: '#FDE08D', fontSize: 14 }}>
-                  充值积分后，即可开通会员，享受VIP权益！
-                </Text>
-              </div>
-            </div>
-          ),
-          okText: '去充值',
-          cancelText: '稍后再说',
-          width: 420,
-          centered: true,
-          okButtonProps: {
-            style: {
-              background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-              color: '#000000',
-              fontWeight: 600,
-              height: 40,
-              fontSize: 15,
-              borderRadius: 8
-            }
-          },
-          cancelButtonProps: {
-            style: {
-              background: 'rgba(255, 255, 255, 0.1)',
-              color: 'rgba(255, 255, 255, 0.85)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              height: 40,
-              fontSize: 15,
-              borderRadius: 8
-            }
-          },
-          styles: {
-            content: {
-              background: 'linear-gradient(180deg, #1a1612 0%, #0f0d0a 100%)',
-              borderRadius: 16,
-              border: '1px solid rgba(244, 175, 37, 0.6)',
-              boxShadow: '0 8px 32px rgba(244, 175, 37, 0.6)',
-              padding: '24px'
-            },
-            header: {
-              background: 'transparent',
-              borderBottom: 'none',
-              paddingBottom: 16
-            },
-            body: {
-              color: '#FFFFFF'
-            },
-            footer: {
-              background: 'transparent',
-              borderTop: 'none',
-              marginTop: 20
-            },
-            mask: {
-              backdropFilter: 'blur(8px)',
-              background: 'rgba(0, 0, 0, 0.65)'
-            }
-          },
-          onOk: () => {
-            navigate('/reload');
-          }
-        });
-
-        return;
-      }
-
       // 立即尝试扣除年费
       const deductResult = await deductMembershipFee(recordId);
 
@@ -483,13 +372,13 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
             setUser(updatedUser);
           }
         } catch (error) {
-          // 刷新用户信息失败，静默处理
+          // 静默处理
         }
 
-        // 重新加载数据
         await loadData();
+        setMembershipModalVisible(false);
+        setSelectedAccess(null);
       } else {
-        // 其他错误
         message.error(deductResult.error || '扣除年费失败，请稍后重试');
       }
     } catch (error: any) {
@@ -498,7 +387,6 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
       setLoading(false);
     }
   };
-
   const handleRedeem = async () => {
     if (!user?.id) {
       message.warning('请先登录');
@@ -506,13 +394,12 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
     }
 
     if (loading) {
-      return; // 防止重复点击
+      return;
     }
 
     setLoading(true);
 
     try {
-      // 检查是否有pending session
       const session = await getPendingVisitSession(user.id);
       if (!session) {
         message.warning('请先check-in才能兑换');
@@ -520,7 +407,6 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
         return;
       }
 
-      // 检查是否可以兑换
       const canRedeem = await canUserRedeem(user.id, 1);
       if (!canRedeem.canRedeem) {
         message.warning(canRedeem.reason || '无法兑换');
@@ -528,21 +414,14 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
         return;
       }
 
-      // 创建待处理的兑换记录（等待管理员选择雪茄）
       const { createPendingRedemptionRecord } = await import('../../services/firebase/redemption');
       const result = await createPendingRedemptionRecord(user.id, session.id, 1);
 
       if (result.success) {
         message.success('兑换请求已提交，请等待管理员选择雪茄产品');
-
-        // 开始1小时倒计时
         const storageKey = `redeem_countdown_${user.id}`;
-        const now = Date.now();
-        localStorage.setItem(storageKey, now.toString());
-        setCountdownSeconds(3600); // 1小时 = 3600秒
-
-
-        // 数据会在管理员确认后，通过定时刷新（每30秒）自动更新
+        localStorage.setItem(storageKey, Date.now().toString());
+        setCountdownSeconds(3600);
       } else {
         message.error(result.error || '提交兑换请求失败');
       }
@@ -553,6 +432,34 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
     }
   };
 
+  const handleBuyDayPass = async () => {
+    if (!user?.id) {
+      message.warning('请先登录');
+      return;
+    }
+    if (loading) return;
+ 
+    setLoading(true);
+    try {
+      const { purchaseDayPass } = await import('../../services/firebase/visitSessions');
+      const result = await purchaseDayPass(user.id, user.displayName, currentSession?.id);
+      if (result.success) {
+        message.success('Day Pass 购买成功，已为您自动办理签到及雪茄兑换！');
+        const updatedUser = await getUserData(user.id);
+        if (updatedUser) setUser(updatedUser);
+        await loadData();
+        setMembershipModalVisible(false);
+        setSelectedAccess(null);
+      } else {
+        message.error(result.error || '购买失败');
+      }
+    } catch (error: any) {
+      message.error(error.message || '购买失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+ 
   if (!user) {
     return null;
   }
@@ -644,53 +551,43 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
 
               // 检查用户会员状态
               const isActiveMember = user?.status === 'active';
+              const hasDayPass = currentSession?.dayPass?.isPurchased;
 
-              // 如果不是活跃会员，显示开通会员按钮
-              if (!isActiveMember) {
-                const currentPoints = user?.membership?.points || 0;
-                const hasEnoughPoints = annualFeeAmount !== null && currentPoints >= annualFeeAmount;
-
+              // 如果不是活跃会员且没有购买 Day Pass，显示合并按钮
+              if (!isActiveMember && !hasDayPass) {
                 return (
-                  <>
-                    <button
-                      type="button"
-                      onClick={handleActivateMembership}
-                      disabled={loading || annualFeeAmount === null}
-                      style={{
-                        background: appConfig?.colorTheme?.primaryButton
-                          ? `linear-gradient(135deg, ${appConfig.colorTheme.primaryButton.startColor} 0%, ${appConfig.colorTheme.primaryButton.endColor} 100%)`
-                          : 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
-                        color: '#111',
-                        height: 48,
-                        fontSize: 16,
-                        fontWeight: 600,
-                        minWidth: 120,
-                        opacity: (loading || annualFeeAmount === null) ? 0.6 : 1,
-                        cursor: (loading || annualFeeAmount === null) ? 'not-allowed' : 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 8,
-                        borderRadius: 6,
-                        padding: '0 16px'
-                      }}
-                      title={
-                        annualFeeAmount === null
-                          ? '正在加载年费信息...'
-                          : !hasEnoughPoints
-                            ? `积分不足，需要 ${annualFeeAmount} 积分，点击充值`
-                            : `开通会员需要扣除 ${annualFeeAmount} 积分`
-                      }
-                    >
-                      {loading && <span style={{ display: 'inline-block', width: 16, height: 16, border: '2px solid #111', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />}
-                      <TrophyOutlined />
-                      开通会员
-                    </button>
-                  </>
+                  <button
+                    type="button"
+                    onClick={() => setMembershipModalVisible(true)}
+                    disabled={loading}
+                    style={{
+                      background: appConfig?.colorTheme?.primaryButton
+                        ? `linear-gradient(135deg, ${appConfig.colorTheme.primaryButton.startColor} 0%, ${appConfig.colorTheme.primaryButton.endColor} 100%)`
+                        : 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
+                      color: '#111',
+                      height: 48,
+                      fontSize: 16,
+                      fontWeight: 600,
+                      minWidth: 140,
+                      opacity: loading ? 0.6 : 1,
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      borderRadius: 6,
+                      padding: '0 24px',
+                      boxShadow: '0 4px 12px rgba(196, 141, 58, 0.3)'
+                    }}
+                  >
+                    {loading && <span className="anticon-spin" style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #111', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />}
+                    <TrophyOutlined />
+                    Join NOW
+                  </button>
                 );
               }
 
-              // 检查积分是否少于50
+              // 如果是活跃会员或已购买 Day Pass，显示正常逻辑
               const currentPoints = user?.membership?.points || 0;
               const isLowPoints = currentPoints < 50;
 
@@ -719,8 +616,6 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                   navigate('/reload');
                 };
                 isDisabled = false;
-                buttonStyle.background = 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)';
-                buttonStyle.color = '#FFFFFF';
                 buttonStyle.opacity = 1;
               }
               // 如果dailyCount >= dailyLimit，显示"No Quota"
@@ -1037,6 +932,212 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
             background: rgba(255, 255, 255, 0.02) !important;
           }
           .dark-table .ant-pagination-item-link, .dark-table .ant-pagination-item a { color: #fff !important; }
+        `}</style>
+      </Modal>
+
+      {/* 会员/Day Pass 选择弹窗 */}
+      <Modal
+        title={<span style={{ color: '#FDE08D', fontWeight: 800, fontSize: 18 }}>Choose Your Access</span>}
+        open={membershipModalVisible}
+        onCancel={() => setMembershipModalVisible(false)}
+        footer={null}
+        width={window.innerWidth < 768 ? '95%' : 600}
+        centered
+        styles={{
+          mask: { backdropFilter: 'blur(8px)' },
+          content: {
+            background: '#1a1a1a',
+            border: '1px solid #C48D3A',
+            borderRadius: 16,
+            padding: '24px'
+          }
+        }}
+      >
+        <div style={{
+          marginBottom: 16,
+          padding: '12px 16px',
+          background: 'rgba(255, 255, 255, 0.05)',
+          borderRadius: 12,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          border: '1px solid rgba(244, 175, 37, 0.2)',
+          marginTop: 16
+        }}>
+          <span style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 14 }}>Your Current Balance</span>
+          <span style={{
+            color: '#FDE08D',
+            fontSize: 18,
+            fontWeight: 800,
+            textShadow: '0 0 10px rgba(253, 224, 141, 0.3)'
+          }}>
+            {user?.membership?.points || 0} pts
+          </span>
+        </div>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: window.innerWidth < 768 ? 'repeat(2, 1fr)' : 'repeat(2, 1fr)',
+          gap: 12,
+          marginTop: 16
+        }}>
+          {/* Card 1: Membership */}
+          <div
+            onClick={() => setSelectedAccess('membership')}
+            style={{
+              padding: window.innerWidth < 768 ? '16px 12px' : '24px',
+              borderRadius: 12,
+              cursor: (loading || annualFeeAmount === null) ? 'not-allowed' : 'pointer',
+              background: selectedAccess === 'membership' ? 'rgba(253,224,141,0.08)' : 'rgba(255,255,255,0.03)',
+              border: selectedAccess === 'membership' ? '2px solid #FDE08D' : '1px solid rgba(255,255,255,0.1)',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              minHeight: window.innerWidth < 768 ? 160 : 200,
+              boxShadow: selectedAccess === 'membership' ? '0 0 15px rgba(253,224,141,0.2)' : 'none',
+            }}
+            className="membership-selection-card"
+          >
+            <div>
+              <div style={{ color: selectedAccess === 'membership' ? '#FDE08D' : '#fff', fontWeight: 800, fontSize: 16, marginBottom: 8 }}>
+                Annual Membership
+              </div>
+              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, lineHeight: 1.4 }} className="benefit-list">
+                ✓ Annual membership<br />
+                ✓ Accumulate Stay Hours<br />
+                ✓ Priority Access<br />
+                ✓ Rate per hour<br />
+                ✓ FREE 25/50/75 Cigar<br />
+                ✓ Daily redemption limit 3/5/6
+              </div>
+            </div>
+            <div style={{ textAlign: 'right', marginTop: 16 }} className="price-text-container">
+              <div style={{
+                fontSize: 20,
+                fontWeight: 800,
+                backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                WebkitBackgroundClip: 'text',
+                color: 'transparent'
+              }}>
+                {annualFeeAmount} pts
+              </div>
+              <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 9, letterSpacing: 1 }}>YEARLY</div>
+            </div>
+          </div>
+
+          {/* Card 2: Day Pass */}
+          <div
+            onClick={() => setSelectedAccess('daypass')}
+            style={{
+              padding: window.innerWidth < 768 ? '16px 12px' : '24px',
+              borderRadius: 12,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              background: selectedAccess === 'daypass' ? 'rgba(253,224,141,0.08)' : 'rgba(255,255,255,0.03)',
+              border: selectedAccess === 'daypass' ? '2px solid #FDE08D' : '1px solid rgba(255,255,255,0.1)',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              minHeight: window.innerWidth < 768 ? 160 : 200,
+              boxShadow: selectedAccess === 'daypass' ? '0 0 15px rgba(253,224,141,0.2)' : 'none',
+            }}
+            className="membership-selection-card"
+          >
+            <div>
+              <div style={{ color: selectedAccess === 'daypass' ? '#FDE08D' : '#fff', fontWeight: 800, fontSize: 16, marginBottom: 8 }}>
+                Day Pass
+              </div>
+              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, lineHeight: 1.4 }} className="benefit-list">
+                ✓ 3 Hours Free<br />
+                ✓ 1 Cigar Included<br />
+                ✓ One-time Entry<br />
+                ✓ Rate per hour<br />
+                <span style={{ color: 'rgba(255,255,255,0.3)' }}>X FREE 25/50/75 Cigar</span><br />
+                <span style={{ color: 'rgba(255,255,255,0.3)' }}>X Accumulate Stay Hours</span>
+              </div>
+            </div>
+            <div style={{ textAlign: 'right', marginTop: 16 }} className="price-text-container">
+              <div style={{
+                fontSize: 20,
+                fontWeight: 800,
+                backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                WebkitBackgroundClip: 'text',
+                color: 'transparent'
+              }}>
+                {dayPassConfig?.cost || 100} pts
+              </div>
+              <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 9, letterSpacing: 1 }}>ONE-TIME</div>
+            </div>
+          </div>
+        </div>
+ 
+        {/* Action Button Section */}
+        {selectedAccess && (() => {
+          const currentPoints = user?.membership?.points || 0;
+          const cost = selectedAccess === 'membership' ? (annualFeeAmount || 0) : (dayPassConfig?.cost || 100);
+          const hasEnoughPoints = currentPoints >= cost;
+ 
+          return (
+            <div style={{ marginTop: 24 }}>
+              <button
+                type="button"
+                onClick={hasEnoughPoints ? (selectedAccess === 'membership' ? handleActivateMembership : handleBuyDayPass) : () => navigate('/reload')}
+                disabled={loading}
+                style={{
+                  width: '100%',
+                  height: 48,
+                  borderRadius: 12,
+                  background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                  border: 'none',
+                  color: '#111',
+                  fontWeight: 700,
+                  fontSize: 16,
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 4px 15px rgba(244,175,37,0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8
+                }}
+              >
+                {loading && <span className="anticon-spin" style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />}
+                {!hasEnoughPoints && <WalletOutlined />}
+                {hasEnoughPoints 
+                  ? (selectedAccess === 'membership' ? 'Confirm Activation' : 'Confirm Purchase')
+                  : `Reload Points (Short: ${cost - currentPoints})`
+                }
+              </button>
+            </div>
+          );
+        })()}
+
+        <style>{`
+          .membership-selection-card {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          }
+          @media (max-width: 575px) {
+            .membership-selection-card {
+              padding: 12px 10px !important;
+              min-height: 180px !important;
+            }
+            .membership-selection-card .benefit-list {
+              font-size: 10px !important;
+              line-height: 1.4 !important;
+              margin-top: 4px !important;
+            }
+            .membership-selection-card .price-text-container {
+              margin-top: 12px !important;
+            }
+            .membership-selection-card .price-text-container div:first-child {
+              font-size: 16px !important;
+            }
+          }
+          .membership-selection-card:hover {
+            background: rgba(253,224,141,0.08) !important;
+            transform: translateY(-5px);
+            border-color: #FDE08D !important;
+            box-shadow: 0 0 15px rgba(253,224,141,0.2) !important;
+          }
         `}</style>
       </Modal>
     </Card>

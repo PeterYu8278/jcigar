@@ -222,6 +222,18 @@ const VisitSessionsPage: React.FC = () => {
       render: (name: string, record: VisitSession) => name || record.userId
     },
     {
+      title: '类型',
+      dataIndex: 'checkInType',
+      key: 'checkInType',
+      width: 120,
+      render: (type: string, record: VisitSession) => {
+        if (type === 'daypass' || record.dayPass?.isPurchased) {
+          return <Tag color="gold">Day Pass</Tag>;
+        }
+        return <Tag color="blue">会员签到</Tag>;
+      }
+    },
+    {
       title: 'Check-out时间',
       dataIndex: 'checkOutAt',
       key: 'checkOutAt',

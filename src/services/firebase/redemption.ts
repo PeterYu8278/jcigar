@@ -83,14 +83,14 @@ export const getUserTotalVisitHoursInPeriod = async (userId: string): Promise<nu
     if (!period) {
       // 如果没有会员期限，则计算所有已完成记录（兼容未缴纳年费或迁移数据）
       const totalHours = sessions
-        .filter(s => s.status === 'completed' && s.durationHours)
+        .filter(s => s.status === 'completed' && s.durationHours && s.checkInType !== 'daypass')
         .reduce((sum, s) => sum + (s.durationHours || 0), 0);
       return totalHours;
     }
 
-    // 筛选出在会员期限内的completed sessions
+    // 筛选出在会员期限内的completed sessions，且排除 Day Pass
     const periodSessions = sessions.filter(session => {
-      if (session.status !== 'completed' || !session.checkOutAt) {
+      if (session.status !== 'completed' || !session.checkOutAt || session.checkInType === 'daypass') {
         return false;
       }
       // 确保日期对象比较正确
@@ -176,10 +176,20 @@ export const canUserRedeem = async (
     }
 
     const userData = userDoc.data() as User;
-    if (userData.status !== 'active') {
-      return { canRedeem: false, reason: '会员状态不活跃，无法兑换' };
+    
+    // 检查是否有 pending session 且已购买 Day Pass
+    const { getPendingVisitSession } = await import('./visitSessions');
+    const pendingSession = await getPendingVisitSession(userId);
+    
+    if (!pendingSession) {
+      return { canRedeem: false, reason: '请先check-in才能兑换' };
     }
-
+ 
+    const hasActiveDayPass = pendingSession?.dayPass?.isPurchased;
+    if (userData.status !== 'active' && !hasActiveDayPass) {
+      return { canRedeem: false, reason: '会员状态不活跃且未购买 Day Pass，无法兑换' };
+    }
+ 
     // 检查是否在截止时间之前
     const config = await getRedemptionConfig();
     if (config) {
@@ -187,17 +197,10 @@ export const canUserRedeem = async (
       const [cutoffHour, cutoffMinute] = config.cutoffTime.split(':').map(Number);
       const cutoffTime = new Date(now);
       cutoffTime.setHours(cutoffHour, cutoffMinute, 0, 0);
-
+ 
       if (now >= cutoffTime) {
         return { canRedeem: false, reason: `兑换截止时间为 ${config.cutoffTime}，请明日再试` };
       }
-    }
-
-    // 检查是否有pending的visit session
-    const { getPendingVisitSession } = await import('./visitSessions');
-    const pendingSession = await getPendingVisitSession(userId);
-    if (!pendingSession) {
-      return { canRedeem: false, reason: '请先check-in才能兑换' };
     }
 
     // 获取限额
@@ -746,6 +749,9 @@ export const getTotalRedemptions = async (userId: string): Promise<RedemptionRec
       const redemptions = data.redemptions || [];
       
       redemptions.forEach(item => {
+        // 跳过 Day Pass 兑换记录，不计入累计总数
+        if (item.isDayPass) return;
+
         // 转换日期
         const redeemedAt = (item.redeemedAt as any)?.toDate?.() || (item.redeemedAt instanceof Date ? item.redeemedAt : new Date(item.redeemedAt as any));
         const createdAt = (item.createdAt as any)?.toDate?.() || (item.createdAt instanceof Date ? item.createdAt : new Date(item.createdAt as any));

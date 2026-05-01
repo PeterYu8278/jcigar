@@ -17,6 +17,15 @@ export const getPointsConfig = async (): Promise<PointsConfig | null> => {
       if (!data.visit) {
         data.visit = { hourlyRate: 10 }; // 默认值
       }
+      // 确保 dayPass 字段存在（向后兼容）
+      if (!data.dayPass) {
+        data.dayPass = {
+          cost: 100,
+          freeHours: 3,
+          hourlyRateAfter: 30,
+          cigarAllowance: 1
+        };
+      }
       return { id: docSnap.id, ...data } as PointsConfig;
     }
     
@@ -67,6 +76,12 @@ export const getDefaultPointsConfig = (): PointsConfig => {
     },
     visit: {
       hourlyRate: 10,        // 默认每小时扣除10积分
+    },
+    dayPass: {
+      cost: 100,             // 100 积分
+      freeHours: 3,          // 3 小时免费
+      hourlyRateAfter: 30,   // 3 小时后每个小时扣除 30 积分
+      cigarAllowance: 1,     // 允许兑换 1 支雪茄
     },
     updatedAt: new Date(),
     updatedBy: 'system',
