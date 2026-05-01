@@ -117,6 +117,7 @@ const AdminAccountList: React.FC = () => {
 
 const { Option } = Select;
 const { TabPane } = Tabs;
+type SubTabKey = 'settings' | 'records' | 'accounts';
 
 export const SubscriptionSettings: React.FC = () => {
   const { t } = useTranslation();
@@ -125,6 +126,7 @@ export const SubscriptionSettings: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const { user, isSuperAdmin } = useAuthStore();
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
+  const [activeTab, setActiveTab] = useState<SubTabKey>('settings');
   
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [requests, setRequests] = useState<SubscriptionRequest[]>([]);
@@ -374,18 +376,57 @@ export const SubscriptionSettings: React.FC = () => {
         />
       )}
 
-      <Tabs 
-        defaultActiveKey="1" 
-        type="card"
-        className="custom-tabs"
-        style={{ color: '#fff' }}
-      >
-        <TabPane tab="Subscription Settings" key="1">
-          <Form
-            form={form}
-            layout="vertical"
-            onFinish={handleSaveConfig}
-          >
+      {/* Custom Tab Bar */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{
+          display: 'flex',
+          borderBottom: '1px solid rgba(244,175,37,0.2)',
+          marginBottom: 16
+        }}>
+          {([{ key: 'settings', label: 'Subscription Settings' }, { key: 'records', label: 'Payment Records' }, { key: 'accounts', label: 'Admin Accounts' }] as const).map(({ key, label }) => {
+            const isActive = activeTab === key;
+            const baseStyle: React.CSSProperties = {
+              flex: 1,
+              padding: '12px 0',
+              fontWeight: 800,
+              fontSize: 13,
+              outline: 'none',
+              borderBottom: isActive ? '2px solid #f4af25' : '2px solid transparent',
+              borderTop: 'none',
+              borderLeft: 'none',
+              borderRight: 'none',
+              cursor: 'pointer',
+              background: 'none',
+              transition: 'all 0.2s ease',
+            };
+            const activeStyle: React.CSSProperties = {
+              color: 'transparent',
+              background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+              WebkitBackgroundClip: 'text',
+            };
+            const inactiveStyle: React.CSSProperties = {
+              color: '#A0A0A0',
+            };
+            return (
+              <button
+                key={key}
+                style={{ ...baseStyle, ...(isActive ? activeStyle : inactiveStyle) }}
+                onClick={() => setActiveTab(key)}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'settings' && (
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSaveConfig}
+        >
             <div style={{ display: 'flex', flexDirection: window.innerWidth < 768 ? 'column' : 'row', gap: 24 }}>
               {/* Left Column: Status & Quota */}
               <div style={{ flex: 1 }}>
@@ -468,7 +509,7 @@ export const SubscriptionSettings: React.FC = () => {
                     }
                     rules={[{ required: true }]}
                   >
-                    <InputNumber min={1} style={{ width: '100%' }} disabled={!isSuperAdmin} />
+                    <InputNumber min={1} controls={false} style={{ width: '100%' }} disabled={!isSuperAdmin} />
                   </Form.Item>
                   <Form.Item
                     name={['quota', 'maxSuperAdmins']}
@@ -482,7 +523,7 @@ export const SubscriptionSettings: React.FC = () => {
                     }
                     rules={[{ required: true }]}
                   >
-                    <InputNumber min={1} style={{ width: '100%' }} disabled={!isSuperAdmin} />
+                    <InputNumber min={1} controls={false} style={{ width: '100%' }} disabled={!isSuperAdmin} />
                   </Form.Item>
                   <Form.Item
                     name={['quota', 'maxAdmins']}
@@ -496,7 +537,7 @@ export const SubscriptionSettings: React.FC = () => {
                     }
                     rules={[{ required: true }]}
                   >
-                    <InputNumber min={0} style={{ width: '100%' }} disabled={!isSuperAdmin} />
+                    <InputNumber min={0} controls={false} style={{ width: '100%' }} disabled={!isSuperAdmin} />
                   </Form.Item>
                 </Card>
               </div>
@@ -560,7 +601,7 @@ export const SubscriptionSettings: React.FC = () => {
                                 label={<span style={{ color: '#888', fontSize: 12 }}>Annual Fee</span>}
                                 rules={[{ required: true, message: 'Missing Fee' }]}
                               >
-                                <InputNumber placeholder="0" min={0} addonBefore="RM" style={{ width: '100%' }} disabled={!isSuperAdmin} />
+                                <InputNumber placeholder="0" min={0} controls={false} addonBefore="RM" style={{ width: '100%' }} disabled={!isSuperAdmin} />
                               </Form.Item>
                               <Form.Item
                                 {...restField}
@@ -568,7 +609,7 @@ export const SubscriptionSettings: React.FC = () => {
                                 label={<span style={{ color: '#888', fontSize: 12 }}>Validity (Months)</span>}
                                 rules={[{ required: true, message: 'Missing Period' }]}
                               >
-                                <InputNumber placeholder="12" min={1} addonAfter="Mon" style={{ width: '100%' }} disabled={!isSuperAdmin} />
+                                <InputNumber placeholder="12" min={1} controls={false} addonAfter="Mon" style={{ width: '100%' }} disabled={!isSuperAdmin} />
                               </Form.Item>
                             </div>
                           </div>
@@ -629,9 +670,9 @@ export const SubscriptionSettings: React.FC = () => {
               </div>
             )}
           </Form>
-        </TabPane>
+      )}
 
-        <TabPane tab="Payment Records" key="2">
+      {activeTab === 'records' && (
           <Card style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: 0 }}>
             <Table
               dataSource={requests}
@@ -644,32 +685,14 @@ export const SubscriptionSettings: React.FC = () => {
               style={{ background: 'transparent' }}
             />
           </Card>
-        </TabPane>
+      )}
 
-        <TabPane tab="Admin Accounts" key="3">
+      {activeTab === 'accounts' && (
           <AdminAccountList />
-        </TabPane>
-      </Tabs>
+      )}
 
       <style dangerouslySetInnerHTML={{ __html: `
-        .custom-tabs .ant-tabs-nav-list {
-          border-bottom: none !important;
-        }
-        .custom-tabs .ant-tabs-tab {
-          background: rgba(255,255,255,0.03) !important;
-          border: 1px solid rgba(255,255,255,0.1) !important;
-          border-bottom: none !important;
-          color: #888 !important;
-          transition: all 0.3s;
-        }
-        .custom-tabs .ant-tabs-tab-active {
-          background: rgba(244,175,37,0.1) !important;
-          border-top: 2px solid #f4af25 !important;
-        }
-        .custom-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
-          color: #f4af25 !important;
-          font-weight: 800;
-        }
+
         .custom-table .ant-table {
           background: transparent !important;
           color: #fff !important;

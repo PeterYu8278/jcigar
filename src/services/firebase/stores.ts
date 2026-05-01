@@ -75,6 +75,11 @@ export const getStoreById = async (storeId: string) => {
   }
 };
 
+// Remove undefined values – Firestore rejects them
+const stripUndefined = (obj: Record<string, any>): Record<string, any> => {
+  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined));
+};
+
 /**
  * 创建门店
  */
@@ -82,7 +87,7 @@ export const createStore = async (storeData: Omit<Store, 'id' | 'createdAt' | 'u
   try {
     const now = new Date();
     const docRef = await addDoc(collection(db, STORES_COLLECTION), {
-      ...storeData,
+      ...stripUndefined(storeData as Record<string, any>),
       createdAt: Timestamp.fromDate(now),
       updatedAt: Timestamp.fromDate(now)
     });
@@ -100,7 +105,7 @@ export const updateStore = async (storeId: string, storeData: Partial<Omit<Store
   try {
     const docRef = doc(db, STORES_COLLECTION, storeId);
     await updateDoc(docRef, {
-      ...storeData,
+      ...stripUndefined(storeData as Record<string, any>),
       updatedAt: Timestamp.fromDate(new Date())
     });
     return { success: true };
