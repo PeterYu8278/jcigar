@@ -211,13 +211,13 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
 
       const userResult = await getUserByMemberId(memberId);
       if (!userResult.success || !userResult.user) {
-        message.error(userResult.error || `未找到会员编号为 ${memberId} 的用户`);
+        setCheckInError(userResult.error || `签到失败：用户不存在`);
         setProcessing(false);
         setScannedData(null);
         // 重新启动扫描
         setTimeout(() => {
           startScanning();
-        }, 500);
+        }, 800);
         return;
       }
 
@@ -246,16 +246,13 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
           }, 500);
         } else {
           const errorMsg = result.error || 'Check-in 失败';
-          // 只在开发环境或非预期错误时输出日志
-          if (process.env.NODE_ENV === 'development' || !errorMsg.includes('已有未完成的驻店记录')) {
           console.error('[QRScanner] Check-in失败:', errorMsg);
-          }
           
-          // 如果是"用户已有未完成的驻店记录"错误，在弹窗UI中显示
-          if (errorMsg.includes('已有未完成的驻店记录') || errorMsg.includes('请先check-out')) {
-            setCheckInError('用户已有未完成的驻店记录，请先check-out');
+          // 统一在页面顶部显示业务逻辑错误，确保醒目
+          if (errorMsg.includes('签到失败') || errorMsg.includes('会员状态') || errorMsg.includes('已有未完成') || errorMsg.includes('请先check-out')) {
+            setCheckInError(errorMsg);
           } else {
-          message.error(errorMsg);
+            message.error(errorMsg);
           }
           
           setProcessing(false);
@@ -263,7 +260,7 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
           // 重新启动扫描
           setTimeout(() => {
             startScanning();
-          }, 500);
+          }, 800); // 稍长一点的延迟，让管理员看清错误
         }
       } else {
         // Check-out
@@ -367,7 +364,9 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
         {processing ? (
           <div>
             <CheckCircleOutlined style={{ fontSize: 48, color: '#52c41a' }} />
-            <Text style={{ display: 'block', marginTop: 16, color: '#FFFFFF' }}>处理中...</Text>
+            <Text style={{ display: 'block', marginTop: 16, color: '#FFFFFF' }}>
+              {mode === 'checkin' ? '正在检查用户状态及未完成 Session...' : '正在获取驻店记录...'}
+            </Text>
             {scannedData && (
               <Text type="secondary" style={{ display: 'block', marginTop: 8, fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>
                 扫描到: {scannedData.substring(0, 30)}...

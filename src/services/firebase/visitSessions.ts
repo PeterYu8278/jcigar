@@ -88,24 +88,23 @@ export const createVisitSession = async (
     }
     
     if (pendingSession) {
-      return { success: false, error: '用户已有未完成的驻店记录，请先check-out' };
+      return { success: false, error: '签到失败：用户已有未完成的驻店记录，请先check-out' };
     }
 
     // 获取用户信息，检查会员状态
     const userDoc = await getDoc(doc(db, GLOBAL_COLLECTIONS.USERS, userId));
     if (!userDoc.exists()) {
       console.error('[createVisitSession] 用户不存在:', userId);
-      return { success: false, error: '用户不存在' };
+      return { success: false, error: '签到失败：用户不存在' };
     }
 
     const userData = userDoc.data() as User;
     
-    // 检查会员状态：仅允许 'active' 会员手动签到
     if (userData.status !== 'active') {
       console.error('[createVisitSession] 非活跃会员尝试签到:', userData.status);
       return { 
         success: false, 
-        error: `签到失败：该用户会员状态为“${userData.status || '游客'}”。请引导用户开通会员或购买 Day Pass。` 
+        error: '签到失败：需先开通会员或购买 Day Pass。' 
       };
     }
 
