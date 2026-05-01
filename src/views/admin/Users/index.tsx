@@ -177,6 +177,7 @@ const AdminUsers: React.FC = () => {
     switch (role) {
       case 'developer': return 'red'
       case 'superAdmin': return 'red'
+      case 'admin': return 'volcano'
       case 'member': return 'blue'
       case 'vip': return 'gold'  // VIP 使用自定义渐变样式，此颜色不会被使用
       case 'guest': return 'default'
@@ -186,13 +187,13 @@ const AdminUsers: React.FC = () => {
 
   const getRoleText = (role: string) => {
     switch (role) {
-      case 'developer': return t('auth.developer', 'Developer')
-      case 'superAdmin': return t('auth.superAdmin', 'Super Admin')
-      case 'admin': return t('common.admin', 'Store Admin')
-      case 'member': return t('auth.member', 'Member')
-      case 'vip': return t('auth.vip', 'VIP')
-      case 'guest': return t('auth.guest', 'Guest')
-      default: return t('profile.unknown', 'Unknown')
+      case 'developer': return t('auth.developer')
+      case 'superAdmin': return t('auth.superAdmin')
+      case 'admin': return t('auth.admin')
+      case 'member': return t('auth.member')
+      case 'vip': return t('auth.vip')
+      case 'guest': return t('auth.guest')
+      default: return t('profile.unknown')
     }
   }
 
@@ -309,7 +310,8 @@ const AdminUsers: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 120 }}>
               <Button size="small" type={(selectedKeys[0] === undefined) ? 'primary' : 'text'} onClick={() => { setSelectedKeys([]); clearFilters?.(); confirm({ closeDropdown: true }) }}>{t('common.all')}</Button>
               <Button size="small" type={selectedKeys[0] === 'superAdmin' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['superAdmin']); confirm({ closeDropdown: true }) }}>{t('auth.superAdmin')}</Button>
-              <Button size="small" type={selectedKeys[0] === 'admin' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['admin']); confirm({ closeDropdown: true }) }}>{t('auth.storeAdmin')}</Button>
+              <Button size="small" type={selectedKeys[0] === 'admin' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['admin']); confirm({ closeDropdown: true }) }}>{t('auth.admin')}</Button>
+              <Button size="small" type={selectedKeys[0] === 'vip' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['vip']); confirm({ closeDropdown: true }) }}>{t('auth.vip')}</Button>
               <Button size="small" type={selectedKeys[0] === 'member' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['member']); confirm({ closeDropdown: true }) }}>{t('auth.member')}</Button>
               <Button size="small" type={selectedKeys[0] === 'guest' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['guest']); confirm({ closeDropdown: true }) }}>{t('auth.guest')}</Button>
             </div>
@@ -718,9 +720,11 @@ const AdminUsers: React.FC = () => {
                     onChange={(v) => setRoleFilter(v)}
                     className="points-config-form"
                   >
-                    <Option value="admin">{t('common.admin')}</Option>
-                    <Option value="member">{t('common.member')}</Option>
-                    <Option value="guest">{t('common.guest')}</Option>
+                    <Option value="superAdmin">{t('auth.superAdmin')}</Option>
+                    <Option value="admin">{t('auth.admin')}</Option>
+                    <Option value="vip">{t('auth.vip')}</Option>
+                    <Option value="member">{t('auth.member')}</Option>
+                    <Option value="guest">{t('auth.guest')}</Option>
                     {currentUser?.role === 'developer' && <Option value="developer">{t('auth.developer')}</Option>}
                   </Select>
                   <Select
@@ -865,9 +869,11 @@ const AdminUsers: React.FC = () => {
                       menu={{
                         items: [
                           { key: 'all', label: t('common.all') },
-                          { key: 'superAdmin', label: t('common.admin') },
-                          { key: 'member', label: t('common.member') },
-                          { key: 'guest', label: t('common.guest') },
+                          { key: 'superAdmin', label: t('auth.superAdmin') },
+                          { key: 'admin', label: t('auth.admin') },
+                          { key: 'vip', label: t('auth.vip') },
+                          { key: 'member', label: t('auth.member') },
+                          { key: 'guest', label: t('auth.guest') },
                           ...(currentUser?.role === 'developer' ? [{ key: 'developer', label: t('auth.developer') }] : []),
                         ],
                         onClick: ({ key }) => setRoleFilter(key === 'all' ? undefined : (key as string)),
@@ -1536,10 +1542,11 @@ const AdminUsers: React.FC = () => {
             initialValue="member"
           >
             <Select>
-              <Option value="admin">{t('common.admin', 'Store Admin')}</Option>
-              <Option value="superAdmin">{t('auth.admin', 'Super Admin')}</Option>
-              <Option value="member">{t('common.member')}</Option>
-              <Option value="guest">{t('common.guest')}</Option>
+              <Option value="superAdmin">{t('auth.superAdmin')}</Option>
+              <Option value="admin">{t('auth.admin')}</Option>
+              <Option value="vip">{t('auth.vip')}</Option>
+              <Option value="member">{t('auth.member')}</Option>
+              <Option value="guest">{t('auth.guest')}</Option>
               {currentUser?.role === 'developer' && (
                 <Option value="developer">{t('auth.developer')}</Option>
               )}
