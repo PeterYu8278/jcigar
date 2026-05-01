@@ -18,6 +18,7 @@ import EventParticipantsManager from '../../../components/admin/EventParticipant
 import StatusFilterDropdown from '../../../components/admin/StatusFilterDropdown'
 import { useTranslation } from 'react-i18next'
 import { getResponsiveModalConfig, getModalTheme } from '../../../config/modalTheme'
+import { useAuthStore } from '../../../store/modules/auth'
 
 const { Title } = Typography
 const { Search } = Input
@@ -51,6 +52,7 @@ const STATUS_TRANSITIONS: Record<EventStatus, EventStatus[]> = {
 
 const AdminEvents: React.FC = () => {
   const { t } = useTranslation()
+  const { user: currentUser, isSuperAdmin } = useAuthStore()
   
   // Main data state
   const [events, setEvents] = useState<Event[]>([])
@@ -186,6 +188,8 @@ const AdminEvents: React.FC = () => {
               tasting: []
             },
             isPrivate: !!editForm.isPrivate,
+            storeId: currentUser?.storeId || '',
+            creatorId: currentUser?.id || '',
             createdAt: new Date(),
             updatedAt: new Date()
           }
@@ -194,7 +198,7 @@ const AdminEvents: React.FC = () => {
           const res = await createDocument<Event>(COLLECTIONS.EVENTS, newEventData as any)
           if (res.success) {
             message.success(t('common.created'))
-            const list = await getEvents()
+            const list = await getEvents(isSuperAdmin ? undefined : currentUser?.id)
             setEvents(list)
             const newEvent = list.find(e => e.id === res.id)
             if (newEvent) {
@@ -324,7 +328,7 @@ const AdminEvents: React.FC = () => {
       const res = await updateDocument(COLLECTIONS.EVENTS, viewing.id, updateData)
       if (res.success) {
         message.success(t('common.saved'))
-        const list = await getEvents()
+        const list = await getEvents(isSuperAdmin ? undefined : currentUser?.id)
         setEvents(list)
         const updatedEvent = list.find(e => e.id === viewing.id)
         if (updatedEvent) {
@@ -371,7 +375,7 @@ const AdminEvents: React.FC = () => {
       setLoading(true)
       try {
         const [list, users, cigars] = await Promise.all([
-          getEvents(),
+          getEvents(isSuperAdmin ? undefined : currentUser?.id),
           getUsers(),
           getCigars()
         ])
@@ -563,7 +567,7 @@ const AdminEvents: React.FC = () => {
       setLoading(true)
       try {
         const [list, users, cigars] = await Promise.all([
-          getEvents(),
+          getEvents(isSuperAdmin ? undefined : currentUser?.id),
           getUsers(),
           getCigars()
         ])
@@ -784,7 +788,7 @@ const AdminEvents: React.FC = () => {
                   return { success: true }
                 }}
                 onSuccess={async () => {
-                  const list = await getEvents()
+                  const list = await getEvents(isSuperAdmin ? undefined : currentUser?.id)
                   setEvents(list)
                   setSelectedRowKeys([])
                 }}
@@ -805,7 +809,7 @@ const AdminEvents: React.FC = () => {
                   return { success: true }
                 }}
                 onSuccess={async () => {
-                      const list = await getEvents()
+                      const list = await getEvents(isSuperAdmin ? undefined : currentUser?.id)
                       setEvents(list)
                       setSelectedRowKeys([])
                 }}
@@ -1044,7 +1048,7 @@ const AdminEvents: React.FC = () => {
                           const res = await updateDocument(COLLECTIONS.EVENTS, viewing.id, updateData)
                           if (res.success) {
                             message.success(t('common.saved'))
-                    const list = await getEvents()
+                    const list = await getEvents(isSuperAdmin ? undefined : currentUser?.id)
                     setEvents(list)
                             const updatedEvent = list.find(e => e.id === viewing.id)
                             if (updatedEvent) {
@@ -1158,7 +1162,7 @@ const AdminEvents: React.FC = () => {
                 const res = await registerForEvent((participantsEvent as any).id, userId)
                 if (res.success) {
                   message.success(t('common.participantAdded'));
-                  const list = await getEvents()
+                  const list = await getEvents(isSuperAdmin ? undefined : currentUser?.id)
                   setEvents(list)
                   setParticipantsEvent(list.find(e => e.id === (participantsEvent as any).id) || null)
                   setManualAddValue('')
@@ -1253,7 +1257,7 @@ const AdminEvents: React.FC = () => {
                 const merged = Array.from(new Set([...(participantsEvent as any)?.participants?.registered || [], ...uniq]))
                 await updateDocument(COLLECTIONS.EVENTS, (participantsEvent as any).id, { 'participants.registered': merged } as any)
                 message.success(`${t('common.imported')} ${uniq.length} ${t('common.条')}`);
-                const list = await getEvents()
+                const list = await getEvents(isSuperAdmin ? undefined : currentUser?.id)
                 setEvents(list)
                 setParticipantsEvent(list.find(e => e.id === (participantsEvent as any).id) || null)
                 return false
@@ -1424,7 +1428,7 @@ const AdminEvents: React.FC = () => {
               message.success(t('common.created'))
             }
             
-            const list = await getEvents()
+            const list = await getEvents(isSuperAdmin ? undefined : currentUser?.id)
             
             setEvents(list)
             setCreating(false)
@@ -1627,7 +1631,7 @@ const AdminEvents: React.FC = () => {
             const res = await deleteDocument(COLLECTIONS.EVENTS, deleting.id)
             if (res.success) {
               message.success(t('common.deleted'))
-              const list = await getEvents()
+              const list = await getEvents(isSuperAdmin ? undefined : currentUser?.id)
               setEvents(list)
             }
           } finally {

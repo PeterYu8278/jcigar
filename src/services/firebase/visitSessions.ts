@@ -67,6 +67,8 @@ export const calculateVisitDuration = (minutes: number): number => {
 export const createVisitSession = async (
   userId: string,
   checkInBy: string,
+  storeId: string,
+  storeName?: string,
   userName?: string
 ): Promise<{ success: boolean; sessionId?: string; error?: string }> => {
   try {
@@ -116,6 +118,8 @@ export const createVisitSession = async (
     const sessionData: Omit<VisitSession, 'id'> = {
       userId,
       userName: userName || userData.displayName,
+      storeId,
+      storeName: storeName || '',
       checkInAt: now,
       checkInBy,
       status: 'pending',
@@ -152,6 +156,7 @@ export const createVisitSession = async (
 export const completeVisitSession = async (
   sessionId: string,
   checkOutBy: string,
+  currentStoreId?: string,
   forceHours?: number // 强制使用指定小时数（忘记check-out时）
 ): Promise<{ success: boolean; pointsDeducted?: number; error?: string }> => {
   try {
@@ -181,6 +186,11 @@ export const completeVisitSession = async (
 
     if (session.status !== 'pending') {
       return { success: false, error: '该驻店记录已完成或已过期' };
+    }
+
+    // 检查门店一致性 (非强制结算且提供了门店ID时)
+    if (currentStoreId && session.storeId && session.storeId !== currentStoreId) {
+      return { success: false, error: `签退失败：该记录属于[${session.storeName || '其他门店'}]，请在原门店进行签退` };
     }
 
     const now = new Date();
@@ -613,7 +623,8 @@ export const getPendingVisitSession = async (userId: string): Promise<VisitSessi
  */
 export const getUserVisitSessions = async (
   userId: string,
-  limitCount?: number
+  limitCount?: number,
+  storeId?: string
 ): Promise<VisitSession[]> => {
   try {
     let q = query(
@@ -621,6 +632,10 @@ export const getUserVisitSessions = async (
       where('userId', '==', userId),
       orderBy('checkInAt', 'desc')
     );
+
+    if (storeId) {
+      q = query(q, where('storeId', '==', storeId));
+    }
     
     // 如果指定了 limitCount，则应用限制；否则加载所有数据
     if (limitCount !== undefined && limitCount > 0) {
@@ -640,6 +655,9 @@ export const getUserVisitSessions = async (
           collection(db, GLOBAL_COLLECTIONS.VISIT_SESSIONS),
           where('userId', '==', userId)
         );
+        if (storeId) {
+          q = query(q, where('storeId', '==', storeId));
+        }
         if (limitCount !== undefined && limitCount > 0) {
           q = query(q, limit(limitCount));
         }
@@ -660,13 +678,17 @@ export const getUserVisitSessions = async (
 /**
  * 获取所有待处理的驻店记录（包括所有pending状态的记录）
  */
-export const getAllPendingVisitSessions = async (): Promise<VisitSession[]> => {
+export const getAllPendingVisitSessions = async (storeId?: string): Promise<VisitSession[]> => {
   try {
-    const q = query(
+    let q = query(
       collection(db, GLOBAL_COLLECTIONS.VISIT_SESSIONS),
       where('status', '==', 'pending'),
       orderBy('checkInAt', 'desc')
     );
+
+    if (storeId) {
+      q = query(q, where('storeId', '==', storeId));
+    }
 
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => processVisitSessionData(doc.data(), doc.id));
@@ -680,12 +702,16 @@ export const getAllPendingVisitSessions = async (): Promise<VisitSession[]> => {
 /**
  * 获取所有驻店记录（包括所有状态）
  */
-export const getAllVisitSessions = async (limitCount?: number): Promise<VisitSession[]> => {
+export const getAllVisitSessions = async (limitCount?: number, storeId?: string): Promise<VisitSession[]> => {
   try {
     let q = query(
       collection(db, GLOBAL_COLLECTIONS.VISIT_SESSIONS),
       orderBy('checkInAt', 'desc')
     );
+    
+    if (storeId) {
+      q = query(q, where('storeId', '==', storeId));
+    }
     
     // 如果指定了 limitCount，则应用限制；否则加载所有数据
     if (limitCount !== undefined && limitCount > 0) {
@@ -790,6 +816,8 @@ export const addRedemptionToSession = async (
  */
 export const purchaseDayPass = async (
   userId: string,
+  storeId: string,
+  storeName?: string,
   userName?: string,
   sessionId?: string
 ): Promise<{ success: boolean; error?: string }> => {
@@ -837,6 +865,8 @@ export const purchaseDayPass = async (
         transaction.set(sessionRef, {
           userId,
           userName: userName || userData.displayName,
+          storeId,
+          storeName: storeName || '',
           checkInAt: nowTimestamp,
           checkInBy: userName || userData.displayName,
           status: 'pending',

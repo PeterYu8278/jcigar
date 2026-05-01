@@ -48,7 +48,7 @@ const AdminUsers: React.FC = () => {
   const { user: currentUser } = useAuthStore()
   const [users, setUsers] = useState<User[]>([]) // 保留用于搜索和筛选
   const [loading, setLoading] = useState(false)
-  const canManageDiscount = currentUser?.role === 'developer' || currentUser?.role === 'admin'
+  const canManageDiscount = currentUser?.role === 'developer' || currentUser?.role === 'superAdmin'
 
   // 服务端分页
   const {
@@ -176,7 +176,7 @@ const AdminUsers: React.FC = () => {
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'developer': return 'red'
-      case 'admin': return 'red'
+      case 'superAdmin': return 'red'
       case 'member': return 'blue'
       case 'vip': return 'gold'  // VIP 使用自定义渐变样式，此颜色不会被使用
       case 'guest': return 'default'
@@ -187,7 +187,7 @@ const AdminUsers: React.FC = () => {
   const getRoleText = (role: string) => {
     switch (role) {
       case 'developer': return t('auth.developer')
-      case 'admin': return t('auth.admin')
+      case 'superAdmin': return t('auth.admin')
       case 'member': return t('auth.member')
       case 'vip': return t('auth.vip')
       case 'guest': return t('auth.guest')
@@ -307,7 +307,7 @@ const AdminUsers: React.FC = () => {
           <div style={{ padding: 8 }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 120 }}>
               <Button size="small" type={(selectedKeys[0] === undefined) ? 'primary' : 'text'} onClick={() => { setSelectedKeys([]); clearFilters?.(); confirm({ closeDropdown: true }) }}>{t('common.all')}</Button>
-              <Button size="small" type={selectedKeys[0] === 'admin' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['admin']); confirm({ closeDropdown: true }) }}>{t('auth.admin')}</Button>
+              <Button size="small" type={selectedKeys[0] === 'superAdmin' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['superAdmin']); confirm({ closeDropdown: true }) }}>{t('auth.admin')}</Button>
               <Button size="small" type={selectedKeys[0] === 'member' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['member']); confirm({ closeDropdown: true }) }}>{t('auth.member')}</Button>
               <Button size="small" type={selectedKeys[0] === 'guest' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['guest']); confirm({ closeDropdown: true }) }}>{t('auth.guest')}</Button>
             </div>
@@ -340,7 +340,7 @@ const AdminUsers: React.FC = () => {
 
                 // ✅ 当状态变为活跃时，角色自动变为 VIP；变为非活跃时，角色改回 member（不影响 admin）
                 const updateData: Partial<User> = { status: next }
-                if (checked && record.role !== 'admin') {
+                if (checked && record.role !== 'superAdmin') {
                   updateData.role = 'vip'
                 } else if (!checked && record.role === 'vip') {
                   updateData.role = 'member'
@@ -863,7 +863,7 @@ const AdminUsers: React.FC = () => {
                       menu={{
                         items: [
                           { key: 'all', label: t('common.all') },
-                          { key: 'admin', label: t('common.admin') },
+                          { key: 'superAdmin', label: t('common.admin') },
                           { key: 'member', label: t('common.member') },
                           { key: 'guest', label: t('common.guest') },
                           ...(currentUser?.role === 'developer' ? [{ key: 'developer', label: t('auth.developer') }] : []),

@@ -17,14 +17,16 @@ import { useTranslation } from 'react-i18next'
 import { filterOrders, sortOrders, getStatusColor, getStatusText, getUserName, getUserPhone } from './helpers'
 import { getModalThemeStyles, getModalWidth, getResponsiveModalConfig } from '../../../config/modalTheme'
 import { getAppConfig } from '../../../services/firebase/appConfig'
+import { useAuthStore } from '../../../store/modules/auth'
 
 const { Search } = Input
 const { Option } = Select
 
 const AdminOrders: React.FC = () => {
   const { t } = useTranslation()
+  const { isSuperAdmin, user: authUser } = useAuthStore()
   const [mainTab, setMainTab] = useState<'orders' | 'invoices'>('orders')
-  const [orders, setOrders] = useState<Order[]>([]) // 保留用于搜索和筛选
+  const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(false)
   const [isMobile, setIsMobile] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false
@@ -38,7 +40,6 @@ const AdminOrders: React.FC = () => {
     return () => window.removeEventListener('resize', update)
   }, [])
 
-  // 服务端分页
   const {
     data: paginatedOrders,
     loading: paginatedLoading,
@@ -48,15 +49,17 @@ const AdminOrders: React.FC = () => {
     refresh: refreshPaginated
   } = usePaginatedData(
     async (pageSize, lastDoc, filters) => {
-      const result = await getOrdersPaginated(pageSize, lastDoc, filters)
+      const storeId = isSuperAdmin ? undefined : authUser?.storeId
+      const result = await getOrdersPaginated(pageSize, lastDoc, { ...filters, storeId })
       return result
     },
     {
-      pageSize: 20, // 桌面端20条/页
-      mobilePageSize: 10, // 移动端10条/页
-      initialLoad: false // 手动控制加载
+      pageSize: 20,
+      mobilePageSize: 10,
+      initialLoad: false
     }
   )
+
   const [viewing, setViewing] = useState<Order | null>(null)
   const [isEditingInView, setIsEditingInView] = useState(false)
   const [users, setUsers] = useState<User[]>([])
@@ -64,13 +67,13 @@ const AdminOrders: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [creating, setCreating] = useState(false)
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
-
   const [keyword, setKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState<string | undefined>()
   const [paymentFilter, setPaymentFilter] = useState<string | undefined>()
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null)
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
   const [matchStatusTab, setMatchStatusTab] = useState<'all' | 'matched' | 'unmatched'>('all')
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
+  const [sortDesc, setSortDesc] = useState<boolean>(true)
   const [pagination, setPagination] = useState(() => {
     const saved = localStorage.getItem('orders-pagination')
     if (saved) {
@@ -83,11 +86,9 @@ const AdminOrders: React.FC = () => {
     return { current: 1, pageSize: 10, total: 0 }
   })
 
-
   useEffect(() => {
-    loadData() // 加载关联数据
+    loadData()
     loadAppConfig()
-    // 初始加载订单数据
     const filters: any = {}
     if (statusFilter) filters.status = statusFilter
     if (paymentFilter) filters.paymentMethod = paymentFilter
@@ -95,21 +96,19 @@ const AdminOrders: React.FC = () => {
       filters.startDate = dateRange[0].toDate()
       filters.endDate = dateRange[1].toDate()
     }
+    if (!isSuperAdmin && authUser?.storeId) filters.storeId = authUser.storeId
     loadPage(1, Object.keys(filters).length > 0 ? filters : undefined)
   }, [])
 
   const loadAppConfig = async () => {
     try {
       const config = await getAppConfig()
-      if (config) {
-        setAppConfig(config)
-      }
+      if (config) setAppConfig(config)
     } catch (error) {
       console.error('加载应用配置失败:', error)
     }
   }
 
-  // 筛选条件变化时重新加载分页数据
   useEffect(() => {
     const filters: any = {}
     if (statusFilter) filters.status = statusFilter
@@ -118,18 +117,17 @@ const AdminOrders: React.FC = () => {
       filters.startDate = dateRange[0].toDate()
       filters.endDate = dateRange[1].toDate()
     }
-
+    if (!isSuperAdmin && authUser?.storeId) filters.storeId = authUser.storeId
     loadPage(1, Object.keys(filters).length > 0 ? filters : undefined)
-  }, [statusFilter, paymentFilter, dateRange]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [statusFilter, paymentFilter, dateRange, isSuperAdmin, authUser?.storeId])
 
-  // 加载关联数据（用户、雪茄、交易）- 这些数据量较小，可以一次性加载
   const loadData = async () => {
     setLoading(true)
     try {
       const [usersData, cigarsData, transactionsData] = await Promise.all([
         getUsers(),
         getCigars(),
-        getAllTransactions()
+        getAllTransactions(isSuperAdmin ? undefined : authUser?.storeId)
       ])
       setUsers(usersData)
       setCigars(cigarsData)
@@ -141,29 +139,18 @@ const AdminOrders: React.FC = () => {
     }
   }
 
-  // 处理搜索和数据源
   useEffect(() => {
-    // 判断是否有筛选条件
     const hasFilters = statusFilter || paymentFilter || (dateRange && dateRange[0] && dateRange[1])
-
     if (keyword.trim() || !hasFilters) {
-      // 有搜索关键词或没有筛选条件时，加载所有订单
       setLoading(true)
-      getAllOrders()
-        .then(ordersData => {
-          setOrders(ordersData)
-        })
-        .catch(e => {
-          message.error(t('messages.dataLoadFailed'))
-        })
-        .finally(() => {
-          setLoading(false)
-        })
+      getAllOrders(isSuperAdmin ? undefined : authUser?.storeId)
+        .then(setOrders)
+        .catch(() => message.error(t('messages.dataLoadFailed')))
+        .finally(() => setLoading(false))
     } else {
-      // 有筛选条件但没有搜索关键词时，使用分页数据
       setOrders(paginatedOrders)
     }
-  }, [keyword, paginatedOrders, statusFilter, paymentFilter, dateRange, t])
+  }, [keyword, paginatedOrders, statusFilter, paymentFilter, dateRange, isSuperAdmin, authUser?.storeId, t])
 
   // 分页处理函数
   const handlePaginationChange = async (page: number, pageSize?: number) => {
@@ -190,64 +177,49 @@ const AdminOrders: React.FC = () => {
     }
   }
 
-  // 删除订单相关的出库记录
+  const refreshAllOrders = async () => {
+    await refreshPaginated()
+    try {
+      const ordersData = await getAllOrders(isSuperAdmin ? undefined : authUser?.storeId)
+      setOrders(ordersData)
+    } catch {
+      // 静默失败：不阻塞 UI
+    }
+    // Also refresh app_config so invoice previews use the latest invoiceTemplate.
+    await loadAppConfig()
+  }
+
   const deleteOrderOutboundRecords = async (orderId: string) => {
     try {
-      const outboundOrders = await getAllOutboundOrders()
-
-      // 查找匹配的出库订单
-      const relatedOutboundOrders = outboundOrders.filter((order: OutboundOrder) =>
-        order.referenceNo === orderId
-      )
-
-      // 删除出库订单（会自动删除关联的 inventory_movements）
+      const outboundOrders = await getAllOutboundOrders(isSuperAdmin ? undefined : authUser?.storeId)
+      const relatedOutboundOrders = outboundOrders.filter((o: OutboundOrder) => o.referenceNo === orderId)
       if (relatedOutboundOrders.length > 0) {
-        await Promise.all(relatedOutboundOrders.map((order: OutboundOrder) =>
-          deleteOutboundOrder(order.id)
-        ))
+        await Promise.all(relatedOutboundOrders.map((o: OutboundOrder) => deleteOutboundOrder(o.id)))
       }
     } catch (error) {
       console.error('❌ [Orders] Error deleting outbound records:', error)
-      // 静默处理错误，不影响订单删除
     }
   }
 
-  // 删除参与者分配记录中的订单资料
   const deleteOrderFromEventAllocations = async (orderId: string) => {
     try {
-      // 获取所有活动
       const { getEvents } = await import('../../../services/firebase/firestore')
       const events = await getEvents()
-
-      // 查找包含该订单ID的活动
       for (const event of events) {
         const allocations = (event as any)?.allocations
         if (allocations) {
           let hasChanges = false
           const updatedAllocations = { ...allocations }
-
-          // 遍历所有分配记录，移除包含该订单ID的记录
           for (const [userId, allocation] of Object.entries(allocations)) {
             if ((allocation as any)?.orderId === orderId) {
-              // 移除订单ID，但保留其他分配信息
-              updatedAllocations[userId] = {
-                ...(allocation as any),
-                orderId: undefined
-              }
+              updatedAllocations[userId] = { ...(allocation as any), orderId: undefined }
               hasChanges = true
             }
           }
-
-          // 如果有变化，更新活动文档
-          if (hasChanges) {
-            await updateDocument(COLLECTIONS.EVENTS, event.id, {
-              allocations: updatedAllocations
-            } as any)
-          }
+          if (hasChanges) await updateDocument(COLLECTIONS.EVENTS, event.id, { allocations: updatedAllocations } as any)
         }
       }
-    } catch (error) {
-    }
+    } catch (error) {}
   }
 
   // 批量删除：在同一次更新中清理多个订单ID对应的分配记录，避免并发覆盖
@@ -286,112 +258,54 @@ const AdminOrders: React.FC = () => {
     }
   }
 
-  const [sortDesc, setSortDesc] = useState<boolean>(true)
-
-  // 计算订单匹配状态（需要在filtered之前定义）
   const getOrderMatchStatus = (orderId: string) => {
     const order = orders.find(o => o.id === orderId)
     if (!order) return { matched: 0, total: 0, status: 'none' }
-
     const orderTotal = Number(order.total || 0)
     const matchedAmount = transactions
-      .filter(t => {
-        const relatedOrders = (t as any)?.relatedOrders || []
-        return relatedOrders.some((ro: any) => ro.orderId === orderId)
-      })
+      .filter(t => (t as any)?.relatedOrders?.some((ro: any) => ro.orderId === orderId))
       .reduce((sum, t) => {
-        const relatedOrders = (t as any)?.relatedOrders || []
-        const orderMatch = relatedOrders.find((ro: any) => ro.orderId === orderId)
+        const orderMatch = (t as any)?.relatedOrders?.find((ro: any) => ro.orderId === orderId)
         return sum + (orderMatch ? Number(orderMatch.amount || 0) : 0)
       }, 0)
 
-    if (matchedAmount >= orderTotal) {
-      return { matched: matchedAmount, total: orderTotal, status: 'fully' }
-    } else if (matchedAmount > 0) {
-      return { matched: matchedAmount, total: orderTotal, status: 'partial' }
-    } else {
-      return { matched: matchedAmount, total: orderTotal, status: 'none' }
-    }
+    if (matchedAmount >= orderTotal) return { matched: matchedAmount, total: orderTotal, status: 'fully' }
+    if (matchedAmount > 0) return { matched: matchedAmount, total: orderTotal, status: 'partial' }
+    return { matched: matchedAmount, total: orderTotal, status: 'none' }
   }
 
-  // 获取雪茄信息
   const getCigarName = (cigarId: string) => {
     const cigar = cigars.find(c => c.id === cigarId)
     return cigar ? cigar.name : cigarId
   }
 
   const filtered = useMemo(() => {
-    // 判断是否有筛选条件
-    const hasFilters = statusFilter || paymentFilter || (dateRange && dateRange[0] && dateRange[1])
-
-    // 确定使用的数据源
-    let dataSource: Order[]
-    if (keyword.trim() || !hasFilters) {
-      // 有搜索关键词或没有筛选条件时，使用所有订单数据
-      dataSource = orders
-    } else {
-      // 有筛选条件但没有搜索关键词时，使用分页数据
-      dataSource = paginatedOrders
-    }
-
-    // 如果有搜索关键词，进行客户端筛选
-    if (keyword.trim()) {
-      dataSource = filterOrders(dataSource, users, keyword, undefined, undefined, undefined, cigars)
-    }
-
-    // 按匹配状态筛选
-    if (matchStatusTab === 'matched') {
-      dataSource = dataSource.filter(order => {
-        const matchStatus = getOrderMatchStatus(order.id)
-        return matchStatus.status === 'fully'
-      })
-    } else if (matchStatusTab === 'unmatched') {
-      dataSource = dataSource.filter(order => {
-        const matchStatus = getOrderMatchStatus(order.id)
-        return matchStatus.status !== 'fully'
-      })
-    }
-
+    let dataSource = (keyword.trim() || !(statusFilter || paymentFilter || (dateRange && dateRange[0] && dateRange[1]))) ? orders : paginatedOrders
+    if (keyword.trim()) dataSource = filterOrders(dataSource, users, keyword, undefined, undefined, undefined, cigars)
+    if (matchStatusTab === 'matched') dataSource = dataSource.filter(o => getOrderMatchStatus(o.id).status === 'fully')
+    else if (matchStatusTab === 'unmatched') dataSource = dataSource.filter(o => getOrderMatchStatus(o.id).status !== 'fully')
     return dataSource
-  }, [orders, paginatedOrders, users, keyword, cigars, matchStatusTab, transactions, statusFilter, paymentFilter, dateRange])
+  }, [orders, paginatedOrders, users, keyword, cigars, matchStatusTab, statusFilter, paymentFilter, dateRange])
+
+  const filteredSorted = useMemo(() => {
+    return sortOrders(filtered, sortDesc)
+  }, [filtered, sortDesc])
 
   const columns = useOrderColumns({
     users,
     cigars,
     transactions,
     orders,
-    onViewOrder: (order) => {
-      setViewing(order)
-      setIsEditingInView(false)
-    },
+    onViewOrder: (order) => { setViewing(order); setIsEditingInView(false) },
     onDeleteOrder: async (id) => {
-      // 删除参与者分配记录中的订单资料
       await deleteOrderFromEventAllocations(id)
-      // 删除订单相关的出库记录
       await deleteOrderOutboundRecords(id)
-      // 删除订单
       return await deleteDocument(COLLECTIONS.ORDERS, id)
     },
     onOrderUpdate: async () => {
       await refreshPaginated()
     }
   })
-
-  const filteredSorted = useMemo(() => {
-    return sortOrders(filtered, sortDesc)
-  }, [filtered, sortDesc])
-
-  const refreshAllOrders = async () => {
-    await refreshPaginated()
-    try {
-      const ordersData = await getAllOrders()
-      setOrders(ordersData)
-    } catch {
-      // 静默失败：不阻塞 UI
-    }
-    // Also refresh app_config so invoice previews use the latest invoiceTemplate.
-    await loadAppConfig()
-  }
 
   return (
     <div
@@ -678,7 +592,7 @@ const AdminOrders: React.FC = () => {
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      {filteredSorted.map(order => {
+                      {filteredSorted.map((order: Order) => {
                         const matchStatus = getOrderMatchStatus(order.id)
                         const createdDate = order.createdAt ?
                           (typeof (order.createdAt as any).toDate === 'function' ? (order.createdAt as any).toDate() : order.createdAt)
@@ -721,7 +635,7 @@ const AdminOrders: React.FC = () => {
                             <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(244,175,37,0.1)', display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                               {/* 商品列表 */}
                               <div style={{ flex: 1 }}>
-                                {order.items.slice(0, 2).map((item, index) => (
+                                {order.items.slice(0, 2).map((item: any, index: number) => (
                                   <div key={`${order.id}_${item.cigarId}_${index}`} style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginBottom: 4 }}>
                                     • {getCigarName(item.cigarId)} × {item.quantity}
                                   </div>

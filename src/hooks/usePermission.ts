@@ -149,7 +149,7 @@ export const usePermission = (): UsePermissionReturn => {
  * </PermissionGuard>
  * 
  * // 基于角色
- * <PermissionGuard roles={['admin']}>
+ * <PermissionGuard roles={['superAdmin']}>
  *   <AdminPanel />
  * </PermissionGuard>
  * 
@@ -261,12 +261,12 @@ export const usePermissionRender = () => {
  * @example
  * ```tsx
  * // 仅管理员可见
- * <RoleGuard roles={['admin']}>
+ * <RoleGuard roles={['superAdmin']}>
  *   <AdminPanel />
  * </RoleGuard>
  * 
  * // 会员和管理员可见
- * <RoleGuard roles={['member', 'admin']}>
+ * <RoleGuard roles={['member', 'superAdmin']}>
  *   <MemberFeature />
  * </RoleGuard>
  * ```

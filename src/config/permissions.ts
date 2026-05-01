@@ -48,6 +48,19 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission> = {
     canManageInventory: true,
     canManageUsers: true,
     canManageOrders: true,
+    canViewFinance: false, // 门店管理员禁止查看财务
+    canSwitchToAdmin: true,
+    canManageFeatures: false,
+  },
+  superAdmin: {
+    canViewEvents: true,
+    canRegisterEvent: true,
+    canPurchase: true,
+    canViewProfile: true,
+    canCreateEvent: true,
+    canManageInventory: true,
+    canManageUsers: true,
+    canManageOrders: true,
     canViewFinance: true,
     canSwitchToAdmin: true,
     canManageFeatures: false,
@@ -69,23 +82,25 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission> = {
 
 // 路由权限配置
 export const ROUTE_PERMISSIONS = {
-  '/': ['guest', 'member', 'vip', 'admin', 'developer'],
-  '/events': ['guest', 'member', 'vip', 'admin', 'developer'],
-  '/shop': ['member', 'vip', 'admin', 'developer'],
-  '/profile': ['member', 'vip', 'admin', 'developer'],
-  '/ai-cigar-history': ['member', 'vip', 'admin', 'developer'], // AI识茄历史记录页面权限
-  '/reload': ['member', 'vip', 'admin', 'developer'], // 充值页面权限
-  '/brand': ['member', 'vip', 'admin', 'developer'], // 品牌详情页面权限
-  '/admin': ['admin', 'developer'],
-  '/admin/users': ['admin', 'developer'],
-  '/admin/inventory': ['admin', 'developer'],
-  '/admin/events': ['admin', 'developer'],
-  '/admin/orders': ['admin', 'developer'],
-  '/admin/finance': ['admin', 'developer'],
+  '/': ['guest', 'member', 'vip', 'admin', 'superAdmin', 'developer'],
+  '/events': ['guest', 'member', 'vip', 'admin', 'superAdmin', 'developer'],
+  '/shop': ['member', 'vip', 'admin', 'superAdmin', 'developer'],
+  '/profile': ['member', 'vip', 'admin', 'superAdmin', 'developer'],
+  '/ai-cigar-history': ['member', 'vip', 'admin', 'superAdmin', 'developer'], // AI识茄历史记录页面权限
+  '/reload': ['member', 'vip', 'admin', 'superAdmin', 'developer'], // 充值页面权限
+  '/brand': ['member', 'vip', 'admin', 'superAdmin', 'developer'], // brand list
+  '/admin': ['admin', 'superAdmin', 'developer'],
+  '/admin/users': ['admin', 'superAdmin', 'developer'],
+  '/admin/inventory': ['admin', 'superAdmin', 'developer'],
+  '/admin/events': ['admin', 'superAdmin', 'developer'],
+  '/admin/orders': ['admin', 'superAdmin', 'developer'],
+  '/admin/visit-sessions': ['admin', 'superAdmin', 'developer'],
+  '/admin/finance': ['superAdmin', 'developer'], // 财务仅限超级管理员和开发者
+  '/admin/points-config': ['admin', 'superAdmin', 'developer'], // 积分配置支持管理员验证充值
   
   // Developer 专属路由
   '/developer/feature-management': ['developer'],
-  '/developer/invoice-template': ['admin', 'developer'],
+  '/developer/invoice-template': ['superAdmin', 'developer'],
   '/developer/cigar-database': ['developer'],
   '/developer/performance': ['developer'],
   '/developer/gemini-tester': ['developer'],
@@ -93,12 +108,12 @@ export const ROUTE_PERMISSIONS = {
   '/developer/orphaned-users': ['developer'],
   '/developer/debug-orders': ['developer'],
   '/developer/test-data-generator': ['developer'],
-  '/developer/subscription': ['developer'],
+  '/developer/subscription': ['superAdmin', 'developer'], // 超级管理员可管理订阅
 };
 
 // 权限检查函数
 export const hasPermission = (userRole: UserRole, permission: keyof Permission): boolean => {
-  return ROLE_PERMISSIONS[userRole][permission] ?? false;
+  return ROLE_PERMISSIONS[userRole]?.[permission] ?? false;
 };
 
 // 路由权限检查函数
@@ -111,11 +126,17 @@ export const canAccessRoute = (userRole: UserRole, path: string): boolean => {
   
   // 动态路由匹配
   if (path.startsWith('/brand/')) {
-    return ['member', 'vip', 'admin', 'developer'].includes(userRole);
+    return ['member', 'vip', 'admin', 'superAdmin', 'developer'].includes(userRole);
   }
   
   if (path.startsWith('/admin/')) {
-    return userRole === 'admin' || userRole === 'developer';
+    // 检查子路径权限
+    const subPaths = Object.keys(ROUTE_PERMISSIONS).filter(p => p.startsWith('/admin/'));
+    const matchedPath = subPaths.find(p => path.startsWith(p));
+    if (matchedPath) {
+      return ROUTE_PERMISSIONS[matchedPath as keyof typeof ROUTE_PERMISSIONS].includes(userRole);
+    }
+    return ['admin', 'superAdmin', 'developer'].includes(userRole);
   }
   
   // 默认拒绝访问

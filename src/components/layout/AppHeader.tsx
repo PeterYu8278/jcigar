@@ -190,7 +190,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ siderCollapsed = false, isDesktop
               <Text style={{ color: 'rgb(255,215,0)', fontSize: 12, fontWeight: 500 }}>
                 {user?.role === 'developer'
                   ? t('auth.developer', { defaultValue: '开发者' })
-                  : user?.role === 'admin' 
+                  : user?.role === 'superAdmin' 
                   ? t('auth.admin', { defaultValue: '管理员' })
                   : user?.role === 'vip'
                   ? t('auth.vip', { defaultValue: 'VIP' })

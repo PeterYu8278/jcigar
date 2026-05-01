@@ -263,9 +263,18 @@ export const getCigarsByBrand = async (brand: string): Promise<Cigar[]> => {
 };
 
 // 活动相关操作
-export const getEvents = async (): Promise<Event[]> => {
+export const getEvents = async (creatorId?: string, storeId?: string): Promise<Event[]> => {
   try {
-    const q = query(collection(db, COLLECTIONS.EVENTS), orderBy('schedule.startDate', 'desc'));
+    let q = query(collection(db, COLLECTIONS.EVENTS), orderBy('schedule.startDate', 'desc'));
+    
+    if (creatorId) {
+      q = query(q, where('creatorId', '==', creatorId));
+    }
+    
+    if (storeId) {
+      q = query(q, where('storeId', '==', storeId));
+    }
+
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Event));
   } catch (error) {
@@ -426,9 +435,12 @@ export const getOrdersByUser = async (userId: string): Promise<Order[]> => {
   }
 };
 
-export const getAllOrders = async (): Promise<Order[]> => {
+export const getAllOrders = async (storeId?: string): Promise<Order[]> => {
   try {
-    const q = query(collection(db, COLLECTIONS.ORDERS), orderBy('createdAt', 'desc'));
+    let q = query(collection(db, COLLECTIONS.ORDERS), orderBy('createdAt', 'desc'));
+    if (storeId) {
+      q = query(q, where('storeId', '==', storeId));
+    }
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
   } catch (error) {
@@ -792,9 +804,12 @@ export const createDirectSaleOrder = async (params: { userId: string; items: { c
 }
 
 // 财务相关操作
-export const getAllTransactions = async (): Promise<Transaction[]> => {
+export const getAllTransactions = async (storeId?: string): Promise<Transaction[]> => {
   try {
-    const q = query(collection(db, COLLECTIONS.TRANSACTIONS), orderBy('createdAt', 'desc'));
+    let q = query(collection(db, COLLECTIONS.TRANSACTIONS), orderBy('createdAt', 'desc'));
+    if (storeId) {
+      q = query(q, where('storeId', '==', storeId));
+    }
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
   } catch (error) {
@@ -890,9 +905,12 @@ export const subscribeToCollection = <T>(
 /**
  * 获取所有入库订单
  */
-export const getAllInboundOrders = async (): Promise<InboundOrder[]> => {
+export const getAllInboundOrders = async (storeId?: string): Promise<InboundOrder[]> => {
   try {
-    const q = query(collection(db, COLLECTIONS.INBOUND_ORDERS), orderBy('createdAt', 'desc'));
+    let q = query(collection(db, COLLECTIONS.INBOUND_ORDERS), orderBy('createdAt', 'desc'));
+    if (storeId) {
+      q = query(q, where('storeId', '==', storeId));
+    }
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InboundOrder));
   } catch (error) {
@@ -968,6 +986,7 @@ export const createInboundOrder = async (orderData: Omit<InboundOrder, 'id' | 'u
         inboundOrderId: generatedId,        // 实际的 document ID（用于精确访问）
         reason: orderData.reason,
         unitPrice: item.unitPrice,
+        storeId: orderData.storeId,         // 关联门店ID
         createdAt: orderData.createdAt || new Date()
       };
       
@@ -1026,9 +1045,12 @@ export const deleteInboundOrder = async (id: string): Promise<void> => {
 /**
  * 获取所有出库订单
  */
-export const getAllOutboundOrders = async (): Promise<OutboundOrder[]> => {
+export const getAllOutboundOrders = async (storeId?: string): Promise<OutboundOrder[]> => {
   try {
-    const q = query(collection(db, COLLECTIONS.OUTBOUND_ORDERS), orderBy('createdAt', 'desc'));
+    let q = query(collection(db, COLLECTIONS.OUTBOUND_ORDERS), orderBy('createdAt', 'desc'));
+    if (storeId) {
+      q = query(q, where('storeId', '==', storeId));
+    }
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as OutboundOrder));
   } catch (error) {
@@ -1102,6 +1124,7 @@ export const createOutboundOrder = async (orderData: Omit<OutboundOrder, 'id' | 
         outboundOrderId: generatedId,       // 实际的 document ID（用于精确访问）
         reason: orderData.reason,
         unitPrice: item.unitPrice,
+        storeId: orderData.storeId,         // 关联门店ID
         createdAt: orderData.createdAt || new Date()
       };
       
@@ -1140,9 +1163,12 @@ export const deleteOutboundOrder = async (id: string): Promise<void> => {
 /**
  * 获取所有库存变动记录（索引表）
  */
-export const getAllInventoryMovements = async (): Promise<InventoryMovement[]> => {
+export const getAllInventoryMovements = async (storeId?: string): Promise<InventoryMovement[]> => {
   try {
-    const q = query(collection(db, COLLECTIONS.INVENTORY_MOVEMENTS), orderBy('createdAt', 'desc'));
+    let q = query(collection(db, COLLECTIONS.INVENTORY_MOVEMENTS), orderBy('createdAt', 'desc'));
+    if (storeId) {
+      q = query(q, where('storeId', '==', storeId));
+    }
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryMovement));
   } catch (error) {

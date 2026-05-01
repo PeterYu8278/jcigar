@@ -16,6 +16,7 @@ import { collection, getDocs } from 'firebase/firestore'
 import { db } from '../../../config/firebase'
 import { GLOBAL_COLLECTIONS } from '../../../config/globalCollections'
 
+import { useAuthStore } from '../../../store/modules/auth'
 const { Title } = Typography
 const { Search } = Input
 const { Option } = Select
@@ -24,6 +25,7 @@ const DEFAULT_CIGAR_IMAGE = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhla
 
 const AdminInventory: React.FC = () => {
   const { t } = useTranslation()
+  const { user: currentUser, isSuperAdmin } = useAuthStore()
   const { modal } = App.useApp() // 使用 App.useApp() 获取 modal 实例以支持 React 19
   const [items, setItems] = useState<Cigar[]>([])
   const [loading, setLoading] = useState(false)
@@ -163,14 +165,14 @@ const AdminInventory: React.FC = () => {
 
         // 加载新架构数据
         const [inOrders, outOrders, movements, os, us, bs, txs, evts] = await Promise.all([
-          getAllInboundOrders(),
-          getAllOutboundOrders(),
-          getAllInventoryMovements(),
-          getAllOrders(),
+          getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId),
+          getAllOutboundOrders(isSuperAdmin ? undefined : currentUser?.storeId),
+          getAllInventoryMovements(isSuperAdmin ? undefined : currentUser?.storeId),
+          getAllOrders(isSuperAdmin ? undefined : currentUser?.storeId),
           getUsers(),
           getBrands(),
-          getAllTransactions(),
-          getEvents()
+          getAllTransactions(isSuperAdmin ? undefined : currentUser?.storeId),
+          getEvents(isSuperAdmin ? undefined : currentUser?.id)
         ])
 
         setInboundOrders(inOrders)
@@ -483,8 +485,9 @@ const AdminInventory: React.FC = () => {
       const passKw = !kw || i.name?.toLowerCase().includes(kw) || i.brand?.toLowerCase().includes(kw)
       const passBrand = !brandFilter || i.brand === brandFilter
       const passOrigin = !originFilter || i.origin === originFilter
-      const computedStock = getComputedStock(i.id)
       const minStock = ((i as any)?.inventory?.minStock ?? 0)
+      const totals = getTotals(i.id)
+      const computedStock = totals.totalIn - totals.totalOut
       const status = (computedStock <= minStock) ? 'critical' : (computedStock <= (minStock * 1.5)) ? 'low' : 'normal'
       const passStatus = !statusFilter || status === statusFilter
       const passStrength = !strengthFilter || i.strength === strengthFilter
@@ -1282,8 +1285,8 @@ const AdminInventory: React.FC = () => {
                     try {
                       await deleteOutboundOrder(record.outboundOrderId)
                       message.success(t('inventory.deleteSuccess'))
-                      setOutboundOrders(await getAllOutboundOrders())
-                      setInventoryMovements(await getAllInventoryMovements())
+                      setOutboundOrders(await getAllOutboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
+                      setInventoryMovements(await getAllInventoryMovements(isSuperAdmin ? undefined : currentUser?.storeId))
                       // 如果是订单出库，也需要重新加载订单
                       if (record.orderId && record.orderId !== '-') {
                         setOrders(await getAllOrders())
@@ -2622,8 +2625,8 @@ const AdminInventory: React.FC = () => {
 
                     inForm.resetFields()
                     setItems(await getCigars())
-                    setInboundOrders(await getAllInboundOrders())
-                    setInventoryMovements(await getAllInventoryMovements())
+                    setInboundOrders(await getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
+                    setInventoryMovements(await getAllInventoryMovements(isSuperAdmin ? undefined : currentUser?.storeId))
                     setInModalOpen(false)
                     setEditingOrder(null)
                     setAttachmentFileList([])
@@ -3325,7 +3328,7 @@ const AdminInventory: React.FC = () => {
                                         if (order) {
                                           await updateInboundOrder(order.id, { status: 'cancelled' })
                                           message.success('✅ 订单已取消')
-                                          setInboundOrders(await getAllInboundOrders())
+                                          setInboundOrders(await getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
                                         } else {
                                           message.error('订单未找到')
                                         }
@@ -3386,14 +3389,15 @@ const AdminInventory: React.FC = () => {
                                           totalQuantity: -order.totalQuantity,
                                           totalValue: -order.totalValue,
                                           status: 'completed',
-                                          operatorId: 'system',
+                                          operatorId: currentUser?.displayName || 'system',
+                                          storeId: currentUser?.storeId,
                                           createdAt: new Date()
                                         }
 
                                         await createInboundOrder(returnOrderData)
                                         message.success('反向订单已创建')
-                                        setInboundOrders(await getAllInboundOrders())
-                                        setInventoryMovements(await getAllInventoryMovements())
+                                        setInboundOrders(await getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
+                                        setInventoryMovements(await getAllInventoryMovements(isSuperAdmin ? undefined : currentUser?.storeId))
                                       } catch (error: any) {
                                         message.error('创建失败: ' + error.message)
                                       } finally {
@@ -3656,7 +3660,7 @@ const AdminInventory: React.FC = () => {
                                           if (order) {
                                             await updateInboundOrder(order.id, { status: 'cancelled' })
                                             message.success('✅ 订单已取消')
-                                            setInboundOrders(await getAllInboundOrders())
+                                            setInboundOrders(await getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
                                           } else {
                                             message.error('订单未找到')
                                           }
@@ -3725,14 +3729,15 @@ const AdminInventory: React.FC = () => {
                                             totalQuantity: -order.totalQuantity,
                                             totalValue: -order.totalValue,
                                             status: 'completed',
-                                            operatorId: 'system',
+                                            operatorId: currentUser?.displayName || 'system',
+                                            storeId: currentUser?.storeId,
                                             createdAt: new Date()
                                           }
 
                                           await createInboundOrder(returnOrderData)
                                           message.success('反向订单已创建')
-                                          setInboundOrders(await getAllInboundOrders())
-                                          setInventoryMovements(await getAllInventoryMovements())
+                                          setInboundOrders(await getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
+                                          setInventoryMovements(await getAllInventoryMovements(isSuperAdmin ? undefined : currentUser?.storeId))
                                         } catch (error: any) {
                                           message.error('创建失败: ' + error.message)
                                         } finally {
@@ -4054,8 +4059,8 @@ const AdminInventory: React.FC = () => {
                     outForm.resetFields()
                     setOutModalOpen(false)
                     setItems(await getCigars())
-                    setOutboundOrders(await getAllOutboundOrders())
-                    setInventoryMovements(await getAllInventoryMovements())
+                    setOutboundOrders(await getAllOutboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
+                    setInventoryMovements(await getAllInventoryMovements(isSuperAdmin ? undefined : currentUser?.storeId))
                   } finally {
                     setLoading(false)
                   }
@@ -5062,7 +5067,8 @@ const AdminInventory: React.FC = () => {
                 totalQuantity: qty,
                 totalValue: orderItem.subtotal,
                 status: 'completed',
-                operatorId: 'system',
+                operatorId: currentUser?.displayName || 'system',
+                storeId: currentUser?.storeId,
                 createdAt: new Date()
               }
               await createInboundOrder(inboundOrderData)
@@ -5075,7 +5081,8 @@ const AdminInventory: React.FC = () => {
                 totalQuantity: qty,
                 totalValue: orderItem.subtotal,
                 status: 'completed',
-                operatorId: 'system',
+                operatorId: currentUser?.displayName || 'system',
+                storeId: currentUser?.storeId,
                 createdAt: new Date()
               }
               await createOutboundOrder(outboundOrderData)
@@ -5083,9 +5090,9 @@ const AdminInventory: React.FC = () => {
 
             message.success(t('inventory.stockUpdated'))
             setItems(await getCigars())
-            setInboundOrders(await getAllInboundOrders())
-            setOutboundOrders(await getAllOutboundOrders())
-            setInventoryMovements(await getAllInventoryMovements())
+            setInboundOrders(await getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
+            setOutboundOrders(await getAllOutboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
+            setInventoryMovements(await getAllInventoryMovements(isSuperAdmin ? undefined : currentUser?.storeId))
             setAdjustingIn(null)
             setAdjustingOut(null)
           } finally {
@@ -6175,8 +6182,8 @@ const AdminInventory: React.FC = () => {
               orderEditForm.resetFields()
               setEditAttachmentFileList([])
               setEditUploadedAttachments([])
-              setInboundOrders(await getAllInboundOrders())
-              setInventoryMovements(await getAllInventoryMovements())
+              setInboundOrders(await getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
+              setInventoryMovements(await getAllInventoryMovements(isSuperAdmin ? undefined : currentUser?.storeId))
             } catch (error: any) {
               message.error('更新失败: ' + error.message)
             } finally {
@@ -6439,8 +6446,8 @@ const AdminInventory: React.FC = () => {
               await deleteInboundOrder(order.id)
               message.success(t('inventory.deleteSuccess'))
               // 刷新数据
-              setInboundOrders(await getAllInboundOrders())
-              setInventoryMovements(await getAllInventoryMovements())
+              setInboundOrders(await getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
+              setInventoryMovements(await getAllInventoryMovements(isSuperAdmin ? undefined : currentUser?.storeId))
               setDeleteConfirmOpen(false)
               setDeleteTargetOrder(null)
             } else {

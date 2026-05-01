@@ -5,10 +5,115 @@ import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import { getAppConfig, updateAppConfig } from '../../../services/firebase/appConfig';
 import { useAuthStore } from '../../../store/modules/auth';
-import { collection, query, orderBy, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, doc, updateDoc, where } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import { GLOBAL_COLLECTIONS } from '../../../config/globalCollections';
-import type { AppConfig, SubscriptionRequest } from '../../../types';
+import type { AppConfig, SubscriptionRequest, User } from '../../../types';
+import { getAllStores } from '../../../services/firebase/stores';
+
+const AdminAccountList: React.FC = () => {
+  const [admins, setAdmins] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stores, setStores] = useState<any[]>([]);
+
+  useEffect(() => {
+    loadAdmins();
+    loadStores();
+  }, []);
+
+  const loadAdmins = async () => {
+    try {
+      setLoading(true);
+      const q = query(
+        collection(db, 'users'), 
+        where('role', 'in', ['superAdmin', 'admin'])
+      );
+      const snapshot = await getDocs(q);
+      const data: User[] = [];
+      snapshot.forEach(doc => {
+        data.push({ id: doc.id, ...doc.data() } as User);
+      });
+      setAdmins(data);
+    } catch (error) {
+      console.error('Failed to load admins:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadStores = async () => {
+    const data = await getAllStores();
+    setStores(data);
+  };
+
+  const handleUpdateStore = async (userId: string, storeId: string) => {
+    try {
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, { storeId });
+      message.success('User store updated');
+      loadAdmins();
+    } catch (error) {
+      message.error('Failed to update store');
+    }
+  };
+
+  const columns = [
+    {
+      title: 'Name',
+      dataIndex: 'displayName',
+      key: 'displayName',
+      render: (text: string, record: User) => (
+        <Space>
+          <span>{text || 'No Name'}</span>
+          {record.role === 'superAdmin' && <Tag color="gold">SUPER</Tag>}
+          {record.role === 'admin' && <Tag color="blue">STORE ADMIN</Tag>}
+        </Space>
+      )
+    },
+    {
+      title: 'Email',
+      dataIndex: 'email',
+      key: 'email',
+    },
+    {
+      title: 'Assigned Store',
+      dataIndex: 'storeId',
+      key: 'storeId',
+      render: (storeId: string, record: User) => {
+        if (record.role === 'superAdmin') return <span style={{ color: '#888' }}>Global (All Stores)</span>;
+        
+        return (
+          <Select 
+            value={storeId} 
+            style={{ width: 200 }} 
+            placeholder="Select Store"
+            onChange={(val) => handleUpdateStore(record.id, val)}
+            dropdownStyle={{ background: '#1a1a1a', border: '1px solid #444' }}
+          >
+            {stores.map(s => (
+              <Option key={s.id} value={s.id}>{s.name}</Option>
+            ))}
+          </Select>
+        );
+      }
+    }
+  ];
+
+  return (
+    <Card style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: 0 }}>
+      <Table
+        dataSource={admins}
+        columns={columns}
+        rowKey="id"
+        loading={loading}
+        pagination={false}
+        scroll={{ x: 'max-content' }}
+        className="custom-table"
+      />
+    </Card>
+  );
+};
+
 
 const { Option } = Select;
 const { TabPane } = Tabs;
@@ -18,16 +123,41 @@ export const SubscriptionSettings: React.FC = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const { user } = useAuthStore();
+  const { user, isSuperAdmin } = useAuthStore();
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   
-  const [requests, setRequests] = useState<SubscriptionRequest[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
+  const [requests, setRequests] = useState<SubscriptionRequest[]>([]);
+  const [counts, setCounts] = useState({ stores: 0, superAdmins: 0, admins: 0 });
 
   useEffect(() => {
     loadConfig();
     loadRequests();
+    loadCounts();
   }, []);
+
+  const loadCounts = async () => {
+    try {
+      const stores = await getAllStores();
+      
+      const adminQuery = query(
+        collection(db, 'users'), 
+        where('role', 'in', ['superAdmin', 'admin'])
+      );
+      const adminSnapshot = await getDocs(adminQuery);
+      let superAdmins = 0;
+      let admins = 0;
+      adminSnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.role === 'superAdmin') superAdmins++;
+        else if (data.role === 'admin') admins++;
+      });
+
+      setCounts({ stores: stores.length, superAdmins, admins });
+    } catch (error) {
+      console.error('Failed to load counts:', error);
+    }
+  };
 
   const loadConfig = async () => {
     try {
@@ -46,7 +176,12 @@ export const SubscriptionSettings: React.FC = () => {
         form.setFieldsValue({
           isActive: config.subscription?.isActive || false,
           planId: config.subscription?.planId || config.subscription?.plan || 'basic',
-          plans: defaultPlans
+          plans: defaultPlans,
+          quota: config.subscription?.quota || {
+            maxStores: 1,
+            maxSuperAdmins: 1,
+            maxAdmins: 3
+          }
         });
       }
     } catch (error) {
@@ -84,6 +219,7 @@ export const SubscriptionSettings: React.FC = () => {
           planId: values.planId,
           plan: values.planId as 'basic' | 'pro' | 'premium', // Legacy sync
           plans: values.plans,
+          quota: values.quota,
           expiryDate: appConfig?.subscription?.expiryDate || new Date()
         }
       };
@@ -91,6 +227,7 @@ export const SubscriptionSettings: React.FC = () => {
       await updateAppConfig(updateData, user?.id || 'system');
       message.success('Subscription settings updated successfully');
       loadConfig(); // Reload to get fresh state
+      loadCounts(); // Refresh counts
     } catch (error) {
       message.error('Failed to update subscription settings');
     } finally {
@@ -227,6 +364,16 @@ export const SubscriptionSettings: React.FC = () => {
         Subscription Management
       </h1>
 
+      {!isSuperAdmin && (
+        <Alert
+          message="View Only"
+          description="You are viewing this page as an admin. Only superAdmins can modify these settings."
+          type="info"
+          showIcon
+          style={{ marginBottom: 24, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}
+        />
+      )}
+
       <Tabs 
         defaultActiveKey="1" 
         type="card"
@@ -240,7 +387,7 @@ export const SubscriptionSettings: React.FC = () => {
             onFinish={handleSaveConfig}
           >
             <div style={{ display: 'flex', flexDirection: window.innerWidth < 768 ? 'column' : 'row', gap: 24 }}>
-              {/* Left Column: Status & Current Plan */}
+              {/* Left Column: Status & Quota */}
               <div style={{ flex: 1 }}>
                 <Card 
                   title={<span style={{ color: '#FDE08D' }}>General Status</span>}
@@ -251,17 +398,17 @@ export const SubscriptionSettings: React.FC = () => {
                     label={<span style={{ color: '#ccc' }}>Enable Subscription Mode</span>}
                     valuePropName="checked"
                   >
-                    <Switch />
+                    <Switch disabled={!isSuperAdmin} />
                   </Form.Item>
 
                   <Form.Item
                     name="planId"
                     label={<span style={{ color: '#ccc' }}>Current Active Plan</span>}
                   >
-                    <Select style={{ width: '100%' }} dropdownStyle={{ background: '#1a1a1a', border: '1px solid #444' }}>
+                    <Select disabled={!isSuperAdmin} style={{ width: '100%' }} dropdownStyle={{ background: '#1a1a1a', border: '1px solid #444' }}>
                       {appConfig?.subscription?.plans?.map((p: any) => (
                         <Option key={p.id} value={p.id}>
-                          {p.name} - RM {p.fee} ({p.maxMembers} members)
+                          {p.name} - RM {p.fee}
                         </Option>
                       )) || (
                         <>
@@ -295,13 +442,62 @@ export const SubscriptionSettings: React.FC = () => {
                         padding: '12px', 
                         background: 'rgba(253,224,141,0.1)', 
                         borderRadius: 8,
-                        border: '1px solid rgba(253,224,141,0.2)'
+                        border: '1px solid rgba(253,224,141,0.2)',
+                        marginBottom: 16
                       }}>
                         <span style={{ color: '#aaa', marginRight: 8 }}>Current Expiry:</span>
                         {dateStr}
                       </div>
                     );
                   })()}
+                </Card>
+
+                <Card 
+                  title={<span style={{ color: '#FDE08D' }}>Account Quotas</span>}
+                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
+                >
+                  <Form.Item
+                    name={['quota', 'maxStores']}
+                    label={
+                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', color: '#ccc' }}>
+                        <span>Max Stores</span>
+                        <span style={{ color: counts.stores >= (form.getFieldValue(['quota', 'maxStores']) || 0) ? '#ff4d4f' : '#52c41a' }}>
+                          {counts.stores} / {form.getFieldValue(['quota', 'maxStores']) || 0}
+                        </span>
+                      </div>
+                    }
+                    rules={[{ required: true }]}
+                  >
+                    <InputNumber min={1} style={{ width: '100%' }} disabled={!isSuperAdmin} />
+                  </Form.Item>
+                  <Form.Item
+                    name={['quota', 'maxSuperAdmins']}
+                    label={
+                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', color: '#ccc' }}>
+                        <span>Max Super Admins</span>
+                        <span style={{ color: counts.superAdmins >= (form.getFieldValue(['quota', 'maxSuperAdmins']) || 0) ? '#ff4d4f' : '#52c41a' }}>
+                          {counts.superAdmins} / {form.getFieldValue(['quota', 'maxSuperAdmins']) || 0}
+                        </span>
+                      </div>
+                    }
+                    rules={[{ required: true }]}
+                  >
+                    <InputNumber min={1} style={{ width: '100%' }} disabled={!isSuperAdmin} />
+                  </Form.Item>
+                  <Form.Item
+                    name={['quota', 'maxAdmins']}
+                    label={
+                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', color: '#ccc' }}>
+                        <span>Max Admins (Store Admins)</span>
+                        <span style={{ color: counts.admins >= (form.getFieldValue(['quota', 'maxAdmins']) || 0) ? '#ff4d4f' : '#52c41a' }}>
+                          {counts.admins} / {form.getFieldValue(['quota', 'maxAdmins']) || 0}
+                        </span>
+                      </div>
+                    }
+                    rules={[{ required: true }]}
+                  >
+                    <InputNumber min={0} style={{ width: '100%' }} disabled={!isSuperAdmin} />
+                  </Form.Item>
                 </Card>
               </div>
               
@@ -348,7 +544,7 @@ export const SubscriptionSettings: React.FC = () => {
                                 label={<span style={{ color: '#888', fontSize: 12 }}>ID</span>}
                                 rules={[{ required: true, message: 'Missing ID' }]}
                               >
-                                <Input placeholder="basic" />
+                                <Input placeholder="basic" disabled={!isSuperAdmin} />
                               </Form.Item>
                               <Form.Item
                                 {...restField}
@@ -356,7 +552,7 @@ export const SubscriptionSettings: React.FC = () => {
                                 label={<span style={{ color: '#888', fontSize: 12 }}>Name</span>}
                                 rules={[{ required: true, message: 'Missing Name' }]}
                               >
-                                <Input placeholder="Plan Name" />
+                                <Input placeholder="Plan Name" disabled={!isSuperAdmin} />
                               </Form.Item>
                               <Form.Item
                                 {...restField}
@@ -364,15 +560,7 @@ export const SubscriptionSettings: React.FC = () => {
                                 label={<span style={{ color: '#888', fontSize: 12 }}>Annual Fee</span>}
                                 rules={[{ required: true, message: 'Missing Fee' }]}
                               >
-                                <InputNumber placeholder="0" min={0} addonBefore="RM" style={{ width: '100%' }} />
-                              </Form.Item>
-                              <Form.Item
-                                {...restField}
-                                name={[name, 'maxMembers']}
-                                label={<span style={{ color: '#888', fontSize: 12 }}>Max Members</span>}
-                                rules={[{ required: true, message: 'Missing Limit' }]}
-                              >
-                                <InputNumber placeholder="50" min={1} style={{ width: '100%' }} />
+                                <InputNumber placeholder="0" min={0} addonBefore="RM" style={{ width: '100%' }} disabled={!isSuperAdmin} />
                               </Form.Item>
                               <Form.Item
                                 {...restField}
@@ -380,7 +568,7 @@ export const SubscriptionSettings: React.FC = () => {
                                 label={<span style={{ color: '#888', fontSize: 12 }}>Validity (Months)</span>}
                                 rules={[{ required: true, message: 'Missing Period' }]}
                               >
-                                <InputNumber placeholder="12" min={1} addonAfter="Mon" style={{ width: '100%' }} />
+                                <InputNumber placeholder="12" min={1} addonAfter="Mon" style={{ width: '100%' }} disabled={!isSuperAdmin} />
                               </Form.Item>
                             </div>
                           </div>
@@ -391,9 +579,10 @@ export const SubscriptionSettings: React.FC = () => {
                             onClick={() => add({ validPeriodMonth: 12 })} 
                             block 
                             icon={<PlusOutlined />} 
+                            disabled={!isSuperAdmin}
                             style={{ 
-                              color: '#FDE08D', 
-                              borderColor: 'rgba(253,224,141,0.3)', 
+                              color: isSuperAdmin ? '#FDE08D' : '#666', 
+                              borderColor: isSuperAdmin ? 'rgba(253,224,141,0.3)' : 'rgba(255,255,255,0.05)', 
                               background: 'transparent',
                               height: 45,
                               borderRadius: 8
@@ -409,34 +598,36 @@ export const SubscriptionSettings: React.FC = () => {
               </div>
             </div>
 
-            <div style={{ 
-              marginTop: 32, 
-              textAlign: 'right',
-              position: window.innerWidth < 768 ? 'fixed' : 'static',
-              bottom: window.innerWidth < 768 ? 80 : 'auto',
-              right: window.innerWidth < 768 ? 16 : 'auto',
-              left: window.innerWidth < 768 ? 16 : 'auto',
-              zIndex: 10
-            }}>
-              <Button 
-                type="primary" 
-                htmlType="submit" 
-                loading={saving}
-                style={{ 
-                  background: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
-                  color: '#111', 
-                  border: 'none', 
-                  fontWeight: 800,
-                  height: 45,
-                  padding: '0 32px',
-                  borderRadius: 22,
-                  boxShadow: '0 4px 15px rgba(196,141,58,0.3)',
-                  width: window.innerWidth < 768 ? '100%' : 'auto'
-                }}
-              >
-                Save All Settings
-              </Button>
-            </div>
+            {isSuperAdmin && (
+              <div style={{ 
+                marginTop: 32, 
+                textAlign: 'right',
+                position: window.innerWidth < 768 ? 'fixed' : 'static',
+                bottom: window.innerWidth < 768 ? 80 : 'auto',
+                right: window.innerWidth < 768 ? 16 : 'auto',
+                left: window.innerWidth < 768 ? 16 : 'auto',
+                zIndex: 10
+              }}>
+                <Button 
+                  type="primary" 
+                  htmlType="submit" 
+                  loading={saving}
+                  style={{ 
+                    background: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
+                    color: '#111', 
+                    border: 'none', 
+                    fontWeight: 800,
+                    height: 45,
+                    padding: '0 32px',
+                    borderRadius: 22,
+                    boxShadow: '0 4px 15px rgba(196,141,58,0.3)',
+                    width: window.innerWidth < 768 ? '100%' : 'auto'
+                  }}
+                >
+                  Save All Settings
+                </Button>
+              </div>
+            )}
           </Form>
         </TabPane>
 
@@ -453,6 +644,10 @@ export const SubscriptionSettings: React.FC = () => {
               style={{ background: 'transparent' }}
             />
           </Card>
+        </TabPane>
+
+        <TabPane tab="Admin Accounts" key="3">
+          <AdminAccountList />
         </TabPane>
       </Tabs>
 

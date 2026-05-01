@@ -236,7 +236,7 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
 
       if (mode === 'checkin') {
         // Check-in
-        const result = await createVisitSession(userId, adminUser.id, userResult.user.displayName);
+        const result = await createVisitSession(userId, adminUser.id, adminUser.storeId || '', '', userResult.user.displayName);
         if (result.success) {
           message.success(`Check-in 成功！Session ID: ${result.sessionId}`);
           setCheckInError(null);
@@ -276,7 +276,7 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
           return;
         }
 
-        const result = await completeVisitSession(pendingSession.id, adminUser.id);
+        const result = await completeVisitSession(pendingSession.id, adminUser.id, adminUser.storeId);
         if (result.success) {
           message.success(`Check-out 成功！扣除积分: ${result.pointsDeducted || 0}`);
           onSuccess?.();

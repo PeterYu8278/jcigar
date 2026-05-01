@@ -14,6 +14,7 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   ShoppingCartOutlined,
+  ShopOutlined,
   FireOutlined,
   TrophyOutlined,
   ClockCircleOutlined,
@@ -41,7 +42,7 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
   const navigate = useNavigate()
   const location = useLocation()
-  const { isAdmin, isDeveloper } = useAuthStore()
+  const { isAdmin, isSuperAdmin, isDeveloper } = useAuthStore()
   const { t } = useTranslation()
 
   // 加载应用配置
@@ -140,6 +141,11 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
       icon: <ClockCircleOutlined />,
       label: t('navigation.visitSessions'),
     },
+    {
+      key: '/admin/stores',
+      icon: <ShopOutlined />,
+      label: t('navigation.stores', { defaultValue: '门店管理' }),
+    },
   ]
 
   // 根据功能可见性过滤菜单项（developer 不受限制）
@@ -158,10 +164,15 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
     // 管理后台分组
     if (isAdmin) {
       const filteredAdminBase = adminMenuItemsBase.filter(item => {
-        if (isDeveloper) return true
-        const featureKey = getFeatureKeyByRoute(item.key)
-        return featureKey ? (featuresVisibility[featureKey] ?? true) : true
-      })
+        // 角色权限检查
+        if (item.key === '/admin/finance' && !isSuperAdmin) return false;
+        if (item.key === '/admin/points-config' && !isSuperAdmin) return false;
+        if (item.key === '/admin/stores' && !isSuperAdmin) return false;
+
+        if (isDeveloper) return true;
+        const featureKey = getFeatureKeyByRoute(item.key);
+        return featureKey ? (featuresVisibility[featureKey] ?? true) : true;
+      });
 
       if (filteredAdminBase.length > 0) {
         items.push({ type: 'divider' })

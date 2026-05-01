@@ -1,11 +1,14 @@
 // 全局类型定义
 
 // 用户相关类型
+export type UserRole = 'superAdmin' | 'admin' | 'member' | 'guest' | 'vip' | 'developer';
+
 export interface User {
   id: string;
   email: string;
   displayName: string;
-  role: 'admin' | 'member' | 'guest' | 'vip' | 'developer';
+  role: UserRole;
+  storeId?: string; // 所属门店 ID (仅针对 admin 角色)
   // 个人折扣，仅管理员/开发者可见
   discount?: {
     rate?: number;      // 折扣百分比，例如 10 表示 10%
@@ -199,6 +202,8 @@ export interface Event {
   coverImage?: string; // 活动封面图片URL（别名）
   status: 'draft' | 'published' | 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
   isPrivate?: boolean; // 是否为私人活动
+  storeId?: string;    // 所属门店ID
+  creatorId?: string;  // 创建者ID
   createdAt: Date;
   updatedAt: Date;
 }
@@ -334,6 +339,7 @@ export interface Order {
     trackingNumber?: string;
   };
   invoice?: OrderInvoiceMeta; // 发票元数据（管理员生成）
+  storeId?: string;           // 所属门店ID
   createdAt: Date;
   updatedAt: Date;
 }
@@ -349,6 +355,7 @@ export interface Transaction {
   relatedId?: string; // order ID or event ID
   relatedOrders?: Array<{ orderId: string; amount: number }>; // multiple related orders and allocated amount
   userId?: string;
+  storeId?: string; // 所属门店ID
   createdAt: Date;
 }
 
@@ -395,6 +402,7 @@ export interface InboundOrder {
   notes?: string;               // 备注
   
   // 时间戳
+  storeId?: string;             // 所属门店ID
   createdAt: Date;
   updatedAt: Date;
 }
@@ -432,6 +440,7 @@ export interface OutboundOrder {
   notes?: string;
   
   // 时间戳
+  storeId?: string;             // 所属门店ID
   createdAt: Date;
   updatedAt: Date;
 }
@@ -456,11 +465,12 @@ export interface InventoryMovement {
   unitPrice?: number;           // 单价
   
   // 时间戳
+  storeId?: string;             // 所属门店ID
   createdAt: Date;
 }
 
 // 权限类型
-export type UserRole = 'guest' | 'member' | 'vip' | 'admin' | 'developer';
+
 
 // 功能可见性配置
 export interface FeatureVisibilityConfig {
@@ -524,6 +534,11 @@ export interface AppConfig {
       maxMembers: number;
       validPeriodMonth: number;
     }>;
+    quota?: {
+      maxStores: number;
+      maxSuperAdmins: number;
+      maxAdmins: number;
+    };
   };
   updatedAt: Date;
   updatedBy: string;       // 最后更新的开发者ID
@@ -654,6 +669,8 @@ export interface VisitSession {
   id: string;
   userId: string;
   userName?: string;
+  storeId: string;           // 门店 ID
+  storeName?: string;        // 门店名称 (冗余)
   
   // Check-in
   checkInAt: Date;
@@ -858,6 +875,42 @@ export interface ReferralRecord {
   
   createdAt: Date;              // 引荐关系建立日期
   updatedAt: Date;              // 最后更新时间
+}
+
+export interface Store {
+  id: string;
+  name: string;
+  address: string;
+  phone?: string;
+  email?: string;
+  status: 'active' | 'inactive';
+  description?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Subscription {
+  id: string;
+  status: 'active' | 'expired' | 'suspended';
+  planId: string;
+  planName: string;
+  expiryDate: Date;
+  
+  // 账户与门店限额
+  quota: {
+    maxStores: number;
+    maxSuperAdmins: number;
+    maxAdmins: number;
+  };
+  
+  // 当前使用的账户列表（由 superAdmin 管理）
+  accounts: {
+    superAdmins: string[]; // userIds
+    admins: string[];      // userIds
+  };
+  
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface SubscriptionRequest {

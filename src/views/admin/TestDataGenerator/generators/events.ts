@@ -51,7 +51,7 @@ function generateEventData(
   }
 
   // 随机选择组织者（管理员）
-  const adminUsers = users.filter(u => u.role === 'admin' || u.role === 'developer')
+  const adminUsers = users.filter(u => u.role === 'superAdmin' || u.role === 'developer')
   const organizerId = adminUsers.length > 0 
     ? adminUsers[Math.floor(Math.random() * adminUsers.length)].id
     : users[0].id

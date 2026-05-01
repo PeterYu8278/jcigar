@@ -41,6 +41,7 @@ import CigarDatabase from './views/admin/CigarDatabase'
 import GeminiModelTester from './views/admin/GeminiModelTester'
 import InvoiceTemplateEditor from './views/admin/InvoiceTemplate'
 import { SubscriptionSettings } from './views/admin/SubscriptionSettings'
+import StoreManagement from './views/admin/StoreManagement'
 
 // 认证页面
 import Login from './views/auth/Login'
@@ -302,26 +303,27 @@ const AppContent: React.FC = () => {
                 {/* 前端路由 */}
                 <Route path="/" element={user ? <Home /> : <Landing />} />
                 <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
-                <Route path="/shop" element={<ProtectedRoute roles={['member', 'vip', 'admin', 'developer']}><Shop /></ProtectedRoute>} />
-                <Route path="/profile" element={<ProtectedRoute roles={['member', 'vip', 'admin', 'developer']}><Profile /></ProtectedRoute>} />
-                <Route path="/ai-cigar-history" element={<ProtectedRoute roles={['member', 'vip', 'admin', 'developer']}><AICigarHistory /></ProtectedRoute>} />
-                <Route path="/reload" element={<ProtectedRoute roles={['member', 'vip', 'admin', 'developer']}><ReloadPage /></ProtectedRoute>} />
-                <Route path="/brand/:brandId" element={<ProtectedRoute roles={['member', 'vip', 'admin', 'developer']}><BrandDetail /></ProtectedRoute>} />
+                <Route path="/shop" element={<ProtectedRoute roles={['member', 'vip', 'superAdmin', 'developer']}><Shop /></ProtectedRoute>} />
+                <Route path="/profile" element={<ProtectedRoute roles={['member', 'vip', 'superAdmin', 'developer']}><Profile /></ProtectedRoute>} />
+                <Route path="/ai-cigar-history" element={<ProtectedRoute roles={['member', 'vip', 'superAdmin', 'developer']}><AICigarHistory /></ProtectedRoute>} />
+                <Route path="/reload" element={<ProtectedRoute roles={['member', 'vip', 'superAdmin', 'developer']}><ReloadPage /></ProtectedRoute>} />
+                <Route path="/brand/:brandId" element={<ProtectedRoute roles={['member', 'vip', 'superAdmin', 'developer']}><BrandDetail /></ProtectedRoute>} />
 
                 {/* 管理后台路由 */}
-                <Route path="/admin" element={<ProtectedRoute roles={['admin', 'developer']}><AdminDashboard /></ProtectedRoute>} />
-                <Route path="/admin/users" element={<ProtectedRoute roles={['admin', 'developer']}><AdminUsers /></ProtectedRoute>} />
-                <Route path="/admin/inventory" element={<ProtectedRoute roles={['admin', 'developer']}><AdminInventory /></ProtectedRoute>} />
-                <Route path="/admin/events" element={<ProtectedRoute roles={['admin', 'developer']}><AdminEvents /></ProtectedRoute>} />
-                <Route path="/admin/orders" element={<ProtectedRoute roles={['admin', 'developer']}><AdminOrders /></ProtectedRoute>} />
-                <Route path="/admin/finance" element={<ProtectedRoute roles={['admin', 'developer']}><AdminFinance /></ProtectedRoute>} />
-                <Route path="/admin/points-config" element={<ProtectedRoute roles={['admin', 'developer']}><PointsConfigPage /></ProtectedRoute>} />
-                <Route path="/admin/visit-sessions" element={<ProtectedRoute roles={['admin', 'developer']}><VisitSessionsPage /></ProtectedRoute>} />
+                <Route path="/admin" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminDashboard /></ProtectedRoute>} />
+                <Route path="/admin/users" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminUsers /></ProtectedRoute>} />
+                <Route path="/admin/inventory" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminInventory /></ProtectedRoute>} />
+                <Route path="/admin/events" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminEvents /></ProtectedRoute>} />
+                <Route path="/admin/orders" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminOrders /></ProtectedRoute>} />
+                <Route path="/admin/finance" element={<ProtectedRoute roles={['superAdmin', 'developer']}><AdminFinance /></ProtectedRoute>} />
+                <Route path="/admin/points-config" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><PointsConfigPage /></ProtectedRoute>} />
+                <Route path="/admin/visit-sessions" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><VisitSessionsPage /></ProtectedRoute>} />
+                <Route path="/admin/stores" element={<ProtectedRoute roles={['superAdmin', 'developer']}><StoreManagement /></ProtectedRoute>} />
                 <Route path="/developer/orphaned-users" element={<ProtectedRoute roles={['developer']}><OrphanedUserCleanup /></ProtectedRoute>} />
                 <Route path="/developer/performance" element={<ProtectedRoute roles={['developer']}><PerformanceMonitor /></ProtectedRoute>} />
                 <Route path="/developer/feature-management" element={<ProtectedRoute roles={['developer']}><FeatureManagement /></ProtectedRoute>} />
                 <Route path="/developer/subscription" element={<ProtectedRoute roles={['developer']}><SubscriptionSettings /></ProtectedRoute>} />
-                <Route path="/developer/invoice-template" element={<ProtectedRoute roles={['admin', 'developer']}><InvoiceTemplateEditor /></ProtectedRoute>} />
+                <Route path="/developer/invoice-template" element={<ProtectedRoute roles={['developer']}><InvoiceTemplateEditor /></ProtectedRoute>} />
                 <Route path="/developer/cigar-database" element={<ProtectedRoute roles={['developer']}><CigarDatabase /></ProtectedRoute>} />
                 <Route path="/developer/gemini-tester" element={<ProtectedRoute roles={['developer']}><GeminiModelTester /></ProtectedRoute>} />
                 <Route path="/developer/cloudinary-test" element={<ProtectedRoute roles={['developer']}><CloudinaryTestPage /></ProtectedRoute>} />

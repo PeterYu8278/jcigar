@@ -53,7 +53,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [referredUsers, setReferredUsers] = useState<User[]>([])
   const [loadingReferrals, setLoadingReferrals] = useState(false)
   const [pointsRecords, setPointsRecords] = useState<PointsRecord[]>([])
-  const canViewDiscount = authUser?.role === 'developer' || authUser?.role === 'admin'
+  const canViewDiscount = authUser?.role === 'developer' || authUser?.role === 'superAdmin'
   const [loadingPointsRecords, setLoadingPointsRecords] = useState(false)
   const [referralActivationMap, setReferralActivationMap] = useState<Record<string, Date | null>>({})
 

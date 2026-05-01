@@ -27,6 +27,7 @@ export const getUsersPaginated = async (
     role?: string
     status?: string
     level?: string
+    storeId?: string
   }
 ): Promise<{
   data: User[]
@@ -49,6 +50,9 @@ export const getUsersPaginated = async (
     }
     if (filters?.level) {
       q = query(q, where('membership.level', '==', filters.level))
+    }
+    if (filters?.storeId) {
+      q = query(q, where('storeId', '==', filters.storeId))
     }
 
     // 分页
@@ -98,6 +102,7 @@ export const getOrdersPaginated = async (
     paymentMethod?: string
     startDate?: Date
     endDate?: Date
+    storeId?: string
   }
 ): Promise<{
   data: Order[]
@@ -125,6 +130,9 @@ export const getOrdersPaginated = async (
       if (filters.endDate) {
         q = query(q, where('createdAt', '<=', Timestamp.fromDate(filters.endDate)))
       }
+    }
+    if (filters?.storeId) {
+      q = query(q, where('storeId', '==', filters.storeId))
     }
 
     // 分页
@@ -171,6 +179,7 @@ export const getTransactionsPaginated = async (
     type?: string
     startDate?: Date
     endDate?: Date
+    storeId?: string
   }
 ): Promise<{
   data: Transaction[]
@@ -195,6 +204,9 @@ export const getTransactionsPaginated = async (
       if (filters.endDate) {
         q = query(q, where('createdAt', '<=', Timestamp.fromDate(filters.endDate)))
       }
+    }
+    if (filters?.storeId) {
+      q = query(q, where('storeId', '==', filters.storeId))
     }
 
     // 分页
@@ -235,6 +247,7 @@ export const getVisitSessionsPaginated = async (
   filters?: {
     status?: string
     userId?: string
+    storeId?: string
   }
 ): Promise<{
   data: VisitSession[]
@@ -254,6 +267,9 @@ export const getVisitSessionsPaginated = async (
     }
     if (filters?.userId) {
       q = query(q, where('userId', '==', filters.userId))
+    }
+    if (filters?.storeId) {
+      q = query(q, where('storeId', '==', filters.storeId))
     }
 
     // 分页

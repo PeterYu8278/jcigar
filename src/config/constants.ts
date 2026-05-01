@@ -15,9 +15,11 @@ export const APP_INFO = {
 
 // 用户角色
 export const USER_ROLES = {
+  SUPER_ADMIN: 'superAdmin',
   ADMIN: 'admin',
   MEMBER: 'member',
-  GUEST: 'guest'
+  GUEST: 'guest',
+  DEVELOPER: 'developer'
 } as const
 
 export type UserRole = typeof USER_ROLES[keyof typeof USER_ROLES]

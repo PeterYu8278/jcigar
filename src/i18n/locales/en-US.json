@@ -405,7 +405,7 @@
     "createEvent": "Create Event",
     "viewOrders": "View Orders",
     "createUser": "Create User",
-    "inventoryManagement": "Inventory Management",
+    "inventory": "Inventory",
     "completedOrders": "Completed Orders",
     "pendingOrders": "Pending Orders",
     "orderNumber": "Order",

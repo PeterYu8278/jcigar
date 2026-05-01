@@ -1,6 +1,6 @@
 /**
- * 用户相关 API
- */
+* 用户相关 API
+*/
 
 import { apiCall, type ApiConfig } from './base'
 import * as firestoreService from '../firebase/firestore'
@@ -94,7 +94,7 @@ export const searchUsers = (keyword: string, config?: ApiConfig) => {
   return apiCall(
     async () => {
       const users = await firestoreService.getAllUsers()
-      
+
       if (!keyword) return users
 
       const lowerKeyword = keyword.toLowerCase()
@@ -131,7 +131,7 @@ export const updateUserStatus = (
  */
 export const updateUserRole = (
   userId: string,
-  role: 'admin' | 'member' | 'guest',
+  role: 'superAdmin' | 'member' | 'guest',
   config?: ApiConfig
 ) => {
   return apiCall(

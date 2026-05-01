@@ -22,12 +22,13 @@ const { Title, Text } = Typography;
 const { Search } = Input;
 
 const VisitSessionsPage: React.FC = () => {
-  const { user } = useAuthStore();
+  const { user, isSuperAdmin } = useAuthStore();
   const { modal } = App.useApp(); // 使用 App.useApp() 获取 modal 实例以支持 React 19
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [sessions, setSessions] = useState<VisitSession[]>([]); // 保留用于搜索
   const [searchUserId, setSearchUserId] = useState<string>('');
+  const [stores, setStores] = useState<any[]>([]);
 
   // 不再使用服务端分页，改为加载所有数据并使用客户端分页
   const [qrScannerVisible, setQrScannerVisible] = useState(false);
@@ -47,9 +48,16 @@ const VisitSessionsPage: React.FC = () => {
 
   useEffect(() => {
     loadCigars();
+    loadStores();
     // 初始加载所有数据
     loadAllSessions();
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadStores = async () => {
+    const { getAllStores } = await import('../../../services/firebase/stores');
+    const data = await getAllStores();
+    setStores(data);
+  };
 
   // 监听筛选条件变化，重新加载数据
   useEffect(() => {
@@ -60,7 +68,7 @@ const VisitSessionsPage: React.FC = () => {
       // 否则加载所有记录
       loadAllSessions();
     }
-  }, [statusFilter, searchUserId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [statusFilter, searchUserId, isSuperAdmin, user?.storeId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadCigars = async () => {
     try {
@@ -92,11 +100,11 @@ const VisitSessionsPage: React.FC = () => {
 
       if (statusFilter === 'pending') {
         // 只加载待处理的记录
-        allSessions = await getAllPendingVisitSessions();
+        allSessions = await getAllPendingVisitSessions(isSuperAdmin ? undefined : user?.storeId);
       } else {
         // 加载所有记录，然后根据筛选器过滤
         // 移除数量限制，加载所有数据
-        allSessions = await getAllVisitSessions();
+        allSessions = await getAllVisitSessions(undefined, isSuperAdmin ? undefined : user?.storeId);
         if (statusFilter !== 'all') {
           allSessions = allSessions.filter(session => session.status === statusFilter);
         }
@@ -114,8 +122,9 @@ const VisitSessionsPage: React.FC = () => {
   const loadUserSessions = async (userId: string) => {
     setLoading(true);
     try {
+      const storeId = isSuperAdmin ? undefined : user?.storeId;
       // 移除数量限制，加载该用户的所有记录
-      const userSessions = await getUserVisitSessions(userId);
+      const userSessions = await getUserVisitSessions(userId, undefined, storeId);
       // 根据状态筛选
       let filteredSessions = userSessions;
       if (statusFilter !== 'all') {
@@ -152,7 +161,7 @@ const VisitSessionsPage: React.FC = () => {
         onOk: async () => {
           try {
             setLoading(true);
-            const result = await completeVisitSession(sessionId, user.id, forceHours);
+            const result = await completeVisitSession(sessionId, user.id, user.storeId, forceHours);
             if (result.success) {
               message.success(`结算成功，扣除积分: ${result.pointsDeducted || 0}`);
               // 重新加载所有数据
@@ -220,6 +229,17 @@ const VisitSessionsPage: React.FC = () => {
       key: 'userName',
       width: 150,
       render: (name: string, record: VisitSession) => name || record.userId
+    },
+    {
+      title: '门店',
+      dataIndex: 'storeId',
+      key: 'storeId',
+      width: 150,
+      render: (storeId: string, record: VisitSession) => {
+        if (!storeId) return '-';
+        const store = stores.find(s => s.id === storeId);
+        return store?.name || record.storeName || storeId;
+      }
     },
     {
       title: '类型',

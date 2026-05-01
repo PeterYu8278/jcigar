@@ -15,6 +15,7 @@ import dayjs from 'dayjs'
 import { useTranslation } from 'react-i18next'
 import { getModalThemeStyles, getModalWidth, getModalTheme, getResponsiveModalConfig } from '../../../config/modalTheme'
 import { calculateFifoProfit, aggregateProfitByPeriod, ProfitRecord } from '../../../utils/finance'
+import { useAuthStore } from '../../../store/modules/auth'
 
 const { Title } = Typography
 const { RangePicker } = DatePicker
@@ -23,6 +24,26 @@ const { Search } = Input
 
 const AdminFinance: React.FC = () => {
   const { t } = useTranslation()
+  const { user: currentUser, isSuperAdmin } = useAuthStore()
+
+  // 权限检查：仅 superAdmin 允许访问财务管理
+  if (!isSuperAdmin) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '60vh',
+        color: 'rgba(255, 255, 255, 0.65)'
+      }}>
+        <div style={{ fontSize: 64, marginBottom: 24 }}>🚫</div>
+        <Title level={3} style={{ color: '#FFFFFF' }}>{t('common.unauthorized')}</Title>
+        <p>{t('financeAdmin.superAdminOnly', '只有超级管理员有权访问财务管理页面')}</p>
+      </div>
+    )
+  }
+
   const [transactions, setTransactions] = useState<Transaction[]>([]) // 保留用于搜索和筛选
   const [orders, setOrders] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
@@ -307,11 +328,11 @@ const AdminFinance: React.FC = () => {
     try {
       // 加载所有数据（用于显示和筛选）
       const [allTransactions, inOrders, outOrders, movements, orderList, userList, cigarList] = await Promise.all([
-        getAllTransactions(),
-        getAllInboundOrders(),
-        getAllOutboundOrders(),
-        getAllInventoryMovements(),
-        getAllOrders(),
+        getAllTransactions(isSuperAdmin ? undefined : currentUser?.storeId),
+        getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId),
+        getAllOutboundOrders(isSuperAdmin ? undefined : currentUser?.storeId),
+        getAllInventoryMovements(isSuperAdmin ? undefined : currentUser?.storeId),
+        getAllOrders(isSuperAdmin ? undefined : currentUser?.storeId),
         getAllUsers(),
         getCigars()
       ])
@@ -339,7 +360,7 @@ const AdminFinance: React.FC = () => {
   const loadTransactions = async () => {
     setLoading(true)
     try {
-      const data = await getAllTransactions()
+      const data = await getAllTransactions(isSuperAdmin ? undefined : currentUser?.storeId)
       setTransactions(data)
     } catch (error) {
       message.error(t('financeAdmin.loadTransactionsFailed'))
@@ -362,7 +383,7 @@ const AdminFinance: React.FC = () => {
       if (result.success) {
         message.success(t('financeAdmin.transactionDeleted'))
         // 重新加载所有交易数据
-        const data = await getAllTransactions()
+        const data = await getAllTransactions(isSuperAdmin ? undefined : currentUser?.storeId)
         setTransactions(data)
         // 如果正在查看被删除的交易，关闭查看 Modal
         if (viewing?.id === deleting.id) {

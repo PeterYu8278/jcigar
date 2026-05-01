@@ -109,7 +109,7 @@ const PlanSelector: React.FC<{ value?: string; onChange?: (val: string) => void;
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const { user } = useAuthStore()
+  const { user, isSuperAdmin } = useAuthStore()
   const [loading, setLoading] = useState(false)
   const [users, setUsers] = useState<User[]>([])
   const [orders, setOrders] = useState<Order[]>([])
@@ -167,9 +167,9 @@ const AdminDashboard: React.FC = () => {
     try {
       const [usersData, ordersData, eventsData, transactionsData, cigarsData] = await Promise.all([
         getUsers(),
-        getAllOrders(),
-        getEvents(),
-        getAllTransactions(),
+        getAllOrders(isSuperAdmin ? undefined : user?.storeId),
+        getEvents(isSuperAdmin ? undefined : user?.id),
+        getAllTransactions(isSuperAdmin ? undefined : user?.storeId),
         getCigars()
       ])
 
@@ -314,8 +314,8 @@ const AdminDashboard: React.FC = () => {
               { label: t('dashboard.totalMembers'), value: `${totalUsers}/${currentPlan.maxMembers || 50}` },
               { label: '', value: statusValue, subText, isSubscription: true, isExpired: isExpired || !isActive, showButton },
               { label: t('dashboard.monthlyOrders'), value: monthlyOrders.toLocaleString() },
-              { label: t('dashboard.monthlyRevenue'), value: `RM${monthlyRevenue.toLocaleString()}` }
-            ];
+              isSuperAdmin ? { label: t('dashboard.monthlyRevenue'), value: `RM${monthlyRevenue.toLocaleString()}` } : null
+            ].filter(Boolean) as any[];
 
           const isMobile = window.innerWidth < 768;
 
@@ -350,9 +350,9 @@ const AdminDashboard: React.FC = () => {
                 {typeof card.value === 'string' && card.value.includes('/') ? (
                   <>
                     <span>{card.value.split('/')[0]}</span>
-                    <span style={{ 
-                      fontSize: isMobile ? '10px' : '14px', 
-                      color: 'rgba(255,255,255,0.7)', 
+                    <span style={{
+                      fontSize: isMobile ? '10px' : '14px',
+                      color: 'rgba(255,255,255,0.7)',
                       WebkitTextFillColor: 'rgba(255,255,255,0.7)',
                       marginLeft: 2,
                       fontWeight: 500
@@ -491,7 +491,7 @@ const AdminDashboard: React.FC = () => {
           {inventoryFeatureVisible && (
             <button onClick={() => navigate('/admin/inventory')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 12, padding: 8, background: appConfig?.colorTheme?.secondaryButton?.backgroundColor || 'rgba(255,255,255,0.05)', color: appConfig?.colorTheme?.secondaryButton?.textColor || '#EAEAEA', cursor: 'pointer' }}>
               <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M5 8a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z"></path><path clipRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V3zm2 2v10h10V5H5z" fillRule="evenodd"></path></svg>
-              <span>{t('dashboard.inventoryManagement')}</span>
+              <span>{t('dashboard.inventory')}</span>
             </button>
           )}
         </div>

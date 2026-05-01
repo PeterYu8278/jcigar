@@ -19,10 +19,11 @@ import { isFeatureVisible } from '../../../services/firebase/featureVisibility';
 const { Title, Text } = Typography;
 
 const PointsConfigPage: React.FC = () => {
+  const { user, isSuperAdmin } = useAuthStore();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'config' | 'records' | 'reload' | 'membershipFees'>('config');
+  const [activeTab, setActiveTab] = useState<'config' | 'records' | 'reload' | 'membershipFees'>(isSuperAdmin ? 'config' : 'reload');
   const [pointsRecords, setPointsRecords] = useState<PointsRecord[]>([]);
   const [loadingRecords, setLoadingRecords] = useState(false);
   const [processingFees, setProcessingFees] = useState(false);
@@ -32,7 +33,6 @@ const PointsConfigPage: React.FC = () => {
   const [creatingFeeRecord, setCreatingFeeRecord] = useState(false);
   const [feeRecordForm] = Form.useForm();
   const [users, setUsers] = useState<User[]>([]);
-  const { user } = useAuthStore();
   const { t } = useTranslation();
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false;
   const [eventsAdminFeatureVisible, setEventsAdminFeatureVisible] = useState<boolean>(true);
@@ -80,7 +80,7 @@ const PointsConfigPage: React.FC = () => {
 
   // 自动执行扣除年费（管理员访问页面时自动执行，无需手动点击）
   useEffect(() => {
-    if (!user?.id || user.role !== 'admin') {
+    if (!user?.id || user.role !== 'superAdmin') {
       return;
     }
 
@@ -398,7 +398,7 @@ const PointsConfigPage: React.FC = () => {
           borderBottom: '1px solid rgba(244,175,37,0.2)',
           marginBottom: 16
         }}>
-          {(['config', 'records', 'reload', 'membershipFees'] as const).map((tabKey) => {
+          {(['config', 'records', 'reload', 'membershipFees'] as const).filter(k => isSuperAdmin || (k !== 'config')).map((tabKey) => {
             const isActive = activeTab === tabKey
             const baseStyle: React.CSSProperties = {
               flex: 1,

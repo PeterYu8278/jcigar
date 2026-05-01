@@ -499,13 +499,15 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
                     }}>
                       {user?.role === 'developer'
                         ? t('auth.developer', { defaultValue: '开发者' })
-                        : user?.role === 'admin'
-                          ? t('auth.admin', { defaultValue: '管理员' })
-                          : user?.role === 'vip'
-                            ? t('auth.vip', { defaultValue: 'VIP' })
-                            : user?.status === 'active'
-                              ? t('auth.member', { defaultValue: '会员' })
-                              : t('auth.guest', { defaultValue: '游客' })}
+                        : user?.role === 'superAdmin'
+                          ? t('auth.superAdmin', { defaultValue: '超级管理员' })
+                          : user?.role === 'admin'
+                            ? t('auth.admin', { defaultValue: '管理员' })
+                            : user?.role === 'vip'
+                              ? t('auth.vip', { defaultValue: 'VIP' })
+                              : user?.status === 'active'
+                                ? t('auth.member', { defaultValue: '会员' })
+                                : t('auth.guest', { defaultValue: '游客' })}
                     </div>
                   </div>
                 </div>

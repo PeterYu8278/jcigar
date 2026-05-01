@@ -63,17 +63,17 @@ function generateUserData(
   const email = `user${index}@test.com`
   const memberId = generateMemberId(index)
   const createdAt = randomDateInLast18Months()
-  
+
   // 角色分布：95% member, 3% vip, 1% admin, 1% guest
   const roleRand = Math.random()
   const role = roleRand < 0.95 ? 'member' :
-               roleRand < 0.98 ? 'vip' :
-               roleRand < 0.99 ? 'admin' : 'guest'
-  
+    roleRand < 0.98 ? 'vip' :
+      roleRand < 0.99 ? 'superAdmin' : 'guest'
+
   // 状态分布：90% active, 8% inactive, 2% suspended
   const statusRand = Math.random()
   const status = statusRand < 0.9 ? 'active' :
-                 statusRand < 0.98 ? 'inactive' : 'suspended'
+    statusRand < 0.98 ? 'inactive' : 'suspended'
 
   // 推荐关系：前2000个作为推荐人，后续8000个随机分配推荐人
   let referral = null
@@ -94,8 +94,8 @@ function generateUserData(
   // 会员等级分布
   const levelRand = Math.random()
   const level = levelRand < 0.4 ? 'bronze' :
-                levelRand < 0.7 ? 'silver' :
-                levelRand < 0.9 ? 'gold' : 'platinum'
+    levelRand < 0.7 ? 'silver' :
+      levelRand < 0.9 ? 'gold' : 'platinum'
 
   return {
     email,
@@ -144,10 +144,10 @@ export async function generateUsers(
 
       for (let j = 0; j < currentBatchSize; j++) {
         const userData = generateUserData(i + j, referrers)
-        
+
         // 清理 undefined 值
         const cleanUserData = removeUndefined(userData)
-        
+
         const docRef = await addDoc(collection(db, GLOBAL_COLLECTIONS.USERS), {
           ...cleanUserData,
           createdAt: Timestamp.fromDate(userData.createdAt),

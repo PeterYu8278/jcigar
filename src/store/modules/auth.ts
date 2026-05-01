@@ -13,6 +13,7 @@ interface AuthState {
   loading: boolean
   error: string | null
   isAdmin: boolean
+  isSuperAdmin: boolean
   isDeveloper: boolean
   initialized: boolean
   
@@ -98,6 +99,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   loading: true,
   error: null,
   isAdmin: false,
+  isSuperAdmin: false,
   isDeveloper: false,
   initialized: false,
   
@@ -220,7 +222,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             setUser(userData)
             setFirebaseUser(firebaseUser)
             set({ 
-              isAdmin: userData.role === 'admin' || userData.role === 'developer',
+              isAdmin: ['superAdmin', 'admin', 'developer'].includes(userData.role),
+              isSuperAdmin: ['superAdmin', 'developer'].includes(userData.role),
               isDeveloper: userData.role === 'developer'
             })
             
@@ -244,7 +247,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                     const updatedUser = { id: firestoreUserId, ...data } as User;
                     setUser(updatedUser);
                     set({ 
-                      isAdmin: updatedUser.role === 'admin' || updatedUser.role === 'developer',
+                      isAdmin: ['superAdmin', 'admin', 'developer'].includes(updatedUser.role),
+                      isSuperAdmin: ['superAdmin', 'developer'].includes(updatedUser.role),
                       isDeveloper: updatedUser.role === 'developer'
                     });
                   }
@@ -281,7 +285,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               setUser(cachedUserData);
               setFirebaseUser(firebaseUser);
               set({ 
-                isAdmin: cachedUserData.role === 'admin' || cachedUserData.role === 'developer',
+                isAdmin: ['superAdmin', 'admin', 'developer'].includes(cachedUserData.role),
+                isSuperAdmin: ['superAdmin', 'developer'].includes(cachedUserData.role),
                 isDeveloper: cachedUserData.role === 'developer',
                 error: '网络繁忙，使用缓存数据'
               });
@@ -290,7 +295,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               setUser(storageCache.userData);
               setFirebaseUser(firebaseUser);
               set({ 
-                isAdmin: storageCache.userData.role === 'admin' || storageCache.userData.role === 'developer',
+                isAdmin: ['superAdmin', 'admin', 'developer'].includes(storageCache.userData.role),
+                isSuperAdmin: ['superAdmin', 'developer'].includes(storageCache.userData.role),
                 isDeveloper: storageCache.userData.role === 'developer',
                 error: '网络繁忙，使用缓存数据'
               });
