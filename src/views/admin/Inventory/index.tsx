@@ -3,9 +3,10 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Table, Button, Tag, Space, Typography, Input, Select, Modal, Form, InputNumber, message, Dropdown, Checkbox, Upload, Row, Col, App, Divider, AutoComplete } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, WarningOutlined, UploadOutlined, DownloadOutlined, MinusCircleOutlined, FilePdfOutlined, FileImageOutlined, EyeOutlined, ThunderboltOutlined, LoadingOutlined } from '@ant-design/icons'
-import type { Cigar, Brand, InboundOrder, OutboundOrder, InventoryMovement, Event } from '../../../types'
+import type { Cigar, Brand, InboundOrder, OutboundOrder, InventoryMovement, Event, Store } from '../../../types'
 import type { UploadFile } from 'antd'
 import { getCigars, createDocument, updateDocument, deleteDocument, COLLECTIONS, getAllOrders, getUsers, getBrands, getBrandById, getAllTransactions, getAllInboundOrders, getAllOutboundOrders, getAllInventoryMovements, createInboundOrder, deleteInboundOrder, updateInboundOrder, getInboundOrdersByReferenceNo, createOutboundOrder, deleteOutboundOrder, getEvents } from '../../../services/firebase/firestore'
+import { getAllStores } from '../../../services/firebase/stores'
 import ImageUpload from '../../../components/common/ImageUpload'
 import { getModalTheme, getResponsiveModalConfig, getModalThemeStyles } from '../../../config/modalTheme'
 import { useCloudinary } from '../../../hooks/useCloudinary'
@@ -44,6 +45,7 @@ const AdminInventory: React.FC = () => {
   const [users, setUsers] = useState<any[]>([])
   const [transactions, setTransactions] = useState<any[]>([])
   const [events, setEvents] = useState<Event[]>([])
+  const [stores, setStores] = useState<Store[]>([])
 
   // 新架构数据
   const [inboundOrders, setInboundOrders] = useState<InboundOrder[]>([])
@@ -164,7 +166,7 @@ const AdminInventory: React.FC = () => {
         setItems(list)
 
         // 加载新架构数据
-        const [inOrders, outOrders, movements, os, us, bs, txs, evts] = await Promise.all([
+        const [inOrders, outOrders, movements, os, us, bs, txs, evts, activeStores] = await Promise.all([
           getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId),
           getAllOutboundOrders(isSuperAdmin ? undefined : currentUser?.storeId),
           getAllInventoryMovements(isSuperAdmin ? undefined : currentUser?.storeId),
@@ -172,7 +174,8 @@ const AdminInventory: React.FC = () => {
           getUsers(),
           getBrands(),
           getAllTransactions(isSuperAdmin ? undefined : currentUser?.storeId),
-          getEvents(isSuperAdmin ? undefined : currentUser?.id)
+          getEvents(isSuperAdmin ? undefined : currentUser?.id),
+          getAllStores()
         ])
 
         setInboundOrders(inOrders)
@@ -183,6 +186,7 @@ const AdminInventory: React.FC = () => {
         setBrandList(bs)
         setTransactions(txs)
         setEvents(evts)
+        setStores(activeStores)
 
         // 初始化分页（本地持久化）
         try {
@@ -2483,6 +2487,7 @@ const AdminInventory: React.FC = () => {
                   if (open && editingOrder) {
                     // 编辑模式：初始化表单和附件
                     inForm.setFieldsValue({
+                      storeId: editingOrder.storeId,
                       referenceNo: editingOrder.referenceNo,
                       reason: editingOrder.reason,
                       items: editingOrder.items
@@ -2501,7 +2506,7 @@ const AdminInventory: React.FC = () => {
                   }
                 }}
               >
-                <Form form={inForm} layout="vertical" className="dark-theme-form" onFinish={async (values: { referenceNo?: string; reason?: string; items: { itemType?: string; cigarId?: string; customName?: string; quantity: number; unitPrice?: number }[] }) => {
+                <Form form={inForm} layout="vertical" className="dark-theme-form" onFinish={async (values: { storeId?: string; referenceNo?: string; reason?: string; items: { itemType?: string; cigarId?: string; customName?: string; quantity: number; unitPrice?: number }[] }) => {
                   const lines = (values.items || []).filter(it => it?.quantity > 0 && (it?.cigarId || it?.customName))
                   if (lines.length === 0) { message.warning(t('inventory.pleaseAddAtLeastOneInStockDetail')); return }
 
@@ -2561,6 +2566,12 @@ const AdminInventory: React.FC = () => {
                       }
                     }
 
+                    // 确定分配的门店
+                    let assignedStoreId = currentUser?.storeId;
+                    if (isSuperAdmin || currentUser?.role === 'developer') {
+                      assignedStoreId = values.storeId;
+                    }
+
                     // 检查是否是编辑模式
                     if (editingOrder) {
                       // 编辑模式：更新现有订单
@@ -2575,7 +2586,8 @@ const AdminInventory: React.FC = () => {
                         status: editingOrder.status,
                         // 保留原有类型和操作员
                         type: editingOrder.type,
-                        operatorId: editingOrder.operatorId
+                        operatorId: editingOrder.operatorId,
+                        storeId: assignedStoreId
                       }
 
                       // 更新订单
@@ -2599,6 +2611,7 @@ const AdminInventory: React.FC = () => {
                           inboundOrderId: editingOrder.id,
                           reason: values.reason || t('inventory.inStock'),
                           unitPrice: item.unitPrice,
+                          storeId: assignedStoreId,
                           createdAt: createdAt
                         })
                       }
@@ -2616,6 +2629,7 @@ const AdminInventory: React.FC = () => {
                         attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
                         status: 'completed',
                         operatorId: 'system',
+                        storeId: assignedStoreId,
                         createdAt: new Date()
                       }
 
@@ -2638,8 +2652,20 @@ const AdminInventory: React.FC = () => {
                   <div style={{ width: '100%', overflow: 'hidden' }}>
                     {/* 左右分栏布局 */}
                     <Row gutter={16}>
-                      {/* 左侧：单号和原因 */}
+                      {/* 左侧：门店、单号和原因 */}
                       <Col span={12}>
+                        {(isSuperAdmin || currentUser?.role === 'developer') ? (
+                          <Form.Item label="门店 / Store" name="storeId" rules={[{ required: true, message: '请选择门店' }]} style={{ marginBottom: 12 }}>
+                            <Select 
+                              placeholder="请选择门店"
+                              options={stores.map(store => ({ label: store.name, value: store.id }))}
+                            />
+                          </Form.Item>
+                        ) : (
+                          <Form.Item label="门店 / Store" style={{ marginBottom: 12 }}>
+                            <Input disabled value={stores.find(s => s.id === currentUser?.storeId)?.name || currentUser?.storeId || '默认门店'} />
+                          </Form.Item>
+                        )}
                         <Form.Item label={t('inventory.referenceNo')} name="referenceNo" style={{ marginBottom: 12 }}>
                           <Input placeholder={t('inventory.pleaseInputReferenceNo')} />
                         </Form.Item>
