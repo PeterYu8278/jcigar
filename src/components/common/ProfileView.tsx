@@ -38,7 +38,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   showEditButton = false,
   onEdit
 }) => {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { user: authUser } = useAuthStore()
   const navigate = useNavigate()
   const [user, setUser] = useState<User | null>(propUser || null)
@@ -232,6 +232,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     loadPointsRecords()
   }, [user?.id, t])
 
+  // 日期格式化助手
+  const formatDate = (date: Date) => {
+    if (i18n.language === 'en-US') {
+      const day = date.getDate();
+      const month = date.toLocaleDateString('en-US', { month: 'short' });
+      const year = date.getFullYear();
+      return `${day} ${month}, ${year}`;
+    }
+    return date.toLocaleDateString('zh-CN', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  }
+
   // 计算雪茄购买总数量
   const totalCigarsPurchased = useMemo(() => {
     return userOrders.reduce((total, order) => {
@@ -323,7 +338,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <p style={{ margin: '4px 0' }}>{t('auth.phone')}: {(user as any)?.profile?.phone || '-'}</p>
             {canViewDiscount && (user.discount?.rate !== undefined || user.discount?.note) && (
               <p style={{ margin: '4px 0', color: '#FDE08D' }}>
-                折扣: {user.discount?.rate !== undefined ? `${user.discount?.rate}%` : '—'}
+                {t('profile.discount')}: {user.discount?.rate !== undefined ? `${user.discount?.rate}%` : '—'}
                 {user.discount?.note ? `（${user.discount.note}）` : ''}
               </p>
             )}
@@ -417,7 +432,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               backgroundClip: 'text',
               fontWeight: 'bold'
             }}>
-              查看我的 AI 识茄历史
+              {t('profile.viewAiHistory')}
             </span>
           </Button>
         </div>
@@ -562,7 +577,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                           </Text>
                           <div style={{ marginTop: '4px' }}>
                             <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
-                              {orderDate.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' })}
+                              {formatDate(orderDate)}
                             </Text>
                           </div>
                         </div>
@@ -657,22 +672,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       ? (record.createdAt as any).toDate()
                       : new Date(record.createdAt)
 
-                  const getSourceText = (source: string) => {
-                    const sourceMap: Record<string, string> = {
-                      registration: t('pointsConfig.records.sources.registration'),
-                      referral: t('pointsConfig.records.sources.referral'),
-                      purchase: t('pointsConfig.records.sources.purchase'),
-                      event: t('pointsConfig.records.sources.event'),
-                      profile: t('pointsConfig.records.sources.profile'),
-                      checkin: t('pointsConfig.records.sources.checkin'),
-                      visit: '驻店时长费用',
-                      membership_fee: '年费',
-                      reload: '充值',
-                      admin: t('pointsConfig.records.sources.admin'),
-                      other: t('pointsConfig.records.sources.other')
+                    const getSourceText = (source: string) => {
+                      return t(`pointsConfig.records.sources.${source}`) || source
                     }
-                    return sourceMap[source] || source
-                  }
 
                   return (
                     <Card
@@ -687,14 +689,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         <div style={{ flex: 1 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                             <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
-                              {recordDate.toLocaleString('zh-CN', {
-                                year: 'numeric',
-                                month: '2-digit',
-                                day: '2-digit',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </Text>
+                                {formatDate(recordDate)}
+                              </Text>
                             <span style={{ color: 'rgba(255, 255, 255, 0.3)' }}>•</span>
                             <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
                               {getSourceText(record.source)}
@@ -818,11 +814,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                           color: 'rgba(255, 255, 255, 0.6)',
                           marginBottom: '8px'
                         }}>
-                          {startDate.toLocaleDateString('zh-CN', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
+                          {formatDate(startDate)}
                         </div>
 
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -958,25 +950,25 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                             {referred.displayName || t('profile.unknownUser')}
                           </div>
                           <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '2px' }}>
-                            加入日期: {joinDate.toLocaleDateString('zh-CN')}
+                            {t('profile.joinDate')}: {formatDate(joinDate)}
                           </div>
                           <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>
-                            Member ID: {referred.memberId || '-'}
+                            {t('profile.memberNumber')}: {referred.memberId || '-'}
                           </div>
                           <div style={{ fontSize: '12px', marginTop: '2px' }}>
-                            <span style={{ color: 'rgba(255,255,255,0.5)' }}>开通会员: </span>
+                            <span style={{ color: 'rgba(255,255,255,0.5)' }}>{t('profile.activatedMembership')}: </span>
                             {(() => {
                               const activatedAt = referralActivationMap[referred.id];
                               if (activatedAt) {
                                 return (
                                   <span style={{ color: '#52c41a' }}>
-                                    {activatedAt.toLocaleDateString('zh-CN')}
+                                    {formatDate(activatedAt)}
                                   </span>
                                 );
                               }
                               return (
                                 <span style={{ color: 'rgba(255,255,255,0.35)' }}>
-                                  未开通会员
+                                  {t('profile.notActivated')}
                                 </span>
                               );
                             })()}

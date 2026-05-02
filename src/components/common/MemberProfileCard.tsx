@@ -497,17 +497,34 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
                       textShadow: '0 1px 2px rgba(0,0,0,0.5)',
                       fontFamily: "'Noto Sans SC', sans-serif"
                     }}>
-                      {user?.role === 'developer'
-                        ? t('auth.developer', { defaultValue: '开发者' })
-                        : user?.role === 'superAdmin'
-                          ? t('auth.superAdmin', { defaultValue: '超级管理员' })
-                          : user?.role === 'admin'
-                            ? t('auth.admin', { defaultValue: '管理员' })
-                            : user?.role === 'vip'
-                              ? t('auth.vip', { defaultValue: 'VIP' })
-                              : user?.status === 'active'
-                                ? t('auth.member', { defaultValue: '会员' })
-                                : t('auth.guest', { defaultValue: '游客' })}
+                      {(() => {
+                        let baseRole = '';
+                        if (user?.role === 'developer') baseRole = t('auth.developer', { defaultValue: '开发者' });
+                        else if (user?.role === 'superAdmin') baseRole = t('auth.superAdmin', { defaultValue: '超级管理员' });
+                        else if (user?.role === 'admin') baseRole = t('auth.admin', { defaultValue: '管理员' });
+                        else if (user?.role === 'vip') baseRole = t('auth.vip', { defaultValue: 'VIP' });
+                        else if (user?.role === 'member') baseRole = t('auth.member', { defaultValue: '会员' });
+                        else baseRole = t('auth.guest', { defaultValue: '游客' });
+
+                        // 如果是普通会员但不是 active，且也不是 inactive/suspended，则显示为游客
+                        if (user?.role === 'member' && user?.status !== 'active' && user?.status !== 'inactive' && user?.status !== 'suspended') {
+                          baseRole = t('auth.guest', { defaultValue: '游客' });
+                        }
+
+                        if (user?.status === 'inactive') {
+                          return `${baseRole} (${t('usersAdmin.inactive', { defaultValue: 'Inactive' })})`;
+                        }
+                        if (user?.status === 'suspended') {
+                          return `${baseRole} (Suspended)`;
+                        }
+                        
+                        // 特殊情况：如果 status 不是 active，且 baseRole 是会员/游客，确保逻辑一致
+                        if (user?.status !== 'active' && baseRole === t('auth.member', { defaultValue: '会员' }) && user?.status !== 'inactive' && user?.status !== 'suspended') {
+                           return t('auth.guest', { defaultValue: '游客' });
+                        }
+
+                        return baseRole;
+                      })()}
                     </div>
                   </div>
                 </div>

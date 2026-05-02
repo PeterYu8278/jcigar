@@ -188,7 +188,7 @@ const Shop: React.FC = () => {
 
   // 按品牌分组商品（手机端使用）并按 Cuban > New World, A-Z 排序
   const groupedCigars = filteredCigars.reduce((groups, cigar) => {
-    const brand = cigar.brand || '其他'
+    const brand = cigar.brand || t('shop.other')
     if (!groups[brand]) {
       groups[brand] = []
     }
@@ -305,7 +305,7 @@ const Shop: React.FC = () => {
                 textAlign: 'center',
                 lineHeight: 1.2
               }}>
-                全部
+                {t('shop.all')}
               </div>
             </div>
           </div>
@@ -592,9 +592,9 @@ const Shop: React.FC = () => {
                   padding: '0 12px',
                   fontSize: '14px'
                 }}
-                title="重置筛选"
+                title={t('shop.reset')}
               >
-                {!isMobile && '重置'}
+                {!isMobile && t('shop.reset')}
               </Button>
             </div>
           </div>
@@ -634,7 +634,7 @@ const Shop: React.FC = () => {
                 padding: '48px 24px',
                 color: '#9ca3af'
               }}>
-                加载中...
+                {t('common.loading') || t('shop.processing') || 'Loading...'}
               </div>
             ) : filteredCigars.length > 0 ? (
               isMobile ? (
@@ -691,11 +691,11 @@ const Shop: React.FC = () => {
 
                       // 强度翻译
                       const strengthMap: Record<string, string> = {
-                        'mild': t('shop.mild') || '温和',
-                        'mild-medium': t('shop.mildMedium') || '温和-中等',
-                        'medium': t('shop.medium') || '中等',
-                        'medium-full': t('shop.mediumFull') || '中等-浓郁',
-                        'full': t('shop.full') || '浓郁'
+                        'mild': t('shop.mild'),
+                        'mild-medium': t('shop.mildMedium'),
+                        'medium': t('shop.medium'),
+                        'medium-full': t('shop.mediumFull'),
+                        'full': t('shop.full')
                       };
 
                       return (
@@ -1091,17 +1091,17 @@ const Shop: React.FC = () => {
                                 }
                               }}
                             >
-                                {(() => {
-                                  const strengthMap: Record<string, string> = {
-                                    'mild': t('shop.mild') || '温和',
-                                    'mild-medium': t('shop.mildMedium') || '温和-中等',
-                                    'medium': t('shop.medium') || '中等',
-                                    'medium-full': t('shop.mediumFull') || '中等-浓郁',
-                                    'full': t('shop.full') || '浓郁'
-                                  }
-                                  const key = cigar.strength?.toLowerCase() || ''
-                                  return strengthMap[key] || cigar.strength
-                                })()}
+                              {(() => {
+                                const strengthMap: Record<string, string> = {
+                                  'mild': t('shop.mild') || '温和',
+                                  'mild-medium': t('shop.mildMedium') || '温和-中等',
+                                  'medium': t('shop.medium') || '中等',
+                                  'medium-full': t('shop.mediumFull') || '中等-浓郁',
+                                  'full': t('shop.full') || '浓郁'
+                                }
+                                const key = cigar.strength?.toLowerCase() || ''
+                                return strengthMap[key] || cigar.strength
+                              })()}
                             </Tag>
                           </div>
                         )}
@@ -1278,7 +1278,7 @@ const Shop: React.FC = () => {
                     color: 'transparent',
                     backgroundClip: 'text'
                   } as React.CSSProperties}>
-                    购物车 ({cartItemCount} 件商品)
+                    {t('shop.cart')} ({cartItemCount === 1 ? t('shop.item') : t('shop.items', { count: cartItemCount })})
                   </span>
                 ) : (
                   <span style={{
@@ -1287,7 +1287,7 @@ const Shop: React.FC = () => {
                     color: 'transparent',
                     backgroundClip: 'text'
                   } as React.CSSProperties}>
-                    订单结算
+                    {t('shop.checkout')}
                   </span>
                 )}
               </h2>
@@ -1314,10 +1314,10 @@ const Shop: React.FC = () => {
                   }}>
                     <div style={{ fontSize: '45px', marginBottom: '11px' }}>🛒</div>
                     <div style={{ fontSize: '11px', color: '#c0c0c0' }}>
-                      购物车是空的
+                      {t('shop.emptyCart')}
                     </div>
                     <div style={{ fontSize: '10px', color: '#666', marginTop: '6px' }}>
-                      快去添加商品吧！
+                      {t('shop.addSomeProducts')}
                     </div>
                   </div>
                 ) : (
@@ -1334,11 +1334,11 @@ const Shop: React.FC = () => {
                         : []
 
                       const strengthMap: Record<string, string> = {
-                        'mild': t('inventory.mild') || '温和',
-                        'mild-medium': t('shop.mildMedium') || '温和-中等',
-                        'medium': t('inventory.medium') || '中等',
-                        'medium-full': t('shop.mediumFull') || '中等-浓郁',
-                        'full': t('inventory.full') || '浓郁'
+                        'mild': t('shop.mild'),
+                        'mild-medium': t('shop.mildMedium'),
+                        'medium': t('shop.medium'),
+                        'medium-full': t('shop.mediumFull'),
+                        'full': t('shop.full')
                       }
 
                       return (
@@ -1515,7 +1515,7 @@ const Shop: React.FC = () => {
                       fontWeight: '600',
                       color: '#fff'
                     }}>
-                      订单摘要
+                      {t('shop.orderSummary')}
                     </h3>
                     <div style={{
                       background: 'rgba(255, 255, 255, 0.03)',
@@ -1525,11 +1525,11 @@ const Shop: React.FC = () => {
                     }}>
                       {cartItems.map((item) => {
                         const strengthMap: Record<string, string> = {
-                          'mild': t('inventory.mild') || '温和',
-                          'mild-medium': t('shop.mildMedium') || '温和-中等',
-                          'medium': t('inventory.medium') || '中等',
-                          'medium-full': t('shop.mediumFull') || '中等-浓郁',
-                          'full': t('inventory.full') || '浓郁'
+                          'mild': t('shop.mild'),
+                          'mild-medium': t('shop.mildMedium'),
+                          'medium': t('shop.medium'),
+                          'medium-full': t('shop.mediumFull'),
+                          'full': t('shop.full')
                         }
                         return (
                           <div
@@ -1578,7 +1578,7 @@ const Shop: React.FC = () => {
                       fontWeight: '600',
                       color: '#fff'
                     }}>
-                      配送方式
+                      {t('shop.deliveryMethod')}
                     </h3>
                     <Button.Group style={{ width: '100%', display: 'flex', marginBottom: '12px' }}>
                       <Button
@@ -1603,7 +1603,7 @@ const Shop: React.FC = () => {
                           zIndex: 1
                         }}
                       >
-                        送货上门
+                        {t('shop.homeDelivery')}
                       </Button>
                       <Button
                         type={deliveryMethod === 'event' ? 'primary' : 'default'}
@@ -1627,7 +1627,7 @@ const Shop: React.FC = () => {
                           zIndex: 1
                         }}
                       >
-                        活动现场领取
+                        {t('shop.eventPickup')}
                       </Button>
                     </Button.Group>
 
@@ -1649,7 +1649,7 @@ const Shop: React.FC = () => {
                         <Select
                           value={selectedEventId || undefined}
                           onChange={(eventId) => setSelectedEventId(eventId)}
-                          placeholder="请选择活动"
+                          placeholder={t('shop.selectEvent')}
                           style={{ width: '100%' }}
                           loading={availableEvents.length === 0}
                           className="dark-theme-form"
@@ -1673,7 +1673,7 @@ const Shop: React.FC = () => {
                       fontWeight: '600',
                       color: '#fff'
                     }}>
-                      支付方式
+                      {t('shop.paymentMethod')}
                     </h3>
                     <Button.Group style={{ width: '100%', display: 'flex' }}>
                       <Button
@@ -1693,7 +1693,7 @@ const Shop: React.FC = () => {
                           fontWeight: paymentMethod === 'cash' ? 'bold' : 'normal'
                         }}
                       >
-                        现金支付
+                        {t('shop.cashPayment')}
                       </Button>
                       <Button
                         type={paymentMethod === 'online' ? 'primary' : 'default'}
@@ -1712,7 +1712,7 @@ const Shop: React.FC = () => {
                           fontWeight: paymentMethod === 'online' ? 'bold' : 'normal'
                         }}
                       >
-                        在线支付
+                        {t('shop.onlinePayment')}
                       </Button>
                     </Button.Group>
                   </div>
@@ -1739,7 +1739,7 @@ const Shop: React.FC = () => {
                   marginBottom: '11px',
                   width: '100%'
                 }}>
-                  <span style={{ fontSize: '11px', color: '#c0c0c0' }}>总计：</span>
+                  <span style={{ fontSize: '11px', color: '#c0c0c0' }}>{t('shop.total')}：</span>
                   <span style={{ fontSize: '17px', color: '#F4AF25', fontWeight: 'bold' }}>
                     RM {cartTotal.toFixed(2)}
                   </span>
@@ -1766,7 +1766,7 @@ const Shop: React.FC = () => {
                       fontSize: '11px'
                     }}
                   >
-                    去结算
+                    {t('shop.checkout')}
                   </Button>
                 </div>
               </div>
@@ -1811,18 +1811,18 @@ const Shop: React.FC = () => {
                       fontWeight: '500'
                     }}
                   >
-                    返回
+                    {t('shop.back')}
                   </Button>
                   <Button
                     type="primary"
                     onClick={() => {
                       // 验证配送方式
                       if (deliveryMethod === 'address' && !selectedAddressId) {
-                        message.error('请选择收货地址')
+                        message.error(t('shop.selectAddress'))
                         return
                       }
                       if (deliveryMethod === 'event' && !selectedEventId) {
-                        message.error('请选择活动')
+                        message.error(t('shop.selectEvent'))
                         return
                       }
 
@@ -1842,7 +1842,7 @@ const Shop: React.FC = () => {
                       setSelectedEventId(null)
                       setDeliveryMethod('address')
                       // 显示成功消息
-                      message.success('订单已提交成功！')
+                      message.success(t('shop.orderSuccess'))
                     }}
                     style={{
                       flex: 2,
@@ -1854,7 +1854,7 @@ const Shop: React.FC = () => {
                       fontWeight: 'bold'
                     }}
                   >
-                    确认结算
+                    {t('shop.confirmCheckout')}
                   </Button>
                 </div>
               </div>
@@ -1897,7 +1897,7 @@ const Shop: React.FC = () => {
                 onClick={() => setCartModalVisible(true)}
               >
                 <span style={{ color: '#fff', fontSize: '14px', fontWeight: '600' }}>
-                  0 item
+                  {t('shop.items', { count: 0 })}
                 </span>
               </Button>
             </div>
@@ -1928,7 +1928,7 @@ const Shop: React.FC = () => {
                 gap: '12px'
               }}>
                 <span style={{ fontSize: '16px', fontWeight: '600' }}>
-                  {cartItemCount} {cartItemCount === 1 ? 'item' : 'items'}
+                  {cartItemCount === 1 ? t('shop.item') : t('shop.items', { count: cartItemCount })}
                 </span>
               </div>
 
@@ -1962,7 +1962,7 @@ const Shop: React.FC = () => {
 
       {/* 确认移除对话框 */}
       <Modal
-        title="确认移除商品？"
+        title={t('shop.confirmRemove')}
         open={confirmRemove.visible}
         onOk={() => {
           if (confirmRemove.itemId) {
@@ -1973,8 +1973,8 @@ const Shop: React.FC = () => {
         onCancel={() => {
           setConfirmRemove({ visible: false, itemId: null, itemName: null })
         }}
-        okText="确认"
-        cancelText="取消"
+        okText={t('common.confirm') || 'Confirm'}
+        cancelText={t('common.cancel') || 'Cancel'}
         centered
         zIndex={3000}
         okButtonProps={{
@@ -2010,7 +2010,7 @@ const Shop: React.FC = () => {
           margin: 0,
           lineHeight: '1.6'
         }}>
-          确定要从购物车中移除 <span style={{ color: '#F4AF25', fontWeight: '600' }}>"{confirmRemove.itemName}"</span> 吗？
+          {t('shop.confirmRemoveText', { name: confirmRemove.itemName })}
         </p>
       </Modal>
     </div>

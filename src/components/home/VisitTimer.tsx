@@ -4,6 +4,7 @@ import { Card, Typography, Space } from 'antd';
 import { ClockCircleOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../store/modules/auth';
 import { getPendingVisitSession } from '../../services/firebase/visitSessions';
+import { useTranslation } from 'react-i18next';
 import type { VisitSession } from '../../types';
 import dayjs from 'dayjs';
 
@@ -15,6 +16,7 @@ interface VisitTimerProps {
 
 export const VisitTimer: React.FC<VisitTimerProps> = ({ style }) => {
   const { user } = useAuthStore();
+  const { t } = useTranslation();
   const [currentSession, setCurrentSession] = useState<VisitSession | null>(null);
   const [duration, setDuration] = useState<string>('00:00:00');
   const [lastCheckIn, setLastCheckIn] = useState<Date | null>(null);
@@ -85,7 +87,7 @@ export const VisitTimer: React.FC<VisitTimerProps> = ({ style }) => {
                 {duration}
               </Title>
               <Text style={{ color: '#c0c0c0', fontSize: 12 }}>
-                <ClockCircleOutlined /> Stay Duration Timer
+                <ClockCircleOutlined /> {t('visitTimer.stayDurationTimer')}
               </Text>
             </Space>
           </div>
@@ -95,7 +97,7 @@ export const VisitTimer: React.FC<VisitTimerProps> = ({ style }) => {
             <div style={{ textAlign: 'right' }}>
               <Space direction="vertical" size={0}>
                 <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: 600 }}>
-                  Last Check In:
+                  {t('visitTimer.lastCheckIn')}
                 </Text>
                 <Text style={{ color: '#c0c0c0', fontSize: 11 }}>
                   {dayjs(lastCheckIn).format('YYYY-MM-DD HH:mm:ss')}

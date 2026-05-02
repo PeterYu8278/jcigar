@@ -1,15 +1,18 @@
 // 合并后的驻店计时器和兑换模块组件
 import React, { useState, useEffect } from 'react';
-import { Card, Typography, Space, Progress, message, Image, App, Modal, Table, Tag, Row, Col } from 'antd';
+import { Card, Typography, Space, Progress, message, Image, App, Modal, List, Tag, Row, Col } from 'antd';
 import { ClockCircleOutlined, GiftOutlined, ShoppingCartOutlined, TrophyOutlined, ReloadOutlined, WalletOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../store/modules/auth';
 import { getPendingVisitSession } from '../../services/firebase/visitSessions';
 import { getUserRedemptionLimits, canUserRedeem, getDailyRedemptions, getTotalRedemptions, getHourlyRedemptions, getRedemptionConfig, createRedemptionRecord } from '../../services/firebase/redemption';
-import { createMembershipFeeRecord, deductMembershipFee } from '../../services/firebase/membershipFee';
+import { createMembershipFeeRecord, deductMembershipFee, getUserMembershipPeriod } from '../../services/firebase/membershipFee';
+import { Select } from 'antd';
 import { getUserData } from '../../services/firebase/auth';
+import { getAllStores } from '../../services/firebase/stores';
 import { useNavigate } from 'react-router-dom';
-import type { VisitSession, AppConfig } from '../../types';
+import type { VisitSession, AppConfig, Store } from '../../types';
 import { getAppConfig } from '../../services/firebase/appConfig';
+import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -20,6 +23,7 @@ interface VisitTimerRedemptionProps {
 
 export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ style }) => {
   const { user, setUser } = useAuthStore();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { modal } = App.useApp();
   const [currentSession, setCurrentSession] = useState<VisitSession | null>(null);
@@ -45,6 +49,10 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
   const [selectedAccess, setSelectedAccess] = useState<'membership' | 'daypass' | null>(null);
   const [redemptionHistory, setRedemptionHistory] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [stores, setStores] = useState<Store[]>([]);
+  const [selectedStoreId, setSelectedStoreId] = useState<string>('');
+  const [selectedStoreName, setSelectedStoreName] = useState<string>('');
+  const [dailyRedemptions, setDailyRedemptions] = useState<any[]>([]);
 
   // 加载倒计时状态（从localStorage）
   useEffect(() => {
@@ -214,6 +222,30 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
     loadAppConfig();
   }, []);
 
+  // 加载门店列表
+  useEffect(() => {
+    const fetchStores = async () => {
+      try {
+        const data = await getAllStores();
+        const activeStores = data.filter(s => s.status === 'active');
+        setStores(activeStores);
+        if (activeStores.length > 0) {
+          // 如果当前已有会话，优先选择会话中的门店
+          if (currentSession?.storeId) {
+            setSelectedStoreId(currentSession.storeId);
+            setSelectedStoreName(currentSession.storeName || '');
+          } else {
+            setSelectedStoreId(activeStores[0].id);
+            setSelectedStoreName(activeStores[0].name);
+          }
+        }
+      } catch (error) {
+        console.error('加载门店失败:', error);
+      }
+    };
+    fetchStores();
+  }, [currentSession?.storeId]);
+
   // 加载兑换数据和时长数据
   const loadData = async () => {
     if (!user?.id) {
@@ -250,8 +282,9 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
 
       // 获取当日兑换记录（只计算已完成的记录）
       const today = new Date().toISOString().split('T')[0];
-      const dailyRedemptions = await getDailyRedemptions(userId, today);
-      const completedDailyRedemptions = dailyRedemptions.filter(r => r.status === 'completed');
+      const dailyRedemptionsData = await getDailyRedemptions(userId, today);
+      setDailyRedemptions(dailyRedemptionsData);
+      const completedDailyRedemptions = dailyRedemptionsData.filter(r => r.status === 'completed');
       const dailyCountValue = completedDailyRedemptions.reduce((sum, r) => sum + r.quantity, 0);
       setDailyCount(dailyCountValue);
 
@@ -347,7 +380,10 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
         const result = await createMembershipFeeRecord(
           user.id,
           today,
-          'initial'
+          'initial',
+          undefined,
+          user.displayName,
+          selectedStoreId
         );
 
         if (!result.success || !result.recordId) {
@@ -438,11 +474,11 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
       return;
     }
     if (loading) return;
- 
+
     setLoading(true);
     try {
       const { purchaseDayPass } = await import('../../services/firebase/visitSessions');
-      const result = await purchaseDayPass(user.id, user.displayName, currentSession?.id);
+      const result = await purchaseDayPass(user.id, selectedStoreId, selectedStoreName, user.displayName, currentSession?.id);
       if (result.success) {
         message.success('Day Pass 购买成功，已为您自动办理签到及雪茄兑换！');
         const updatedUser = await getUserData(user.id);
@@ -459,7 +495,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
       setLoading(false);
     }
   };
- 
+
   if (!user) {
     return null;
   }
@@ -518,7 +554,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
               {lastCheckIn && (
                 <div>
                   <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: 600 }}>
-                    Last Check In:
+                    {t('visitTimer.lastCheckIn')}
                   </Text>
                   <Text style={{ color: '#c0c0c0', fontSize: 11, marginLeft: 8 }}>
                     {dayjs(lastCheckIn).format('YYYY-MM-DD HH:mm:ss')}
@@ -532,7 +568,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                   {duration}
                 </Title>
                 <Text style={{ color: '#c0c0c0', fontSize: 12 }}>
-                  <ClockCircleOutlined /> Stay Duration Timer
+                  <ClockCircleOutlined /> {t('visitTimer.stayDurationTimer')}
                 </Text>
               </div>
             </Space>
@@ -553,37 +589,48 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
               const isActiveMember = user?.status === 'active';
               const hasDayPass = currentSession?.dayPass?.isPurchased;
 
+              // 计算显示用的限额
+              const displayDailyLimit = hasDayPass ? 1 : (isActiveMember ? limits.dailyLimit : 0);
+              // 计算当日已兑换数量（如果是 Day Pass，由于系统会自动创建一个 pending 记录，我们计算所有状态的 Day Pass 记录）
+              // 但为了统一逻辑，我们先看看如何获取当日 Day Pass 记录
+              const displayDailyCount = isActiveMember ? dailyCount : (hasDayPass ? dailyRedemptions.filter(r => r.isDayPass).length : 0);
+
               // 如果不是活跃会员且没有购买 Day Pass，显示合并按钮
               if (!isActiveMember && !hasDayPass) {
                 return (
-                  <button
-                    type="button"
-                    onClick={() => setMembershipModalVisible(true)}
-                    disabled={loading}
-                    style={{
-                      background: appConfig?.colorTheme?.primaryButton
-                        ? `linear-gradient(135deg, ${appConfig.colorTheme.primaryButton.startColor} 0%, ${appConfig.colorTheme.primaryButton.endColor} 100%)`
-                        : 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
-                      color: '#111',
-                      height: 48,
-                      fontSize: 16,
-                      fontWeight: 600,
-                      minWidth: 140,
-                      opacity: loading ? 0.6 : 1,
-                      cursor: loading ? 'not-allowed' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8,
-                      borderRadius: 6,
-                      padding: '0 24px',
-                      boxShadow: '0 4px 12px rgba(196, 141, 58, 0.3)'
-                    }}
-                  >
-                    {loading && <span className="anticon-spin" style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #111', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />}
-                    <TrophyOutlined />
-                    Join NOW
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setMembershipModalVisible(true)}
+                      disabled={loading}
+                      style={{
+                        background: appConfig?.colorTheme?.primaryButton
+                          ? `linear-gradient(135deg, ${appConfig.colorTheme.primaryButton.startColor} 0%, ${appConfig.colorTheme.primaryButton.endColor} 100%)`
+                          : 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)',
+                        color: '#111',
+                        height: 48,
+                        fontSize: 16,
+                        fontWeight: 600,
+                        minWidth: 140,
+                        opacity: loading ? 0.6 : 1,
+                        cursor: loading ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                        borderRadius: 6,
+                        padding: '0 24px',
+                        boxShadow: '0 4px 12px rgba(196, 141, 58, 0.3)'
+                      }}
+                    >
+                      {loading && <span className="anticon-spin" style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #111', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />}
+                      <TrophyOutlined />
+                      {t('visitTimer.joinNow')}
+                    </button>
+                    <Text style={{ fontSize: 13, display: 'block', marginTop: 8, color: '#FFFFFF', textAlign: 'center' }}>
+                      {t('visitTimer.dailyLimit')}: 0/0
+                    </Text>
+                  </>
                 );
               }
 
@@ -592,7 +639,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
               const isLowPoints = currentPoints < 50;
 
               // 判断按钮状态和显示文本
-              let buttonText = 'Redeem';
+              let buttonText = t('visitTimer.redeem');
               let isDisabled = true;
               let buttonIcon: React.ReactNode = undefined;
               let buttonOnClick: () => void | Promise<void> = handleRedeem;
@@ -608,9 +655,16 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                 minWidth: 120
               };
 
+              // 如果是 Day Pass 模式，禁用 Redeem 按钮
+              if (hasDayPass) {
+                buttonText = t('visitTimer.redeem');
+                isDisabled = true;
+                buttonStyle.opacity = 0.5;
+                buttonIcon = <ShoppingCartOutlined />;
+              }
               // 如果积分少于50，显示Reload按钮
-              if (isLowPoints) {
-                buttonText = 'Reload';
+              else if (isLowPoints) {
+                buttonText = t('visitTimer.reload');
                 buttonIcon = <ReloadOutlined />;
                 buttonOnClick = () => {
                   navigate('/reload');
@@ -620,7 +674,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
               }
               // 如果dailyCount >= dailyLimit，显示"No Quota"
               else if (dailyCount >= limits.dailyLimit) {
-                buttonText = 'No Quota';
+                buttonText = t('visitTimer.noQuota');
                 isDisabled = true;
                 buttonStyle.opacity = 0.5;
               }
@@ -654,17 +708,19 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                       padding: '0 16px'
                     }}
                     title={
-                      isLowPoints
-                        ? `积分不足（当前: ${currentPoints}），请先充值`
-                        : dailyCount >= limits.dailyLimit
-                          ? '今日兑换限额已用完'
-                          : countdownSeconds !== null && countdownSeconds > 0
-                            ? `请等待 ${formatCountdown(countdownSeconds)} 后再次兑换`
-                            : !currentSession
-                              ? '请先check-in才能兑换'
-                              : !isBeforeCutoff
-                                ? `兑换截止时间为 ${cutoffTime}，请明日再试`
-                                : undefined
+                      hasDayPass
+                        ? 'Day Pass 已包含一次兑换，无法手动提交'
+                        : isLowPoints
+                          ? `积分不足（当前: ${currentPoints}），请先充值`
+                          : dailyCount >= limits.dailyLimit
+                            ? '今日兑换限额已用完'
+                            : countdownSeconds !== null && countdownSeconds > 0
+                              ? `请等待 ${formatCountdown(countdownSeconds)} 后再次兑换`
+                              : !currentSession
+                                ? '请先check-in才能兑换'
+                                : !isBeforeCutoff
+                                  ? `兑换截止时间为 ${cutoffTime}，请明日再试`
+                                  : undefined
                     }
                   >
                     {loading && <span style={{ display: 'inline-block', width: 16, height: 16, border: '2px solid #111', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />}
@@ -672,7 +728,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                     {buttonText}
                   </button>
                   <Text style={{ fontSize: 13, display: 'block', marginTop: 8, color: '#FFFFFF' }}>
-                    Daily Limit: {dailyCount}/{limits.dailyLimit}
+                    {t('visitTimer.dailyLimit')}: {displayDailyCount}/{displayDailyLimit}
                   </Text>
                 </>
               );
@@ -695,7 +751,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Title level={5} style={{ margin: 0, color: '#FFFFFF', fontSize: 18, fontWeight: 700 }}>
-                  Complimentary Cigars
+                  {t('visitTimer.complimentaryCigars')}
                 </Title>
               </div>
               <div
@@ -713,7 +769,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                       });
                       setRedemptionHistory(sortedHistory);
                     } catch (error) {
-                      message.error('加载历史记录失败');
+                      message.error(t('visitTimer.loadHistoryFailed'));
                     } finally {
                       setHistoryLoading(false);
                     }
@@ -729,7 +785,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                   textDecoration: 'none'
                 }}
               >
-                History &gt;
+                {t('visitTimer.history')} &gt;
               </div>
             </div>
 
@@ -738,13 +794,29 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
                 {/* 驻店时间统计 */}
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                  <Text style={{ fontSize: 20, fontWeight: 700, color: '#FFD700' }}>{hoursText}</Text>
-                  <Text style={{ fontSize: 16, fontWeight: 400, color: '#9ca3af' }}>/ {targetHours} hrs</Text>
+                  <Text style={{
+                    fontSize: 20,
+                    fontWeight: 800,
+                    backgroundImage: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    color: 'transparent',
+                    display: 'inline-block'
+                  }}>{hoursText}</Text>
+                  <Text style={{ fontSize: 16, fontWeight: 400, color: '#9ca3af' }}>/ {targetHours} {t('visitTimer.hours')}</Text>
                 </div>
                 {/* 雪茄兑换统计 */}
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                  <Text style={{ fontSize: 20, fontWeight: 700, color: '#FFD700' }}>{totalCount}</Text>
-                  <Text style={{ fontSize: 16, fontWeight: 400, color: '#9ca3af' }}>/ {currentCigarLimit} Cigars</Text>
+                  <Text style={{
+                    fontSize: 20,
+                    fontWeight: 800,
+                    backgroundImage: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    color: 'transparent',
+                    display: 'inline-block'
+                  }}>{totalCount}</Text>
+                  <Text style={{ fontSize: 16, fontWeight: 400, color: '#9ca3af' }}>/ {currentCigarLimit} {t('visitTimer.cigars')}</Text>
                 </div>
               </div>
 
@@ -803,7 +875,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                               marginTop: '4px',
                               fontWeight: isCompleted ? 600 : 400
                             }}>
-                              {milestone.hours}hrs
+                              {milestone.hours}{t('visitTimer.hours')}
                             </Text>
                             <TrophyOutlined
                               style={{
@@ -823,7 +895,15 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
               {/* 底部信息 */}
               <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: 32 }}>
                 <Text style={{ color: '#d1d5db', fontSize: 14, fontWeight: 600 }}>
-                  🎁 <Text style={{ color: '#FFD700' }}>25</Text> Cigars / 50 hrs
+                  <Text style={{
+                    backgroundImage: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    color: 'transparent',
+                    fontWeight: 800,
+                    fontSize: 16,
+                    display: 'inline-block'
+                  }}>25</Text> {t('visitTimer.cigars')} / 50 {t('visitTimer.hours')}
                 </Text>
               </div>
             </div>
@@ -840,7 +920,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
             }}>
               <span style={{ fontSize: 16, color: '#FDE08D' }}></span>
               <Text style={{ fontSize: 12, color: '#9ca3af' }}>
-                Last call for redemption is at {cutoffTime} PM
+                {t('redemption.lastCall', { time: cutoffTime })}
               </Text>
             </div>
           </div>
@@ -851,7 +931,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
         title={
           <Space>
             <GiftOutlined style={{ color: '#FDE08D' }} />
-            <span style={{ color: '#FDE08D' }}>Redemption History</span>
+            <span style={{ color: '#FDE08D' }}>{t('redemption.title')}</span>
           </Space>
         }
         open={historyModalVisible}
@@ -873,71 +953,109 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
           }
         }}
       >
-        <Table
+        <List
           dataSource={redemptionHistory}
           loading={historyLoading}
-          rowKey={(record, index) => record.id || `history-${index}`}
-          pagination={{ pageSize: 5, simple: true }}
-          size="small"
-          columns={[
-            {
-              title: 'Date',
-              dataIndex: 'redeemedAt',
-              key: 'redeemedAt',
-              render: (ts) => {
-                const date = ts instanceof Date ? ts : new Date(ts);
-                return <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13 }}>{dayjs(date).format('MM-DD HH:mm')}</Text>
-              }
-            },
-            {
-              title: 'Cigar',
-              dataIndex: 'cigarName',
-              key: 'cigarName',
-              render: (name) => <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13 }}>{name || '-'}</Text>
-            },
-            {
-              title: 'Qty',
-              dataIndex: 'quantity',
-              key: 'quantity',
-              render: (qty) => <Text style={{ color: '#FDE08D', fontWeight: 600 }}>{qty}</Text>
-            },
-            {
-              title: 'Status',
-              dataIndex: 'status',
-              key: 'status',
-              render: (status) => (
-                <Tag color={status === 'completed' ? 'gold' : 'default'} style={{ borderRadius: 4 }}>
-                  {status?.toUpperCase() || 'COMPLETED'}
-                </Tag>
-              )
-            }
-          ]}
-          locale={{
-            emptyText: <Text style={{ color: 'rgba(255,255,255,0.45)' }}>No redemption records found</Text>
+          pagination={{
+            pageSize: 10,
+            simple: true,
+            size: 'small',
+            className: 'dark-pagination'
           }}
-          style={{ background: 'transparent' }}
-          className="dark-table"
+          renderItem={(item: any) => {
+            const date = item.redeemedAt instanceof Date ? item.redeemedAt : new Date(item.redeemedAt);
+            const isCompleted = item.status === 'completed';
+
+            return (
+              <List.Item style={{ border: 'none', padding: '6px 0' }}>
+                <div style={{
+                  width: '100%',
+                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%)',
+                  border: '1px solid rgba(244, 175, 37, 0.15)',
+                  borderRadius: 12,
+                  padding: '12px 16px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  backdropFilter: 'blur(10px)',
+                  transition: 'all 0.3s ease'
+                }} className="history-card-item">
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <ClockCircleOutlined style={{ color: 'rgba(244, 175, 37, 0.5)', fontSize: 10 }} />
+                      <Text style={{ color: 'rgba(255, 255, 255, 0.45)', fontSize: 11 }}>
+                        {dayjs(date).format('YYYY-MM-DD HH:mm')}
+                      </Text>
+                    </div>
+                    <div style={{
+                      color: '#fff',
+                      fontSize: 14,
+                      fontWeight: 600,
+                      letterSpacing: '0.5px'
+                    }}>
+                      {item.cigarName || t('redemption.pendingChoice')}
+                    </div>
+                  </div>
+
+                  <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                    <div style={{
+                      fontSize: 18,
+                      fontWeight: 800,
+                      color: '#FDE08D',
+                      fontFamily: 'monospace',
+                      lineHeight: 1
+                    }}>
+                      x{item.quantity}
+                    </div>
+                    <Tag
+                      style={{
+                        borderRadius: 4,
+                        margin: 0,
+                        fontSize: 10,
+                        padding: '0 6px',
+                        lineHeight: '18px',
+                        background: isCompleted ? 'rgba(212, 175, 55, 0.15)' : 'rgba(24, 144, 255, 0.15)',
+                        border: isCompleted ? '1px solid rgba(212, 175, 55, 0.4)' : '1px solid rgba(24, 144, 255, 0.4)',
+                        color: isCompleted ? '#FDE08D' : '#1890ff'
+                      }}
+                    >
+                      {isCompleted ? t('redemption.completed') : t('redemption.pending')}
+                    </Tag>
+                  </div>
+                </div>
+              </List.Item>
+            );
+          }}
+          locale={{
+            emptyText: (
+              <div style={{ padding: '40px 0', textAlign: 'center' }}>
+                <GiftOutlined style={{ fontSize: 32, color: 'rgba(255,255,255,0.1)', marginBottom: 12 }} />
+                <div style={{ color: 'rgba(255,255,255,0.2)', fontSize: 13 }}>{t('redemption.empty')}</div>
+              </div>
+            )
+          }}
         />
         <style>{`
-          .dark-table .ant-table { background: transparent !important; color: #fff !important; }
-          .dark-table .ant-table-thead > tr > th { 
-            background: rgba(255, 255, 255, 0.05) !important; 
-            color: rgba(255, 255, 255, 0.65) !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+          .dark-pagination .ant-pagination-simple-pager input {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border: 1px solid rgba(244, 175, 37, 0.3) !important;
+            color: #FDE08D !important;
           }
-          .dark-table .ant-table-tbody > tr > td { 
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+          .dark-pagination .ant-pagination-item-link {
+            color: rgba(255, 255, 255, 0.45) !important;
           }
-          .dark-table .ant-table-tbody > tr:hover > td {
-            background: rgba(255, 255, 255, 0.02) !important;
+          .history-card-item:hover {
+            background: rgba(244, 175, 37, 0.08) !important;
+            border-color: rgba(244, 175, 37, 0.4) !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
           }
-          .dark-table .ant-pagination-item-link, .dark-table .ant-pagination-item a { color: #fff !important; }
         `}</style>
       </Modal>
 
       {/* 会员/Day Pass 选择弹窗 */}
       <Modal
-        title={<span style={{ color: '#FDE08D', fontWeight: 800, fontSize: 18 }}>Choose Your Access</span>}
+        title={<span style={{ color: '#FDE08D', fontWeight: 800, fontSize: 18 }}>{t('visitTimer.chooseAccess')}</span>}
         open={membershipModalVisible}
         onCancel={() => setMembershipModalVisible(false)}
         footer={null}
@@ -964,16 +1082,34 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
           border: '1px solid rgba(244, 175, 37, 0.2)',
           marginTop: 16
         }}>
-          <span style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 14 }}>Your Current Balance</span>
+          <span style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 14 }}>{t('visitTimer.currentBalance')}</span>
           <span style={{
             color: '#FDE08D',
             fontSize: 18,
             fontWeight: 800,
             textShadow: '0 0 10px rgba(253, 224, 141, 0.3)'
           }}>
-            {user?.membership?.points || 0} pts
+            {user?.membership?.points || 0} {t('visitTimer.points')}
           </span>
         </div>
+
+        {/* 门店选择 */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 14, marginBottom: 8 }}>{t('visitTimer.selectStore')}</div>
+          <Select
+            value={selectedStoreId}
+            onChange={(val) => {
+              setSelectedStoreId(val);
+              const store = stores.find(s => s.id === val);
+              if (store) setSelectedStoreName(store.name);
+            }}
+            style={{ width: '100%', height: 44 }}
+            placeholder={t('visitTimer.pleaseSelectStore')}
+            options={stores.map(s => ({ value: s.id, label: s.name }))}
+            disabled={loading}
+          />
+        </div>
+
         <div style={{
           display: 'grid',
           gridTemplateColumns: window.innerWidth < 768 ? 'repeat(2, 1fr)' : 'repeat(2, 1fr)',
@@ -1000,15 +1136,10 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
           >
             <div>
               <div style={{ color: selectedAccess === 'membership' ? '#FDE08D' : '#fff', fontWeight: 800, fontSize: 16, marginBottom: 8 }}>
-                Annual Membership
+                {t('visitTimer.annualMembership')}
               </div>
-              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, lineHeight: 1.4 }} className="benefit-list">
-                ✓ Annual membership<br />
-                ✓ Accumulate Stay Hours<br />
-                ✓ Priority Access<br />
-                ✓ Rate per hour<br />
-                ✓ FREE 25/50/75 Cigar<br />
-                ✓ Daily redemption limit 3/5/6
+              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, lineHeight: 1.4, whiteSpace: 'pre-line' }} className="benefit-list">
+                {t('visitTimer.benefits.membership')}
               </div>
             </div>
             <div style={{ textAlign: 'right', marginTop: 16 }} className="price-text-container">
@@ -1019,9 +1150,9 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                 WebkitBackgroundClip: 'text',
                 color: 'transparent'
               }}>
-                {annualFeeAmount} pts
+                {annualFeeAmount} {t('visitTimer.points')}
               </div>
-              <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 9, letterSpacing: 1 }}>YEARLY</div>
+              <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 9, letterSpacing: 1 }}>{t('visitTimer.yearly')}</div>
             </div>
           </div>
 
@@ -1045,15 +1176,10 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
           >
             <div>
               <div style={{ color: selectedAccess === 'daypass' ? '#FDE08D' : '#fff', fontWeight: 800, fontSize: 16, marginBottom: 8 }}>
-                Day Pass
+                {t('visitTimer.dayPass')}
               </div>
-              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, lineHeight: 1.4 }} className="benefit-list">
-                ✓ 3 Hours Free<br />
-                ✓ 1 Cigar Included<br />
-                ✓ One-time Entry<br />
-                ✓ Rate per hour<br />
-                <span style={{ color: 'rgba(255,255,255,0.3)' }}>X FREE 25/50/75 Cigar</span><br />
-                <span style={{ color: 'rgba(255,255,255,0.3)' }}>X Accumulate Stay Hours</span>
+              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, lineHeight: 1.4, whiteSpace: 'pre-line' }} className="benefit-list">
+                {t('visitTimer.benefits.dayPass')}
               </div>
             </div>
             <div style={{ textAlign: 'right', marginTop: 16 }} className="price-text-container">
@@ -1064,19 +1190,19 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                 WebkitBackgroundClip: 'text',
                 color: 'transparent'
               }}>
-                {dayPassConfig?.cost || 100} pts
+                {dayPassConfig?.cost || 100} {t('visitTimer.points')}
               </div>
-              <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 9, letterSpacing: 1 }}>ONE-TIME</div>
+              <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 9, letterSpacing: 1 }}>{t('visitTimer.oneTime')}</div>
             </div>
           </div>
         </div>
- 
+
         {/* Action Button Section */}
         {selectedAccess && (() => {
           const currentPoints = user?.membership?.points || 0;
           const cost = selectedAccess === 'membership' ? (annualFeeAmount || 0) : (dayPassConfig?.cost || 100);
           const hasEnoughPoints = currentPoints >= cost;
- 
+
           return (
             <div style={{ marginTop: 24 }}>
               <button
@@ -1102,9 +1228,9 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
               >
                 {loading && <span className="anticon-spin" style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />}
                 {!hasEnoughPoints && <WalletOutlined />}
-                {hasEnoughPoints 
-                  ? (selectedAccess === 'membership' ? 'Confirm Activation' : 'Confirm Purchase')
-                  : `Reload Points (Short: ${cost - currentPoints})`
+                {hasEnoughPoints
+                  ? (selectedAccess === 'membership' ? t('visitTimer.confirmActivation') : t('visitTimer.confirmPurchase'))
+                  : `${t('visitTimer.reloadPoints')} (${t('visitTimer.short')}: ${cost - currentPoints})`
                 }
               </button>
             </div>

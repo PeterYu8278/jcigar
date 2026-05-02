@@ -1337,7 +1337,7 @@ const AdminInventory: React.FC = () => {
   const groupedByBrand = useMemo(() => {
     const map: Record<string, { display: string; items: Cigar[] }> = {}
     for (const it of filtered) {
-      const raw = (it.brand || '其他').trim()
+      const raw = (it.brand || t('shop.other')).trim()
       const lower = raw.toLowerCase()
       if (!map[lower]) map[lower] = { display: raw, items: [] }
       map[lower].items.push(it)
@@ -1423,7 +1423,7 @@ const AdminInventory: React.FC = () => {
                       <Button
                         onClick={async () => {
 
-                          const confirmed = window.confirm(`确定要删除选中的 ${selectedRowKeys.length} 个产品吗？`)
+                          const confirmed = window.confirm(t('inventory.batchDeleteConfirmText', { count: selectedRowKeys.length }))
 
                           if (confirmed) {
                             setLoading(true)
@@ -1693,7 +1693,7 @@ const AdminInventory: React.FC = () => {
                           textAlign: 'center',
                           lineHeight: 1.2
                         }}>
-                          {t('inventory.allBrands', '全部')}
+                          {t('inventory.allBrands')}
                         </div>
                       </div>
                     </div>
@@ -1899,7 +1899,7 @@ const AdminInventory: React.FC = () => {
                         <div key={group.key} style={{ border: '1px solid rgba(244,175,37,0.2)', borderRadius: 12, overflow: 'hidden', background: 'rgba(255, 255, 255, 0.05)', backdropFilter: 'blur(10px)' }}>
                           <div style={{ padding: '8px 12px', background: 'linear-gradient(to right, #FDE08D, #C48D3A)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <div style={{ fontWeight: 700, color: '#000' }}>{group.key}</div>
-                            <div style={{ fontSize: 12, color: 'rgba(0, 0, 0, 0.6)' }}>{t('inventory.productTypes')}：{group.items.length}</div>
+                            <div style={{ fontSize: 12, color: 'rgba(0, 0, 0, 0.6)' }}>{t('inventory.productTypes')}: {group.items.length}</div>
                           </div>
                           <div style={{ padding: 12 }}>
                             <div className="points-config-form">
@@ -2228,7 +2228,7 @@ const AdminInventory: React.FC = () => {
                                           <circle cx="12" cy="10" r="3"></circle>
                                         </svg>
                                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                          {t('inventory.origin')}：{brand.country || '-'}
+                                          {t('inventory.origin')}: {brand.country || '-'}
                                         </span>
                                       </div>
                                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
@@ -2248,7 +2248,7 @@ const AdminInventory: React.FC = () => {
                                           <line x1="12" x2="12" y1="22.08" y2="12"></line>
                                         </svg>
                                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                          {t('inventory.productTypes')}：{productCount}
+                                          {t('inventory.productTypes')}: {productCount}
                                         </span>
                                       </div>
                                     </div>
@@ -2275,7 +2275,7 @@ const AdminInventory: React.FC = () => {
                                           <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
                                           <circle cx="12" cy="10" r="3"></circle>
                                         </svg>
-                                        <span>{t('inventory.origin')}：{brand.country || '-'}</span>
+                                        <span>{t('inventory.origin')}: {brand.country || '-'}</span>
                                       </div>
                                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                         <svg
@@ -2293,7 +2293,7 @@ const AdminInventory: React.FC = () => {
                                           <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
                                           <line x1="12" x2="12" y1="22.08" y2="12"></line>
                                         </svg>
-                                        <span>{t('inventory.productTypes')}：{productCount}</span>
+                                        <span>{t('inventory.productTypes')}: {productCount}</span>
                                       </div>
                                     </div>
                                   )}
@@ -2331,7 +2331,7 @@ const AdminInventory: React.FC = () => {
                               <Button
                                 onClick={async () => {
 
-                                  const confirmed = window.confirm(`确定要删除品牌 "${brand.name}" 吗？`)
+                                  const confirmed = window.confirm(t('inventory.deleteBrandConfirmText', { name: brand.name }))
 
                                   if (confirmed) {
                                     try {
@@ -2458,7 +2458,7 @@ const AdminInventory: React.FC = () => {
               {/* 入库列表渲染在后文（我们将在实际列表处包裹滚动容器） */}
 
               <Modal
-                title={editingOrder ? "编辑入库订单" : t('inventory.inStockRecord')}
+                title={editingOrder ? t('inventory.editInboundOrder') : t('inventory.inStockRecord')}
                 open={inModalOpen || !!editingOrder}
                 onCancel={() => {
                   setInModalOpen(false)
@@ -2616,7 +2616,7 @@ const AdminInventory: React.FC = () => {
                         })
                       }
 
-                      message.success('订单已更新')
+                      message.success(t('common.success'))
                     } else {
                       // 创建模式：创建新订单
                       const inboundOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
@@ -2655,15 +2655,15 @@ const AdminInventory: React.FC = () => {
                       {/* 左侧：门店、单号和原因 */}
                       <Col span={12}>
                         {(isSuperAdmin || currentUser?.role === 'developer') ? (
-                          <Form.Item label="门店 / Store" name="storeId" rules={[{ required: true, message: '请选择门店' }]} style={{ marginBottom: 12 }}>
+                          <Form.Item label={t('common.store')} name="storeId" rules={[{ required: true, message: t('common.pleaseSelectStore') }]} style={{ marginBottom: 12 }}>
                             <Select 
-                              placeholder="请选择门店"
+                              placeholder={t('common.pleaseSelectStore')}
                               options={stores.map(store => ({ label: store.name, value: store.id }))}
                             />
                           </Form.Item>
                         ) : (
-                          <Form.Item label="门店 / Store" style={{ marginBottom: 12 }}>
-                            <Input disabled value={stores.find(s => s.id === currentUser?.storeId)?.name || currentUser?.storeId || '默认门店'} />
+                          <Form.Item label={t('common.store')} style={{ marginBottom: 12 }}>
+                            <Input disabled value={stores.find(s => s.id === currentUser?.storeId)?.name || currentUser?.storeId || t('common.defaultStore')} />
                           </Form.Item>
                         )}
                         <Form.Item label={t('inventory.referenceNo')} name="referenceNo" style={{ marginBottom: 12 }}>
@@ -2877,7 +2877,7 @@ const AdminInventory: React.FC = () => {
                                           onClick={() => remove(name)}
                                           style={{ padding: 0 }}
                                         >
-                                          删除
+                                          {t('common.delete')}
                                         </Button>
                                       )}
                                     </Col>
@@ -2997,7 +2997,7 @@ const AdminInventory: React.FC = () => {
                                             icon={<MinusCircleOutlined />}
                                             onClick={() => remove(name)}
                                           >
-                                            删除
+                                            {t('common.delete')}
                                           </Button>
                                         )}
                                       </Col>
@@ -3026,7 +3026,7 @@ const AdminInventory: React.FC = () => {
                           setUploadedAttachments([])
                         }}>{t('common.cancel')}</Button>
                         <Button type="primary" htmlType="submit" loading={loading}>
-                          {editingOrder ? "保存修改" : t('inventory.confirmInStock')}
+                          {editingOrder ? t('inventory.saveModifications') : t('inventory.confirmInStock')}
                         </Button>
                       </Space>
                     </Form.Item>
@@ -3319,11 +3319,11 @@ const AdminInventory: React.FC = () => {
                                       items: order.items
                                     })
                                   } else {
-                                    message.error('订单未找到')
+                                    message.error(t('inventory.orderNotFound'))
                                   }
                                 }}
                               >
-                                编辑
+                                {t('inventory.edit')}
                               </Button>
 
                               {/* 取消订单（标记为cancelled，不删除） */}
@@ -3334,17 +3334,12 @@ const AdminInventory: React.FC = () => {
                                 onClick={() => {
 
                                   Modal.confirm({
-                                    title: '取消订单',
+                                    title: t('inventory.cancelConfirmTitle'),
                                     content: (
-                                      <div>
-                                        <p>将订单 <strong>{group.referenceNo}</strong> 标记为已取消状态</p>
-                                        <p style={{ marginTop: 8, fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>• 订单数据将被保留（用于审计）</p>
-                                        <p style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>• 库存计算将忽略此订单</p>
-                                        <p style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>• 可以通过"退货"功能创建反向订单来冲销库存</p>
-                                      </div>
+                                        <p>{t('inventory.cancelConfirmContent', { ref: group.referenceNo })}</p>
                                     ),
-                                    okText: '确认取消',
-                                    cancelText: '返回',
+                                    okText: t('common.confirm'),
+                                    cancelText: t('common.back'),
                                     onOk: async () => {
                                       setLoading(true)
                                       try {
@@ -3353,13 +3348,13 @@ const AdminInventory: React.FC = () => {
 
                                         if (order) {
                                           await updateInboundOrder(order.id, { status: 'cancelled' })
-                                          message.success('✅ 订单已取消')
+                                          message.success(t('inventory.orderCancelled'))
                                           setInboundOrders(await getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
                                         } else {
-                                          message.error('订单未找到')
+                                          message.error(t('inventory.orderNotFound'))
                                         }
                                       } catch (error: any) {
-                                        message.error('操作失败: ' + error.message)
+                                        message.error(t('common.error') + ': ' + error.message)
                                       } finally {
                                         setLoading(false)
                                       }
@@ -3369,7 +3364,7 @@ const AdminInventory: React.FC = () => {
                                   })
                                 }}
                               >
-                                取消
+                                {t('inventory.cancel')}
                               </Button>
 
                               {/* 反向订单（退货/红冲） */}
@@ -3380,17 +3375,12 @@ const AdminInventory: React.FC = () => {
                                 onClick={() => {
 
                                   Modal.confirm({
-                                    title: '🔄 创建反向订单',
+                                    title: t('inventory.returnConfirmTitle'),
                                     content: (
-                                      <div>
-                                        <p>将为订单 <strong>{group.referenceNo}</strong> 创建反向订单（退货）</p>
-                                        <p>• 原订单数量：<span style={{ color: '#52c41a' }}>+{group.totalQuantity}</span></p>
-                                        <p>• 反向订单数量：<span style={{ color: '#ff4d4f' }}>-{group.totalQuantity}</span></p>
-                                        <p style={{ marginTop: 12, color: '#faad14' }}>此操作将创建一个负数量的退货订单，用于冲销原订单的库存影响。</p>
-                                      </div>
+                                        <p>{t('inventory.returnConfirmContent', { ref: group.referenceNo })}</p>
                                     ),
-                                    okText: '确认创建',
-                                    cancelText: '取消',
+                                    okText: t('common.confirm'),
+                                    cancelText: t('common.cancel'),
                                     onOk: async () => {
                                       setLoading(true)
                                       try {
@@ -3398,7 +3388,7 @@ const AdminInventory: React.FC = () => {
                                         const order = inboundOrders.find(o => o.id === group.id)
 
                                         if (!order) {
-                                          message.error('原订单未找到')
+                                          message.error(t('inventory.orderNotFound'))
                                           return
                                         }
 
@@ -3407,7 +3397,7 @@ const AdminInventory: React.FC = () => {
                                         const returnOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
                                           referenceNo: returnReferenceNo,
                                           type: 'return',
-                                          reason: `退货冲销: ${group.referenceNo}`,
+                                          reason: t('inventory.returnReason', { referenceNo: group.referenceNo }),
                                           items: order.items.map(item => ({
                                             ...item,
                                             quantity: -item.quantity
@@ -3421,11 +3411,11 @@ const AdminInventory: React.FC = () => {
                                         }
 
                                         await createInboundOrder(returnOrderData)
-                                        message.success('反向订单已创建')
+                                        message.success(t('inventory.returnOrderCreated'))
                                         setInboundOrders(await getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
                                         setInventoryMovements(await getAllInventoryMovements(isSuperAdmin ? undefined : currentUser?.storeId))
                                       } catch (error: any) {
-                                        message.error('创建失败: ' + error.message)
+                                        message.error(t('common.error') + ': ' + error.message)
                                       } finally {
                                         setLoading(false)
                                       }
@@ -3435,7 +3425,7 @@ const AdminInventory: React.FC = () => {
                                   })
                                 }}
                               >
-                                🔄 退货
+                                🔄 {t('inventory.return')}
                               </Button>
 
                               {/* 删除订单 */}
@@ -3525,7 +3515,7 @@ const AdminInventory: React.FC = () => {
                                           borderRadius: 4,
                                           border: '1px solid rgba(255, 77, 79, 0.4)'
                                         }}>
-                                          ✕ 已取消
+                                          ✕ {t('common.cancelled')}
                                         </span>
                                       )
                                     } else if (order.status === 'pending') {
@@ -3539,7 +3529,7 @@ const AdminInventory: React.FC = () => {
                                           borderRadius: 4,
                                           border: '1px solid rgba(250, 173, 20, 0.4)'
                                         }}>
-                                          ⏳ 待处理
+                                          ⏳ {t('common.pending')}
                                         </span>
                                       )
                                     }
@@ -3643,7 +3633,7 @@ const AdminInventory: React.FC = () => {
                                         items: order.items
                                       })
                                     } else {
-                                      message.error('订单未找到')
+                                      message.error(t('inventory.orderNotFound'))
                                     }
                                   }}
                                   style={{
@@ -3658,7 +3648,7 @@ const AdminInventory: React.FC = () => {
                                     border: 'none'
                                   }}
                                 >
-                                  编辑
+                                  {t('inventory.edit')}
                                 </button>
 
                                 {/* 取消订单按钮 */}
@@ -3667,16 +3657,12 @@ const AdminInventory: React.FC = () => {
                                     e.stopPropagation()
 
                                     Modal.confirm({
-                                      title: '取消订单',
+                                      title: t('inventory.cancelConfirmTitle'),
                                       content: (
-                                        <div>
-                                          <p>将订单 <strong>{group.referenceNo}</strong> 标记为已取消状态</p>
-                                          <p style={{ marginTop: 8, fontSize: 12, color: '#8c8c8c' }}>• 订单数据将被保留</p>
-                                          <p style={{ fontSize: 12, color: '#8c8c8c' }}>• 库存计算将忽略此订单</p>
-                                        </div>
+                                        <p>{t('inventory.cancelConfirmContent', { ref: group.referenceNo })}</p>
                                       ),
-                                      okText: '确认取消',
-                                      cancelText: '返回',
+                                      okText: t('common.confirm'),
+                                      cancelText: t('common.back'),
                                       onOk: async () => {
                                         setLoading(true)
                                         try {
@@ -3685,13 +3671,13 @@ const AdminInventory: React.FC = () => {
 
                                           if (order) {
                                             await updateInboundOrder(order.id, { status: 'cancelled' })
-                                            message.success('✅ 订单已取消')
+                                            message.success(t('inventory.orderCancelled'))
                                             setInboundOrders(await getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
                                           } else {
-                                            message.error('订单未找到')
+                                            message.error(t('inventory.orderNotFound'))
                                           }
                                         } catch (error: any) {
-                                          message.error('操作失败: ' + error.message)
+                                          message.error(t('common.error') + ': ' + error.message)
                                         } finally {
                                           setLoading(false)
                                         }
@@ -3712,7 +3698,7 @@ const AdminInventory: React.FC = () => {
                                     border: '1px solid rgba(255, 255, 255, 0.2)'
                                   }}
                                 >
-                                  取消
+                                  {t('inventory.cancel')}
                                 </button>
 
                                 {/* 退货按钮 */}
@@ -3721,17 +3707,12 @@ const AdminInventory: React.FC = () => {
                                     e.stopPropagation()
 
                                     Modal.confirm({
-                                      title: '🔄 创建反向订单',
+                                      title: t('inventory.returnConfirmTitle'),
                                       content: (
-                                        <div>
-                                          <p>将为订单 <strong>{group.referenceNo}</strong> 创建反向订单（退货）</p>
-                                          <p>• 原订单数量：<span style={{ color: '#52c41a' }}>+{group.totalQuantity}</span></p>
-                                          <p>• 反向订单数量：<span style={{ color: '#ff4d4f' }}>-{group.totalQuantity}</span></p>
-                                          <p style={{ marginTop: 12, color: '#faad14', fontSize: 12 }}>⚠️ 此操作将创建一个负数量的退货订单，用于冲销原订单的库存影响。</p>
-                                        </div>
+                                        <p>{t('inventory.returnConfirmContent', { ref: group.referenceNo })}</p>
                                       ),
-                                      okText: '确认创建',
-                                      cancelText: '取消',
+                                      okText: t('common.confirm'),
+                                      cancelText: t('common.cancel'),
                                       onOk: async () => {
                                         setLoading(true)
                                         try {
@@ -3739,7 +3720,7 @@ const AdminInventory: React.FC = () => {
                                           const order = inboundOrders.find(o => o.id === group.id)
 
                                           if (!order) {
-                                            message.error('原订单未找到')
+                                            message.error(t('inventory.orderNotFound'))
                                             return
                                           }
 
@@ -3747,7 +3728,7 @@ const AdminInventory: React.FC = () => {
                                           const returnOrderData: Omit<InboundOrder, 'id' | 'updatedAt'> = {
                                             referenceNo: returnReferenceNo,
                                             type: 'return',
-                                            reason: `退货冲销: ${group.referenceNo}`,
+                                            reason: t('inventory.returnReason', { referenceNo: group.referenceNo }),
                                             items: order.items.map(item => ({
                                               ...item,
                                               quantity: -item.quantity
@@ -3761,11 +3742,11 @@ const AdminInventory: React.FC = () => {
                                           }
 
                                           await createInboundOrder(returnOrderData)
-                                          message.success('反向订单已创建')
+                                          message.success(t('inventory.returnOrderCreated'))
                                           setInboundOrders(await getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
                                           setInventoryMovements(await getAllInventoryMovements(isSuperAdmin ? undefined : currentUser?.storeId))
                                         } catch (error: any) {
-                                          message.error('创建失败: ' + error.message)
+                                          message.error(t('common.error') + ': ' + error.message)
                                         } finally {
                                           setLoading(false)
                                         }
@@ -3786,7 +3767,7 @@ const AdminInventory: React.FC = () => {
                                     border: '1px solid rgba(255, 255, 255, 0.2)'
                                   }}
                                 >
-                                  🔄 退货
+                                  🔄 {t('inventory.return')}
                                 </button>
 
                                 {/* 删除订单按钮 */}
@@ -3814,7 +3795,7 @@ const AdminInventory: React.FC = () => {
                                     border: '1px solid rgba(255, 255, 255, 0.2)'
                                   }}
                                 >
-                                  删除
+                                  {t('common.delete')}
                                 </button>
                               </div>
                               {group.logs.map((log: any) => {
@@ -4173,7 +4154,7 @@ const AdminInventory: React.FC = () => {
                                         icon={<MinusCircleOutlined />}
                                         onClick={() => remove(name)}
                                       >
-                                        删除
+                                        {t('common.delete')}
                                       </Button>
                                     )}
                                   </Col>
@@ -4484,7 +4465,7 @@ const AdminInventory: React.FC = () => {
             setLoading(false)
           }
         }}>
-          <Form.Item label="图片" name="images">
+          <Form.Item label={t('inventory.image')} name="images">
             <div>
               <style>{`
                 .cigar-modal-upload .ant-upload.ant-upload-select-picture-card,
@@ -4510,7 +4491,7 @@ const AdminInventory: React.FC = () => {
                     setCigarImages(prev => [...prev, result.secure_url]);
                     return false; // 阻止自动上传
                   } catch (error) {
-                    message.error('图片上传失败');
+                    message.error(t('inventory.imageUploadFailed'));
                     return false;
                   }
                 }}
@@ -4525,12 +4506,12 @@ const AdminInventory: React.FC = () => {
                 {cigarImages.length < 5 && (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                     <PlusOutlined style={{ color: '#FFFFFF' }} />
-                    <div style={{ marginTop: 8, color: '#FFFFFF' }}>上传</div>
+                    <div style={{ marginTop: 8, color: '#FFFFFF' }}>{t('inventory.upload')}</div>
                   </div>
                 )}
               </Upload>
               <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 8 }}>
-                最多上传 5 张图片
+                {t('inventory.maxImagesCount')}
               </div>
             </div>
           </Form.Item>
@@ -4578,7 +4559,7 @@ const AdminInventory: React.FC = () => {
 
                         form.setFieldsValue(updates);
 
-                        message.success(`已从数据库加载 "${value}" 的信息（基于 ${aggregatedData.totalRecognitions} 次AI识别）`);
+                        message.success(t('inventory.uploadSuccess', { name: value, count: aggregatedData.totalRecognitions }));
                       }
                     } catch (error) {
                       // 查询失败，允许手动输入
@@ -4614,7 +4595,7 @@ const AdminInventory: React.FC = () => {
 
                         form.setFieldsValue(updates);
 
-                        message.success(`已从数据库加载 "${productName}" 的信息（基于 ${aggregatedData.totalRecognitions} 次AI识别）`);
+                        message.success(t('inventory.uploadSuccess', { name: productName, count: aggregatedData.totalRecognitions }));
                       } else {
                         // 未找到数据，清空 cigarDatabaseData 以允许手动输入
                         setCigarDatabaseData(null);
@@ -4624,7 +4605,7 @@ const AdminInventory: React.FC = () => {
                       setCigarDatabaseData(null);
                     }
                   }}
-                  placeholder="输入或选择产品名称"
+                  placeholder={t('inventory.inputOrSelectProductName')}
                   style={{ flex: 1 }}
                 />
               </Form.Item>
@@ -4637,7 +4618,7 @@ const AdminInventory: React.FC = () => {
                   e.stopPropagation()
                   const productName = form.getFieldValue('name')
                   if (!productName || !productName.trim()) {
-                    message.warning('请先输入产品名称')
+                    message.warning(t('inventory.pleaseInputProductName'))
                     return
                   }
 
@@ -4796,12 +4777,12 @@ const AdminInventory: React.FC = () => {
                         }
                       }
 
-                      message.success(`AI识别完成并已保存到数据库！可信度: ${Math.round(result.confidence * 100)}%`)
+                      message.success(t('inventory.aiRecognitionSuccess', { confidence: Math.round(result.confidence * 100) }))
                     } catch (dbError: any) {
-                      message.error(`保存到数据库失败: ${dbError.message || '未知错误'}`)
+                      message.error(t('inventory.saveToDbFailed', { error: dbError.message || t('common.unknownError') }))
                     }
                   } catch (error: any) {
-                    message.error(`AI识别失败: ${error.message || '未知错误'}`)
+                    message.error(t('inventory.aiRecognitionFailed', { error: error.message || t('common.unknownError') }))
                   } finally {
                     setAiRecognizing(false)
                   }
@@ -4809,9 +4790,9 @@ const AdminInventory: React.FC = () => {
                 style={{
                   color: '#f4af25'
                 }}
-                title="AI识笳"
+                title={t('inventory.aiRecognitionTitle')}
               >
-                {isMobile ? '' : 'AI识笳'}
+                {isMobile ? '' : t('inventory.aiRecognitionTitle')}
               </Button>
             </Space.Compact>
           </Form.Item>
@@ -4882,7 +4863,7 @@ const AdminInventory: React.FC = () => {
             </Select>
           </Form.Item>
 
-          <Form.Item label="评分" name="rating">
+          <Form.Item label={t('inventory.rating')} name="rating">
             <InputNumber
               min={0}
               max={100}
@@ -4896,8 +4877,8 @@ const AdminInventory: React.FC = () => {
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
 
-          <Form.Item label={t('common.description') || '描述'} name="description">
-            <Input.TextArea rows={3} placeholder="请输入雪茄描述" />
+          <Form.Item label={t('common.description')} name="description">
+            <Input.TextArea rows={3} placeholder={t('inventory.descriptionPlaceholder')} />
           </Form.Item>
 
           <div style={{
@@ -4920,7 +4901,7 @@ const AdminInventory: React.FC = () => {
               fontWeight: 600,
               whiteSpace: 'nowrap'
             }}>
-              构造信息
+              {t('inventory.constructionInfo')}
             </span>
             <div style={{
               flex: 1,
@@ -4929,16 +4910,16 @@ const AdminInventory: React.FC = () => {
             }} />
           </div>
 
-          <Form.Item label="茄衣" name="wrapper">
-            <Input placeholder="例如: Habano, Connecticut, Maduro" />
+          <Form.Item label={t('inventory.wrapper')} name="wrapper">
+            <Input placeholder={t('inventory.wrapperPlaceholder')} />
           </Form.Item>
 
-          <Form.Item label="茄套" name="binder">
-            <Input placeholder="例如: Nicaraguan, Ecuadorian" />
+          <Form.Item label={t('inventory.binder')} name="binder">
+            <Input placeholder={t('inventory.binderPlaceholder')} />
           </Form.Item>
 
-          <Form.Item label="茄芯" name="filler">
-            <Input placeholder="例如: Cuban, Nicaraguan, Dominican" />
+          <Form.Item label={t('inventory.filler')} name="filler">
+            <Input placeholder={t('inventory.fillerPlaceholder')} />
           </Form.Item>
 
           <div style={{
@@ -4961,7 +4942,7 @@ const AdminInventory: React.FC = () => {
               fontWeight: 600,
               whiteSpace: 'nowrap'
             }}>
-              品吸笔记
+              {t('inventory.tastingNotes')}
             </span>
             <div style={{
               flex: 1,
@@ -4971,42 +4952,42 @@ const AdminInventory: React.FC = () => {
           </div>
 
           <Form.Item
-            label="脚部 (Foot) - 前1/3"
+            label={t('inventory.footNotes')}
             name="footTasteNotes"
             labelCol={isMobile ? { span: 24 } : undefined}
             wrapperCol={isMobile ? { span: 24 } : undefined}
           >
             <Select
               mode="tags"
-              placeholder="输入品吸笔记，按回车添加"
+              placeholder={t('inventory.tastingNotesPlaceholder')}
               style={{ width: '100%' }}
               tokenSeparators={[',']}
             />
           </Form.Item>
 
           <Form.Item
-            label="主体 (Body) - 中1/3"
+            label={t('inventory.bodyNotes')}
             name="bodyTasteNotes"
             labelCol={isMobile ? { span: 24 } : undefined}
             wrapperCol={isMobile ? { span: 24 } : undefined}
           >
             <Select
               mode="tags"
-              placeholder="输入品吸笔记，按回车添加"
+              placeholder={t('inventory.tastingNotesPlaceholder')}
               style={{ width: '100%' }}
               tokenSeparators={[',']}
             />
           </Form.Item>
 
           <Form.Item
-            label="头部 (Head) - 后1/3"
+            label={t('inventory.headNotes')}
             name="headTasteNotes"
             labelCol={isMobile ? { span: 24 } : undefined}
             wrapperCol={isMobile ? { span: 24 } : undefined}
           >
             <Select
               mode="tags"
-              placeholder="输入品吸笔记，按回车添加"
+              placeholder={t('inventory.tastingNotesPlaceholder')}
               style={{ width: '100%' }}
               tokenSeparators={[',']}
             />
@@ -5033,7 +5014,7 @@ const AdminInventory: React.FC = () => {
               fontWeight: 600,
               whiteSpace: 'nowrap'
             }}>
-              其他信息
+              {t('inventory.otherInfo')}
             </span>
             <div style={{
               flex: 1,
@@ -5043,14 +5024,14 @@ const AdminInventory: React.FC = () => {
           </div>
 
           <Form.Item
-            label="标签/风味特征"
+            label={t('inventory.flavorProfile')}
             name="tags"
             labelCol={isMobile ? { span: 24 } : undefined}
             wrapperCol={isMobile ? { span: 24 } : undefined}
           >
             <Select
               mode="tags"
-              placeholder="输入标签，按回车添加"
+              placeholder={t('inventory.flavorProfilePlaceholder')}
               style={{ width: '100%' }}
               tokenSeparators={[',']}
             />
@@ -5369,19 +5350,19 @@ const AdminInventory: React.FC = () => {
             }}>
               <div style={{ fontWeight: 'bold', marginBottom: 8, color: '#FFFFFF' }}>{t('inventory.summary')}</div>
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '8px 24px' }}>
-                <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.totalRecords')}：{currentProductLogs.length} {t('inventory.records')}</div>
-                <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.currentStock')}：{getComputedStock(viewingProductLogs || '')} {t('inventory.sticks')}</div>
+                <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.totalRecords')}: {currentProductLogs.length} {t('inventory.records')}</div>
+                <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.currentStock')}: {getComputedStock(viewingProductLogs || '')} {t('inventory.sticks')}</div>
 
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', gridColumn: '1 / -1', margin: '4px 0' }} />
 
                 <div>
-                  <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.totalInStock')}：{currentProductLogs.filter(log => log.type === 'in').reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
-                  <div style={{ color: '#52c41a', fontWeight: 600, fontSize: 13 }}>{t('inventory.totalInValue')}：RM{currentProductLogs.filter(log => log.type === 'in').reduce((sum, log) => sum + ((log.quantity || 0) * (log.unitPrice || 0)), 0).toFixed(2)}</div>
+                  <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.totalInStock')}: {currentProductLogs.filter(log => log.type === 'in').reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
+                  <div style={{ color: '#52c41a', fontWeight: 600, fontSize: 13 }}>{t('inventory.totalInValue')}: RM{currentProductLogs.filter(log => log.type === 'in').reduce((sum, log) => sum + ((log.quantity || 0) * (log.unitPrice || 0)), 0).toFixed(2)}</div>
                 </div>
 
                 <div>
-                  <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.totalOutStock')}：{currentProductLogs.filter(log => log.type === 'out').reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
-                  <div style={{ color: '#ff4d4f', fontWeight: 600, fontSize: 13 }}>{t('inventory.totalOutValue')}：RM{currentProductLogs.filter(log => log.type === 'out').reduce((sum, log) => sum + ((log.quantity || 0) * (log.unitPrice || 0)), 0).toFixed(2)}</div>
+                  <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.totalOutStock')}: {currentProductLogs.filter(log => log.type === 'out').reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
+                  <div style={{ color: '#ff4d4f', fontWeight: 600, fontSize: 13 }}>{t('inventory.totalOutValue')}: RM{currentProductLogs.filter(log => log.type === 'out').reduce((sum, log) => sum + ((log.quantity || 0) * (log.unitPrice || 0)), 0).toFixed(2)}</div>
                 </div>
               </div>
             </div>
@@ -6112,7 +6093,7 @@ const AdminInventory: React.FC = () => {
 
       {/* 订单编辑Modal */}
       <Modal
-        title="编辑入库订单"
+        title={t('inventory.editInboundOrder')}
         open={!!editingOrder}
         onCancel={() => {
           setEditingOrder(null)
@@ -6203,7 +6184,7 @@ const AdminInventory: React.FC = () => {
                 await createDocument(COLLECTIONS.INVENTORY_MOVEMENTS, movement)
               }
 
-              message.success('✅ 订单已更新')
+              message.success(t('inventory.orderUpdatedSuccess'))
               setEditingOrder(null)
               orderEditForm.resetFields()
               setEditAttachmentFileList([])
@@ -6211,7 +6192,7 @@ const AdminInventory: React.FC = () => {
               setInboundOrders(await getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
               setInventoryMovements(await getAllInventoryMovements(isSuperAdmin ? undefined : currentUser?.storeId))
             } catch (error: any) {
-              message.error('更新失败: ' + error.message)
+              message.error(t('inventory.orderUpdateFailed', { error: error.message }))
             } finally {
               setLoading(false)
             }
@@ -6222,18 +6203,18 @@ const AdminInventory: React.FC = () => {
             {/* 左侧：单号和原因 */}
             <Col span={12}>
               <Form.Item
-                label="单号"
+                label={t('inventory.referenceNo')}
                 name="referenceNo"
-                rules={[{ required: true, message: '请输入单号' }]}
+                rules={[{ required: true, message: t('inventory.pleaseInputOrderNo') }]}
               >
-                <Input placeholder="例如: YI-001" />
+                <Input placeholder={t('inventory.orderNoPlaceholder')} />
               </Form.Item>
 
               <Form.Item
-                label="原因"
+                label={t('inventory.reason')}
                 name="reason"
               >
-                <Input placeholder="例如: 入库" />
+                <Input placeholder={t('inventory.reasonPlaceholder')} />
               </Form.Item>
             </Col>
 
@@ -6316,14 +6297,14 @@ const AdminInventory: React.FC = () => {
             {(fields, { add, remove }) => (
               <>
                 <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h4 style={{ margin: 0, fontSize: '16px' }}>产品列表</h4>
+                  <h4 style={{ margin: 0, fontSize: '16px' }}>{t('inventory.productList')}</h4>
                   <Button
                     type="dashed"
                     onClick={() => add()}
                     icon={<PlusOutlined />}
                     size="small"
                   >
-                    添加产品
+                    {t('inventory.addProduct')}
                   </Button>
                 </div>
 
@@ -6356,18 +6337,18 @@ const AdminInventory: React.FC = () => {
                       {/* 产品标题、产品选择、数量、单价、删除按钮 - 全部同行显示 */}
                       <Row gutter={12} align="middle">
                         <Col flex="80px">
-                          <span style={{ fontWeight: 600, color: 'rgba(255, 255, 255, 0.6)' }}>产品 {index + 1}</span>
+                          <span style={{ fontWeight: 600, color: 'rgba(255, 255, 255, 0.6)' }}>{t('inventory.productIndex', { index: index + 1 })}</span>
                         </Col>
                         <Col flex="auto">
                           <Form.Item
                             {...restField}
                             name={[field.name, 'cigarId']}
-                            rules={[{ required: true, message: '请选择产品' }]}
+                            rules={[{ required: true, message: t('inventory.pleaseSelectProduct') }]}
                             style={{ marginBottom: 0 }}
                           >
                             <Select
                               showSearch
-                              placeholder="选择雪茄产品"
+                              placeholder={t('inventory.selectCigarProduct')}
                               optionFilterProp="children"
                               onChange={(value) => {
                                 const cigar = items.find(c => c.id === value)
@@ -6395,11 +6376,11 @@ const AdminInventory: React.FC = () => {
                           <Form.Item
                             {...restField}
                             name={[field.name, 'quantity']}
-                            rules={[{ required: true, message: '请输入数量' }]}
+                            rules={[{ required: true, message: t('inventory.pleaseInputQuantity') }]}
                             style={{ marginBottom: 0 }}
                           >
                             <InputNumber
-                              placeholder="数量"
+                              placeholder={t('inventory.quantity')}
                               min={1}
                               style={{ width: '100%' }}
                             />
@@ -6412,7 +6393,7 @@ const AdminInventory: React.FC = () => {
                             style={{ marginBottom: 0 }}
                           >
                             <InputNumber
-                              placeholder="单价"
+                              placeholder={t('inventory.unitPrice')}
                               min={0}
                               precision={2}
                               style={{ width: '100%' }}
@@ -6427,7 +6408,7 @@ const AdminInventory: React.FC = () => {
                             onClick={() => remove(field.name)}
                             style={{ padding: 0 }}
                           >
-                            删除
+                            {t('common.delete')}
                           </Button>
                         </Col>
                       </Row>
@@ -6441,7 +6422,7 @@ const AdminInventory: React.FC = () => {
           <Form.Item style={{ marginTop: 24, marginBottom: 0 }}>
             <Space>
               <Button type="primary" htmlType="submit" loading={loading}>
-                保存更改
+                {t('common.saveChanges')}
               </Button>
               <Button onClick={() => {
                 setEditingOrder(null)
@@ -6449,7 +6430,7 @@ const AdminInventory: React.FC = () => {
                 setEditAttachmentFileList([])
                 setEditUploadedAttachments([])
               }}>
-                取消
+                {t('common.cancel')}
               </Button>
             </Space>
           </Form.Item>
@@ -6477,7 +6458,7 @@ const AdminInventory: React.FC = () => {
               setDeleteConfirmOpen(false)
               setDeleteTargetOrder(null)
             } else {
-              message.error('订单未找到，无法删除')
+              message.error(t('inventory.orderNotFound'))
               setDeleteConfirmOpen(false)
               setDeleteTargetOrder(null)
             }

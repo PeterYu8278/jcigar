@@ -7,6 +7,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { getUserTotalVisitHoursInPeriod, getTotalRedemptions, getUserRedemptionLimits } from '../../services/firebase/redemption';
 import { getSuccessfulReferralCount } from '../../services/firebase/firestore';
 import { getUserMembershipPeriod } from '../../services/firebase/membershipFee';
+import { useTranslation } from 'react-i18next';
 import type { AppConfig } from '../../types';
 
 const { Text, Title } = Typography;
@@ -18,6 +19,7 @@ interface MysteryGiftBannerProps {
 export const MysteryGiftBanner: React.FC<MysteryGiftBannerProps> = ({ style }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [progress, setProgress] = useState({
@@ -107,14 +109,14 @@ export const MysteryGiftBanner: React.FC<MysteryGiftBannerProps> = ({ style }) =
         }}
       >
         <GiftOutlined style={{ fontSize: 20 }} />
-        Redeem Your Mystery Gift Here!
+        {t('redemptionMechanism.redeemMysteryGift')}
       </button>
 
       <Modal
         title={
           <Space>
             <GiftOutlined style={{ color: '#FDE08D' }} />
-            <span style={{ color: '#FDE08D' }}>Redemption Mechanism</span>
+            <span style={{ color: '#FDE08D' }}>{t('redemptionMechanism.title')}</span>
           </Space>
         }
         open={showModal}
@@ -142,12 +144,12 @@ export const MysteryGiftBanner: React.FC<MysteryGiftBannerProps> = ({ style }) =
             <div style={{ background: 'rgba(255,255,255,0.03)', padding: 12, borderRadius: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                 <InfoCircleOutlined style={{ color: '#FDE08D' }} />
-                <Text strong style={{ color: '#FFF' }}>Daily Redemption Limit</Text>
+                <Text strong style={{ color: '#FFF' }}>{t('redemptionMechanism.dailyLimitTitle')}</Text>
               </div>
               <ul style={{ color: 'rgba(255,255,255,0.7)', paddingLeft: 20, margin: 0, fontSize: 13 }}>
-                <li>Base Limit: <Text style={{ color: '#FDE08D' }}>3 Cigars</Text> per day</li>
-                <li>Wait Interval: <Text style={{ color: '#FDE08D' }}>1 Hour</Text> between each redemption</li>
-                <li>Last Call: <Text style={{ color: '#FDE08D' }}>23:00 PM</Text></li>
+                <li>{t('redemptionMechanism.baseLimit')}: <Text style={{ color: '#FDE08D' }}>{t('redemptionMechanism.cigarsPerDay', { count: 3 })}</Text></li>
+                <li>{t('redemptionMechanism.waitInterval')}: <Text style={{ color: '#FDE08D' }}>{t('redemptionMechanism.betweenRedemptions', { count: 1 })}</Text></li>
+                <li>{t('redemptionMechanism.lastCall')}: <Text style={{ color: '#FDE08D' }}>23:00 PM</Text></li>
               </ul>
             </div>
 
@@ -156,10 +158,10 @@ export const MysteryGiftBanner: React.FC<MysteryGiftBannerProps> = ({ style }) =
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <TrophyOutlined style={{ color: '#FDE08D' }} />
-                  <Text strong style={{ color: '#FFF' }}>Hour Milestones</Text>
+                  <Text strong style={{ color: '#FFF' }}>{t('redemptionMechanism.hourMilestones')}</Text>
                 </div>
                 <Text style={{ fontSize: 12, color: '#FDE08D' }}>
-                  Current: <Text style={{ color: '#FFF', fontWeight: 600 }}>{Math.floor(progress.hours)}h</Text>
+                  {t('redemptionMechanism.current')}: <Text style={{ color: '#FFF', fontWeight: 600 }}>{Math.floor(progress.hours)}h</Text>
                 </Text>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -170,9 +172,9 @@ export const MysteryGiftBanner: React.FC<MysteryGiftBannerProps> = ({ style }) =
                   return (
                     <div key={item.hours}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                        <Text style={{ color: isCompleted ? '#FDE08D' : 'rgba(255,255,255,0.6)' }}>Stay {item.hours} hrs</Text>
+                        <Text style={{ color: isCompleted ? '#FDE08D' : 'rgba(255,255,255,0.6)' }}>{t('redemptionMechanism.stayHours', { count: item.hours })}</Text>
                         <Text style={{ color: isCompleted ? '#FDE08D' : 'rgba(255,255,255,0.4)', fontSize: 12 }}>
-                          Daily +{item.dailyBonus} · Total +{item.totalBonus}
+                          {t('redemptionMechanism.dailyBonus')} +{item.dailyBonus} · {t('redemptionMechanism.totalBonus')} +{item.totalBonus}
                         </Text>
                       </div>
                       <Progress
@@ -193,7 +195,7 @@ export const MysteryGiftBanner: React.FC<MysteryGiftBannerProps> = ({ style }) =
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <ClockCircleOutlined style={{ color: '#FDE08D' }} />
-                  <Text strong style={{ color: '#FFF' }}>Total Redemption Quota</Text>
+                  <Text strong style={{ color: '#FFF' }}>{t('redemptionMechanism.totalQuotaTitle')}</Text>
                 </div>
                 <Text style={{ fontSize: 12, color: '#FDE08D' }}>
                   <Text style={{ color: '#FFF', fontWeight: 600 }}>{progress.totalRedeemed}</Text> / {progress.totalLimit}
@@ -207,7 +209,7 @@ export const MysteryGiftBanner: React.FC<MysteryGiftBannerProps> = ({ style }) =
                 trailColor="rgba(255,255,255,0.05)"
               />
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 6 }}>
-                Base: 25 cigars · Bonus from milestones · Resets each membership year
+                {t('redemptionMechanism.totalQuotaDesc')}
               </div>
             </div>
 
@@ -216,10 +218,10 @@ export const MysteryGiftBanner: React.FC<MysteryGiftBannerProps> = ({ style }) =
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <UserAddOutlined style={{ color: '#FDE08D' }} />
-                  <Text strong style={{ color: '#FFF' }}>Referral Rewards</Text>
+                  <Text strong style={{ color: '#FFF' }}>{t('redemptionMechanism.referralRewardsTitle')}</Text>
                 </div>
                 <Text style={{ fontSize: 12, color: '#FDE08D' }}>
-                  Current: <Text style={{ color: '#FFF', fontWeight: 600 }}>{progress.referrals}</Text> Friends
+                  {t('redemptionMechanism.current')}: <Text style={{ color: '#FFF', fontWeight: 600 }}>{progress.referrals}</Text> {t('redemptionMechanism.friends')}
                 </Text>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -236,9 +238,9 @@ export const MysteryGiftBanner: React.FC<MysteryGiftBannerProps> = ({ style }) =
                   return (
                     <div key={item.target}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                        <Text style={{ color: isCompleted ? '#FDE08D' : 'rgba(255,255,255,0.6)' }}>Invite {item.target} Friends</Text>
+                        <Text style={{ color: isCompleted ? '#FDE08D' : 'rgba(255,255,255,0.6)' }}>{t('redemptionMechanism.inviteFriends', { count: item.target })}</Text>
                         <Text style={{ color: isCompleted ? '#FDE08D' : 'rgba(255,255,255,0.4)' }}>
-                          +{item.points} Points
+                          +{item.points} {t('redemptionMechanism.points')}
                         </Text>
                       </div>
                       <Progress
@@ -255,7 +257,7 @@ export const MysteryGiftBanner: React.FC<MysteryGiftBannerProps> = ({ style }) =
             </div>
 
             <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', textAlign: 'center', display: 'block' }}>
-              * Bonuses are calculated based on your total stay duration and successful referrals in the current membership period.
+              {t('redemptionMechanism.footerNote')}
             </Text>
           </Space>
         </div>

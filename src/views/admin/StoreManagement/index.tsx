@@ -79,6 +79,10 @@ const StoreManagement: React.FC = () => {
   };
 
   const handleDelete = (id: string) => {
+    if (id === 'default') {
+      message.error('Default store cannot be deleted');
+      return;
+    }
     Modal.confirm({
       title: <span style={{ color: '#fff' }}>Delete this store?</span>,
       content: <span style={{ color: 'rgba(255,255,255,0.6)' }}>This action cannot be undone. All associated data will be affected.</span>,
@@ -328,6 +332,7 @@ const StoreManagement: React.FC = () => {
                     icon={<DeleteOutlined />}
                     onClick={() => handleDelete(store.id)}
                     style={{ fontSize: 14 }}
+                    disabled={store.id === 'default'}
                   />
                 </Space>
               </div>

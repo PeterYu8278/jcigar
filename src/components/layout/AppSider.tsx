@@ -26,6 +26,7 @@ import { useTranslation } from 'react-i18next'
 import { NAV_KEYS } from '../../i18n/constants'
 import { getFeaturesVisibility } from '../../services/firebase/featureVisibility'
 import { getFeatureKeyByRoute } from '../../config/featureDefinitions'
+import LanguageSwitcher from '../common/LanguageSwitcher'
 import { getAppConfig } from '../../services/firebase/appConfig'
 import type { AppConfig } from '../../types'
 
@@ -43,7 +44,7 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
   const navigate = useNavigate()
   const location = useLocation()
   const { isAdmin, isSuperAdmin, isDeveloper } = useAuthStore()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
 
   // 加载应用配置
   useEffect(() => {
@@ -80,22 +81,22 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
     {
       key: '/',
       icon: <HomeOutlined />,
-      label: t('navigation.home'),
+      label: t(NAV_KEYS.HOME),
     },
     {
       key: '/events',
       icon: <CalendarOutlined />,
-      label: t('navigation.events'),
+      label: t(NAV_KEYS.EVENTS),
     },
     {
       key: '/shop',
-      icon: <ShoppingOutlined />,
-      label: t('navigation.shop'),
+      icon: <ShopOutlined />,
+      label: t(NAV_KEYS.SHOP),
     },
     {
       key: '/profile',
       icon: <UserOutlined />,
-      label: t('navigation.profile'),
+      label: t(NAV_KEYS.PROFILE),
     },
   ]
 
@@ -104,32 +105,32 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
     {
       key: '/admin',
       icon: <DashboardOutlined />,
-      label: t('navigation.dashboard'),
+      label: t(NAV_KEYS.DASHBOARD),
     },
     {
       key: '/admin/users',
       icon: <TeamOutlined />,
-      label: t('navigation.users'),
+      label: t(NAV_KEYS.USERS),
     },
     {
       key: '/admin/events',
       icon: <CalendarOutlined />,
-      label: t('navigation.events'),
+      label: t(NAV_KEYS.EVENTS),
     },
     {
       key: '/admin/orders',
       icon: <ShoppingCartOutlined />,
-      label: t('navigation.orders'),
+      label: t(NAV_KEYS.ORDERS),
     },
     {
       key: '/admin/inventory',
       icon: <DatabaseOutlined />,
-      label: t('navigation.inventory'),
+      label: t(NAV_KEYS.INVENTORY),
     },
     {
       key: '/admin/finance',
       icon: <DollarOutlined />,
-      label: t('navigation.finance'),
+      label: t(NAV_KEYS.FINANCE),
     },
     {
       key: '/admin/points-config',
@@ -144,7 +145,7 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
     {
       key: '/admin/stores',
       icon: <ShopOutlined />,
-      label: t('navigation.stores', { defaultValue: '门店管理' }),
+      label: t('navigation.stores'),
     },
   ]
 
@@ -155,7 +156,7 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
       const featureKey = getFeatureKeyByRoute(item.key)
       return featureKey ? (featuresVisibility[featureKey] ?? true) : true
     })
-  }, [featuresVisibility, isDeveloper])
+  }, [featuresVisibility, isDeveloper, t])
 
   // 最终合并所有菜单项，并添加分组和分割线
   const menuItems = useMemo(() => {
@@ -178,7 +179,7 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
         items.push({ type: 'divider' })
         items.push({
           key: 'admin-section',
-          label: !collapsed ? 'ADMIN' : '',
+          label: !collapsed ? t('navigation.adminSection') : '',
           type: 'group',
           children: filteredAdminBase
         })
@@ -191,12 +192,12 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
       developerItems.push({
         key: '/developer/feature-management',
         icon: <SettingOutlined />,
-        label: t('navigation.featureManagement', { defaultValue: '功能管理' }),
+        label: t('navigation.featureManagement'),
       })
       developerItems.push({
         key: '/developer/subscription',
         icon: <SettingOutlined />,
-        label: t('navigation.subscription', { defaultValue: '订阅设置' }),
+        label: t('navigation.subscription'),
       })
     }
     // 发票模板：管理员和开发者均可见
@@ -204,7 +205,7 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
       developerItems.push({
         key: '/developer/invoice-template',
         icon: <FileTextOutlined />,
-        label: t('navigation.invoiceTemplate', { defaultValue: '发票模板' }),
+        label: t('navigation.invoiceTemplate'),
       })
     }
 
@@ -212,7 +213,7 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
       items.push({ type: 'divider' })
       items.push({
         key: 'developer-section',
-        label: !collapsed ? 'DEVELOPER' : '',
+        label: !collapsed ? t('navigation.developerSection') : '',
         type: 'group',
         children: developerItems
       })

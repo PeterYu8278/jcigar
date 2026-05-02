@@ -116,10 +116,10 @@ const BrandDetail: React.FC = () => {
       }}>
         <div style={{ textAlign: 'center' }}>
           <Title level={2} style={{ color: '#FFD700', marginBottom: '16px' }}>
-            品牌未找到
+            {t('brand.notFound') || 'Brand Not Found'}
           </Title>
           <Paragraph style={{ color: '#d1d5db', marginBottom: '24px' }}>
-            抱歉，您访问的品牌不存在或已被删除。
+            {t('brand.notFoundDesc') || 'Sorry, the brand you are looking for does not exist.'}
           </Paragraph>
           <Button 
             type="primary"
@@ -131,7 +131,7 @@ const BrandDetail: React.FC = () => {
               fontWeight: 'bold'
             }}
           >
-            返回商城
+            {t('shop.backToShop') || 'Back to Shop'}
           </Button>
         </div>
       </div>
@@ -438,7 +438,7 @@ const BrandDetail: React.FC = () => {
                   color: '#9ca3af' 
                 }}>
                   <Text style={{ color: '#9ca3af' }}>
-                    暂无产品信息
+                    {t('shop.noProducts') || 'No products available'}
                   </Text>
                 </div>
               )}
@@ -545,7 +545,7 @@ const BrandDetail: React.FC = () => {
               >
                 <ShoppingCartOutlined style={{ fontSize: '18px', color: '#fff' }} />
                 <span style={{ color: '#fff', fontSize: '14px', fontWeight: '600' }}>
-                  0 item
+                  {t('shop.items', { count: 0 })}
                 </span>
               </Button>
             </div>
@@ -578,7 +578,7 @@ const BrandDetail: React.FC = () => {
               }}>
                 <ShoppingCartOutlined style={{ fontSize: '24px' }} />
                 <span style={{ fontSize: '16px', fontWeight: '600' }}>
-                  {cartItemCount} {cartItemCount === 1 ? 'item' : 'items'}
+                  {cartItemCount} {cartItemCount === 1 ? t('shop.item') : t('shop.items', { count: cartItemCount })}
                 </span>
               </div>
 
@@ -608,7 +608,7 @@ const BrandDetail: React.FC = () => {
 
       {/* 确认移除对话框 */}
       <Modal
-        title="确认移除商品？"
+        title={t('shop.confirmRemove')}
         open={confirmRemove.visible}
         onOk={() => {
           if (confirmRemove.itemId) {
@@ -619,8 +619,8 @@ const BrandDetail: React.FC = () => {
         onCancel={() => {
           setConfirmRemove({ visible: false, itemId: null, itemName: null })
         }}
-        okText="确认"
-        cancelText="取消"
+        okText={t('common.confirm') || 'Confirm'}
+        cancelText={t('common.cancel') || 'Cancel'}
         centered
         zIndex={3000}
         okButtonProps={{
@@ -656,7 +656,7 @@ const BrandDetail: React.FC = () => {
           margin: 0,
           lineHeight: '1.6'
         }}>
-          确定要从购物车中移除 <span style={{ color: '#F4AF25', fontWeight: '600' }}>"{confirmRemove.itemName}"</span> 吗？
+          {t('shop.confirmRemoveText', { name: confirmRemove.itemName })}
         </p>
       </Modal>
     </div>

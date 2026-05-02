@@ -27,6 +27,7 @@ import {
 } from '../../../services/firebase/address'
 import { useAuthStore } from '../../../store/modules/auth'
 import { getModalThemeStyles } from '../../../config/modalTheme'
+import { useTranslation } from 'react-i18next'
 
 interface AddressSelectorProps {
   value?: string // 选中的地址ID
@@ -44,6 +45,7 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
   style
 }) => {
   const { user } = useAuthStore()
+  const { t } = useTranslation()
   const [addresses, setAddresses] = useState<Address[]>([])
   const [loading, setLoading] = useState(false)
   const [modalVisible, setModalVisible] = useState(false)
@@ -80,7 +82,7 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
         onChange?.(defaultAddr.id)
       }
     } catch (error) {
-      message.error('加载地址失败')
+      message.error(t('address.loadFailed'))
     } finally {
       setLoading(false)
     }
@@ -147,12 +149,12 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
     if (!user?.id) return
     
     Modal.confirm({
-      title: '确认删除',
-      content: '确定要删除这个地址吗？',
+      title: t('address.deleteConfirm'),
+      content: t('address.deleteContent'),
       onOk: async () => {
         const result = await deleteAddress(user.id, addressId)
         if (result.success) {
-          message.success('删除成功')
+          message.success(t('address.deleteSuccess'))
           await loadAddresses()
           // 如果删除的是当前选中的地址，清空选择
           if (value === addressId) {
@@ -189,7 +191,7 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
       }
 
       if (result.success) {
-        message.success(editingAddress ? '更新成功' : '创建成功')
+        message.success(t('address.saveSuccess'))
         setModalVisible(false)
         await loadAddresses()
         // 如果是新创建的地址且设为默认，自动选中
@@ -214,7 +216,7 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
   if (addresses.length === 0 && !allowCreate) {
     return (
       <div style={style}>
-        <Empty description="暂无地址，请先创建地址" />
+        <Empty description={t('address.noAddress')} />
       </div>
     )
   }
@@ -227,13 +229,13 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
             value={value}
             onChange={onChange}
             loading={loading}
-            placeholder="请选择收货地址"
+            placeholder={t('shop.selectAddress')}
             style={{ width: '100%' }}
-            notFoundContent={addresses.length === 0 ? '暂无地址' : undefined}
+            notFoundContent={addresses.length === 0 ? t('address.noAddress') : undefined}
           >
             {addresses.map(addr => (
               <Select.Option key={addr.id} value={addr.id}>
-                {addr.isDefault && '[默认] '}
+                {addr.isDefault && `[${t('address.default')}] `}
                 {formatAddress(addr)}
               </Select.Option>
             ))}
@@ -253,7 +255,7 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
                 background: 'rgba(244, 175, 37, 0.05)'
               }}
             >
-              新建地址
+              {t('address.addAddress')}
             </Button>
             {showSelect && addresses.map(addr => (
               <Space key={addr.id} size="small">
@@ -277,7 +279,7 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
       </Space>
 
       <Modal
-        title={<span style={{ color: '#F4AF25', fontWeight: 'bold' }}>{editingAddress ? '编辑地址' : '新建地址'}</span>}
+        title={<span style={{ color: '#F4AF25', fontWeight: 'bold' }}>{editingAddress ? t('address.editAddress') : t('address.addAddress')}</span>}
         open={modalVisible}
         onOk={handleSubmit}
         onCancel={() => setModalVisible(false)}
@@ -318,30 +320,30 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
               style={{ color: '#fff' }}
               onChange={handleIsSelfChange}
             >
-              我是收货人
+              {t('address.isSelf')}
             </Checkbox>
           </Form.Item>
 
           <Form.Item
             name="name"
-            label={<span style={{ color: '#fff' }}>收货人姓名</span>}
-            rules={[{ required: true, message: '请输入收货人姓名' }]}
+            label={<span style={{ color: '#fff' }}>{t('address.receiverName')}</span>}
+            rules={[{ required: true, message: t('address.pleaseInputName') }]}
           >
             <Input 
-              placeholder="请输入收货人姓名"
+              placeholder={t('address.pleaseInputName')}
             />
           </Form.Item>
           
           <Form.Item
             name="phone"
-            label={<span style={{ color: '#fff' }}>联系电话</span>}
+            label={<span style={{ color: '#fff' }}>{t('address.contactPhone')}</span>}
             rules={[
-              { required: true, message: '请输入联系电话' },
-              { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号' }
+              { required: true, message: t('address.pleaseInputPhone') },
+              { pattern: /^1[3-9]\d{9}$/, message: t('address.pleaseInputPhoneValid') }
             ]}
           >
             <Input 
-              placeholder="请输入手机号"
+              placeholder={t('address.pleaseInputPhone')}
             />
           </Form.Item>
 
@@ -353,17 +355,17 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
             colon={false}
           >
             <Checkbox style={{ color: '#fff' }}>
-              设为默认地址
+              {t('address.isDefault')}
             </Checkbox>
           </Form.Item>
           
           <Form.Item
             name="province"
-            label={<span style={{ color: '#fff' }}>省/直辖市</span>}
-            rules={[{ required: true, message: '请选择省/直辖市' }]}
+            label={<span style={{ color: '#fff' }}>{t('address.province')}</span>}
+            rules={[{ required: true, message: t('address.pleaseSelectProvince') }]}
           >
             <Select 
-              placeholder="请选择省/直辖市"
+              placeholder={t('address.pleaseSelectProvince')}
               className="dark-theme-form"
               dropdownClassName="dark-theme-form"
             >
@@ -386,41 +388,41 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
           
           <Form.Item
             name="city"
-            label={<span style={{ color: '#fff' }}>市</span>}
-            rules={[{ required: true, message: '请输入市' }]}
+            label={<span style={{ color: '#fff' }}>{t('address.city')}</span>}
+            rules={[{ required: true, message: t('address.pleaseInputCity') }]}
           >
             <Input 
-              placeholder="请输入市"
+              placeholder={t('address.pleaseInputCity')}
             />
           </Form.Item>
           
           <Form.Item
             name="district"
-            label={<span style={{ color: '#fff' }}>邮区编号</span>}
-            rules={[{ required: true, message: '请输入邮区编号' }]}
+            label={<span style={{ color: '#fff' }}>{t('address.district')}</span>}
+            rules={[{ required: true, message: t('address.pleaseInputDistrict') }]}
           >
             <Input 
-              placeholder="请输入邮区编号"
+              placeholder={t('address.pleaseInputDistrict')}
             />
           </Form.Item>
           
           <Form.Item
             name="detail"
-            label={<span style={{ color: '#fff' }}>详细地址</span>}
-            rules={[{ required: true, message: '请输入详细地址' }]}
+            label={<span style={{ color: '#fff' }}>{t('address.detail')}</span>}
+            rules={[{ required: true, message: t('address.pleaseInputDetail') }]}
           >
             <Input.TextArea 
               rows={2} 
-              placeholder="请输入详细地址"
+              placeholder={t('address.pleaseInputDetail')}
             />
           </Form.Item>
           
           <Form.Item
             name="postalCode"
-            label={<span style={{ color: '#fff' }}>邮编</span>}
+            label={<span style={{ color: '#fff' }}>{t('address.postalCode')}</span>}
           >
             <Input 
-              placeholder="请输入邮编（可选）"
+              placeholder={t('address.postalCodeOptional')}
             />
           </Form.Item>
         </Form>

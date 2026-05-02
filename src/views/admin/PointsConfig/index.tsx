@@ -5,8 +5,9 @@ import { SaveOutlined, ReloadOutlined, HistoryOutlined, SettingOutlined, PlusOut
 import { getPointsConfig, updatePointsConfig, getDefaultPointsConfig } from '../../../services/firebase/pointsConfig';
 import { getAllPointsRecords } from '../../../services/firebase/pointsRecords';
 import { getMembershipFeeConfig, updateMembershipFeeConfig, getDefaultMembershipFeeConfig, getAllMembershipFeeRecords, createMembershipFeeRecord } from '../../../services/firebase/membershipFee';
-import { getUsers } from '../../../services/firebase/firestore';
-import type { User } from '../../../types';
+import { getAllTransactions, getAllOrders, createTransaction, COLLECTIONS, getAllUsers, updateDocument, deleteDocument, getCigars, getAllInboundOrders, getAllOutboundOrders, getAllInventoryMovements, getOutboundOrdersByReferenceNo, getUsers } from '../../../services/firebase/firestore';
+import { getAllStores } from '../../../services/firebase/stores';
+import type { User, Store } from '../../../types';
 import type { MembershipFeeRecord } from '../../../types';
 import { processPendingMembershipFees } from '../../../services/firebase/scheduledJobs';
 import { useAuthStore } from '../../../store/modules/auth';
@@ -33,7 +34,8 @@ const PointsConfigPage: React.FC = () => {
   const [creatingFeeRecord, setCreatingFeeRecord] = useState(false);
   const [feeRecordForm] = Form.useForm();
   const [users, setUsers] = useState<User[]>([]);
-  const { t } = useTranslation();
+  const [stores, setStores] = useState<Store[]>([]);
+  const { t, i18n } = useTranslation();
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false;
   const [eventsAdminFeatureVisible, setEventsAdminFeatureVisible] = useState<boolean>(true);
 
@@ -65,8 +67,19 @@ const PointsConfigPage: React.FC = () => {
     if (activeTab === 'membershipFees') {
       loadMembershipFeeRecords();
       loadUsers();
+      loadStores();
     }
   }, [activeTab, membershipFeeStatusFilter]);
+
+  // 加载门店列表
+  const loadStores = async () => {
+    try {
+      const storeList = await getAllStores();
+      setStores(storeList);
+    } catch (error) {
+      console.error('加载门店列表失败:', error);
+    }
+  };
 
   // 加载用户列表
   const loadUsers = async () => {
@@ -175,9 +188,9 @@ const PointsConfigPage: React.FC = () => {
         }, user.id);
         
         if (pointsResult.success && membershipFeeResult.success) {
-          message.success('配置已保存');
+          message.success(t('pointsConfig.configSaved'));
         } else {
-          message.error(pointsResult.error || membershipFeeResult.error || '保存失败');
+          message.error(pointsResult.error || membershipFeeResult.error || t('pointsConfig.saveFailed'));
         }
       } else {
         if (pointsResult.success) {
@@ -196,7 +209,7 @@ const PointsConfigPage: React.FC = () => {
   // 手动触发自动扣除会员费
   const handleProcessMembershipFees = async () => {
     if (!user?.id) {
-      message.error('请先登录');
+      message.error(t('pointsConfig.pleaseLogin'));
       return;
     }
 
@@ -205,17 +218,17 @@ const PointsConfigPage: React.FC = () => {
       const result = await processPendingMembershipFees();
       if (result.success) {
         message.success(
-          `处理完成：成功 ${result.paid} 条，失败 ${result.failed} 条，共处理 ${result.processed} 条`
+          t('pointsConfig.processComplete', { paid: result.paid, failed: result.failed, processed: result.processed })
         );
         if (result.errors.length > 0) {
           console.error('处理过程中的错误:', result.errors);
         }
       } else {
-        message.error('处理失败');
+        message.error(t('pointsConfig.processFailed'));
       }
     } catch (error: any) {
       console.error('处理会员费失败:', error);
-      message.error(error.message || '处理失败');
+      message.error(error.message || t('pointsConfig.processFailed'));
     } finally {
       setProcessingFees(false);
     }
@@ -265,16 +278,16 @@ const PointsConfigPage: React.FC = () => {
       setMembershipFeeRecords(records);
     } catch (error) {
       console.error('[PointsConfigPage] 加载年费记录失败:', error);
-      message.error('加载年费记录失败');
+      message.error(t('pointsConfig.membershipFee.loadFailed'));
     } finally {
       setLoadingMembershipFeeRecords(false);
     }
   };
 
   // 创建年费记录
-  const handleCreateFeeRecord = async (values: { userId: string; dueDate: dayjs.Dayjs }) => {
+  const handleCreateFeeRecord = async (values: { userId: string; dueDate: dayjs.Dayjs; storeId: string }) => {
     if (!user?.id) {
-      message.error('请先登录');
+      message.error(t('pointsConfig.pleaseLogin'));
       return;
     }
 
@@ -283,19 +296,22 @@ const PointsConfigPage: React.FC = () => {
       const result = await createMembershipFeeRecord(
         values.userId,
         dueDate,
-        'initial'
+        'initial',
+        undefined,
+        undefined,
+        values.storeId
       );
 
       if (result.success) {
-        message.success('年费记录创建成功');
+        message.success(t('pointsConfig.membershipFee.createSuccess'));
         setCreatingFeeRecord(false);
         feeRecordForm.resetFields();
         loadMembershipFeeRecords();
       } else {
-        message.error(result.error || '创建年费记录失败');
+        message.error(result.error || t('pointsConfig.membershipFee.createFailed'));
       }
     } catch (error: any) {
-      message.error(error.message || '创建年费记录失败');
+      message.error(error.message || t('pointsConfig.membershipFee.createFailed'));
     }
   };
 
@@ -314,7 +330,10 @@ const PointsConfigPage: React.FC = () => {
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
-      render: (date: Date) => new Date(date).toLocaleString('zh-CN')
+      render: (date: Date) => {
+        const d = date instanceof Date ? date : (date as any)?.toDate ? (date as any).toDate() : new Date(date);
+        return dayjs(d).isValid() ? dayjs(d).format(i18n.language === 'en-US' ? 'D MMM, YYYY HH:mm' : 'YYYY-MM-DD HH:mm') : '-';
+      }
     },
     {
       title: t('pointsConfig.records.user'),
@@ -351,12 +370,9 @@ const PointsConfigPage: React.FC = () => {
       key: 'source',
       width: 120,
       render: (source: string) => {
-        const sourceMap: Record<string, string> = {
-          reload: '充值',
-          membership_fee: '年费',
-          visit: '驻店时长费用'
-        };
-        return sourceMap[source] || source;
+        const sourceKey = `pointsConfig.records.sources.${source}`;
+        const translated = t(sourceKey);
+        return translated !== sourceKey ? translated : source;
       }
     },
     {
@@ -426,8 +442,8 @@ const PointsConfigPage: React.FC = () => {
               switch (key) {
                 case 'config': return <><SettingOutlined style={{ marginRight: 4 }} />{t('pointsConfig.tabs.config')}</>
                 case 'records': return <><HistoryOutlined style={{ marginRight: 4 }} />{t('pointsConfig.tabs.records')}</>
-                case 'reload': return <><HistoryOutlined style={{ marginRight: 4 }} />充值验证</>
-                case 'membershipFees': return <><HistoryOutlined style={{ marginRight: 4 }} />年费记录</>
+                case 'reload': return <><HistoryOutlined style={{ marginRight: 4 }} />{t('pointsConfig.tabs.reload')}</>
+                case 'membershipFees': return <><HistoryOutlined style={{ marginRight: 4 }} />{t('pointsConfig.tabs.membershipFees')}</>
                 default: return ''
               }
             }
@@ -558,12 +574,12 @@ const PointsConfigPage: React.FC = () => {
                 WebkitBackgroundClip: 'text',
                 color: 'transparent'
               }}>
-                Day Pass 配置
+                {t('pointsConfig.dayPass.title')}
               </h3>
               <Row gutter={16}>
                 <Col xs={24} sm={6}>
                   <Form.Item
-                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>购买价格</span>}
+                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.dayPass.cost')}</span>}
                     name={['dayPass', 'cost']}
                     rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
@@ -571,13 +587,13 @@ const PointsConfigPage: React.FC = () => {
                       min={0}
                       max={10000}
                       style={{ width: '100%' }}
-                      addonAfter="积分"
+                      addonAfter={t('pointsConfig.units.points')}
                     />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={6}>
                   <Form.Item
-                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>免费时长</span>}
+                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.dayPass.freeHours')}</span>}
                     name={['dayPass', 'freeHours']}
                     rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
@@ -585,13 +601,13 @@ const PointsConfigPage: React.FC = () => {
                       min={0}
                       max={24}
                       style={{ width: '100%' }}
-                      addonAfter="小时"
+                      addonAfter={t('pointsConfig.dayPass.hours')}
                     />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={6}>
                   <Form.Item
-                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>超时费用</span>}
+                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.dayPass.hourlyRateAfter')}</span>}
                     name={['dayPass', 'hourlyRateAfter']}
                     rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
@@ -599,13 +615,13 @@ const PointsConfigPage: React.FC = () => {
                       min={0}
                       max={1000}
                       style={{ width: '100%' }}
-                      addonAfter="积分/小时"
+                      addonAfter={t('pointsConfig.dayPass.pointsPerHour')}
                     />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={6}>
                   <Form.Item
-                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>可兑换雪茄数</span>}
+                    label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.dayPass.cigarAllowance')}</span>}
                     name={['dayPass', 'cigarAllowance']}
                     rules={[{ required: true, message: t('pointsConfig.validation.required') }]}
                   >
@@ -613,7 +629,7 @@ const PointsConfigPage: React.FC = () => {
                       min={0}
                       max={10}
                       style={{ width: '100%' }}
-                      addonAfter="支"
+                      addonAfter={t('pointsConfig.dayPass.sticks')}
                     />
                   </Form.Item>
                 </Col>
@@ -636,7 +652,7 @@ const PointsConfigPage: React.FC = () => {
                 WebkitBackgroundClip: 'text',
                 color: 'transparent'
               }}>
-                年费配置（按日期范围）
+                {t('pointsConfig.annualFee.title')}
               </h3>
               
               <Form.List name={['membershipFee', 'annualFees']}>
@@ -649,8 +665,8 @@ const PointsConfigPage: React.FC = () => {
                             <Form.Item
                               {...restField}
                               name={[name, 'startDate']}
-                              label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>生效开始日期</span>}
-                              rules={[{ required: true, message: '请选择开始日期' }]}
+                              label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.annualFee.startDate')}</span>}
+                              rules={[{ required: true, message: t('pointsConfig.annualFee.startDateRequired') }]}
                             >
                               <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
                             </Form.Item>
@@ -659,7 +675,7 @@ const PointsConfigPage: React.FC = () => {
                             <Form.Item
                               {...restField}
                               name={[name, 'endDate']}
-                              label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>生效结束日期（可选）</span>}
+                              label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.annualFee.endDate')}</span>}
                             >
                               <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
                             </Form.Item>
@@ -668,14 +684,14 @@ const PointsConfigPage: React.FC = () => {
                             <Form.Item
                               {...restField}
                               name={[name, 'amount']}
-                              label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>年费金额（积分）</span>}
-                              rules={[{ required: true, message: '请输入年费金额' }]}
+                              label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.annualFee.amount')}</span>}
+                              rules={[{ required: true, message: t('pointsConfig.annualFee.amountRequired') }]}
                             >
                               <InputNumber
                                 min={0}
                                 max={100000}
                                 style={{ width: '100%' }}
-                                addonAfter="积分"
+                                addonAfter={t('pointsConfig.units.points')}
                               />
                             </Form.Item>
                           </Col>
@@ -683,14 +699,14 @@ const PointsConfigPage: React.FC = () => {
                             <Form.Item
                               {...restField}
                               name={[name, 'rate']}
-                              label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>每小时扣除积分</span>}
-                              rules={[{ required: true, message: '请输入每小时扣除积分' }]}
+                              label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.annualFee.rate')}</span>}
+                              rules={[{ required: true, message: t('pointsConfig.annualFee.rateRequired') }]}
                             >
                               <InputNumber
                                 min={0}
                                 max={1000}
                                 style={{ width: '100%' }}
-                                addonAfter="积分/小时"
+                                addonAfter={t('pointsConfig.dayPass.pointsPerHour')}
                               />
                             </Form.Item>
                           </Col>
@@ -708,7 +724,7 @@ const PointsConfigPage: React.FC = () => {
                                 color: '#ff4d4f'
                               }}
                             >
-                              删除此配置
+                              {t('pointsConfig.annualFee.deleteConfig')}
                             </Button>
                           </Form.Item>
                         )}
@@ -727,7 +743,7 @@ const PointsConfigPage: React.FC = () => {
                           boxShadow: '0 4px 15px rgba(244,175,37,0.35)'
                         }}
                       >
-                        添加年费配置
+                        {t('pointsConfig.annualFee.addConfig')}
                       </Button>
                     </Form.Item>
                   </>
@@ -742,14 +758,14 @@ const PointsConfigPage: React.FC = () => {
                           icon={<PlayCircleOutlined />}
                           onClick={handleProcessMembershipFees}
                           loading={processingFees}
-                          title="手动触发自动扣除到期的会员年费（系统已自动执行，此按钮用于手动触发）"
+                          title={t('pointsConfig.processDeductionHint')}
                   style={{
                     background: 'rgba(255, 255, 255, 0.1)',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
                     color: '#FFFFFF'
                   }}
                         >
-                          手动执行扣除年费
+                          {t('pointsConfig.processDeduction')}
                         </Button>
                         <Button
                           icon={<ReloadOutlined />}
@@ -836,12 +852,9 @@ const PointsConfigPage: React.FC = () => {
                 ) : (
                   pointsRecords.map((record) => {
                     const getSourceText = (source: string) => {
-                      const sourceMap: Record<string, string> = {
-                        reload: '充值',
-                        membership_fee: '年费',
-                        visit: '驻店时长费用'
-                      };
-                      return sourceMap[source] || source;
+                      const sourceKey = `pointsConfig.records.sources.${source}`;
+                      const translated = t(sourceKey);
+                      return translated !== sourceKey ? translated : source;
                     };
 
                     const recordDate = record.createdAt instanceof Date
@@ -864,13 +877,7 @@ const PointsConfigPage: React.FC = () => {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                           <div style={{ flex: 1 }}>
                             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>
-                              {recordDate.toLocaleString('zh-CN', {
-                                year: 'numeric',
-                                month: '2-digit',
-                                day: '2-digit',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
+                              {dayjs(recordDate).isValid() ? dayjs(recordDate).format(i18n.language === 'en-US' ? 'D MMM, YYYY HH:mm' : 'YYYY-MM-DD HH:mm') : '-'}
                             </div>
                             <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.85)', marginBottom: 4 }}>
                               {record.description || '-'}
@@ -890,7 +897,7 @@ const PointsConfigPage: React.FC = () => {
                             </div>
                             {record.balance && (
                               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
-                                余额: {record.balance}
+                              {t('pointsConfig.records.balance')}: {record.balance}
                               </div>
                             )}
                           </div>
@@ -918,11 +925,11 @@ const PointsConfigPage: React.FC = () => {
                 onChange={(value: 'all' | 'pending' | 'paid' | 'failed' | 'cancelled') => setMembershipFeeStatusFilter(value)}
                 style={{ width: 150 }}
                 options={[
-                  { label: '全部', value: 'all' },
-                  { label: '待支付', value: 'pending' },
-                  { label: '已支付', value: 'paid' },
-                  { label: '失败', value: 'failed' },
-                  { label: '已取消', value: 'cancelled' }
+                  { label: t('pointsConfig.membershipFee.all'), value: 'all' },
+                  { label: t('pointsConfig.membershipFee.pending'), value: 'pending' },
+                  { label: t('pointsConfig.membershipFee.paid'), value: 'paid' },
+                  { label: t('pointsConfig.membershipFee.failed'), value: 'failed' },
+                  { label: t('pointsConfig.membershipFee.cancelled'), value: 'cancelled' }
                 ]}
                 className="points-config-form"
               />
@@ -938,7 +945,7 @@ const PointsConfigPage: React.FC = () => {
                     boxShadow: '0 4px 15px rgba(244,175,37,0.35)'
                   }}
                 >
-                创建年费记录
+                {t('pointsConfig.membershipFee.createRecord')}
                 </Button>
                 <Button 
                   onClick={loadMembershipFeeRecords} 
@@ -949,7 +956,7 @@ const PointsConfigPage: React.FC = () => {
                     color: '#FFFFFF'
                   }}
                 >
-                刷新
+                {t('common.refresh')}
                 </Button>
               </Space>
             </div>
@@ -958,70 +965,80 @@ const PointsConfigPage: React.FC = () => {
                     <Table
                       columns={[
                         {
-                          title: '用户',
+                          title: t('pointsConfig.membershipFee.user'),
                           dataIndex: 'userName',
                           key: 'userName',
                           width: 150,
                           render: (name: string, record: MembershipFeeRecord) => name || record.userId
                         },
                         {
-                          title: '类型',
+                          title: t('pointsConfig.membershipFee.store'),
+                          dataIndex: 'storeId',
+                          key: 'storeId',
+                          width: 150,
+                          render: (storeId: string) => {
+                            const store = stores.find(s => s.id === storeId);
+                            return store?.name || '-';
+                          }
+                        },
+                        {
+                          title: t('pointsConfig.membershipFee.type'),
                           dataIndex: 'renewalType',
                           key: 'renewalType',
                           width: 100,
                           render: (type: string) => (
                             <Tag color={type === 'initial' ? 'blue' : 'green'}>
-                              {type === 'initial' ? '首次开通' : '续费'}
+                              {type === 'initial' ? t('pointsConfig.membershipFee.initial') : t('pointsConfig.membershipFee.renewal')}
                             </Tag>
                           )
                         },
                         {
-                          title: '金额',
+                          title: t('pointsConfig.membershipFee.amount'),
                           dataIndex: 'amount',
                           key: 'amount',
                           width: 120,
                           render: (amount: number) => (
                             <Text strong style={{ color: '#ff4d4f' }}>
-                              -{amount} 积分
+                              -{amount} {t('pointsConfig.units.points')}
                             </Text>
                           )
                         },
                         {
-                          title: '应扣费日期',
+                          title: t('pointsConfig.membershipFee.dueDate'),
                           dataIndex: 'dueDate',
                           key: 'dueDate',
                           width: 180,
-                          render: (date: Date) => dayjs(date).format('YYYY-MM-DD HH:mm:ss')
+                          render: (date: Date) => dayjs(date).format(i18n.language === 'en-US' ? 'D MMM, YYYY HH:mm' : 'YYYY-MM-DD HH:mm')
                         },
                         {
-                          title: '实际扣费时间',
+                          title: t('pointsConfig.membershipFee.deductedAt'),
                           dataIndex: 'deductedAt',
                           key: 'deductedAt',
                           width: 180,
-                          render: (date: Date | undefined) => date ? dayjs(date).format('YYYY-MM-DD HH:mm:ss') : '-'
+                          render: (date: Date | undefined) => date ? dayjs(date).format(i18n.language === 'en-US' ? 'D MMM, YYYY HH:mm' : 'YYYY-MM-DD HH:mm') : '-'
                         },
                         {
-                          title: '状态',
+                          title: t('pointsConfig.membershipFee.status'),
                           dataIndex: 'status',
                           key: 'status',
                           width: 100,
                           render: (status: string) => {
                             const statusMap: Record<string, { color: string; text: string }> = {
-                              pending: { color: 'orange', text: '待支付' },
-                              paid: { color: 'green', text: '已支付' },
-                              failed: { color: 'red', text: '失败' },
-                              cancelled: { color: 'default', text: '已取消' }
+                              pending: { color: 'orange', text: t('pointsConfig.membershipFee.pending') },
+                              paid: { color: 'green', text: t('pointsConfig.membershipFee.paid') },
+                              failed: { color: 'red', text: t('pointsConfig.membershipFee.failed') },
+                              cancelled: { color: 'default', text: t('pointsConfig.membershipFee.cancelled') }
                             };
                             const statusInfo = statusMap[status] || { color: 'default', text: status };
                             return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
                           }
                         },
                         {
-                          title: '创建时间',
+                          title: t('pointsConfig.membershipFee.createdAt'),
                           dataIndex: 'createdAt',
                           key: 'createdAt',
                           width: 180,
-                          render: (date: Date) => dayjs(date).format('YYYY-MM-DD HH:mm:ss')
+                          render: (date: Date) => dayjs(date).format(i18n.language === 'en-US' ? 'D MMM, YYYY HH:mm' : 'YYYY-MM-DD HH:mm')
                         }
                       ]}
                       dataSource={membershipFeeRecords}
@@ -1030,10 +1047,10 @@ const PointsConfigPage: React.FC = () => {
                       pagination={{
                         pageSize: 20,
                         showSizeChanger: true,
-                        showTotal: (total) => `共 ${total} 条记录`
+                        showTotal: (total) => t('pointsConfig.membershipFee.totalRecords', { total })
                       }}
                       locale={{
-                        emptyText: '暂无年费记录'
+                        emptyText: t('pointsConfig.membershipFee.noRecords')
                       }}
                   style={{
                     background: 'transparent'
@@ -1048,15 +1065,15 @@ const PointsConfigPage: React.FC = () => {
                   </div>
                 ) : membershipFeeRecords.length === 0 ? (
                   <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>
-                    暂无年费记录
+                    {t('pointsConfig.membershipFee.noRecords')}
                   </div>
                 ) : (
                   membershipFeeRecords.map((record) => {
                     const statusMap: Record<string, { color: string; text: string }> = {
-                      pending: { color: '#fb923c', text: '待支付' },
-                      paid: { color: '#34d399', text: '已支付' },
-                      failed: { color: '#f87171', text: '失败' },
-                      cancelled: { color: '#9ca3af', text: '已取消' }
+                      pending: { color: '#fb923c', text: t('pointsConfig.membershipFee.pending') },
+                      paid: { color: '#34d399', text: t('pointsConfig.membershipFee.paid') },
+                      failed: { color: '#f87171', text: t('pointsConfig.membershipFee.failed') },
+                      cancelled: { color: '#9ca3af', text: t('pointsConfig.membershipFee.cancelled') }
                     };
                     const statusInfo = statusMap[record.status] || { color: '#9ca3af', text: record.status };
 
@@ -1097,15 +1114,15 @@ const PointsConfigPage: React.FC = () => {
                               {record.userName || record.userId.substring(0, 20)}
                             </div>
                             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>
-                              应扣费: {dayjs(dueDate).format('YYYY-MM-DD HH:mm')}
+                              {t('pointsConfig.membershipFee.due')}: {dayjs(dueDate).format(i18n.language === 'en-US' ? 'D MMM, YYYY HH:mm' : 'YYYY-MM-DD HH:mm')}
                             </div>
                             {deductedDate && (
                               <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>
-                                实际扣费: {dayjs(deductedDate).format('YYYY-MM-DD HH:mm')}
+                                {t('pointsConfig.membershipFee.deducted')}: {dayjs(deductedDate).format(i18n.language === 'en-US' ? 'D MMM, YYYY HH:mm' : 'YYYY-MM-DD HH:mm')}
                               </div>
                             )}
                             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
-                              创建: {dayjs(createdDate).format('YYYY-MM-DD HH:mm')}
+                              {t('pointsConfig.membershipFee.created')}: {dayjs(createdDate).format(i18n.language === 'en-US' ? 'D MMM, YYYY HH:mm' : 'YYYY-MM-DD HH:mm')}
                             </div>
                           </div>
                           <div style={{ textAlign: 'right', marginLeft: 12 }}>
@@ -1115,7 +1132,7 @@ const PointsConfigPage: React.FC = () => {
                               color: '#ff4d4f',
                               marginBottom: 4
                             }}>
-                              -{record.amount} 积分
+                              -{record.amount} {t('pointsConfig.units.points')}
                             </div>
                             <span style={{
                               fontSize: 11,
@@ -1131,7 +1148,7 @@ const PointsConfigPage: React.FC = () => {
                               {statusInfo.text}
                             </span>
                             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>
-                              {record.renewalType === 'initial' ? '首次开通' : '续费'}
+                              {record.renewalType === 'initial' ? t('pointsConfig.membershipFee.initial') : t('pointsConfig.membershipFee.renewal')}
                             </div>
                           </div>
                         </div>
@@ -1147,15 +1164,15 @@ const PointsConfigPage: React.FC = () => {
 
       {/* 创建年费记录Modal */}
       <Modal
-        title={<span style={{ color: '#FFFFFF' }}>创建年费记录</span>}
+        title={<span style={{ color: '#FFFFFF' }}>{t('pointsConfig.membershipFee.createRecord')}</span>}
         open={creatingFeeRecord}
         onCancel={() => {
           setCreatingFeeRecord(false);
           feeRecordForm.resetFields();
         }}
         onOk={() => feeRecordForm.submit()}
-        okText="创建"
-        cancelText="取消"
+        okText={t('pointsConfig.membershipFee.create')}
+        cancelText={t('pointsConfig.membershipFee.cancel')}
         okButtonProps={{
           style: {
             background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
@@ -1198,13 +1215,13 @@ const PointsConfigPage: React.FC = () => {
           }}
         >
           <Form.Item
-            label="选择用户"
+            label={t('pointsConfig.membershipFee.selectUser')}
             name="userId"
-            rules={[{ required: true, message: '请选择用户' }]}
+            rules={[{ required: true, message: t('pointsConfig.membershipFee.selectUserRequired') }]}
           >
             <Select
               showSearch
-              placeholder="搜索用户（姓名、邮箱、手机号）"
+              placeholder={t('pointsConfig.membershipFee.searchUserPlaceholder')}
               filterOption={(input, option) => {
                 const kw = (input || '').toLowerCase();
                 const uid = option?.value as string;
@@ -1229,9 +1246,9 @@ const PointsConfigPage: React.FC = () => {
           </Form.Item>
 
           <Form.Item
-            label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>应扣费日期</span>}
+            label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.membershipFee.dueDate')}</span>}
             name="dueDate"
-            rules={[{ required: true, message: '请选择应扣费日期' }]}
+            rules={[{ required: true, message: t('pointsConfig.membershipFee.dueDateRequired') }]}
           >
             <DatePicker
               style={{ width: '100%' }}
@@ -1240,9 +1257,23 @@ const PointsConfigPage: React.FC = () => {
             />
           </Form.Item>
 
+          <Form.Item
+            label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.membershipFee.store')}</span>}
+            name="storeId"
+            rules={[{ required: true, message: t('pointsConfig.membershipFee.selectStoreRequired') }]}
+          >
+            <Select
+              placeholder={t('pointsConfig.membershipFee.selectStorePlaceholder')}
+              options={stores
+                .filter(s => s.status === 'active')
+                .map(s => ({ value: s.id, label: s.name }))
+              }
+            />
+          </Form.Item>
+
           <Form.Item>
             <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-              年费金额将根据配置自动计算。创建后，系统会在应扣费日期自动尝试扣除。
+              {t('pointsConfig.membershipFee.autoDeductHint')}
             </Text>
           </Form.Item>
         </Form>

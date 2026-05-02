@@ -19,7 +19,7 @@ import { useTranslation } from 'react-i18next'
 
 const Events: React.FC = () => {
   const { user } = useAuthStore()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const isMobile = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 991px)').matches : false
   const [events, setEvents] = useState<Event[]>([])
   const [loadingId, setLoadingId] = useState<string | null>(null)
@@ -235,11 +235,24 @@ const Events: React.FC = () => {
                   {(() => {
                     const d = (event as any)?.schedule?.startDate as any
                     const dateVal = (d as any)?.toDate ? (d as any).toDate() : d
-                    return dateVal ? new Date(dateVal).toLocaleDateString('zh-CN', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    }) : '-'
+                    if (!dateVal) return '-'
+                    
+                    const dateObj = new Date(dateVal)
+                    const currentLang = i18n.language || 'zh-CN'
+                    
+                    if (currentLang === 'zh-CN') {
+                      return dateObj.toLocaleDateString('zh-CN', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })
+                    }
+                    
+                    // 英文格式: 9 Apr, 2025
+                    const day = dateObj.getDate()
+                    const month = dateObj.toLocaleString('en-US', { month: 'short' })
+                    const year = dateObj.getFullYear()
+                    return `${day} ${month}, ${year}`
                   })()}
                 </p>
 
@@ -301,7 +314,7 @@ const Events: React.FC = () => {
                     }
                   }}
                 >
-                  {loadingId === event.id ? '处理中...' : (() => {
+                  {loadingId === event.id ? t('events.processing') : (() => {
                     if (event.status === 'completed') return t('events.completed')
                     if (!user) return t('auth.pleaseLogin')
                     const registeredIds = event.participants?.registered || []

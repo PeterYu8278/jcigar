@@ -755,6 +755,7 @@ export interface MembershipFeeRecord {
   dueDate: Date;              // 应扣费日期（基于开通/续费日期+1年）
   deductedAt?: Date;          // 实际扣费时间
   pointsRecordId?: string;    // 关联的积分记录ID
+  storeId?: string;           // 关联的门店ID
   
   // 状态
   status: 'pending' | 'paid' | 'failed' | 'cancelled';
@@ -788,6 +789,7 @@ export interface ReloadRecord {
   
   // 积分记录关联
   pointsRecordId?: string;    // 验证后创建的积分记录ID
+  storeId?: string;           // 关联的门店ID
   
   createdAt: Date;
   updatedAt: Date;

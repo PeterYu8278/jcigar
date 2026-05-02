@@ -3,6 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Table,
   Button,
@@ -92,6 +93,7 @@ function getMostFrequentValue(stats: Record<string, number>): { value: string; c
 }
 
 export const CigarDatabase: React.FC = () => {
+  const { t } = useTranslation();
   const [cigars, setCigars] = useState<CigarDatabaseRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -168,7 +170,7 @@ export const CigarDatabase: React.FC = () => {
       // 加载统计信息
       await loadStats();
     } catch (error) {
-      message.error('加载数据失败');
+      message.error(t('cigarDatabase.details.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -250,7 +252,7 @@ export const CigarDatabase: React.FC = () => {
 
       setCigars(filtered);
     } catch (error) {
-      message.error('搜索失败');
+      message.error(t('cigarDatabase.import.parseFailed', { error: '' })); // Generic error
     } finally {
       setLoading(false);
     }
@@ -260,10 +262,10 @@ export const CigarDatabase: React.FC = () => {
   const handleDelete = async (id: string) => {
     try {
       await deleteDoc(doc(db, GLOBAL_COLLECTIONS.CIGAR_DATABASE, id));
-      message.success('删除成功');
+      message.success(t('cigarDatabase.actions.deleteSuccess'));
       loadCigars();
     } catch (error) {
-      message.error('删除失败');
+      message.error(t('cigarDatabase.actions.deleteFailed'));
     }
   };
 
@@ -272,7 +274,7 @@ export const CigarDatabase: React.FC = () => {
     console.log('[CigarDatabase] 点击详情按钮，数据:', cigar);
     
     if (!cigar || !cigar.productName) {
-      message.error('数据异常');
+      message.error(t('cigarDatabase.details.loadFailed'));
       return;
     }
     
@@ -318,7 +320,7 @@ export const CigarDatabase: React.FC = () => {
         ? (cigar.ratingSum / cigar.ratingCount).toFixed(1) 
         : null;
       
-      const latestDescription = cigar.description || '暂无描述';
+      const latestDescription = cigar.description || t('cigarDatabase.details.noDescription');
       
       // 格式化最后识别时间
       let lastRecognizedText = '';
@@ -327,7 +329,7 @@ export const CigarDatabase: React.FC = () => {
           const date = cigar.lastRecognizedAt.toDate ? cigar.lastRecognizedAt.toDate() : new Date(cigar.lastRecognizedAt);
           lastRecognizedText = dayjs(date).format('YYYY-MM-DD HH:mm');
         } catch (e) {
-          lastRecognizedText = '时间格式错误';
+          lastRecognizedText = t('cigarDatabase.details.timeFormatError');
         }
       }
       
@@ -349,7 +351,7 @@ export const CigarDatabase: React.FC = () => {
                 border: 'none',
                 fontWeight: 600
               }}>
-                总识别次数: {cigar.totalRecognitions} 次
+                {t('cigarDatabase.details.totalRecognitions', { count: cigar.totalRecognitions })}
               </Tag>
               {lastRecognizedText && (
                 <Tag color="cyan" style={{ 
@@ -359,7 +361,7 @@ export const CigarDatabase: React.FC = () => {
                   color: '#0ff',
                   border: '1px solid rgba(0, 255, 255, 0.3)'
                 }}>
-                  最后识别: {lastRecognizedText}
+                  {t('cigarDatabase.details.lastRecognized', { time: lastRecognizedText })}
                 </Tag>
               )}
               {/* 🆕 贡献者数量 */}
@@ -371,7 +373,7 @@ export const CigarDatabase: React.FC = () => {
                   color: '#1890ff',
                   border: '1px solid rgba(24, 144, 255, 0.3)'
                 }}>
-                  贡献用户: {Object.keys(cigar.contributors).length} 人
+                  {t('cigarDatabase.details.contributorsCount', { count: Object.keys(cigar.contributors).length })}
                 </Tag>
               )}
             </div>
@@ -381,7 +383,7 @@ export const CigarDatabase: React.FC = () => {
               <>
                 <Divider style={{ margin: '8px 0', borderColor: '#333' }}>
                   <span style={{ color: '#ffd700', fontSize: '14px', fontWeight: 600 }}>
-                    贡献者列表
+                    {t('cigarDatabase.details.contributorsList')}
                   </span>
                 </Divider>
                 <div style={{
@@ -420,7 +422,7 @@ export const CigarDatabase: React.FC = () => {
               border: '1px solid rgba(255, 255, 255, 0.1)'
             }}>
               <p style={{ color: '#f8f8f8', marginBottom: '12px' }}>
-                <strong style={{ color: '#ffd700' }}>品牌:</strong> {brandResult?.value || '-'} 
+                <strong style={{ color: '#ffd700' }}>{t('cigarDatabase.details.brand')}:</strong> {brandResult?.value || '-'} 
                 {brandResult && (
                   <Tag style={{ 
                     marginLeft: 8,
@@ -428,12 +430,12 @@ export const CigarDatabase: React.FC = () => {
                     color: '#52c41a',
                     border: '1px solid rgba(82, 196, 26, 0.3)'
                   }}>
-                    一致性: {brandResult.percentage.toFixed(0)}%
+                    {t('cigarDatabase.details.consistency')}: {brandResult.percentage.toFixed(0)}%
                   </Tag>
                 )}
               </p>
               <p style={{ color: '#f8f8f8', marginBottom: '12px' }}>
-                <strong style={{ color: '#ffd700' }}>产地:</strong> {originResult?.value || '-'} 
+                <strong style={{ color: '#ffd700' }}>{t('cigarDatabase.details.origin')}:</strong> {originResult?.value || '-'} 
                 {originResult && (
                   <Tag style={{ 
                     marginLeft: 8,
@@ -441,12 +443,12 @@ export const CigarDatabase: React.FC = () => {
                     color: '#52c41a',
                     border: '1px solid rgba(82, 196, 26, 0.3)'
                   }}>
-                    一致性: {originResult.percentage.toFixed(0)}%
+                    {t('cigarDatabase.details.consistency')}: {originResult.percentage.toFixed(0)}%
                   </Tag>
                 )}
               </p>
               <p style={{ color: '#f8f8f8', marginBottom: '12px' }}>
-                <strong style={{ color: '#ffd700' }}>强度:</strong> {strengthResult?.value || '-'} 
+                <strong style={{ color: '#ffd700' }}>{t('cigarDatabase.details.strength')}:</strong> {strengthResult?.value || '-'} 
                 {strengthResult && (
                   <Tag style={{ 
                     marginLeft: 8,
@@ -454,13 +456,13 @@ export const CigarDatabase: React.FC = () => {
                     color: '#52c41a',
                     border: '1px solid rgba(82, 196, 26, 0.3)'
                   }}>
-                    一致性: {strengthResult.percentage.toFixed(0)}%
+                    {t('cigarDatabase.details.consistency')}: {strengthResult.percentage.toFixed(0)}%
                   </Tag>
                 )}
               </p>
               {avgRating && (
                 <p style={{ color: '#f8f8f8', marginBottom: 0 }}>
-                  <strong style={{ color: '#ffd700' }}>平均评分:</strong> {avgRating} 
+                  <strong style={{ color: '#ffd700' }}>{t('cigarDatabase.details.avgRating')}:</strong> {avgRating} 
                   <Tag style={{ 
                     marginLeft: 8,
                     background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
@@ -468,7 +470,7 @@ export const CigarDatabase: React.FC = () => {
                     border: 'none',
                     fontWeight: 600
                   }}>
-                    基于 {cigar.ratingCount} 次
+                    {t('cigarDatabase.details.basedOnCount', { count: cigar.ratingCount })}
                   </Tag>
                 </p>
               )}
@@ -479,7 +481,7 @@ export const CigarDatabase: React.FC = () => {
               <>
                 <Divider style={{ margin: '8px 0', borderColor: '#333' }}>
                   <span style={{ color: '#ffd700', fontSize: '14px', fontWeight: 600 }}>
-                    🍂 雪茄构造 (Top 5)
+                    {t('cigarDatabase.details.tobaccoConstruction')}
                   </span>
                 </Divider>
                 
@@ -491,7 +493,7 @@ export const CigarDatabase: React.FC = () => {
                 }}>
                   {topWrappers.length > 0 && (
                     <div style={{ marginBottom: 16 }}>
-                      <strong style={{ color: '#c0c0c0', fontSize: '13px' }}>🍂 茄衣 (Wrapper):</strong>
+                      <strong style={{ color: '#c0c0c0', fontSize: '13px' }}>{t('cigarDatabase.details.wrapper')}:</strong>
                       <div style={{ marginTop: 8 }}>
                         {topWrappers.map((item, index) => (
                           <Tag key={index} style={{ 
@@ -510,7 +512,7 @@ export const CigarDatabase: React.FC = () => {
                   
                   {topBinders.length > 0 && (
                     <div style={{ marginBottom: 16 }}>
-                      <strong style={{ color: '#c0c0c0', fontSize: '13px' }}>🌿 茄套 (Binder):</strong>
+                      <strong style={{ color: '#c0c0c0', fontSize: '13px' }}>{t('cigarDatabase.details.binder')}:</strong>
                       <div style={{ marginTop: 8 }}>
                         {topBinders.map((item, index) => (
                           <Tag key={index} style={{ 
@@ -529,7 +531,7 @@ export const CigarDatabase: React.FC = () => {
                   
                   {topFillers.length > 0 && (
                     <div>
-                      <strong style={{ color: '#c0c0c0', fontSize: '13px' }}>🌾 茄芯 (Filler):</strong>
+                      <strong style={{ color: '#c0c0c0', fontSize: '13px' }}>{t('cigarDatabase.details.filler')}:</strong>
                       <div style={{ marginTop: 8 }}>
                         {topFillers.map((item, index) => (
                           <Tag key={index} style={{ 
@@ -539,7 +541,7 @@ export const CigarDatabase: React.FC = () => {
                             color: '#1890ff',
                             border: '1px solid rgba(24, 144, 255, 0.3)'
                           }}>
-                            {index + 1}. {item.value} (x{item.count}, {item.percentage.toFixed(0)}%)
+                            {index + 1}. {t(`flavors.${item.value}`, { defaultValue: item.value })} (x{item.count}, {item.percentage.toFixed(0)}%)
                           </Tag>
                         ))}
                       </div>
@@ -554,7 +556,7 @@ export const CigarDatabase: React.FC = () => {
               <>
                 <Divider style={{ margin: '8px 0', borderColor: '#333' }}>
                   <span style={{ color: '#ffd700', fontSize: '14px', fontWeight: 600 }}>
-                    ✨ 风味特征 (Top 10)
+                    {t('cigarDatabase.details.flavorProfile')}
                   </span>
                 </Divider>
                 <div style={{
@@ -572,7 +574,7 @@ export const CigarDatabase: React.FC = () => {
                       border: '1px solid rgba(255, 215, 0, 0.3)',
                       fontWeight: 500
                     }}>
-                      {item.value} (x{item.count})
+                      {t(`flavors.${item.value}`, { defaultValue: item.value })} (x{item.count})
                     </Tag>
                   ))}
                 </div>
@@ -584,7 +586,7 @@ export const CigarDatabase: React.FC = () => {
               <>
                 <Divider style={{ margin: '8px 0', borderColor: '#333' }}>
                   <span style={{ color: '#ffd700', fontSize: '14px', fontWeight: 600 }}>
-                    👃 品吸笔记 (Top 5)
+                    {t('cigarDatabase.details.tastingNotes')}
                   </span>
                 </Divider>
                 
@@ -596,7 +598,7 @@ export const CigarDatabase: React.FC = () => {
                 }}>
                   {topFootNotes.length > 0 && (
                     <div style={{ marginBottom: 12 }}>
-                      <strong style={{ color: '#c0c0c0', fontSize: '13px' }}>脚部 (Foot) - 前1/3:</strong>
+                      <strong style={{ color: '#c0c0c0', fontSize: '13px' }}>{t('cigarDatabase.details.foot')}:</strong>
                       <div style={{ marginTop: 8 }}>
                         {topFootNotes.map((item, index) => (
                           <Tag key={index} style={{ 
@@ -606,7 +608,7 @@ export const CigarDatabase: React.FC = () => {
                             color: '#13c2c2',
                             border: '1px solid rgba(19, 194, 194, 0.3)'
                           }}>
-                            {item.value} (x{item.count})
+                            {t(`flavors.${item.value}`, { defaultValue: item.value })} (x{item.count})
                           </Tag>
                         ))}
                       </div>
@@ -615,7 +617,7 @@ export const CigarDatabase: React.FC = () => {
                   
                   {topBodyNotes.length > 0 && (
                     <div style={{ marginBottom: 12 }}>
-                      <strong style={{ color: '#c0c0c0', fontSize: '13px' }}>主体 (Body) - 中1/3:</strong>
+                      <strong style={{ color: '#c0c0c0', fontSize: '13px' }}>{t('cigarDatabase.details.body')}:</strong>
                       <div style={{ marginTop: 8 }}>
                         {topBodyNotes.map((item, index) => (
                           <Tag key={index} style={{ 
@@ -625,7 +627,7 @@ export const CigarDatabase: React.FC = () => {
                             color: '#1890ff',
                             border: '1px solid rgba(24, 144, 255, 0.3)'
                           }}>
-                            {item.value} (x{item.count})
+                            {t(`flavors.${item.value}`, { defaultValue: item.value })} (x{item.count})
                           </Tag>
                         ))}
                       </div>
@@ -634,7 +636,7 @@ export const CigarDatabase: React.FC = () => {
                   
                   {topHeadNotes.length > 0 && (
                     <div>
-                      <strong style={{ color: '#c0c0c0', fontSize: '13px' }}>头部 (Head) - 后1/3:</strong>
+                      <strong style={{ color: '#c0c0c0', fontSize: '13px' }}>{t('cigarDatabase.details.head')}:</strong>
                       <div style={{ marginTop: 8 }}>
                         {topHeadNotes.map((item, index) => (
                           <Tag key={index} style={{ 
@@ -644,7 +646,7 @@ export const CigarDatabase: React.FC = () => {
                             color: '#722ed1',
                             border: '1px solid rgba(114, 46, 209, 0.3)'
                           }}>
-                            {item.value} (x{item.count})
+                            {t(`flavors.${item.value}`, { defaultValue: item.value })} (x{item.count})
                           </Tag>
                         ))}
                       </div>
@@ -655,11 +657,11 @@ export const CigarDatabase: React.FC = () => {
             )}
 
             {/* 描述 */}
-            {latestDescription !== '暂无描述' && (
+            {latestDescription !== t('cigarDatabase.details.noDescription') && (
               <>
                 <Divider style={{ margin: '8px 0', borderColor: '#333' }}>
                   <span style={{ color: '#ffd700', fontSize: '14px', fontWeight: 600 }}>
-                    产品描述
+                    {t('cigarDatabase.details.description')}
                   </span>
                 </Divider>
                 <div style={{
@@ -684,14 +686,14 @@ export const CigarDatabase: React.FC = () => {
       );
     } catch (error) {
       console.error('[CigarDatabase] 渲染详情内容失败:', error);
-      return <div>数据加载失败</div>;
+      return <div>{t('cigarDatabase.details.loadFailed')}</div>;
     }
   };
 
   // 表格列定义
   const columns: ColumnsType<CigarDatabaseRecord> = [
     {
-      title: '产品名称',
+      title: t('cigarDatabase.columns.productName'),
       dataIndex: 'productName',
       key: 'productName',
       width: 250,
@@ -702,7 +704,7 @@ export const CigarDatabase: React.FC = () => {
             <strong style={{ color: '#ffd700', fontSize: '14px' }}>{text}</strong>
             {brandResult && (
               <div style={{ fontSize: '12px', color: '#c0c0c0', marginTop: '4px' }}>
-                品牌: <span style={{ color: '#ffd700' }}>{brandResult.value}</span>
+                {t('cigarDatabase.details.brand')}: <span style={{ color: '#ffd700' }}>{brandResult.value}</span>
               </div>
             )}
           </div>
@@ -710,7 +712,7 @@ export const CigarDatabase: React.FC = () => {
       }
     },
     {
-      title: '识别次数',
+      title: t('cigarDatabase.columns.recognitions'),
       dataIndex: 'totalRecognitions',
       key: 'totalRecognitions',
       width: 100,
@@ -739,13 +741,13 @@ export const CigarDatabase: React.FC = () => {
         }
         return (
           <Tag style={tagStyle}>
-            {count} 次
+            {t('cigarDatabase.stats.count', { count })}
           </Tag>
         );
       }
     },
     {
-      title: '强度',
+      title: t('cigarDatabase.columns.strength'),
       key: 'strength',
       width: 140,
       render: (_: any, record: CigarDatabaseRecord) => {
@@ -790,14 +792,14 @@ export const CigarDatabase: React.FC = () => {
               {strengthResult.value}
             </Tag>
             <div style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>
-              一致性: <span style={{ color: '#ffd700' }}>{strengthResult.percentage.toFixed(0)}%</span>
+              {t('cigarDatabase.details.consistency')}: <span style={{ color: '#ffd700' }}>{strengthResult.percentage.toFixed(0)}%</span>
             </div>
           </div>
         );
       }
     },
     {
-      title: '产地',
+      title: t('cigarDatabase.columns.origin'),
       key: 'origin',
       width: 140,
       render: (_: any, record: CigarDatabaseRecord) => {
@@ -814,7 +816,7 @@ export const CigarDatabase: React.FC = () => {
       }
     },
     {
-      title: '平均评分',
+      title: t('cigarDatabase.columns.avgRating'),
       key: 'rating',
       width: 120,
       render: (_: any, record: CigarDatabaseRecord) => {
@@ -831,14 +833,14 @@ export const CigarDatabase: React.FC = () => {
               {avgRating}
             </Tag>
             <div style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>
-              基于 <span style={{ color: '#ffd700' }}>{record.ratingCount}</span> 次
+              {t('cigarDatabase.details.basedOnCount', { count: record.ratingCount })}
             </div>
           </div>
         );
       }
     },
     {
-      title: '最后识别',
+      title: t('cigarDatabase.columns.lastRecognized'),
       dataIndex: 'lastRecognizedAt',
       key: 'lastRecognizedAt',
       width: 180,
@@ -853,7 +855,7 @@ export const CigarDatabase: React.FC = () => {
       }
     },
     {
-      title: '操作',
+      title: t('cigarDatabase.columns.actions'),
       key: 'action',
       width: 150,
       render: (_, record) => (
@@ -874,13 +876,14 @@ export const CigarDatabase: React.FC = () => {
               e.currentTarget.style.color = '#ffd700';
             }}
           >
-            详情
+            {t('cigarDatabase.actions.details')}
           </Button>
           <Popconfirm
-            title="确定要删除这条记录吗？此操作将删除所有AI识别统计数据。"
+            title={t('cigarDatabase.actions.confirmDeleteTitle')}
+            description={t('cigarDatabase.actions.confirmDeleteContent')}
             onConfirm={() => handleDelete(record.id)}
-            okText="确定"
-            cancelText="取消"
+            okText={t('cigarDatabase.actions.confirmDeleteOk')}
+            cancelText={t('cigarDatabase.actions.confirmDeleteCancel')}
             okButtonProps={{
               style: {
                 background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
@@ -1002,9 +1005,9 @@ export const CigarDatabase: React.FC = () => {
             borderRadius: '12px'
           }}>
             <Statistic 
-              title={<span style={{ color: '#c0c0c0' }}>雪茄总数</span>}
+              title={<span style={{ color: '#c0c0c0' }}>{t('cigarDatabase.stats.totalCigars')}</span>}
               value={stats.total} 
-              suffix="种"
+              suffix={t('cigarDatabase.stats.type')}
               valueStyle={{ color: '#ffd700' }}
             />
           </Card>
@@ -1016,9 +1019,9 @@ export const CigarDatabase: React.FC = () => {
             borderRadius: '12px'
           }}>
             <Statistic
-              title={<span style={{ color: '#c0c0c0' }}>总识别次数</span>}
+              title={<span style={{ color: '#c0c0c0' }}>{t('cigarDatabase.stats.totalRecognitions')}</span>}
               value={stats.totalRecognitions}
-              suffix="次"
+              suffix={t('cigarDatabase.stats.unit')}
               valueStyle={{ color: '#52c41a' }}
             />
           </Card>
@@ -1030,9 +1033,9 @@ export const CigarDatabase: React.FC = () => {
             borderRadius: '12px'
           }}>
             <Statistic
-              title={<span style={{ color: '#c0c0c0' }}>平均识别次数</span>}
+              title={<span style={{ color: '#c0c0c0' }}>{t('cigarDatabase.stats.avgRecognitions')}</span>}
               value={stats.avgRecognitionsPerCigar}
-              suffix="次/种"
+              suffix={t('cigarDatabase.stats.unitPerType')}
               valueStyle={{ color: '#1890ff' }}
             />
           </Card>
@@ -1065,7 +1068,7 @@ export const CigarDatabase: React.FC = () => {
               fontWeight: 400,
               marginLeft: '4px'
             }}>
-              (只读，通过智能扫描自动累积)
+              {t('cigarDatabase.readonlyNotice')}
             </span>
           </div>
           <Space>
@@ -1103,14 +1106,14 @@ export const CigarDatabase: React.FC = () => {
             ...pagination,
             showSizeChanger: true,
             showTotal: (total) => (
-              <span style={{ color: '#c0c0c0' }}>共 {total} 条记录</span>
+              <span style={{ color: '#c0c0c0' }}>{t('common.paginationTotal', { start: (pagination.current - 1) * pagination.pageSize + 1, end: Math.min(pagination.current * pagination.pageSize, pagination.total), total: pagination.total })}</span>
             ),
             itemRender: (page, type, originalElement) => {
               if (type === 'prev') {
-                return <a style={{ color: '#ffd700' }}>上一页</a>;
+                return <a style={{ color: '#ffd700' }}>{t('common.previous')}</a>;
               }
               if (type === 'next') {
-                return <a style={{ color: '#ffd700' }}>下一页</a>;
+                return <a style={{ color: '#ffd700' }}>{t('common.next')}</a>;
               }
               return originalElement;
             }
@@ -1173,7 +1176,7 @@ export const CigarDatabase: React.FC = () => {
               fontWeight: 600,
               letterSpacing: '0.5px'
             }}>
-              {selectedCigar ? `${selectedCigar.productName}` : '详情'}
+              {selectedCigar ? `${selectedCigar.productName}` : t('cigarDatabase.actions.details')}
             </span>
           </div>
         }
@@ -1224,7 +1227,7 @@ export const CigarDatabase: React.FC = () => {
               fontSize: '14px'
             }}
           >
-            关闭
+            {t('cigarDatabase.actions.close')}
           </Button>
         ]}
       >

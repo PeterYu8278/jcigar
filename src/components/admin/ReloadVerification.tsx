@@ -1,12 +1,14 @@
 // 充值验证组件
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Table, Button, Space, Tag, Modal, Form, Input, message, Upload, Image, Select, Spin } from 'antd';
 import { CheckOutlined, CloseOutlined, UploadOutlined, EyeOutlined } from '@ant-design/icons';
 import { getAllReloadRecords, verifyReloadRecord, rejectReloadRecord } from '../../services/firebase/reload';
 import { processPendingMembershipFees } from '../../services/firebase/scheduledJobs';
-import type { ReloadRecord } from '../../types';
 import dayjs from 'dayjs';
 import { uploadFile } from '../../services/cloudinary/create';
+import { getAllStores } from '../../services/firebase/stores';
+import type { ReloadRecord, Store } from '../../types';
 
 interface ReloadVerificationProps {
   onRefresh?: () => void;
@@ -23,11 +25,23 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
   const [rejectForm] = Form.useForm();
   const [uploading, setUploading] = useState(false);
   const [proofUrl, setProofUrl] = useState<string>('');
+  const [stores, setStores] = useState<Store[]>([]);
+  const { t, i18n } = useTranslation();
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false;
 
   useEffect(() => {
     loadRecords();
+    loadStores();
   }, [statusFilter]);
+
+  const loadStores = async () => {
+    try {
+      const storeList = await getAllStores();
+      setStores(storeList);
+    } catch (error) {
+      console.error('加载门店列表失败:', error);
+    }
+  };
 
   const loadRecords = async () => {
     setLoading(true);
@@ -37,14 +51,14 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
       setRecords(allRecords);
       if (allRecords.length === 0) {
         if (statusFilter === 'pending') {
-          message.info('暂无待验证的充值记录');
+          message.info(t('pointsConfig.reloadVerification.noPendingRecords'));
         } else {
-          message.info('暂无充值记录');
+          message.info(t('pointsConfig.reloadVerification.noRecords'));
         }
       }
     } catch (error: any) {
       console.error('[ReloadVerification] 加载充值记录失败:', error);
-      message.error('加载充值记录失败: ' + (error.message || '未知错误'));
+      message.error(t('pointsConfig.reloadVerification.loadFailed') + ': ' + (error.message || t('common.unknownError')));
     } finally {
       setLoading(false);
     }
@@ -92,7 +106,7 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
       );
 
       if (result.success) {
-        message.success('充值验证成功');
+        message.success(t('pointsConfig.reloadVerification.verifySuccess'));
         setVerifyModalVisible(false);
         form.resetFields();
         setProofUrl('');
@@ -110,10 +124,10 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
           // 静默失败，不显示错误消息
         }
       } else {
-        message.error(result.error || '验证失败');
+        message.error(result.error || t('pointsConfig.reloadVerification.verifyFailed'));
       }
     } catch (error: any) {
-      message.error(error.message || '验证失败');
+      message.error(error.message || t('pointsConfig.reloadVerification.verifyFailed'));
     } finally {
       setUploading(false);
     }
@@ -130,36 +144,46 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
       );
 
       if (result.success) {
-        message.success('已拒绝充值请求');
+        message.success(t('pointsConfig.reloadVerification.rejectSuccess'));
         setRejectModalVisible(false);
         rejectForm.resetFields();
         loadRecords();
         onRefresh?.();
       } else {
-        message.error(result.error || '操作失败');
+        message.error(result.error || t('pointsConfig.reloadVerification.rejectFailed'));
       }
     } catch (error: any) {
-      message.error(error.message || '操作失败');
+      message.error(error.message || t('pointsConfig.reloadVerification.rejectFailed'));
     }
   };
 
   const columns = [
     {
-      title: '时间',
+      title: t('pointsConfig.reloadVerification.time'),
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
-      render: (date: Date) => dayjs(date).format('YYYY-MM-DD HH:mm:ss')
+      render: (date: Date) => dayjs(date).format(i18n.language === 'en-US' ? 'D MMM, YYYY HH:mm' : 'YYYY-MM-DD HH:mm')
     },
     {
-      title: '用户',
+      title: t('pointsConfig.reloadVerification.user'),
       dataIndex: 'userName',
       key: 'userName',
       width: 150,
       render: (name: string, record: ReloadRecord) => name || record.userId
     },
     {
-      title: '充值金额',
+      title: t('pointsConfig.reloadVerification.store'),
+      dataIndex: 'storeId',
+      key: 'storeId',
+      width: 150,
+      render: (storeId: string) => {
+        const store = stores.find(s => s.id === storeId);
+        return store?.name || '-';
+      }
+    },
+    {
+      title: t('pointsConfig.reloadVerification.amount'),
       dataIndex: 'requestedAmount',
       key: 'requestedAmount',
       width: 120,
@@ -167,28 +191,28 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
         <div>
           <div>{amount} RM</div>
           <div style={{ fontSize: 12, color: '#999' }}>
-            = {record.pointsEquivalent} 积分
+            {t('pointsConfig.reloadVerification.pointsEquivalent', { points: record.pointsEquivalent })}
           </div>
         </div>
       )
     },
     {
-      title: '状态',
+      title: t('pointsConfig.reloadVerification.status'),
       dataIndex: 'status',
       key: 'status',
       width: 100,
       render: (status: string) => {
         const statusMap: Record<string, { color: string; text: string }> = {
-          pending: { color: 'orange', text: '待验证' },
-          completed: { color: 'green', text: '已完成' },
-          rejected: { color: 'red', text: '已拒绝' }
+          pending: { color: 'orange', text: t('pointsConfig.reloadVerification.statusPending') },
+          completed: { color: 'green', text: t('pointsConfig.reloadVerification.statusCompleted') },
+          rejected: { color: 'red', text: t('pointsConfig.reloadVerification.statusRejected') }
         };
         const statusInfo = statusMap[status] || { color: 'default', text: status };
         return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
       }
     },
     {
-      title: '凭证',
+      title: t('pointsConfig.reloadVerification.proof'),
       dataIndex: 'verificationProof',
       key: 'verificationProof',
       width: 100,
@@ -200,8 +224,8 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
             icon={<EyeOutlined />}
             onClick={() => {
               Modal.info({
-              title: <span style={{ color: '#FFFFFF' }}>充值凭证</span>,
-                content: <Image src={proof} alt="充值凭证" style={{ maxWidth: '100%' }} />,
+              title: <span style={{ color: '#FFFFFF' }}>{t('pointsConfig.reloadVerification.proofModalTitle')}</span>,
+                content: <Image src={proof} alt={t('pointsConfig.reloadVerification.proofModalAlt')} style={{ maxWidth: '100%' }} />,
               width: 600,
               styles: {
                 content: {
@@ -231,13 +255,13 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
             padding: 0
           }}
           >
-            查看
+            {t('pointsConfig.reloadVerification.view')}
           </Button>
         );
       }
     },
     {
-      title: '操作',
+      title: t('pointsConfig.reloadVerification.action'),
       key: 'action',
       width: 200,
       render: (_: any, record: ReloadRecord) => (
@@ -256,7 +280,7 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
               fontWeight: 700
             }}
           >
-            验证
+            {t('pointsConfig.reloadVerification.verify')}
           </Button>
           <Button
             size="small"
@@ -272,7 +296,7 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
               fontWeight: 700
             }}
           >
-            拒绝
+            {t('pointsConfig.reloadVerification.reject')}
           </Button>
         </Space>
       )
@@ -287,10 +311,10 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
           onChange={(value) => setStatusFilter(value)}
           style={{ width: 150 }}
           options={[
-            { label: '全部', value: 'all' },
-            { label: '待验证', value: 'pending' },
-            { label: '已完成', value: 'completed' },
-            { label: '已拒绝', value: 'rejected' }
+            { label: t('pointsConfig.reloadVerification.statusAll'), value: 'all' },
+            { label: t('pointsConfig.reloadVerification.statusPending'), value: 'pending' },
+            { label: t('pointsConfig.reloadVerification.statusCompleted'), value: 'completed' },
+            { label: t('pointsConfig.reloadVerification.statusRejected'), value: 'rejected' }
           ]}
           className="points-config-form"
         />
@@ -303,7 +327,7 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
             color: '#FFFFFF'
           }}
         >
-          刷新
+          {t('common.refresh')}
         </Button>
       </div>
       {!isMobile ? (
@@ -330,14 +354,14 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
             </div>
           ) : records.length === 0 ? (
             <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>
-              暂无充值记录
+              {t('pointsConfig.reloadVerification.noRecords')}
             </div>
           ) : (
             records.map((record) => {
               const statusMap: Record<string, { color: string; text: string }> = {
-                pending: { color: '#fb923c', text: '待验证' },
-                completed: { color: '#34d399', text: '已完成' },
-                rejected: { color: '#f87171', text: '已拒绝' }
+                pending: { color: '#fb923c', text: t('pointsConfig.reloadVerification.statusPending') },
+                completed: { color: '#34d399', text: t('pointsConfig.reloadVerification.statusCompleted') },
+                rejected: { color: '#f87171', text: t('pointsConfig.reloadVerification.statusRejected') }
               };
               const statusInfo = statusMap[record.status] || { color: '#9ca3af', text: record.status };
 
@@ -364,10 +388,13 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
                         {record.userName || record.userId.substring(0, 20)}
                       </div>
                       <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>
-                        {dayjs(createdDate).format('YYYY-MM-DD HH:mm')}
+                        {dayjs(createdDate).format(i18n.language === 'en-US' ? 'D MMM, YYYY HH:mm' : 'YYYY-MM-DD HH:mm')}
                       </div>
                       <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
-                        {record.requestedAmount} RM = {record.pointsEquivalent} 积分
+                        {record.requestedAmount} RM {t('pointsConfig.reloadVerification.pointsEquivalent', { points: record.pointsEquivalent })}
+                      </div>
+                      <div style={{ fontSize: 12, color: '#f4af25', marginTop: 4 }}>
+                        {t('pointsConfig.reloadVerification.store')}: {stores.find(s => s.id === record.storeId)?.name || '-'}
                       </div>
                     </div>
                     <div style={{ textAlign: 'right', marginLeft: 12 }}>
@@ -391,8 +418,8 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
                           size="small"
                           onClick={() => {
                             Modal.info({
-                              title: <span style={{ color: '#FFFFFF' }}>充值凭证</span>,
-                              content: <Image src={record.verificationProof!} alt="充值凭证" style={{ maxWidth: '100%' }} />,
+                              title: <span style={{ color: '#FFFFFF' }}>{t('pointsConfig.reloadVerification.proofModalTitle')}</span>,
+                              content: <Image src={record.verificationProof!} alt={t('pointsConfig.reloadVerification.proofModalAlt')} style={{ maxWidth: '100%' }} />,
                               width: isMobile ? '90%' : 600,
                               styles: {
                                 content: {
@@ -423,7 +450,7 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
                             fontSize: 11
                           }}
                         >
-                          查看凭证
+                          {t('pointsConfig.reloadVerification.view')}
                         </Button>
                       )}
                     </div>
@@ -442,7 +469,7 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
                           fontWeight: 700
                         }}
                       >
-                        验证
+                        {t('pointsConfig.reloadVerification.verify')}
                       </Button>
                       <Button
                         size="small"
@@ -456,7 +483,7 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
                           fontWeight: 700
                         }}
                       >
-                        拒绝
+                        {t('pointsConfig.reloadVerification.reject')}
                       </Button>
                     </div>
                   )}
@@ -469,7 +496,7 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
 
       {/* 验证模态框 */}
       <Modal
-        title={<span style={{ color: '#FFFFFF' }}>验证充值</span>}
+        title={<span style={{ color: '#FFFFFF' }}>{t('pointsConfig.reloadVerification.verifyModalTitle')}</span>}
         open={verifyModalVisible}
         onCancel={() => {
           setVerifyModalVisible(false);
@@ -520,14 +547,14 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
             className="points-config-form"
           >
             <div style={{ marginBottom: 16, color: 'rgba(255, 255, 255, 0.85)' }}>
-              <div style={{ marginBottom: 8 }}>用户: {currentRecord.userName || currentRecord.userId}</div>
-              <div style={{ marginBottom: 8 }}>充值金额: {currentRecord.requestedAmount} RM</div>
-              <div>对应积分: {currentRecord.pointsEquivalent} 积分</div>
+              <div style={{ marginBottom: 8 }}>{t('pointsConfig.reloadVerification.user')}: {currentRecord.userName || currentRecord.userId}</div>
+              <div style={{ marginBottom: 8 }}>{t('pointsConfig.reloadVerification.amount')}: {currentRecord.requestedAmount} RM</div>
+              <div>{t('pointsConfig.reloadVerification.pointsEquivalent', { points: currentRecord.pointsEquivalent })}</div>
             </div>
 
             <Form.Item
               name="proof"
-              label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>上传充值凭证（可选）</span>}
+              label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.reloadVerification.uploadProofLabel')}</span>}
               valuePropName="fileList"
               getValueFromEvent={(e) => {
                 if (Array.isArray(e)) {
@@ -555,18 +582,18 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
               >
                 <div>
                   <UploadOutlined style={{ color: 'rgba(255, 255, 255, 0.85)' }} />
-                  <div style={{ marginTop: 8, color: 'rgba(255, 255, 255, 0.85)' }}>上传</div>
+                  <div style={{ marginTop: 8, color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.reloadVerification.upload')}</div>
                 </div>
               </Upload>
             </Form.Item>
 
             <Form.Item
               name="notes"
-              label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>备注（可选）</span>}
+              label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.reloadVerification.notesLabel')}</span>}
             >
               <Input.TextArea 
                 rows={4} 
-                placeholder="输入验证备注..." 
+                placeholder={t('pointsConfig.reloadVerification.notesPlaceholder')} 
                 style={{
                   background: 'rgba(255, 255, 255, 0.1)',
                   border: '1px solid rgba(255, 255, 255, 0.2)',
@@ -580,7 +607,7 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
 
       {/* 拒绝模态框 */}
       <Modal
-        title={<span style={{ color: '#FFFFFF' }}>拒绝充值</span>}
+        title={<span style={{ color: '#FFFFFF' }}>{t('pointsConfig.reloadVerification.rejectModalTitle')}</span>}
         open={rejectModalVisible}
         onCancel={() => {
           setRejectModalVisible(false);
@@ -630,18 +657,18 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
             className="points-config-form"
           >
             <div style={{ marginBottom: 16, color: 'rgba(255, 255, 255, 0.85)' }}>
-              <div style={{ marginBottom: 8 }}>用户: {currentRecord.userName || currentRecord.userId}</div>
-              <div>充值金额: {currentRecord.requestedAmount} RM</div>
+              <div style={{ marginBottom: 8 }}>{t('pointsConfig.reloadVerification.user')}: {currentRecord.userName || currentRecord.userId}</div>
+              <div>{t('pointsConfig.reloadVerification.amount')}: {currentRecord.requestedAmount} RM</div>
             </div>
 
             <Form.Item
               name="notes"
-              label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>拒绝原因</span>}
-              rules={[{ required: true, message: '请输入拒绝原因' }]}
+              label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('pointsConfig.reloadVerification.rejectReasonLabel')}</span>}
+              rules={[{ required: true, message: t('pointsConfig.reloadVerification.rejectReasonRequired') }]}
             >
               <Input.TextArea 
                 rows={4} 
-                placeholder="输入拒绝原因..." 
+                placeholder={t('pointsConfig.reloadVerification.rejectReasonPlaceholder')} 
                 style={{
                   background: 'rgba(255, 255, 255, 0.1)',
                   border: '1px solid rgba(255, 255, 255, 0.2)',

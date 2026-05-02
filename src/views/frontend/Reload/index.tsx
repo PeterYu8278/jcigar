@@ -1,11 +1,12 @@
 // 用户充值页面
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Typography, Space, message, Spin, Tag, Modal, App } from 'antd';
+import { Card, Button, Typography, Space, message, Spin, Tag, Modal, App, Select } from 'antd';
 import { WalletOutlined, ReloadOutlined, ClockCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../../store/modules/auth';
 import { createReloadRecord, getUserReloadRecords, getUserPendingReloadRecord, cancelReloadRecord } from '../../../services/firebase/reload';
+import { getAllStores } from '../../../services/firebase/stores';
 import { useNavigate } from 'react-router-dom';
-import type { ReloadRecord } from '../../../types';
+import type { ReloadRecord, Store } from '../../../types';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -18,8 +19,26 @@ const ReloadPage: React.FC = () => {
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [pendingRecord, setPendingRecord] = useState<ReloadRecord | null>(null);
   const [checkingPending, setCheckingPending] = useState(true);
+  const [stores, setStores] = useState<Store[]>([]);
+  const [selectedStoreId, setSelectedStoreId] = useState<string>('');
 
   const amountOptions = [100, 200, 300, 500, 1000];
+
+  useEffect(() => {
+    const fetchStores = async () => {
+      try {
+        const data = await getAllStores();
+        const activeStores = data.filter(s => s.status === 'active');
+        setStores(activeStores);
+        if (activeStores.length > 0) {
+          setSelectedStoreId(activeStores[0].id);
+        }
+      } catch (error) {
+        console.error('Failed to load stores', error);
+      }
+    };
+    fetchStores();
+  }, []);
 
   // 检查是否有未验证的充值记录
   useEffect(() => {
@@ -64,9 +83,14 @@ const ReloadPage: React.FC = () => {
       return;
     }
 
+    if (!selectedStoreId) {
+      message.warning('请选择门店');
+      return;
+    }
+
     setLoading(true);
     try {
-      const result = await createReloadRecord(user.id, amount, user.displayName);
+      const result = await createReloadRecord(user.id, amount, user.displayName, selectedStoreId);
       if (result.success) {
         message.success(`充值请求已提交（${amount} RM），等待管理员验证`);
         setSelectedAmount(null);
@@ -280,6 +304,20 @@ const ReloadPage: React.FC = () => {
             </div>
           ) : (
             <>
+              {/* 门店选择 */}
+              <div style={{ marginBottom: 24 }}>
+                <Text style={{ color: '#c0c0c0', display: 'block', marginBottom: 8, fontSize: 14 }}>
+                  选择充值门店:
+                </Text>
+                <Select
+                  value={selectedStoreId}
+                  onChange={setSelectedStoreId}
+                  style={{ width: '100%', height: 44 }}
+                  disabled={loading}
+                  options={stores.map(s => ({ value: s.id, label: s.name }))}
+                />
+              </div>
+
               {/* 金额选择按钮 */}
               <Space direction="vertical" size="middle" style={{ width: '100%' }}>
                 {amountOptions.map((amount) => (

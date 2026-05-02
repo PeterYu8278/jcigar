@@ -135,7 +135,7 @@ export const usePermission = (): UsePermissionReturn => {
  * ```tsx
  * // 单个权限
  * <PermissionGuard permission="canManageInventory">
- *   <InventoryManagement />
+ *   <Inventory />
  * </PermissionGuard>
  * 
  * // 多个权限（全部满足）
@@ -149,13 +149,13 @@ export const usePermission = (): UsePermissionReturn => {
  * </PermissionGuard>
  * 
  * // 基于角色
- * <PermissionGuard roles={['superAdmin']}>
+ * <PermissionGuard roles={['admin']}>
  *   <AdminPanel />
  * </PermissionGuard>
  * 
  * // 自定义无权限时的显示
  * <PermissionGuard permission="canManageInventory" fallback={<NoPermission />}>
- *   <InventoryManagement />
+ *   <Inventory />
  * </PermissionGuard>
  * ```
  */
@@ -261,12 +261,12 @@ export const usePermissionRender = () => {
  * @example
  * ```tsx
  * // 仅管理员可见
- * <RoleGuard roles={['superAdmin']}>
+ * <RoleGuard roles={['admin']}>
  *   <AdminPanel />
  * </RoleGuard>
  * 
  * // 会员和管理员可见
- * <RoleGuard roles={['member', 'superAdmin']}>
+ * <RoleGuard roles={['member', 'admin']}>
  *   <MemberFeature />
  * </RoleGuard>
  * ```

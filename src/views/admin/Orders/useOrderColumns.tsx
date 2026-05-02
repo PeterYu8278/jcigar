@@ -26,7 +26,7 @@ export const useOrderColumns = ({
   onDeleteOrder,
   onOrderUpdate
 }: UseOrderColumnsProps) => {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
 
   // 计算订单匹配状态
   const getOrderMatchStatus = (orderId: string) => {
@@ -152,7 +152,7 @@ export const useOrderColumns = ({
           d = d.toDate()
         }
         const m = dayjs(d)
-        return m.isValid() ? m.format('YYYY-MM-DD') : '-'
+        return m.isValid() ? m.format(i18n.language === 'en-US' ? 'D MMM, YYYY' : 'YYYY-MM-DD') : '-'
       },
     },
     {
@@ -161,7 +161,7 @@ export const useOrderColumns = ({
       render: (_: any, record: Order) => (
         <ActionButtons
           itemId={record.id}
-          itemName={`订单 ${record.id.substring(0, 8)}...`}
+          itemName={`${t('ordersAdmin.order')} ${record.id.substring(0, 8)}...`}
           onView={() => onViewOrder(record)}
           onDelete={onDeleteOrder}
           onDeleteSuccess={onOrderUpdate}

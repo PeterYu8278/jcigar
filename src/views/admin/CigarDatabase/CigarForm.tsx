@@ -3,6 +3,7 @@
  */
 
 import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Form,
   Input,
@@ -66,6 +67,7 @@ export const CigarForm: React.FC<CigarFormProps> = ({
   onSuccess,
   onCancel
 }) => {
+  const { t } = useTranslation();
   const [form] = Form.useForm();
   const [loading, setLoading] = React.useState(false);
   const [imagePreview, setImagePreview] = React.useState<string | null>(null);
@@ -87,7 +89,7 @@ export const CigarForm: React.FC<CigarFormProps> = ({
 
   const handleSubmit = async (values: any) => {
     if (!user) {
-      message.error('请先登录');
+      message.error(t('cigarDatabase.form.pleaseLogin'));
       return;
     }
 
@@ -128,7 +130,7 @@ export const CigarForm: React.FC<CigarFormProps> = ({
         // 更新现有记录
         const docRef = doc(db, GLOBAL_COLLECTIONS.CIGAR_DATABASE, initialValues.id);
         await updateDoc(docRef, cigarData);
-        message.success('雪茄信息已更新');
+        message.success(t('cigarDatabase.form.updateSuccess'));
       } else {
         // 创建新记录
         await addDoc(collection(db, GLOBAL_COLLECTIONS.CIGAR_DATABASE), {
@@ -137,7 +139,7 @@ export const CigarForm: React.FC<CigarFormProps> = ({
           createdBy: user.id || user.email || 'unknown',
           createdAt: serverTimestamp()
         });
-        message.success('雪茄信息已添加');
+        message.success(t('cigarDatabase.form.addSuccess'));
         form.resetFields();
         setImagePreview(null);
       }
@@ -145,7 +147,7 @@ export const CigarForm: React.FC<CigarFormProps> = ({
       onSuccess?.();
     } catch (error) {
       console.error('保存雪茄信息失败:', error);
-      message.error('保存失败，请重试');
+      message.error(t('cigarDatabase.form.saveFailed'));
     } finally {
       setLoading(false);
     }
@@ -168,40 +170,40 @@ export const CigarForm: React.FC<CigarFormProps> = ({
     >
       <Collapse defaultActiveKey={['basic', 'tobacco', 'flavor']}>
         {/* 基础信息 */}
-        <Panel header="基础信息" key="basic">
+        <Panel header={t('cigarDatabase.form.basicInfo')} key="basic">
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="品牌"
+                label={t('cigarDatabase.form.brand')}
                 name="brand"
-                rules={[{ required: true, message: '请输入品牌名称' }]}
+                rules={[{ required: true, message: t('cigarDatabase.form.brandRequired') }]}
               >
-                <Input placeholder="例如：Macanudo" />
+                <Input placeholder={t('cigarDatabase.form.brandPlaceholder')} />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                label="名称"
+                label={t('cigarDatabase.form.name')}
                 name="name"
-                rules={[{ required: true, message: '请输入雪茄名称' }]}
+                rules={[{ required: true, message: t('cigarDatabase.form.nameRequired') }]}
               >
-                <Input placeholder="例如：Cafe Crystal" />
+                <Input placeholder={t('cigarDatabase.form.namePlaceholder')} />
               </Form.Item>
             </Col>
           </Row>
 
-          <Form.Item label="产品描述" name="description">
+          <Form.Item label={t('cigarDatabase.form.description')} name="description">
             <TextArea
               rows={4}
-              placeholder="输入雪茄的详细描述..."
+              placeholder={t('cigarDatabase.form.descriptionPlaceholder')}
             />
           </Form.Item>
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="图片 URL" name="imageUrl">
+              <Form.Item label={t('cigarDatabase.form.imageUrl')} name="imageUrl">
                 <Input
-                  placeholder="https://example.com/image.jpg"
+                  placeholder={t('cigarDatabase.form.imageUrlPlaceholder')}
                   onChange={handleImageUrlChange}
                 />
               </Form.Item>
@@ -211,7 +213,7 @@ export const CigarForm: React.FC<CigarFormProps> = ({
                 <div style={{ marginTop: 30 }}>
                   <Image
                     src={imagePreview}
-                    alt="预览"
+                    alt={t('cigarDatabase.form.preview')}
                     style={{ maxWidth: '100%', maxHeight: 200 }}
                     fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
                   />
@@ -220,114 +222,114 @@ export const CigarForm: React.FC<CigarFormProps> = ({
             </Col>
           </Row>
 
-          <Form.Item label="已验证" name="verified" valuePropName="checked">
+          <Form.Item label={t('cigarDatabase.form.verified')} name="verified" valuePropName="checked">
             <Switch />
           </Form.Item>
         </Panel>
 
         {/* 烟叶信息 */}
-        <Panel header="烟叶信息" key="tobacco">
-          <Form.Item label="外包叶 (Wrapper)" name="wrapper">
+        <Panel header={t('cigarDatabase.form.tobaccoInfo')} key="tobacco">
+          <Form.Item label={t('cigarDatabase.form.wrapper')} name="wrapper">
             <Select
-              placeholder="选择或输入外包叶类型"
+              placeholder={t('cigarDatabase.form.wrapperPlaceholder')}
               allowClear
               showSearch
               mode="tags"
               maxCount={1}
             >
               {COMMON_WRAPPERS.map(w => (
-                <Option key={w} value={w}>{w}</Option>
+                <Option key={w} value={w}>{t(`flavors.${w}`, { defaultValue: w })}</Option>
               ))}
             </Select>
           </Form.Item>
 
-          <Form.Item label="粘合叶 (Binder)" name="binder">
-            <Input placeholder="例如：Mexican" />
+          <Form.Item label={t('cigarDatabase.form.binder')} name="binder">
+            <Input placeholder={t('cigarDatabase.form.binderPlaceholder')} />
           </Form.Item>
 
-          <Form.Item label="填充叶 (Filler)" name="filler">
-            <Input placeholder="例如：Dominican, Mexican, Jamaican" />
+          <Form.Item label={t('cigarDatabase.form.filler')} name="filler">
+            <Input placeholder={t('cigarDatabase.form.fillerPlaceholder')} />
           </Form.Item>
         </Panel>
 
         {/* 风味与强度 */}
-        <Panel header="风味与强度" key="flavor">
-          <Form.Item label="强度" name="strength">
-            <Select placeholder="选择强度等级" allowClear>
-              <Option value="mild">Mild (温和)</Option>
-              <Option value="medium-mild">Medium-Mild (中温和)</Option>
-              <Option value="medium">Medium (中等)</Option>
-              <Option value="medium-full">Medium-Full (中浓)</Option>
-              <Option value="full">Full (浓烈)</Option>
+        <Panel header={t('cigarDatabase.form.flavorStrength')} key="flavor">
+          <Form.Item label={t('cigarDatabase.form.strength')} name="strength">
+            <Select placeholder={t('cigarDatabase.form.strengthPlaceholder')} allowClear>
+              <Option value="mild">Mild ({t('cigarDatabase.import.status.mild', { defaultValue: '温和' })})</Option>
+              <Option value="medium-mild">Medium-Mild ({t('cigarDatabase.import.status.medium-mild', { defaultValue: '中温和' })})</Option>
+              <Option value="medium">Medium ({t('cigarDatabase.import.status.medium', { defaultValue: '中等' })})</Option>
+              <Option value="medium-full">Medium-Full ({t('cigarDatabase.import.status.medium-full', { defaultValue: '中浓' })})</Option>
+              <Option value="full">Full ({t('cigarDatabase.import.status.full', { defaultValue: '浓烈' })})</Option>
             </Select>
           </Form.Item>
 
-          <Form.Item label="风味特征" name="flavorProfile">
+          <Form.Item label={t('cigarDatabase.form.flavorProfile')} name="flavorProfile">
             <Select
               mode="tags"
-              placeholder="选择或输入风味标签"
+              placeholder={t('cigarDatabase.form.flavorProfilePlaceholder')}
               style={{ width: '100%' }}
             >
               {COMMON_FLAVORS.map(flavor => (
-                <Option key={flavor} value={flavor}>{flavor}</Option>
+                <Option key={flavor} value={flavor}>{t(`flavors.${flavor}`, { defaultValue: flavor })}</Option>
               ))}
             </Select>
           </Form.Item>
         </Panel>
 
         {/* 品鉴笔记 */}
-        <Panel header="品鉴笔记" key="tasting">
-          <Form.Item label="茄脚风味 (Foot)" name="footTasteNotes">
+        <Panel header={t('cigarDatabase.form.tastingNotes')} key="tasting">
+          <Form.Item label={t('cigarDatabase.form.foot')} name="footTasteNotes">
             <TextArea
               rows={3}
-              placeholder="描述点燃前的香气和初段风味..."
+              placeholder={t('cigarDatabase.form.footPlaceholder')}
             />
           </Form.Item>
 
-          <Form.Item label="茄身风味 (Body)" name="bodyTasteNotes">
+          <Form.Item label={t('cigarDatabase.form.body')} name="bodyTasteNotes">
             <TextArea
               rows={3}
-              placeholder="描述燃烧中段的风味变化..."
+              placeholder={t('cigarDatabase.form.bodyPlaceholder')}
             />
           </Form.Item>
 
-          <Form.Item label="茄头风味 (Head)" name="headTasteNotes">
+          <Form.Item label={t('cigarDatabase.form.head')} name="headTasteNotes">
             <TextArea
               rows={3}
-              placeholder="描述收尾阶段的风味..."
+              placeholder={t('cigarDatabase.form.headPlaceholder')}
             />
           </Form.Item>
         </Panel>
 
         {/* 评分信息 */}
-        <Panel header="评分信息" key="rating">
+        <Panel header={t('cigarDatabase.form.ratingInfo')} key="rating">
           <Row gutter={16}>
             <Col span={8}>
               <Form.Item
-                label="评分 (0-100)"
+                label={t('cigarDatabase.form.rating')}
                 name="rating"
                 rules={[
                   {
                     type: 'number',
                     min: 0,
                     max: 100,
-                    message: '评分必须在 0-100 之间'
+                    message: t('cigarDatabase.form.ratingRangeError')
                   }
                 ]}
               >
                 <InputNumber
                   style={{ width: '100%' }}
-                  placeholder="例如：87"
+                  placeholder={t('cigarDatabase.form.ratingPlaceholder')}
                 />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item label="评分来源" name="ratingSource">
-                <Input placeholder="例如：Cigar Aficionado 2022" />
+              <Form.Item label={t('cigarDatabase.form.ratingSource')} name="ratingSource">
+                <Input placeholder={t('cigarDatabase.form.ratingSourcePlaceholder')} />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item label="评分日期" name="ratingDate">
+              <Form.Item label={t('cigarDatabase.form.ratingDate')} name="ratingDate">
                 <DatePicker style={{ width: '100%' }} />
               </Form.Item>
             </Col>
@@ -338,11 +340,11 @@ export const CigarForm: React.FC<CigarFormProps> = ({
       <Form.Item style={{ marginTop: 24 }}>
         <Space>
           <Button type="primary" htmlType="submit" loading={loading}>
-            {initialValues?.id ? '更新' : '保存'}
+            {initialValues?.id ? t('cigarDatabase.form.update') : t('cigarDatabase.form.save')}
           </Button>
           {onCancel && (
             <Button onClick={onCancel}>
-              取消
+              {t('common.cancel')}
             </Button>
           )}
         </Space>

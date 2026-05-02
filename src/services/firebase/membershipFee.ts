@@ -174,7 +174,8 @@ export const createMembershipFeeRecord = async (
   dueDate: Date,
   renewalType: 'initial' | 'renewal' = 'initial',
   previousDueDate?: Date,
-  userName?: string
+  userName?: string,
+  storeId?: string
 ): Promise<{ success: boolean; recordId?: string; error?: string }> => {
   try {
     const amount = await getCurrentAnnualFeeAmount(dueDate);
@@ -193,6 +194,7 @@ export const createMembershipFeeRecord = async (
       renewalType,
       previousDueDate,
       status: 'pending',
+      storeId,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -448,7 +450,8 @@ export const deductMembershipFee = async (
         nextDueDate,
         'renewal',
         record.dueDate,
-        record.userName
+        record.userName,
+        recordData.storeId
       );
 
     } else {

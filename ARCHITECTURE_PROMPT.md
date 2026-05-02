@@ -174,6 +174,29 @@ VITE_CLOUDINARY_API_SECRET=your_api_secret
 - **CSP策略**: 已配置支持 Firebase 和 Google Analytics
 - **自动部署**: 推送到 main 分支触发
 
+## 🌐 国际化 (i18n) 系统
+
+### 多语言支持
+- **语言**: 中文 (zh-CN), 英文 (en-US)
+- **框架**: `react-i18next` + `i18next`
+- **配置文件**: `src/i18n/config.ts`
+- **语言包**: `src/i18n/locales/*.json`
+
+### 命名空间划分
+- **common**: 通用操作（取消、确定、搜索、分页等）
+- **inventory**: 库存管理与入库/出库单据模块
+- **cigarDatabase**: 雪茄知识库与 AI 识别数据库模块
+- **flavors**: 动态风味、烟叶名称、产地翻译
+- **visitSessions**: 到店记录管理模块
+
+### 开发规范
+1. **禁止硬编码**: 严禁在 JSX 中直接编写中文或英文 UI 字符串，必须使用 `t()` 函数。
+2. **结构化键名**: 遵循模块化层级命名规则，如 `t('cigarDatabase.form.brand')`。
+3. **参数插值**: 使用 i18next 模板语法处理动态数据，如 `t('cigarDatabase.details.totalRecognitions', { count })`。
+4. **动态标签翻译**: 对于风味等用户可选标签，使用 `t(`flavors.${value}`, { defaultValue: value })` 处理。
+
+---
+
 ## 🎨 UI/UX 设计
 
 ### 主题风格

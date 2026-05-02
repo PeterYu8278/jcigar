@@ -14,6 +14,7 @@ import { getUsers, createDocument, updateDocument, deleteDocument, COLLECTIONS, 
 import { getUsersPaginated } from '../../../services/firebase/paginatedQueries'
 import { usePaginatedData } from '../../../hooks/usePaginatedData'
 import type { User, Event, Order } from '../../../types'
+import dayjs from 'dayjs'
 import { sendPasswordResetEmailFor, resetPasswordByPhone, generateResetPasswordMessageByPhone } from '../../../services/firebase/auth'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../../../store/modules/auth'
@@ -43,7 +44,7 @@ const glassmorphismInputStyle = {
 }
 
 const AdminUsers: React.FC = () => {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { modal } = App.useApp() // 使用 App.useApp() 获取 modal 实例以支持 React 19
   const { user: currentUser } = useAuthStore()
   const [users, setUsers] = useState<User[]>([]) // 保留用于搜索和筛选
@@ -98,8 +99,7 @@ const AdminUsers: React.FC = () => {
       } catch { }
     }
     return {
-      id: currentUser?.role === 'developer',
-      memberId: true,
+      id_combined: true,
       displayName: true,
       email: true,
       role: true,
@@ -234,18 +234,22 @@ const AdminUsers: React.FC = () => {
   }
 
   const allColumns = [
-    ...(currentUser?.role === 'developer' ? [{
-      title: t('usersAdmin.userId'),
-      dataIndex: 'id',
-      key: 'id',
-      width: 80,
-    }] : []),
     {
-      title: t('usersAdmin.memberId'),
-      dataIndex: 'memberId',
-      key: 'memberId',
-      width: 100,
-      render: (memberId: string) => memberId || '-',
+      title: 'ID',
+      key: 'id_combined',
+      width: 140,
+      render: (_: any, record: User) => (
+        <div>
+          <div style={{ fontWeight: 600, color: '#FDE08D' }}>
+            {record.memberId || '-'}
+          </div>
+          {currentUser?.role === 'developer' && (
+            <div style={{ fontSize: '10px', opacity: 0.5, fontFamily: 'monospace', marginTop: 2 }}>
+              {record.id}
+            </div>
+          )}
+        </div>
+      ),
     },
     {
       title: t('usersAdmin.name'),
@@ -264,7 +268,7 @@ const AdminUsers: React.FC = () => {
       key: 'email',
     },
     ...(canManageDiscount ? [{
-      title: '折扣',
+      title: t('usersAdmin.discount'),
       dataIndex: 'discount',
       key: 'discount',
       width: 80,
@@ -299,27 +303,6 @@ const AdminUsers: React.FC = () => {
             {getRoleText(role)}
           </Tag>
         )
-      },
-      filterIcon: (filtered: boolean) => (
-        <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />
-      ),
-      filterDropdown: (props: any) => {
-        const { setSelectedKeys, selectedKeys, confirm, clearFilters } = props as any
-        return (
-          <div style={{ padding: 8 }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 120 }}>
-              <Button size="small" type={(selectedKeys[0] === undefined) ? 'primary' : 'text'} onClick={() => { setSelectedKeys([]); clearFilters?.(); confirm({ closeDropdown: true }) }}>{t('common.all')}</Button>
-              <Button size="small" type={selectedKeys[0] === 'superAdmin' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['superAdmin']); confirm({ closeDropdown: true }) }}>{t('auth.superAdmin')}</Button>
-              <Button size="small" type={selectedKeys[0] === 'admin' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['admin']); confirm({ closeDropdown: true }) }}>{t('auth.admin')}</Button>
-              <Button size="small" type={selectedKeys[0] === 'vip' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['vip']); confirm({ closeDropdown: true }) }}>{t('auth.vip')}</Button>
-              <Button size="small" type={selectedKeys[0] === 'member' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['member']); confirm({ closeDropdown: true }) }}>{t('auth.member')}</Button>
-              <Button size="small" type={selectedKeys[0] === 'guest' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['guest']); confirm({ closeDropdown: true }) }}>{t('auth.guest')}</Button>
-            </div>
-          </div>
-        )
-      },
-      onFilter: (value: any, record: any) => {
-        return !value || record.role === value
       },
     },
     // 移除加入时间列以适配移动端
@@ -362,28 +345,9 @@ const AdminUsers: React.FC = () => {
           </Space>
         )
       },
-      filterIcon: (filtered: boolean) => (
-        <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />
-      ),
-      filterDropdown: (props: any) => {
-        const { setSelectedKeys, selectedKeys, confirm, clearFilters } = props as any
-        return (
-          <div style={{ padding: 8 }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 120 }}>
-              <Button size="small" type={(selectedKeys[0] === undefined) ? 'primary' : 'text'} onClick={() => { setSelectedKeys([]); clearFilters?.(); confirm({ closeDropdown: true }) }}>{t('common.all')}</Button>
-              <Button size="small" type={selectedKeys[0] === 'active' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['active']); confirm({ closeDropdown: true }) }}>{t('usersAdmin.active')}</Button>
-              <Button size="small" type={selectedKeys[0] === 'inactive' ? 'primary' : 'text'} onClick={() => { setSelectedKeys(['inactive']); confirm({ closeDropdown: true }) }}>{t('usersAdmin.inactive')}</Button>
-            </div>
-          </div>
-        )
-      },
-      onFilter: (value: any, record: any) => {
-        const status = record.status || 'active'
-        return !value || status === value
-      },
     },
     {
-      title: 'AI识茄使用',
+      title: t('usersAdmin.aiUsage'),
       key: 'aiUsageStats',
       width: 120,
       render: (_: any, record: any) => {
@@ -391,7 +355,7 @@ const AdminUsers: React.FC = () => {
         const lastScanAt = record.aiUsageStats?.lastCigarScanAt;
 
         if (scanCount === 0) {
-          return <Text style={{ color: '#FFFFFF' }}>未使用</Text>;
+          return <Text style={{ color: '#FFFFFF' }}>{t('usersAdmin.unused')}</Text>;
         }
 
         // 处理 Firestore Timestamp 或 Date 对象
@@ -401,7 +365,7 @@ const AdminUsers: React.FC = () => {
             // 如果是 Firestore Timestamp，使用 toDate() 方法
             const date = lastScanAt?.toDate ? lastScanAt.toDate() : new Date(lastScanAt);
             if (date && !isNaN(date.getTime())) {
-              formattedDate = date.toLocaleDateString();
+              formattedDate = dayjs(date).format(i18n.language === 'en-US' ? 'D MMM, YYYY' : 'YYYY-MM-DD');
             }
           } catch (error) {
             console.error('[Users] 日期格式化失败:', error);
@@ -410,10 +374,10 @@ const AdminUsers: React.FC = () => {
 
         return (
           <Space direction="vertical" size="small">
-            <Tag color="blue">{scanCount} 次</Tag>
+            <Tag color="blue">{scanCount} {t('usersAdmin.times')}</Tag>
             {formattedDate && (
               <Text style={{ fontSize: '11px', color: '#FFFFFF' }}>
-                最后: {formattedDate}
+                {t('usersAdmin.lastScan')}: {formattedDate}
               </Text>
             )}
           </Space>
@@ -912,7 +876,7 @@ const AdminUsers: React.FC = () => {
                           color: '#FFFFFF'
                         }}
                       >
-                        {t('usersAdmin.level')}{levelFilter ? `：${getMembershipText(levelFilter)}` : ''}
+                        {t('usersAdmin.level')}{levelFilter ? `: ${getMembershipText(levelFilter)}` : ''}
                       </Button>
                     </Dropdown>
                     <Dropdown
@@ -992,7 +956,7 @@ const AdminUsers: React.FC = () => {
                                       {u.memberId && <span style={{ marginRight: 8, fontFamily: 'monospace' }}>{t('usersAdmin.memberId')}: {u.memberId}</span>}
                                       {maskPhone((u as any)?.profile?.phone)}
                                       {canManageDiscount && u.discount?.rate !== undefined && (
-                                        <span style={{ marginLeft: 8, color: '#FDE08D' }}>折扣 {u.discount.rate}%</span>
+                                        <span style={{ marginLeft: 8, color: '#FDE08D' }}>{t('usersAdmin.discount')} {u.discount.rate}%</span>
                                       )}
                                     </div>
                                     <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1299,7 +1263,7 @@ const AdminUsers: React.FC = () => {
                   const existingUserId = phoneSnap.docs[0].id
                   // 如果是编辑模式，检查是否是当前用户自己的手机号
                   if (!editing || existingUserId !== editing.id) {
-                    message.error('该手机号已被其他用户使用')
+                    message.error(t('usersAdmin.phoneInUseError'))
                     setLoading(false)
                     return
                   }
@@ -1419,7 +1383,7 @@ const AdminUsers: React.FC = () => {
                       const existingUserId = emailSnap.docs[0].id
                       // 如果是编辑模式，检查是否是当前用户
                       if (!editing || existingUserId !== editing.id) {
-                        return Promise.reject(new Error('该邮箱已被其他用户使用'))
+                        return Promise.reject(new Error(t('usersAdmin.emailInUseError')))
                       }
                     }
                   } catch (error) {
@@ -1443,7 +1407,7 @@ const AdminUsers: React.FC = () => {
               { required: true, message: t('profile.phoneRequired') },
               {
                 pattern: /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/,
-                message: '手机号格式无效（需10-12位数字）'
+                message: t('usersAdmin.phoneFormatError')
               },
               {
                 validator: async (_, value) => {
@@ -1482,7 +1446,7 @@ const AdminUsers: React.FC = () => {
                       const existingUserId = phoneSnap.docs[0].id
                       // 如果是编辑模式，检查是否是当前用户
                       if (!editing || existingUserId !== editing.id) {
-                        return Promise.reject(new Error('该手机号已被其他用户使用'))
+                        return Promise.reject(new Error(t('usersAdmin.phoneInUseError')))
                       }
                     }
                   } catch (error) {
@@ -1510,14 +1474,14 @@ const AdminUsers: React.FC = () => {
             <Row gutter={12}>
               <Col span={12}>
                 <Form.Item
-                  label={<span style={{ color: '#FFFFFF' }}>折扣（%）</span>}
+                  label={<span style={{ color: '#FFFFFF' }}>{t('usersAdmin.discountRate')}</span>}
                   name="discountRate"
                   rules={[
                     {
                       type: 'number',
                       min: 0,
                       max: 100,
-                      message: '折扣需在 0-100 之间'
+                      message: t('usersAdmin.discountRateRangeError')
                     }
                   ]}
                 >
@@ -1526,10 +1490,10 @@ const AdminUsers: React.FC = () => {
               </Col>
               <Col span={12}>
                 <Form.Item
-                  label={<span style={{ color: '#FFFFFF' }}>折扣备注（仅管理员可见）</span>}
+                  label={<span style={{ color: '#FFFFFF' }}>{t('usersAdmin.discountNote')}（{t('usersAdmin.discountAdminOnly')}）</span>}
                   name="discountNote"
                 >
-                  <Input placeholder="例如：长期会员折扣" />
+                  <Input placeholder={t('usersAdmin.discountNotePlaceholder')} />
                 </Form.Item>
               </Col>
             </Row>
@@ -1604,7 +1568,7 @@ const AdminUsers: React.FC = () => {
       >
         <div style={{ color: '#FFFFFF' }}>
           <p style={{ marginBottom: 20, color: '#f4af25', fontWeight: 600 }}>
-            选择重置方式：
+            {t('usersAdmin.selectResetMethod')}
           </p>
 
           {/* 重置方式按钮 */}
@@ -1619,15 +1583,15 @@ const AdminUsers: React.FC = () => {
               loading={resettingPasswordLoading}
               onClick={async () => {
                 if (!resettingPassword || !resettingPassword.email) {
-                  message.error('该用户没有绑定邮箱，无法通过邮箱重置密码')
+                  message.error(t('usersAdmin.noEmailForReset'))
                   return
                 }
 
                 modal.confirm({
-                  title: <span style={{ color: '#FFFFFF' }}>确认发送密码重置邮件</span>,
-                  content: <span style={{ color: '#FFFFFF' }}>确定要向 {resettingPassword.email} 发送密码重置邮件吗？</span>,
-                  okText: '确认',
-                  cancelText: '取消',
+                  title: <span style={{ color: '#FFFFFF' }}>{t('usersAdmin.confirmEmailReset')}</span>,
+                  content: <span style={{ color: '#FFFFFF' }}>{t('usersAdmin.resetPasswordConfirm', { name: resettingPassword.email })}</span>,
+                  okText: t('common.confirm'),
+                  cancelText: t('common.cancel'),
                   centered: true,
                   styles: getModalThemeStyles(isMobile, true),
                   okButtonProps: {
@@ -1663,7 +1627,7 @@ const AdminUsers: React.FC = () => {
                 fontSize: '16px',
               }}
             >
-              通过电邮重置
+              {t('usersAdmin.resetByEmail')}
               {resettingPassword?.email && (
                 <span style={{ marginLeft: 8, fontSize: '12px', opacity: 0.6 }}>
                   ({resettingPassword.email})
@@ -1681,16 +1645,16 @@ const AdminUsers: React.FC = () => {
               loading={resettingPasswordLoading}
               onClick={async () => {
                 if (!resettingPassword || !(resettingPassword as any)?.profile?.phone) {
-                  message.error('该用户没有绑定手机号，无法通过WhatsApp重置密码')
+                  message.error(t('usersAdmin.noPhoneForReset'))
                   return
                 }
 
                 const phone = (resettingPassword as any).profile.phone
                 modal.confirm({
-                  title: <span style={{ color: '#FFFFFF' }}>确认通过WhatsApp重置密码</span>,
-                  content: <span style={{ color: '#FFFFFF' }}>确定要通过WhatsApp向 {phone} 发送临时密码吗？</span>,
-                  okText: '确认',
-                  cancelText: '取消',
+                  title: <span style={{ color: '#FFFFFF' }}>{t('usersAdmin.confirmWhatsappReset')}</span>,
+                  content: <span style={{ color: '#FFFFFF' }}>{t('usersAdmin.resetPasswordConfirm', { name: phone })}</span>,
+                  okText: t('common.confirm'),
+                  cancelText: t('common.cancel'),
                   centered: true,
                   styles: getModalThemeStyles(isMobile, true),
                   okButtonProps: {
@@ -1704,13 +1668,13 @@ const AdminUsers: React.FC = () => {
                     try {
                       const result = await resetPasswordByPhone(phone)
                       if (result.success) {
-                        message.success('密码重置成功，临时密码已通过WhatsApp发送')
+                        message.success(t('usersAdmin.whatsappResetSuccess'))
                         setResettingPassword(null)
                       } else {
-                        message.error(result.error || '通过WhatsApp重置密码失败')
+                        message.error(result.error || t('usersAdmin.passwordResetFailed'))
                       }
                     } catch (error: any) {
-                      message.error(error.message || '通过WhatsApp重置密码失败')
+                      message.error(error.message || t('usersAdmin.passwordResetFailed'))
                     } finally {
                       setResettingPasswordLoading(false)
                     }
@@ -1726,7 +1690,7 @@ const AdminUsers: React.FC = () => {
                 fontSize: '16px',
               }}
             >
-              通过WhatsApp重置
+              {t('usersAdmin.resetByWhatsapp')}
               {(resettingPassword as any)?.profile?.phone && (
                 <span style={{ marginLeft: 8, fontSize: '12px', opacity: 0.6 }}>
                   ({(resettingPassword as any).profile.phone})
@@ -1743,7 +1707,7 @@ const AdminUsers: React.FC = () => {
               onClick={async () => {
                 try {
                   if (!resettingPassword || !(resettingPassword as any)?.profile?.phone) {
-                    message.error('该用户没有绑定手机号，无法生成重置内容');
+                    message.error(t('usersAdmin.noPhoneForReset'));
                     return;
                   }
 
@@ -1754,7 +1718,7 @@ const AdminUsers: React.FC = () => {
                   const result = await generateResetPasswordMessageByPhone(phone);
 
                   if (!result.success || !result.message || !result.normalizedPhone) {
-                    message.error(result.error || '生成重置内容失败');
+                    message.error(result.error || t('usersAdmin.generateResetContentFailed'));
                     return;
                   }
 
@@ -1769,10 +1733,10 @@ const AdminUsers: React.FC = () => {
                   if (!opened) {
                     // 如果被拦截，则回退为展示链接供手动复制
                     modal.info({
-                      title: 'WhatsApp 重置链接',
+                      title: t('usersAdmin.whatsappLinkTitle'),
                       content: (
                         <div>
-                          <p>浏览器拦截了自动打开，请手动复制以下链接并在浏览器或 WhatsApp 中打开：</p>
+                          <p>{t('usersAdmin.whatsappLinkHint')}</p>
                           <pre
                             style={{
                               whiteSpace: 'pre-wrap',
@@ -1789,7 +1753,7 @@ const AdminUsers: React.FC = () => {
                           </pre>
                         </div>
                       ),
-                      okText: '知道了',
+                      okText: t('common.done'),
                       centered: true,
                       styles: getModalThemeStyles(isMobile, true)
                     });
@@ -1810,7 +1774,7 @@ const AdminUsers: React.FC = () => {
                 fontSize: '16px',
               }}
             >
-              手动发送
+              {t('usersAdmin.manualSend')}
             </Button>
           </Space>
 
@@ -1818,7 +1782,7 @@ const AdminUsers: React.FC = () => {
           {(!resettingPassword?.email || resettingPassword.email.trim() === '') &&
             (!(resettingPassword as any)?.profile?.phone || (resettingPassword as any).profile.phone.trim() === '') && (
               <p style={{ color: '#ff4d4f', fontSize: '12px', marginTop: 16, textAlign: 'center' }}>
-                该用户没有绑定邮箱或手机号，无法重置密码
+                {t('usersAdmin.noEmailOrPhone')}
               </p>
             )}
         </div>

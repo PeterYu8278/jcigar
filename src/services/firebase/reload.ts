@@ -34,7 +34,8 @@ const RELOAD_EXCHANGE_RATE = 1; // 1 RM = 1 积分（可根据配置调整）
 export const createReloadRecord = async (
   userId: string,
   requestedAmount: number, // RM
-  userName?: string
+  userName?: string,
+  storeId?: string
 ): Promise<{ success: boolean; recordId?: string; error?: string }> => {
   try {
     const userDoc = await getDoc(doc(db, GLOBAL_COLLECTIONS.USERS, userId));
@@ -51,6 +52,7 @@ export const createReloadRecord = async (
       requestedAmount,
       pointsEquivalent,
       status: 'pending',
+      storeId,
       createdAt: new Date(),
       updatedAt: new Date()
     };

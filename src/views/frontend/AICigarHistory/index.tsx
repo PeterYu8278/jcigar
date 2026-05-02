@@ -22,11 +22,11 @@ interface UserCigarHistoryItem {
 }
 
 const AICigarHistory: React.FC = () => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const navigate = useNavigate();
     const { user } = useAuthStore();
     const [loading, setLoading] = useState(false);
-    const [history, setHistory] = useState<UserCigarHistoryItem[]>([]);
+    const [cigarHistory, setCigarHistory] = useState<UserCigarHistoryItem[]>([]);
     const [brandsData, setBrandsData] = useState<Brand[]>([]);
     const [selectedBrand, setSelectedBrand] = useState<string>('all');
     const [searchKeyword, setSearchKeyword] = useState('');
@@ -36,7 +36,7 @@ const AICigarHistory: React.FC = () => {
 
     useEffect(() => {
         if (!user?.id) {
-            message.warning('请先登录');
+            message.warning(t('aiHistory.pleaseLogin'));
             navigate('/');
             return;
         }
@@ -60,10 +60,10 @@ const AICigarHistory: React.FC = () => {
         setLoading(true);
         try {
             const data = await getUserCigarScanHistory(user.id);
-            setHistory(data);
+            setCigarHistory(data);
         } catch (error) {
             console.error('[AICigarHistory] 加载失败:', error);
-            message.error('加载历史记录失败');
+            message.error(t('aiHistory.loadFailed'));
         } finally {
             setLoading(false);
         }
@@ -71,19 +71,26 @@ const AICigarHistory: React.FC = () => {
 
     const formatDate = (date: Date | null) => {
         if (!date) return '-';
+        if (i18n.language === 'en-US') {
+            const day = date.getDate();
+            const month = date.toLocaleDateString('en-US', { month: 'short' });
+            const year = date.getFullYear();
+            const time = dayjs(date).format('HH:mm');
+            return `${day} ${month}, ${year} ${time}`;
+        }
         return dayjs(date).format('YYYY-MM-DD HH:mm');
     };
 
     // 从历史记录中提取品牌列表（去重），并匹配 brands collection 数据
     const brands = useMemo(() => {
         const brandSet = new Set<string>();
-        history.forEach(item => {
+        cigarHistory.forEach(item => {
             if (item.aggregatedData.brand) {
                 brandSet.add(item.aggregatedData.brand);
             }
         });
         const brandNames = Array.from(brandSet).sort();
-        
+
         // 匹配 brands collection 中的品牌数据
         return brandNames.map(brandName => {
             const brandData = brandsData.find(b => b.name === brandName);
@@ -94,7 +101,7 @@ const AICigarHistory: React.FC = () => {
                 id: brandData?.id
             };
         });
-    }, [history, brandsData]);
+    }, [cigarHistory, brandsData]);
 
     // 按产地分组品牌
     const cubanBrands = useMemo(() => {
@@ -113,31 +120,31 @@ const AICigarHistory: React.FC = () => {
 
     // 筛选后的历史记录
     const filteredHistory = useMemo(() => {
-        let filtered = history;
-        
+        let filtered = cigarHistory;
+
         // 品牌筛选
         if (selectedBrand !== 'all') {
             filtered = filtered.filter(item => item.aggregatedData.brand === selectedBrand);
         }
-        
+
         // 搜索关键词筛选
         if (searchKeyword) {
             const keyword = searchKeyword.toLowerCase();
-            filtered = filtered.filter(item => 
+            filtered = filtered.filter(item =>
                 item.productName.toLowerCase().includes(keyword) ||
                 item.aggregatedData.brand?.toLowerCase().includes(keyword) ||
                 item.aggregatedData.origin?.toLowerCase().includes(keyword)
             );
         }
-        
+
         return filtered;
-    }, [history, selectedBrand, searchKeyword]);
+    }, [cigarHistory, selectedBrand, searchKeyword]);
 
     // 按品牌分组筛选后的历史记录
     const groupedHistory = useMemo(() => {
         const groups: Record<string, UserCigarHistoryItem[]> = {};
         filteredHistory.forEach(item => {
-            const brand = item.aggregatedData.brand || '其他';
+            const brand = item.aggregatedData.brand || t('aiHistory.other');
             if (!groups[brand]) {
                 groups[brand] = [];
             }
@@ -156,11 +163,11 @@ const AICigarHistory: React.FC = () => {
 
     if (loading) {
         return (
-            <div style={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                alignItems: 'center', 
-                minHeight: '50vh' 
+            <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                minHeight: '50vh'
             }}>
                 <Spin size="large" />
             </div>
@@ -168,16 +175,15 @@ const AICigarHistory: React.FC = () => {
     }
 
     return (
-        <div style={{ 
-            display: 'flex', 
+        <div style={{
+            display: 'flex',
             height: !isMobile ? 'calc(100vh - 64px)' : '100%',
             background: 'transparent',
-            overflow: 'hidden',
-            paddingTop: !isMobile ? '100px' : 0
+            overflow: 'hidden'
         }}>
             {/* 左侧品牌导航栏 */}
             {brands.length > 0 && (
-                <div 
+                <div
                     ref={sidebarRef}
                     className="shop-sidebar"
                     style={{
@@ -227,7 +233,7 @@ const AICigarHistory: React.FC = () => {
                                     textAlign: 'center',
                                     lineHeight: 1.2
                                 }}>
-                                    全部
+                                    {t('common.all') || '全部'}
                                 </div>
                             </div>
                         </div>
@@ -412,7 +418,7 @@ const AICigarHistory: React.FC = () => {
                 height: !isMobile ? '95vh' : '90vh'
             }}>
                 {/* 顶部搜索栏 - 固定不滚动 */}
-                <div style={{ 
+                <div style={{
                     flexShrink: 0,
                     padding: isMobile ? '12px' : '16px',
                     paddingBottom: '12px',
@@ -432,7 +438,7 @@ const AICigarHistory: React.FC = () => {
                                 <SearchOutlined />
                             </div>
                             <Input
-                                placeholder="搜索产品名称、品牌或产地"
+                                placeholder={t('aiHistory.searchPlaceholder')}
                                 value={searchKeyword}
                                 onChange={(e) => setSearchKeyword(e.target.value)}
                                 style={{
@@ -465,9 +471,9 @@ const AICigarHistory: React.FC = () => {
                                 padding: '0 12px',
                                 fontSize: '14px'
                             }}
-                            title="重置筛选"
+                            title={t('aiHistory.reset')}
                         >
-                            {!isMobile && '重置'}
+                            {!isMobile && t('aiHistory.reset')}
                         </Button>
                     </div>
                 </div>
@@ -487,7 +493,7 @@ const AICigarHistory: React.FC = () => {
                 }} />
 
                 {/* 历史记录滚动区域 */}
-                <div 
+                <div
                     className="shop-content-scroll"
                     style={{
                         flex: 1,
@@ -503,7 +509,7 @@ const AICigarHistory: React.FC = () => {
                         <Empty
                             description={
                                 <Text style={{ color: '#999' }}>
-                                    {searchKeyword || selectedBrand !== 'all' ? '没有找到匹配的记录' : '暂无识别历史记录'}
+                                    {searchKeyword || selectedBrand !== 'all' ? t('aiHistory.noResults') : t('aiHistory.emptyHistory')}
                                 </Text>
                             }
                             style={{ marginTop: '60px' }}
@@ -524,13 +530,13 @@ const AICigarHistory: React.FC = () => {
                                     }}>
                                         {brandName}
                                     </h2>
-                                    
+
                                     {/* 品牌下的产品列表 */}
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                         {items.map((item, index) => (
-                                            <div 
+                                            <div
                                                 key={index}
-                                                style={{ 
+                                                style={{
                                                     display: 'flex',
                                                     flexDirection: 'column',
                                                     gap: '12px',
@@ -542,11 +548,11 @@ const AICigarHistory: React.FC = () => {
                                                     transition: 'background 0.2s ease'
                                                 }}
                                                 onClick={() => {
-                                                    message.info(`查看 ${item.productName} 的详细信息`);
+                                                    message.info(t('aiHistory.viewDetail', { name: item.productName }));
                                                 }}
                                             >
                                                 {/* 产品名称 */}
-                                                <Title level={5} style={{ 
+                                                <Title level={5} style={{
                                                     margin: 0,
                                                     backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
                                                     WebkitBackgroundClip: 'text',
@@ -555,7 +561,7 @@ const AICigarHistory: React.FC = () => {
                                                 }}>
                                                     {item.productName}
                                                 </Title>
-                                                
+
                                                 {/* 图片和信息区域 */}
                                                 <div style={{
                                                     display: 'flex',
@@ -564,7 +570,7 @@ const AICigarHistory: React.FC = () => {
                                                 }}>
                                                     {/* 左侧图片 */}
                                                     <div style={{ position: 'relative', flexShrink: 0 }}>
-                                                        <img 
+                                                        <img
                                                             alt={item.productName}
                                                             src={DEFAULT_CIGAR_IMAGE}
                                                             style={{
@@ -593,9 +599,9 @@ const AICigarHistory: React.FC = () => {
                                                             {item.aggregatedData.strength && (
                                                                 <Tag
                                                                     color={
-                                                                        item.aggregatedData.strength === 'Full' || item.aggregatedData.strength === 'full' ? 'red' : 
-                                                                        item.aggregatedData.strength === 'Medium' || item.aggregatedData.strength === 'medium' ? 'orange' : 
-                                                                        'green'
+                                                                        item.aggregatedData.strength === 'Full' || item.aggregatedData.strength === 'full' ? 'red' :
+                                                                            item.aggregatedData.strength === 'Medium' || item.aggregatedData.strength === 'medium' ? 'orange' :
+                                                                                'green'
                                                                     }
                                                                     style={{
                                                                         margin: 0,

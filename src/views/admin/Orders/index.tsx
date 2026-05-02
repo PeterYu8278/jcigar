@@ -23,7 +23,7 @@ const { Search } = Input
 const { Option } = Select
 
 const AdminOrders: React.FC = () => {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { isSuperAdmin, user: authUser } = useAuthStore()
   const [mainTab, setMainTab] = useState<'orders' | 'invoices'>('orders')
   const [orders, setOrders] = useState<Order[]>([])
@@ -421,7 +421,7 @@ const AdminOrders: React.FC = () => {
                             <Option value="bank_transfer">{t('ordersAdmin.payment.bankTransfer')}</Option>
                           </Select>
                           <Select
-                            placeholder="财务状态"
+                            placeholder={t('ordersAdmin.financialStatus')}
                             style={{ width: 140 }}
                             value={matchStatusTab}
                             onChange={setMatchStatusTab}
@@ -534,7 +534,7 @@ const AdminOrders: React.FC = () => {
                           </div>
                           <div style={{ position: 'relative', width: '100%' }}>
                             <Select
-                              placeholder="财务状态"
+                              placeholder={t('ordersAdmin.financialStatus')}
                               value={matchStatusTab}
                               onChange={setMatchStatusTab}
                               style={{ width: '100%' }}
@@ -579,7 +579,7 @@ const AdminOrders: React.FC = () => {
                           total: filteredSorted.length,
                           showSizeChanger: true,
                           showQuickJumper: false,
-                          showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
+                          showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
                           onChange: handlePaginationChange,
                           onShowSizeChange: handlePaginationChange,
                           pageSizeOptions: ['10', '20', '50', '100'],
@@ -597,7 +597,7 @@ const AdminOrders: React.FC = () => {
                         const createdDate = order.createdAt ?
                           (typeof (order.createdAt as any).toDate === 'function' ? (order.createdAt as any).toDate() : order.createdAt)
                           : new Date()
-                        const formattedDate = dayjs(createdDate).isValid() ? dayjs(createdDate).format('YYYY-MM-DD') : '-'
+                        const formattedDate = dayjs(createdDate).isValid() ? dayjs(createdDate).format(i18n.language === 'en-US' ? 'D MMM, YYYY' : 'YYYY-MM-DD') : '-'
 
                         return (
                           <div key={order.id} style={{ border: '1px solid rgba(244,175,37,0.2)', borderRadius: 12, padding: 12, background: 'rgba(34,28,16,0.5)', backdropFilter: 'blur(10px)' }}>

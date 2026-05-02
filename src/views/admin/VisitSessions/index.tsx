@@ -16,12 +16,14 @@ import { createRedemptionRecord, updateRedemptionRecord, getRedemptionRecordsByS
 import { useAuthStore } from '../../../store/modules/auth';
 import type { VisitSession, Cigar } from '../../../types';
 import dayjs from 'dayjs';
+import { useTranslation } from 'react-i18next';
 import { QRScanner } from '../../../components/admin/QRScanner';
 
 const { Title, Text } = Typography;
 const { Search } = Input;
 
 const VisitSessionsPage: React.FC = () => {
+  const { t } = useTranslation();
   const { user, isSuperAdmin } = useAuthStore();
   const { modal } = App.useApp(); // 使用 App.useApp() 获取 modal 实例以支持 React 19
   const [form] = Form.useForm();
@@ -75,7 +77,7 @@ const VisitSessionsPage: React.FC = () => {
       const cigarList = await getCigars();
       setCigars(cigarList);
     } catch (error) {
-      console.error('加载雪茄列表失败:', error);
+      console.error(t('visitSessions.loadCigarsFailed') + ':', error);
     }
   };
 
@@ -89,7 +91,7 @@ const VisitSessionsPage: React.FC = () => {
         return newMap;
       });
     } catch (error) {
-      console.error('加载兑换记录失败:', error);
+      console.error(t('visitSessions.loadRedemptionRecordsFailed') + ':', error);
     }
   };
 
@@ -112,8 +114,8 @@ const VisitSessionsPage: React.FC = () => {
 
       setSessions(allSessions);
     } catch (error) {
-      console.error('加载驻店记录失败:', error);
-      message.error('加载驻店记录失败');
+      console.error(t('visitSessions.loadVisitSessionsFailed') + ':', error);
+      message.error(t('visitSessions.loadVisitSessionsFailed'));
     } finally {
       setLoading(false);
     }
@@ -132,7 +134,7 @@ const VisitSessionsPage: React.FC = () => {
       }
       setSessions(filteredSessions);
     } catch (error) {
-      message.error('加载用户驻店记录失败');
+      message.error(t('visitSessions.loadUserVisitSessionsFailed'));
     } finally {
       setLoading(false);
     }
@@ -141,21 +143,21 @@ const VisitSessionsPage: React.FC = () => {
   const handleManualCheckout = async (sessionId: string, forceHours?: number) => {
 
     if (!user?.id) {
-      message.error('请先登录');
+      message.error(t('visitSessions.pleaseLogin'));
       return;
     }
 
     const content = forceHours
-      ? `是否按 ${forceHours} 小时强制结算此驻店记录？`
-      : '是否结算此驻店记录？';
+      ? t('visitSessions.forceCheckoutConfirmContent', { hours: forceHours })
+      : t('visitSessions.confirmCheckoutContent');
 
     try {
 
       modal.confirm({
-        title: '确认结算',
+        title: t('visitSessions.confirmCheckout'),
         content: content,
-        okText: '确认',
-        cancelText: '取消',
+        okText: t('common.confirm'),
+        cancelText: t('common.cancel'),
         centered: true,
         maskClosable: false,
         onOk: async () => {
@@ -163,15 +165,15 @@ const VisitSessionsPage: React.FC = () => {
             setLoading(true);
             const result = await completeVisitSession(sessionId, user.id, user.storeId, forceHours);
             if (result.success) {
-              message.success(`结算成功，扣除积分: ${result.pointsDeducted || 0}`);
+              message.success(t('visitSessions.checkoutSuccess', { points: result.pointsDeducted || 0 }));
               // 重新加载所有数据
               await loadAllSessions();
             } else {
-              message.error(result.error || '结算失败');
+              message.error(result.error || t('visitSessions.checkoutFailed'));
             }
           } catch (error: any) {
             console.error('[handleManualCheckout] 结算异常', error);
-            message.error(error.message || '结算失败');
+            message.error(error.message || t('visitSessions.checkoutFailed'));
           } finally {
             setLoading(false);
           }
@@ -182,32 +184,34 @@ const VisitSessionsPage: React.FC = () => {
 
     } catch (error: any) {
       console.error('[handleManualCheckout] modal.confirm 异常', error);
-      message.error('无法打开确认对话框: ' + (error.message || '未知错误'));
+      message.error(t('visitSessions.modalOpenFailed') + ': ' + (error.message || t('common.unknownError')));
     }
   };
 
   const handleBatchProcessExpired = async () => {
     if (!user?.id) {
-      message.error('请先登录');
+      message.error(t('visitSessions.pleaseLogin'));
       return;
     }
 
     modal.confirm({
-      title: '批量处理过期记录',
-      content: '是否批量处理所有超过24小时未check-out的驻店记录（按5小时强制结算）？',
+      title: t('visitSessions.batchProcessExpired'),
+      content: t('visitSessions.batchProcessExpiredConfirm'),
+      okText: t('common.confirm'),
+      cancelText: t('common.cancel'),
       onOk: async () => {
         setLoading(true);
         try {
           const { processExpiredVisitSessions } = await import('../../../services/firebase/scheduledJobs');
           const result = await processExpiredVisitSessions();
           if (result.success) {
-            message.success(`已处理 ${result.processed} 条记录`);
+            message.success(t('visitSessions.batchProcessSuccess', { count: result.processed }));
             loadAllSessions();
           } else {
-            message.error('批量处理失败');
+            message.error(t('visitSessions.batchProcessFailed'));
           }
         } catch (error: any) {
-          message.error(error.message || '批量处理失败');
+          message.error(error.message || t('visitSessions.batchProcessFailed'));
         } finally {
           setLoading(false);
         }
@@ -217,21 +221,21 @@ const VisitSessionsPage: React.FC = () => {
 
   const columns = [
     {
-      title: 'Check-in时间',
+      title: t('visitSessions.checkInTime'),
       dataIndex: 'checkInAt',
       key: 'checkInAt',
       width: 180,
       render: (date: Date) => dayjs(date).format('YYYY-MM-DD HH:mm:ss')
     },
     {
-      title: '用户',
+      title: t('visitSessions.user'),
       dataIndex: 'userName',
       key: 'userName',
       width: 150,
       render: (name: string, record: VisitSession) => name || record.userId
     },
     {
-      title: '门店',
+      title: t('visitSessions.store'),
       dataIndex: 'storeId',
       key: 'storeId',
       width: 150,
@@ -242,7 +246,7 @@ const VisitSessionsPage: React.FC = () => {
       }
     },
     {
-      title: '类型',
+      title: t('visitSessions.type'),
       dataIndex: 'checkInType',
       key: 'checkInType',
       width: 120,
@@ -250,23 +254,23 @@ const VisitSessionsPage: React.FC = () => {
         if (type === 'daypass' || record.dayPass?.isPurchased) {
           return <Tag color="gold">Day Pass</Tag>;
         }
-        return <Tag color="blue">会员签到</Tag>;
+        return <Tag color="blue">{t('visitSessions.memberCheckIn')}</Tag>;
       }
     },
     {
-      title: 'Check-out时间',
+      title: t('visitSessions.checkOutTime'),
       dataIndex: 'checkOutAt',
       key: 'checkOutAt',
       width: 180,
       render: (date: Date | undefined) => date ? dayjs(date).format('YYYY-MM-DD HH:mm:ss') : '-'
     },
     {
-      title: '驻店时长',
+      title: t('visitSessions.duration'),
       key: 'duration',
       width: 120,
       render: (_: any, record: VisitSession) => {
         if (record.durationHours !== undefined) {
-          return `${record.durationHours} 小时`;
+          return `${record.durationHours} ${t('visitSessions.hours')}`;
         }
         if (record.status === 'pending') {
           const now = new Date();
@@ -279,22 +283,22 @@ const VisitSessionsPage: React.FC = () => {
       }
     },
     {
-      title: '扣除积分',
+      title: t('visitSessions.pointsDeducted'),
       dataIndex: 'pointsDeducted',
       key: 'pointsDeducted',
       width: 100,
       render: (points: number | undefined) => points !== undefined ? `-${points}` : '-'
     },
     {
-      title: '状态',
+      title: t('visitSessions.status'),
       dataIndex: 'status',
       key: 'status',
       width: 100,
       render: (status: string, record: VisitSession) => {
         const statusMap: Record<string, { color: string; text: string }> = {
-          pending: { color: 'orange', text: '待处理' },
-          completed: { color: 'green', text: '已完成' },
-          expired: { color: 'red', text: '已过期' }
+          pending: { color: 'orange', text: t('visitSessions.statusPending') },
+          completed: { color: 'green', text: t('visitSessions.statusCompleted') },
+          expired: { color: 'red', text: t('visitSessions.statusExpired') }
         };
         const statusInfo = statusMap[status] || { color: 'default', text: status };
 
@@ -304,7 +308,7 @@ const VisitSessionsPage: React.FC = () => {
           const diffMs = now.getTime() - record.checkInAt.getTime();
           const hours = diffMs / (1000 * 60 * 60);
           if (hours >= 24) {
-            return <Tag color="red">过期待处理</Tag>;
+            return <Tag color="red">{t('visitSessions.expiredPending')}</Tag>;
           }
         }
 
@@ -312,7 +316,7 @@ const VisitSessionsPage: React.FC = () => {
       }
     },
     {
-      title: '操作',
+      title: t('visitSessions.actions'),
       key: 'action',
       width: 200,
       render: (_: any, record: VisitSession) => {
@@ -336,7 +340,7 @@ const VisitSessionsPage: React.FC = () => {
                 fontWeight: 700
               }}
             >
-              结算
+              {t('visitSessions.checkout')}
             </Button>
             <Button
               size="small"
@@ -352,7 +356,7 @@ const VisitSessionsPage: React.FC = () => {
                 color: '#FFFFFF'
               }}
             >
-              强制结算
+              {t('visitSessions.forceCheckout')}
             </Button>
           </Space>
         );
@@ -371,10 +375,10 @@ const VisitSessionsPage: React.FC = () => {
         color: 'transparent',
         marginBottom: 12
       }}>
-        驻店记录管理
+        {t('visitSessions.title')}
       </h1>
       <Text style={{ color: 'rgba(255, 255, 255, 0.6)', display: 'block' }}>
-        查看和管理所有驻店记录
+        {t('visitSessions.subtitle')}
       </Text>
       <div>
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
@@ -427,16 +431,16 @@ const VisitSessionsPage: React.FC = () => {
                   color: '#FFFFFF'
                 }}
               >
-                刷新
+                {t('visitSessions.refresh')}
               </Button>
             </Space>
           </div>
 
           <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
             <Search
-              placeholder="输入用户ID或会员ID搜索"
+              placeholder={t('visitSessions.searchPlaceholder')}
               allowClear
-              enterButton="搜索"
+              enterButton={t('common.search')}
               size="large"
               style={{ flex: 1, minWidth: 300 }}
               onSearch={(value) => {
@@ -446,7 +450,7 @@ const VisitSessionsPage: React.FC = () => {
               className="points-config-form"
             />
             <Space wrap>
-              <Text style={{ color: 'rgba(255, 255, 255, 0.85)' }}>状态筛选：</Text>
+              <Text style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('visitSessions.statusFilter')}</Text>
               <Button
                 onClick={() => setStatusFilter('all')}
                 style={statusFilter === 'all' ? {
@@ -460,7 +464,7 @@ const VisitSessionsPage: React.FC = () => {
                   color: '#FFFFFF'
                 }}
               >
-                全部
+                {t('visitSessions.all')}
               </Button>
               <Button
                 onClick={() => setStatusFilter('pending')}
@@ -475,7 +479,7 @@ const VisitSessionsPage: React.FC = () => {
                   color: '#FFFFFF'
                 }}
               >
-                待处理
+                {t('visitSessions.pending')}
               </Button>
               <Button
                 onClick={() => setStatusFilter('completed')}
@@ -490,7 +494,7 @@ const VisitSessionsPage: React.FC = () => {
                   color: '#FFFFFF'
                 }}
               >
-                已完成
+                {t('visitSessions.completed')}
               </Button>
 
             </Space>
@@ -512,7 +516,7 @@ const VisitSessionsPage: React.FC = () => {
                   total: sessions.length,
                   showSizeChanger: true,
                   showQuickJumper: true,
-                  showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+                  showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
                   pageSizeOptions: ['10', '20', '50', '100'],
                 }}
                 style={{
@@ -533,7 +537,7 @@ const VisitSessionsPage: React.FC = () => {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                           <div style={{ fontWeight: 600, color: '#FFD700' }}>
                             <GiftOutlined style={{ marginRight: 8 }} />
-                            兑换记录 ({allRedemptionRecords.length} 项)
+                            {t('visitSessions.redemptionRecords')} ({allRedemptionRecords.length})
                           </div>
                           {record.status === 'pending' && (
                             <Button
@@ -551,13 +555,13 @@ const VisitSessionsPage: React.FC = () => {
                                 fontWeight: 700
                               }}
                             >
-                              添加兑换记录
+                              {t('visitSessions.addRedemption')}
                             </Button>
                           )}
                         </div>
 
                         {allRedemptionRecords.length === 0 ? (
-                          <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>暂无兑换记录</Text>
+                          <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>{t('visitSessions.noRedemptionRecords')}</Text>
                         ) : (
                           <div className="points-config-form">
                             <Table
@@ -570,41 +574,41 @@ const VisitSessionsPage: React.FC = () => {
                               }}
                               columns={[
                                 {
-                                  title: '状态',
+                                  title: t('visitSessions.status'),
                                   dataIndex: 'status',
                                   key: 'status',
                                   width: 100,
                                   render: (status: string) => {
                                     if (status === 'pending') {
-                                      return <Tag color="orange">待选择</Tag>;
+                                      return <Tag color="orange">{t('visitSessions.statusToSelect')}</Tag>;
                                     }
-                                    return <Tag color="green">已完成</Tag>;
+                                    return <Tag color="green">{t('visitSessions.statusCompleted')}</Tag>;
                                   }
                                 },
                                 {
-                                  title: '雪茄名称',
+                                  title: t('visitSessions.cigarName'),
                                   dataIndex: 'cigarName',
                                   key: 'cigarName',
                                   width: 200,
                                   render: (name: string, record: any) => {
                                     if (record.status === 'pending') {
-                                      return <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>待选择</Text>;
+                                      return <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>{t('visitSessions.statusToSelect')}</Text>;
                                     }
                                     return <Text strong style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{name}</Text>;
                                   }
                                 },
                                 {
-                                  title: '数量',
+                                  title: t('visitSessions.quantity'),
                                   dataIndex: 'quantity',
                                   key: 'quantity',
                                   width: 100,
                                   align: 'center' as const,
                                   render: (quantity: number) => (
-                                    <Tag color="blue">{quantity} 支</Tag>
+                                    <Tag color="blue">{quantity} {t('visitSessions.sticks')}</Tag>
                                   )
                                 },
                                 {
-                                  title: '兑换时间',
+                                  title: t('visitSessions.redemptionTime'),
                                   dataIndex: 'redeemedAt',
                                   key: 'redeemedAt',
                                   width: 180,
@@ -616,14 +620,14 @@ const VisitSessionsPage: React.FC = () => {
                                   }
                                 },
                                 {
-                                  title: '操作人',
+                                  title: t('visitSessions.operator'),
                                   dataIndex: 'redeemedBy',
                                   key: 'redeemedBy',
                                   width: 150,
                                   render: (userId: string) => userId || '-'
                                 },
                                 {
-                                  title: '操作',
+                                  title: t('visitSessions.actions'),
                                   key: 'action',
                                   width: 100,
                                   render: (_: any, redemptionRecord: any) => {
@@ -643,7 +647,7 @@ const VisitSessionsPage: React.FC = () => {
                                           setEditRedemptionModalVisible(true);
                                         }}
                                       >
-                                        编辑
+                                        {t('common.edit')}
                                       </Button>
                                     );
                                   }
@@ -676,14 +680,14 @@ const VisitSessionsPage: React.FC = () => {
                 </div>
               ) : sessions.length === 0 ? (
                 <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>
-                  暂无驻店记录
+                  {t('visitSessions.noVisitSessions')}
                 </div>
               ) : (
                 sessions.map((record) => {
                   const statusMap: Record<string, { color: string; text: string }> = {
-                    pending: { color: '#fb923c', text: '待处理' },
-                    completed: { color: '#34d399', text: '已完成' },
-                    expired: { color: '#f87171', text: '已过期' }
+                    pending: { color: '#fb923c', text: t('visitSessions.statusPending') },
+                    completed: { color: '#34d399', text: t('visitSessions.statusCompleted') },
+                    expired: { color: '#f87171', text: t('visitSessions.statusExpired') }
                   };
                   const statusInfo = statusMap[record.status] || { color: '#9ca3af', text: record.status };
 
@@ -703,7 +707,7 @@ const VisitSessionsPage: React.FC = () => {
 
                   const calculateDuration = () => {
                     if (record.durationHours !== undefined) {
-                      return `${record.durationHours} 小时`;
+                      return `${record.durationHours} ${t('visitSessions.hours')}`;
                     }
                     if (record.status === 'pending') {
                       const now = new Date();
@@ -748,10 +752,10 @@ const VisitSessionsPage: React.FC = () => {
                             </div>
                           )}
                           <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
-                            时长: {calculateDuration()}
+                            {t('visitSessions.duration')}: {calculateDuration()}
                             {record.pointsDeducted !== undefined && (
                               <span style={{ marginLeft: 8 }}>
-                                • 扣除: -{record.pointsDeducted} 积分
+                                • {t('visitSessions.pointsDeducted')}: -{record.pointsDeducted}
                               </span>
                             )}
                           </div>
@@ -792,7 +796,7 @@ const VisitSessionsPage: React.FC = () => {
                               fontSize: 11
                             }}
                           >
-                            {expanded ? '收起' : `兑换记录${allRedemptionRecords.length > 0 ? ` (${allRedemptionRecords.length})` : ''}`}
+                            {expanded ? t('visitSessions.collapse') : `${t('visitSessions.redemptionRecords')}${allRedemptionRecords.length > 0 ? ` (${allRedemptionRecords.length})` : ''}`}
                           </Button>
                         </div>
                       </div>
@@ -810,7 +814,7 @@ const VisitSessionsPage: React.FC = () => {
                               fontWeight: 700
                             }}
                           >
-                            结算
+                            {t('visitSessions.checkout')}
                           </Button>
                           <Button
                             size="small"
@@ -826,7 +830,7 @@ const VisitSessionsPage: React.FC = () => {
                               color: '#FFFFFF'
                             }}
                           >
-                            强制结算
+                            {t('visitSessions.forceCheckout')}
                           </Button>
                         </div>
                       )}
@@ -835,7 +839,7 @@ const VisitSessionsPage: React.FC = () => {
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                             <div style={{ fontSize: 12, fontWeight: 600, color: '#FFD700' }}>
                               <GiftOutlined style={{ marginRight: 4 }} />
-                              兑换记录 {allRedemptionRecords.length > 0 && `(${allRedemptionRecords.length} 项)`}
+                              {t('visitSessions.redemptionRecords')} {allRedemptionRecords.length > 0 && `(${allRedemptionRecords.length})`}
                             </div>
                             {record.status === 'pending' && (
                               <Button
@@ -856,7 +860,7 @@ const VisitSessionsPage: React.FC = () => {
                                   padding: '0 8px'
                                 }}
                               >
-                                添加
+                                {t('common.add')}
                               </Button>
                             )}
                           </div>
@@ -867,7 +871,7 @@ const VisitSessionsPage: React.FC = () => {
                               color: 'rgba(255, 255, 255, 0.5)',
                               fontSize: 12
                             }}>
-                              暂无兑换记录
+                              {t('visitSessions.noRedemptionRecords')}
                             </div>
                           ) : (
                             allRedemptionRecords.map((redemptionRecord) => {
@@ -892,23 +896,23 @@ const VisitSessionsPage: React.FC = () => {
                                     <div style={{ flex: 1 }}>
                                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                                         <span style={{ color: 'rgba(255,255,255,0.9)', fontWeight: 600, fontSize: 12 }}>
-                                          {redemptionRecord.status === 'pending' ? '待选择' : (redemptionRecord.cigarName || '-')}
+                                          {redemptionRecord.status === 'pending' ? t('visitSessions.statusToSelect') : (redemptionRecord.cigarName || '-')}
                                         </span>
                                         <Tag color="blue" style={{ fontSize: 10, margin: 0 }}>
-                                          {redemptionRecord.quantity || 1} 支
+                                          {redemptionRecord.quantity || 1} {t('visitSessions.sticks')}
                                         </Tag>
                                         <Tag color={redemptionRecord.status === 'pending' ? 'orange' : 'green'} style={{ fontSize: 10, margin: 0 }}>
-                                          {redemptionRecord.status === 'pending' ? '待选择' : '已完成'}
+                                          {redemptionRecord.status === 'pending' ? t('visitSessions.statusToSelect') : t('visitSessions.statusCompleted')}
                                         </Tag>
                                       </div>
                                       {redeemedAt && (
                                         <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginBottom: 2 }}>
-                                          兑换时间: {dayjs(redeemedAt).format('YYYY-MM-DD HH:mm')}
+                                          {t('visitSessions.redemptionTime')}: {dayjs(redeemedAt).format('YYYY-MM-DD HH:mm')}
                                         </div>
                                       )}
                                       {redemptionRecord.redeemedBy && (
                                         <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
-                                          操作人: {redemptionRecord.redeemedBy}
+                                          {t('visitSessions.operator')}: {redemptionRecord.redeemedBy}
                                         </div>
                                       )}
                                     </div>
@@ -933,7 +937,7 @@ const VisitSessionsPage: React.FC = () => {
                                           height: 'auto'
                                         }}
                                       >
-                                        编辑
+                                        {t('common.edit')}
                                       </Button>
                                     )}
                                   </div>
@@ -964,7 +968,7 @@ const VisitSessionsPage: React.FC = () => {
 
       {/* 添加兑换记录弹窗 */}
       <Modal
-        title={<span style={{ color: '#FFFFFF' }}>添加兑换记录</span>}
+        title={<span style={{ color: '#FFFFFF' }}>{t('visitSessions.addRedemption')}</span>}
         open={addRedemptionModalVisible}
         onCancel={() => {
           setAddRedemptionModalVisible(false);
@@ -1005,7 +1009,7 @@ const VisitSessionsPage: React.FC = () => {
         }}
         onOk={async () => {
           if (!selectedSession || !user?.id) {
-            message.error('缺少必要信息');
+            message.error(t('visitSessions.missingRequiredInfo'));
             return;
           }
 
@@ -1014,7 +1018,7 @@ const VisitSessionsPage: React.FC = () => {
             const items = values.items || [];
 
             if (items.length === 0) {
-              message.warning('请至少添加一项兑换记录');
+              message.warning(t('visitSessions.addAtLeastOneRedemption'));
               return;
             }
 
@@ -1024,7 +1028,7 @@ const VisitSessionsPage: React.FC = () => {
             for (const item of items) {
               const cigar = cigars.find(c => c.id === item.cigarId);
               if (!cigar) {
-                message.error(`雪茄 ${item.cigarId} 不存在`);
+                message.error(t('visitSessions.cigarNotFound', { id: item.cigarId }));
                 continue;
               }
 
@@ -1039,12 +1043,12 @@ const VisitSessionsPage: React.FC = () => {
               );
 
               if (!result.success) {
-                message.error(`添加兑换记录失败: ${result.error}`);
+                message.error(t('visitSessions.addRedemptionFailed', { error: result.error }));
                 continue;
               }
             }
 
-            message.success('兑换记录添加成功');
+            message.success(t('visitSessions.saveSuccess'));
             setAddRedemptionModalVisible(false);
             setSelectedSession(null);
             form.resetFields();
@@ -1062,13 +1066,13 @@ const VisitSessionsPage: React.FC = () => {
               // 只显示一个友好的提示
               const errorMessages = error.errorFields.map((field: any) => field.errors?.[0]).filter(Boolean);
               if (errorMessages.length > 0) {
-                message.warning(`请完善表单信息：${errorMessages.join('，')}`);
+                message.warning(t('visitSessions.pleaseCompleteForm', { errors: errorMessages.join(', ') }));
               }
               return;
             }
             // 其他错误才记录到控制台
             console.error('添加兑换记录失败:', error);
-            message.error(error.message || '添加兑换记录失败');
+            message.error(error.message || t('visitSessions.addRedemptionError'));
           } finally {
             setAddingRedemption(false);
           }
@@ -1085,12 +1089,12 @@ const VisitSessionsPage: React.FC = () => {
                     <Form.Item
                       {...restField}
                       name={[name, 'cigarId']}
-                      label="雪茄"
-                      rules={[{ required: true, message: '请选择雪茄' }]}
+                      label={t('visitSessions.cigarName')}
+                      rules={[{ required: true, message: t('visitSessions.selectCigar') }]}
                       style={{ flex: 1, marginBottom: 0 }}
                     >
                       <Select
-                        placeholder="选择雪茄"
+                        placeholder={t('visitSessions.selectCigar')}
                         showSearch
                         filterOption={(input, option) =>
                           (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
@@ -1104,14 +1108,14 @@ const VisitSessionsPage: React.FC = () => {
                     <Form.Item
                       {...restField}
                       name={[name, 'quantity']}
-                      label="数量"
+                      label={t('visitSessions.quantity')}
                       rules={[
-                        { required: true, message: '请输入数量' },
-                        { type: 'number', min: 1, message: '数量必须大于0' }
+                        { required: true, message: t('visitSessions.enterQuantity') },
+                        { type: 'number', min: 1, message: t('visitSessions.quantityGreaterThanZero') }
                       ]}
                       style={{ width: 100, marginBottom: 0 }}
                     >
-                      <InputNumber min={1} max={100} placeholder="数量" />
+                      <InputNumber min={1} max={100} placeholder={t('visitSessions.quantity')} />
                     </Form.Item>
                     <Button
                       type="link"
@@ -1124,7 +1128,7 @@ const VisitSessionsPage: React.FC = () => {
                 ))}
                 <Form.Item>
                   <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                    添加雪茄
+                    {t('visitSessions.addRedemption')}
                   </Button>
                 </Form.Item>
               </>
@@ -1135,7 +1139,7 @@ const VisitSessionsPage: React.FC = () => {
 
       {/* 编辑兑换记录弹窗 */}
       <Modal
-        title={<span style={{ color: '#FFFFFF' }}>编辑兑换记录</span>}
+        title={<span style={{ color: '#FFFFFF' }}>{t('visitSessions.editRedemption')}</span>}
         open={editRedemptionModalVisible}
         onCancel={() => {
           setEditRedemptionModalVisible(false);
@@ -1177,7 +1181,7 @@ const VisitSessionsPage: React.FC = () => {
         }}
         onOk={async () => {
           if (!selectedRedemptionRecord || !selectedSession || !user?.id) {
-            message.error('缺少必要信息');
+            message.error(t('visitSessions.missingRequiredInfo'));
             return;
           }
 
@@ -1185,7 +1189,7 @@ const VisitSessionsPage: React.FC = () => {
             const values = await form.validateFields();
             const cigar = cigars.find(c => c.id === values.cigarId);
             if (!cigar) {
-              message.error('请选择雪茄');
+              message.error(t('visitSessions.pleaseSelectCigar'));
               return;
             }
 
@@ -1201,11 +1205,11 @@ const VisitSessionsPage: React.FC = () => {
             );
 
             if (!result.success) {
-              message.error(result.error || '更新兑换记录失败');
+              message.error(result.error || t('visitSessions.updateRedemptionFailed'));
               return;
             }
 
-            message.success('兑换记录已更新');
+            message.success(t('visitSessions.saveSuccess'));
             setEditRedemptionModalVisible(false);
             setSelectedRedemptionRecord(null);
             setSelectedSession(null);
@@ -1222,7 +1226,7 @@ const VisitSessionsPage: React.FC = () => {
               // 表单验证错误
               return;
             }
-            message.error(error.message || '更新兑换记录失败');
+            message.error(error.message || t('visitSessions.updateRedemptionError'));
           } finally {
             setAddingRedemption(false);
           }
@@ -1233,11 +1237,11 @@ const VisitSessionsPage: React.FC = () => {
         <Form form={form} layout="vertical" className="points-config-form">
           <Form.Item
             name="cigarId"
-            label="雪茄"
-            rules={[{ required: true, message: '请选择雪茄' }]}
+            label={t('visitSessions.cigarName')}
+            rules={[{ required: true, message: t('visitSessions.selectCigar') }]}
           >
             <Select
-              placeholder="选择雪茄"
+              placeholder={t('visitSessions.selectCigar')}
               showSearch
               filterOption={(input, option) =>
                 (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
@@ -1250,17 +1254,17 @@ const VisitSessionsPage: React.FC = () => {
           </Form.Item>
           <Form.Item
             name="quantity"
-            label="数量"
-            rules={[{ required: true, message: '请输入数量' }]}
+            label={t('visitSessions.quantity')}
+            rules={[{ required: true, message: t('visitSessions.enterQuantity') }]}
           >
-            <InputNumber min={1} max={100} placeholder="数量" style={{ width: '100%' }} />
+            <InputNumber min={1} max={100} placeholder={t('visitSessions.quantity')} style={{ width: '100%' }} />
           </Form.Item>
         </Form>
       </Modal>
 
       {/* 强制结算弹窗 */}
       <Modal
-        title={<span style={{ color: '#FFFFFF' }}>强制结算</span>}
+        title={<span style={{ color: '#FFFFFF' }}>{t('visitSessions.forceCheckout')}</span>}
         open={forceCheckoutModalVisible}
         onCancel={() => {
           setForceCheckoutModalVisible(false);
@@ -1301,7 +1305,7 @@ const VisitSessionsPage: React.FC = () => {
         }}
         onOk={async () => {
           if (!selectedSession || !user?.id) {
-            message.error('缺少必要信息');
+            message.error(t('visitSessions.missingRequiredInfo'));
             return;
           }
 
@@ -1310,7 +1314,7 @@ const VisitSessionsPage: React.FC = () => {
             const forceHours = values.forceHours;
 
             if (forceHours <= 0) {
-              message.error('结算时长必须大于0');
+              message.error(t('visitSessions.durationGreaterThanZero'));
               return;
             }
 
@@ -1327,7 +1331,7 @@ const VisitSessionsPage: React.FC = () => {
               // 表单验证错误
               return;
             }
-            message.error(error.message || '验证失败');
+            message.error(error.message || t('visitSessions.validationFailed'));
           }
         }}
         width={400}
@@ -1335,10 +1339,10 @@ const VisitSessionsPage: React.FC = () => {
         <Form form={forceCheckoutForm} layout="vertical" className="points-config-form">
           <Form.Item
             name="forceHours"
-            label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>结算时长（小时）</span>}
+            label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('visitSessions.forceHours')}</span>}
             rules={[
-              { required: true, message: '请输入结算时长' },
-              { type: 'number', min: 0.5, message: '结算时长必须大于等于0.5小时' }
+              { required: true, message: t('visitSessions.enterForceHours') },
+              { type: 'number', min: 0.5, message: t('visitSessions.minForceHours') }
             ]}
             initialValue={5}
           >
@@ -1347,12 +1351,12 @@ const VisitSessionsPage: React.FC = () => {
               max={24}
               step={0.5}
               style={{ width: '100%' }}
-              placeholder="请输入结算时长"
-              addonAfter="小时"
+              placeholder={t('visitSessions.enterForceHours')}
+              addonAfter={t('visitSessions.hours')}
             />
           </Form.Item>
           <div style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 12, marginTop: -8 }}>
-            提示：忘记check-out时，将按此时长进行强制结算
+            {t('visitSessions.forceCheckoutHint')}
           </div>
         </Form>
       </Modal>
