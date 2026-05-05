@@ -1,6 +1,6 @@
 // 功能管理页面
 import React, { useState, useEffect } from 'react';
-import { Card, Switch, Button, Space, Typography, message, Spin, Tabs, Input, Checkbox, Form, Divider, Alert, Select } from 'antd';
+import { Card, Switch, Button, Space, Typography, message, Spin, Tabs, Input, Checkbox, Form, Divider, Alert, Select, Modal, Table } from 'antd';
 const { TextArea } = Input;
 import { SaveOutlined, ReloadOutlined, EyeOutlined, EyeInvisibleOutlined, SearchOutlined, SettingOutlined, CopyOutlined, DownloadOutlined, FileTextOutlined, RocketOutlined, CheckCircleOutlined, LoadingOutlined, DatabaseOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../../store/modules/auth';
@@ -20,6 +20,20 @@ import CigarDatabase from '../CigarDatabase';
 
 const { Title, Text } = Typography;
 const { Search } = Input;
+
+// Firestore 索引预览数据
+const FIRESTORE_INDEXES_PREVIEW = [
+  { collectionGroup: "visitSessions", fields: "userId (ASC), status (ASC), checkInAt (DESC)" },
+  { collectionGroup: "visitSessions", fields: "status (ASC), checkInAt (DESC)" },
+  { collectionGroup: "visitSessions", fields: "status (ASC), checkInAt (ASC)" },
+  { collectionGroup: "visitSessions", fields: "userId (ASC), checkInAt (DESC)" },
+  { collectionGroup: "redemptionRecords", fields: "userId (ASC), dayKey (ASC), redeemedAt (ASC)" },
+  { collectionGroup: "redemptionRecords", fields: "userId (ASC), hourKey (ASC), redeemedAt (ASC)" },
+  { collectionGroup: "redemptionRecords", fields: "userId (ASC), redeemedAt (ASC)" },
+  { collectionGroup: "reloadRecords", fields: "userId (ASC), status (ASC), createdAt (DESC)" },
+  { collectionGroup: "membershipFeeRecords", fields: "status (ASC), dueDate (ASC)" },
+  { collectionGroup: "pointsRecords", fields: "userId (ASC), createdAt (DESC)" },
+];
 
 // 默认颜色主题配置（与 appConfig.ts 中的 DEFAULT_COLOR_THEME 保持一致）
 const DEFAULT_COLOR_THEME: ColorThemeConfig = {
@@ -116,6 +130,7 @@ const FeatureManagement: React.FC = () => {
     consoleUrl?: string;
   }>({ state: 'idle', message: '' });
   const [firebaseConfigCode, setFirebaseConfigCode] = useState<string>('');
+  const [isIndexModalVisible, setIsIndexModalVisible] = useState(false);
 
   // 检查是否为开发者
   useEffect(() => {
@@ -2152,7 +2167,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               <Button
                 type="primary"
                 icon={<DatabaseOutlined />}
-                onClick={handleDeployFirestoreIndexes}
+                onClick={() => setIsIndexModalVisible(true)}
                 loading={indexDeploying}
                 disabled={indexDeploying}
                 style={{
@@ -2329,6 +2344,46 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                 />
               </div>
             )}
+
+            {/* 部署 Firestore 索引预览 Modal */}
+            <Modal
+              title="预览将要部署的 Firestore 索引"
+              open={isIndexModalVisible}
+              onCancel={() => setIsIndexModalVisible(false)}
+              onOk={() => {
+                setIsIndexModalVisible(false);
+                handleDeployFirestoreIndexes();
+              }}
+              okText="确认部署"
+              cancelText="取消"
+              width={800}
+            >
+              <Alert 
+                message="以下索引将部署到您的 Firebase 项目中。此过程可能需要几分钟，已有索引将被跳过。" 
+                type="info" 
+                showIcon 
+                style={{ marginBottom: 16 }} 
+              />
+              <Table 
+                dataSource={FIRESTORE_INDEXES_PREVIEW} 
+                pagination={false}
+                size="small"
+                rowKey={(record, idx) => String(idx)}
+                columns={[
+                  {
+                    title: 'Collection Group',
+                    dataIndex: 'collectionGroup',
+                    key: 'collectionGroup',
+                    width: 200,
+                  },
+                  {
+                    title: 'Fields & Order',
+                    dataIndex: 'fields',
+                    key: 'fields',
+                  }
+                ]}
+              />
+            </Modal>
           </Form>
         </Card>
       ) : null}

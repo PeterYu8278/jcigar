@@ -1,6 +1,6 @@
 // 测试数据生成页面
 import React, { useState } from 'react'
-import { Card, Button, Space, Typography, Progress, Alert, Divider, Row, Col, Statistic, message } from 'antd'
+import { Card, Button, Space, Typography, Progress, Alert, Divider, Row, Col, Statistic, message, InputNumber } from 'antd'
 import { PlayCircleOutlined, CheckCircleOutlined, LoadingOutlined, WarningOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import { generateBrands } from './generators/brands'
@@ -227,7 +227,7 @@ const TestDataGenerator: React.FC = () => {
               }}
             >
               <Row gutter={16} align="middle">
-                <Col span={4}>
+                <Col span={2}>
                   <Text strong style={{ color: '#ffd700' }}>
                     {stage.id}
                   </Text>
@@ -241,7 +241,19 @@ const TestDataGenerator: React.FC = () => {
                     {stage.description}
                   </Text>
                 </Col>
-                <Col span={6}>
+                <Col span={4}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Text style={{ color: '#c0c0c0', fontSize: '12px' }}>数量:</Text>
+                    <InputNumber 
+                      min={0} 
+                      value={stage.count} 
+                      onChange={(val) => updateStage(stage.id, { count: val || 0 })}
+                      disabled={stage.status === 'running' || isRunning || stage.id === '10.1'}
+                      style={{ width: '80px', background: 'rgba(255,255,255,0.1)', color: '#fff', borderColor: 'rgba(255,215,0,0.3)' }}
+                    />
+                  </div>
+                </Col>
+                <Col span={4}>
                   <Progress
                     percent={stage.progress}
                     size="small"
