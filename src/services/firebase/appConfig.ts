@@ -64,7 +64,7 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
   try {
     const docRef = doc(db, GLOBAL_COLLECTIONS.APP_CONFIG, CONFIG_ID);
     let docSnap = await getDoc(docRef);
-    
+
     // 如果文档不存在，尝试从缓存读取（可能是离线状态）
     if (!docSnap.exists()) {
       try {
@@ -77,14 +77,14 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
         // 静默处理，不输出警告
       }
     }
-    
+
     if (!docSnap.exists()) {
       // 如果不存在，创建默认配置
       const defaultConfig: AppConfig = {
         id: CONFIG_ID,
         logoUrl: 'https://res.cloudinary.com/dy2zb1n41/image/upload/jep-cigar/brands/JEP_Logo_White_1763310931359_s1pkcz8y617',
         appName: 'Cigar Club',
-        hideFooter: false,
+        hideFooter: true,
         colorTheme: DEFAULT_COLOR_THEME,
         auth: {
           disableGoogleLogin: true,
@@ -93,17 +93,17 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
         updatedAt: new Date(),
         updatedBy: '',
       };
-      
+
       await setDoc(docRef, {
         ...defaultConfig,
         updatedAt: Timestamp.fromDate(defaultConfig.updatedAt),
       });
-      
+
       return defaultConfig;
     }
-    
+
     const data = docSnap.data();
-    
+
     // 处理 whapi 配置
     const whapiConfig: WhapiConfig | undefined = data.whapi ? {
       apiToken: data.whapi.apiToken,
@@ -113,23 +113,23 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
     } : undefined;
 
     // 处理消息模板
-    const whapiTemplates: MessageTemplate[] = data.whapiTemplates 
+    const whapiTemplates: MessageTemplate[] = data.whapiTemplates
       ? data.whapiTemplates.map((t: any) => ({
-          id: t.id || '',
-          name: t.name,
-          type: t.type,
-          template: t.template,
-          variables: t.variables || [],
-          enabled: t.enabled ?? true,
-          createdAt: t.createdAt?.toDate?.() || new Date(t.createdAt),
-          updatedAt: t.updatedAt?.toDate?.() || new Date(t.updatedAt),
-        }))
+        id: t.id || '',
+        name: t.name,
+        type: t.type,
+        template: t.template,
+        variables: t.variables || [],
+        enabled: t.enabled ?? true,
+        createdAt: t.createdAt?.toDate?.() || new Date(t.createdAt),
+        updatedAt: t.updatedAt?.toDate?.() || new Date(t.updatedAt),
+      }))
       : DEFAULT_MESSAGE_TEMPLATES.map((t, index) => ({
-          id: `default_${index}`,
-          ...t,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        }));
+        id: `default_${index}`,
+        ...t,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }));
 
     return {
       id: docSnap.id,
@@ -188,11 +188,11 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
       try {
         const docRef = doc(db, GLOBAL_COLLECTIONS.APP_CONFIG, CONFIG_ID);
         const docSnap = await getDocFromCache(docRef);
-        
+
         if (docSnap.exists()) {
           console.log('[getAppConfig] 使用缓存数据（离线模式）');
           const data = docSnap.data();
-          
+
           // 处理配置数据（复用现有逻辑）
           const whapiConfig: WhapiConfig | undefined = data.whapi ? {
             apiToken: data.whapi.apiToken,
@@ -201,23 +201,23 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
             enabled: data.whapi.enabled ?? false,
           } : undefined;
 
-          const whapiTemplates: MessageTemplate[] = data.whapiTemplates 
+          const whapiTemplates: MessageTemplate[] = data.whapiTemplates
             ? data.whapiTemplates.map((t: any) => ({
-                id: t.id || '',
-                name: t.name,
-                type: t.type,
-                template: t.template,
-                variables: t.variables || [],
-                enabled: t.enabled ?? true,
-                createdAt: t.createdAt?.toDate?.() || new Date(t.createdAt),
-                updatedAt: t.updatedAt?.toDate?.() || new Date(t.updatedAt),
-              }))
+              id: t.id || '',
+              name: t.name,
+              type: t.type,
+              template: t.template,
+              variables: t.variables || [],
+              enabled: t.enabled ?? true,
+              createdAt: t.createdAt?.toDate?.() || new Date(t.createdAt),
+              updatedAt: t.updatedAt?.toDate?.() || new Date(t.updatedAt),
+            }))
             : DEFAULT_MESSAGE_TEMPLATES.map((t, index) => ({
-                id: `default_${index}`,
-                ...t,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-              }));
+              id: `default_${index}`,
+              ...t,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            }));
 
           return {
             id: docSnap.id,
@@ -291,7 +291,7 @@ export const updateAppConfig = async (
   try {
     const docRef = doc(db, GLOBAL_COLLECTIONS.APP_CONFIG, CONFIG_ID);
     const docSnap = await getDoc(docRef);
-    
+
     // 构建更新数据，确保嵌套对象（如 aiCigar）被正确保存
     const updateData: any = {
       updatedAt: Timestamp.fromDate(new Date()),
@@ -320,11 +320,11 @@ export const updateAppConfig = async (
       }
       return input
     }
-    
+
     // 处理所有更新字段
     Object.keys(updates).forEach(key => {
       let value = stripUndefinedDeep((updates as any)[key]);
-      
+
       // 强制将订阅到期时间转换为 Firestore Timestamp，避免存为普通 Map
       if (key === 'subscription' && value?.expiryDate instanceof Date) {
         value.expiryDate = Timestamp.fromDate(value.expiryDate);
@@ -334,7 +334,7 @@ export const updateAppConfig = async (
         updateData[key] = value;
       }
     });
-    
+
     if (docSnap.exists()) {
       // 使用 updateDoc 更新，Firestore 会自动合并嵌套对象
       await updateDoc(docRef, updateData);
@@ -349,13 +349,13 @@ export const updateAppConfig = async (
         ...updateData,
       });
     }
-    
+
     return { success: true };
   } catch (error) {
     console.error('[updateAppConfig] 更新配置失败:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : '更新配置失败' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '更新配置失败'
     };
   }
 };
@@ -373,13 +373,13 @@ export const resetAppConfig = async (
       hideFooter: false,
       colorTheme: DEFAULT_COLOR_THEME,
     };
-    
+
     return await updateAppConfig(defaultConfig, updatedBy);
   } catch (error) {
     console.error('[resetAppConfig] 重置配置失败:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : '重置配置失败' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '重置配置失败'
     };
   }
 };

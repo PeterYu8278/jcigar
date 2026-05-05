@@ -2160,7 +2160,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                   border: 'none',
                 }}
               >
-                {indexDeploying ? '部署中...' : '部署 Firestore 索引'}
+                {indexDeploying ? '部署中...' : '一键部署firestore indexes'}
               </Button>
             </div>
 
