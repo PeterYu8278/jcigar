@@ -1,4 +1,4 @@
-// 库存管理页面
+// Inventory Management Page
 import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Table, Button, Tag, Space, Typography, Input, Select, Modal, Form, InputNumber, message, Dropdown, Checkbox, Upload, Row, Col, App, Divider, AutoComplete } from 'antd'
@@ -27,7 +27,7 @@ const DEFAULT_CIGAR_IMAGE = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhla
 const AdminInventory: React.FC = () => {
   const { t } = useTranslation()
   const { user: currentUser, isSuperAdmin } = useAuthStore()
-  const { modal } = App.useApp() // 使用 App.useApp() 获取 modal 实例以支持 React 19
+  const { modal } = App.useApp() // Use App.useApp() to get modal instance for React 19 support
   const [items, setItems] = useState<Cigar[]>([])
   const [loading, setLoading] = useState(false)
   const [creating, setCreating] = useState(false)
@@ -47,7 +47,7 @@ const AdminInventory: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([])
   const [stores, setStores] = useState<Store[]>([])
 
-  // 新架构数据
+  // New architecture data
   const [inboundOrders, setInboundOrders] = useState<InboundOrder[]>([])
   const [outboundOrders, setOutboundOrders] = useState<OutboundOrder[]>([])
   const [inventoryMovements, setInventoryMovements] = useState<InventoryMovement[]>([])
@@ -55,10 +55,10 @@ const AdminInventory: React.FC = () => {
   const [viewingProductLogs, setViewingProductLogs] = useState<string | null>(null)
   const [imageList, setImageList] = useState<any[]>([])
   const [pagination, setPagination] = useState<{ current: number; pageSize: number }>({ current: 1, pageSize: 10 })
-  const [cigarImages, setCigarImages] = useState<string[]>([]) // 雪茄图片列表
-  const [aiRecognizing, setAiRecognizing] = useState(false) // AI识别状态
-  const [cigarDatabaseData, setCigarDatabaseData] = useState<AggregatedCigarData | null>(null) // 从 cigar_database 读取的数据
-  const [cigarDatabaseOptions, setCigarDatabaseOptions] = useState<string[]>([]) // cigar_database 产品名称列表
+  const [cigarImages, setCigarImages] = useState<string[]>([]) // Cigar image list
+  const [aiRecognizing, setAiRecognizing] = useState(false) // AI recognition status
+  const [cigarDatabaseData, setCigarDatabaseData] = useState<AggregatedCigarData | null>(null) // Data read from cigar_database
+  const [cigarDatabaseOptions, setCigarDatabaseOptions] = useState<string[]>([]) // cigar_database product name list
   const [inModalOpen, setInModalOpen] = useState(false)
   const [inStatsOpen, setInStatsOpen] = useState(false)
   const [outStatsOpen, setOutStatsOpen] = useState(false)
@@ -75,7 +75,7 @@ const AdminInventory: React.FC = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [deleteTargetOrder, setDeleteTargetOrder] = useState<{ id: string; referenceNo: string; productCount: number } | null>(null)
 
-  // 文件上传相关
+  // File upload related
   const { upload: cloudinaryUpload, uploading: uploadingFile } = useCloudinary()
   const [attachmentFileList, setAttachmentFileList] = useState<UploadFile[]>([])
   const [uploadedAttachments, setUploadedAttachments] = useState<Array<{
@@ -85,7 +85,7 @@ const AdminInventory: React.FC = () => {
     uploadedAt: Date
   }>>([])
 
-  // 编辑订单的附件状态
+  // Edit order attachment state
   const [editAttachmentFileList, setEditAttachmentFileList] = useState<UploadFile[]>([])
   const [editUploadedAttachments, setEditUploadedAttachments] = useState<Array<{
     url: string
@@ -401,20 +401,20 @@ const AdminInventory: React.FC = () => {
     return inventoryMovements.some(m => m.cigarId === cigarId)
   }
 
-  // 基于入库/出库日志的实时库存计算（只统计雪茄产品，不统计活动物料等）
+  // Real-time stock calculation based on inbound/outbound logs (cigars only)
   const stockByCigarId = useMemo(() => {
-    // 精确计算：sum(IN) - sum(OUT)，不在逐步相减时夹0，避免顺序依赖
+    // Calculation: sum(IN) - sum(OUT) without intermediate zeroing to avoid order dependency
     const map = new Map<string, number>()
 
     for (const movement of inventoryMovements) {
       const id = movement.cigarId
       if (!id) continue
 
-      // 只统计雪茄产品
+      // Only count cigars
       const itemType = movement.itemType
       if (itemType && itemType !== 'cigar') continue
 
-      // 过滤掉已取消订单的库存变动
+      // Filter out movements from cancelled orders
       if (movement.inboundOrderId) {
         const order = inboundOrders.find(o => o.id === movement.inboundOrderId)
         if (order && order.status === 'cancelled') continue
@@ -440,11 +440,11 @@ const AdminInventory: React.FC = () => {
   const getComputedStock = (cigarId?: string) => {
     if (!cigarId) return 0
     const net = stockByCigarId.get(cigarId) ?? 0
-    // 允许显示负库存，以便管理员发现库存异常
+    // Allow negative stock to help admins spot anomalies
     return net
   }
 
-  // 每个商品的总入库/总出库数量（只统计雪茄产品）
+  // Total in/out per product (cigars only)
   const totalsByCigarId = useMemo(() => {
     const map = new Map<string, { totalIn: number; totalOut: number }>()
 
@@ -452,11 +452,11 @@ const AdminInventory: React.FC = () => {
       const id = movement.cigarId
       if (!id) continue
 
-      // 只统计雪茄产品
+      // Only count cigars
       const itemType = movement.itemType
       if (itemType && itemType !== 'cigar') continue
 
-      // 过滤已取消订单
+      // Filter cancelled orders
       if (movement.inboundOrderId) {
         const order = inboundOrders.find(o => o.id === movement.inboundOrderId)
         if (order && order.status === 'cancelled') continue
@@ -694,7 +694,7 @@ const AdminInventory: React.FC = () => {
     return inventoryMovements
       .filter(m => m.type === 'in')
       .map(m => {
-        // 获取操作人信息
+        // Get operator info
         let operatorId = 'system'
         let price = m.unitPrice
 
@@ -738,7 +738,7 @@ const AdminInventory: React.FC = () => {
     return inventoryMovements
       .filter(m => m.type === 'out')
       .map(m => {
-        // 获取操作人信息
+        // Get operator info
         let operatorId = 'system'
         let price = m.unitPrice
 
@@ -778,16 +778,16 @@ const AdminInventory: React.FC = () => {
       })
   }, [inventoryMovements, outboundOrders, orders])
 
-  // 入库记录筛选
+  // Filter inbound logs
   const filteredInLogs = useMemo(() => {
     return inLogs.filter(log => {
-      // 品牌筛选
+      // Brand filter
       if (inBrandFilter) {
         const cigar = items.find(c => c.id === log.cigarId)
         if (cigar?.brand !== inBrandFilter) return false
       }
 
-      // 关键字搜索
+      // Keyword search
       if (inSearchKeyword) {
         const kw = inSearchKeyword.toLowerCase()
         const cigar = items.find(c => c.id === log.cigarId)
@@ -804,17 +804,17 @@ const AdminInventory: React.FC = () => {
     })
   }, [inLogs, inSearchKeyword, inBrandFilter, items])
 
-  // 计算入库单号的财务匹配状态
+  // Calculate financial match status for inbound orders
   const getInboundReferenceMatchStatus = (referenceNo: string) => {
     if (!referenceNo) return { matched: 0, total: 0, status: 'none' }
 
-    // 从 inboundOrders 获取总价值
+    // Get total value from inboundOrders
     const order = inboundOrders.find(o => o.referenceNo === referenceNo)
     const totalValue = order ? (order.totalValue || order.items.reduce((sum, item) => {
       return sum + (Number(item.quantity || 0) * Number(item.unitPrice || 0))
     }, 0)) : 0
 
-    // 查找匹配该单号的交易记录
+    // Find matching transactions for this referenceNo
     const matchedAmount = transactions
       .filter((t: any) => {
         const relatedOrders = (t as any)?.relatedOrders || []
@@ -841,11 +841,11 @@ const AdminInventory: React.FC = () => {
     }
   }
 
-  // 入库记录按单号分组（直接使用 inboundOrders）
+  // Group inbound logs by reference No (using inboundOrders directly)
   const inLogsGroupedByReference = useMemo(() => {
     return inboundOrders
       .filter(order => {
-        // 品牌筛选
+        // Brand filter
         if (inBrandFilter) {
           const hasBrand = order.items.some(item => {
             const cigar = items.find(c => c.id === item.cigarId)
@@ -854,7 +854,7 @@ const AdminInventory: React.FC = () => {
           if (!hasBrand) return false
         }
 
-        // 关键字搜索
+        // Keyword search
         if (inSearchKeyword) {
           const kw = inSearchKeyword.toLowerCase()
           const refNo = order.referenceNo.toLowerCase()
@@ -871,7 +871,7 @@ const AdminInventory: React.FC = () => {
         return true
       })
       .map(order => ({
-        id: order.id, // 添加唯一ID用于key
+        id: order.id, // Unique ID for key
         referenceNo: order.referenceNo,
         date: toDateSafe(order.createdAt),
         reason: order.reason,
@@ -898,16 +898,16 @@ const AdminInventory: React.FC = () => {
       });
   }, [inboundOrders, items, inSearchKeyword, inBrandFilter])
 
-  // 出库记录筛选
+  // Filter outbound logs
   const filteredOutLogs = useMemo(() => {
     return outLogs.filter(log => {
-      // 品牌筛选
+      // Brand filter
       if (outBrandFilter) {
         const cigar = items.find(c => c.id === log.cigarId)
         if (cigar?.brand !== outBrandFilter) return false
       }
 
-      // 关键字搜索
+      // Keyword search
       if (outSearchKeyword) {
         const kw = outSearchKeyword.toLowerCase()
         const cigar = items.find(c => c.id === log.cigarId)
@@ -924,7 +924,7 @@ const AdminInventory: React.FC = () => {
     })
   }, [outLogs, outSearchKeyword, outBrandFilter, items])
 
-  // 入库统计（包含品牌和产品详情）
+  // Inbound statistics (with brand and product details)
   const inStats = useMemo(() => {
     const brandMap = new Map<string, {
       quantity: number;
@@ -3081,11 +3081,11 @@ const AdminInventory: React.FC = () => {
                                     const cigar = items.find(i => i.id === id)
                                     const itemType = rec.itemType || 'cigar'
                                     const itemTypeIcons: { [key: string]: string } = {
-                                      'cigar': '',
-                                      'activity': '',
-                                      'gift': '',
-                                      'service': '',
-                                      'other': ''
+                                      'cigar': '🎯',
+                                      'activity': '🎪',
+                                      'gift': '🎁',
+                                      'service': '💼',
+                                      'other': '📦'
                                     }
                                     const itemTypeColors: { [key: string]: string } = {
                                       'cigar': '#52c41a',
@@ -3099,11 +3099,25 @@ const AdminInventory: React.FC = () => {
                                     const displayName = rec.cigarName || cigar?.name || id
 
                                     return (
-                                      <span>
-                                        <span style={{ marginRight: 8 }}>{icon}</span>
+                                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                        <span style={{ marginRight: 4 }}>{icon}</span>
                                         <span style={{ color: itemType !== 'cigar' ? color : undefined }}>
                                           {displayName}
                                         </span>
+                                        {itemType !== 'cigar' && (
+                                          <span style={{
+                                            padding: '1px 6px',
+                                            fontSize: 10,
+                                            fontWeight: 600,
+                                            background: `${color}20`,
+                                            color: color,
+                                            borderRadius: 4,
+                                            border: `1px solid ${color}40`,
+                                            whiteSpace: 'nowrap'
+                                          }}>
+                                            {t(`inventory.itemType${itemType.charAt(0).toUpperCase() + itemType.slice(1)}` as any)}
+                                          </span>
+                                        )}
                                       </span>
                                     )
                                   }
@@ -3801,6 +3815,16 @@ const AdminInventory: React.FC = () => {
                               {group.logs.map((log: any) => {
                                 const cigar = items.find(i => i.id === log.cigarId)
                                 const itemValue = Number(log.quantity || 0) * Number(log.unitPrice || 0)
+                                const logItemType = log.itemType || 'cigar'
+                                const itemTypeIconMap: { [key: string]: string } = {
+                                  'cigar': '🎯', 'activity': '🎪', 'gift': '🎁', 'service': '💼', 'other': '📦'
+                                }
+                                const itemTypeColorMap: { [key: string]: string } = {
+                                  'cigar': '#52c41a', 'activity': '#722ed1', 'gift': '#faad14', 'service': '#1890ff', 'other': '#8c8c8c'
+                                }
+                                const typeIcon = itemTypeIconMap[logItemType] || '📦'
+                                const typeColor = itemTypeColorMap[logItemType] || '#52c41a'
+                                const displayName = log.cigarName || cigar?.name || log.cigarId
                                 return (
                                   <div
                                     key={log.id}
@@ -3821,35 +3845,65 @@ const AdminInventory: React.FC = () => {
                                       borderRadius: 10,
                                       overflow: 'hidden',
                                       background: 'rgba(255, 255, 255, 0.08)',
-                                      flexShrink: 0
+                                      flexShrink: 0,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      fontSize: logItemType !== 'cigar' ? 28 : undefined
                                     }}>
-                                      <div style={{
-                                        width: '100%',
-                                        height: '100%',
-                                        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02))'
-                                      }} />
+                                      {logItemType !== 'cigar' ? (
+                                        <span>{typeIcon}</span>
+                                      ) : (
+                                        <div style={{
+                                          width: '100%',
+                                          height: '100%',
+                                          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02))'
+                                        }} />
+                                      )}
                                     </div>
 
                                     {/* 右侧信息 */}
                                     <div style={{ flex: 1 }}>
-                                      {/* 产品名称 */}
+                                      {/* 产品名称 + 类型标签 */}
                                       <div style={{
-                                        fontSize: 15,
-                                        fontWeight: 700,
-                                        color: '#fff',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 6,
                                         marginBottom: 4
                                       }}>
-                                        {log.cigarName || cigar?.name || log.cigarId}
+                                        <div style={{
+                                          fontSize: 15,
+                                          fontWeight: 700,
+                                          color: logItemType !== 'cigar' ? typeColor : '#fff'
+                                        }}>
+                                          {displayName}
+                                        </div>
+                                        {logItemType !== 'cigar' && (
+                                          <span style={{
+                                            padding: '1px 6px',
+                                            fontSize: 10,
+                                            fontWeight: 600,
+                                            background: `${typeColor}20`,
+                                            color: typeColor,
+                                            borderRadius: 4,
+                                            border: `1px solid ${typeColor}40`,
+                                            whiteSpace: 'nowrap'
+                                          }}>
+                                            {t(`inventory.itemType${logItemType.charAt(0).toUpperCase() + logItemType.slice(1)}` as any)}
+                                          </span>
+                                        )}
                                       </div>
 
-                                      {/* SKU */}
-                                      <div style={{
-                                        fontSize: 12,
-                                        color: 'rgba(224, 214, 196, 0.6)',
-                                        marginBottom: 6
-                                      }}>
-                                        {cigar?.size || ''} {cigar?.size ? '|' : ''} SKU: {log.cigarId}
-                                      </div>
+                                      {/* SKU (仅雪茄产品显示) */}
+                                      {logItemType === 'cigar' && (
+                                        <div style={{
+                                          fontSize: 12,
+                                          color: 'rgba(224, 214, 196, 0.6)',
+                                          marginBottom: 6
+                                        }}>
+                                          {cigar?.size || ''} {cigar?.size ? '|' : ''} SKU: {log.cigarId}
+                                        </div>
+                                      )}
 
                                       {/* 单价 */}
                                       <div style={{
@@ -6127,12 +6181,41 @@ const AdminInventory: React.FC = () => {
 
             setLoading(true)
             try {
+              // 处理所有项目，为非雪茄类型生成 cigarId
+              const processedItems = (values.items || []).map((item: any) => {
+                const lineItemType = item.itemType || 'cigar'
+                let cigarId = item.cigarId
+                let cigarName = item.cigarName
+
+                // 非雪茄类型需要生成 cigarId
+                if (lineItemType !== 'cigar' && !cigarId) {
+                  const prefixMap: { [key: string]: string } = {
+                    'activity': 'ACTIVITY:',
+                    'gift': 'GIFT:',
+                    'service': 'SERVICE:',
+                    'other': 'OTHER:'
+                  }
+                  const prefix = prefixMap[lineItemType] || 'OTHER:'
+                  cigarId = `${prefix}${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                }
+
+                return {
+                  cigarId,
+                  cigarName: cigarName || '',
+                  itemType: lineItemType,
+                  quantity: Number(item.quantity),
+                  ...(item.unitPrice != null && {
+                    unitPrice: Number(item.unitPrice),
+                    subtotal: Number(item.quantity) * Number(item.unitPrice)
+                  })
+                }
+              })
+
               // 重新计算汇总
-              const items = values.items || []
-              const totalQuantity = items.reduce((sum: number, item: any) =>
+              const totalQuantity = processedItems.reduce((sum: number, item: any) =>
                 sum + (Number(item.quantity) || 0), 0
               )
-              const totalValue = items.reduce((sum: number, item: any) => {
+              const totalValue = processedItems.reduce((sum: number, item: any) => {
                 const qty = Number(item.quantity) || 0
                 const price = Number(item.unitPrice) || 0
                 return sum + (qty * price)
@@ -6142,16 +6225,7 @@ const AdminInventory: React.FC = () => {
               await updateInboundOrder(editingOrder.id, {
                 referenceNo: values.referenceNo,
                 reason: values.reason,
-                items: items.map((item: any) => ({
-                  cigarId: item.cigarId,
-                  cigarName: item.cigarName,
-                  itemType: item.itemType,
-                  quantity: Number(item.quantity),
-                  ...(item.unitPrice != null && {
-                    unitPrice: Number(item.unitPrice),
-                    subtotal: Number(item.quantity) * Number(item.unitPrice)
-                  })
-                })),
+                items: processedItems,
                 totalQuantity,
                 totalValue,
                 attachments: editUploadedAttachments.length > 0 ? editUploadedAttachments : undefined
@@ -6166,8 +6240,8 @@ const AdminInventory: React.FC = () => {
                 await deleteDocument(COLLECTIONS.INVENTORY_MOVEMENTS, m.id)
               }
 
-              // 创建新的 movements
-              for (const item of items) {
+              // 创建新的 movements（使用处理后的项目数据）
+              for (const item of processedItems) {
                 const movement = {
                   cigarId: item.cigarId,
                   cigarName: item.cigarName,
@@ -6300,7 +6374,7 @@ const AdminInventory: React.FC = () => {
                   <h4 style={{ margin: 0, fontSize: '16px' }}>{t('inventory.productList')}</h4>
                   <Button
                     type="dashed"
-                    onClick={() => add()}
+                    onClick={() => add({ itemType: 'cigar', quantity: 1 })}
                     icon={<PlusOutlined />}
                     size="small"
                   >
@@ -6314,7 +6388,11 @@ const AdminInventory: React.FC = () => {
                     <div
                       key={key}
                       style={{
-                        marginBottom: 8
+                        marginBottom: 8,
+                        padding: 10,
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: 8,
+                        background: 'rgba(0, 0, 0, 0.2)'
                       }}
                     >
                       <Form.Item
@@ -6325,53 +6403,95 @@ const AdminInventory: React.FC = () => {
                         <Input />
                       </Form.Item>
 
-                      <Form.Item
-                        {...restField}
-                        name={[field.name, 'itemType']}
-                        hidden
-                        initialValue="cigar"
-                      >
-                        <Input />
-                      </Form.Item>
-
-                      {/* 产品标题、产品选择、数量、单价、删除按钮 - 全部同行显示 */}
-                      <Row gutter={12} align="middle">
+                      {/* 产品标题、类型选择、产品/名称、数量、单价、删除按钮 */}
+                      <Row gutter={12} align="middle" style={{ marginBottom: 8 }}>
                         <Col flex="80px">
                           <span style={{ fontWeight: 600, color: 'rgba(255, 255, 255, 0.6)' }}>{t('inventory.productIndex', { index: index + 1 })}</span>
                         </Col>
-                        <Col flex="auto">
+                        <Col flex="120px">
                           <Form.Item
                             {...restField}
-                            name={[field.name, 'cigarId']}
-                            rules={[{ required: true, message: t('inventory.pleaseSelectProduct') }]}
+                            name={[field.name, 'itemType']}
+                            initialValue="cigar"
                             style={{ marginBottom: 0 }}
                           >
                             <Select
-                              showSearch
-                              placeholder={t('inventory.selectCigarProduct')}
-                              optionFilterProp="children"
-                              onChange={(value) => {
-                                const cigar = items.find(c => c.id === value)
-                                if (cigar) {
-                                  const currentItems = orderEditForm.getFieldValue('items') || []
-                                  currentItems[index] = {
-                                    ...currentItems[index],
-                                    cigarId: value,
-                                    cigarName: cigar.name,
-                                    itemType: 'cigar'
-                                  }
+                              placeholder={t('inventory.selectItemType')}
+                              onChange={() => {
+                                const currentItems = orderEditForm.getFieldValue('items') || []
+                                if (currentItems[index]) {
+                                  currentItems[index].cigarId = undefined
+                                  currentItems[index].cigarName = undefined
+                                  currentItems[index].customName = undefined
                                   orderEditForm.setFieldsValue({ items: currentItems })
                                 }
                               }}
                             >
-                              {items.map((cigar: any) => (
-                                <Select.Option key={cigar.id} value={cigar.id}>
-                                  {cigar.name}
-                                </Select.Option>
-                              ))}
+                              <Select.Option value="cigar">🎯 {t('inventory.itemTypeCigar')}</Select.Option>
+                              <Select.Option value="activity">🎪 {t('inventory.itemTypeActivity')}</Select.Option>
+                              <Select.Option value="gift">🎁 {t('inventory.itemTypeGift')}</Select.Option>
+                              <Select.Option value="service">💼 {t('inventory.itemTypeService')}</Select.Option>
+                              <Select.Option value="other">📦 {t('inventory.itemTypeOther')}</Select.Option>
                             </Select>
                           </Form.Item>
                         </Col>
+                        <Col flex="auto">
+                          <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => {
+                            const prev = prevValues.items?.[index]?.itemType
+                            const curr = currentValues.items?.[index]?.itemType
+                            return prev !== curr
+                          }}>
+                            {({ getFieldValue }) => {
+                              const currentItemType = getFieldValue(['items', field.name, 'itemType']) || 'cigar'
+
+                              return currentItemType === 'cigar' ? (
+                                <Form.Item
+                                  {...restField}
+                                  name={[field.name, 'cigarId']}
+                                  rules={[{ required: true, message: t('inventory.pleaseSelectProduct') }]}
+                                  style={{ marginBottom: 0 }}
+                                >
+                                  <Select
+                                    showSearch
+                                    placeholder={t('inventory.selectCigarProduct')}
+                                    optionFilterProp="children"
+                                    onChange={(value) => {
+                                      const cigar = items.find(c => c.id === value)
+                                      if (cigar) {
+                                        const currentItems = orderEditForm.getFieldValue('items') || []
+                                        currentItems[index] = {
+                                          ...currentItems[index],
+                                          cigarId: value,
+                                          cigarName: cigar.name,
+                                          itemType: 'cigar'
+                                        }
+                                        orderEditForm.setFieldsValue({ items: currentItems })
+                                      }
+                                    }}
+                                  >
+                                    {items.map((cigar: any) => (
+                                      <Select.Option key={cigar.id} value={cigar.id}>
+                                        {cigar.name}
+                                      </Select.Option>
+                                    ))}
+                                  </Select>
+                                </Form.Item>
+                              ) : (
+                                <Form.Item
+                                  {...restField}
+                                  name={[field.name, 'cigarName']}
+                                  rules={[{ required: true, message: t('inventory.itemNameRequired') }]}
+                                  style={{ marginBottom: 0 }}
+                                >
+                                  <Input placeholder={t('inventory.itemNamePlaceholder')} />
+                                </Form.Item>
+                              )
+                            }}
+                          </Form.Item>
+                        </Col>
+                      </Row>
+                      <Row gutter={12} align="middle">
+                        <Col flex="80px" />
                         <Col flex="100px">
                           <Form.Item
                             {...restField}
