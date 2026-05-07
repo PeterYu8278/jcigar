@@ -292,6 +292,7 @@ export interface Order {
   payment: {
     method: 'credit' | 'paypal' | 'bank_transfer';
     transactionId?: string;
+    transactionIds?: string[];
     paidAt?: Date;
   };
   shipping: {

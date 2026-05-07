@@ -3,7 +3,7 @@ import dayjs from 'dayjs'
 import { Button, Tag, Input, message } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
-import type { Order, User, Cigar } from '../../../types'
+import type { Order, User, Cigar, Transaction } from '../../../types'
 import { updateDocument, COLLECTIONS } from '../../../services/firebase/firestore'
 import { getStatusColor, getStatusText, getPaymentText, getUserName, getUserPhone } from './helpers'
 import { getModalTheme } from '../../../config/modalTheme'
@@ -17,6 +17,7 @@ interface OrderDetailsProps {
   onClose: () => void
   onEditToggle: () => void
   onOrderUpdate: () => void
+  transactions?: Transaction[]
 }
 
 const OrderDetails: React.FC<OrderDetailsProps> = ({
@@ -27,7 +28,8 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
   isEditingInView,
   onClose,
   onEditToggle,
-  onOrderUpdate
+  onOrderUpdate,
+  transactions
 }) => {
   const { t } = useTranslation()
   const theme = getModalTheme(true) // 使用暗色主题
@@ -204,9 +206,45 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
                 <p style={{ ...theme.text.secondary, whiteSpace: 'nowrap' }}>{t('ordersAdmin.payment.title')}</p>
                 <p style={theme.text.body}>{getPaymentText(order.payment.method, t)}</p>
               </div>
-              <div style={theme.content.row}>
-                <p style={{ ...theme.text.secondary, whiteSpace: 'nowrap' }}>{t('ordersAdmin.transactionId')}</p>
-                <p style={{ ...theme.text.body, wordBreak: 'break-all', whiteSpace: 'normal', textAlign: 'right' }}>{order.payment.transactionId}</p>
+              <div style={{ ...theme.content.row, flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
+                <p style={{ ...theme.text.secondary, whiteSpace: 'nowrap', marginBottom: 0 }}>{t('ordersAdmin.transactionIds', '交易流水记录')}</p>
+                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {(order.payment?.transactionIds || (order.payment?.transactionId ? [order.payment.transactionId] : [])).map(txId => {
+                    // 如果传入了 transactions 列表，则尝试查找匹配的详细信息
+                    const tx = (transactions || []).find(t => t.id === txId)
+                    const relatedOrders = (tx as any)?.relatedOrders || []
+                    const matchedAmount = relatedOrders.find((ro: any) => ro.orderId === order.id)?.amount
+
+                    return (
+                      <div key={txId} style={{ 
+                        padding: '8px 12px', 
+                        background: 'rgba(255,255,255,0.05)', 
+                        borderRadius: '6px',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#f4af25' }}>{txId}</span>
+                          {tx && (
+                            <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)' }}>
+                              {dayjs(toDateSafe(tx.createdAt)).format('YYYY-MM-DD HH:mm')}
+                            </span>
+                          )}
+                        </div>
+                        {matchedAmount !== undefined && (
+                          <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#52c41a' }}>
+                            RM{Number(matchedAmount).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })}
+                  {(order.payment?.transactionIds?.length === 0 && !order.payment?.transactionId) && (
+                    <p style={{ ...theme.text.body, margin: 0 }}>-</p>
+                  )}
+                </div>
               </div>
               <div style={theme.content.row}>
                 <p style={{ ...theme.text.secondary, whiteSpace: 'nowrap' }}>{t('ordersAdmin.paidAt')}</p>

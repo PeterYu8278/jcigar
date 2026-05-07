@@ -210,7 +210,7 @@ const AdminFinance: React.FC = () => {
     return inboundOrders
       .map((order: InboundOrder) => {
         const totalValue = order.totalValue || order.items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.unitPrice || 0)), 0);
-        
+
         // 计算已匹配金额
         const matchedAmount = transactions
           .filter(t => {
@@ -2464,17 +2464,19 @@ const AdminFinance: React.FC = () => {
                       const orderId = match.orderId
                       const txDate = updated.createdAt
 
-                      // 1) 更新订单本人的支付日期
+                      // 1) 更新订单本人的支付日期和交易 ID 列表
                       const currentOrder = orders.find(o => o.id === orderId)
                       if (currentOrder) {
+                        const existingIds = currentOrder.payment?.transactionIds || (currentOrder.payment?.transactionId ? [currentOrder.payment.transactionId] : [])
+                        const newIds = Array.from(new Set([...existingIds, viewing.id]))
+
                         await updateDocument(COLLECTIONS.ORDERS, orderId, {
                           payment: {
                             ...(currentOrder.payment || {}),
                             paidAt: txDate,
-                            transactionId: viewing.id // 关联该笔交易流水ID
+                            transactionId: viewing.id, // 保留最后一次关联的 ID 兼容旧逻辑
+                            transactionIds: newIds      // 存储所有关联的交易 ID
                           },
-                          // 只有在完全匹配且订单是pending时考虑自动确认？
-                          // 这里我们保持简单，只同步日期
                         } as any)
 
                         // 2) 同步更新出库记录及库存变动的日期（影响利润报表）
@@ -2749,12 +2751,7 @@ const AdminFinance: React.FC = () => {
                                   }
 
                                   return (
-                                    <div key={refNo} style={{
-                                      background: 'rgba(255, 255, 255, 0.03)',
-                                      borderRadius: 6,
-                                      padding: 8,
-                                      border: '1px solid rgba(255, 255, 255, 0.08)'
-                                    }}>
+                                    <div key={refNo}>
                                       {/* 分组头部：订单信息 */}
                                       <div style={{
                                         padding: '4px 11px',
@@ -2804,11 +2801,6 @@ const AdminFinance: React.FC = () => {
                                                   <span style={{ fontSize: 12 }}>{cigarName}</span>
                                                   <span style={{ color: logColor }}>{logPrefix}{log.quantity}</span>
                                                 </div>
-                                                {log.reason && log.reason !== '-' && (
-                                                  <div style={{ fontSize: 10, fontWeight: 400, color: 'rgba(255,255,255,0.4)', marginTop: 1 }}>
-                                                    {log.reason}
-                                                  </div>
-                                                )}
                                               </div>
                                               <div style={{
                                                 width: 100,
@@ -3479,6 +3471,7 @@ const AdminFinance: React.FC = () => {
             order={viewingOrder}
             users={users}
             cigars={cigars}
+            transactions={transactions}
             isMobile={isMobile}
             isEditingInView={false}
             onClose={() => setViewingOrder(null)}
