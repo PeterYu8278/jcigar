@@ -587,8 +587,8 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
         <Form
           form={form}
           layout="horizontal"
-          labelCol={{ span: 6 }}
-          wrapperCol={{ span: 18 }}
+          labelCol={{ span: 8, xs: 8 }}
+          wrapperCol={{ span: 16, xs: 16 }}
           labelAlign="left"
         >
           <Form.Item
