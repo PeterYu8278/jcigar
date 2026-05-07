@@ -208,20 +208,38 @@ const AdminFinance: React.FC = () => {
   // 获取入库单号列表（用于支出交易）
   const inboundReferenceOptions = useMemo(() => {
     return inboundOrders
-      .map((order: InboundOrder) => ({
-        referenceNo: order.referenceNo,
-        totalQuantity: order.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
-        totalValue: order.items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.unitPrice || 0)), 0),
-        productCount: order.items.length,
-        date: order.createdAt,
-        reason: order.reason || ''
-      }))
+      .map((order: InboundOrder) => {
+        const totalValue = order.totalValue || order.items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.unitPrice || 0)), 0);
+        
+        // 计算已匹配金额
+        const matchedAmount = transactions
+          .filter(t => {
+            const relatedOrders = (t as any)?.relatedOrders || []
+            return relatedOrders.some((ro: any) => ro.orderId === order.referenceNo)
+          })
+          .reduce((sum, t) => {
+            const relatedOrders = (t as any)?.relatedOrders || []
+            const match = relatedOrders.find((ro: any) => ro.orderId === order.referenceNo)
+            return sum + (match ? Number(match.amount || 0) : 0)
+          }, 0);
+
+        return {
+          referenceNo: order.referenceNo,
+          totalQuantity: order.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
+          totalValue,
+          matchedAmount,
+          isFullyMatched: matchedAmount >= (totalValue - 0.01),
+          productCount: order.items.length,
+          date: order.createdAt,
+          reason: order.reason || ''
+        };
+      })
       .sort((a, b) => {
         const dateA = a.date?.getTime?.() || 0;
         const dateB = b.date?.getTime?.() || 0;
         return dateB - dateA;
       });
-  }, [inboundOrders]);
+  }, [inboundOrders, transactions]);
 
   // 获取关联的库存变动记录
   const relatedInventoryMovements = useMemo(() => {
@@ -2581,27 +2599,29 @@ const AdminFinance: React.FC = () => {
                                     }}
                                     options={isExpenseTransaction ? (
                                       // 支出交易：显示入库单号
-                                      inboundReferenceOptions.map(ref => {
-                                        const searchText = `${ref.referenceNo} ${ref.reason} ${ref.totalValue.toFixed(2)}`
-                                        return {
-                                          label: (
-                                            <div>
+                                      inboundReferenceOptions
+                                        .filter(ref => !ref.isFullyMatched || ref.referenceNo === fieldValue)
+                                        .map(ref => {
+                                          const searchText = `${ref.referenceNo} ${ref.reason} ${ref.totalValue.toFixed(2)}`
+                                          return {
+                                            label: (
                                               <div>
-                                                📦 {ref.referenceNo} · {ref.productCount} {t('inventory.types')} · RM{ref.totalValue.toFixed(2)}
+                                                <div>
+                                                  📦 {ref.referenceNo} · {ref.productCount} {t('inventory.types')} · RM{ref.totalValue.toFixed(2)}
+                                                </div>
+                                                <div style={{ fontSize: '12px', color: '#bab09c' }}>
+                                                  {ref.reason || '-'}
+                                                </div>
                                               </div>
-                                              <div style={{ fontSize: '12px', color: '#bab09c' }}>
-                                                {ref.reason || '-'}
-                                              </div>
-                                            </div>
-                                          ),
-                                          value: ref.referenceNo,
-                                          searchText
-                                        }
-                                      })
+                                            ),
+                                            value: ref.referenceNo,
+                                            searchText
+                                          }
+                                        })
                                     ) : (
                                       // 收入交易：显示销售订单
                                       (orders || [])
-                                        .filter(o => !isOrderFullyMatched(o.id))
+                                        .filter(o => !isOrderFullyMatched(o.id) || o.id === fieldValue)
                                         .map(o => {
                                           const u = (users || []).find((x: any) => x.id === o.userId)
                                           const name = u?.displayName || u?.email || o.userId
