@@ -730,6 +730,8 @@
     "paidAt": "Paid At",
     "trackingNumber": "Tracking Number",
     "enterTrackingNo": "Enter tracking number",
+    "transactionIds": "Transaction Records",
+    "note": "Note",
     "itemDetails": "Item Details",
     "item": {
       "cigar": "Cigar",
@@ -762,7 +764,6 @@
     "selectUser": "Select User",
     "pleaseSelectUser": "Please select user",
     "pleaseAddAtLeastOneItem": "Please add at least one item",
-    "note": "Note",
     "noteOptional": "Note (optional)",
     "addressOptional": "Address (optional)",
     "selectItem": "Select item",
@@ -1190,7 +1191,10 @@
       "unmatched": "Unmatched"
     },
     "filteringMonth": "Filtering results for: {{month}}",
-    "resetFilters": "Date filters reset"
+    "resetFilters": "Date filters reset",
+    "allRecords": "All Records",
+    "surplus": "Surplus",
+    "deficits": "Deficits"
   },
   "participants": {
     "loadingParticipants": "Loading participant information...",

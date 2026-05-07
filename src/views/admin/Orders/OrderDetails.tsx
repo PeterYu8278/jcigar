@@ -206,9 +206,9 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
                 <p style={{ ...theme.text.secondary, whiteSpace: 'nowrap' }}>{t('ordersAdmin.payment.title')}</p>
                 <p style={theme.text.body}>{getPaymentText(order.payment.method, t)}</p>
               </div>
-              <div style={{ ...theme.content.row, flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
-                <p style={{ ...theme.text.secondary, whiteSpace: 'nowrap', marginBottom: 0 }}>{t('ordersAdmin.transactionIds', '交易流水记录')}</p>
-                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ ...theme.content.row, alignItems: 'flex-start', gap: '16px' }}>
+                <p style={{ ...theme.text.secondary, whiteSpace: 'nowrap', marginBottom: 0, width: '100px' }}>{t('ordersAdmin.transactionIds', '交易流水记录')}</p>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
                   {(order.payment?.transactionIds || (order.payment?.transactionId ? [order.payment.transactionId] : [])).map(txId => {
                     // 如果传入了 transactions 列表，则尝试查找匹配的详细信息
                     const tx = (transactions || []).find(t => t.id === txId)
@@ -223,7 +223,8 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
                         border: '1px solid rgba(255,255,255,0.1)',
                         display: 'flex',
                         justifyContent: 'space-between',
-                        alignItems: 'center'
+                        alignItems: 'center',
+                        width: '100%'
                       }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                           <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#f4af25' }}>{txId}</span>
@@ -253,6 +254,12 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
                     const date = toDateSafe(order.payment?.paidAt)
                     return date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-'
                   })()}
+                </p>
+              </div>
+              <div style={{ ...theme.content.row, alignItems: 'flex-start', gap: '16px' }}>
+                <p style={{ ...theme.text.secondary, whiteSpace: 'nowrap', width: '100px' }}>{t('ordersAdmin.note')}</p>
+                <p style={{ ...theme.text.body, whiteSpace: 'pre-wrap', flex: 1, textAlign: 'right' }}>
+                  {order.source?.note || '-'}
                 </p>
               </div>
               <div style={theme.content.row}>

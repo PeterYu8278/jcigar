@@ -729,6 +729,8 @@
     "paidAt": "支付时间",
     "trackingNumber": "运单号",
     "enterTrackingNo": "输入运单号",
+    "transactionIds": "交易流水记录",
+    "note": "备注",
     "itemDetails": "商品明细",
     "item": {
       "cigar": "雪茄",
@@ -761,7 +763,6 @@
     "selectUser": "选择用户",
     "pleaseSelectUser": "请选择用户",
     "pleaseAddAtLeastOneItem": "请添加至少一件商品",
-    "note": "备注",
     "noteOptional": "备注（选填）",
     "addressOptional": "配送地址（选填）",
     "selectItem": "请选择商品",
@@ -1190,7 +1191,10 @@
       "unmatched": "未对账"
     },
     "filteringMonth": "正在筛选项目: {{month}}",
-    "resetFilters": "已重置日期筛选"
+    "resetFilters": "已重置日期筛选",
+    "allRecords": "全部记录",
+    "surplus": "盈余",
+    "deficits": "亏损"
   },
   "participants": {
     "loadingParticipants": "加载参与者信息中...",

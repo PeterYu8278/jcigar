@@ -935,7 +935,16 @@ const AdminInventory: React.FC = () => {
 
     inLogs.forEach(log => {
       const cigar = items.find(c => c.id === log.cigarId)
-      const brand = cigar?.brand || 'Unknown'
+      // 如果找不到雪茄且不是雪茄类型，使用类型名称作为品牌
+      let brand = cigar?.brand
+      if (!brand) {
+        if (log.itemType && log.itemType !== 'cigar') {
+          brand = t(`inventory.itemType${log.itemType.charAt(0).toUpperCase() + log.itemType.slice(1)}`)
+        } else {
+          brand = 'Unknown'
+        }
+      }
+
       const quantity = Number(log.quantity || 0)
       const unitPrice = Number((log as any).unitPrice || 0)
       const value = quantity * unitPrice
@@ -954,22 +963,20 @@ const AdminInventory: React.FC = () => {
       brandData.records += 1
       brandData.totalValue += value
 
-      // 产品级别统计
-      if (cigar) {
-        const productKey = log.cigarId
-        if (!brandData.products.has(productKey)) {
-          brandData.products.set(productKey, {
-            cigar,
-            quantity: 0,
-            records: 0,
-            totalValue: 0
-          })
-        }
-        const productData = brandData.products.get(productKey)!
-        productData.quantity += quantity
-        productData.records += 1
-        productData.totalValue += value
+      // 产品级别统计 - 即使 cigar 不在 items 列表中也记录（例如已删除或特殊项目）
+      const productKey = log.cigarId || 'unknown'
+      if (!brandData.products.has(productKey)) {
+        brandData.products.set(productKey, {
+          cigar: cigar || { id: log.cigarId, name: log.cigarName || log.cigarId, brand: brand },
+          quantity: 0,
+          records: 0,
+          totalValue: 0
+        })
       }
+      const productData = brandData.products.get(productKey)!
+      productData.quantity += quantity
+      productData.records += 1
+      productData.totalValue += value
     })
 
     return Array.from(brandMap.entries())
@@ -988,30 +995,54 @@ const AdminInventory: React.FC = () => {
     const brandMap = new Map<string, {
       quantity: number;
       records: number;
-      products: Map<string, { cigar: any; quantity: number; records: number }>
+      totalValue: number;
+      products: Map<string, { cigar: any; quantity: number; records: number; totalValue: number }>
     }>()
 
     outLogs.forEach(log => {
       const cigar = items.find(c => c.id === log.cigarId)
-      const brand = cigar?.brand || 'Unknown'
+      // 如果找不到雪茄且不是雪茄类型，使用类型名称作为品牌
+      let brand = cigar?.brand
+      if (!brand) {
+        if (log.itemType && log.itemType !== 'cigar') {
+          brand = t(`inventory.itemType${log.itemType.charAt(0).toUpperCase() + log.itemType.slice(1)}`)
+        } else {
+          brand = 'Unknown'
+        }
+      }
+
       const quantity = Number(log.quantity || 0)
+      const unitPrice = Number((log as any).unitPrice || 0)
+      const value = quantity * unitPrice
 
       if (!brandMap.has(brand)) {
-        brandMap.set(brand, { quantity: 0, records: 0, products: new Map() })
+        brandMap.set(brand, { 
+          quantity: 0, 
+          records: 0, 
+          totalValue: 0,
+          products: new Map() 
+        })
       }
+
       const brandData = brandMap.get(brand)!
       brandData.quantity += quantity
       brandData.records += 1
+      brandData.totalValue += value
 
-      if (cigar) {
-        const productKey = log.cigarId
-        if (!brandData.products.has(productKey)) {
-          brandData.products.set(productKey, { cigar, quantity: 0, records: 0 })
-        }
-        const productData = brandData.products.get(productKey)!
-        productData.quantity += quantity
-        productData.records += 1
+      // 产品级别统计 - 即使 cigar 不在 items 列表中也记录（例如已删除或特殊项目）
+      const productKey = log.cigarId || 'unknown'
+      if (!brandData.products.has(productKey)) {
+        brandData.products.set(productKey, {
+          cigar: cigar || { id: log.cigarId, name: log.cigarName || log.cigarId, brand: brand },
+          quantity: 0,
+          records: 0,
+          totalValue: 0
+        })
       }
+      const productData = brandData.products.get(productKey)!
+      productData.quantity += quantity
+      productData.records += 1
+      productData.totalValue += value
     })
 
     return Array.from(brandMap.entries())
@@ -1019,6 +1050,7 @@ const AdminInventory: React.FC = () => {
         brand,
         quantity: data.quantity,
         records: data.records,
+        totalValue: data.totalValue,
         products: Array.from(data.products.values()).sort((a, b) => b.quantity - a.quantity)
       }))
       .sort((a, b) => b.quantity - a.quantity)
@@ -1044,6 +1076,13 @@ const AdminInventory: React.FC = () => {
     if (!viewingReference) return []
     return referenceGroups[viewingReference] || []
   }, [viewingReference, referenceGroups])
+
+  // 当前查看的单号关联的订单
+  const currentReferenceOrder = useMemo(() => {
+    if (!viewingReference) return null
+    return inboundOrders.find(o => o.referenceNo === viewingReference) ||
+      outboundOrders.find(o => o.referenceNo === viewingReference)
+  }, [viewingReference, inboundOrders, outboundOrders])
 
   // 当前查看的产品相关记录
   const currentProductLogs = useMemo(() => {
@@ -2659,7 +2698,7 @@ const AdminInventory: React.FC = () => {
                       <Col span={12}>
                         {(isSuperAdmin || currentUser?.role === 'developer') ? (
                           <Form.Item label={t('common.store')} name="storeId" rules={[{ required: true, message: t('common.pleaseSelectStore') }]} style={{ marginBottom: 12 }}>
-                            <Select 
+                            <Select
                               placeholder={t('common.pleaseSelectStore')}
                               options={stores.map(store => ({ label: store.name, value: store.id }))}
                             />
@@ -3333,7 +3372,8 @@ const AdminInventory: React.FC = () => {
                                     orderEditForm.setFieldsValue({
                                       referenceNo: order.referenceNo,
                                       reason: order.reason,
-                                      items: order.items
+                                      items: order.items,
+                                      notes: order.notes
                                     })
                                   } else {
                                     message.error(t('inventory.orderNotFound'))
@@ -3353,7 +3393,7 @@ const AdminInventory: React.FC = () => {
                                   Modal.confirm({
                                     title: t('inventory.cancelConfirmTitle'),
                                     content: (
-                                        <p>{t('inventory.cancelConfirmContent', { ref: group.referenceNo })}</p>
+                                      <p>{t('inventory.cancelConfirmContent', { ref: group.referenceNo })}</p>
                                     ),
                                     okText: t('common.confirm'),
                                     cancelText: t('common.back'),
@@ -3394,7 +3434,7 @@ const AdminInventory: React.FC = () => {
                                   Modal.confirm({
                                     title: t('inventory.returnConfirmTitle'),
                                     content: (
-                                        <p>{t('inventory.returnConfirmContent', { ref: group.referenceNo })}</p>
+                                      <p>{t('inventory.returnConfirmContent', { ref: group.referenceNo })}</p>
                                     ),
                                     okText: t('common.confirm'),
                                     cancelText: t('common.cancel'),
@@ -3647,7 +3687,8 @@ const AdminInventory: React.FC = () => {
                                       orderEditForm.setFieldsValue({
                                         referenceNo: order.referenceNo,
                                         reason: order.reason,
-                                        items: order.items
+                                        items: order.items,
+                                        notes: order.notes
                                       })
                                     } else {
                                       message.error(t('inventory.orderNotFound'))
@@ -5254,11 +5295,27 @@ const AdminInventory: React.FC = () => {
           background: 'rgba(255, 255, 255, 0.05)',
           borderRadius: 12,
           border: '1px solid rgba(244,175,37,0.2)',
-          backdropFilter: 'blur(10px)'
+          backdropFilter: 'blur(10px)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px'
         }}>
-          <div style={{ fontWeight: 'bold', marginBottom: 8, color: '#FFFFFF' }}>{t('inventory.referenceNo')}</div>
-          <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.totalProductTypes')}：{currentReferenceLogs.length} {t('inventory.types')}</div>
-          <div style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('inventory.totalInStockQuantity')}：{currentReferenceLogs.reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ color: 'rgba(255, 255, 255, 0.65)', fontWeight: 'bold' }}>{t('inventory.referenceNo')}</span>
+            <span style={{ color: '#FFFFFF', fontWeight: 'bold', fontFamily: 'monospace' }}>{viewingReference}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ color: 'rgba(255, 255, 255, 0.65)' }}>{t('inventory.totalProductTypes')}</span>
+            <span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{currentReferenceLogs.length} {t('inventory.types')}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ color: 'rgba(255, 255, 255, 0.65)' }}>{t('inventory.totalInStockQuantity')}</span>
+            <span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{currentReferenceLogs.reduce((sum, log) => sum + (log.quantity || 0), 0)} {t('inventory.sticks')}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 8, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 8 }}>
+            <span style={{ color: 'rgba(255, 255, 255, 0.65)', whiteSpace: 'nowrap', marginRight: 16 }}>{t('inventory.notes')}</span>
+            <span style={{ color: 'rgba(255, 255, 255, 0.85)', textAlign: 'right', whiteSpace: 'pre-wrap' }}>{currentReferenceOrder?.notes || '-'}</span>
+          </div>
         </div>
       </Modal>
 
@@ -5811,32 +5868,32 @@ const AdminInventory: React.FC = () => {
         <div style={getModalTheme().content as React.CSSProperties}>
           {/* 入库总体统计 */}
           <div style={{
-            marginBottom: 16,
-            padding: 16,
-            background: '#f8f9fa',
-            borderRadius: 8,
-            border: '1px solid #e9ecef'
+            marginBottom: 20,
+            padding: '24px',
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%)',
+            borderRadius: '16px',
+            border: '1px solid rgba(244, 175, 37, 0.3)',
+            backdropFilter: 'blur(12px)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
           }}>
-            <div style={{ fontSize: 16, fontWeight: 600, color: '#FFFFFF', marginBottom: 8 }}>
-              {t('inventory.inSummary')}
-            </div>
-            <div style={{ display: 'flex', gap: 24 }}>
-              <div>
-                <div style={{ fontSize: 12, color: '#6c757d' }}>{t('inventory.totalRecords')}</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: '#52c41a' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+              <div style={{ textAlign: 'center', borderRight: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.5)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t('inventory.totalRecords')}</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: '#FFFFFF' }}>
                   {inLogs.length}
                 </div>
               </div>
-              <div>
-                <div style={{ fontSize: 12, color: '#6c757d' }}>{t('inventory.totalInStock')}</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: '#52c41a' }}>
-                  {inLogs.reduce((sum, log) => sum + Number(log.quantity || 0), 0)} {t('inventory.sticks')}
+              <div style={{ textAlign: 'center', borderRight: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.5)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t('inventory.totalInStock')}</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: '#52c41a' }}>
+                  {inLogs.reduce((sum, log) => sum + Number(log.quantity || 0), 0)} <span style={{ fontSize: 14, fontWeight: 400, opacity: 0.7 }}>{t('inventory.sticks')}</span>
                 </div>
               </div>
-              <div>
-                <div style={{ fontSize: 12, color: '#6c757d' }}>{t('inventory.totalValue')}</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: '#52c41a' }}>
-                  RM{inLogs.reduce((sum, log) => sum + (Number(log.quantity || 0) * Number((log as any).unitPrice || 0)), 0).toFixed(2)}
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.5)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t('inventory.totalValue')}</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: '#f4af25' }}>
+                  <span style={{ fontSize: 14, marginRight: 2 }}>RM</span>
+                  {inLogs.reduce((sum, log) => sum + (Number(log.quantity || 0) * Number((log as any).unitPrice || 0)), 0).toFixed(2)}
                 </div>
               </div>
             </div>
@@ -5902,7 +5959,6 @@ const AdminInventory: React.FC = () => {
                           render: (cigar: any) => (
                             <div style={{ paddingLeft: 8 }}>
                               <div style={{ fontWeight: 500 }}>{cigar.name}</div>
-                              <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>{cigar.specification || '-'}</div>
                             </div>
                           )
                         },
@@ -5998,26 +6054,32 @@ const AdminInventory: React.FC = () => {
         <div style={getModalTheme().content as React.CSSProperties}>
           {/* 出库总体统计 */}
           <div style={{
-            marginBottom: 16,
-            padding: 16,
-            background: '#f8f9fa',
-            borderRadius: 8,
-            border: '1px solid #e9ecef'
+            marginBottom: 20,
+            padding: '24px',
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%)',
+            borderRadius: '16px',
+            border: '1px solid rgba(244, 175, 37, 0.3)',
+            backdropFilter: 'blur(12px)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
           }}>
-            <div style={{ fontSize: 16, fontWeight: 600, color: '#FFFFFF', marginBottom: 8 }}>
-              {t('inventory.outSummary')}
-            </div>
-            <div style={{ display: 'flex', gap: 24 }}>
-              <div>
-                <div style={{ fontSize: 12, color: '#6c757d' }}>{t('inventory.totalRecords')}</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: '#f5222d' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+              <div style={{ textAlign: 'center', borderRight: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.5)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t('inventory.totalRecords')}</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: '#FFFFFF' }}>
                   {outLogs.length}
                 </div>
               </div>
-              <div>
-                <div style={{ fontSize: 12, color: '#6c757d' }}>{t('inventory.totalOutStock')}</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: '#f5222d' }}>
-                  {outLogs.reduce((sum, log) => sum + Number(log.quantity || 0), 0)} {t('inventory.sticks')}
+              <div style={{ textAlign: 'center', borderRight: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.5)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t('inventory.totalOutStock')}</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: '#ff4d4f' }}>
+                  {outLogs.reduce((sum, log) => sum + Number(log.quantity || 0), 0)} <span style={{ fontSize: 14, fontWeight: 400, opacity: 0.7 }}>{t('inventory.sticks')}</span>
+                </div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.5)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t('inventory.totalValue')}</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: '#f4af25' }}>
+                  <span style={{ fontSize: 14, marginRight: 2 }}>RM</span>
+                  {outLogs.reduce((sum, log) => sum + (Number(log.quantity || 0) * Number((log as any).unitPrice || 0)), 0).toFixed(2)}
                 </div>
               </div>
             </div>
@@ -6083,7 +6145,6 @@ const AdminInventory: React.FC = () => {
                           render: (cigar: any) => (
                             <div style={{ paddingLeft: 8 }}>
                               <div style={{ fontWeight: 500 }}>{cigar.name}</div>
-                              <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>{cigar.specification || '-'}</div>
                             </div>
                           )
                         },
@@ -6104,6 +6165,16 @@ const AdminInventory: React.FC = () => {
                           width: 120,
                           align: 'center' as const,
                           render: (records: number) => <span>{records}</span>
+                        },
+                        {
+                          title: t('inventory.totalValue'),
+                          dataIndex: 'totalValue',
+                          key: 'totalValue',
+                          width: 150,
+                          align: 'right' as const,
+                          render: (value: number) => (
+                            <span style={{ fontWeight: 600, color: '#f4af25' }}>RM{value.toFixed(2)}</span>
+                          )
                         }
                       ]}
                     />
@@ -6140,6 +6211,16 @@ const AdminInventory: React.FC = () => {
                   align: 'center' as const,
                   render: (records: number) => (
                     <span>{records}</span>
+                  )
+                },
+                {
+                  title: t('inventory.totalValue'),
+                  dataIndex: 'totalValue',
+                  key: 'totalValue',
+                  width: 150,
+                  align: 'right' as const,
+                  render: (value: number) => (
+                    <span style={{ fontWeight: 600, color: '#f4af25' }}>RM{value.toFixed(2)}</span>
                   )
                 }
               ]}
@@ -6231,6 +6312,7 @@ const AdminInventory: React.FC = () => {
                 items: processedItems,
                 totalQuantity,
                 totalValue,
+                notes: values.notes,
                 attachments: editUploadedAttachments.length > 0 ? editUploadedAttachments : undefined
               })
 
@@ -6292,6 +6374,13 @@ const AdminInventory: React.FC = () => {
                 name="reason"
               >
                 <Input placeholder={t('inventory.reasonPlaceholder')} />
+              </Form.Item>
+
+              <Form.Item
+                label={t('inventory.notes')}
+                name="notes"
+              >
+                <Input.TextArea rows={3} placeholder={t('inventory.notesPlaceholder')} />
               </Form.Item>
             </Col>
 

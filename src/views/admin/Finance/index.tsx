@@ -72,6 +72,7 @@ const AdminFinance: React.FC = () => {
   const [viewingOrder, setViewingOrder] = useState<Order | null>(null)
   const [importing, setImporting] = useState(false)
   const [profitPage, setProfitPage] = useState(1)
+  const [profitTypeFilter, setProfitTypeFilter] = useState<'all' | 'surplus' | 'deficit'>('all')
   const [importRows, setImportRows] = useState<Array<{
     date: Date
     description: string
@@ -927,6 +928,10 @@ const AdminFinance: React.FC = () => {
           return orderNo.includes(kw) || product.includes(kw) || userName.includes(kw)
         }
 
+        // 3. 盈余/亏损筛选
+        if (profitTypeFilter === 'surplus' && r.profit <= 0) return false
+        if (profitTypeFilter === 'deficit' && r.profit >= 0) return false
+
         return true
       })
       .sort((a, b) => {
@@ -998,7 +1003,7 @@ const AdminFinance: React.FC = () => {
       trendData,
       maxVal
     }
-  }, [inventoryMovements, orders, users, cigars, inboundOrders, selectedDateRange, dateRange, isMobile, keyword])
+  }, [inventoryMovements, orders, users, cigars, inboundOrders, selectedDateRange, dateRange, isMobile, keyword, profitTypeFilter])
 
   // 已移除类别统计
 
@@ -1641,18 +1646,38 @@ const AdminFinance: React.FC = () => {
               gap: 16,
               marginTop: 10 // Added space between chart and details
             }}>
-              <Search
-                placeholder={t('financeAdmin.searchPlaceholder')}
-                allowClear
-                style={{ width: isMobile ? '100%' : 350 }}
-                prefix={<SearchOutlined />}
-                value={keyword}
-                onChange={(e) => {
-                  setKeyword(e.target.value)
-                  setProfitPage(1) // 搜索时重置分页
-                }}
-                className="points-config-form"
-              />
+              <div style={{ display: 'flex', gap: 12, width: isMobile ? '100%' : 'auto', flexDirection: isMobile ? 'column' : 'row' }}>
+                <Search
+                  placeholder={t('financeAdmin.searchPlaceholder')}
+                  allowClear
+                  style={{ width: isMobile ? '100%' : 350 }}
+                  prefix={<SearchOutlined />}
+                  value={keyword}
+                  onChange={(e) => {
+                    setKeyword(e.target.value)
+                    setProfitPage(1) // 搜索时重置分页
+                  }}
+                  className="points-config-form"
+                />
+                <Select
+                  value={profitTypeFilter}
+                  onChange={(val) => {
+                    setProfitTypeFilter(val)
+                    setProfitPage(1)
+                  }}
+                  style={{ width: isMobile ? '100%' : 160 }}
+                  className="points-config-form"
+                  dropdownStyle={{ background: '#221c10', border: '1px solid rgba(244,175,37,0.3)' }}
+                >
+                  <Option value="all">{t('financeAdmin.allRecords', '全部记录')}</Option>
+                  <Option value="surplus">
+                    <span style={{ color: '#52c41a' }}>📈 {t('financeAdmin.surplus', '盈余')}</span>
+                  </Option>
+                  <Option value="deficit">
+                    <span style={{ color: '#ff4d4f' }}>📉 {t('financeAdmin.deficits', '亏损')}</span>
+                  </Option>
+                </Select>
+              </div>
             </div>
 
             {/* 利润明细表格 */}
