@@ -235,47 +235,14 @@ export interface OrderInvoiceMeta {
   invoiceDate: Date;          // 发票日期
   invoiceTo: InvoiceParty;    // 发票对象
   terms?: string;             // 条款，例如 CASH
+  yourRef?: string;           // 您的参考号
+  ourDoNo?: string;           // 我们的出库单号
   generatedAt: Date;          // 生成时间
   generatedBy: string;        // 生成者 userId
 }
 
-export interface InvoiceTextStyle {
-  fontSize?: number;
-  bold?: boolean;
-  italic?: boolean;
-  underline?: boolean;
-}
-
-export interface InvoiceBlockRect {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  style?: InvoiceTextStyle;
-  lineWidth?: number; // for divider-like blocks, in mm
-}
-
 export interface InvoiceTemplateConfig {
-  version: 1;
-  layout?: {
-    marginMm?: number;
-    rightBoxWidthMm?: number;
-    infoBoxHeightMm?: number;
-    footerYmm?: number;
-    signatureYmm?: number;
-    blocks?: {
-      sellerHeader?: InvoiceBlockRect;
-      invoiceToBox?: InvoiceBlockRect;
-      invoiceMetaBox?: InvoiceBlockRect;
-      itemsTable?: InvoiceBlockRect;
-      totals?: InvoiceBlockRect;
-      notes?: InvoiceBlockRect;
-      footer?: InvoiceBlockRect;
-      signature?: InvoiceBlockRect;
-      dividerHeaderToCustomer?: InvoiceBlockRect;
-      dividerCustomerToItems?: InvoiceBlockRect;
-    };
-  };
+  version: 2;
   labels?: {
     invoiceTitle?: string;      // INVOICE
     yourRef?: string;           // Your Ref.
@@ -301,13 +268,6 @@ export interface InvoiceTemplateConfig {
       amount?: string;
     };
     currencySymbol?: string; // RM
-  };
-  show?: {
-    showNotes?: boolean;
-    showBank?: boolean;
-    showFooter?: boolean;
-    showSignature?: boolean;
-    showPage?: boolean;
   };
 }
 
@@ -522,6 +482,7 @@ export interface AppConfig {
     enableImageSearch?: boolean;  // AI识茄是否启用图片URL搜索（默认 true）
     imageSearchOrder?: 'google-first' | 'gemini-first';  // 图片URL搜索引擎顺序（默认 'google-first'）
   };
+  payment?: import('./payment').PaymentGatewayConfig; // 支付网关配置
   subscription?: {
     isActive: boolean;
     plan: 'basic' | 'pro' | 'premium'; // Legacy

@@ -2490,7 +2490,10 @@ const AdminInventory: React.FC = () => {
                       storeId: editingOrder.storeId,
                       referenceNo: editingOrder.referenceNo,
                       reason: editingOrder.reason,
-                      items: editingOrder.items
+                      items: editingOrder.items.map(item => ({
+                        ...item,
+                        customName: item.itemType !== 'cigar' ? item.cigarName : undefined
+                      }))
                     })
 
                     const existingAttachments = editingOrder.attachments || []
@@ -2542,7 +2545,7 @@ const AdminInventory: React.FC = () => {
                           'other': 'OTHER:'
                         }
                         const prefix = prefixMap[lineItemType] || 'OTHER:'
-                        cigarId = `${prefix}${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                        cigarId = line.cigarId || `${prefix}${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
                         cigarName = line.customName.trim()
                       }
 

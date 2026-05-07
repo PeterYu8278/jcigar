@@ -1,4 +1,4 @@
-// 通用购物车弹窗组件
+// Common Cart Modal Component
 import React, { useState, useEffect } from 'react'
 import { Modal, Button, List, Typography, Radio, Divider, message, Select } from 'antd'
 import { getModalThemeStyles, getModalWidth } from '../../config/modalTheme'
@@ -42,18 +42,18 @@ export const CartModal: React.FC<CartModalProps> = ({
   t,
   onCheckout
 }) => {
-  // 模式状态：购物车或结算
+  // Mode: cart or checkout
   const [mode, setMode] = useState<'cart' | 'checkout'>('cart')
-  // 支付方式
+  // Payment method
   const [paymentMethod, setPaymentMethod] = useState<string>('cash')
-  // 配送方式
+  // Delivery method
   const [deliveryMethod, setDeliveryMethod] = useState<'address' | 'event'>('address')
-  // 地址和活动选择
+  // Address and event selection
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [availableEvents, setAvailableEvents] = useState<Event[]>([])
 
-  // 当弹窗关闭时重置模式
+  // Reset mode when modal closes
   useEffect(() => {
     if (!open) {
       setMode('cart')
@@ -64,13 +64,13 @@ export const CartModal: React.FC<CartModalProps> = ({
     }
   }, [open])
 
-  // 加载可用活动
+  // Load available events
   useEffect(() => {
     if (mode === 'checkout') {
       ; (async () => {
         try {
           const events = await getEvents()
-          // 筛选出状态为 upcoming 或 ongoing 的活动，且未过报名截止日期
+          // Filter upcoming or ongoing events that haven't passed the deadline
           const now = new Date()
           const available = events.filter(event => {
             const isStatusValid = event.status === 'upcoming' || event.status === 'ongoing'
@@ -79,13 +79,13 @@ export const CartModal: React.FC<CartModalProps> = ({
           })
           setAvailableEvents(available)
         } catch (error) {
-          console.error('加载活动失败:', error)
+          console.error('Failed to load events:', error)
         }
       })()
     }
   }, [mode])
 
-  // 确认删除对话框状态
+  // Confirm remove dialog state
   const [confirmRemove, setConfirmRemove] = useState<{
     visible: boolean
     itemId: string | null
@@ -96,19 +96,19 @@ export const CartModal: React.FC<CartModalProps> = ({
     itemName: null
   })
 
-  // 强度翻译
+  // Strength translation
   const strengthMap: Record<string, string> = {
-    'mild': t('inventory.mild') || '温和',
-    'medium': t('inventory.medium') || '中等',
-    'full': t('inventory.full') || '浓郁'
+    'mild': t('inventory.mild') || 'Mild',
+    'medium': t('inventory.medium') || 'Medium',
+    'full': t('inventory.full') || 'Full'
   }
 
   const handleCheckout = () => {
     if (isMobile) {
-      // 手机端：切换模式
+      // Mobile: switch mode
       setMode('checkout')
     } else {
-      // 电脑端：调用回调
+      // Desktop: call callback
       onClose()
       if (onCheckout) {
         onCheckout()
@@ -117,7 +117,7 @@ export const CartModal: React.FC<CartModalProps> = ({
   }
 
   const handleConfirmCheckout = () => {
-    // 验证配送方式
+    // Validate delivery method
     if (deliveryMethod === 'address' && !selectedAddressId) {
       message.error(t('shop.selectAddress'))
       return
@@ -127,8 +127,8 @@ export const CartModal: React.FC<CartModalProps> = ({
       return
     }
 
-    // TODO: 处理结算逻辑
-    console.log('结算订单', {
+    // TODO: Handle checkout logic
+    console.log('Checkout order', {
       items: cartItems,
       total: cartTotal,
       paymentMethod,
@@ -136,17 +136,17 @@ export const CartModal: React.FC<CartModalProps> = ({
       addressId: selectedAddressId,
       eventId: selectedEventId
     })
-    // 清空购物车
+    // Clear cart
     if (clearCart) {
       clearCart()
     }
-    // 关闭弹窗
+    // Close modal
     onClose()
-    // 显示成功消息
+    // Show success message
     message.success(t('shop.orderSuccess'))
   }
 
-  // 处理确认移除
+  // Handle confirm remove
   const handleConfirmRemove = () => {
     if (confirmRemove.itemId) {
       removeFromCart(confirmRemove.itemId)
@@ -154,7 +154,7 @@ export const CartModal: React.FC<CartModalProps> = ({
     setConfirmRemove({ visible: false, itemId: null, itemName: null })
   }
 
-  // 处理取消移除
+  // Handle cancel remove
   const handleCancelRemove = () => {
     setConfirmRemove({ visible: false, itemId: null, itemName: null })
   }
@@ -191,7 +191,7 @@ export const CartModal: React.FC<CartModalProps> = ({
           height: '100vh',
           overflow: 'hidden'
         }}>
-          {/* 弹窗标题栏 */}
+          {/* Modal Header */}
           <div style={{
             padding: '8px',
             borderBottom: '1px solid rgba(255, 215, 0, 0.2)',
@@ -236,7 +236,7 @@ export const CartModal: React.FC<CartModalProps> = ({
             </Button>
           </div>
 
-          {/* 购物车内容 */}
+          {/* Cart Content */}
           <div style={{
             flex: 1,
             padding: mode === 'checkout' ? '16px' : '8px 0',
@@ -244,10 +244,10 @@ export const CartModal: React.FC<CartModalProps> = ({
             overflowX: 'hidden'
           }}>
             {mode === 'cart' ? (
-              // 购物车模式
+              // Cart mode
               <>
                 {cartItems.length === 0 ? (
-                  // 空状态
+                  // Empty state
                   <div style={{
                     textAlign: 'center',
                     padding: '60px 20px',
@@ -262,11 +262,11 @@ export const CartModal: React.FC<CartModalProps> = ({
                     </div>
                   </div>
                 ) : (
-                  // 商品列表
+                  // Item list
                   <List
                     dataSource={cartItems}
                     renderItem={(item) => {
-                      // 获取风味特征（合并所有品吸笔记）
+                      // Get flavor notes (merged from all tasting notes)
                       const flavorNotes = item.tastingNotes
                         ? [
                           ...(item.tastingNotes.foot || []),
@@ -286,18 +286,18 @@ export const CartModal: React.FC<CartModalProps> = ({
                           }}
                         >
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
-                            {/* 产品名称 */}
+                            {/* Product Name */}
                             <Title level={5} style={{ color: '#ffffff', margin: 0 }}>
                               {item.name}
                             </Title>
 
-                            {/* 图片和信息区域 */}
+                            {/* Image and Info Area */}
                             <div style={{
                               display: 'flex',
                               alignItems: 'flex-start',
                               gap: '16px'
                             }}>
-                              {/* 左侧图片 */}
+                              {/* Left Image */}
                               <div style={{ position: 'relative', flexShrink: 0 }}>
                                 <img
                                   alt={item.name}
@@ -313,16 +313,16 @@ export const CartModal: React.FC<CartModalProps> = ({
                                 <CigarRatingBadge rating={item.metadata?.rating} size="small" />
                               </div>
 
-                              {/* 右侧信息 */}
+                              {/* Right Info */}
                               <div style={{ flex: 1 }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '12px' }}>
-                                  {/* 产地 */}
+                                  {/* Origin */}
                                   {item.origin && (
                                     <Text style={{ color: '#9ca3af', fontSize: '12px' }}>
                                       {item.origin}
                                     </Text>
                                   )}
-                                  {/* 规格和强度同排 */}
+                                  {/* Size and Strength */}
                                   {(item.size || item.strength) && (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                       {item.size && (
@@ -340,7 +340,7 @@ export const CartModal: React.FC<CartModalProps> = ({
                                       )}
                                     </div>
                                   )}
-                                  {/* 风味特征 */}
+                                  {/* Flavor Notes */}
                                   {flavorNotes.length > 0 && (
                                     <Text style={{ color: '#9ca3af', fontSize: '12px' }}>
                                       {flavorNotes.join('、')}
@@ -348,7 +348,7 @@ export const CartModal: React.FC<CartModalProps> = ({
                                   )}
                                 </div>
 
-                                {/* 价格、数量控制器和删除 */}
+                                {/* Price, Quantity Controller and Remove */}
                                 <div style={{
                                   display: 'flex',
                                   alignItems: 'center',
@@ -358,7 +358,7 @@ export const CartModal: React.FC<CartModalProps> = ({
                                     RM {item.price}
                                   </div>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    {/* 数量调整 */}
+                                    {/* Quantity Adjustment */}
                                     <div style={{
                                       display: 'flex',
                                       alignItems: 'center',
@@ -374,7 +374,7 @@ export const CartModal: React.FC<CartModalProps> = ({
                                           if (currentQty > 1) {
                                             setQuantity(item.id, currentQty - 1)
                                           } else if (currentQty === 1) {
-                                            // 当数量为1时，点击减号提示确认移除
+                                            // When quantity is 1, click minus to prompt confirm remove
                                             setConfirmRemove({
                                               visible: true,
                                               itemId: item.id,
@@ -441,9 +441,9 @@ export const CartModal: React.FC<CartModalProps> = ({
                 )}
               </>
             ) : (
-              // 结算模式
+              // Checkout mode
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                {/* 订单摘要 */}
+                {/* Order Summary */}
                 <div>
                   <h3 style={{
                     margin: '0 0 12px 0',
@@ -497,7 +497,7 @@ export const CartModal: React.FC<CartModalProps> = ({
                   </div>
                 </div>
 
-                {/* 配送方式选择 */}
+                {/* Delivery Method Selection */}
                 <div>
                   <h3 style={{
                     margin: '0 0 12px 0',
@@ -558,7 +558,7 @@ export const CartModal: React.FC<CartModalProps> = ({
                     </Button>
                   </Button.Group>
 
-                  {/* 地址选择 */}
+                  {/* Address Selection */}
                   {deliveryMethod === 'address' && (
                     <div style={{ marginBottom: '12px' }}>
                       <AddressSelector
@@ -570,7 +570,7 @@ export const CartModal: React.FC<CartModalProps> = ({
                     </div>
                   )}
 
-                  {/* 活动选择 */}
+                  {/* Event Selection */}
                   {deliveryMethod === 'event' && (
                     <div style={{ marginBottom: '12px' }}>
                       <Select
@@ -592,7 +592,7 @@ export const CartModal: React.FC<CartModalProps> = ({
                   )}
                 </div>
 
-                {/* 支付方式 */}
+                {/* Payment Method */}
                 <div>
                   <h3 style={{
                     margin: '0 0 12px 0',
@@ -649,7 +649,7 @@ export const CartModal: React.FC<CartModalProps> = ({
             )}
           </div>
 
-          {/* 底部操作栏 */}
+          {/* Bottom Action Bar */}
           {mode === 'cart' && cartItems.length > 0 && (
             <div style={{
               padding: '11px 14px',
@@ -660,7 +660,7 @@ export const CartModal: React.FC<CartModalProps> = ({
               alignItems: 'center',
               background: 'rgba(0, 0, 0, 0.3)'
             }}>
-              {/* 总计 */}
+              {/* Total */}
               <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -674,7 +674,7 @@ export const CartModal: React.FC<CartModalProps> = ({
                 </span>
               </div>
 
-              {/* 操作按钮 */}
+              {/* Action Buttons */}
               <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
                 <Button
                   type="primary"
@@ -695,7 +695,7 @@ export const CartModal: React.FC<CartModalProps> = ({
             </div>
           )}
 
-          {/* 结算模式底部操作栏 */}
+          {/* Checkout Mode Bottom Action Bar */}
           {mode === 'checkout' && cartItems.length > 0 && (
             <div style={{
               padding: '11px 14px',
@@ -706,7 +706,7 @@ export const CartModal: React.FC<CartModalProps> = ({
               alignItems: 'center',
               background: 'rgba(0, 0, 0, 0.3)'
             }}>
-              {/* 总计 */}
+              {/* Total */}
               <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -720,7 +720,7 @@ export const CartModal: React.FC<CartModalProps> = ({
                 </span>
               </div>
 
-              {/* 操作按钮 */}
+              {/* Action Buttons */}
               <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
                 <Button
                   onClick={() => setMode('cart')}
@@ -757,7 +757,7 @@ export const CartModal: React.FC<CartModalProps> = ({
         </div>
       </Modal>
 
-      {/* 确认移除对话框 */}
+      {/* Confirm Remove Dialog */}
       <Modal
         title={t('shop.confirmRemove')}
         open={confirmRemove.visible}

@@ -87,10 +87,11 @@ const FeatureManagement: React.FC = () => {
   const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'frontend' | 'admin' | 'cigar-database' | 'tools' | 'app' | 'whapi' | 'env'>('frontend');
-  const [whapiForm] = Form.useForm();
-  const [envForm] = Form.useForm();
   const [searchText, setSearchText] = useState('');
+  const [activeTab, setActiveTab] = useState<'frontend' | 'admin' | 'cigar-database' | 'tools' | 'app' | 'whapi' | 'payment' | 'env'>('frontend');
+  const [whapiForm] = Form.useForm();
+  const [paymentForm] = Form.useForm();
+  const [envForm] = Form.useForm();
   const [config, setConfig] = useState<FeatureVisibilityConfig | null>(null);
   const [localFeatures, setLocalFeatures] = useState<Record<string, boolean>>({});
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
@@ -187,6 +188,19 @@ const FeatureManagement: React.FC = () => {
       });
     }
   }, [activeTab, appConfig, whapiForm]);
+
+  // 当切换到 payment 标签页时，设置表单值
+  useEffect(() => {
+    if (activeTab === 'payment' && appConfig) {
+      paymentForm.setFieldsValue({
+        billplzApiKey: appConfig.payment?.billplz?.apiKey || '',
+        billplzXSignatureKey: appConfig.payment?.billplz?.xSignatureKey || '',
+        billplzCollectionId: appConfig.payment?.billplz?.collectionId || '',
+        billplzIsSandbox: appConfig.payment?.billplz?.isSandbox ?? true,
+        billplzEnabled: appConfig.payment?.billplz?.enabled ?? false,
+      });
+    }
+  }, [activeTab, appConfig, paymentForm]);
 
   const loadConfig = async () => {
     setLoading(true);
@@ -416,6 +430,51 @@ const FeatureManagement: React.FC = () => {
       }
     } catch (error) {
       message.error('重置失败');
+    }
+  };
+
+  // 保存支付配置
+  const handleSavePaymentConfig = async () => {
+    if (!user?.id) {
+      message.error('用户未登录');
+      return;
+    }
+
+    setSavingAppConfig(true);
+    try {
+      const values = await paymentForm.validateFields();
+      const paymentConfig = {
+        billplz: {
+          apiKey: values.billplzApiKey,
+          xSignatureKey: values.billplzXSignatureKey,
+          collectionId: values.billplzCollectionId,
+          isSandbox: Boolean(values.billplzIsSandbox),
+          enabled: Boolean(values.billplzEnabled),
+        }
+      };
+
+      const result = await updateAppConfig(
+        {
+          payment: paymentConfig,
+        },
+        user.id
+      );
+
+      if (result.success) {
+        message.success('支付配置已保存');
+        if (appConfig) {
+          setAppConfig({
+            ...appConfig,
+            payment: paymentConfig,
+          });
+        }
+      } else {
+        message.error(result.error || '保存失败');
+      }
+    } catch (error) {
+      message.error('保存失败');
+    } finally {
+      setSavingAppConfig(false);
     }
   };
 
@@ -957,7 +1016,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
           borderBottom: '1px solid rgba(244,175,37,0.2)',
           marginBottom: 16
         }}>
-          {(['frontend', 'admin', 'cigar-database', 'tools', 'app', 'whapi', 'env'] as const).map((tabKey) => {
+          {(['frontend', 'admin', 'cigar-database', 'tools', 'app', 'whapi', 'payment', 'env'] as const).map((tabKey) => {
             const isActive = activeTab === tabKey;
             const baseStyle: React.CSSProperties = {
               flex: 1,
@@ -1002,7 +1061,9 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                           ? t('featureManagement.appSettings', { defaultValue: '应用配置' })
                           : tabKey === 'whapi'
                             ? t('featureManagement.whapiSettings', { defaultValue: 'WhatsApp 管理' })
-                            : t('featureManagement.envSettings', { defaultValue: '环境配置' })}
+                            : tabKey === 'payment'
+                              ? t('featureManagement.paymentSettings', { defaultValue: '支付网关' })
+                              : t('featureManagement.envSettings', { defaultValue: '环境配置' })}
               </button>
             );
           })}
@@ -1010,7 +1071,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
       </div>
 
       {/* 搜索和批量操作（仅功能标签页显示） */}
-      {activeTab !== 'app' && activeTab !== 'whapi' && activeTab !== 'env' && activeTab !== 'cigar-database' && (
+      {activeTab !== 'app' && activeTab !== 'whapi' && activeTab !== 'payment' && activeTab !== 'env' && activeTab !== 'cigar-database' && (
         <div style={{ marginBottom: 16, display: 'flex', gap: 12, alignItems: 'center' }}>
           <Search
             placeholder={t('featureManagement.searchPlaceholder', { defaultValue: '搜索功能...' })}
@@ -1513,6 +1574,124 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
           {/* 消息发送测试 */}
           <WhapiMessageTester whapiConfig={appConfig?.whapi} />
         </>
+      ) : null}
+
+      {/* 支付网关标签页 */}
+      {activeTab === 'payment' ? (
+        <Card style={{
+          background: 'rgba(255, 255, 255, 0.05)',
+          borderRadius: 12,
+          border: '1px solid rgba(244, 175, 37, 0.6)',
+          backdropFilter: 'blur(10px)',
+          marginBottom: 16,
+        }}>
+          <Form
+            form={paymentForm}
+            layout="vertical"
+            onFinish={handleSavePaymentConfig}
+          >
+            <div style={{ marginBottom: 24 }}>
+              <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600, display: 'block', marginBottom: 8 }}>
+                {t('featureManagement.billplzConfig', { defaultValue: 'Billplz 配置' })}
+              </Text>
+              <Text style={{ color: '#c0c0c0', fontSize: '14px', display: 'block', marginBottom: 16 }}>
+                {t('featureManagement.billplzDescription', { defaultValue: '配置 Billplz 支付网关参数以支持在线支付和自动对账。可在 Billplz API 文档查看详情。' })}
+                <a href="https://www.billplz.com/api" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700', marginLeft: 4 }}>
+                  {t('featureManagement.viewDocs', { defaultValue: '查看文档' })}
+                </a>
+              </Text>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+              <Form.Item
+                label={<span style={{ color: '#f8f8f8', fontSize: '14px', fontWeight: 600 }}>{t('featureManagement.apiKey', { defaultValue: 'API Key' })}</span>}
+                name="billplzApiKey"
+                rules={[{ required: true, message: t('featureManagement.apiKeyRequired', { defaultValue: '请输入 Billplz API Key' }) }]}
+              >
+                <Input.Password
+                  placeholder={t('featureManagement.apiKeyPlaceholder', { defaultValue: '请输入 Billplz API Key' })}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#f8f8f8',
+                  }}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={<span style={{ color: '#f8f8f8', fontSize: '14px', fontWeight: 600 }}>{t('featureManagement.xSignatureKey', { defaultValue: 'X-Signature Key' })}</span>}
+                name="billplzXSignatureKey"
+                rules={[{ required: true, message: t('featureManagement.xSignatureKeyRequired', { defaultValue: '请输入 X-Signature Key' }) }]}
+              >
+                <Input.Password
+                  placeholder={t('featureManagement.xSignatureKeyPlaceholder', { defaultValue: '请输入 X-Signature Key' })}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#f8f8f8',
+                  }}
+                />
+              </Form.Item>
+            </div>
+
+            <Form.Item
+              label={<span style={{ color: '#f8f8f8', fontSize: '14px', fontWeight: 600 }}>{t('featureManagement.collectionId', { defaultValue: 'Collection ID' })}</span>}
+              name="billplzCollectionId"
+              rules={[{ required: true, message: t('featureManagement.collectionIdRequired', { defaultValue: '请输入 Collection ID' }) }]}
+            >
+              <Input
+                placeholder={t('featureManagement.collectionIdPlaceholder', { defaultValue: '请输入 Billplz Collection ID' })}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  color: '#f8f8f8',
+                }}
+              />
+            </Form.Item>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+              <Form.Item
+                label={<span style={{ color: '#f8f8f8', fontSize: '14px', fontWeight: 600 }}>{t('featureManagement.sandboxMode', { defaultValue: '沙盒模式' })}</span>}
+                name="billplzIsSandbox"
+                valuePropName="checked"
+              >
+                <Switch
+                  checkedChildren={<span style={{ color: '#000' }}>{t('featureManagement.sandbox', { defaultValue: '沙盒' })}</span>}
+                  unCheckedChildren={<span style={{ color: '#000' }}>{t('featureManagement.production', { defaultValue: '正式' })}</span>}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={<span style={{ color: '#f8f8f8', fontSize: '14px', fontWeight: 600 }}>{t('featureManagement.enableBillplz', { defaultValue: '启用 Billplz' })}</span>}
+                name="billplzEnabled"
+                valuePropName="checked"
+              >
+                <Switch
+                  checkedChildren={<span style={{ color: '#000' }}>{t('featureManagement.enable', { defaultValue: '启用' })}</span>}
+                  unCheckedChildren={<span style={{ color: '#000' }}>{t('featureManagement.disable', { defaultValue: '禁用' })}</span>}
+                />
+              </Form.Item>
+            </div>
+
+            <Form.Item>
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <Button
+                  type="primary"
+                  icon={<SaveOutlined />}
+                  htmlType="submit"
+                  loading={savingAppConfig}
+                  style={{
+                    background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                    border: 'none',
+                    color: '#000',
+                  }}
+                >
+                  {t('featureManagement.saveChanges', { defaultValue: '保存配置' })}
+                </Button>
+              </div>
+            </Form.Item>
+          </Form>
+        </Card>
       ) : null}
 
       {/* 环境配置标签页 */}

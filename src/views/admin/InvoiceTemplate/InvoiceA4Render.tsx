@@ -1,10 +1,20 @@
 import React, { forwardRef, useMemo } from 'react'
-import type { InvoiceTemplateConfig, InvoiceTextStyle } from '@/types'
+import dayjs from 'dayjs'
+import { INVOICE_COLORS } from '@/utils/invoiceTheme'
+import { numberToEnglishWords } from '@/utils/format/numberFormat'
 
 const A4 = { w: 210, h: 297 } // mm
 const MM_TO_PX = 96 / 25.4
 
-type Blocks = NonNullable<NonNullable<InvoiceTemplateConfig['layout']>['blocks']>
+
+const colors = {
+  primary: INVOICE_COLORS.primary.hex,
+  secondary: INVOICE_COLORS.secondary.hex,
+  lightGray: INVOICE_COLORS.lightGray.hex,
+  borderGray: INVOICE_COLORS.borderGray.hex,
+  textMain: INVOICE_COLORS.textMain.hex,
+  textSecondary: INVOICE_COLORS.textSecondary.hex,
+}
 
 export type InvoiceA4PreviewModel = {
   seller: {
@@ -12,12 +22,14 @@ export type InvoiceA4PreviewModel = {
     regNo?: string
     addressLines: string[]
     phone?: string
-    fax?: string
+    logoUrl?: string
   }
   invoice: {
     invoiceNo: string
     invoiceDate: string
     terms?: string
+    yourRef?: string
+    ourDoNo?: string
     invoiceTo: { name: string; address: string; phone: string }
     page?: string
   }
@@ -39,40 +51,70 @@ export type InvoiceA4PreviewModel = {
   bank?: { bankName?: string; bankAccountNo?: string }
 }
 
-const cssTextStyle = (s?: InvoiceTextStyle, fallback = 10) => {
-  const fontSize = (typeof s?.fontSize === 'number' && Number.isFinite(s.fontSize)) ? s.fontSize : fallback
+/**
+ * 核心数据映射函数：将业务对象映射为 UI 渲染模型
+ */
+export const mapBusinessDataToInvoiceModel = (
+  order: any, 
+  invoice: any, 
+  appConfig: any, 
+  template: any,
+  currencySymbol: string
+): InvoiceA4PreviewModel => {
+  const seller = { 
+    name: appConfig?.invoice?.sellerName || 'JEP Ventures Sdn Bhd',
+    regNo: appConfig?.invoice?.sellerRegNo,
+    addressLines: appConfig?.invoice?.sellerAddressLines || [],
+    phone: appConfig?.invoice?.sellerPhone,
+    logoUrl: appConfig?.logoUrl,
+  }
+
   return {
-    // visually closer to jsPDF default rendering
-    fontSize: `${Math.max(8, Math.round(fontSize * (96 / 72)))}px`,
-    fontWeight: s?.bold ? 700 : 400,
-    fontStyle: s?.italic ? 'italic' : 'normal',
-    textDecoration: s?.underline ? 'underline' : 'none',
-    lineHeight: 1.2,
-    color: '#000',
-    wordBreak: 'break-word' as const,
-    whiteSpace: 'pre-wrap' as const,
+    seller,
+    invoice: {
+      invoiceNo: invoice.invoiceNo,
+      invoiceDate: dayjs(invoice.invoiceDate).format('DD/MM/YYYY'),
+      terms: invoice.terms,
+      yourRef: invoice.yourRef,
+      ourDoNo: invoice.ourDoNo,
+      invoiceTo: {
+        name: invoice.invoiceTo.name,
+        address: invoice.invoiceTo.address,
+        phone: invoice.invoiceTo.phone
+      },
+      page: '1 of 1',
+    },
+    order: {
+      items: (order.items || []).map((it: any) => ({
+        name: it.name || it.cigarId,
+        qty: Number(it.quantity || 0),
+        unit: Number(it.price || 0)
+      })),
+      total: Number(order.total || 0),
+      currencySymbol,
+      totalWords: `RINGGIT MALAYSIA : ${numberToEnglishWords(Number(order.total || 0))}`
+    },
+    labels: {
+      invoiceTitle: template.labels?.invoiceTitle || 'INVOICE',
+      thNo: template.table?.headers?.no || 'No',
+      thDesc: template.table?.headers?.description || 'Description',
+      thQty: template.table?.headers?.qty || 'Qty',
+      thPrice: template.table?.headers?.priceUnit || 'Price/Unit',
+      thAmount: template.table?.headers?.amount || 'Amount',
+    },
+    notes: appConfig?.invoice?.notes || [],
+    bank: {
+      bankName: appConfig?.invoice?.bankName,
+      bankAccountNo: appConfig?.invoice?.bankAccountNo
+    }
   }
 }
 
-const blockKeys: Array<keyof Blocks> = [
-  'sellerHeader',
-  'dividerHeaderToCustomer',
-  'invoiceToBox',
-  'invoiceMetaBox',
-  'dividerCustomerToItems',
-  'itemsTable',
-  'totals',
-  'notes',
-  'footer',
-  'signature',
-]
-
 export interface InvoiceA4RenderProps {
-  blocks: Blocks
   preview: InvoiceA4PreviewModel
 }
 
-export const InvoiceA4Render = forwardRef<HTMLDivElement, InvoiceA4RenderProps>(({ blocks, preview }, ref) => {
+export const InvoiceA4Render = forwardRef<HTMLDivElement, InvoiceA4RenderProps>(({ preview }, ref) => {
   const pagePx = useMemo(() => ({ w: Math.round(A4.w * MM_TO_PX), h: Math.round(A4.h * MM_TO_PX) }), [])
   const p = preview
 
@@ -80,213 +122,223 @@ export const InvoiceA4Render = forwardRef<HTMLDivElement, InvoiceA4RenderProps>(
     <div
       ref={ref}
       style={{
-        width: `${pagePx.w}px`,
-        height: `${pagePx.h}px`,
+        width: pagePx.w,
+        height: pagePx.h,
+        padding: '15mm',
         background: '#fff',
+        fontFamily: 'Helvetica, Arial, sans-serif',
+        color: colors.textMain,
         position: 'relative',
-        overflow: 'hidden',
+        boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
-      {blockKeys.map((k) => {
-        const b: any = (blocks as any)?.[k]
-        if (!b) return null
-        const x = Math.round(Number(b.x || 0) * MM_TO_PX)
-        const y = Math.round(Number(b.y || 0) * MM_TO_PX)
-        const w = Math.round(Number(b.w || 0) * MM_TO_PX)
-        const h = Math.max(2, Math.round(Number(b.h || 0) * MM_TO_PX))
-
-        const styleBase: React.CSSProperties = {
-          position: 'absolute',
-          left: x,
-          top: y,
-          width: w,
-          height: h,
-          boxSizing: 'border-box',
-        }
-
-        if (k === 'dividerHeaderToCustomer' || k === 'dividerCustomerToItems') {
-          const lw = Math.max(1, Math.round(Number(b.lineWidth || 0.2) * MM_TO_PX))
-          return (
-            <div key={String(k)} style={styleBase}>
-              <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', borderTop: `${lw}px solid #000`, transform: 'translateY(-50%)' }} />
+      {/* 1. Header (Dark) */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        marginBottom: '20px',
+        background: colors.primary,
+        margin: '-15mm -15mm 5mm -15mm',
+        padding: '10mm 15mm',
+        color: '#fff'
+      }}>
+        {p.seller.logoUrl ? (
+          <img
+            src={p.seller.logoUrl}
+            alt="Logo"
+            style={{ height: '15mm', marginRight: '8mm' }}
+          />
+        ) : (
+          <div style={{ marginRight: '8mm' }}>
+            <div style={{ fontSize: '22pt', fontWeight: 'bold', lineHeight: 1 }}>
+              <span style={{ color: '#fff' }}>{p.seller.name?.split(' ')[0] || 'JEP'} </span>
+              <span style={{ color: colors.secondary }}>{p.seller.name?.split(' ').slice(1).join(' ') || 'Ventures'}</span>
             </div>
-          )
-        }
+          </div>
+        )}
+        <div style={{ flex: 1 }}>
+          {!p.seller.logoUrl && <div style={{ height: '2mm' }} />}
+          <div style={{ fontSize: '14pt', fontWeight: 'bold', marginBottom: '1mm', color: '#fff', display: 'flex', alignItems: 'baseline', gap: '2mm' }}>
+            {p.seller.name}
+            {p.seller.regNo && (
+              <span style={{ fontSize: '8pt', fontWeight: 'normal', color: '#CBD5E1' }}>
+                ({p.seller.regNo})
+              </span>
+            )}
+          </div>
+          <div style={{ fontSize: '8pt', color: '#CBD5E1', marginBottom: '0.5mm' }}>
+            {p.seller.addressLines.join(', ')}
+          </div>
+          {p.seller.phone && (
+            <div style={{ fontSize: '8pt', color: '#CBD5E1' }}>
+              Phone: {p.seller.phone}
+            </div>
+          )}
+        </div>
+      </div>
 
-        if (k === 'sellerHeader') {
-          const s: InvoiceTextStyle | undefined = b.style
-          return (
-            <div key={String(k)} style={{ ...styleBase, padding: 0 }}>
-              <div style={{ ...cssTextStyle(s, 10.5), textAlign: 'center' }}>
-                <div>
-                  <span style={{ fontWeight: 800 }}>{p.seller.name}</span>
-                  {p.seller.regNo ? (
-                    <span style={{ fontSize: '0.72em', verticalAlign: 'sub', marginLeft: 4 }}>
-                      ({p.seller.regNo})
-                    </span>
-                  ) : null}
-                </div>
-                {p.seller.addressLines.map((ln, idx) => (
-                  <div key={idx}>{ln}</div>
-                ))}
+      {/* 2. Main Title */}
+      <div style={{ textAlign: 'center', marginBottom: '5mm' }}>
+        <div style={{ fontSize: '20pt', fontWeight: 'bold', color: colors.textMain, textTransform: 'uppercase' }}>
+          {p.labels.invoiceTitle}
+        </div>
+      </div>
+
+      {/* 3. Customer Info */}
+      <div style={{ marginBottom: '8mm' }}>
+        <div style={{ display: 'flex', fontSize: '9pt', marginTop: '0mm' }}>
+          {/* Left Column: Customer Details */}
+          <div style={{ width: '100mm', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '25mm 1fr', rowGap: '0mm' }}>
+              <div style={{ color: colors.textSecondary }}>Name</div>
+              <div style={{ fontWeight: 'bold' }}>{p.invoice.invoiceTo.name}</div>
+
+              <div style={{ color: colors.textSecondary }}>Address</div>
+              <div style={{ whiteSpace: 'pre-wrap' }}>{p.invoice.invoiceTo.address}</div>
+            </div>
+
+            {/* Spacer to push Phone down - will be adjusted by flex if needed, but here we just want it to align with the 6th row */}
+            <div style={{ flex: 1, minHeight: '12mm' }} />
+
+            <div style={{ display: 'grid', gridTemplateColumns: '25mm 1fr', rowGap: '0mm' }}>
+              <div style={{ color: colors.textSecondary }}>Phone</div>
+              <div>{p.invoice.invoiceTo.phone}</div>
+            </div>
+          </div>
+
+          {/* Right Column: Metadata (Strict spacing) */}
+          <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '25mm 1fr', rowGap: '0mm' }}>
+            <div style={{ color: colors.textSecondary }}>Invoice No</div>
+            <div style={{ fontWeight: 'bold' }}>{p.invoice.invoiceNo}</div>
+
+            <div style={{ color: colors.textSecondary }}>Date</div>
+            <div style={{ fontWeight: 'bold' }}>{p.invoice.invoiceDate}</div>
+
+            <div style={{ color: colors.textSecondary }}>Your Ref.</div>
+            <div style={{ fontWeight: 'bold' }}>{p.invoice.yourRef || '-'}</div>
+
+            <div style={{ color: colors.textSecondary }}>Our D/O No</div>
+            <div style={{ fontWeight: 'bold' }}>{p.invoice.ourDoNo || '-'}</div>
+
+            <div style={{ color: colors.textSecondary }}>Terms</div>
+            <div style={{ fontWeight: 'bold' }}>{p.invoice.terms || 'CASH'}</div>
+
+            <div style={{ color: colors.textSecondary }}>Page</div>
+            <div style={{ fontWeight: 'bold' }}>{p.invoice.page || '1 of 1'}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Table */}
+      <div style={{ flex: 1 }}>
+        <SectionHeader title="ITEM DETAILS" />
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '4mm', fontSize: '9pt' }}>
+          <thead>
+            <tr style={{ background: colors.lightGray, color: colors.textSecondary, textAlign: 'left' }}>
+              <th style={{ padding: '3mm', width: '10mm', borderBottom: `0.2mm solid ${colors.borderGray}` }}>{p.labels.thNo}</th>
+              <th style={{ padding: '3mm', borderBottom: `0.2mm solid ${colors.borderGray}` }}>{p.labels.thDesc}</th>
+              <th style={{ padding: '3mm', textAlign: 'right', borderBottom: `0.2mm solid ${colors.borderGray}` }}>{p.labels.thQty}</th>
+              <th style={{ padding: '3mm', textAlign: 'right', borderBottom: `0.2mm solid ${colors.borderGray}` }}>{p.labels.thPrice}</th>
+              <th style={{ padding: '3mm', textAlign: 'right', borderBottom: `0.2mm solid ${colors.borderGray}` }}>{p.labels.thAmount}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {p.order.items.map((item, idx) => (
+              <tr key={idx} style={{ background: idx % 2 === 1 ? '#FCFDFE' : 'transparent' }}>
+                <td style={{ padding: '3mm', borderBottom: `0.1mm solid ${colors.borderGray}` }}>{idx + 1}</td>
+                <td style={{ padding: '3mm', borderBottom: `0.1mm solid ${colors.borderGray}` }}>{item.name}</td>
+                <td style={{ padding: '3mm', textAlign: 'right', borderBottom: `0.1mm solid ${colors.borderGray}` }}>{item.qty}</td>
+                <td style={{ padding: '3mm', textAlign: 'right', borderBottom: `0.1mm solid ${colors.borderGray}` }}>
+                  {item.unit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </td>
+                <td style={{ padding: '3mm', textAlign: 'right', fontWeight: 'bold', borderBottom: `0.1mm solid ${colors.borderGray}` }}>
+                  {(item.qty * item.unit).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {/* Total Box */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '5mm' }}>
+          <div style={{
+            background: colors.primary,
+            color: '#fff',
+            width: '65mm',
+            padding: '3mm 5mm',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            fontWeight: 'bold'
+          }}>
+            <span>TOTAL</span>
+            <span style={{ fontSize: '11pt' }}>
+              {p.order.currencySymbol} {p.order.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 5. Remarks & Bank */}
+      <div style={{ marginTop: 'auto', paddingTop: '5mm' }}>
+        <div style={{ fontSize: '8pt', color: colors.textSecondary, marginBottom: '4mm', fontStyle: 'italic' }}>
+          {p.order.totalWords}
+        </div>
+        {p.notes.length > 0 && (
+          <div style={{ marginBottom: '6mm' }}>
+            <SectionHeader title="REMARKS" />
+            <div style={{ fontSize: '8pt', color: colors.textSecondary, marginTop: '2mm', lineHeight: 1.6 }}>
+              {p.notes.map((note, i) => (
+                <div key={i}>{i + 1}. {note}</div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(p.bank?.bankName || p.bank?.bankAccountNo) && (
+          <div>
+            <SectionHeader title="PAYMENT METHOD" />
+            <div style={{
+              background: colors.lightGray,
+              border: `0.2mm solid ${colors.borderGray}`,
+              marginTop: '3mm',
+              padding: '4mm',
+              display: 'flex',
+              gap: '12mm',
+              fontSize: '8pt'
+            }}>
+              <div>
+                <div style={{ color: colors.textSecondary, marginBottom: '1mm' }}>Bank Name</div>
+                <div style={{ fontWeight: 'bold' }}>{p.bank?.bankName}</div>
+              </div>
+              <div>
+                <div style={{ color: colors.textSecondary, marginBottom: '1mm' }}>Account Holder</div>
+                <div style={{ fontWeight: 'bold' }}>{p.seller.name}</div>
+              </div>
+              <div>
+                <div style={{ color: colors.textSecondary, marginBottom: '1mm' }}>Account Number</div>
+                <div style={{ fontWeight: 'bold' }}>{p.bank?.bankAccountNo}</div>
               </div>
             </div>
-          )
-        }
+          </div>
+        )}
+      </div>
 
-        if (k === 'invoiceToBox') {
-          const s: InvoiceTextStyle | undefined = b.style
-          return (
-            <div key={String(k)} style={{ ...styleBase, padding: 0 }}>
-              <div style={{ ...cssTextStyle(s, 10), height: '100%', display: 'flex', flexDirection: 'column', padding: 0 }}>
-                <div>
-                  <div style={{ fontWeight: 700 }}>{p.invoice.invoiceTo.name}</div>
-                  <div style={{ marginTop: 2 }}>{p.invoice.invoiceTo.address}</div>
-                </div>
-                <div style={{ marginTop: 'auto' }}>
-                  <div>Attn :</div>
-                  <div>TEL : {p.invoice.invoiceTo.phone}</div>
-                </div>
-              </div>
-            </div>
-          )
-        }
-
-        if (k === 'invoiceMetaBox') {
-          const s: InvoiceTextStyle | undefined = b.style
-          return (
-            <div key={String(k)} style={{ ...styleBase, padding: 0 }}>
-              <div style={{ ...cssTextStyle(s, 10), padding: 0 }}>
-                <div style={{ fontWeight: 800 }}>{p.labels.invoiceTitle}</div>
-                <div>: {p.invoice.invoiceNo}</div>
-                <div style={{ marginTop: 4 }}>Terms : {p.invoice.terms || ''}</div>
-                <div>Date : {p.invoice.invoiceDate}</div>
-                <div>Page : {p.invoice.page || '1 of 1'}</div>
-              </div>
-            </div>
-          )
-        }
-
-        if (k === 'itemsTable') {
-          const s: InvoiceTextStyle | undefined = b.style
-          const rows = p.order.items.slice(0, 10)
-          return (
-            <div key={String(k)} style={{ ...styleBase, padding: 0 }}>
-              <div style={{ ...cssTextStyle(s, 10), height: '100%' }}>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '28px 1fr 44px 70px 70px',
-                  gap: 4,
-                  fontWeight: 800,
-                  borderBottom: '1px solid rgba(0,0,0,0.65)',
-                  paddingBottom: 4,
-                  marginBottom: 4,
-                }}>
-                  <div>{p.labels.thNo}</div>
-                  <div>{p.labels.thDesc}</div>
-                  <div style={{ textAlign: 'right' }}>{p.labels.thQty}</div>
-                  <div style={{ textAlign: 'right' }}>{p.labels.thPrice}</div>
-                  <div style={{ textAlign: 'right' }}>{p.labels.thAmount}</div>
-                </div>
-                {rows.map((r, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '28px 1fr 44px 70px 70px',
-                      gap: 4,
-                      padding: '2px 0',
-                      borderBottom: '1px dotted rgba(0,0,0,0.18)',
-                    }}
-                  >
-                    <div>{idx + 1}</div>
-                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</div>
-                    <div style={{ textAlign: 'right' }}>{r.qty}</div>
-                    <div style={{ textAlign: 'right' }}>{r.unit.toFixed(2)}</div>
-                    <div style={{ textAlign: 'right' }}>{(r.qty * r.unit).toFixed(2)}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )
-        }
-
-        if (k === 'totals') {
-          const s: InvoiceTextStyle | undefined = b.style
-          return (
-            <div key={String(k)} style={{ ...styleBase, padding: 0 }}>
-              <div style={cssTextStyle(s, 10)}>
-                <div style={{ opacity: 0.85 }}>{p.order.totalWords || 'RINGGIT MALAYSIA : ...'}</div>
-                <div style={{ marginTop: 6, display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}>
-                  <div>Total</div>
-                  <div>{p.order.currencySymbol} {p.order.total.toFixed(2)}</div>
-                </div>
-              </div>
-            </div>
-          )
-        }
-
-        if (k === 'notes') {
-          const s: InvoiceTextStyle | undefined = b.style
-          return (
-            <div key={String(k)} style={{ ...styleBase, padding: 0 }}>
-              <div style={cssTextStyle(s, 10)}>
-                <div style={{ fontWeight: 800 }}>Notes :</div>
-                {p.notes.slice(0, 8).map((n, idx) => (
-                  <div key={idx}>{idx + 1}. {n}</div>
-                ))}
-                {(p.bank?.bankName || p.bank?.bankAccountNo) && (
-                  <div style={{ marginTop: 6 }}>
-                    {p.bank.bankName && <div>Bank : {p.bank.bankName}</div>}
-                    {p.bank.bankAccountNo && <div>Account No: {p.bank.bankAccountNo}</div>}
-                  </div>
-                )}
-              </div>
-            </div>
-          )
-        }
-
-        if (k === 'footer') {
-          const s: InvoiceTextStyle | undefined = b.style
-          return (
-            <div key={String(k)} style={{ ...styleBase, padding: 0 }}>
-              <div style={{ ...cssTextStyle(s, 10), display: 'flex', justifyContent: 'space-between' }}>
-                <div style={{ flex: 1, textAlign: 'center' }}>E. & O.E</div>
-                <div style={{ textAlign: 'right' }}>
-                  <div>COMPUTER GENERATED INVOICE</div>
-                  <div>NO SIGNATURE REQUIRED</div>
-                </div>
-              </div>
-            </div>
-          )
-        }
-
-        if (k === 'signature') {
-          const s: InvoiceTextStyle | undefined = b.style
-          return (
-            <div key={String(k)} style={{ ...styleBase, padding: 0 }}>
-              <div style={{ ...cssTextStyle(s, 10), height: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                <div style={{ width: '48%' }}>
-                  <div style={{ borderTop: '1px solid rgba(0,0,0,0.65)', marginBottom: 4 }} />
-                  <div style={{ textAlign: 'center' }}>Acknowledgment of receipt</div>
-                </div>
-                <div style={{ width: '48%' }}>
-                  <div style={{ borderTop: '1px solid rgba(0,0,0,0.65)', marginBottom: 4 }} />
-                  <div style={{ textAlign: 'center' }}>FOR {p.seller.name}</div>
-                </div>
-              </div>
-            </div>
-          )
-        }
-
-        return null
-      })}
+      {/* 6. Footer */}
+      <div style={{ textAlign: 'center', marginTop: '10mm', fontSize: '7pt', color: colors.textSecondary }}>
+        <div style={{ marginTop: '1mm' }}>This is a computer-generated document and no signature is required.</div>
+      </div>
     </div>
   )
 })
 
-InvoiceA4Render.displayName = 'InvoiceA4Render'
+const SectionHeader: React.FC<{ title: string }> = ({ title }) => (
+  <div style={{ position: 'relative' }}>
+    <div style={{ fontSize: '11pt', fontWeight: 'bold', color: colors.textMain }}>{title}</div>
+    <div style={{ width: '15mm', height: '0.5mm', background: colors.primary, marginTop: '1mm' }} />
+  </div>
+)
 
 export default InvoiceA4Render
-
-

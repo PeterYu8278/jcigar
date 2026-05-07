@@ -1,4 +1,4 @@
-// QR Code 显示组件
+// QR Code Display Component
 import React from 'react'
 import { Spin, Alert } from 'antd'
 import { QrcodeOutlined } from '@ant-design/icons'
@@ -15,8 +15,8 @@ interface QRCodeDisplayProps {
 }
 
 /**
- * QR Code 显示组件
- * @param props 组件属性
+ * QR Code Display Component
+ * @param props Component props
  * @returns JSX.Element
  */
 export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
@@ -29,7 +29,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
   showPlaceholder = true
 }) => {
   const { t } = useTranslation()
-  // 加载状态
+  // Loading state
   if (loading) {
     return (
       <div 
@@ -50,7 +50,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
     )
   }
 
-  // 错误状态
+  // Error state
   if (error) {
     return (
       <div 
@@ -71,7 +71,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
     )
   }
 
-  // 有QR Code数据
+  // With QR Code data
   if (qrCodeDataURL) {
     return (
       <div 
@@ -98,7 +98,7 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
     )
   }
 
-  // 占位符
+  // Placeholder
   if (showPlaceholder) {
     return (
       <div 

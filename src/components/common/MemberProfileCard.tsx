@@ -1,4 +1,4 @@
-// 共享的会员头像/会员卡组件
+// Shared Member Avatar/Member Card Component
 import React, { useState, useEffect, useRef } from 'react'
 import { CrownOutlined, CopyOutlined, ShareAltOutlined } from '@ant-design/icons'
 import { Modal, Button, Space, message } from 'antd'
@@ -21,7 +21,7 @@ interface MemberProfileCardProps {
   getMembershipText: (level: string) => string
   className?: string
   style?: React.CSSProperties
-  enableQrModal?: boolean // 是否启用点击会员卡放大QR code功能（主页场景）
+  enableQrModal?: boolean // Whether to enable click member card to enlarge QR code (home scene)
 }
 
 export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
@@ -37,20 +37,20 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
   const [pointsConfig, setPointsConfig] = useState<PointsConfig | null>(null)
 
-  // 3D旋转动画状态
+  // 3D rotation animation state
   const [isRotating, setIsRotating] = useState(false)
   const [rotationDirection, setRotationDirection] = useState<'left' | 'right'>('right')
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
-  // QR code 放大显示状态
+  // QR code enlarged display state
   const [qrModalVisible, setQrModalVisible] = useState(false)
-  // 用于跟踪之前的 check-in 状态
+  // Used to track previous check-in status
   const prevHasPendingSessionRef = useRef<boolean | null>(null)
-  // 用于标记是否是首次回调
+  // Used to mark if it's the first callback
   const isFirstCallbackRef = useRef<boolean>(true)
   const [membershipPeriod, setMembershipPeriod] = useState<{ startDate: Date, endDate: Date } | null>(null)
 
-  // 加载应用配置
+  // Load app config
   useEffect(() => {
     const loadAppConfig = async () => {
       const config = await getAppConfig()
@@ -61,7 +61,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
     loadAppConfig()
   }, [])
 
-  // 加载积分配置（用于控制引荐奖励文案是否显示）
+  // Load points config (to control referral reward text visibility)
   useEffect(() => {
     const loadPointsConfig = async () => {
       const config = await getPointsConfig()
@@ -72,7 +72,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
     loadPointsConfig()
   }, [])
 
-  // 加载会员有效期
+  // Load membership validity period
   useEffect(() => {
     const loadMembershipPeriod = async () => {
       if (user?.id) {
@@ -85,24 +85,24 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
     loadMembershipPeriod()
   }, [user?.id])
 
-  // 使用 onSnapshot 实时监听用户 check-in 状态
+  // Use onSnapshot to monitor user check-in status in real-time
   useEffect(() => {
     if (!user?.id) {
-      // 重置状态
+      // Reset state
       prevHasPendingSessionRef.current = null
       isFirstCallbackRef.current = true
       return
     }
 
-    // 只有当引荐码分享模态框打开时才设置监听器
+    // Only set listener when referral code share modal is open
     if (!qrModalVisible) {
-      // 模态框关闭时，重置状态以便下次打开时重新初始化
+      // Reset state when modal closes to re-initialize next time
       prevHasPendingSessionRef.current = null
       isFirstCallbackRef.current = true
       return
     }
 
-    // 查询当前用户的 pending visit session
+    // Query current user's pending visit session
     const q = query(
       collection(db, GLOBAL_COLLECTIONS.VISIT_SESSIONS),
       where('userId', '==', user.id),
@@ -111,50 +111,50 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
       limit(1)
     )
 
-    // 设置实时监听器
+    // Set real-time listener
     const unsubscribe: Unsubscribe = onSnapshot(
       q,
       (querySnapshot) => {
         const hasPendingSession = !querySnapshot.empty
 
-        // 首次回调：只初始化状态，不关闭模态框
+        // First callback: only initialize state, don't close modal
         if (isFirstCallbackRef.current) {
           prevHasPendingSessionRef.current = hasPendingSession
           isFirstCallbackRef.current = false
           return
         }
 
-        // 后续回调：检测到用户被 check-in（从没有 pending session 变为有 pending session）
+        // Subsequent callbacks: user checked-in (from no pending session to having one)
         if (prevHasPendingSessionRef.current === false && hasPendingSession) {
-          // 关闭引荐码分享模态框
+          // Close referral code share modal
           setQrModalVisible(false)
         }
 
-        // 更新 ref 为当前状态
+        // Update ref to current state
         prevHasPendingSessionRef.current = hasPendingSession
       },
       (error) => {
-        // 监听错误不影响主流程，静默处理
+        // Silent error handling for listener
         if (error.code !== 'failed-precondition' && !error.message?.includes('index')) {
-          // 非索引错误才记录
+          // Log only if not an index error
         }
       }
     )
 
-    // 清理函数：组件卸载或依赖变化时取消监听
+    // Cleanup: unsubscribe on unmount or dependency change
     return () => {
       unsubscribe()
     }
   }, [user?.id, qrModalVisible])
 
-  // QR Code Hook - 基于会员编号生成引荐链接
+  // QR Code Hook - Generate referral link based on member ID
   const { qrCodeDataURL, loading: qrLoading, error: qrError } = useQRCode({
-    memberId: user?.memberId,  // ✅ 使用 memberId 而不是 user.id
+    memberId: user?.memberId,  // ✅ Use memberId instead of user.id
     memberName: user?.displayName,
     autoGenerate: true
   })
 
-  // 复制引荐码到剪贴板
+  // Copy referral code to clipboard
   const handleCopyReferralCode = async () => {
     if (!user?.memberId) {
       message.error(t('profile.referralCodeNotFound'))
@@ -165,7 +165,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
       await navigator.clipboard.writeText(user.memberId)
       message.success(t('profile.referralCodeCopied'))
     } catch (error) {
-      // 降级方案：使用传统方法
+      // Fallback: use traditional method
       const textArea = document.createElement('textarea')
       textArea.value = user.memberId
       textArea.style.position = 'fixed'
@@ -182,7 +182,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
     }
   }
 
-  // 复制分享链接到剪贴板
+  // Copy share link to clipboard
   const handleCopyShareLink = async () => {
     if (!user?.memberId) {
       message.error(t('profile.referralCodeNotFound'))
@@ -196,7 +196,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
       await navigator.clipboard.writeText(shareLink)
       message.success(t('profile.inviteTextCopied'))
     } catch (error) {
-      // 降级方案
+      // Fallback
       const textArea = document.createElement('textarea')
       textArea.value = shareLink
       textArea.style.position = 'fixed'
@@ -213,7 +213,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
     }
   }
 
-  // 分享功能（使用 Web Share API）
+  // Share function (Web Share API)
   const handleShare = async () => {
     if (!user?.memberId) {
       message.error(t('profile.referralCodeNotFound'))
@@ -232,18 +232,18 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
           url: shareLink
         })
       } catch (error: any) {
-        // 用户取消分享或其他错误，不显示错误消息
+        // User cancelled or other error, silent handle
         if (error.name !== 'AbortError') {
           console.error('Share failed:', error)
         }
       }
     } else {
-      // 降级到复制链接
+      // Fallback to copy link
       handleCopyShareLink()
     }
   }
 
-  // 触摸事件处理函数
+  // Touch event handlers
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null)
     setTouchStart(e.targetTouches[0].clientX)
@@ -256,20 +256,20 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
   const handleTouchEnd = () => {
     if (!touchStart || !touchEnd || isRotating) return
 
-    // 移除全卡片点击打开QR modal的逻辑，改为只在点击QR码区域时打开
+    // Removed logic to open QR modal on card click, only on QR area click
 
     const distance = touchStart - touchEnd
     const isLeftSwipe = distance > 50
     const isRightSwipe = distance < -50
 
     if (isLeftSwipe) {
-      // 左滑：头像从左往右转动消失，名片从左往右显示
+      // Left swipe: avatar disappear from left to right, card appear from left to right
       setRotationDirection('left')
       setIsRotating(true)
       onToggleMemberCard(true)
       setTimeout(() => setIsRotating(false), 600)
     } else if (isRightSwipe) {
-      // 右滑：头像从右往左转动消失，名片从右往左显示
+      // Right swipe: avatar disappear from right to left, card appear from right to left
       setRotationDirection('right')
       setIsRotating(true)
       onToggleMemberCard(true)
@@ -277,21 +277,21 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
     }
   }
 
-  // 点击事件处理函数
+  // Click event handler
   const handleClick = (e: React.MouseEvent) => {
     if (isRotating) return
 
-    // 移除 parent 的 QR 点击检测，改回子元素直接处理
+    // Removed QR click detection from parent, handled by child directly
 
     const rect = e.currentTarget.getBoundingClientRect()
     const clickX = e.clientX - rect.left
     const centerX = rect.width / 2
 
     if (clickX < centerX) {
-      // 点击左边：头像从左往右转动消失，名片从左往右显示
+      // Click left: avatar disappear from left to right, card appear from left to right
       setRotationDirection('left')
     } else {
-      // 点击右边：头像从右往左转动消失，名片从右往左显示
+      // Click right: avatar disappear from right to left, card appear from right to left
       setRotationDirection('right')
     }
 
@@ -302,7 +302,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
 
   return (
     <>
-      {/* CSS动画关键帧 */}
+      {/* CSS Animation Keyframes */}
       <style>
         {`
           @keyframes avatarSlideOutLeft {
@@ -360,7 +360,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
         }}
       >
         {showMemberCard ? (
-          /* 会员卡显示 - 应用3D效果和精美样式 */
+          /* Member Card Display - 3D effect and premium styling */
           <div
             className="card-3d-effect"
             style={{
@@ -385,7 +385,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
               animation: isRotating
                 ? `cardSlideIn${rotationDirection === 'left' ? 'Left' : 'Right'} 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards`
                 : 'none',
-              // 3D阴影效果
+              // 3D shadow effect
               boxShadow: `
                 0px 15px 35px rgba(0,0,0,0.5), 
                 0px 5px 15px rgba(0,0,0,0.4),
@@ -419,7 +419,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
               }
             }}
           >
-            {/* 背景装饰 */}
+            {/* Background Decoration */}
             <div style={{
               position: 'absolute',
               inset: 0,
@@ -499,28 +499,28 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
                     }}>
                       {(() => {
                         let baseRole = '';
-                        if (user?.role === 'developer') baseRole = t('auth.developer', { defaultValue: '开发者' });
-                        else if (user?.role === 'superAdmin') baseRole = t('auth.superAdmin', { defaultValue: '超级管理员' });
-                        else if (user?.role === 'admin') baseRole = t('auth.admin', { defaultValue: '管理员' });
-                        else if (user?.role === 'vip') baseRole = t('auth.vip', { defaultValue: 'VIP' });
-                        else if (user?.role === 'member') baseRole = t('auth.member', { defaultValue: '会员' });
-                        else baseRole = t('auth.guest', { defaultValue: '游客' });
+                        if (user?.role === 'developer') baseRole = t('auth.developer')
+                        else if (user?.role === 'superAdmin') baseRole = t('auth.superAdmin')
+                        else if (user?.role === 'admin') baseRole = t('auth.admin')
+                        else if (user?.role === 'vip') baseRole = t('auth.vip')
+                        else if (user?.role === 'member') baseRole = t('auth.member')
+                        else baseRole = t('auth.guest')
 
-                        // 如果是普通会员但不是 active，且也不是 inactive/suspended，则显示为游客
+                        // If regular member but not active (and not inactive/suspended), show as guest
                         if (user?.role === 'member' && user?.status !== 'active' && user?.status !== 'inactive' && user?.status !== 'suspended') {
-                          baseRole = t('auth.guest', { defaultValue: '游客' });
+                          baseRole = t('auth.guest')
                         }
 
                         if (user?.status === 'inactive') {
-                          return `${baseRole} (${t('usersAdmin.inactive', { defaultValue: 'Inactive' })})`;
+                          return `${baseRole} (${t('usersAdmin.inactive')})`
                         }
                         if (user?.status === 'suspended') {
-                          return `${baseRole} (Suspended)`;
+                          return `${baseRole} (Suspended)`
                         }
                         
-                        // 特殊情况：如果 status 不是 active，且 baseRole 是会员/游客，确保逻辑一致
-                        if (user?.status !== 'active' && baseRole === t('auth.member', { defaultValue: '会员' }) && user?.status !== 'inactive' && user?.status !== 'suspended') {
-                           return t('auth.guest', { defaultValue: '游客' });
+                        // Special case: if status is not active and baseRole is member/guest, ensure consistency
+                        if (user?.status !== 'active' && baseRole === t('auth.member') && user?.status !== 'inactive' && user?.status !== 'suspended') {
+                           return t('auth.guest')
                         }
 
                         return baseRole;
@@ -559,7 +559,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
                       fontFamily: "'Noto Sans SC', sans-serif",
                       textShadow: '0 1px 2px rgba(0,0,0,0.5)'
                     }}>
-                      {membershipPeriod ? dayjs(membershipPeriod.startDate).format('YYYY-MM-DD') : '未开通会员'}
+                      {membershipPeriod ? dayjs(membershipPeriod.startDate).format('YYYY-MM-DD') : t('profile.notActivated')}
                     </div>
                   </div>
 
@@ -567,7 +567,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
               </div>
             </div>
 
-            {/* 切换提示 */}
+            {/* Toggle Hint */}
             <div style={{
               position: 'absolute',
               bottom: '-30px',
@@ -583,7 +583,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
             </div>
           </div>
         ) : (
-          /* 头像显示 */
+          /* Avatar Display */
           <div style={{
             position: 'relative',
             transform: isRotating
@@ -608,7 +608,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
               fontSize: '48px',
               color: '#221c10',
               fontWeight: 'bold',
-              // 金色多层阴影效果
+              // Gold multi-layer shadow effect
               boxShadow: `
                 0 0 20px rgba(212, 175, 55, 0.4),
                 0 0 40px rgba(212, 175, 55, 0.3),
@@ -633,7 +633,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               border: '2px solid #221c10',
-              // 金色阴影效果
+              // Gold shadow effect
               boxShadow: `
                 0 0 12px rgba(212, 175, 55, 0.5),
                 0 0 24px rgba(212, 175, 55, 0.3),
@@ -642,7 +642,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
             }}>
               <CrownOutlined style={{ color: '#221c10', fontSize: '16px' }} />
             </div>
-            {/* 点击提示 */}
+            {/* Click Hint */}
             <div style={{
               position: 'absolute',
               bottom: '-30px',
@@ -660,7 +660,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
         )}
       </div>
 
-      {/* 引荐码分享模态框 */}
+      {/* Referral Code Share Modal */}
       <Modal
         title={null}
         open={qrModalVisible}
@@ -695,7 +695,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
           textAlign: 'center',
           width: '100%'
         }}>
-          {/* 标题 */}
+          {/* Title */}
           <div style={{
             fontSize: 16,
             fontWeight: 600,
@@ -706,7 +706,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
             {t('profile.myReferralCode')}
           </div>
 
-          {/* 引荐码显示 */}
+          {/* Referral Code Display */}
           <div style={{
             fontSize: '36px',
             fontWeight: 'bold',
@@ -719,7 +719,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
             {user?.memberId || '------'}
           </div>
 
-          {/* QR Code 显示 */}
+          {/* QR Code Display */}
           <div style={{
             display: 'flex',
             justifyContent: 'center',
@@ -738,7 +738,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
             />
           </div>
 
-          {/* 操作按钮 */}
+          {/* Action Buttons */}
           <Space size="middle" direction="vertical" style={{ width: '100%', marginBottom: 20 }}>
             <Button
               type="default"
@@ -776,7 +776,7 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
             </Button>
           </Space>
 
-          {/* 奖励说明：当“被引荐人首充，引荐人奖励”和“被引荐人首充，被引荐人奖励”都为 0 时隐藏 */}
+          {/* Reward Description: hidden if both referrer and referred rewards are 0 */}
           {(() => {
             const referrerReward = pointsConfig?.reload?.referrerFirstReload ?? 0
             const referredReward = pointsConfig?.reload?.referredFirstReload ?? 0

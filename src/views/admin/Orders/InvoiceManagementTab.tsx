@@ -7,7 +7,7 @@ import type { AppConfig, Cigar, Order, OrderInvoiceMeta, User } from '@/types'
 import { useAuthStore } from '@/store/modules/auth'
 import { getAppConfig } from '@/services/firebase/appConfig'
 import { COLLECTIONS, updateDocument } from '@/services/firebase/firestore'
-import { generateInvoicePdfAndDownload, openInvoicePdfPreview } from '@/utils/invoicePdf'
+import { generateInvoicePdfAndDownload, openInvoicePdfPreview } from '@/utils/invoicePdfRenderer'
 import { getStatusColor, getStatusText, getUserName, getUserPhone } from './helpers'
 
 type InvoiceFormValues = {
@@ -17,6 +17,8 @@ type InvoiceFormValues = {
   invoiceToAddress: string
   invoiceToPhone: string
   terms: string
+  yourRef: string
+  ourDoNo: string
 }
 
 const padLeft = (value: string, len: number) => value.padStart(len, '0')
@@ -102,7 +104,7 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
 
   const downloadInvoicePdf = async (order: Order, inv: OrderInvoiceMeta) => {
     const cfg = await resolveAppConfig()
-    generateInvoicePdfAndDownload({
+    await generateInvoicePdfAndDownload({
       order: enrichOrderItems(order),
       invoice: inv,
       appConfig: cfg,
@@ -239,6 +241,8 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
                 invoiceToAddress: inv?.invoiceTo?.address || (record as any)?.shipping?.address || '',
                 invoiceToPhone: inv?.invoiceTo?.phone || getUserPhone(record.userId, users) || '',
                 terms: inv?.terms || 'CASH',
+                yourRef: inv?.yourRef || '',
+                ourDoNo: inv?.ourDoNo || '',
               })
               setModalOpen(true)
             }}
@@ -263,6 +267,8 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
         phone: values.invoiceToPhone.trim(),
       },
       terms: values.terms?.trim() || 'CASH',
+      yourRef: values.yourRef?.trim() || '',
+      ourDoNo: values.ourDoNo?.trim() || '',
       generatedAt: new Date(),
       generatedBy: user?.id || '',
     }
@@ -279,7 +285,7 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
     await onRefresh()
 
     const cfg = await resolveAppConfig()
-    generateInvoicePdfAndDownload({
+    await generateInvoicePdfAndDownload({
       order: enrichOrderItems({ ...activeOrder, invoice }),
       invoice,
       appConfig: cfg,
@@ -342,6 +348,8 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
                   invoiceToAddress: inv?.invoiceTo?.address || (order as any)?.shipping?.address || '',
                   invoiceToPhone: inv?.invoiceTo?.phone || getUserPhone(order.userId, users) || '',
                   terms: inv?.terms || 'CASH',
+                  yourRef: inv?.yourRef || '',
+                  ourDoNo: inv?.ourDoNo || '',
                 })
                 setModalOpen(true)
               }}
@@ -386,6 +394,8 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
                     invoiceToAddress: inv?.invoiceTo?.address || (order as any)?.shipping?.address || '',
                     invoiceToPhone: inv?.invoiceTo?.phone || getUserPhone(order.userId, users) || '',
                     terms: inv?.terms || 'CASH',
+                    yourRef: inv?.yourRef || '',
+                    ourDoNo: inv?.ourDoNo || '',
                   })
                   setModalOpen(true)
                 }}
@@ -515,6 +525,8 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
                         invoiceToAddress: inv?.invoiceTo?.address || (record as any)?.shipping?.address || '',
                         invoiceToPhone: inv?.invoiceTo?.phone || getUserPhone(record.userId, users) || '',
                         terms: inv?.terms || 'CASH',
+                        yourRef: inv?.yourRef || '',
+                        ourDoNo: inv?.ourDoNo || '',
                       })
                       setModalOpen(true)
                     }}
@@ -572,7 +584,13 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
         <div style={{ marginBottom: 16, fontSize: 13, color: 'rgba(255, 255, 255, 0.6)' }}>
           {t('ordersAdmin.invoice.printHint')}
         </div>
-        <Form form={form} layout="vertical">
+        <Form
+          form={form}
+          layout="horizontal"
+          labelCol={{ span: 6 }}
+          wrapperCol={{ span: 18 }}
+          labelAlign="left"
+        >
           <Form.Item
             label={<span style={{ color: '#fff' }}>{t('ordersAdmin.invoice.invoiceNo')}</span>}
             name="invoiceNo"
@@ -602,14 +620,27 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
             <Input className="points-config-form" />
           </Form.Item>
           <Form.Item
+            label={<span style={{ color: '#fff' }}>{t('ordersAdmin.invoice.terms')}</span>}
+            name="terms"
+            rules={[{ required: true, message: t('ordersAdmin.invoice.termsRequired') }]}
+          >
+            <Input className="points-config-form" />
+          </Form.Item>
+          <Form.Item label={<span style={{ color: '#fff' }}>Your Ref.</span>} name="yourRef">
+            <Input className="points-config-form" />
+          </Form.Item>
+          <Form.Item label={<span style={{ color: '#fff' }}>Our D/O No</span>} name="ourDoNo">
+            <Input className="points-config-form" />
+          </Form.Item>
+          <Form.Item
             label={<span style={{ color: '#fff' }}>{t('ordersAdmin.invoice.address')}</span>}
             name="invoiceToAddress"
             rules={[{ required: true, message: t('ordersAdmin.invoice.addressRequired') }]}
+            layout="vertical"
+            labelCol={{ span: 24 }}
+            wrapperCol={{ span: 24 }}
           >
             <Input.TextArea rows={3} className="points-config-form" />
-          </Form.Item>
-          <Form.Item label={<span style={{ color: '#fff' }}>{t('ordersAdmin.invoice.terms')}</span>} name="terms">
-            <Input className="points-config-form" />
           </Form.Item>
         </Form>
       </Modal>

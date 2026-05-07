@@ -1,4 +1,4 @@
-// 通用用户档案视图组件
+// Common User Profile View Component
 import React, { useMemo, useState, useEffect } from 'react'
 import { Row, Col, Card, Typography, Tag, Button, Space, Spin, message } from 'antd'
 import {
@@ -24,11 +24,11 @@ import { useAuthStore } from '../../store/modules/auth'
 import { textTransform } from 'html2canvas/dist/types/css/property-descriptors/text-transform'
 
 interface ProfileViewProps {
-  user?: User | null          // 直接传入用户对象
-  userId?: string              // 或传入用户ID（组件内部加载）
-  readOnly?: boolean           // 是否只读模式
-  showEditButton?: boolean     // 是否显示编辑按钮
-  onEdit?: (user: User) => void // 编辑回调
+  user?: User | null          // Direct user object
+  userId?: string              // Or User ID (loaded internally)
+  readOnly?: boolean           // Read-only mode
+  showEditButton?: boolean     // Show edit button
+  onEdit?: (user: User) => void // Edit callback
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
@@ -57,7 +57,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [loadingPointsRecords, setLoadingPointsRecords] = useState(false)
   const [referralActivationMap, setReferralActivationMap] = useState<Record<string, Date | null>>({})
 
-  // 如果传入userId，加载用户数据
+  // Load user data if userId is provided
   useEffect(() => {
     if (propUserId && !propUser) {
       const loadUser = async () => {
@@ -77,34 +77,34 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
   }, [propUserId, propUser])
 
-  // 当propUser变化时更新user
+  // Update user when propUser changes
   useEffect(() => {
     if (propUser) {
       setUser(propUser)
     }
   }, [propUser])
 
-  // 检查活动功能是否可见（developer 不受限制）
+  // Check if events feature is visible (developer always allowed)
   useEffect(() => {
     const checkFeatureVisibility = async () => {
       const visible = authUser?.role === 'developer' ? true : await isFeatureVisible('events')
       setEventsFeatureVisible(visible)
-      // 如果活动功能不可见且当前激活的是活动标签，切换到雪茄标签
+      // If feature hidden and active tab is activity, switch to cigar
       if (!visible && activeTab === 'activity') {
         setActiveTab('cigar')
       }
     }
     checkFeatureVisibility()
-  }, []) // 只在组件加载时检查一次
+  }, []) // Check once on mount
 
-  // 当活动功能可见性变化时，如果当前在活动标签且功能被隐藏，切换到雪茄标签
+  // Switch tab if feature hidden while active
   useEffect(() => {
     if (!eventsFeatureVisible && activeTab === 'activity') {
       setActiveTab('cigar')
     }
   }, [eventsFeatureVisible, activeTab])
 
-  // 加载用户参与的活动
+  // Load joined events
   useEffect(() => {
     const loadUserEvents = async () => {
       if (!user?.id) return
@@ -121,7 +121,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     loadUserEvents()
   }, [user?.id])
 
-  // 加载用户订单并填充雪茄名称
+  // Load orders and fill cigar names
   useEffect(() => {
     const loadUserOrders = async () => {
       if (!user?.id) return
@@ -132,10 +132,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           getCigars()
         ])
 
-        // 创建雪茄ID到名称的映射
+        // Map cigar ID to name
         const cigarMap = new Map(cigars.map(c => [c.id, c.name]))
 
-        // 为每个订单项填充雪茄名称
+        // Fill cigar names for each item
         const ordersWithNames = orders.map(order => ({
           ...order,
           items: order.items.map(item => ({
@@ -154,7 +154,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     loadUserOrders()
   }, [user?.id])
 
-  // 加载引荐的用户
+  // Load referred users
   useEffect(() => {
     const loadReferredUsers = async () => {
       if (!user?.referral?.referrals || user.referral.referrals.length === 0) {
@@ -165,12 +165,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       setLoadingReferrals(true)
       try {
         const allUsers = await getUsers()
-        // 筛选出引荐的用户（兼容新旧格式：string[] 或对象数组）
+        // Filter referrals (compat for string[] or object[])
         const referralUserIds = user.referral.referrals.map((r: any) =>
           typeof r === 'string' ? r : r.userId
         );
         const referred = allUsers.filter(u => referralUserIds.includes(u.id))
-        // 按注册日期降序排序
+        // Sort by join date descending
         referred.sort((a, b) => {
           const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt)
           const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt)
@@ -185,7 +185,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
     loadReferredUsers()
 
-    // 加载引荐子集合中的 membershipActivatedAt（基于会费开通）
+    // Load membershipActivatedAt from referrals subcollection
     const loadReferralActivations = async () => {
       if (!user?.id) return
       try {
@@ -203,13 +203,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         })
         setReferralActivationMap(map)
       } catch (error) {
-        console.error('[ProfileView] 加载引荐激活日期失败:', error)
+        console.error('[ProfileView] Failed to load referral activations:', error)
       }
     }
     loadReferralActivations()
   }, [user?.referral?.referrals])
 
-  // 加载积分记录
+  // Load points records
   useEffect(() => {
     const loadPointsRecords = async () => {
       if (!user?.id) {
@@ -222,7 +222,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         const records = await getUserPointsRecords(user.id, 50)
         setPointsRecords(records)
       } catch (error) {
-        console.error('[ProfileView] 加载积分记录失败:', error)
+        console.error('[ProfileView] Failed to load points records:', error)
         message.error(t('pointsConfig.loadRecordsFailed'))
         setPointsRecords([])
       } finally {
@@ -232,7 +232,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     loadPointsRecords()
   }, [user?.id, t])
 
-  // 日期格式化助手
+  // Date formatting helper
   const formatDate = (date: Date) => {
     if (i18n.language === 'en-US') {
       const day = date.getDate();
@@ -247,7 +247,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     });
   }
 
-  // 计算雪茄购买总数量
+  // Total cigars purchased calculation
   const totalCigarsPurchased = useMemo(() => {
     return userOrders.reduce((total, order) => {
       const orderTotal = order.items.reduce((sum, item) => sum + item.quantity, 0)
@@ -255,7 +255,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }, 0)
   }, [userOrders])
 
-  // 用户统计数据
+  // User stats data
   const userStats = [
     { title: t('profile.eventsJoined'), value: userEvents.length, icon: <CalendarOutlined /> },
     { title: t('profile.cigarsPurchased'), value: totalCigarsPurchased, icon: <ShoppingOutlined /> },
@@ -339,7 +339,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             {canViewDiscount && (user.discount?.rate !== undefined || user.discount?.note) && (
               <p style={{ margin: '4px 0', color: '#FDE08D' }}>
                 {t('profile.discount')}: {user.discount?.rate !== undefined ? `${user.discount?.rate}%` : '—'}
-                {user.discount?.note ? `（${user.discount.note}）` : ''}
+                {user.discount?.note ? ` (${user.discount.note})` : ''}
               </p>
             )}
           </div>
@@ -405,7 +405,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         ))}
       </div>
 
-      {/* 🆕 AI 识茄历史记录入口 */}
+      {/* AI Recognition History Entry */}
       {user?.id === authUser?.id && (
         <div style={{
           maxWidth: '640px',
@@ -447,7 +447,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         }}>
           {(['cigar', 'points', 'activity', 'referral'] as const)
             .filter((tabKey) => {
-              // 如果活动功能不可见，过滤掉活动标签
+              // Hide activity tab if feature hidden
               if (tabKey === 'activity' && !eventsFeatureVisible) {
                 return false
               }
@@ -480,10 +480,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
               const getTabLabel = (key: string) => {
                 switch (key) {
-                  case 'cigar': return t('usersAdmin.cigarRecords')
-                  case 'points': return t('usersAdmin.pointsRecords')
-                  case 'activity': return t('usersAdmin.activityRecords')
-                  case 'referral': return t('usersAdmin.referralRecords')
+                  case 'cigar': return t('profile.cigarRecords')
+                  case 'points': return t('profile.pointsRecords')
+                  case 'activity': return t('profile.activityRecords')
+                  case 'referral': return t('profile.referralRecords')
                   default: return ''
                 }
               }
@@ -540,7 +540,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 color: 'rgba(255, 255, 255, 0.6)'
               }}>
                 <p style={{ margin: 0, fontSize: '14px' }}>
-                  {t('usersAdmin.noCigarRecords')}
+                  {t('profile.noCigarRecords')}
                 </p>
               </div>
             ) : (
@@ -660,7 +660,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 color: 'rgba(255, 255, 255, 0.6)'
               }}>
                 <p style={{ margin: 0, fontSize: '14px' }}>
-                  {t('usersAdmin.noPointsRecords')}
+                  {t('profile.noPointsRecords')}
                 </p>
               </div>
             ) : (
@@ -739,7 +739,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 color: 'rgba(255, 255, 255, 0.6)'
               }}>
                 <p style={{ margin: 0, fontSize: '14px' }}>
-                  {t('usersAdmin.noActivityRecords')}
+                  {t('profile.noActivityRecords')}
                 </p>
               </div>
             ) : (
@@ -766,7 +766,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         gap: '12px'
                       }}
                     >
-                      {/* 活动封面 */}
+                      {/* Event Cover */}
                       <div style={{
                         width: '80px',
                         height: '80px',
@@ -795,7 +795,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         )}
                       </div>
 
-                      {/* 活动信息 */}
+                      {/* Event Info */}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{
                           fontSize: '16px',
@@ -818,7 +818,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         </div>
 
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                          {/* 状态标签 */}
+                          {/* Status Tag */}
                           <Tag
                             color={
                               event.status === 'upcoming' ? 'blue' :
@@ -836,7 +836,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                             }
                           </Tag>
 
-                          {/* 参与状态标签 */}
+                          {/* Check-in/Registration Tag */}
                           {isCheckedIn && (
                             <Tag color="success" style={{ margin: 0, fontSize: '11px' }}>
                               {t('profile.participationStatus.checkedIn')}
@@ -858,7 +858,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
           {activeTab === 'referral' && (
             <>
-              {/* 引荐统计 - Unified Card */}
+              {/* Referral Stats - Unified Card */}
               <div style={{
                 background: 'rgba(255, 255, 255, 0.05)',
                 borderRadius: '12px',
@@ -892,7 +892,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </div>
               </div>
 
-              {/* 引荐记录列表 */}
+              {/* Referral List */}
               {loadingReferrals ? (
                 <div style={{ textAlign: 'center', padding: '40px 20px' }}>
                   <Spin />
@@ -904,7 +904,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   color: 'rgba(255, 255, 255, 0.6)'
                 }}>
                   <p style={{ margin: 0, fontSize: '14px' }}>
-                    {t('usersAdmin.noReferralRecords')}
+                    {t('profile.noReferralRecords')}
                   </p>
                 </div>
               ) : (
@@ -926,7 +926,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         alignItems: 'center',
                         gap: '12px'
                       }}>
-                        {/* 用户头像 */}
+                        {/* User Avatar */}
                         <div style={{
                           width: '48px',
                           height: '48px',
@@ -944,7 +944,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                           {referred.displayName?.charAt(0) || '?'}
                         </div>
 
-                        {/* 用户信息 */}
+                        {/* User Info */}
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: '16px', fontWeight: '600', color: '#fff', textTransform: 'uppercase' }}>
                             {referred.displayName || t('profile.unknownUser')}
@@ -975,7 +975,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                           </div>
                         </div>
 
-                        {/* 会员等级标签 */}
+                        {/* Membership Level Tag */}
                         <Tag color={getMembershipColor(referred.membership?.level || 'bronze')}>
                           {getMembershipText(referred.membership?.level || 'bronze')}
                         </Tag>

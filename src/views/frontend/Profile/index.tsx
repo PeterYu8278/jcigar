@@ -1,4 +1,4 @@
-// 用户档案页面
+// User Profile Page
 import React, { useState, useEffect } from 'react'
 import { Button, Modal, Form, Input, message, Switch, Select, Space, Typography, Checkbox, Divider, TimePicker } from 'antd'
 import { ArrowLeftOutlined, MailOutlined, PhoneOutlined, BellOutlined, CalendarOutlined, WalletOutlined, ShoppingOutlined, GiftOutlined } from '@ant-design/icons'
@@ -33,16 +33,16 @@ const Profile: React.FC = () => {
   const theme = getModalTheme()
   const labelFlex = isMobile ? '40%' : '120px'
 
-  // 检查通知权限
+  // Check notification permission
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       setNotificationPermission(Notification.permission)
     }
   }, [])
 
-  // 构建表单值的公共函数
+  // Helper function to build form values
   const buildFormValues = (userData: User) => {
-    // preferences 在文档根目录下，不在 profile 下
+    // preferences are at the root, not under profile
     const pushPrefs = (userData as any)?.preferences?.pushNotifications || {}
     const quietHours = pushPrefs.quietHours || {}
     
@@ -52,12 +52,12 @@ const Profile: React.FC = () => {
       phone: (userData as any)?.profile?.phone || '',
       notifications: (userData as any)?.preferences?.notifications ?? true,
       language: (userData as any)?.preferences?.locale || i18n.language || 'zh-CN',
-      // 推送通知类型设置（使用 ?? 操作符，只在 undefined 时使用默认值 true，保留 false 值）
+      // Push notification type settings (use ?? to keep false values)
       pushActivity: pushPrefs.types?.activity ?? true,
       pushPoints: pushPrefs.types?.points ?? true,
       pushOrder: pushPrefs.types?.order ?? true,
       pushMarketing: pushPrefs.types?.marketing ?? true,
-      // 免打扰时段设置（使用 ?? 操作符，只在 undefined 时使用默认值 false，保留 false 值）
+      // Quiet hours settings (use ?? to keep false values)
       quietHoursEnabled: quietHours.enabled ?? false,
       quietHoursStart: quietHours.start ? dayjs(quietHours.start, 'HH:mm') : dayjs('22:00', 'HH:mm'),
       quietHoursEnd: quietHours.end ? dayjs(quietHours.end, 'HH:mm') : dayjs('09:00', 'HH:mm'),
@@ -68,21 +68,21 @@ const Profile: React.FC = () => {
     const u = userToEdit || user
     if (!u) return
     
-    // 先打开 Modal，然后在 Modal 打开后再设置表单值
+    // Open Modal then set values
     setEditing(true)
     
-    // 重新从 Firestore 读取最新数据，确保与数据库一致
+    // Re-read from Firestore to ensure consistency
     try {
       const latestUser = await getUserById(u.id)
-      const userData = latestUser || u // 优先使用 Firestore 数据，否则使用本地数据
+      const userData = latestUser || u // Prioritize Firestore data
       
-      // 使用 setTimeout 确保 Modal 已渲染后再设置表单值
+      // Use setTimeout to ensure Modal is rendered
       setTimeout(() => {
         form.setFieldsValue(buildFormValues(userData))
       }, 0)
     } catch (error) {
-      console.error('[Profile] 读取用户数据失败:', error)
-      // 如果读取失败，使用本地数据
+      console.error('[Profile] Failed to read user data:', error)
+      // If read fails, use local data
       setTimeout(() => {
         form.setFieldsValue(buildFormValues(u))
       }, 0)
@@ -98,19 +98,19 @@ const Profile: React.FC = () => {
       const updates: any = {
         displayName: values.displayName,
         'profile.phone': normalizePhoneNumber(values.phone),
-        'preferences.notifications': values.notifications, // 主开关：开启通知
+        'preferences.notifications': values.notifications, // Main switch: enable notifications
         ...(values.language ? { 'preferences.locale': values.language } : {}),
-        // 推送通知类型设置（仅在开启通知时保存）
+        // Push notification types (only save if notifications enabled)
         'preferences.pushNotifications.types.activity': values.pushActivity === true,
         'preferences.pushNotifications.types.points': values.pushPoints === true,
         'preferences.pushNotifications.types.order': values.pushOrder === true,
         'preferences.pushNotifications.types.marketing': values.pushMarketing === true,
-        // 免打扰时段设置
+        // Quiet hours settings
         'preferences.pushNotifications.quietHours.enabled': values.quietHoursEnabled === true,
         updatedAt: new Date(),
       }
       
-      // 只有有值时才设置 quietHours 的时间字段
+      // Only set quiet hours if values exist
       if (values.quietHoursStart) {
         updates['preferences.pushNotifications.quietHours.start'] = values.quietHoursStart.format('HH:mm')
       }
@@ -121,12 +121,12 @@ const Profile: React.FC = () => {
       const updateResult = await updateDocument('users', user.id, updates)
       
       if (!updateResult.success) {
-        throw new Error('更新失败')
+        throw new Error('Update failed')
       }
 
       const currentUser = auth.currentUser
 
-      // 邮箱更新
+      // Email update
       if (values.email && values.email !== user.email) {
         if (!currentUser) throw new Error('not logged in')
         if (values.currentPassword) {
@@ -139,7 +139,7 @@ const Profile: React.FC = () => {
         }
       }
 
-      // 密码更新
+      // Password update
       if (values.newPassword) {
         if (!currentUser) throw new Error('not logged in')
         if (values.currentPassword) {
@@ -152,14 +152,14 @@ const Profile: React.FC = () => {
         }
       }
 
-      // 重新从 Firestore 读取最新数据，确保本地状态与数据库一致
+      // Re-read from Firestore to ensure local state is in sync
       try {
         const latestUser = await getUserById(user.id)
         if (latestUser) {
           setUser(latestUser as any)
         } else {
-          // 如果无法读取最新数据，使用保存的值更新本地状态
-          // preferences 在文档根目录下，不在 profile 下
+          // If failed to read, use saved values
+          // preferences are at root, not under profile
           setUser({
             ...user,
             displayName: values.displayName,
@@ -189,9 +189,9 @@ const Profile: React.FC = () => {
           } as any)
         }
       } catch (error) {
-        console.error('[Profile] 重新读取用户数据失败:', error)
-        // 如果读取失败，使用保存的值更新本地状态
-        // preferences 在文档根目录下，不在 profile 下
+        console.error('[Profile] Failed to re-read user data:', error)
+        // If failed, use saved values
+        // preferences are at root, not under profile
         setUser({
           ...user,
           displayName: values.displayName,
@@ -284,7 +284,7 @@ const Profile: React.FC = () => {
         />
       </div>
 
-      {/* 编辑资料弹窗（简化：昵称与手机 + 头像） */}
+      {/* Edit Profile Modal */}
       <Modal
         title={t('profile.editProfile')}
         open={editing}
@@ -304,7 +304,7 @@ const Profile: React.FC = () => {
         }}
       >
         <div style={theme.content as React.CSSProperties}>
-          {/* 基本信息卡片 */}
+          {/* Basic Info Card */}
           <div style={theme.card.elevated as React.CSSProperties}>
             <div style={theme.text.subtitle as React.CSSProperties}>{t('profile.editProfile')}</div>
         <Form
@@ -358,28 +358,28 @@ const Profile: React.FC = () => {
                   { type: 'email', message: t('auth.emailInvalid') },
                   {
                     validator: async (_, value) => {
-                      // 如果字段被禁用（Google登录），跳过验证
+                      // If field is disabled (Google login), skip validation
                       if (!!(user as any)?.providerData?.find((p: any) => p.providerId === 'google.com')) {
                         return Promise.resolve()
                       }
                       
-                      // 如果没有输入，跳过验证（required 规则会处理）
+                      // If no input, skip (required rule handles it)
                       if (!value) {
                         return Promise.resolve()
                       }
                       
-                      // 如果邮箱没有改变，跳过验证
+                      // If email hasn't changed, skip validation
                       if (value === user?.email) {
                         return Promise.resolve()
                       }
                       
-                      // ✅ 先验证格式，格式无效则跳过唯一性检查
+                      // ✅ Validate format first
                       const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
                       if (!emailPattern.test(value)) {
                         return Promise.resolve()
                       }
                       
-                      // ✅ 格式有效，检查邮箱唯一性
+                      // ✅ Format valid, check uniqueness
                       const { collection, query, where, getDocs, limit } = await import('firebase/firestore')
                       const { db } = await import('../../../config/firebase')
                       
@@ -392,10 +392,10 @@ const Profile: React.FC = () => {
                         const emailSnap = await getDocs(emailQuery)
                         
                         if (!emailSnap.empty) {
-                          return Promise.reject(new Error('该邮箱已被其他用户使用'))
+                          return Promise.reject(new Error(t('profile.emailUsed')))
                         }
                       } catch (error) {
-                        // 如果查询失败，允许通过（不阻止用户提交）
+                        // If query fails, allow through
                       }
                       
                       return Promise.resolve()
@@ -420,26 +420,26 @@ const Profile: React.FC = () => {
                   { required: true, message: t('profile.phoneRequired') },
                   { 
                     pattern: /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/, 
-                    message: '手机号格式无效（需10-12位数字）' 
+                    message: t('profile.phoneInvalidLength') 
                   },
                   {
                     validator: async (_, value) => {
                       if (!value) return Promise.resolve()
                       
-                      // 如果手机号没有改变，跳过验证
+                      // If phone hasn't changed, skip
                       const currentPhone = normalizePhoneNumber((user as any)?.profile?.phone || '')
                       const newPhone = normalizePhoneNumber(value)
                       if (newPhone === currentPhone) {
                         return Promise.resolve()
                       }
                       
-                      // ✅ 先验证格式，格式无效则跳过唯一性检查
+                      // ✅ Validate format first
                       const formatPattern = /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/
                       if (!formatPattern.test(value)) {
                         return Promise.resolve()
                       }
                       
-                      // ✅ 格式有效，检查手机号唯一性
+                      // ✅ Format valid, check uniqueness
                       const normalized = normalizePhoneNumber(value)
                       if (!normalized) {
                         return Promise.resolve()
@@ -457,14 +457,14 @@ const Profile: React.FC = () => {
                         const phoneSnap = await getDocs(phoneQuery)
                         
                         if (!phoneSnap.empty) {
-                          // 检查是否是当前用户
+                          // Check if it's the current user
                           const existingUserId = phoneSnap.docs[0].id
                           if (existingUserId !== user?.id) {
-                            return Promise.reject(new Error('该手机号已被其他用户使用'))
+                            return Promise.reject(new Error(t('profile.phoneUsed')))
                           }
                         }
                       } catch (error) {
-                        // 如果查询失败，允许通过（不阻止用户提交）
+                        // If query fails, allow through
                       }
                       
                       return Promise.resolve()
@@ -479,7 +479,7 @@ const Profile: React.FC = () => {
                   placeholder={t('profile.phonePlaceholder')}
                   onInput={(e) => {
                     const input = e.currentTarget
-                    // 只保留数字、加号和空格
+                    // Keep only digits, plus and spaces
                     input.value = input.value.replace(/[^\d+\s-]/g, '')
                   }}
                 />
@@ -487,7 +487,7 @@ const Profile: React.FC = () => {
           </Form>
           </div>
 
-          {/* 安全设置卡片 */}
+          {/* Security Settings Card */}
           <div style={{ ...(theme.card.elevated as React.CSSProperties), marginTop: 12 }}>
             <div style={theme.text.subtitle as React.CSSProperties}>🔐 {t('auth.security')}</div>
             <Form
@@ -534,7 +534,7 @@ const Profile: React.FC = () => {
             </Form>
           </div>
 
-          {/* 偏好设置卡片 */}
+          {/* Preference Settings Card */}
           <div style={{ ...(theme.card.elevated as React.CSSProperties), marginTop: 12 }}>
             <div style={theme.text.subtitle as React.CSSProperties}>{t('profile.settings')}</div>
             <Form
@@ -570,7 +570,7 @@ const Profile: React.FC = () => {
           </Form.Item>
         </Form>
 
-          {/* 推送通知详细设置 */}
+          {/* Push Notification Detailed Settings */}
           <Divider style={{ margin: '16px 0', borderColor: 'rgba(255, 255, 255, 0.1)' }} />
           <div style={{ marginBottom: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>

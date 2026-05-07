@@ -179,6 +179,15 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
         expiryDate: data.subscription.expiryDate?.toDate?.() || new Date(data.subscription.expiryDate),
         plans: data.subscription.plans || []
       } : undefined,
+      payment: data.payment ? {
+        billplz: data.payment.billplz ? {
+          apiKey: data.payment.billplz.apiKey,
+          xSignatureKey: data.payment.billplz.xSignatureKey,
+          collectionId: data.payment.billplz.collectionId,
+          isSandbox: data.payment.billplz.isSandbox ?? true,
+          enabled: data.payment.billplz.enabled ?? false,
+        } : undefined
+      } : undefined,
       updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
       updatedBy: data.updatedBy || '',
     };
@@ -267,6 +276,15 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
               expiryDate: data.subscription.expiryDate?.toDate?.() || new Date(data.subscription.expiryDate),
               plans: data.subscription.plans || []
             } : undefined,
+            payment: data.payment ? {
+              billplz: data.payment.billplz ? {
+                apiKey: data.payment.billplz.apiKey,
+                xSignatureKey: data.payment.billplz.xSignatureKey,
+                collectionId: data.payment.billplz.collectionId,
+                isSandbox: data.payment.billplz.isSandbox ?? true,
+                enabled: data.payment.billplz.enabled ?? false,
+              } : undefined
+            } : undefined,
             updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
             updatedBy: data.updatedBy || '',
           };
@@ -285,7 +303,7 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
  * 更新应用配置
  */
 export const updateAppConfig = async (
-  updates: Partial<Pick<AppConfig, 'logoUrl' | 'appName' | 'hideFooter' | 'colorTheme' | 'invoice' | 'invoiceTemplate' | 'whapi' | 'whapiTemplates' | 'auth' | 'gemini' | 'aiCigar' | 'subscription'>>,
+  updates: Partial<Pick<AppConfig, 'logoUrl' | 'appName' | 'hideFooter' | 'colorTheme' | 'invoice' | 'invoiceTemplate' | 'whapi' | 'whapiTemplates' | 'auth' | 'gemini' | 'aiCigar' | 'subscription' | 'payment'>>,
   updatedBy: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
