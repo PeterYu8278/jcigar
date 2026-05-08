@@ -120,27 +120,66 @@ const AdminReports: React.FC = () => {
   const exportOrders = async () => {
     setExporting('orders')
     try {
-      let orders = await getAllOrders()
+      const [orders, cigars, users] = await Promise.all([
+        getAllOrders(),
+        getCigars(),
+        getUsers()
+      ])
       
+      const cigarMap = new Map(cigars.map(c => [c.id, c.name]))
+      const userMap = new Map(users.map(u => [u.id, u.displayName || u.email || u.id]))
+      
+      let filteredOrders = orders
       // Filter by date range if selected
       if (orderRange) {
         const [start, end] = orderRange
-        orders = orders.filter(o => {
+        filteredOrders = orders.filter(o => {
           const date = dayjs((o.createdAt as any)?.toDate?.() || o.createdAt)
           return date.isAfter(start.startOf('day')) && date.isBefore(end.endOf('day'))
         })
       }
 
-      const exportData = orders.map(o => ({
-        'Order ID': o.id,
-        'Order No': o.orderNo || '-',
-        'Customer': o.userId,
-        'Total Amount': o.total || 0,
-        'Status': o.status,
-        'Payment Method': o.payment?.method || '-',
-        'Created At': o.createdAt ? dayjs((o.createdAt as any)?.toDate?.() || o.createdAt).format('YYYY-MM-DD HH:mm:ss') : '-',
-        'Items': o.items?.map(i => `${i.name} x${i.quantity}`).join('; ') || '-'
-      }))
+      const exportData: any[] = []
+      filteredOrders.forEach(o => {
+        const orderDate = o.createdAt ? dayjs((o.createdAt as any)?.toDate?.() || o.createdAt).format('YYYY-MM-DD HH:mm:ss') : '-'
+        const customerName = userMap.get(o.userId) || o.userId
+        
+        if (!o.items || o.items.length === 0) {
+          exportData.push({
+            'Order No': o.orderNo || '-',
+            'Order ID': o.id,
+            'Created At': orderDate,
+            'Customer': customerName,
+            'Customer ID': o.userId,
+            'Product Name': '-',
+            'Quantity': 0,
+            'Unit Price': 0,
+            'Subtotal': 0,
+            'Total Amount': o.total || 0,
+            'Status': o.status,
+            'Payment Method': o.payment?.method || '-'
+          })
+        } else {
+          o.items.forEach(item => {
+            const productName = item.name || cigarMap.get(item.cigarId) || item.cigarId || '-'
+            exportData.push({
+              'Order No': o.orderNo || '-',
+              'Order ID': o.id,
+              'Created At': orderDate,
+              'Customer': customerName,
+              'Customer ID': o.userId,
+              'Product Name': productName,
+              'Quantity': item.quantity || 0,
+              'Unit Price': item.price || 0,
+              'Subtotal': (item.quantity || 0) * (item.price || 0),
+              'Total Amount': o.total || 0,
+              'Status': o.status,
+              'Payment Method': o.payment?.method || '-'
+            })
+          })
+        }
+      })
+
       downloadExcel(exportData, 'Orders_Report', 'Orders')
       message.success(t('messages.operationSuccess'))
     } catch (error) {
