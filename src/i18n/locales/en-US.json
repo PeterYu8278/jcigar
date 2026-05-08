@@ -279,7 +279,8 @@
     "adminSection": "Administration",
     "developerSection": "Developer / System",
     "subscription": "Subscriptions",
-    "stores": "Stores"
+    "stores": "Stores",
+    "reports": "Reports"
   },
   "visitSessions": {
     "title": "Visit Sessions",
@@ -776,7 +777,8 @@
     "confirmOrder": "Confirm Order",
     "tabs": {
       "orders": "Orders",
-      "invoices": "Invoices"
+      "invoices": "Invoices",
+      "reports": "Reports"
     },
     "invoice": {
       "status": "Invoice",

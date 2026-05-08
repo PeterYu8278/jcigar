@@ -106,6 +106,7 @@ export const NAV_KEYS = {
   ORDERS: 'navigation.orders',
   FINANCE: 'navigation.finance',
   PERFORMANCE: 'navigation.performance',
+  REPORTS: 'navigation.reports',
 } as const
 
 // 订单状态

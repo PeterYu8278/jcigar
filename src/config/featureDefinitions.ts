@@ -153,6 +153,17 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     defaultVisible: true,
   },
   {
+    key: 'reports',
+    name: '报表导出',
+    nameEn: 'Report Export',
+    description: '导出系统各类业务报表',
+    descriptionEn: 'Export various business reports of the system',
+    route: '/admin/reports',
+    category: 'admin',
+    icon: 'FileTextOutlined',
+    defaultVisible: true,
+  },
+  {
     key: 'points-config',
     name: '积分配置',
     nameEn: 'Points Configuration',

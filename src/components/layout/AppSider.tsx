@@ -128,6 +128,11 @@ const AppSider: React.FC<AppSiderProps> = ({ onCollapseChange }) => {
       label: t(NAV_KEYS.INVENTORY),
     },
     {
+      key: '/admin/reports',
+      icon: <FileTextOutlined />,
+      label: t('navigation.reports'),
+    },
+    {
       key: '/admin/finance',
       icon: <DollarOutlined />,
       label: t(NAV_KEYS.FINANCE),

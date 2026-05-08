@@ -42,6 +42,7 @@ import GeminiModelTester from './views/admin/GeminiModelTester'
 import InvoiceTemplateEditor from './views/admin/InvoiceTemplate'
 import { SubscriptionSettings } from './views/admin/SubscriptionSettings'
 import StoreManagement from './views/admin/StoreManagement'
+import AdminReports from './views/admin/Reports'
 
 // 认证页面
 import Login from './views/auth/Login'
@@ -315,6 +316,7 @@ const AppContent: React.FC = () => {
                 <Route path="/admin/inventory" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminInventory /></ProtectedRoute>} />
                 <Route path="/admin/events" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminEvents /></ProtectedRoute>} />
                 <Route path="/admin/orders" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminOrders /></ProtectedRoute>} />
+                <Route path="/admin/reports" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminReports /></ProtectedRoute>} />
                 <Route path="/admin/finance" element={<ProtectedRoute roles={['superAdmin', 'developer']}><AdminFinance /></ProtectedRoute>} />
                 <Route path="/admin/points-config" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><PointsConfigPage /></ProtectedRoute>} />
                 <Route path="/admin/visit-sessions" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><VisitSessionsPage /></ProtectedRoute>} />

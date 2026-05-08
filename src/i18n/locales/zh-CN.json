@@ -279,7 +279,8 @@
     "adminSection": "管理后台",
     "developerSection": "开发者/系统管理",
     "subscription": "订阅管理",
-    "stores": "门店管理"
+    "stores": "门店管理",
+    "reports": "报表导出"
   },
   "visitSessions": {
     "title": "驻店记录",
@@ -775,7 +776,8 @@
     "confirmOrder": "确认订单",
     "tabs": {
       "orders": "订单列表",
-      "invoices": "发票管理"
+      "invoices": "发票管理",
+      "reports": "报表导出"
     },
     "invoice": {
       "status": "发票",
