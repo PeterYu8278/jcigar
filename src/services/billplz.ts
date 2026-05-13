@@ -61,7 +61,7 @@ export const createBill = async (
           mobile,
           name,
           amount: Math.round(amount * 100),
-          callback_url: window.location.origin + '/api/payment/callback',
+          callback_url: window.location.origin + '/.netlify/functions/billplz-callback',
           description,
         }
       }),

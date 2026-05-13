@@ -752,6 +752,7 @@ export interface ReloadRecord {
   // 积分记录关联
   pointsRecordId?: string;    // 验证后创建的积分记录ID
   storeId?: string;           // 关联的门店ID
+  billplzId?: string;         // 关联的 Billplz 账单 ID
   
   createdAt: Date;
   updatedAt: Date;

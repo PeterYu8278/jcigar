@@ -35,7 +35,8 @@ export const createReloadRecord = async (
   userId: string,
   requestedAmount: number, // RM
   userName?: string,
-  storeId?: string
+  storeId?: string,
+  billplzId?: string
 ): Promise<{ success: boolean; recordId?: string; error?: string }> => {
   try {
     const userDoc = await getDoc(doc(db, GLOBAL_COLLECTIONS.USERS, userId));
@@ -53,6 +54,7 @@ export const createReloadRecord = async (
       pointsEquivalent,
       status: 'pending',
       storeId,
+      billplzId,
       createdAt: new Date(),
       updatedAt: new Date()
     };

@@ -119,7 +119,7 @@ const ReloadPage: React.FC = () => {
             amount, 
             user.displayName, 
             selectedStoreId, 
-            `Billplz ID: ${billResponse.data.id}`
+            billResponse.data.id
           );
           
           message.loading('正在跳转到支付页面...', 2);
