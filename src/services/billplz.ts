@@ -29,9 +29,9 @@ export interface BillplzBillResponse {
 }
 
 /**
- * 创建测试账单
+ * 创建账单
  */
-export const createTestBill = async (
+export const createBill = async (
   amount: number,
   description: string,
   name: string,

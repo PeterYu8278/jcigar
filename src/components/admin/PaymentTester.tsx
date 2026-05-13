@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { Card, Form, Input, Button, Space, message, Typography, Divider, Tag, Descriptions, Badge } from 'antd';
 import { CreditCardOutlined, SearchOutlined, CheckCircleOutlined, CloseCircleOutlined, SyncOutlined, LinkOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { createTestBill, getBillStatus, type BillplzBillResponse } from '../../services/billplz';
+import { createBill, getBillStatus, type BillplzBillResponse } from '../../services/billplz';
 import { getAppConfig } from '../../services/firebase/appConfig';
 
 const { Title, Text } = Typography;
@@ -43,7 +43,7 @@ const PaymentTester: React.FC<PaymentTesterProps> = ({ paymentConfig }) => {
     setLoading(true);
     try {
       const { amount, description, name, email, mobile } = values;
-      const result = await createTestBill(
+      const result = await createBill(
         parseFloat(amount),
         description || `Test payment for ${appName}`,
         name || 'Test User',

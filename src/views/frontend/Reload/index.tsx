@@ -5,8 +5,10 @@ import { WalletOutlined, ReloadOutlined, ClockCircleOutlined, CloseCircleOutline
 import { useAuthStore } from '../../../store/modules/auth';
 import { createReloadRecord, getUserReloadRecords, getUserPendingReloadRecord, cancelReloadRecord } from '../../../services/firebase/reload';
 import { getAllStores } from '../../../services/firebase/stores';
+import { getAppConfig } from '../../../services/firebase/appConfig';
+import { createBill } from '../../../services/billplz';
 import { useNavigate } from 'react-router-dom';
-import type { ReloadRecord, Store } from '../../../types';
+import type { ReloadRecord, Store, AppConfig } from '../../../types';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -21,6 +23,7 @@ const ReloadPage: React.FC = () => {
   const [checkingPending, setCheckingPending] = useState(true);
   const [stores, setStores] = useState<Store[]>([]);
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
+  const [paymentConfig, setPaymentConfig] = useState<AppConfig['payment'] | null>(null);
 
   const amountOptions = [100, 200, 300, 500, 1000];
 
@@ -38,6 +41,15 @@ const ReloadPage: React.FC = () => {
       }
     };
     fetchStores();
+
+    // 加载支付配置
+    const fetchConfig = async () => {
+      const config = await getAppConfig();
+      if (config?.payment) {
+        setPaymentConfig(config.payment);
+      }
+    };
+    fetchConfig();
   }, []);
 
   // 检查是否有未验证的充值记录
@@ -90,14 +102,45 @@ const ReloadPage: React.FC = () => {
 
     setLoading(true);
     try {
+      // 检查是否开启了 Billplz 支付
+      if (paymentConfig?.billplz?.enabled) {
+        const billResponse = await createBill(
+          amount,
+          `Reload ${amount} RM for ${user.displayName || 'Member'}`,
+          user.displayName || 'Member',
+          user.email || '',
+          user.phoneNumber || ''
+        );
+
+        if (billResponse.success && billResponse.data?.url) {
+          // 先创建一个 pending 记录，备注 Billplz ID
+          await createReloadRecord(
+            user.id, 
+            amount, 
+            user.displayName, 
+            selectedStoreId, 
+            `Billplz ID: ${billResponse.data.id}`
+          );
+          
+          message.loading('正在跳转到支付页面...', 2);
+          setTimeout(() => {
+            window.location.href = billResponse.data!.url;
+          }, 1000);
+          return;
+        } else {
+          message.error(billResponse.error || '无法初始化在线支付');
+          setLoading(false);
+          return;
+        }
+      }
+
+      // 传统模式：提交请求等待管理员验证
       const result = await createReloadRecord(user.id, amount, user.displayName, selectedStoreId);
       if (result.success) {
         message.success(`充值请求已提交（${amount} RM），等待管理员验证`);
         setSelectedAmount(null);
-        // 重新检查 pending 记录
         const pending = await getUserPendingReloadRecord(user.id);
         setPendingRecord(pending);
-        // 跳转到主页
         navigate('/');
       } else {
         message.error(result.error || '提交充值请求失败');
@@ -397,7 +440,7 @@ const ReloadPage: React.FC = () => {
                     e.currentTarget.style.transform = 'translateY(0)';
                   }}
                 >
-                  确认充值 {selectedAmount} RM
+                  确认充值 {selectedAmount} RM {paymentConfig?.billplz?.enabled ? '(在线支付)' : ''}
                 </Button>
               )}
 
