@@ -10,6 +10,7 @@ import { db } from '../../../config/firebase';
 import { GLOBAL_COLLECTIONS } from '../../../config/globalCollections';
 import type { AppConfig, SubscriptionRequest, User } from '../../../types';
 import { getAllStores } from '../../../services/firebase/stores';
+import PaymentTester from '../../../components/admin/PaymentTester';
 
 const AdminAccountList: React.FC = () => {
   const [admins, setAdmins] = useState<User[]>([]);
@@ -117,7 +118,7 @@ const AdminAccountList: React.FC = () => {
 
 const { Option } = Select;
 const { TabPane } = Tabs;
-type SubTabKey = 'settings' | 'records' | 'accounts';
+type SubTabKey = 'settings' | 'records' | 'accounts' | 'payment';
 
 export const SubscriptionSettings: React.FC = () => {
   const { t } = useTranslation();
@@ -183,7 +184,12 @@ export const SubscriptionSettings: React.FC = () => {
             maxStores: 1,
             maxSuperAdmins: 1,
             maxAdmins: 3
-          }
+          },
+          billplzApiKey: config.paymentPlatform?.billplz?.apiKey,
+          billplzXSignatureKey: config.paymentPlatform?.billplz?.xSignatureKey,
+          billplzCollectionId: config.paymentPlatform?.billplz?.collectionId,
+          billplzIsSandbox: config.paymentPlatform?.billplz?.isSandbox ?? true,
+          billplzEnabled: config.paymentPlatform?.billplz?.enabled ?? false,
         });
       }
     } catch (error) {
@@ -223,6 +229,15 @@ export const SubscriptionSettings: React.FC = () => {
           plans: values.plans,
           quota: values.quota,
           expiryDate: appConfig?.subscription?.expiryDate || new Date()
+        },
+        paymentPlatform: {
+          billplz: {
+            apiKey: values.billplzApiKey,
+            xSignatureKey: values.billplzXSignatureKey,
+            collectionId: values.billplzCollectionId,
+            isSandbox: values.billplzIsSandbox,
+            enabled: values.billplzEnabled
+          }
         }
       };
 
@@ -326,6 +341,16 @@ export const SubscriptionSettings: React.FC = () => {
       }
     },
     {
+      title: 'Bill ID',
+      dataIndex: 'billplzId',
+      key: 'billplzId',
+      render: (id: string, record: any) => id ? (
+        <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#FDE08D' }}>{id}</span>
+      ) : (
+        <Tag color="default">{record.paymentMethod === 'online' ? '-' : 'Manual'}</Tag>
+      )
+    },
+    {
       title: 'Expiry Date',
       dataIndex: 'expiryDate',
       key: 'expiryDate',
@@ -383,7 +408,7 @@ export const SubscriptionSettings: React.FC = () => {
           borderBottom: '1px solid rgba(244,175,37,0.2)',
           marginBottom: 16
         }}>
-          {([{ key: 'settings', label: 'Subscription Settings' }, { key: 'records', label: 'Payment Records' }, { key: 'accounts', label: 'Admin Accounts' }] as const).map(({ key, label }) => {
+          {([{ key: 'settings', label: 'Subscription Settings' }, { key: 'payment', label: 'Payment Gateway' }, { key: 'records', label: 'Payment Records' }, { key: 'accounts', label: 'Admin Accounts' }] as const).map(({ key, label }) => {
             const isActive = activeTab === key;
             const baseStyle: React.CSSProperties = {
               flex: 1,
@@ -611,6 +636,13 @@ export const SubscriptionSettings: React.FC = () => {
                               >
                                 <InputNumber placeholder="12" min={1} controls={false} addonAfter="Mon" style={{ width: '100%' }} disabled={!isSuperAdmin} />
                               </Form.Item>
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'maxMembers']}
+                                label={<span style={{ color: '#888', fontSize: 12 }}>Max Members</span>}
+                              >
+                                <InputNumber placeholder="Unlimited" min={0} controls={false} style={{ width: '100%' }} disabled={!isSuperAdmin} />
+                              </Form.Item>
                             </div>
                           </div>
                         ))}
@@ -670,6 +702,99 @@ export const SubscriptionSettings: React.FC = () => {
               </div>
             )}
           </Form>
+      )}
+
+      {activeTab === 'payment' && (
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSaveConfig}
+        >
+          <Card 
+            title={<span style={{ color: '#FDE08D' }}>{t('featureManagement.billplzConfigPlatform')}</span>}
+            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', marginBottom: 24 }}
+          >
+            <div style={{ marginBottom: 24 }}>
+              <Alert
+                message="Platform Payment Configuration"
+                description="This configuration is used for system-level payments, such as annual fees from clients. These credentials should belong to the platform owner."
+                type="warning"
+                showIcon
+                style={{ marginBottom: 24, background: 'rgba(255,193,7,0.1)', border: '1px solid rgba(255,193,7,0.3)', color: '#fff' }}
+              />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '1fr 1fr', gap: 24 }}>
+              <Form.Item
+                label={<span style={{ color: '#ccc' }}>{t('featureManagement.apiKey')}</span>}
+                name="billplzApiKey"
+                rules={[{ required: activeTab === 'payment' }]}
+              >
+                <Input.Password placeholder="Billplz API Key" disabled={!isSuperAdmin} />
+              </Form.Item>
+
+              <Form.Item
+                label={<span style={{ color: '#ccc' }}>{t('featureManagement.xSignatureKey')}</span>}
+                name="billplzXSignatureKey"
+                rules={[{ required: activeTab === 'payment' }]}
+              >
+                <Input.Password placeholder="X-Signature Key" disabled={!isSuperAdmin} />
+              </Form.Item>
+            </div>
+
+            <Form.Item
+              label={<span style={{ color: '#ccc' }}>{t('featureManagement.collectionId')}</span>}
+              name="billplzCollectionId"
+              rules={[{ required: activeTab === 'payment' }]}
+            >
+              <Input placeholder="Collection ID" disabled={!isSuperAdmin} />
+            </Form.Item>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+              <Form.Item
+                label={<span style={{ color: '#ccc' }}>{t('featureManagement.sandboxMode')}</span>}
+                name="billplzIsSandbox"
+                valuePropName="checked"
+              >
+                <Switch disabled={!isSuperAdmin} />
+              </Form.Item>
+
+              <Form.Item
+                label={<span style={{ color: '#ccc' }}>{t('featureManagement.enableBillplz')}</span>}
+                name="billplzEnabled"
+                valuePropName="checked"
+              >
+                <Switch disabled={!isSuperAdmin} />
+              </Form.Item>
+            </div>
+            
+            {isSuperAdmin && (
+              <div style={{ marginTop: 24, textAlign: 'right' }}>
+                <Button 
+                  type="primary" 
+                  htmlType="submit" 
+                  loading={saving}
+                  style={{ 
+                    background: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
+                    color: '#111', 
+                    border: 'none', 
+                    fontWeight: 800,
+                    borderRadius: 22,
+                    padding: '0 32px'
+                  }}
+                >
+                  {t('common.save')}
+                </Button>
+              </div>
+            )}
+          </Card>
+
+          {/* 支付功能测试 */}
+          <PaymentTester 
+            paymentConfig={appConfig?.paymentPlatform} 
+            isPlatform={true} 
+          />
+        </Form>
       )}
 
       {activeTab === 'records' && (

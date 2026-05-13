@@ -36,14 +36,15 @@ export const createBill = async (
   description: string,
   name: string,
   email: string,
-  mobile: string
+  mobile: string,
+  usePlatformConfig: boolean = false
 ): Promise<{ success: boolean; data?: BillplzBillResponse; error?: string }> => {
   try {
     const config = await getAppConfig();
-    const billplz = config?.payment?.billplz;
+    const billplz = usePlatformConfig ? config?.paymentPlatform?.billplz : config?.payment?.billplz;
 
     if (!billplz?.enabled || !billplz?.apiKey || !billplz?.collectionId) {
-      throw new Error('Billplz 未配置或未启用');
+      throw new Error(`Billplz (${usePlatformConfig ? 'Platform' : 'Client'}) 未配置或未启用`);
     }
 
     const response = await fetch('/.netlify/functions/billplz', {
@@ -75,7 +76,7 @@ export const createBill = async (
 
     return { success: true, data };
   } catch (error: any) {
-    console.error('[createTestBill] Error:', error);
+    console.error('[createBill] Error:', error);
     return { success: false, error: error.message };
   }
 };
@@ -84,14 +85,15 @@ export const createBill = async (
  * 获取账单状态
  */
 export const getBillStatus = async (
-  billId: string
+  billId: string,
+  usePlatformConfig: boolean = false
 ): Promise<{ success: boolean; data?: BillplzBillResponse; error?: string }> => {
   try {
     const config = await getAppConfig();
-    const billplz = config?.payment?.billplz;
+    const billplz = usePlatformConfig ? config?.paymentPlatform?.billplz : config?.payment?.billplz;
 
     if (!billplz?.apiKey) {
-      throw new Error('Billplz API Key 未配置');
+      throw new Error(`Billplz (${usePlatformConfig ? 'Platform' : 'Client'}) API Key 未配置`);
     }
 
     const response = await fetch('/.netlify/functions/billplz', {

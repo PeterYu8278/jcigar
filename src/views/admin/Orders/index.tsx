@@ -18,6 +18,7 @@ import { filterOrders, sortOrders, getStatusColor, getStatusText, getUserName, g
 import { getModalThemeStyles, getModalWidth, getResponsiveModalConfig } from '../../../config/modalTheme'
 import { getAppConfig } from '../../../services/firebase/appConfig'
 import { useAuthStore } from '../../../store/modules/auth'
+import { refundOrderPoints, deleteOrderWithRefund } from '../../../services/firebase/orders'
 
 const { Search } = Input
 const { Option } = Select
@@ -298,6 +299,8 @@ const AdminOrders: React.FC = () => {
     orders,
     onViewOrder: (order) => { setViewing(order); setIsEditingInView(false) },
     onDeleteOrder: async (id) => {
+      // 先退还积分并清理记录（如果是积分支付的订单）
+      await deleteOrderWithRefund(id)
       await deleteOrderFromEventAllocations(id)
       await deleteOrderOutboundRecords(id)
       return await deleteDocument(COLLECTIONS.ORDERS, id)
@@ -939,8 +942,18 @@ const AdminOrders: React.FC = () => {
               onClick={async () => {
                 setLoading(true)
                 try {
-                  await Promise.all(selectedRowKeys.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'cancelled' } as any)))
-                  message.success(t('ordersAdmin.batchCancelled'))
+                  // 批量取消：自动退还积分支付的订单
+                  const results = await Promise.all(selectedRowKeys.map(id => refundOrderPoints(String(id))))
+                  const totalRefunded = results.reduce((sum, r) => sum + (r.refunded || 0), 0)
+                  // 对于非积分支付的订单，仍需手动更新状态
+                  const nonPointsOrders = selectedRowKeys.filter((id, idx) => results[idx].refunded === 0)
+                  if (nonPointsOrders.length > 0) {
+                    await Promise.all(nonPointsOrders.map(id => updateDocument<Order>(COLLECTIONS.ORDERS, String(id), { status: 'cancelled' } as any)))
+                  }
+                  const msg = totalRefunded > 0 
+                    ? `${t('ordersAdmin.batchCancelled')} (${t('ordersAdmin.pointsRefunded', { points: totalRefunded })})`
+                    : t('ordersAdmin.batchCancelled')
+                  message.success(msg)
                   await refreshPaginated()
                   setSelectedRowKeys([])
                 } finally {
@@ -966,6 +979,8 @@ const AdminOrders: React.FC = () => {
               confirmTitle={t('ordersAdmin.batchDeleteConfirm')}
               confirmContent={t('ordersAdmin.batchDeleteContent', { count: selectedRowKeys.length })}
               onBatchDelete={async (ids) => {
+                // 批量删除前先退还积分并清理记录
+                await Promise.all(ids.map(id => deleteOrderWithRefund(String(id))))
                 await deleteOrdersFromEventAllocations(ids.map(String))
                 await Promise.all(ids.map(id => deleteOrderOutboundRecords(id)))
                 await Promise.all(ids.map(id => deleteDocument(COLLECTIONS.ORDERS, id)))

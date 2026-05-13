@@ -1,11 +1,15 @@
 // Common Cart Modal Component
 import React, { useState, useEffect } from 'react'
 import { Modal, Button, List, Typography, Radio, Divider, message, Select } from 'antd'
+import { useNavigate } from 'react-router-dom'
 import { getModalThemeStyles, getModalWidth } from '../../config/modalTheme'
 import type { Cigar, Event } from '../../types'
 import { CigarRatingBadge } from './CigarRatingBadge'
 import { AddressSelector } from './AddressSelector'
 import { getEvents } from '../../services/firebase/firestore'
+import { useAuthStore } from '../../store/modules/auth'
+import { createOrder } from '../../services/firebase/orders'
+import { createBill } from '../../services/billplz'
 
 const { Title, Text } = Typography
 
@@ -45,19 +49,34 @@ export const CartModal: React.FC<CartModalProps> = ({
   // Mode: cart or checkout
   const [mode, setMode] = useState<'cart' | 'checkout'>('cart')
   // Payment method
-  const [paymentMethod, setPaymentMethod] = useState<string>('cash')
+  const [paymentMethod, setPaymentMethod] = useState<string>('points')
   // Delivery method
   const [deliveryMethod, setDeliveryMethod] = useState<'address' | 'event'>('address')
   // Address and event selection
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [availableEvents, setAvailableEvents] = useState<Event[]>([])
+  const [loading, setLoading] = useState(false)
+  const { user } = useAuthStore()
+  const navigate = useNavigate()
+
+  // 自动选择默认地址
+  useEffect(() => {
+    if (user?.addresses && !selectedAddressId) {
+      const defaultAddr = user.addresses.find(a => a.isDefault)
+      if (defaultAddr) {
+        setSelectedAddressId(defaultAddr.id)
+      } else if (user.addresses.length > 0) {
+        setSelectedAddressId(user.addresses[0].id)
+      }
+    }
+  }, [user?.addresses, selectedAddressId, mode])
 
   // Reset mode when modal closes
   useEffect(() => {
     if (!open) {
       setMode('cart')
-      setPaymentMethod('cash')
+      setPaymentMethod('points')
       setDeliveryMethod('address')
       setSelectedAddressId(null)
       setSelectedEventId(null)
@@ -103,6 +122,14 @@ export const CartModal: React.FC<CartModalProps> = ({
     'full': t('inventory.full') || 'Full'
   }
 
+  const formatAddress = (address: any): string => {
+    if (!address) return ''
+    const stateKey = address.province?.toLowerCase().replace(/\s+/g, '') || ''
+    const translatedState = t(`address.states.${stateKey}`)
+    const displayState = translatedState.includes('address.states') ? address.province : translatedState
+    return `${displayState} ${address.city || ''} ${address.district || ''} ${address.detail || ''} (${address.name || ''} ${address.phone || ''})`
+  }
+
   const handleCheckout = () => {
     if (isMobile) {
       // Mobile: switch mode
@@ -116,8 +143,16 @@ export const CartModal: React.FC<CartModalProps> = ({
     }
   }
 
-  const handleConfirmCheckout = () => {
-    // Validate delivery method
+
+  const handleConfirmCheckout = async () => {
+    // 验证登录
+    if (!user) {
+      message.warning(t('profile.notLoggedIn'))
+      navigate('/login')
+      return
+    }
+
+    // 验证配送方式
     if (deliveryMethod === 'address' && !selectedAddressId) {
       message.error(t('shop.selectAddress'))
       return
@@ -127,23 +162,109 @@ export const CartModal: React.FC<CartModalProps> = ({
       return
     }
 
-    // TODO: Handle checkout logic
-    console.log('Checkout order', {
-      items: cartItems,
-      total: cartTotal,
-      paymentMethod,
-      deliveryMethod,
-      addressId: selectedAddressId,
-      eventId: selectedEventId
-    })
-    // Clear cart
-    if (clearCart) {
-      clearCart()
+    // 验证积分
+    if (paymentMethod === 'points') {
+      const currentPoints = user.membership?.points || 0
+      if (currentPoints < cartTotal) {
+        message.error(t('visitTimer.short') + ` ${Math.ceil(cartTotal - currentPoints)} ` + t('visitTimer.points'))
+        return
+      }
     }
-    // Close modal
-    onClose()
-    // Show success message
-    message.success(t('shop.orderSuccess'))
+
+    setLoading(true)
+    try {
+      // 构建订单数据
+      const orderPayload = {
+        userId: user.id,
+        items: cartItems.map(item => ({
+          cigarId: item.id,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price
+        })),
+        total: cartTotal,
+        status: 'pending' as const,
+        source: {
+          type: deliveryMethod === 'event' ? 'event' as const : 'direct' as const,
+          eventId: selectedEventId || null
+        },
+        payment: {
+          method: paymentMethod as any,
+        },
+        shipping: {
+          address: deliveryMethod === 'address' && selectedAddressId 
+            ? formatAddress(user.addresses?.find((a: any) => a.id === selectedAddressId))
+            : (selectedEventId ? `Event Pickup: ${availableEvents.find(e => e.id === selectedEventId)?.title}` : '')
+        }
+      }
+
+      // 如果是在线支付，先创建 Billplz 账单
+      if (paymentMethod === 'online') {
+        const billResponse = await createBill(
+          cartTotal,
+          `Shop Order for ${user.displayName || 'Member'}`,
+          user.displayName || 'Member',
+          user.email || '',
+          user.phone || ''
+        );
+
+        if (billResponse.success && billResponse.data?.url) {
+          // 创建待支付订单并关联 Billplz ID
+          const orderResult = await createOrder({
+            ...orderPayload,
+            payment: {
+              ...orderPayload.payment,
+              billplzId: billResponse.data.id
+            }
+          });
+
+          if (orderResult.success) {
+            if (clearCart) {
+              clearCart()
+            }
+            setMode('cart')
+            setSelectedAddressId(null)
+            setSelectedEventId(null)
+            setDeliveryMethod('address')
+            
+            message.loading('正在跳转到支付页面...', 2);
+            setTimeout(() => {
+              window.location.href = billResponse.data!.url;
+            }, 1000);
+            return;
+          } else {
+            throw new Error(orderResult.error || '创建订单失败');
+          }
+        } else {
+          throw new Error(billResponse.error || '无法初始化在线支付');
+        }
+      }
+
+      // 积分支付或传统模式
+      const result = await createOrder(orderPayload);
+      
+      if (result.success) {
+        // 清空购物车
+        if (clearCart) {
+          clearCart()
+        }
+        setMode('cart')
+        setSelectedAddressId(null)
+        setSelectedEventId(null)
+        setDeliveryMethod('address')
+        onClose()
+        
+        // 显示成功消息
+        message.success(t('shop.orderSuccess'))
+      } else {
+        throw new Error(result.error)
+      }
+    } catch (error: any) {
+      console.error('Checkout error:', error)
+      message.error(error.message || t('messages.operationFailed'))
+    } finally {
+      setLoading(false)
+    }
   }
 
   // Handle confirm remove
@@ -565,7 +686,7 @@ export const CartModal: React.FC<CartModalProps> = ({
                         value={selectedAddressId || undefined}
                         onChange={(addressId) => setSelectedAddressId(addressId)}
                         allowCreate={true}
-                        showSelect={false}
+                        showSelect={true}
                       />
                     </div>
                   )}
@@ -592,57 +713,6 @@ export const CartModal: React.FC<CartModalProps> = ({
                   )}
                 </div>
 
-                {/* Payment Method */}
-                <div>
-                  <h3 style={{
-                    margin: '0 0 12px 0',
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    color: '#fff'
-                  }}>
-                    {t('shop.paymentMethod')}
-                  </h3>
-                  <Button.Group style={{ width: '100%', display: 'flex' }}>
-                    <Button
-                      type={paymentMethod === 'cash' ? 'primary' : 'default'}
-                      onClick={() => setPaymentMethod('cash')}
-                      style={{
-                        flex: 1,
-                        height: '44px',
-                        fontSize: '14px',
-                        background: paymentMethod === 'cash'
-                          ? 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)'
-                          : 'rgba(255, 255, 255, 0.03)',
-                        border: paymentMethod === 'cash'
-                          ? 'none'
-                          : '1px solid rgba(255, 255, 255, 0.1)',
-                        color: paymentMethod === 'cash' ? '#000' : '#fff',
-                        fontWeight: paymentMethod === 'cash' ? 'bold' : 'normal'
-                      }}
-                    >
-                      {t('shop.cashPayment')}
-                    </Button>
-                    <Button
-                      type={paymentMethod === 'online' ? 'primary' : 'default'}
-                      onClick={() => setPaymentMethod('online')}
-                      style={{
-                        flex: 1,
-                        height: '44px',
-                        fontSize: '14px',
-                        background: paymentMethod === 'online'
-                          ? 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)'
-                          : 'rgba(255, 255, 255, 0.03)',
-                        border: paymentMethod === 'online'
-                          ? 'none'
-                          : '1px solid rgba(255, 255, 255, 0.1)',
-                        color: paymentMethod === 'online' ? '#000' : '#fff',
-                        fontWeight: paymentMethod === 'online' ? 'bold' : 'normal'
-                      }}
-                    >
-                      {t('shop.onlinePayment')}
-                    </Button>
-                  </Button.Group>
-                </div>
 
                 <Divider style={{ margin: '8px 0', borderColor: 'rgba(255, 215, 0, 0.2)' }} />
               </div>
@@ -706,6 +776,50 @@ export const CartModal: React.FC<CartModalProps> = ({
               alignItems: 'center',
               background: 'rgba(0, 0, 0, 0.3)'
             }}>
+              {/* 支付方式 */}
+              <div style={{ width: '100%', marginBottom: '12px' }}>
+                <Button.Group style={{ width: '100%', display: 'flex' }}>
+                  <Button
+                    type={paymentMethod === 'points' ? 'primary' : 'default'}
+                    onClick={() => setPaymentMethod('points')}
+                    style={{
+                      flex: 1,
+                      height: '44px',
+                      fontSize: '14px',
+                      background: paymentMethod === 'points'
+                        ? 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)'
+                        : 'rgba(255, 255, 255, 0.03)',
+                      border: paymentMethod === 'points'
+                        ? 'none'
+                        : '1px solid rgba(255, 255, 255, 0.1)',
+                      color: paymentMethod === 'points' ? '#000' : '#fff',
+                      fontWeight: paymentMethod === 'points' ? 'bold' : 'normal'
+                    }}
+                  >
+                    {t('shop.pointsRedemption')}
+                  </Button>
+                  <Button
+                    type={paymentMethod === 'online' ? 'primary' : 'default'}
+                    onClick={() => setPaymentMethod('online')}
+                    style={{
+                      flex: 1,
+                      height: '44px',
+                      fontSize: '14px',
+                      background: paymentMethod === 'online'
+                        ? 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)'
+                        : 'rgba(255, 255, 255, 0.03)',
+                      border: paymentMethod === 'online'
+                        ? 'none'
+                        : '1px solid rgba(255, 255, 255, 0.1)',
+                      color: paymentMethod === 'online' ? '#000' : '#fff',
+                      fontWeight: paymentMethod === 'online' ? 'bold' : 'normal'
+                    }}
+                  >
+                    {t('shop.onlinePayment')}
+                  </Button>
+                </Button.Group>
+              </div>
+
               {/* Total */}
               <div style={{
                 display: 'flex',
@@ -739,6 +853,8 @@ export const CartModal: React.FC<CartModalProps> = ({
                 <Button
                   type="primary"
                   onClick={handleConfirmCheckout}
+                  loading={loading}
+                  disabled={loading}
                   style={{
                     flex: 2,
                     height: '31px',

@@ -5,6 +5,7 @@ import { ArrowLeftOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import type { Order, User, Cigar, Transaction } from '../../../types'
 import { updateDocument, COLLECTIONS } from '../../../services/firebase/firestore'
+import { refundOrderPoints } from '../../../services/firebase/orders'
 import { getStatusColor, getStatusText, getPaymentText, getUserName, getUserPhone } from './helpers'
 import { getModalTheme } from '../../../config/modalTheme'
 
@@ -53,8 +54,24 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
 
   const handleStatusUpdate = async (status: string) => {
     try {
-      await updateDocument(COLLECTIONS.ORDERS, order.id, { status } as any)
-      message.success(t(`ordersAdmin.order${status.charAt(0).toUpperCase() + status.slice(1)}`))
+      // 如果是取消操作，自动退还积分
+      if (status === 'cancelled') {
+        const result = await refundOrderPoints(order.id)
+        if (!result.success) {
+          message.error(result.error || t('ordersAdmin.updateFailed'))
+          return
+        }
+        if (result.refunded && result.refunded > 0) {
+          message.success(`${t('ordersAdmin.orderCancelled')} (${t('ordersAdmin.pointsRefunded', { points: result.refunded })})`)
+        } else {
+          // 非积分支付的订单，正常更新状态
+          await updateDocument(COLLECTIONS.ORDERS, order.id, { status } as any)
+          message.success(t('ordersAdmin.orderCancelled'))
+        }
+      } else {
+        await updateDocument(COLLECTIONS.ORDERS, order.id, { status } as any)
+        message.success(t(`ordersAdmin.order${status.charAt(0).toUpperCase() + status.slice(1)}`))
+      }
       onOrderUpdate()
     } catch (error) {
       message.error(t('ordersAdmin.updateFailed'))
@@ -340,6 +357,14 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
                 {t('ordersAdmin.markDelivered')}
               </button>
             </>
+          )}
+          {!isEditingInView && (
+            <button 
+              onClick={() => handleStatusUpdate('cancelled')}
+              style={{ ...theme.button.primary, flex: 1, height: '40px', transition: 'all 0.2s ease', background: 'rgba(255, 77, 79, 0.6)', color: '#fff' }}
+            >
+              {t('ordersAdmin.cancelOrder')}
+            </button>
           )}
           <button 
             onClick={onEditToggle}

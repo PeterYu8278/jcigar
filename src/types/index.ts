@@ -286,13 +286,14 @@ export interface Order {
   status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'completed' | 'cancelled';
   source?: {
     type: 'event' | 'direct';
-    eventId?: string; // 当来源为活动时记录
+    eventId?: string | null; // 当来源为活动时记录
     note?: string;
   };
   payment: {
-    method: 'credit' | 'paypal' | 'bank_transfer';
+    method: 'points' | 'online' | 'cash' | 'credit' | 'paypal' | 'bank_transfer';
     transactionId?: string;
     transactionIds?: string[];
+    billplzId?: string;
     paidAt?: Date;
   };
   shipping: {
@@ -393,7 +394,7 @@ export interface OutboundOrder {
   orderId?: string;             // 关联的销售订单ID
   userId?: string;              // 关联的顾客ID
   userName?: string;            // 关联的顾客名称
-  eventId?: string;             // 关联的活动ID
+  eventId?: string | null;             // 关联的活动ID
   
   // 状态和审计
   status: 'pending' | 'completed' | 'cancelled';
@@ -483,7 +484,8 @@ export interface AppConfig {
     enableImageSearch?: boolean;  // AI识茄是否启用图片URL搜索（默认 true）
     imageSearchOrder?: 'google-first' | 'gemini-first';  // 图片URL搜索引擎顺序（默认 'google-first'）
   };
-  payment?: import('./payment').PaymentGatewayConfig; // 支付网关配置
+  payment?: import('./payment').PaymentGatewayConfig; // 支付网关配置 (Client)
+  paymentPlatform?: import('./payment').PaymentGatewayConfig; // 支付网关配置 (Platform)
   subscription?: {
     isActive: boolean;
     plan: 'basic' | 'pro' | 'premium'; // Legacy
@@ -892,5 +894,6 @@ export interface SubscriptionRequest {
   adminNotes?: string;
   developerNotes?: string;
   expiryDate?: Date;
+  billplzId?: string;
+  paymentMethod?: 'manual' | 'online';
 }
-

@@ -188,6 +188,15 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
           enabled: data.payment.billplz.enabled ?? false,
         } : undefined
       } : undefined,
+      paymentPlatform: data.paymentPlatform ? {
+        billplz: data.paymentPlatform.billplz ? {
+          apiKey: data.paymentPlatform.billplz.apiKey,
+          xSignatureKey: data.paymentPlatform.billplz.xSignatureKey,
+          collectionId: data.paymentPlatform.billplz.collectionId,
+          isSandbox: data.paymentPlatform.billplz.isSandbox ?? true,
+          enabled: data.paymentPlatform.billplz.enabled ?? false,
+        } : undefined
+      } : undefined,
       updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
       updatedBy: data.updatedBy || '',
     };
@@ -303,7 +312,7 @@ export const getAppConfig = async (): Promise<AppConfig | null> => {
  * 更新应用配置
  */
 export const updateAppConfig = async (
-  updates: Partial<Pick<AppConfig, 'logoUrl' | 'appName' | 'hideFooter' | 'colorTheme' | 'invoice' | 'invoiceTemplate' | 'whapi' | 'whapiTemplates' | 'auth' | 'gemini' | 'aiCigar' | 'subscription' | 'payment'>>,
+  updates: Partial<Pick<AppConfig, 'logoUrl' | 'appName' | 'hideFooter' | 'colorTheme' | 'invoice' | 'invoiceTemplate' | 'whapi' | 'whapiTemplates' | 'auth' | 'gemini' | 'aiCigar' | 'subscription' | 'payment' | 'paymentPlatform'>>,
   updatedBy: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {

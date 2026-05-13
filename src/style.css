@@ -137,6 +137,15 @@ a:hover {
   -ms-overflow-style: none;
 }
 
+/* 隐藏滚动条但保留滚动功能 */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
 /* 手机端全局隐藏滚动条（保留滚动功能） */
 @media (max-width: 768px) {
 

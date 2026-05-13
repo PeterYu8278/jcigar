@@ -46,7 +46,9 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
 }) => {
   const { user } = useAuthStore()
   const { t } = useTranslation()
-  const [addresses, setAddresses] = useState<Address[]>([])
+  // 直接从 user 对象获取地址列表，利用 authStore 的实时监听功能
+  const addresses = user?.addresses || []
+  
   const [loading, setLoading] = useState(false)
   const [modalVisible, setModalVisible] = useState(false)
   const [editingAddress, setEditingAddress] = useState<Address | null>(null)
@@ -62,31 +64,7 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  useEffect(() => {
-    if (user?.id) {
-      loadAddresses()
-    }
-  }, [user?.id])
-
-  const loadAddresses = async () => {
-    if (!user?.id) return
-    
-    setLoading(true)
-    try {
-      const addrList = await getUserAddresses(user.id)
-      setAddresses(addrList)
-      
-      // 如果没有选中地址，自动选择默认地址
-      if (!value && addrList.length > 0) {
-        const defaultAddr = addrList.find(addr => addr.isDefault) || addrList[0]
-        onChange?.(defaultAddr.id)
-      }
-    } catch (error) {
-      message.error(t('address.loadFailed'))
-    } finally {
-      setLoading(false)
-    }
-  }
+  // 移除了 loadAddresses，因为 user 对象会自动通过 onSnapshot 更新
 
   const handleCreate = () => {
     setEditingAddress(null)
@@ -122,13 +100,11 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
   const handleEdit = (address: Address) => {
     setEditingAddress(address)
     // 判断地址的姓名和手机号是否与用户信息匹配
-    // 如果用户信息存在，检查姓名和手机号是否都匹配
     let isSelf = false
     if (user) {
       const userPhone = (user as any)?.profile?.phone || user?.phone
       const nameMatch = user.displayName && address.name === user.displayName
       const phoneMatch = userPhone && address.phone === userPhone
-      // 如果姓名和手机号都匹配，或者至少有一个匹配且另一个为空，则认为是本人
       isSelf = (nameMatch && phoneMatch) || (nameMatch && !userPhone) || (phoneMatch && !user.displayName)
     }
     form.setFieldsValue({
@@ -151,20 +127,44 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
     Modal.confirm({
       title: t('address.deleteConfirm'),
       content: t('address.deleteContent'),
+      okText: t('common.confirm'),
+      cancelText: t('common.cancel'),
+      okButtonProps: { danger: true },
       onOk: async () => {
-        const result = await deleteAddress(user.id, addressId)
-        if (result.success) {
-          message.success(t('address.deleteSuccess'))
-          await loadAddresses()
-          // 如果删除的是当前选中的地址，清空选择
-          if (value === addressId) {
-            onChange?.(null)
+        try {
+          const result = await deleteAddress(user.id, addressId)
+          if (result.success) {
+            message.success(t('address.deleteSuccess'))
+            // 如果删除的是当前选中的地址，清空选择
+            if (value === addressId) {
+              onChange?.(null)
+            }
+          } else {
+            message.error(result.error?.message || t('address.deleteFailed'))
           }
-        } else {
-          message.error(result.error?.message || '删除失败')
+        } catch (error) {
+          console.error('Delete address failed:', error)
+          message.error(t('address.deleteFailed'))
         }
       }
     })
+  }
+
+  const handleSetDefault = async (addressId: string) => {
+    if (!user?.id) return
+    setLoading(true)
+    try {
+      const result = await setDefaultAddress(user.id, addressId)
+      if (result.success) {
+        message.success(t('address.setDefaultSuccess'))
+      } else {
+        message.error(result.error?.message || t('messages.operationFailed'))
+      }
+    } catch (error) {
+      message.error(t('messages.operationFailed'))
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleSubmit = async () => {
@@ -193,7 +193,6 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
       if (result.success) {
         message.success(t('address.saveSuccess'))
         setModalVisible(false)
-        await loadAddresses()
         // 如果是新创建的地址且设为默认，自动选中
         if (!editingAddress && addressData.isDefault) {
           const addResult = result as { success: boolean; addressId?: string; error?: Error }
@@ -202,7 +201,7 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
           }
         }
       } else {
-        message.error(result.error?.message || '操作失败')
+        message.error(result.error?.message || t('messages.operationFailed'))
       }
     } catch (error) {
       // 表单验证失败
@@ -210,7 +209,11 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
   }
 
   const formatAddress = (address: Address): string => {
-    return `${address.province} ${address.city} ${address.district} ${address.detail} (${address.name} ${address.phone})`
+    const stateKey = address.province.toLowerCase().replace(/\s+/g, '')
+    const translatedState = t(`address.states.${stateKey}`)
+    // If translation doesn't exist (e.g. key doesn't match), fallback to original
+    const displayState = translatedState.includes('address.states') ? address.province : translatedState
+    return `${displayState} ${address.city} ${address.district} ${address.detail} (${address.name} ${address.phone})`
   }
 
   if (addresses.length === 0 && !allowCreate) {
@@ -223,60 +226,167 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
 
   return (
     <div style={style}>
-      <Space direction="vertical" style={{ width: '100%' }} size="small">
-        {showSelect && (
-          <Select
-            value={value}
-            onChange={onChange}
-            loading={loading}
-            placeholder={t('shop.selectAddress')}
-            style={{ width: '100%' }}
-            notFoundContent={addresses.length === 0 ? t('address.noAddress') : undefined}
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: '12px',
+        width: '100%' 
+      }}>
+        {/* 地址卡片列表 */}
+        {addresses.length > 0 ? (
+          <div 
+            className="hide-scrollbar"
+            style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '8px',
+              maxHeight: isMobile ? '240px' : '300px',
+              overflowY: 'auto',
+              paddingRight: '4px'
+            }}
           >
-            {addresses.map(addr => (
-              <Select.Option key={addr.id} value={addr.id}>
-                {addr.isDefault && `[${t('address.default')}] `}
-                {formatAddress(addr)}
-              </Select.Option>
-            ))}
-          </Select>
+            {addresses.map(addr => {
+              const isSelected = value === addr.id
+              const stateKey = addr.province.toLowerCase().replace(/\s+/g, '')
+              const translatedState = t(`address.states.${stateKey}`)
+              const displayState = translatedState.includes('address.states') ? addr.province : translatedState
+
+              return (
+                <div 
+                  key={addr.id}
+                  onClick={() => onChange?.(addr.id)}
+                  style={{
+                    padding: '12px',
+                    borderRadius: '8px',
+                    background: isSelected ? 'rgba(244, 175, 37, 0.15)' : 'rgba(255, 255, 255, 0.03)',
+                    border: isSelected ? '1px solid #F4AF25' : '1px solid rgba(255, 255, 255, 0.1)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    position: 'relative'
+                  }}
+                >
+                  {/* 收货人信息 */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ color: '#fff', fontWeight: 'bold', fontSize: '14px' }}>{addr.name}</span>
+                      <span style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>{addr.phone}</span>
+                      {addr.isDefault && (
+                        <span style={{ 
+                          fontSize: '10px', 
+                          background: 'rgba(244, 175, 37, 0.2)', 
+                          color: '#F4AF25', 
+                          padding: '0 4px', 
+                          borderRadius: '2px',
+                          border: '1px solid rgba(244, 175, 37, 0.3)'
+                        }}>
+                          {t('address.default')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* 地址详情 */}
+                  <div style={{ 
+                    color: 'rgba(255, 255, 255, 0.85)', 
+                    fontSize: '12px',
+                    lineHeight: '1.5',
+                    marginTop: '4px',
+                    marginBottom: '8px'
+                  }}>
+                    <div style={{ fontWeight: '500', color: '#fff' }}>{addr.detail}</div>
+                    <div style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                      {addr.district}, {addr.city}, {displayState} {addr.postalCode ? `(${addr.postalCode})` : ''}
+                    </div>
+                  </div>
+
+                  {/* 底部操作栏 */}
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+                    paddingTop: '8px',
+                    marginTop: '4px'
+                  }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {!addr.isDefault && (
+                        <Button
+                          type="text"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleSetDefault(addr.id)
+                          }}
+                          size="small"
+                          style={{ color: '#F4AF25', fontSize: '10px', padding: 0 }}
+                        >
+                          {t('address.setDefault')}
+                        </Button>
+                      )}
+                      <Button
+                        type="text"
+                        icon={<EditOutlined style={{ fontSize: '11px' }} />}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleEdit(addr)
+                        }}
+                        size="small"
+                        style={{ color: 'rgba(255, 255, 255, 0.45)', padding: 0, fontSize: '10px' }}
+                      >
+                        {t('common.edit')}
+                      </Button>
+                      <Button
+                        type="text"
+                        danger
+                        icon={<DeleteOutlined style={{ fontSize: '11px' }} />}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDelete(addr.id)
+                        }}
+                        size="small"
+                        style={{ padding: 0, fontSize: '10px' }}
+                      >
+                        {t('common.delete')}
+                      </Button>
+                    </div>
+
+                    {/* 选中标记 */}
+                    {isSelected && (
+                      <div style={{ color: '#F4AF25', height: '14px', display: 'flex', alignItems: 'center' }}>
+                        <Checkbox checked={true} style={{ pointerEvents: 'none' }} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <Empty 
+            image={Empty.PRESENTED_IMAGE_SIMPLE} 
+            description={<span style={{ color: 'rgba(255, 255, 255, 0.45)' }}>{t('address.noAddress')}</span>} 
+            style={{ margin: '12px 0' }}
+          />
         )}
         
+        {/* 添加新地址按钮 */}
         {allowCreate && (
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <Button 
-              type="dashed" 
-              icon={<PlusOutlined />} 
-              onClick={handleCreate}
-              size="small"
-              style={{
-                borderColor: 'rgba(244, 175, 37, 0.5)',
-                color: '#F4AF25',
-                background: 'rgba(244, 175, 37, 0.05)'
-              }}
-            >
-              {t('address.addAddress')}
-            </Button>
-            {showSelect && addresses.map(addr => (
-              <Space key={addr.id} size="small">
-                <Button
-                  type="text"
-                  icon={<EditOutlined />}
-                  onClick={() => handleEdit(addr)}
-                  size="small"
-                />
-                <Button
-                  type="text"
-                  danger
-                  icon={<DeleteOutlined />}
-                  onClick={() => handleDelete(addr.id)}
-                  size="small"
-                />
-              </Space>
-            ))}
-          </div>
+          <Button 
+            type="dashed" 
+            icon={<PlusOutlined />} 
+            onClick={handleCreate}
+            block
+            style={{
+              height: '40px',
+              borderColor: 'rgba(244, 175, 37, 0.5)',
+              color: '#F4AF25',
+              background: 'rgba(244, 175, 37, 0.05)',
+              borderRadius: '8px'
+            }}
+          >
+            {t('address.addAddress')}
+          </Button>
         )}
-      </Space>
+      </div>
 
       <Modal
         title={<span style={{ color: '#F4AF25', fontWeight: 'bold' }}>{editingAddress ? t('address.editAddress') : t('address.addAddress')}</span>}
@@ -339,7 +449,7 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
             label={<span style={{ color: '#fff' }}>{t('address.contactPhone')}</span>}
             rules={[
               { required: true, message: t('address.pleaseInputPhone') },
-              { pattern: /^1[3-9]\d{9}$/, message: t('address.pleaseInputPhoneValid') }
+              { pattern: /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/, message: t('address.pleaseInputPhoneValid') }
             ]}
           >
             <Input 
@@ -369,20 +479,20 @@ export const AddressSelector: React.FC<AddressSelectorProps> = ({
               className="dark-theme-form"
               dropdownClassName="dark-theme-form"
             >
-              <Select.Option value="Johor">Johor</Select.Option>
-              <Select.Option value="Kedah">Kedah</Select.Option>
-              <Select.Option value="Kelantan">Kelantan</Select.Option>
-              <Select.Option value="Melaka">Melaka</Select.Option>
-              <Select.Option value="Negeri Sembilan">Negeri Sembilan</Select.Option>
-              <Select.Option value="Pahang">Pahang</Select.Option>
-              <Select.Option value="Perak">Perak</Select.Option>
-              <Select.Option value="Perlis">Perlis</Select.Option>
-              <Select.Option value="Pulau Pinang">Pulau Pinang</Select.Option>
-              <Select.Option value="Sabah">Sabah</Select.Option>
-              <Select.Option value="Sarawak">Sarawak</Select.Option>
-              <Select.Option value="Selangor">Selangor</Select.Option>
-              <Select.Option value="Terengganu">Terengganu</Select.Option>
-              <Select.Option value="Wilayah Persekutuan">Wilayah Persekutuan</Select.Option>
+              <Select.Option value="Johor">{t('address.states.johor')}</Select.Option>
+              <Select.Option value="Kedah">{t('address.states.kedah')}</Select.Option>
+              <Select.Option value="Kelantan">{t('address.states.kelantan')}</Select.Option>
+              <Select.Option value="Melaka">{t('address.states.melaka')}</Select.Option>
+              <Select.Option value="Negeri Sembilan">{t('address.states.negerisembilan')}</Select.Option>
+              <Select.Option value="Pahang">{t('address.states.pahang')}</Select.Option>
+              <Select.Option value="Perak">{t('address.states.perak')}</Select.Option>
+              <Select.Option value="Perlis">{t('address.states.perlis')}</Select.Option>
+              <Select.Option value="Pulau Pinang">{t('address.states.pulaupinang')}</Select.Option>
+              <Select.Option value="Sabah">{t('address.states.sabah')}</Select.Option>
+              <Select.Option value="Sarawak">{t('address.states.sarawak')}</Select.Option>
+              <Select.Option value="Selangor">{t('address.states.selangor')}</Select.Option>
+              <Select.Option value="Terengganu">{t('address.states.terengganu')}</Select.Option>
+              <Select.Option value="Wilayah Persekutuan">{t('address.states.wilayahpersekutuan')}</Select.Option>
             </Select>
           </Form.Item>
           

@@ -12,6 +12,8 @@ import { AddressSelector } from '../../../components/common/AddressSelector'
 import { getModalThemeStyles } from '../../../config/modalTheme'
 import { CigarRatingBadge } from '../../../components/common/CigarRatingBadge'
 import { useAuthStore } from '../../../store/modules/auth'
+import { createBill } from '../../../services/billplz'
+import { createOrder } from '../../../services/firebase/orders'
 
 const { Title, Text } = Typography
 
@@ -39,7 +41,7 @@ const Shop: React.FC = () => {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 2000])
   const [cartModalVisible, setCartModalVisible] = useState(false)
   const [sidebarMode, setSidebarMode] = useState<'cart' | 'checkout'>('cart') // 侧边栏模式：购物车或结算
-  const [paymentMethod, setPaymentMethod] = useState<string>('cash')
+  const [paymentMethod, setPaymentMethod] = useState<string>('points')
   const [deliveryMethod, setDeliveryMethod] = useState<'address' | 'event'>('address')
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
@@ -50,6 +52,14 @@ const Shop: React.FC = () => {
   const brandRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const brandNavRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const sidebarRef = useRef<HTMLDivElement | null>(null)
+
+  const formatAddress = (address: any): string => {
+    if (!address) return ''
+    const stateKey = address.province?.toLowerCase().replace(/\s+/g, '') || ''
+    const translatedState = t(`address.states.${stateKey}`)
+    const displayState = translatedState.includes('address.states') ? address.province : translatedState
+    return `${displayState} ${address.city || ''} ${address.district || ''} ${address.detail || ''} (${address.name || ''} ${address.phone || ''})`
+  }
 
   useEffect(() => {
     ; (async () => {
@@ -85,6 +95,18 @@ const Shop: React.FC = () => {
       }
     })()
   }, [])
+
+  // 自动选择默认地址
+  useEffect(() => {
+    if (user?.addresses && !selectedAddressId) {
+      const defaultAddr = user.addresses.find(a => a.isDefault)
+      if (defaultAddr) {
+        setSelectedAddressId(defaultAddr.id)
+      } else if (user.addresses.length > 0) {
+        setSelectedAddressId(user.addresses[0].id)
+      }
+    }
+  }, [user?.addresses, selectedAddressId])
 
   // 滚动监听：自动更新高亮品牌
   useEffect(() => {
@@ -1638,7 +1660,7 @@ const Shop: React.FC = () => {
                           value={selectedAddressId || undefined}
                           onChange={(addressId) => setSelectedAddressId(addressId)}
                           allowCreate={true}
-                          showSelect={false}
+                          showSelect={true}
                         />
                       </div>
                     )}
@@ -1665,57 +1687,6 @@ const Shop: React.FC = () => {
                     )}
                   </div>
 
-                  {/* 支付方式 */}
-                  <div>
-                    <h3 style={{
-                      margin: '0 0 8px 0',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      color: '#fff'
-                    }}>
-                      {t('shop.paymentMethod')}
-                    </h3>
-                    <Button.Group style={{ width: '100%', display: 'flex' }}>
-                      <Button
-                        type={paymentMethod === 'cash' ? 'primary' : 'default'}
-                        onClick={() => setPaymentMethod('cash')}
-                        style={{
-                          flex: 1,
-                          height: '28px',
-                          fontSize: '10px',
-                          background: paymentMethod === 'cash'
-                            ? 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)'
-                            : 'rgba(255, 255, 255, 0.03)',
-                          border: paymentMethod === 'cash'
-                            ? 'none'
-                            : '1px solid rgba(255, 255, 255, 0.1)',
-                          color: paymentMethod === 'cash' ? '#000' : '#fff',
-                          fontWeight: paymentMethod === 'cash' ? 'bold' : 'normal'
-                        }}
-                      >
-                        {t('shop.cashPayment')}
-                      </Button>
-                      <Button
-                        type={paymentMethod === 'online' ? 'primary' : 'default'}
-                        onClick={() => setPaymentMethod('online')}
-                        style={{
-                          flex: 1,
-                          height: '28px',
-                          fontSize: '10px',
-                          background: paymentMethod === 'online'
-                            ? 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)'
-                            : 'rgba(255, 255, 255, 0.03)',
-                          border: paymentMethod === 'online'
-                            ? 'none'
-                            : '1px solid rgba(255, 255, 255, 0.1)',
-                          color: paymentMethod === 'online' ? '#000' : '#fff',
-                          fontWeight: paymentMethod === 'online' ? 'bold' : 'normal'
-                        }}
-                      >
-                        {t('shop.onlinePayment')}
-                      </Button>
-                    </Button.Group>
-                  </div>
                 </div>
               )}
             </div>
@@ -1783,6 +1754,50 @@ const Shop: React.FC = () => {
                 alignItems: 'center',
                 background: 'rgba(0, 0, 0, 0.3)'
               }}>
+                {/* 支付方式 */}
+                <div style={{ width: '100%', marginBottom: '12px' }}>
+                  <Button.Group style={{ width: '100%', display: 'flex' }}>
+                    <Button
+                      type={paymentMethod === 'points' ? 'primary' : 'default'}
+                      onClick={() => setPaymentMethod('points')}
+                      style={{
+                        flex: 1,
+                        height: '32px',
+                        fontSize: '11px',
+                        background: paymentMethod === 'points'
+                          ? 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)'
+                          : 'rgba(255, 255, 255, 0.03)',
+                        border: paymentMethod === 'points'
+                          ? 'none'
+                          : '1px solid rgba(255, 255, 255, 0.1)',
+                        color: paymentMethod === 'points' ? '#000' : '#fff',
+                        fontWeight: paymentMethod === 'points' ? 'bold' : 'normal'
+                      }}
+                    >
+                      {t('shop.pointsRedemption')}
+                    </Button>
+                    <Button
+                      type={paymentMethod === 'online' ? 'primary' : 'default'}
+                      onClick={() => setPaymentMethod('online')}
+                      style={{
+                        flex: 1,
+                        height: '32px',
+                        fontSize: '11px',
+                        background: paymentMethod === 'online'
+                          ? 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)'
+                          : 'rgba(255, 255, 255, 0.03)',
+                        border: paymentMethod === 'online'
+                          ? 'none'
+                          : '1px solid rgba(255, 255, 255, 0.1)',
+                        color: paymentMethod === 'online' ? '#000' : '#fff',
+                        fontWeight: paymentMethod === 'online' ? 'bold' : 'normal'
+                      }}
+                    >
+                      {t('shop.onlinePayment')}
+                    </Button>
+                  </Button.Group>
+                </div>
+
                 {/* 总计 */}
                 <div style={{
                   display: 'flex',
@@ -1815,7 +1830,14 @@ const Shop: React.FC = () => {
                   </Button>
                   <Button
                     type="primary"
-                    onClick={() => {
+                    onClick={async () => {
+                      // 验证登录
+                      if (!user) {
+                        message.warning(t('profile.notLoggedIn'))
+                        navigate('/login')
+                        return
+                      }
+
                       // 验证配送方式
                       if (deliveryMethod === 'address' && !selectedAddressId) {
                         message.error(t('shop.selectAddress'))
@@ -1826,23 +1848,103 @@ const Shop: React.FC = () => {
                         return
                       }
 
-                      // TODO: 处理结算逻辑
-                      console.log('结算订单', {
-                        items: cartItems,
-                        total: cartTotal,
-                        paymentMethod,
-                        deliveryMethod,
-                        addressId: selectedAddressId,
-                        eventId: selectedEventId
-                      })
-                      // 清空购物车
-                      clearCart()
-                      setSidebarMode('cart')
-                      setSelectedAddressId(null)
-                      setSelectedEventId(null)
-                      setDeliveryMethod('address')
-                      // 显示成功消息
-                      message.success(t('shop.orderSuccess'))
+                      // 验证积分
+                      if (paymentMethod === 'points') {
+                        const currentPoints = user.membership?.points || 0
+                        if (currentPoints < cartTotal) {
+                          message.error(t('visitTimer.short') + ` ${Math.ceil(cartTotal - currentPoints)} ` + t('visitTimer.points'))
+                          return
+                        }
+                      }
+
+                      setLoading(true)
+                      try {
+                        // 构建订单数据
+                        const orderPayload = {
+                          userId: user.id,
+                          items: cartItems.map(item => ({
+                            cigarId: item.id,
+                            name: item.name,
+                            quantity: item.quantity,
+                            price: item.price
+                          })),
+                          total: cartTotal,
+                          status: 'pending' as const,
+                          source: {
+                            type: deliveryMethod === 'event' ? 'event' as const : 'direct' as const,
+                            eventId: selectedEventId || null
+                          },
+                          payment: {
+                            method: paymentMethod as any,
+                          },
+                          shipping: {
+                            address: deliveryMethod === 'address' && selectedAddressId && user?.addresses
+                              ? formatAddress(user.addresses.find((a: any) => a.id === selectedAddressId))
+                              : (selectedEventId ? `Event Pickup: ${availableEvents.find(e => e.id === selectedEventId)?.title}` : '')
+                          }
+                        }
+
+                        // 如果是在线支付，先创建 Billplz 账单
+                        if (paymentMethod === 'online') {
+                          const billResponse = await createBill(
+                            cartTotal,
+                            `Shop Order for ${user.displayName || 'Member'}`,
+                            user.displayName || 'Member',
+                            user.email || '',
+                            user.phone || ''
+                          );
+
+                          if (billResponse.success && billResponse.data?.url) {
+                            // 创建待支付订单并关联 Billplz ID
+                            const orderResult = await createOrder({
+                              ...orderPayload,
+                              payment: {
+                                ...orderPayload.payment,
+                                billplzId: billResponse.data.id
+                              }
+                            });
+
+                            if (orderResult.success) {
+                              clearCart()
+                              setSidebarMode('cart')
+                              setSelectedAddressId(null)
+                              setSelectedEventId(null)
+                              setDeliveryMethod('address')
+                              
+                              message.loading('正在跳转到支付页面...', 2);
+                              setTimeout(() => {
+                                window.location.href = billResponse.data!.url;
+                              }, 1000);
+                              return;
+                            } else {
+                              throw new Error(orderResult.error || '创建订单失败');
+                            }
+                          } else {
+                            throw new Error(billResponse.error || '无法初始化在线支付');
+                          }
+                        }
+
+                        // 积分支付或传统模式
+                        const result = await createOrder(orderPayload);
+                        
+                        if (result.success) {
+                          // 清空购物车
+                          clearCart()
+                          setSidebarMode('cart')
+                          setSelectedAddressId(null)
+                          setSelectedEventId(null)
+                          setDeliveryMethod('address')
+                          
+                          // 显示成功消息
+                          message.success(t('shop.orderSuccess'))
+                        } else {
+                          throw new Error(result.error)
+                        }
+                      } catch (error: any) {
+                        message.error(error.message || t('messages.operationFailed'))
+                      } finally {
+                        setLoading(false)
+                      }
                     }}
                     style={{
                       flex: 2,

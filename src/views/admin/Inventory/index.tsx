@@ -1299,56 +1299,6 @@ const AdminInventory: React.FC = () => {
         return s === 'event' ? t('inventory.event') : s === 'direct' ? t('inventory.directSale') : t('inventory.manual')
       }
     },
-    {
-      title: t('inventory.actions'),
-      key: 'actions',
-      width: 100,
-      fixed: 'right' as const,
-      render: (_: any, record: any) => (
-        <Space size="small">
-          {record.outboundOrderId && (
-            <Button
-              type="link"
-              icon={<DeleteOutlined />}
-              size="small"
-              danger
-              onClick={async () => {
-                Modal.confirm({
-                  title: t('inventory.deleteOutboundRecord'),
-                  content: t('inventory.deleteOutboundRecordConfirm', {
-                    referenceNo: record.referenceNo || record.orderId || '-',
-                    product: record.cigarName,
-                    quantity: record.quantity
-                  }),
-                  okText: t('common.confirm'),
-                  cancelText: t('common.cancel'),
-                  okType: 'danger',
-                  onOk: async () => {
-                    setLoading(true)
-                    try {
-                      await deleteOutboundOrder(record.outboundOrderId)
-                      message.success(t('inventory.deleteSuccess'))
-                      setOutboundOrders(await getAllOutboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
-                      setInventoryMovements(await getAllInventoryMovements(isSuperAdmin ? undefined : currentUser?.storeId))
-                      // 如果是订单出库，也需要重新加载订单
-                      if (record.orderId && record.orderId !== '-') {
-                        setOrders(await getAllOrders())
-                      }
-                    } catch (error: any) {
-                      message.error(t('common.deleteFailed') + ': ' + error.message)
-                    } finally {
-                      setLoading(false)
-                    }
-                  }
-                })
-              }}
-            >
-              {t('common.delete')}
-            </Button>
-          )}
-        </Space>
-      )
-    },
   ]
 
   // 产品下拉：按品牌分组，并按品牌与产品名称字母排序（用于入库/出库下拉）

@@ -21,8 +21,9 @@ import { useAuthStore } from '../../../store/modules/auth'
 import { getAppConfig } from '../../../services/firebase/appConfig'
 
 const { Title } = Typography
+import { createBill } from '../../../services/billplz'
 
-const PlanSelector: React.FC<{ value?: string; onChange?: (val: string) => void; plans: any[] }> = ({ value, onChange, plans }) => {
+const PlanSelector: React.FC<{ value?: string; onChange?: (val: string) => void; plans: any[]; currentPlanId?: string; memberCount?: number }> = ({ value, onChange, plans, currentPlanId, memberCount = 0 }) => {
   const isMobile = window.innerWidth < 768;
 
   if (!plans || plans.length === 0) {
@@ -46,44 +47,76 @@ const PlanSelector: React.FC<{ value?: string; onChange?: (val: string) => void;
     }}>
       {plans.map((p: any) => {
         const isSelected = value === p.id;
+        const isCurrent = currentPlanId === p.id;
+        const isDisabled = p.maxMembers && p.maxMembers > 0 && memberCount > p.maxMembers;
         return (
           <div
             key={p.id}
-            onClick={() => onChange?.(p.id)}
+            onClick={() => !isDisabled && onChange?.(p.id)}
             style={{
               flex: isMobile ? '1 1 0' : 'unset',
               minWidth: isMobile ? '100px' : 'unset',
               padding: isMobile ? '12px 8px' : '16px',
               borderRadius: 12,
-              cursor: 'pointer',
-              background: isSelected ? 'rgba(253,224,141,0.08)' : 'rgba(255,255,255,0.03)',
-              border: isSelected ? '2px solid #FDE08D' : '1px solid rgba(255,255,255,0.1)',
+              cursor: isDisabled ? 'not-allowed' : 'pointer',
+              background: isDisabled ? 'rgba(255,255,255,0.01)' : (isSelected ? 'rgba(253,224,141,0.08)' : 'rgba(255,255,255,0.03)'),
+              border: isDisabled ? '1px solid rgba(255,0,0,0.2)' : (isSelected ? '2px solid #FDE08D' : (isCurrent ? '2px solid rgba(82,196,26,0.6)' : '1px solid rgba(255,255,255,0.1)')),
+              opacity: isDisabled ? 0.45 : 1,
               transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
               boxShadow: isSelected ? '0 0 15px rgba(253,224,141,0.2)' : 'none',
-              minHeight: isMobile ? 120 : 140
+              minHeight: isMobile ? 120 : 140,
+              position: 'relative' as const
             }}
             onMouseEnter={(e) => {
-              if (!isSelected) {
+              if (!isSelected && !isDisabled) {
                 e.currentTarget.style.borderColor = 'rgba(253,224,141,0.5)';
                 e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
               }
             }}
             onMouseLeave={(e) => {
-              if (!isSelected) {
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+              if (!isSelected && !isDisabled) {
+                e.currentTarget.style.borderColor = isCurrent ? 'rgba(82,196,26,0.6)' : 'rgba(255,255,255,0.1)';
                 e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
               }
             }}
           >
+            {isCurrent && (
+              <div style={{
+                position: 'absolute',
+                top: -1,
+                right: -1,
+                background: '#52c41a',
+                color: '#fff',
+                fontSize: 9,
+                fontWeight: 700,
+                padding: '2px 8px',
+                borderRadius: '0 10px 0 8px',
+                letterSpacing: 0.5
+              }}>CURRENT</div>
+            )}
+            {isDisabled && (
+              <div style={{
+                position: 'absolute',
+                top: -1,
+                left: -1,
+                background: '#ff4d4f',
+                color: '#fff',
+                fontSize: 9,
+                fontWeight: 700,
+                padding: '2px 8px',
+                borderRadius: '10px 0 8px 0',
+                letterSpacing: 0.5
+              }}>INSUFFICIENT</div>
+            )}
             <div>
               <div style={{ color: isSelected ? '#FDE08D' : '#fff', fontWeight: 800, fontSize: 16, marginBottom: 4 }}>
                 {p.name}
               </div>
               <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>
-                <span style={{ color: '#aaa' }}>{p.maxMembers}</span> Members<br />
+                <span style={{ color: '#aaa' }}>{p.maxMembers || '∞'}</span> Members<br />
                 <span style={{ color: '#aaa' }}>{p.validPeriodMonth}</span> Months
               </div>
             </div>
@@ -223,7 +256,10 @@ const AdminDashboard: React.FC = () => {
       setRenewLoading(true)
       const plan = appConfig?.subscription?.plans?.find(p => p.id === values.planId)
 
-      const requestData: Omit<SubscriptionRequest, 'id'> = {
+      const currentPlanId = appConfig?.subscription?.planId || appConfig?.subscription?.plan;
+      const isUpgrade = currentPlanId && currentPlanId !== values.planId;
+
+      const requestData: any = {
         planId: values.planId,
         planName: plan?.name || values.planId,
         validPeriodMonth: plan?.validPeriodMonth || 12,
@@ -231,7 +267,42 @@ const AdminDashboard: React.FC = () => {
         status: 'pending',
         createdAt: new Date(),
         updatedAt: new Date(),
-        adminNotes: values.adminNotes || ''
+        adminNotes: values.adminNotes || '',
+        paymentMethod: 'manual',
+        requestType: isUpgrade ? 'upgrade' : 'renewal',
+        previousPlanId: isUpgrade ? currentPlanId : undefined
+      }
+
+      // 检查平台 Billplz 是否启用
+      const platformBillplz = appConfig?.paymentPlatform?.billplz;
+      if (platformBillplz?.enabled && platformBillplz?.apiKey && platformBillplz?.collectionId) {
+        const fee = plan?.fee || 0;
+        if (fee > 0) {
+          const billResponse = await createBill(
+            fee,
+            `Subscription Activation: ${plan?.name || values.planId}`,
+            user?.displayName || 'Admin',
+            user?.email || '',
+            user?.phone || '',
+            true // usePlatformConfig
+          );
+
+          if (billResponse.success && billResponse.data?.url) {
+            // 关联 Billplz ID 并设置支付方式为在线
+            requestData.billplzId = billResponse.data.id;
+            requestData.paymentMethod = 'online';
+            
+            await addDoc(collection(db, GLOBAL_COLLECTIONS.SUBSCRIPTION_REQUESTS), requestData);
+            
+            message.loading('Redirecting to payment page...', 2);
+            setTimeout(() => {
+              window.location.href = billResponse.data!.url;
+            }, 1000);
+            return;
+          } else {
+            console.warn('Failed to create Billplz bill, falling back to manual request:', billResponse.error);
+          }
+        }
       }
 
       await addDoc(collection(db, GLOBAL_COLLECTIONS.SUBSCRIPTION_REQUESTS), requestData)
@@ -300,7 +371,9 @@ const AdminDashboard: React.FC = () => {
           }
 
           const isOverlimit = totalUsers > (currentPlan.maxMembers || 50);
-          const showButton = isOverlimit || isExpired || daysLeft <= 30;
+          const currentPlanIndex = plans?.findIndex((p: any) => p.id === (planId || plan)) ?? -1;
+          const hasHigherPlan = plans && currentPlanIndex >= 0 && currentPlanIndex < plans.length - 1;
+          const showButton = isOverlimit || isExpired || daysLeft <= 30 || hasHigherPlan;
 
           const cards: Array<{
             label: string;
@@ -408,7 +481,7 @@ const AdminDashboard: React.FC = () => {
                     marginInline: 'auto'
                   }}
                 >
-                  {isOverlimit ? 'Upgrade' : (isExpired ? 'Activate' : 'Renew')}
+                  {isOverlimit || hasHigherPlan ? 'Upgrade' : (isExpired ? 'Activate' : 'Renew')}
                 </Button>
               )}
             </div>
@@ -418,7 +491,7 @@ const AdminDashboard: React.FC = () => {
 
       {/* Subscription Renewal Modal */}
       <Modal
-        title={<span style={{ color: '#FDE08D' }}>Subscription Activation / Renewal</span>}
+        title={<span style={{ color: '#FDE08D' }}>Subscription Activation / Renewal / Upgrade</span>}
         open={showRenewModal}
         onCancel={() => setShowRenewModal(false)}
         footer={null}
@@ -433,7 +506,7 @@ const AdminDashboard: React.FC = () => {
             rules={[{ required: true, message: 'Please select a plan' }]}
             initialValue={appConfig?.subscription?.planId || appConfig?.subscription?.plan || 'basic'}
           >
-            <PlanSelector plans={appConfig?.subscription?.plans || []} />
+            <PlanSelector plans={appConfig?.subscription?.plans || []} currentPlanId={appConfig?.subscription?.planId || appConfig?.subscription?.plan} memberCount={totalUsers} />
           </Form.Item>
 
           <Form.Item name="adminNotes" label={<span style={{ color: '#ccc' }}>Notes (Optional)</span>}>

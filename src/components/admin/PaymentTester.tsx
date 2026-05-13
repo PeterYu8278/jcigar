@@ -17,9 +17,10 @@ interface PaymentTesterProps {
       isSandbox?: boolean;
     };
   };
+  isPlatform?: boolean;
 }
 
-const PaymentTester: React.FC<PaymentTesterProps> = ({ paymentConfig }) => {
+const PaymentTester: React.FC<PaymentTesterProps> = ({ paymentConfig, isPlatform = false }) => {
   const { t } = useTranslation();
   const [createForm] = Form.useForm();
   const [statusForm] = Form.useForm();
@@ -48,7 +49,8 @@ const PaymentTester: React.FC<PaymentTesterProps> = ({ paymentConfig }) => {
         description || `Test payment for ${appName}`,
         name || 'Test User',
         email || 'test@example.com',
-        mobile || '60123456789'
+        mobile || '60123456789',
+        isPlatform
       );
 
       if (result.success && result.data) {
@@ -71,7 +73,7 @@ const PaymentTester: React.FC<PaymentTesterProps> = ({ paymentConfig }) => {
     setChecking(true);
     try {
       const { billId } = values;
-      const result = await getBillStatus(billId);
+      const result = await getBillStatus(billId, isPlatform);
 
       if (result.success && result.data) {
         setCheckedBill(result.data);
