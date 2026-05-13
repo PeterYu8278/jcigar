@@ -1544,6 +1544,7 @@
       "user": "用户",
       "store": "归属门店",
       "amount": "充值金额",
+      "adminNotes": "备注",
       "points": "积分",
       "status": "状态",
       "proof": "凭证",

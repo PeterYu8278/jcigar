@@ -1543,6 +1543,7 @@
       "user": "User",
       "store": "Store",
       "amount": "Reload Amount",
+      "adminNotes": "Note",
       "points": "Points",
       "status": "Status",
       "proof": "Proof",

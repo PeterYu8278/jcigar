@@ -83,7 +83,7 @@ export const handler: Handler = async (event) => {
           status: 'completed',
           verifiedAt: FieldValue.serverTimestamp(),
           verifiedBy: 'system_billplz',
-          adminNotes: `Auto-verified via Billplz (Paid: ${params.get('paid_at')})`,
+          adminNotes: `Auto-verified via Billplz (ID: ${billId}, Paid: ${params.get('paid_at')})`,
           updatedAt: FieldValue.serverTimestamp()
         });
 
@@ -95,7 +95,7 @@ export const handler: Handler = async (event) => {
           type: 'earn',
           amount: points,
           source: 'reload',
-          description: `Billplz Online Reload: ${amount} RM`,
+          description: `Billplz Online Reload: ${amount} RM (Bill ID: ${billId})`,
           relatedId: recordDoc.id,
           balance: (userDoc.data()?.membership?.points || 0) + points,
           createdBy: 'system_billplz',

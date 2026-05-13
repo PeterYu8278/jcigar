@@ -212,6 +212,13 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
       }
     },
     {
+      title: t('pointsConfig.reloadVerification.adminNotes'),
+      dataIndex: 'adminNotes',
+      key: 'adminNotes',
+      ellipsis: true,
+      render: (notes: string) => notes || '-'
+    },
+    {
       title: t('pointsConfig.reloadVerification.proof'),
       dataIndex: 'verificationProof',
       key: 'verificationProof',
@@ -396,6 +403,19 @@ export const ReloadVerification: React.FC<ReloadVerificationProps> = ({ onRefres
                       <div style={{ fontSize: 12, color: '#f4af25', marginTop: 4 }}>
                         {t('pointsConfig.reloadVerification.store')}: {stores.find(s => s.id === record.storeId)?.name || '-'}
                       </div>
+                      {record.adminNotes && (
+                        <div style={{ 
+                          fontSize: 12, 
+                          color: 'rgba(255,255,255,0.5)', 
+                          marginTop: 4,
+                          padding: '4px 8px',
+                          background: 'rgba(255,255,255,0.05)',
+                          borderRadius: 4,
+                          borderLeft: '2px solid rgba(244,175,37,0.5)'
+                        }}>
+                          {record.adminNotes}
+                        </div>
+                      )}
                     </div>
                     <div style={{ textAlign: 'right', marginLeft: 12 }}>
                       <div style={{
