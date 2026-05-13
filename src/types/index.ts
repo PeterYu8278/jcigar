@@ -497,6 +497,9 @@ export interface AppConfig {
       fee: number;
       maxMembers: number;
       validPeriodMonth: number;
+      maxStores?: number;
+      maxSuperAdmins?: number;
+      maxAdmins?: number;
     }>;
     quota?: {
       maxStores: number;
@@ -896,4 +899,20 @@ export interface SubscriptionRequest {
   expiryDate?: Date;
   billplzId?: string;
   paymentMethod?: 'manual' | 'online';
+}
+
+export type AuditLogModule = 'users' | 'events' | 'orders' | 'inventory' | 'transactions' | 'system' | 'subscription';
+export type AuditLogAction = 'create' | 'update' | 'delete' | 'other';
+
+export interface AuditLog {
+  id: string;
+  timestamp: Date;
+  operatorId: string;
+  operatorName: string;
+  module: AuditLogModule;
+  action: AuditLogAction;
+  targetId: string;
+  description: string;
+  details?: any;
+  storeId?: string;
 }

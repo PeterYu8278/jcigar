@@ -7,6 +7,7 @@ import { GLOBAL_COLLECTIONS } from '../../config/globalCollections';
 import type { AppConfig, ColorThemeConfig } from '../../types';
 import type { WhapiConfig, MessageTemplate } from '../../types/whapi';
 import { DEFAULT_MESSAGE_TEMPLATES } from '../../types/whapi';
+import { saveAuditLog } from './auditLog';
 
 // 默认颜色主题配置
 const DEFAULT_COLOR_THEME: ColorThemeConfig = {
@@ -376,6 +377,15 @@ export const updateAppConfig = async (
         ...updateData,
       });
     }
+
+    // 记录审计日志
+    await saveAuditLog({
+      module: 'system',
+      action: 'update',
+      targetId: CONFIG_ID,
+      description: `更新系统配置: ${Object.keys(updates).join(', ')}`,
+      details: updates
+    });
 
     return { success: true };
   } catch (error) {

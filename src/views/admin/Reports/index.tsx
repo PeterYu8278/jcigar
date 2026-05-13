@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Card, Button, Row, Col, Typography, Space, message, DatePicker, Tag, Divider } from 'antd'
+import { Card, Button, Row, Col, Typography, Space, message, DatePicker, Tag, Divider, Tabs } from 'antd'
 import { 
   FileExcelOutlined, 
   TeamOutlined, 
@@ -7,7 +7,8 @@ import {
   ShoppingCartOutlined, 
   CalendarOutlined,
   DownloadOutlined,
-  BarChartOutlined
+  BarChartOutlined,
+  HistoryOutlined
 } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import * as XLSX from 'xlsx'
@@ -21,7 +22,9 @@ import {
   getAllInboundOrders,
   getAllOutboundOrders
 } from '../../../services/firebase/firestore'
+import { getAppConfig } from '../../../services/firebase/appConfig'
 import { useAuthStore } from '../../../store/modules/auth'
+import AuditLogTab from './AuditLogTab'
 
 const { Title, Text, Paragraph } = Typography
 const { RangePicker } = DatePicker
@@ -30,6 +33,7 @@ const AdminReports: React.FC = () => {
   const { t } = useTranslation()
   const { user } = useAuthStore()
   const [exporting, setExporting] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState('export')
   
   // Date range states
   const [orderRange, setOrderRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null)
@@ -45,8 +49,24 @@ const AdminReports: React.FC = () => {
   const exportMembers = async () => {
     setExporting('members')
     try {
-      const users = await getUsers()
-      const exportData = users.map(u => ({
+      const [users, config] = await Promise.all([getUsers(), getAppConfig()])
+      
+      let exportUsers = users
+      const currentPlanId = config?.subscription?.planId || config?.subscription?.plan
+      const currentPlan = config?.subscription?.plans?.find(p => p.id === currentPlanId)
+      
+      if (currentPlan && currentPlan.maxMembers && users.length > currentPlan.maxMembers) {
+        // 按创建时间排序，保留最早的 maxMembers 个用户
+        exportUsers = [...users].sort((a, b) => {
+          const d1 = (a.createdAt as any)?.toDate?.() || a.createdAt
+          const d2 = (b.createdAt as any)?.toDate?.() || b.createdAt
+          return new Date(d1).getTime() - new Date(d2).getTime()
+        }).slice(0, currentPlan.maxMembers)
+        
+        message.info(`Report limited to ${currentPlan.maxMembers} members based on your ${currentPlan.name} plan.`)
+      }
+
+      const exportData = exportUsers.map(u => ({
         'Member ID': u.memberId || '-',
         'Name': u.displayName || '-',
         'Email': u.email || '-',
@@ -266,6 +286,100 @@ const AdminReports: React.FC = () => {
     }
   ]
 
+  const items = [
+    {
+      key: 'export',
+      label: (
+        <Space>
+          <FileExcelOutlined />
+          <span>Excel Reports</span>
+        </Space>
+      ),
+      children: (
+        <Row gutter={[24, 24]} style={{ marginTop: 16 }}>
+          {reportCards.map(card => (
+            <Col xs={24} sm={12} key={card.key}>
+              <Card
+                hoverable
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: `1px solid rgba(255, 255, 255, 0.1)`,
+                  borderRadius: 16,
+                  backdropFilter: 'blur(10px)',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
+                styles={{
+                  body: { padding: '24px', flex: 1, display: 'flex', flexDirection: 'column' }
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+                  <div style={{ 
+                    background: `rgba(${card.color === '#f4af25' ? '244, 175, 37' : card.color === '#52c41a' ? '82, 196, 26' : card.color === '#1890ff' ? '24, 144, 255' : '235, 47, 150'}, 0.1)`, 
+                    padding: 16, 
+                    borderRadius: 12 
+                  }}>
+                    {card.icon}
+                  </div>
+                  <Tag color={card.color} style={{ margin: 0, borderRadius: 4, fontWeight: 600 }}>EXCEL</Tag>
+                </div>
+
+                <Title level={4} style={{ color: '#FFFFFF', marginBottom: 8 }}>{card.title}</Title>
+                <Paragraph style={{ color: 'rgba(255, 255, 255, 0.5)', marginBottom: 24, fontSize: 14 }}>
+                  {card.description}
+                </Paragraph>
+
+                <div style={{ marginTop: 'auto' }}>
+                  {card.hasFilter && (
+                    <div style={{ marginBottom: 16 }}>
+                      <Text style={{ color: 'rgba(255, 255, 255, 0.45)', display: 'block', fontSize: 12, marginBottom: 8 }}>
+                        DATE RANGE (OPTIONAL)
+                      </Text>
+                      <RangePicker 
+                        className="points-config-form"
+                        style={{ width: '100%' }}
+                        onChange={(dates) => card.setRange(dates as any)}
+                      />
+                    </div>
+                  )}
+                  
+                  <Button 
+                    type="primary" 
+                    icon={<DownloadOutlined />} 
+                    block
+                    loading={exporting === card.key}
+                    onClick={card.action}
+                    style={{
+                      background: `linear-gradient(135deg, ${card.color} 0%, ${card.color}dd 100%)`,
+                      border: 'none',
+                      height: 48,
+                      borderRadius: 12,
+                      fontWeight: 700,
+                      boxShadow: `0 4px 14px 0 rgba(0, 0, 0, 0.25)`
+                    }}
+                  >
+                    {t('common.exportReport')}
+                  </Button>
+                </div>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      )
+    },
+    {
+      key: 'logs',
+      label: (
+        <Space>
+          <HistoryOutlined />
+          <span>Operation Logs</span>
+        </Space>
+      ),
+      children: <AuditLogTab />
+    }
+  ]
+
   return (
     <div style={{ padding: '24px', maxWidth: 1200, margin: '0 auto' }}>
       <div style={{ marginBottom: 32 }}>
@@ -273,80 +387,17 @@ const AdminReports: React.FC = () => {
           <BarChartOutlined /> {t('navigation.reports')}
         </Title>
         <Paragraph style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 16 }}>
-          Generate and download detailed Excel reports for various business operations.
+          Generate and download detailed Excel reports or monitor system operation logs.
         </Paragraph>
       </div>
 
-      <Row gutter={[24, 24]}>
-        {reportCards.map(card => (
-          <Col xs={24} sm={12} key={card.key}>
-            <Card
-              hoverable
-              style={{
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: `1px solid rgba(255, 255, 255, 0.1)`,
-                borderRadius: 16,
-                backdropFilter: 'blur(10px)',
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column'
-              }}
-              styles={{
-                body: { padding: '24px', flex: 1, display: 'flex', flexDirection: 'column' }
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
-                <div style={{ 
-                  background: `rgba(${card.color === '#f4af25' ? '244, 175, 37' : card.color === '#52c41a' ? '82, 196, 26' : card.color === '#1890ff' ? '24, 144, 255' : '235, 47, 150'}, 0.1)`, 
-                  padding: 16, 
-                  borderRadius: 12 
-                }}>
-                  {card.icon}
-                </div>
-                <Tag color={card.color} style={{ margin: 0, borderRadius: 4, fontWeight: 600 }}>EXCEL</Tag>
-              </div>
-
-              <Title level={4} style={{ color: '#FFFFFF', marginBottom: 8 }}>{card.title}</Title>
-              <Paragraph style={{ color: 'rgba(255, 255, 255, 0.5)', marginBottom: 24, fontSize: 14 }}>
-                {card.description}
-              </Paragraph>
-
-              <div style={{ marginTop: 'auto' }}>
-                {card.hasFilter && (
-                  <div style={{ marginBottom: 16 }}>
-                    <Text style={{ color: 'rgba(255, 255, 255, 0.45)', display: 'block', fontSize: 12, marginBottom: 8 }}>
-                      DATE RANGE (OPTIONAL)
-                    </Text>
-                    <RangePicker 
-                      className="points-config-form"
-                      style={{ width: '100%' }}
-                      onChange={(dates) => card.setRange(dates as any)}
-                    />
-                  </div>
-                )}
-                
-                <Button 
-                  type="primary" 
-                  icon={<DownloadOutlined />} 
-                  block
-                  loading={exporting === card.key}
-                  onClick={card.action}
-                  style={{
-                    background: `linear-gradient(135deg, ${card.color} 0%, ${card.color}dd 100%)`,
-                    border: 'none',
-                    height: 48,
-                    borderRadius: 12,
-                    fontWeight: 700,
-                    boxShadow: `0 4px 14px 0 rgba(0, 0, 0, 0.25)`
-                  }}
-                >
-                  {t('common.exportReport')}
-                </Button>
-              </div>
-            </Card>
-          </Col>
-        ))}
-      </Row>
+      <Tabs 
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={items}
+        className="points-config-form"
+        style={{ color: '#fff' }}
+      />
 
       <Divider style={{ borderColor: 'rgba(255, 255, 255, 0.05)', margin: '48px 0' }} />
       

@@ -171,9 +171,9 @@ export const SubscriptionSettings: React.FC = () => {
         
         // Default plans if none exist
         const defaultPlans = config.subscription?.plans || [
-          { id: 'basic', name: 'Basic', fee: 2400, maxMembers: 50, validPeriodMonth: 12 },
-          { id: 'pro', name: 'Pro', fee: 4500, maxMembers: 150, validPeriodMonth: 12 },
-          { id: 'premium', name: 'Premium', fee: 6000, maxMembers: 300, validPeriodMonth: 12 }
+          { id: 'basic', name: 'Basic', fee: 2400, maxMembers: 50, validPeriodMonth: 12, maxStores: 1, maxSuperAdmins: 1, maxAdmins: 3 },
+          { id: 'pro', name: 'Pro', fee: 4500, maxMembers: 150, validPeriodMonth: 12, maxStores: 3, maxSuperAdmins: 2, maxAdmins: 10 },
+          { id: 'premium', name: 'Premium', fee: 6000, maxMembers: 300, validPeriodMonth: 12, maxStores: 10, maxSuperAdmins: 5, maxAdmins: 30 }
         ];
 
         form.setFieldsValue({
@@ -220,6 +220,14 @@ export const SubscriptionSettings: React.FC = () => {
     try {
       setSaving(true);
       
+      // Find selected plan to sync quota
+      const selectedPlan = values.plans?.find((p: any) => p.id === values.planId);
+      const newQuota = selectedPlan ? {
+        maxStores: selectedPlan.maxStores || 1,
+        maxSuperAdmins: selectedPlan.maxSuperAdmins || 1,
+        maxAdmins: selectedPlan.maxAdmins || 3,
+      } : appConfig?.subscription?.quota;
+
       const updateData: any = {
         subscription: {
           ...appConfig?.subscription,
@@ -227,7 +235,7 @@ export const SubscriptionSettings: React.FC = () => {
           planId: values.planId,
           plan: values.planId as 'basic' | 'pro' | 'premium', // Legacy sync
           plans: values.plans,
-          quota: values.quota,
+          quota: newQuota,
           expiryDate: appConfig?.subscription?.expiryDate || new Date()
         },
         paymentPlatform: {
@@ -275,7 +283,12 @@ export const SubscriptionSettings: React.FC = () => {
           isActive: true,
           planId: request.planId,
           plan: request.planId as 'basic' | 'pro' | 'premium', // Legacy sync
-          expiryDate: newExpiry
+          expiryDate: newExpiry,
+          quota: {
+            maxStores: plan?.maxStores || appConfig?.subscription?.quota?.maxStores || 1,
+            maxSuperAdmins: plan?.maxSuperAdmins || appConfig?.subscription?.quota?.maxSuperAdmins || 1,
+            maxAdmins: plan?.maxAdmins || appConfig?.subscription?.quota?.maxAdmins || 3,
+          }
         }
       };
       await updateAppConfig(updateData, user?.id || 'system');
@@ -519,51 +532,41 @@ export const SubscriptionSettings: React.FC = () => {
                 </Card>
 
                 <Card 
-                  title={<span style={{ color: '#FDE08D' }}>Account Quotas</span>}
+                  title={<span style={{ color: '#FDE08D' }}>Current Account Quotas (Read Only)</span>}
                   style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
                 >
-                  <Form.Item
-                    name={['quota', 'maxStores']}
-                    label={
-                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', color: '#ccc' }}>
-                        <span>Max Stores</span>
-                        <span style={{ color: counts.stores >= (form.getFieldValue(['quota', 'maxStores']) || 0) ? '#ff4d4f' : '#52c41a' }}>
-                          {counts.stores} / {form.getFieldValue(['quota', 'maxStores']) || 0}
-                        </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                    {[
+                      { label: 'Max Stores', count: counts.stores, max: appConfig?.subscription?.quota?.maxStores || 1 },
+                      { label: 'Max Super Admins', count: counts.superAdmins, max: appConfig?.subscription?.quota?.maxSuperAdmins || 1 },
+                      { label: 'Max Admins (Store Admins)', count: counts.admins, max: appConfig?.subscription?.quota?.maxAdmins || 3 }
+                    ].map(item => (
+                      <div key={item.label}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, color: '#ccc' }}>
+                          <span style={{ fontSize: 13 }}>{item.label}</span>
+                          <span style={{ 
+                            fontWeight: 700, 
+                            color: item.count >= item.max ? '#ff4d4f' : '#52c41a' 
+                          }}>
+                            {item.count} / {item.max}
+                          </span>
+                        </div>
+                        <div style={{ 
+                          height: 4, 
+                          background: 'rgba(255,255,255,0.05)', 
+                          borderRadius: 2,
+                          overflow: 'hidden'
+                        }}>
+                          <div style={{ 
+                            width: `${Math.min(100, (item.count / item.max) * 100)}%`, 
+                            height: '100%', 
+                            background: item.count >= item.max ? '#ff4d4f' : 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                            borderRadius: 2
+                          }} />
+                        </div>
                       </div>
-                    }
-                    rules={[{ required: true }]}
-                  >
-                    <InputNumber min={1} controls={false} style={{ width: '100%' }} disabled={!isSuperAdmin} />
-                  </Form.Item>
-                  <Form.Item
-                    name={['quota', 'maxSuperAdmins']}
-                    label={
-                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', color: '#ccc' }}>
-                        <span>Max Super Admins</span>
-                        <span style={{ color: counts.superAdmins >= (form.getFieldValue(['quota', 'maxSuperAdmins']) || 0) ? '#ff4d4f' : '#52c41a' }}>
-                          {counts.superAdmins} / {form.getFieldValue(['quota', 'maxSuperAdmins']) || 0}
-                        </span>
-                      </div>
-                    }
-                    rules={[{ required: true }]}
-                  >
-                    <InputNumber min={1} controls={false} style={{ width: '100%' }} disabled={!isSuperAdmin} />
-                  </Form.Item>
-                  <Form.Item
-                    name={['quota', 'maxAdmins']}
-                    label={
-                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', color: '#ccc' }}>
-                        <span>Max Admins (Store Admins)</span>
-                        <span style={{ color: counts.admins >= (form.getFieldValue(['quota', 'maxAdmins']) || 0) ? '#ff4d4f' : '#52c41a' }}>
-                          {counts.admins} / {form.getFieldValue(['quota', 'maxAdmins']) || 0}
-                        </span>
-                      </div>
-                    }
-                    rules={[{ required: true }]}
-                  >
-                    <InputNumber min={0} controls={false} style={{ width: '100%' }} disabled={!isSuperAdmin} />
-                  </Form.Item>
+                    ))}
+                  </div>
                 </Card>
               </div>
               
@@ -642,6 +645,27 @@ export const SubscriptionSettings: React.FC = () => {
                                 label={<span style={{ color: '#888', fontSize: 12 }}>Max Members</span>}
                               >
                                 <InputNumber placeholder="Unlimited" min={0} controls={false} style={{ width: '100%' }} disabled={!isSuperAdmin} />
+                              </Form.Item>
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'maxStores']}
+                                label={<span style={{ color: '#888', fontSize: 12 }}>Max Stores</span>}
+                              >
+                                <InputNumber placeholder="1" min={1} controls={false} style={{ width: '100%' }} disabled={!isSuperAdmin} />
+                              </Form.Item>
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'maxSuperAdmins']}
+                                label={<span style={{ color: '#888', fontSize: 12 }}>Max Super Admins</span>}
+                              >
+                                <InputNumber placeholder="1" min={1} controls={false} style={{ width: '100%' }} disabled={!isSuperAdmin} />
+                              </Form.Item>
+                              <Form.Item
+                                {...restField}
+                                name={[name, 'maxAdmins']}
+                                label={<span style={{ color: '#888', fontSize: 12 }}>Max Admins</span>}
+                              >
+                                <InputNumber placeholder="3" min={0} controls={false} style={{ width: '100%' }} disabled={!isSuperAdmin} />
                               </Form.Item>
                             </div>
                           </div>

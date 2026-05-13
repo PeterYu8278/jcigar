@@ -19,7 +19,26 @@ import {
   FieldValue
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-import type { User, Brand, Cigar, Event, Order, Transaction, InboundOrder, OutboundOrder, InventoryMovement } from '../../types';
+import { GLOBAL_COLLECTIONS } from '../../config/globalCollections';
+import type { User, Brand, Cigar, Event, Order, Transaction, InboundOrder, OutboundOrder, InventoryMovement, AuditLogModule } from '../../types';
+import { saveAuditLog } from './auditLog';
+
+// 集合名称到模块的映射
+const COLLECTION_TO_MODULE: Record<string, AuditLogModule> = {
+  [GLOBAL_COLLECTIONS.USERS]: 'users',
+  [GLOBAL_COLLECTIONS.MEMBERS]: 'users',
+  [GLOBAL_COLLECTIONS.EVENTS]: 'events',
+  [GLOBAL_COLLECTIONS.ORDERS]: 'orders',
+  [GLOBAL_COLLECTIONS.CIGARS]: 'inventory',
+  [GLOBAL_COLLECTIONS.INBOUND_ORDERS]: 'inventory',
+  [GLOBAL_COLLECTIONS.OUTBOUND_ORDERS]: 'inventory',
+  [GLOBAL_COLLECTIONS.INVENTORY_MOVEMENTS]: 'inventory',
+  [GLOBAL_COLLECTIONS.TRANSACTIONS]: 'transactions',
+  [GLOBAL_COLLECTIONS.POINTS_RECORDS]: 'transactions',
+  [GLOBAL_COLLECTIONS.APP_CONFIG]: 'system',
+  [GLOBAL_COLLECTIONS.FEATURE_VISIBILITY]: 'system',
+  [GLOBAL_COLLECTIONS.SUBSCRIPTION_REQUESTS]: 'subscription'
+};
 
 // 清洗数据：移除undefined，转换日期/时间戳，深拷贝数组和对象
 const sanitizeForFirestore = (input: any): any => {
@@ -96,6 +115,15 @@ export const createDocument = async <T>(collectionName: string, data: Omit<T, 'i
       updatedAt: new Date(),
     });
     
+    // 自动记录日志
+    const module = COLLECTION_TO_MODULE[collectionName] || 'system';
+    await saveAuditLog({
+      module,
+      action: 'create',
+      targetId: docRef.id,
+      description: `Created new document in ${collectionName}`,
+      details: sanitized
+    });
     
     return { success: true, id: docRef.id };
   } catch (error) {
@@ -149,6 +177,16 @@ export const updateDocument = async <T>(collectionName: string, id: string, data
     };
     
     await updateDoc(docRef, finalUpdateData);
+
+    // 自动记录日志
+    const module = COLLECTION_TO_MODULE[collectionName] || 'system';
+    await saveAuditLog({
+      module,
+      action: 'update',
+      targetId: id,
+      description: `Updated document in ${collectionName}`,
+      details: data
+    });
     
     return { success: true };
   } catch (error) {
@@ -159,6 +197,16 @@ export const updateDocument = async <T>(collectionName: string, id: string, data
 export const deleteDocument = async (collectionName: string, id: string) => {
   try {
     await deleteDoc(doc(db, collectionName, id));
+
+    // 自动记录日志
+    const module = COLLECTION_TO_MODULE[collectionName] || 'system';
+    await saveAuditLog({
+      module,
+      action: 'delete',
+      targetId: id,
+      description: `Deleted document from ${collectionName}`
+    });
+
     return { success: true };
   } catch (error) {
     return { success: false, error: error as Error };

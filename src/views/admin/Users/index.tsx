@@ -412,7 +412,7 @@ const AdminUsers: React.FC = () => {
             icon={<KeyOutlined />}
             size="small"
             onClick={() => setResettingPassword(record)}
-            title={t('usersAdmin.resetPassword') || '重置密码'}
+            title={t('usersAdmin.resetPassword')}
           >
           </Button>
         </Space>
@@ -995,7 +995,7 @@ const AdminUsers: React.FC = () => {
                                         minWidth: '40px'
                                       }}
                                       onClick={() => setResettingPassword(u)}
-                                      title={t('usersAdmin.resetPassword') || '重置密码'}
+                                      title={t('usersAdmin.resetPassword')}
                                     >
                                       <KeyOutlined style={{ fontSize: 14 }} />
                                     </button>
@@ -1246,7 +1246,7 @@ const AdminUsers: React.FC = () => {
               if (values.phone) {
                 const normalized = normalizePhoneNumber(values.phone)
                 if (!normalized) {
-                  message.error('手机号格式无效')
+                  message.error(t('usersAdmin.phoneFormatError'))
                   setLoading(false)
                   return
                 }
@@ -1325,7 +1325,7 @@ const AdminUsers: React.FC = () => {
                     message.success(t('usersAdmin.created'))
                   } catch (error) {
                     console.error('生成会员ID失败:', error)
-                    message.warning(t('usersAdmin.created') + '，但会员ID生成失败，请稍后手动添加')
+                    message.warning(t('usersAdmin.created') + '，' + t('usersAdmin.memberIdGenerationFailed'))
                   }
                 } else {
                   message.error(t('messages.dataLoadFailed'))
@@ -1559,7 +1559,7 @@ const AdminUsers: React.FC = () => {
 
       {/* 重置密码确认 */}
       <Modal
-        title={<span style={{ color: '#FFFFFF' }}>{t('usersAdmin.resetPassword') || '重置密码'}</span>}
+        title={<span style={{ color: '#FFFFFF' }}>{t('usersAdmin.resetPassword')}</span>}
         open={!!resettingPassword}
         onCancel={() => setResettingPassword(null)}
         footer={null}
@@ -1605,13 +1605,13 @@ const AdminUsers: React.FC = () => {
                     try {
                       const result = await sendPasswordResetEmailFor(resettingPassword.email!)
                       if (result.success) {
-                        message.success(t('usersAdmin.passwordResetSent') || '密码重置邮件已发送')
+                        message.success(t('usersAdmin.passwordResetSent'))
                         setResettingPassword(null)
                       } else {
-                        message.error(result.error?.message || t('usersAdmin.passwordResetFailed') || '发送密码重置邮件失败')
+                        message.error(result.error?.message || t('usersAdmin.passwordResetFailed'))
                       }
                     } catch (error: any) {
-                      message.error(error.message || '发送密码重置邮件失败')
+                      message.error(error.message || t('usersAdmin.passwordResetFailed'))
                     } finally {
                       setResettingPasswordLoading(false)
                     }
@@ -1759,7 +1759,7 @@ const AdminUsers: React.FC = () => {
                     });
                   }
                 } catch (error: any) {
-                  message.error(error?.message || '打开 WhatsApp 重置链接失败，请稍后重试');
+                  message.error(error?.message || t('usersAdmin.passwordResetFailed'));
                 } finally {
                   setResettingPasswordLoading(false);
                 }

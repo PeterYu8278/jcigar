@@ -3,6 +3,7 @@ import { collection, addDoc, getDocs, query, orderBy, limit, where, Timestamp } 
 import { db } from '../../config/firebase';
 import { GLOBAL_COLLECTIONS } from '../../config/globalCollections';
 import type { PointsRecord } from '../../types';
+import { saveAuditLog } from './auditLog';
 
 /**
  * 获取所有积分记录
@@ -107,12 +108,22 @@ export const createPointsRecord = async (
 
     const docRef = await addDoc(collection(db, GLOBAL_COLLECTIONS.POINTS_RECORDS), recordData);
     
+    // 记录审计日志
+    await saveAuditLog({
+      module: 'transactions',
+      action: 'create',
+      targetId: docRef.id,
+      description: `创建积分变动记录: ${record.userName} [${record.type === 'spend' ? '消费' : '增加'}] ${record.amount} 点 (来源: ${record.source})`,
+      details: record
+    });
+
     return {
       id: docRef.id,
       ...record,
       createdAt: now
     };
   } catch (error) {
+    console.error('Failed to create points record:', error);
     return null;
   }
 };

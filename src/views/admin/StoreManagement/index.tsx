@@ -11,8 +11,7 @@ import {
   Typography,
   Row,
   Col,
-  Spin,
-  Empty
+  Spin
 } from 'antd';
 import { 
   PlusOutlined, 
@@ -25,20 +24,24 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined
 } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { 
   getAllStores, 
   createStore, 
   updateStore, 
   deleteStore 
 } from '../../../services/firebase/stores';
-import type { Store } from '../../../types';
+import { getAppConfig } from '../../../services/firebase/appConfig';
+import type { Store, AppConfig } from '../../../types';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
 const StoreManagement: React.FC = () => {
+  const { t } = useTranslation();
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingStore, setEditingStore] = useState<Store | null>(null);
   const [form] = Form.useForm();
@@ -52,7 +55,17 @@ const StoreManagement: React.FC = () => {
 
   useEffect(() => {
     loadStores();
+    loadConfig();
   }, []);
+
+  const loadConfig = async () => {
+    try {
+      const config = await getAppConfig();
+      setAppConfig(config);
+    } catch (error) {
+      console.error('Failed to load app config:', error);
+    }
+  };
 
   const loadStores = async () => {
     try {
@@ -60,13 +73,20 @@ const StoreManagement: React.FC = () => {
       const data = await getAllStores();
       setStores(data);
     } catch (error) {
-      message.error('Failed to load stores');
+      message.error(t('container.loadFailed'));
     } finally {
       setLoading(false);
     }
   };
 
   const handleAdd = () => {
+    // Check store quota
+    const maxStores = appConfig?.subscription?.quota?.maxStores || 1;
+    if (stores.length >= maxStores) {
+      message.error(t('storeManagement.limitReached', { max: maxStores }));
+      return;
+    }
+    
     setEditingStore(null);
     form.resetFields();
     setIsModalVisible(true);
@@ -80,15 +100,15 @@ const StoreManagement: React.FC = () => {
 
   const handleDelete = (id: string) => {
     if (id === 'default') {
-      message.error('Default store cannot be deleted');
+      message.error(t('storeManagement.defaultStoreDeleteError'));
       return;
     }
     Modal.confirm({
-      title: <span style={{ color: '#fff' }}>Delete this store?</span>,
-      content: <span style={{ color: 'rgba(255,255,255,0.6)' }}>This action cannot be undone. All associated data will be affected.</span>,
-      okText: 'Delete',
+      title: <span style={{ color: '#fff' }}>{t('storeManagement.confirmDelete')}</span>,
+      content: <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('storeManagement.deleteContent')}</span>,
+      okText: t('common.delete'),
       okButtonProps: { danger: true },
-      cancelText: 'Cancel',
+      cancelText: t('common.cancel'),
       className: 'dark-modal',
       styles: {
         mask: { backdropFilter: 'blur(4px)' },
@@ -97,7 +117,7 @@ const StoreManagement: React.FC = () => {
       onOk: async () => {
         const res = await deleteStore(id);
         if (res.success) {
-          message.success('Store deleted');
+          message.success(t('storeManagement.deleteSuccess'));
           loadStores();
         } else {
           message.error(res.error);
@@ -112,7 +132,7 @@ const StoreManagement: React.FC = () => {
       if (editingStore) {
         const res = await updateStore(editingStore.id, values);
         if (res.success) {
-          message.success('Store updated');
+          message.success(t('storeManagement.saveSuccess'));
           setIsModalVisible(false);
           loadStores();
         } else {
@@ -124,7 +144,7 @@ const StoreManagement: React.FC = () => {
           status: 'active'
         });
         if (res.success) {
-          message.success('Store created');
+          message.success(t('storeManagement.createSuccess'));
           setIsModalVisible(false);
           loadStores();
         } else {
@@ -137,7 +157,7 @@ const StoreManagement: React.FC = () => {
   };
 
   const activeCount = stores.filter(s => s.status === 'active').length;
-  const inactiveCount = stores.length - activeCount;
+  const maxStores = appConfig?.subscription?.quota?.maxStores || 1;
 
   return (
     <div style={{ padding: isMobile ? '12px 12px' : '12px 16px', maxWidth: 1200, margin: '0 auto' }}>
@@ -157,10 +177,10 @@ const StoreManagement: React.FC = () => {
             color: 'transparent',
             margin: 0
           }}>
-            Store Management
+            {t('storeManagement.title')}
           </Title>
           <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13 }}>
-            Manage all branch locations
+            {t('storeManagement.subtitle')}
           </Text>
         </div>
         <Button 
@@ -178,7 +198,7 @@ const StoreManagement: React.FC = () => {
             boxShadow: '0 4px 15px rgba(196,141,58,0.3)'
           }}
         >
-          Add New Store
+          {t('storeManagement.addStore')}
         </Button>
       </div>
 
@@ -190,9 +210,9 @@ const StoreManagement: React.FC = () => {
         marginBottom: 24
       }}>
         {[
-          { label: 'Total', value: stores.length, color: '#FDE08D', icon: <ShopOutlined /> },
-          { label: 'Active', value: activeCount, color: '#52c41a', icon: <CheckCircleOutlined /> },
-          { label: 'Inactive', value: inactiveCount, color: '#ff4d4f', icon: <CloseCircleOutlined /> }
+          { label: t('storeManagement.total'), value: stores.length, color: '#FDE08D', icon: <ShopOutlined /> },
+          { label: t('storeManagement.active'), value: activeCount, color: '#52c41a', icon: <CheckCircleOutlined /> },
+          { label: t('storeManagement.quota'), value: `${stores.length}/${maxStores}`, color: stores.length >= maxStores ? '#ff4d4f' : '#C48D3A', icon: <EnvironmentOutlined /> }
         ].map((stat) => (
           <div key={stat.label} style={{
             background: 'rgba(255,255,255,0.03)',
@@ -207,7 +227,7 @@ const StoreManagement: React.FC = () => {
               {stat.icon}
             </div>
             <div style={{
-              fontSize: isMobile ? 22 : 28,
+              fontSize: isMobile ? 18 : 24,
               fontWeight: 800,
               color: stat.color,
               lineHeight: 1
@@ -216,7 +236,7 @@ const StoreManagement: React.FC = () => {
             </div>
             <div style={{
               color: 'rgba(255,255,255,0.45)',
-              fontSize: isMobile ? 11 : 12,
+              fontSize: isMobile ? 10 : 12,
               marginTop: 4,
               letterSpacing: 0.5
             }}>
@@ -240,9 +260,9 @@ const StoreManagement: React.FC = () => {
           textAlign: 'center'
         }}>
           <ShopOutlined style={{ fontSize: 48, color: 'rgba(253,224,141,0.3)', marginBottom: 16 }} />
-          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 15 }}>No stores yet</div>
+          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 15 }}>{t('storeManagement.noStores')}</div>
           <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, marginTop: 4 }}>
-            Click "Add New Store" to create your first location
+            {t('storeManagement.addFirstStore')}
           </div>
         </div>
       ) : (
@@ -312,7 +332,7 @@ const StoreManagement: React.FC = () => {
                         fontWeight: 600
                       }}
                     >
-                      {store.status === 'active' ? '● ACTIVE' : '○ INACTIVE'}
+                      {store.status === 'active' ? `● ${t('storeManagement.active').toUpperCase()}` : `○ ${t('storeManagement.inactive').toUpperCase()}`}
                     </Tag>
                   </div>
                 </div>
@@ -405,11 +425,11 @@ const StoreManagement: React.FC = () => {
 
       {/* Create / Edit Modal */}
       <Modal
-        title={<span style={{ color: '#FDE08D', fontSize: 18, fontWeight: 700 }}>{editingStore ? 'Edit Store' : 'Add New Store'}</span>}
+        title={<span style={{ color: '#FDE08D', fontSize: 18, fontWeight: 700 }}>{editingStore ? t('storeManagement.editStore') : t('storeManagement.addStore')}</span>}
         open={isModalVisible}
         onOk={handleModalOk}
         onCancel={() => setIsModalVisible(false)}
-        okText={editingStore ? 'Update' : 'Create'}
+        okText={editingStore ? t('common.save') : t('common.add')}
         className="dark-modal"
         width={520}
         okButtonProps={{
@@ -441,15 +461,15 @@ const StoreManagement: React.FC = () => {
         >
           <Form.Item
             name="name"
-            label={<span style={{ color: '#ccc' }}>Store Name</span>}
-            rules={[{ required: true, message: 'Please input store name' }]}
+            label={<span style={{ color: '#ccc' }}>{t('storeManagement.storeName')}</span>}
+            rules={[{ required: true, message: t('common.required') }]}
           >
             <Input placeholder="E.g., KL Main Branch" />
           </Form.Item>
           <Form.Item
             name="address"
-            label={<span style={{ color: '#ccc' }}>Address</span>}
-            rules={[{ required: true, message: 'Please input address' }]}
+            label={<span style={{ color: '#ccc' }}>{t('storeManagement.address')}</span>}
+            rules={[{ required: true, message: t('common.required') }]}
           >
             <Input.TextArea rows={3} placeholder="Full address" />
           </Form.Item>
@@ -457,8 +477,8 @@ const StoreManagement: React.FC = () => {
             <Col span={12}>
               <Form.Item
                 name="phone"
-                label={<span style={{ color: '#ccc' }}>Phone</span>}
-                rules={[{ required: true, message: 'Please input contact number' }]}
+                label={<span style={{ color: '#ccc' }}>{t('storeManagement.phone')}</span>}
+                rules={[{ required: true, message: t('common.required') }]}
               >
                 <Input placeholder="Contact number" />
               </Form.Item>
@@ -466,19 +486,19 @@ const StoreManagement: React.FC = () => {
             <Col span={12}>
               <Form.Item
                 name="status"
-                label={<span style={{ color: '#ccc' }}>Status</span>}
+                label={<span style={{ color: '#ccc' }}>{t('storeManagement.status')}</span>}
               >
                 <Select dropdownStyle={{ background: '#1a1a1a' }}>
-                  <Option value="active">Active</Option>
-                  <Option value="inactive">Inactive</Option>
+                  <Option value="active">{t('storeManagement.active')}</Option>
+                  <Option value="inactive">{t('storeManagement.inactive')}</Option>
                 </Select>
               </Form.Item>
             </Col>
           </Row>
           <Form.Item
             name="email"
-            label={<span style={{ color: '#ccc' }}>Email</span>}
-            rules={[{ required: true, message: 'Please input store email' }, { type: 'email', message: 'Please enter a valid email' }]}
+            label={<span style={{ color: '#ccc' }}>{t('storeManagement.email')}</span>}
+            rules={[{ required: true, message: t('common.required') }, { type: 'email', message: t('auth.emailInvalid') }]}
           >
             <Input placeholder="Store email" />
           </Form.Item>
