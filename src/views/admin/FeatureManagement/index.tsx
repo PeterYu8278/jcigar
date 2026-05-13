@@ -16,6 +16,7 @@ import { getAppConfig, updateAppConfig, resetAppConfig } from '../../../services
 import ImageUpload from '../../../components/common/ImageUpload';
 import MockAppInterface from '../../../components/admin/MockAppInterface';
 import WhapiMessageTester from '../../../components/admin/WhapiMessageTester';
+import PaymentTester from '../../../components/admin/PaymentTester';
 import CigarDatabase from '../CigarDatabase';
 
 const { Title, Text } = Typography;
@@ -1691,6 +1692,9 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               </div>
             </Form.Item>
           </Form>
+
+          {/* 支付功能测试 */}
+          <PaymentTester paymentConfig={appConfig?.payment} />
         </Card>
       ) : null}
 

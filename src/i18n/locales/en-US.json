@@ -253,7 +253,18 @@
     "production": "Production",
     "enableBillplz": "Enable Billplz",
     "enable": "Enable",
-    "disable": "Disable"
+    "disable": "Disable",
+    "paymentTest": "Payment Test",
+    "createTestBill": "Create Test Payment",
+    "checkPaymentStatus": "Check Payment Status",
+    "amount": "Amount (MYR)",
+    "billDescription": "Bill Description",
+    "testUser": "Test User",
+    "openPaymentPage": "Open Payment Page",
+    "billId": "Bill ID",
+    "queryStatus": "Query Status",
+    "paid": "Paid",
+    "unpaid": "Unpaid"
   },
   "navigation": {
     "home": "Home",

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "netlify": "netlify dev",
     "build": "node scripts/inject-sw-config.js && tsc && vite build",
     "build:fast": "node scripts/inject-sw-config.js && vite build",
     "preview": "vite preview",

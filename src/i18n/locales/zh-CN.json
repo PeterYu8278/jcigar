@@ -253,7 +253,18 @@
     "production": "正式",
     "enableBillplz": "启用 Billplz",
     "enable": "启用",
-    "disable": "禁用"
+    "disable": "禁用",
+    "paymentTest": "支付测试",
+    "createTestBill": "发起测试付款",
+    "checkPaymentStatus": "查询付款状态",
+    "amount": "金额 (MYR)",
+    "billDescription": "付款描述",
+    "testUser": "测试用户",
+    "openPaymentPage": "打开支付页面",
+    "billId": "账单 ID",
+    "queryStatus": "查询状态",
+    "paid": "已支付",
+    "unpaid": "未支付"
   },
   "navigation": {
     "home": "首页",
