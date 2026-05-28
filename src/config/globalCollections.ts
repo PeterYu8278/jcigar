@@ -48,6 +48,8 @@ export const GLOBAL_COLLECTIONS = {
   WHAPI_MESSAGES: 'whapi_messages',
   /** 订阅激活请求 */
   SUBSCRIPTION_REQUESTS: 'subscription_requests',
+  /** 交易记录（财务） */
+  TRANSACTIONS: 'transactions',
   /** 操作审计日志 */
   AUDIT_LOGS: 'audit_logs'
 } as const

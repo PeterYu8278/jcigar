@@ -101,6 +101,7 @@ function generateVisitSessionData(
   return {
     userId: user.id,
     userName: user.displayName,
+    storeId: 'test-store-id',
     status,
     checkInAt,
     checkInBy: 'system',

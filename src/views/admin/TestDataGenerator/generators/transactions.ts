@@ -66,7 +66,7 @@ export async function generateTransactions(
         amount: order.total,
         currency: 'RM',
         description: `活动报名费 - 订单 ${order.orderNo}`,
-        relatedId: order.source?.eventId,
+        relatedId: order.source?.eventId || undefined,
         relatedOrders: [{
           orderId: order.id,
           amount: order.total

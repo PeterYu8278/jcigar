@@ -109,7 +109,7 @@ const ReloadPage: React.FC = () => {
           `Reload ${amount} RM for ${user.displayName || 'Member'}`,
           user.displayName || 'Member',
           user.email || '',
-          user.phoneNumber || ''
+          user.phone || ''
         );
 
         if (billResponse.success && billResponse.data?.url) {

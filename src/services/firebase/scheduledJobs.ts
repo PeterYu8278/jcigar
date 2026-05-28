@@ -19,7 +19,7 @@ export const processExpiredVisitSessions = async (): Promise<{
     for (const session of expiredSessions) {
       try {
         // 按5小时强制结算
-        const result = await completeVisitSession(session.id, 'system', 5);
+        const result = await completeVisitSession(session.id, 'system', undefined, 5);
         if (result.success) {
           processed++;
         } else {
