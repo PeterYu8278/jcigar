@@ -2,7 +2,6 @@ import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react'
 import { Button, Spin, Card, Typography, Space, message, Tag, Divider, Upload, AutoComplete, Image, Modal, Input } from 'antd';
 import { CameraOutlined, ReloadOutlined, ThunderboltFilled, ThunderboltOutlined, LoadingOutlined, UploadOutlined, SwapOutlined, EditOutlined, DownloadOutlined, ShareAltOutlined, SearchOutlined } from '@ant-design/icons';
 import Webcam from 'react-webcam';
-import html2canvas from 'html2canvas';
 import { useTranslation } from 'react-i18next';
 import { analyzeCigarImage, CigarAnalysisResult } from '../../../services/gemini/cigarRecognition';
 import { getCigars, getBrands } from '../../../services/firebase/firestore';
@@ -310,6 +309,7 @@ export const AICigarScanner: React.FC = () => {
 
         setSavingScreenshot(true);
         try {
+            const html2canvas = (await import('html2canvas')).default;
             const canvas = await html2canvas(screenshotContainerRef.current, {
                 backgroundColor: '#1a1a1a',
                 scale: 2, // 提高清晰度
@@ -343,6 +343,7 @@ export const AICigarScanner: React.FC = () => {
 
         setSavingScreenshot(true);
         try {
+            const html2canvas = (await import('html2canvas')).default;
             const canvas = await html2canvas(screenshotContainerRef.current, {
                 backgroundColor: '#1a1a1a',
                 scale: 2,

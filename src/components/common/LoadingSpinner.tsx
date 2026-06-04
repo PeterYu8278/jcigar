@@ -111,7 +111,6 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
       <div style={fullScreenStyle}>
       <Spin
         indicator={icon ?? defaultIcon as any}
-        tip={tip}
         delay={delay}
         size="large"
         {...restProps}
@@ -136,11 +135,22 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
     <div style={getContainerStyle()}>
       <Spin
         indicator={icon ?? defaultIcon as any}
-        tip={tip}
         delay={delay}
         size={size}
         {...restProps}
       />
+      {tip && (
+        <div
+          style={{
+            marginTop: '12px',
+            fontSize: '14px',
+            color: 'rgba(255, 255, 255, 0.7)',
+            textAlign: 'center'
+          }}
+        >
+          {tip}
+        </div>
+      )}
     </div>
   )
 }

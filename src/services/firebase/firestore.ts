@@ -76,15 +76,15 @@ const sanitizeForFirestore = (input: any): any => {
 
 // 集合名称常量
 export const COLLECTIONS = {
-  USERS: 'users',
-  BRANDS: 'brands',
-  CIGARS: 'cigars',
-  EVENTS: 'events',
-  ORDERS: 'orders',
-  TRANSACTIONS: 'transactions',
-  INBOUND_ORDERS: 'inbound_orders',
-  OUTBOUND_ORDERS: 'outbound_orders',
-  INVENTORY_MOVEMENTS: 'inventory_movements',
+  USERS: GLOBAL_COLLECTIONS.USERS,
+  BRANDS: GLOBAL_COLLECTIONS.BRANDS,
+  CIGARS: GLOBAL_COLLECTIONS.CIGARS,
+  EVENTS: GLOBAL_COLLECTIONS.EVENTS,
+  ORDERS: GLOBAL_COLLECTIONS.ORDERS,
+  TRANSACTIONS: GLOBAL_COLLECTIONS.TRANSACTIONS,
+  INBOUND_ORDERS: GLOBAL_COLLECTIONS.INBOUND_ORDERS,
+  OUTBOUND_ORDERS: GLOBAL_COLLECTIONS.OUTBOUND_ORDERS,
+  INVENTORY_MOVEMENTS: GLOBAL_COLLECTIONS.INVENTORY_MOVEMENTS,
 } as const;
 
 // 通用日期转换工具
@@ -109,10 +109,11 @@ export const createDocument = async <T>(collectionName: string, data: Omit<T, 'i
   try {
     const sanitized = sanitizeForFirestore(data);
     
+    const now = new Date();
     const docRef = await addDoc(collection(db, collectionName), {
+      createdAt: now,
+      updatedAt: now,
       ...sanitized,
-      createdAt: new Date(),
-      updatedAt: new Date(),
     });
     
     // 自动记录日志
@@ -1007,15 +1008,14 @@ export const createInboundOrder = async (orderData: Omit<InboundOrder, 'id' | 'u
   try {
     const referenceNo = orderData.referenceNo;
     
-    // 1. 检查是否已存在相同单号（可选，如果需要防止重复）
-    // 注意：如果允许不同供应商使用相同单号，可以跳过此检查
-    // 或添加供应商条件
+    // 1. 确定统一的创建时间，确保订单和库存流水的创建时间完全一致
+    const orderCreatedAt = orderData.createdAt || new Date();
     
     // 2. 创建入库订单（使用 Auto ID）
     const sanitized = sanitizeForFirestore(orderData);
     const docRef = await addDoc(collection(db, COLLECTIONS.INBOUND_ORDERS), {
       ...sanitized,
-      createdAt: orderData.createdAt || new Date(),
+      createdAt: orderCreatedAt,
       updatedAt: new Date()
     });
     
@@ -1035,7 +1035,7 @@ export const createInboundOrder = async (orderData: Omit<InboundOrder, 'id' | 'u
         reason: orderData.reason,
         unitPrice: item.unitPrice,
         storeId: orderData.storeId,         // 关联门店ID
-        createdAt: orderData.createdAt || new Date()
+        createdAt: orderCreatedAt
       };
       
       await createDocument(COLLECTIONS.INVENTORY_MOVEMENTS, movement);
@@ -1049,6 +1049,7 @@ export const createInboundOrder = async (orderData: Omit<InboundOrder, 'id' | 'u
 
 /**
  * 更新入库订单（使用 Document ID）
+ * 当 createdAt 发生变化时，自动同步更新关联的 inventory_movements 的 createdAt
  */
 export const updateInboundOrder = async (id: string, updates: Partial<InboundOrder>): Promise<void> => {
   try {
@@ -1057,6 +1058,18 @@ export const updateInboundOrder = async (id: string, updates: Partial<InboundOrd
       ...sanitized,
       updatedAt: new Date()
     });
+
+    // 如果 createdAt 发生变化，同步更新关联的 inventory_movements
+    if ((updates as any).createdAt) {
+      const q = query(
+        collection(db, COLLECTIONS.INVENTORY_MOVEMENTS),
+        where('inboundOrderId', '==', id)
+      );
+      const snapshot = await getDocs(q);
+      await Promise.all(snapshot.docs.map(movDoc =>
+        updateDoc(movDoc.ref, { createdAt: (updates as any).createdAt })
+      ));
+    }
   } catch (error) {
     throw error;
   }
@@ -1149,17 +1162,20 @@ export const createOutboundOrder = async (orderData: Omit<OutboundOrder, 'id' | 
   try {
     const referenceNo = orderData.referenceNo;
     
-    // 1. 创建出库订单（使用 Auto ID）
+    // 1. 确定统一的创建时间，确保订单和库存流水的创建时间完全一致
+    const orderCreatedAt = orderData.createdAt || new Date();
+    
+    // 2. 创建出库订单（使用 Auto ID）
     const sanitized = sanitizeForFirestore(orderData);
     const docRef = await addDoc(collection(db, COLLECTIONS.OUTBOUND_ORDERS), {
       ...sanitized,
-      createdAt: orderData.createdAt || new Date(),
+      createdAt: orderCreatedAt,
       updatedAt: new Date()
     });
     
     const generatedId = docRef.id;  // 自动生成的 Document ID
     
-    // 2. 创建对应的 inventory_movements，包含实际的 document ID
+    // 3. 创建对应的 inventory_movements，包含实际的 document ID
     for (const item of orderData.items) {
       const movement = {
         cigarId: item.cigarId,
@@ -1173,7 +1189,7 @@ export const createOutboundOrder = async (orderData: Omit<OutboundOrder, 'id' | 
         reason: orderData.reason,
         unitPrice: item.unitPrice,
         storeId: orderData.storeId,         // 关联门店ID
-        createdAt: orderData.createdAt || new Date()
+        createdAt: orderCreatedAt
       };
       
       await createDocument(COLLECTIONS.INVENTORY_MOVEMENTS, movement);
@@ -1204,6 +1220,34 @@ export const deleteOutboundOrder = async (id: string): Promise<void> => {
     await deleteDoc(doc(db, COLLECTIONS.OUTBOUND_ORDERS, id));
   } catch (error) {
     console.error('Error deleting outbound order:', error);
+    throw error;
+  }
+};
+
+/**
+ * 更新出库订单（使用 Document ID）
+ * 当 createdAt 发生变化时，自动同步更新关联的 inventory_movements 的 createdAt
+ */
+export const updateOutboundOrder = async (id: string, updates: Partial<OutboundOrder>): Promise<void> => {
+  try {
+    const sanitized = sanitizeForFirestore(updates);
+    await updateDoc(doc(db, COLLECTIONS.OUTBOUND_ORDERS, id), {
+      ...sanitized,
+      updatedAt: new Date()
+    });
+
+    // 如果 createdAt 发生变化，同步更新关联的 inventory_movements
+    if ((updates as any).createdAt) {
+      const q = query(
+        collection(db, COLLECTIONS.INVENTORY_MOVEMENTS),
+        where('outboundOrderId', '==', id)
+      );
+      const snapshot = await getDocs(q);
+      await Promise.all(snapshot.docs.map(movDoc =>
+        updateDoc(movDoc.ref, { createdAt: (updates as any).createdAt })
+      ));
+    }
+  } catch (error) {
     throw error;
   }
 };

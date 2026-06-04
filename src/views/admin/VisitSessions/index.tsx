@@ -18,6 +18,7 @@ import type { VisitSession, Cigar } from '../../../types';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { QRScanner } from '../../../components/admin/QRScanner';
+import { OrderSkeleton } from '../../../components/features/admin/OrderSkeleton';
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -502,182 +503,185 @@ const VisitSessionsPage: React.FC = () => {
 
           {!isMobile ? (
             <div className="points-config-form">
-              <Table
-                columns={columns}
-                dataSource={sessions}
-                rowKey="id"
-                loading={loading}
-                scroll={{
-                  y: 'calc(100vh - 350px)', // 启用虚拟滚动
-                  x: 'max-content'
-                }}
-                pagination={{
-                  pageSize: isMobile ? 10 : 20,
-                  total: sessions.length,
-                  showSizeChanger: true,
-                  showQuickJumper: true,
-                  showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
-                  pageSizeOptions: ['10', '20', '50', '100'],
-                }}
-                style={{
-                  background: 'transparent'
-                }}
-                expandable={{
-                  expandedRowRender: (record: VisitSession) => {
-                    // 从 redemptionRecords state 中获取该 session 的所有兑换记录（包括待处理和已完成）
-                    const allRedemptionRecords = redemptionRecords.get(record.id) || [];
+              {loading ? (
+                <OrderSkeleton isMobile={false} />
+              ) : (
+                <Table
+                  columns={columns}
+                  dataSource={sessions}
+                  rowKey="id"
+                  loading={loading}
+                  virtual={sessions.length > 50}
+                  scroll={{
+                    y: 'calc(100vh - 350px)', // 启用虚拟滚动
+                    x: 'max-content'
+                  }}
+                  pagination={{
+                    pageSize: isMobile ? 10 : 20,
+                    total: sessions.length,
+                    showSizeChanger: true,
+                    showQuickJumper: true,
+                    showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
+                    pageSizeOptions: ['10', '20', '50', '100'],
+                  }}
+                  style={{
+                    background: 'transparent'
+                  }}
+                  expandable={{
+                    expandedRowRender: (record: VisitSession) => {
+                      // 从 redemptionRecords state 中获取该 session 的所有兑换记录（包括待处理和已完成）
+                      const allRedemptionRecords = redemptionRecords.get(record.id) || [];
 
-                    // 如果还没有加载，则加载
-                    if (allRedemptionRecords.length === 0 && record.status === 'pending') {
-                      loadRedemptionRecords(record.id);
-                    }
+                      // 如果还没有加载，则加载
+                      if (allRedemptionRecords.length === 0 && record.status === 'pending') {
+                        loadRedemptionRecords(record.id);
+                      }
 
-                    return (
-                      <div style={{ padding: '16px', background: 'rgba(255, 255, 255, 0.05)', marginLeft: 24, borderRadius: 8, border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                          <div style={{ fontWeight: 600, color: '#FFD700' }}>
-                            <GiftOutlined style={{ marginRight: 8 }} />
-                            {t('visitSessions.redemptionRecords')} ({allRedemptionRecords.length})
+                      return (
+                        <div style={{ padding: '16px', background: 'rgba(255, 255, 255, 0.05)', marginLeft: 24, borderRadius: 8, border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                            <div style={{ fontWeight: 600, color: '#FFD700' }}>
+                              <GiftOutlined style={{ marginRight: 8 }} />
+                              {t('visitSessions.redemptionRecords')} ({allRedemptionRecords.length})
+                            </div>
+                            {record.status === 'pending' && (
+                              <Button
+                                size="small"
+                                icon={<PlusOutlined />}
+                                onClick={() => {
+                                  setSelectedSession(record);
+                                  form.setFieldsValue({ items: [{ cigarId: undefined, quantity: 1 }] });
+                                  setAddRedemptionModalVisible(true);
+                                }}
+                                style={{
+                                  background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                                  border: 'none',
+                                  color: '#111',
+                                  fontWeight: 700
+                                }}
+                              >
+                                {t('visitSessions.addRedemption')}
+                              </Button>
+                            )}
                           </div>
-                          {record.status === 'pending' && (
-                            <Button
-                              size="small"
-                              icon={<PlusOutlined />}
-                              onClick={() => {
-                                setSelectedSession(record);
-                                form.setFieldsValue({ items: [{ cigarId: undefined, quantity: 1 }] });
-                                setAddRedemptionModalVisible(true);
-                              }}
-                              style={{
-                                background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                                border: 'none',
-                                color: '#111',
-                                fontWeight: 700
-                              }}
-                            >
-                              {t('visitSessions.addRedemption')}
-                            </Button>
+
+                          {allRedemptionRecords.length === 0 ? (
+                            <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>{t('visitSessions.noRedemptionRecords')}</Text>
+                          ) : (
+                            <div className="points-config-form">
+                              <Table
+                                dataSource={allRedemptionRecords}
+                                rowKey={(item) => item.id || `${record.id}-${item.createdAt}`}
+                                pagination={false}
+                                size="small"
+                                style={{
+                                  background: 'transparent'
+                                }}
+                                columns={[
+                                  {
+                                    title: t('visitSessions.status'),
+                                    dataIndex: 'status',
+                                    key: 'status',
+                                    width: 100,
+                                    render: (status: string) => {
+                                      if (status === 'pending') {
+                                        return <Tag color="orange">{t('visitSessions.statusToSelect')}</Tag>;
+                                      }
+                                      return <Tag color="green">{t('visitSessions.statusCompleted')}</Tag>;
+                                    }
+                                  },
+                                  {
+                                    title: t('visitSessions.cigarName'),
+                                    dataIndex: 'cigarName',
+                                    key: 'cigarName',
+                                    width: 200,
+                                    render: (name: string, record: any) => {
+                                      if (record.status === 'pending') {
+                                        return <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>{t('visitSessions.statusToSelect')}</Text>;
+                                      }
+                                      return <Text strong style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{name}</Text>;
+                                    }
+                                  },
+                                  {
+                                    title: t('visitSessions.quantity'),
+                                    dataIndex: 'quantity',
+                                    key: 'quantity',
+                                    width: 100,
+                                    align: 'center' as const,
+                                    render: (quantity: number) => (
+                                      <Tag color="blue">{quantity} {t('visitSessions.sticks')}</Tag>
+                                    )
+                                  },
+                                  {
+                                    title: t('visitSessions.redemptionTime'),
+                                    dataIndex: 'redeemedAt',
+                                    key: 'redeemedAt',
+                                    width: 180,
+                                    render: (date: Date) => {
+                                      if (!date) return '-';
+                                      // 处理 Firestore Timestamp 或 Date
+                                      const dateObj = date instanceof Date ? date : (date as any)?.toDate?.() || new Date(date);
+                                      return dayjs(dateObj).format('YYYY-MM-DD HH:mm:ss');
+                                    }
+                                  },
+                                  {
+                                    title: t('visitSessions.operator'),
+                                    dataIndex: 'redeemedBy',
+                                    key: 'redeemedBy',
+                                    width: 150,
+                                    render: (userId: string) => userId || '-'
+                                  },
+                                  {
+                                    title: t('visitSessions.actions'),
+                                    key: 'action',
+                                    width: 100,
+                                    render: (_: any, redemptionRecord: any) => {
+                                      // 允许管理员编辑所有兑换记录（无论状态如何）
+                                      return (
+                                        <Button
+                                          type="link"
+                                          size="small"
+                                          icon={<EditOutlined />}
+                                          onClick={() => {
+                                            setSelectedRedemptionRecord(redemptionRecord);
+                                            setSelectedSession(record);
+                                            form.setFieldsValue({
+                                              cigarId: redemptionRecord.cigarId || undefined,
+                                              quantity: redemptionRecord.quantity || 1
+                                            });
+                                            setEditRedemptionModalVisible(true);
+                                          }}
+                                        >
+                                          {t('common.edit')}
+                                        </Button>
+                                      );
+                                    }
+                                  }
+                                ]}
+                              />
+                            </div>
                           )}
                         </div>
-
-                        {allRedemptionRecords.length === 0 ? (
-                          <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>{t('visitSessions.noRedemptionRecords')}</Text>
-                        ) : (
-                          <div className="points-config-form">
-                            <Table
-                              dataSource={allRedemptionRecords}
-                              rowKey={(item) => item.id || `${record.id}-${item.createdAt}`}
-                              pagination={false}
-                              size="small"
-                              style={{
-                                background: 'transparent'
-                              }}
-                              columns={[
-                                {
-                                  title: t('visitSessions.status'),
-                                  dataIndex: 'status',
-                                  key: 'status',
-                                  width: 100,
-                                  render: (status: string) => {
-                                    if (status === 'pending') {
-                                      return <Tag color="orange">{t('visitSessions.statusToSelect')}</Tag>;
-                                    }
-                                    return <Tag color="green">{t('visitSessions.statusCompleted')}</Tag>;
-                                  }
-                                },
-                                {
-                                  title: t('visitSessions.cigarName'),
-                                  dataIndex: 'cigarName',
-                                  key: 'cigarName',
-                                  width: 200,
-                                  render: (name: string, record: any) => {
-                                    if (record.status === 'pending') {
-                                      return <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>{t('visitSessions.statusToSelect')}</Text>;
-                                    }
-                                    return <Text strong style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{name}</Text>;
-                                  }
-                                },
-                                {
-                                  title: t('visitSessions.quantity'),
-                                  dataIndex: 'quantity',
-                                  key: 'quantity',
-                                  width: 100,
-                                  align: 'center' as const,
-                                  render: (quantity: number) => (
-                                    <Tag color="blue">{quantity} {t('visitSessions.sticks')}</Tag>
-                                  )
-                                },
-                                {
-                                  title: t('visitSessions.redemptionTime'),
-                                  dataIndex: 'redeemedAt',
-                                  key: 'redeemedAt',
-                                  width: 180,
-                                  render: (date: Date) => {
-                                    if (!date) return '-';
-                                    // 处理 Firestore Timestamp 或 Date
-                                    const dateObj = date instanceof Date ? date : (date as any)?.toDate?.() || new Date(date);
-                                    return dayjs(dateObj).format('YYYY-MM-DD HH:mm:ss');
-                                  }
-                                },
-                                {
-                                  title: t('visitSessions.operator'),
-                                  dataIndex: 'redeemedBy',
-                                  key: 'redeemedBy',
-                                  width: 150,
-                                  render: (userId: string) => userId || '-'
-                                },
-                                {
-                                  title: t('visitSessions.actions'),
-                                  key: 'action',
-                                  width: 100,
-                                  render: (_: any, redemptionRecord: any) => {
-                                    // 允许管理员编辑所有兑换记录（无论状态如何）
-                                    return (
-                                      <Button
-                                        type="link"
-                                        size="small"
-                                        icon={<EditOutlined />}
-                                        onClick={() => {
-                                          setSelectedRedemptionRecord(redemptionRecord);
-                                          setSelectedSession(record);
-                                          form.setFieldsValue({
-                                            cigarId: redemptionRecord.cigarId || undefined,
-                                            quantity: redemptionRecord.quantity || 1
-                                          });
-                                          setEditRedemptionModalVisible(true);
-                                        }}
-                                      >
-                                        {t('common.edit')}
-                                      </Button>
-                                    );
-                                  }
-                                }
-                              ]}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  },
-                  onExpand: (expanded, record) => {
-                    if (expanded) {
-                      // 展开时加载兑换记录
-                      loadRedemptionRecords(record.id);
+                      );
+                    },
+                    onExpand: (expanded, record) => {
+                      if (expanded) {
+                        // 展开时加载兑换记录
+                        loadRedemptionRecords(record.id);
+                      }
+                    },
+                    rowExpandable: (record: VisitSession) => {
+                      // 如果有兑换记录或状态为pending，可以展开
+                      return true; // 总是可以展开，以便查看是否有待处理的记录
                     }
-                  },
-                  rowExpandable: (record: VisitSession) => {
-                    // 如果有兑换记录或状态为pending，可以展开
-                    return true; // 总是可以展开，以便查看是否有待处理的记录
-                  }
-                }}
-              />
+                  }}
+                />
+              )}
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {loading ? (
-                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'rgba(255, 255, 255, 0.6)' }}>
-                  <Spin />
-                </div>
+                <OrderSkeleton isMobile={true} />
               ) : sessions.length === 0 ? (
                 <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>
                   {t('visitSessions.noVisitSessions')}

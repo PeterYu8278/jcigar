@@ -36,18 +36,14 @@ export const getCloudinaryConfig = (): CloudinaryConfig => {
   const secure = true
 
   if (!cloudName || !apiKey || !apiSecret) {
-    throw new Error('Cloudinary 配置不完整。请检查环境变量 VITE_CLOUDINARY_CLOUD_NAME, VITE_CLOUDINARY_API_KEY, VITE_CLOUDINARY_API_SECRET')
-  }
-
-  if (!uploadPreset) {
-    throw new Error('Cloudinary Upload Preset 未配置。请检查环境变量 VITE_CLOUDINARY_UPLOAD_PRESET')
+    console.warn('Cloudinary 配置不完整。请检查环境变量 VITE_CLOUDINARY_CLOUD_NAME, VITE_CLOUDINARY_API_KEY, VITE_CLOUDINARY_API_SECRET')
   }
 
   return {
-    cloudName,
-    apiKey,
-    apiSecret,
-    uploadPreset,
+    cloudName: cloudName || '',
+    apiKey: apiKey || '',
+    apiSecret: apiSecret || '',
+    uploadPreset: uploadPreset || '',
     baseFolder: baseFolder || '',
     secure
   }

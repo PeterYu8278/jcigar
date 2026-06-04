@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense, lazy } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Layout, App as AntApp } from 'antd'
 import AppHeader from './components/layout/AppHeader'
@@ -11,43 +11,44 @@ import { useAuthStore } from './store/modules/auth'
 import { getAppConfig } from './services/firebase/appConfig'
 import { applyDynamicIcons } from './utils/dynamicManifest'
 import { saveAppConfigToIndexedDB } from './utils/indexedDB'
+import { PageLoading } from './components/common/LoadingSpinner'
 
-// 前端页面
-import Home from './views/frontend/Home'
-import Events from './views/frontend/Events'
-import Shop from './views/frontend/Shop'
-import Profile from './views/frontend/Profile'
-import BrandDetail from './views/frontend/BrandDetail'
-import ReloadPage from './views/frontend/Reload'
-import AICigarHistory from './views/frontend/AICigarHistory'
-import Landing from './views/frontend/Landing'
+// --- 前端页面 (Lazy Loaded) ---
+const Home = lazy(() => import('./views/frontend/Home'))
+const Events = lazy(() => import('./views/frontend/Events'))
+const Shop = lazy(() => import('./views/frontend/Shop'))
+const Profile = lazy(() => import('./views/frontend/Profile'))
+const BrandDetail = lazy(() => import('./views/frontend/BrandDetail'))
+const ReloadPage = lazy(() => import('./views/frontend/Reload'))
+const AICigarHistory = lazy(() => import('./views/frontend/AICigarHistory'))
+const Landing = lazy(() => import('./views/frontend/Landing'))
 
-// 管理后台页面
-import AdminDashboard from './views/admin/Dashboard'
-import AdminUsers from './views/admin/Users'
-import AdminInventory from './views/admin/Inventory'
-import AdminEvents from './views/admin/Events'
-import AdminOrders from './views/admin/Orders'
-import AdminFinance from './views/admin/Finance'
-import CloudinaryTestPage from './views/admin/CloudinaryTest'
-import PerformanceMonitor from './components/admin/PerformanceMonitor'
-import EventOrderDebug from './views/admin/EventOrderDebug'
-import PointsConfigPage from './views/admin/PointsConfig'
-import VisitSessionsPage from './views/admin/VisitSessions'
-import OrphanedUserCleanup from './views/admin/OrphanedUserCleanup'
-import FeatureManagement from './views/admin/FeatureManagement'
-import TestDataGenerator from './views/admin/TestDataGenerator'
-import CigarDatabase from './views/admin/CigarDatabase'
-import GeminiModelTester from './views/admin/GeminiModelTester'
-import InvoiceTemplateEditor from './views/admin/InvoiceTemplate'
-import { SubscriptionSettings } from './views/admin/SubscriptionSettings'
-import StoreManagement from './views/admin/StoreManagement'
-import AdminReports from './views/admin/Reports'
+// --- 管理后台页面 (Lazy Loaded) ---
+const AdminDashboard = lazy(() => import('./views/admin/Dashboard'))
+const AdminUsers = lazy(() => import('./views/admin/Users'))
+const AdminInventory = lazy(() => import('./views/admin/Inventory'))
+const AdminEvents = lazy(() => import('./views/admin/Events'))
+const AdminOrders = lazy(() => import('./views/admin/Orders'))
+const AdminFinance = lazy(() => import('./views/admin/Finance'))
+const CloudinaryTestPage = lazy(() => import('./views/admin/CloudinaryTest'))
+const PerformanceMonitor = lazy(() => import('./components/admin/PerformanceMonitor'))
+const EventOrderDebug = lazy(() => import('./views/admin/EventOrderDebug'))
+const PointsConfigPage = lazy(() => import('./views/admin/PointsConfig'))
+const VisitSessionsPage = lazy(() => import('./views/admin/VisitSessions'))
+const OrphanedUserCleanup = lazy(() => import('./views/admin/OrphanedUserCleanup'))
+const FeatureManagement = lazy(() => import('./views/admin/FeatureManagement'))
+const TestDataGenerator = lazy(() => import('./views/admin/TestDataGenerator'))
+const CigarDatabase = lazy(() => import('./views/admin/CigarDatabase'))
+const GeminiModelTester = lazy(() => import('./views/admin/GeminiModelTester'))
+const InvoiceTemplateEditor = lazy(() => import('./views/admin/InvoiceTemplate'))
+const SubscriptionSettings = lazy(() => import('./views/admin/SubscriptionSettings').then(m => ({ default: m.SubscriptionSettings })))
+const StoreManagement = lazy(() => import('./views/admin/StoreManagement'))
+const AdminReports = lazy(() => import('./views/admin/Reports'))
 
-// 认证页面
-import Login from './views/auth/Login'
-import Register from './views/auth/Register'
-import CompleteProfile from './views/auth/CompleteProfile'
+// --- 认证页面 (Lazy Loaded) ---
+const Login = lazy(() => import('./views/auth/Login'))
+const Register = lazy(() => import('./views/auth/Register'))
+const CompleteProfile = lazy(() => import('./views/auth/CompleteProfile'))
 
 const { Content } = Layout
 
@@ -295,46 +296,48 @@ const AppContent: React.FC = () => {
             }} />
 
             <div style={{ position: 'relative', zIndex: 1 }}>
-              <Routes>
-                {/* 认证路由 */}
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/auth/complete-profile" element={<CompleteProfile />} />
+              <Suspense fallback={<PageLoading />}>
+                <Routes>
+                  {/* 认证路由 */}
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/auth/complete-profile" element={<CompleteProfile />} />
 
-                {/* 前端路由 */}
-                <Route path="/" element={user ? <Home /> : <Landing />} />
-                <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
-                <Route path="/shop" element={<ProtectedRoute roles={['member', 'vip', 'superAdmin', 'developer']}><Shop /></ProtectedRoute>} />
-                <Route path="/profile" element={<ProtectedRoute roles={['member', 'vip', 'superAdmin', 'developer']}><Profile /></ProtectedRoute>} />
-                <Route path="/ai-cigar-history" element={<ProtectedRoute roles={['member', 'vip', 'superAdmin', 'developer']}><AICigarHistory /></ProtectedRoute>} />
-                <Route path="/reload" element={<ProtectedRoute roles={['member', 'vip', 'superAdmin', 'developer']}><ReloadPage /></ProtectedRoute>} />
-                <Route path="/brand/:brandId" element={<ProtectedRoute roles={['member', 'vip', 'superAdmin', 'developer']}><BrandDetail /></ProtectedRoute>} />
+                  {/* 前端路由 */}
+                  <Route path="/" element={user ? <Home /> : <Landing />} />
+                  <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
+                  <Route path="/shop" element={<ProtectedRoute roles={['member', 'vip', 'superAdmin', 'developer']}><Shop /></ProtectedRoute>} />
+                  <Route path="/profile" element={<ProtectedRoute roles={['member', 'vip', 'superAdmin', 'developer']}><Profile /></ProtectedRoute>} />
+                  <Route path="/ai-cigar-history" element={<ProtectedRoute roles={['member', 'vip', 'superAdmin', 'developer']}><AICigarHistory /></ProtectedRoute>} />
+                  <Route path="/reload" element={<ProtectedRoute roles={['member', 'vip', 'superAdmin', 'developer']}><ReloadPage /></ProtectedRoute>} />
+                  <Route path="/brand/:brandId" element={<ProtectedRoute roles={['member', 'vip', 'superAdmin', 'developer']}><BrandDetail /></ProtectedRoute>} />
 
-                {/* 管理后台路由 */}
-                <Route path="/admin" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminDashboard /></ProtectedRoute>} />
-                <Route path="/admin/users" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminUsers /></ProtectedRoute>} />
-                <Route path="/admin/inventory" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminInventory /></ProtectedRoute>} />
-                <Route path="/admin/events" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminEvents /></ProtectedRoute>} />
-                <Route path="/admin/orders" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminOrders /></ProtectedRoute>} />
-                <Route path="/admin/reports" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminReports /></ProtectedRoute>} />
-                <Route path="/admin/finance" element={<ProtectedRoute roles={['superAdmin', 'developer']}><AdminFinance /></ProtectedRoute>} />
-                <Route path="/admin/points-config" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><PointsConfigPage /></ProtectedRoute>} />
-                <Route path="/admin/visit-sessions" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><VisitSessionsPage /></ProtectedRoute>} />
-                <Route path="/admin/stores" element={<ProtectedRoute roles={['superAdmin', 'developer']}><StoreManagement /></ProtectedRoute>} />
-                <Route path="/developer/orphaned-users" element={<ProtectedRoute roles={['developer']}><OrphanedUserCleanup /></ProtectedRoute>} />
-                <Route path="/developer/performance" element={<ProtectedRoute roles={['developer']}><PerformanceMonitor /></ProtectedRoute>} />
-                <Route path="/developer/feature-management" element={<ProtectedRoute roles={['developer']}><FeatureManagement /></ProtectedRoute>} />
-                <Route path="/developer/subscription" element={<ProtectedRoute roles={['developer']}><SubscriptionSettings /></ProtectedRoute>} />
-                <Route path="/developer/invoice-template" element={<ProtectedRoute roles={['developer']}><InvoiceTemplateEditor /></ProtectedRoute>} />
-                <Route path="/developer/cigar-database" element={<ProtectedRoute roles={['developer']}><CigarDatabase /></ProtectedRoute>} />
-                <Route path="/developer/gemini-tester" element={<ProtectedRoute roles={['developer']}><GeminiModelTester /></ProtectedRoute>} />
-                <Route path="/developer/cloudinary-test" element={<ProtectedRoute roles={['developer']}><CloudinaryTestPage /></ProtectedRoute>} />
-                <Route path="/developer/debug-orders" element={<ProtectedRoute roles={['developer']}><EventOrderDebug /></ProtectedRoute>} />
-                <Route path="/developer/test-data-generator" element={<ProtectedRoute roles={['developer']}><TestDataGenerator /></ProtectedRoute>} />
+                  {/* 管理后台路由 */}
+                  <Route path="/admin" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminDashboard /></ProtectedRoute>} />
+                  <Route path="/admin/users" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminUsers /></ProtectedRoute>} />
+                  <Route path="/admin/inventory" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminInventory /></ProtectedRoute>} />
+                  <Route path="/admin/events" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminEvents /></ProtectedRoute>} />
+                  <Route path="/admin/orders" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminOrders /></ProtectedRoute>} />
+                  <Route path="/admin/reports" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminReports /></ProtectedRoute>} />
+                  <Route path="/admin/finance" element={<ProtectedRoute roles={['superAdmin', 'developer']}><AdminFinance /></ProtectedRoute>} />
+                  <Route path="/admin/points-config" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><PointsConfigPage /></ProtectedRoute>} />
+                  <Route path="/admin/visit-sessions" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><VisitSessionsPage /></ProtectedRoute>} />
+                  <Route path="/admin/stores" element={<ProtectedRoute roles={['superAdmin', 'developer']}><StoreManagement /></ProtectedRoute>} />
+                  <Route path="/developer/orphaned-users" element={<ProtectedRoute roles={['developer']}><OrphanedUserCleanup /></ProtectedRoute>} />
+                  <Route path="/developer/performance" element={<ProtectedRoute roles={['developer']}><PerformanceMonitor /></ProtectedRoute>} />
+                  <Route path="/developer/feature-management" element={<ProtectedRoute roles={['developer']}><FeatureManagement /></ProtectedRoute>} />
+                  <Route path="/developer/subscription" element={<ProtectedRoute roles={['developer']}><SubscriptionSettings /></ProtectedRoute>} />
+                  <Route path="/developer/invoice-template" element={<ProtectedRoute roles={['developer']}><InvoiceTemplateEditor /></ProtectedRoute>} />
+                  <Route path="/developer/cigar-database" element={<ProtectedRoute roles={['developer']}><CigarDatabase /></ProtectedRoute>} />
+                  <Route path="/developer/gemini-tester" element={<ProtectedRoute roles={['developer']}><GeminiModelTester /></ProtectedRoute>} />
+                  <Route path="/developer/cloudinary-test" element={<ProtectedRoute roles={['developer']}><CloudinaryTestPage /></ProtectedRoute>} />
+                  <Route path="/developer/debug-orders" element={<ProtectedRoute roles={['developer']}><EventOrderDebug /></ProtectedRoute>} />
+                  <Route path="/developer/test-data-generator" element={<ProtectedRoute roles={['developer']}><TestDataGenerator /></ProtectedRoute>} />
 
-                {/* 默认重定向 */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
+                  {/* 默认重定向 */}
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </Suspense>
             </div>
           </Content>
           {user && !isAuthPage && <AppFooter />}

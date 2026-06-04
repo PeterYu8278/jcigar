@@ -1,5 +1,3 @@
-import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
 import { createRoot } from 'react-dom/client'
 import React from 'react'
 import { InvoiceA4Render, mapBusinessDataToInvoiceModel } from '@/views/admin/InvoiceTemplate/InvoiceA4Render'
@@ -57,7 +55,13 @@ export const generateInvoicePdfAndDownload = async (payload: InvoicePdfPayload) 
       )
     })
 
-    // 4. 捕获 DOM 为 Canvas
+    // 4. 动态加载重型库
+    const [jsPDF, html2canvas] = await Promise.all([
+      import('jspdf').then(m => m.default || m.jsPDF),
+      import('html2canvas').then(m => m.default)
+    ])
+
+    // 5. 捕获 DOM 为 Canvas
     const canvas = await html2canvas(container.firstElementChild as HTMLElement, {
       scale: 2, // 提高清晰度
       useCORS: true,

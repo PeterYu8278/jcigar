@@ -5,6 +5,8 @@
 
 import { precacheAndRoute } from 'workbox-precaching'
 import { registerRoute } from 'workbox-routing'
+import { CacheFirst, StaleWhileRevalidate } from 'workbox-strategies'
+import { ExpirationPlugin } from 'workbox-expiration'
 
 declare const self: ServiceWorkerGlobalScope
 
@@ -40,6 +42,42 @@ registerRoute(
       })
     }
   }
+)
+
+// 缓存字体文件（Cache First）
+registerRoute(
+  ({ request }) => request.destination === 'font',
+  new CacheFirst({
+    cacheName: 'google-fonts-stylesheets',
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 10,
+        maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+      }),
+    ],
+  })
+)
+
+// 缓存图片（Cache First）
+registerRoute(
+  ({ request }) => request.destination === 'image',
+  new CacheFirst({
+    cacheName: 'images',
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 50,
+        maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+      }),
+    ],
+  })
+)
+
+// 静态资源（Stale While Revalidate）
+registerRoute(
+  ({ request }) => ['script', 'style'].includes(request.destination),
+  new StaleWhileRevalidate({
+    cacheName: 'static-resources',
+  })
 )
 
 /**

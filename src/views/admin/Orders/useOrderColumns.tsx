@@ -17,16 +17,17 @@ interface UseOrderColumnsProps {
   onOrderUpdate: () => void
 }
 
-export const useOrderColumns = ({
+export const getOrderColumns = ({
   users,
   cigars,
   transactions,
   orders,
   onViewOrder,
   onDeleteOrder,
-  onOrderUpdate
-}: UseOrderColumnsProps) => {
-  const { t, i18n } = useTranslation()
+  onOrderUpdate,
+  t,
+  i18n
+}: UseOrderColumnsProps & { t: any, i18n: any }) => {
 
   // 计算订单匹配状态
   const getOrderMatchStatus = (orderId: string) => {

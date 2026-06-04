@@ -11,7 +11,6 @@ import {
   HistoryOutlined
 } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
-import * as XLSX from 'xlsx'
 import dayjs from 'dayjs'
 import { 
   getUsers, 
@@ -38,11 +37,23 @@ const AdminReports: React.FC = () => {
   // Date range states
   const [orderRange, setOrderRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null)
   const [eventRange, setEventRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null)
+  const [inventoryRange, setInventoryRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null)
 
-  const downloadExcel = (data: any[], fileName: string, sheetName: string) => {
+  const downloadExcel = async (data: any[], fileName: string, sheetName: string) => {
+    const XLSX = await import('xlsx')
     const worksheet = XLSX.utils.json_to_sheet(data)
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
+    XLSX.writeFile(workbook, `${fileName}_${dayjs().format('YYYYMMDD_HHmmss')}.xlsx`)
+  }
+
+  const downloadMultiSheetExcel = async (sheets: { data: any[]; name: string }[], fileName: string) => {
+    const XLSX = await import('xlsx')
+    const workbook = XLSX.utils.book_new()
+    for (const sheet of sheets) {
+      const worksheet = XLSX.utils.json_to_sheet(sheet.data)
+      XLSX.utils.book_append_sheet(workbook, worksheet, sheet.name)
+    }
     XLSX.writeFile(workbook, `${fileName}_${dayjs().format('YYYYMMDD_HHmmss')}.xlsx`)
   }
 
@@ -96,13 +107,58 @@ const AdminReports: React.FC = () => {
         getAllOutboundOrders()
       ])
 
-      // Compute stock using the same logic as AdminInventory
-      const stockMap = new Map<string, number>()
+      const cigarMap = new Map(cigars.map(c => [c.id, c]))
+
+      // --- Sheet 1: Movements (filtered by date range if set) ---
+      let filteredMovements = movements
+      if (inventoryRange) {
+        const [start, end] = inventoryRange
+        filteredMovements = movements.filter(m => {
+          const date = dayjs((m.createdAt as any)?.toDate?.() || m.createdAt)
+          return date.isAfter(start.startOf('day')) && date.isBefore(end.endOf('day'))
+        })
+      }
+
+      const movementsData = [...filteredMovements]
+        .sort((a, b) => {
+          const da = dayjs((a.createdAt as any)?.toDate?.() || a.createdAt)
+          const db = dayjs((b.createdAt as any)?.toDate?.() || b.createdAt)
+          return db.valueOf() - da.valueOf()
+        })
+        .map(m => {
+          let orderStatus = '-'
+          if (m.inboundOrderId) {
+            const ord = inOrders.find(o => o.id === m.inboundOrderId)
+            orderStatus = ord?.status || '-'
+          } else if (m.outboundOrderId) {
+            const ord = outOrders.find(o => o.id === m.outboundOrderId)
+            orderStatus = ord?.status || '-'
+          }
+          return {
+            'Date': m.createdAt ? dayjs((m.createdAt as any)?.toDate?.() || m.createdAt).format('YYYY-MM-DD HH:mm:ss') : '-',
+            'Reference No': m.referenceNo || '-',
+            'Direction': m.type === 'in' ? 'Inbound' : 'Outbound',
+            'Product Name': m.cigarName || cigarMap.get(m.cigarId)?.name || m.cigarId || '-',
+            'Item Type': m.itemType || '-',
+            'Quantity': m.type === 'in' ? m.quantity : -m.quantity,
+            'Unit Price': m.unitPrice ?? 0,
+            'Reason': m.reason || '-',
+            'Order Status': orderStatus
+          }
+        })
+
+      // --- Sheet 2: Inventory – opening stock, closing stock, avg cost ---
+      // Opening stock = all movements BEFORE date range start (0 when no range)
+      // Closing stock = all movements UP TO date range end (all-time when no range)
+      // Avg Stock Cost = weighted average unit price across all inbound movements
+      const openingStockMap = new Map<string, number>()
+      const closingStockMap = new Map<string, number>()
+      const totalInboundCostMap = new Map<string, number>()
+      const totalInboundQtyMap = new Map<string, number>()
+
       for (const m of movements) {
         const id = m.cigarId
         if (!id || (m.itemType && m.itemType !== 'cigar')) continue
-
-        // Filter out cancelled orders
         if (m.inboundOrderId) {
           const order = inOrders.find(o => o.id === m.inboundOrderId)
           if (order && order.status === 'cancelled') continue
@@ -111,23 +167,63 @@ const AdminReports: React.FC = () => {
           const order = outOrders.find(o => o.id === m.outboundOrderId)
           if (order && order.status === 'cancelled') continue
         }
-
         const qty = Number.isFinite(m.quantity) ? Math.floor(m.quantity) : 0
-        const prev = stockMap.get(id) ?? 0
-        stockMap.set(id, m.type === 'in' ? prev + qty : prev - qty)
+        const movDate = dayjs((m.createdAt as any)?.toDate?.() || m.createdAt)
+
+        if (inventoryRange) {
+          const [start, end] = inventoryRange
+          // Opening: strictly before the start of the selected range
+          if (movDate.isBefore(start.startOf('day'))) {
+            const prev = openingStockMap.get(id) ?? 0
+            openingStockMap.set(id, m.type === 'in' ? prev + qty : prev - qty)
+          }
+          // Closing: up to and including the end of the selected range
+          if (!movDate.isAfter(end.endOf('day'))) {
+            const prev = closingStockMap.get(id) ?? 0
+            closingStockMap.set(id, m.type === 'in' ? prev + qty : prev - qty)
+          }
+        } else {
+          // No range → closing = current all-time stock; opening stays 0
+          const prev = closingStockMap.get(id) ?? 0
+          closingStockMap.set(id, m.type === 'in' ? prev + qty : prev - qty)
+        }
+
+        // Weighted average cost from inbound movements that have a unit price
+        if (m.type === 'in' && m.unitPrice && m.unitPrice > 0) {
+          totalInboundCostMap.set(id, (totalInboundCostMap.get(id) ?? 0) + qty * m.unitPrice)
+          totalInboundQtyMap.set(id, (totalInboundQtyMap.get(id) ?? 0) + qty)
+        }
       }
 
-      const exportData = cigars.map(c => ({
-        'Brand': c.brand || '-',
-        'Product Name': c.name || '-',
-        'Origin': c.origin || '-',
-        'Specification': c.size || '-',
-        'Price': c.price || 0,
-        'Stock': stockMap.get(c.id) ?? 0,
-        'Unit': t('shop.sticks'),
-        'Created At': c.createdAt ? dayjs((c.createdAt as any)?.toDate?.() || c.createdAt).format('YYYY-MM-DD HH:mm:ss') : '-'
-      }))
-      downloadExcel(exportData, 'Inventory_Report', 'Inventory')
+      const inventoryData = cigars.map(c => {
+        const openingStock = openingStockMap.get(c.id) ?? 0
+        const closingStock = closingStockMap.get(c.id) ?? 0
+        const totalCost = totalInboundCostMap.get(c.id) ?? 0
+        const totalQty = totalInboundQtyMap.get(c.id) ?? 0
+        const avgCost = totalQty > 0 ? parseFloat((totalCost / totalQty).toFixed(2)) : 0
+        const stockValue = parseFloat((closingStock * avgCost).toFixed(2))
+        return {
+          'Brand': c.brand || '-',
+          'Product Name': c.name || '-',
+          'Origin': c.origin || '-',
+          'Specification': c.size || '-',
+          'Selling Price (RM)': c.price || 0,
+          'Opening Stock': openingStock,
+          'Closing Stock': closingStock,
+          'Buying Price (RM)': avgCost,
+          'Stock Value (RM)': stockValue,
+          'Unit': t('shop.sticks'),
+          'Created At': c.createdAt ? dayjs((c.createdAt as any)?.toDate?.() || c.createdAt).format('YYYY-MM-DD HH:mm:ss') : '-'
+        }
+      })
+
+      await downloadMultiSheetExcel(
+        [
+          { data: movementsData, name: 'Movements' },
+          { data: inventoryData, name: 'Inventory' }
+        ],
+        'Inventory_Report'
+      )
       message.success(t('messages.operationSuccess'))
     } catch (error) {
       console.error('Export inventory error:', error)
@@ -258,8 +354,11 @@ const AdminReports: React.FC = () => {
       key: 'inventory',
       title: t('navigation.inventory'),
       icon: <DatabaseOutlined style={{ fontSize: 32, color: '#52c41a' }} />,
-      description: 'Export current cigar stock levels, prices and specifications.',
+      description: 'Export inventory movements (Sheet 1) and opening stock levels (Sheet 2). Optionally filter movements by date range.',
       action: exportInventory,
+      hasFilter: true,
+      range: inventoryRange,
+      setRange: setInventoryRange,
       color: '#52c41a'
     },
     {

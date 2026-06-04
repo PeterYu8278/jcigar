@@ -240,10 +240,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       const year = date.getFullYear();
       return `${day} ${month}, ${year}`;
     }
-    return date.toLocaleDateString('zh-CN', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    return date.toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
   }
 
@@ -331,7 +331,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           }}>
             <span>{getMembershipText(user.membership?.level || 'bronze')}</span>
             <div style={{ width: '1px', height: '16px', background: 'rgba(255, 255, 255, 0.2)' }} />
-            <span>{t('usersAdmin.points')}: {(user.membership as any)?.points || 0}</span>
+            <span>{t('profile.points')}: {(user.membership as any)?.points || 0}</span>
           </div>
           <div style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.6)' }}>
             <p style={{ margin: '4px 0' }}>{t('auth.email')}: {user.email || '-'}</p>
@@ -362,7 +362,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 color: '#111',
               }}
             >
-              {t('usersAdmin.editProfile')}
+              {t('profile.editProfile')}
             </Button>
           </div>
         )}
@@ -672,9 +672,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       ? (record.createdAt as any).toDate()
                       : new Date(record.createdAt)
 
-                    const getSourceText = (source: string) => {
-                      return t(`pointsConfig.records.sources.${source}`) || source
-                    }
+                  const getSourceText = (source: string) => {
+                    return t(`pointsConfig.records.sources.${source}`) || source
+                  }
 
                   return (
                     <Card
@@ -689,8 +689,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         <div style={{ flex: 1 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                             <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
-                                {formatDate(recordDate)}
-                              </Text>
+                              {formatDate(recordDate)}
+                            </Text>
                             <span style={{ color: 'rgba(255, 255, 255, 0.3)' }}>•</span>
                             <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
                               {getSourceText(record.source)}

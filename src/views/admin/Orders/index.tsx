@@ -7,7 +7,7 @@ import BatchDeleteButton from '../../../components/common/BatchDeleteButton'
 import CreateButton from '../../../components/common/CreateButton'
 import OrderDetails from './OrderDetails'
 import CreateOrderForm from './CreateOrderForm'
-import { useOrderColumns } from './useOrderColumns'
+import { getOrderColumns } from './useOrderColumns'
 import InvoiceManagementTab from './InvoiceManagementTab'
 import type { Order, User, Cigar, Transaction, OutboundOrder, InventoryMovement, AppConfig } from '../../../types'
 import { getAllOrders, getUsers, getCigars, updateDocument, deleteDocument, COLLECTIONS, getAllTransactions, getAllOutboundOrders, getAllInventoryMovements, deleteOutboundOrder } from '../../../services/firebase/firestore'
@@ -19,6 +19,7 @@ import { getModalThemeStyles, getModalWidth, getResponsiveModalConfig } from '..
 import { getAppConfig } from '../../../services/firebase/appConfig'
 import { useAuthStore } from '../../../store/modules/auth'
 import { refundOrderPoints, deleteOrderWithRefund } from '../../../services/firebase/orders'
+import { OrderSkeleton, StatsSkeleton } from '../../../components/features/admin/OrderSkeleton'
 
 const { Search } = Input
 const { Option } = Select
@@ -292,23 +293,34 @@ const AdminOrders: React.FC = () => {
     return sortOrders(filtered, sortDesc)
   }, [filtered, sortDesc])
 
-  const columns = useOrderColumns({
+  const handleViewOrder = React.useCallback((order: Order) => { 
+    setViewing(order); 
+    setIsEditingInView(false); 
+  }, []);
+
+  const handleDeleteOrder = React.useCallback(async (id: string) => {
+    // 先退还积分并清理记录（如果是积分支付的订单）
+    await deleteOrderWithRefund(id)
+    await deleteOrderFromEventAllocations(id)
+    await deleteOrderOutboundRecords(id)
+    return await deleteDocument(COLLECTIONS.ORDERS, id)
+  }, [authUser?.storeId, isSuperAdmin]);
+
+  const handleOrderUpdate = React.useCallback(async () => {
+    await refreshPaginated()
+  }, [refreshPaginated]);
+
+  const columns = useMemo(() => getOrderColumns({
     users,
     cigars,
     transactions,
     orders,
-    onViewOrder: (order) => { setViewing(order); setIsEditingInView(false) },
-    onDeleteOrder: async (id) => {
-      // 先退还积分并清理记录（如果是积分支付的订单）
-      await deleteOrderWithRefund(id)
-      await deleteOrderFromEventAllocations(id)
-      await deleteOrderOutboundRecords(id)
-      return await deleteDocument(COLLECTIONS.ORDERS, id)
-    },
-    onOrderUpdate: async () => {
-      await refreshPaginated()
-    }
-  })
+    onViewOrder: handleViewOrder,
+    onDeleteOrder: handleDeleteOrder,
+    onOrderUpdate: handleOrderUpdate,
+    t,
+    i18n
+  }), [users, cigars, transactions, orders, handleViewOrder, handleDeleteOrder, handleOrderUpdate, t, i18n.language]);
 
   return (
     <div
@@ -565,113 +577,124 @@ const AdminOrders: React.FC = () => {
                 >
                   {!isMobile ? (
                     <div className="points-config-form">
-                      <Table
-                        columns={columns}
-                        dataSource={filteredSorted}
-                        rowKey="id"
-                        loading={loading || paginatedLoading}
-                        rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
-                        scroll={{
-                          y: 'calc(100vh - 350px)', // 启用虚拟滚动
-                          x: 'max-content'
-                        }}
+                      {loading || paginatedLoading ? (
+                        <OrderSkeleton isMobile={false} />
+                      ) : (
+                        <Table
+                          columns={columns}
+                          dataSource={filteredSorted}
+                          rowKey="id"
+                          loading={loading || paginatedLoading}
+                          rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
+                          virtual={filteredSorted.length > 50}
+                          scroll={{
+                            y: 'calc(100vh - 350px)',
+                            x: 'max-content'
+                          }}
 
-                        pagination={{
-                          current: pagination.current,
-                          pageSize: pagination.pageSize,
-                          total: filteredSorted.length,
-                          showSizeChanger: true,
-                          showQuickJumper: false,
-                          showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
-                          onChange: handlePaginationChange,
-                          onShowSizeChange: handlePaginationChange,
-                          pageSizeOptions: ['10', '20', '50', '100'],
-                          style: { color: '#fff' }
-                        }}
-                        style={{
-                          background: 'transparent'
-                        }}
-                      />
+                          pagination={{
+                            current: pagination.current,
+                            pageSize: pagination.pageSize,
+                            total: filteredSorted.length,
+                            showSizeChanger: true,
+                            showQuickJumper: false,
+                            showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
+                            onChange: handlePaginationChange,
+                            onShowSizeChange: handlePaginationChange,
+                            pageSizeOptions: ['10', '20', '50', '100'],
+                            style: { color: '#fff' }
+                          }}
+                          style={{
+                            background: 'transparent'
+                          }}
+                        />
+                      )}
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      {filteredSorted.map((order: Order) => {
-                        const matchStatus = getOrderMatchStatus(order.id)
-                        const createdDate = order.createdAt ?
-                          (typeof (order.createdAt as any).toDate === 'function' ? (order.createdAt as any).toDate() : order.createdAt)
-                          : new Date()
-                        const formattedDate = dayjs(createdDate).isValid() ? dayjs(createdDate).format(i18n.language === 'en-US' ? 'D MMM, YYYY' : 'YYYY-MM-DD') : '-'
+                      {loading || paginatedLoading ? (
+                        <OrderSkeleton isMobile={true} />
+                      ) : (
+                        <>
+                          {filteredSorted.map((order: Order) => {
+                            const matchStatus = getOrderMatchStatus(order.id)
+                            const createdDate = order.createdAt ?
+                              (typeof (order.createdAt as any).toDate === 'function' ? (order.createdAt as any).toDate() : order.createdAt)
+                              : new Date()
+                            const formattedDate = dayjs(createdDate).isValid() ? dayjs(createdDate).format(i18n.language === 'en-US' ? 'D MMM, YYYY' : 'YYYY-MM-DD') : '-'
 
-                        return (
-                          <div key={order.id} style={{ border: '1px solid rgba(244,175,37,0.2)', borderRadius: 12, padding: 12, background: 'rgba(34,28,16,0.5)', backdropFilter: 'blur(10px)' }}>
-                            {/* 订单号和日期同行 */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
-                                {t('ordersAdmin.orderNo')}: {order.id.substring(0, 20)}
-                              </div>
-                              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
-                                {formattedDate}
-                              </div>
-                            </div>
-
-                            {/* 用户名和状态同行 */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                              <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>
-                                {getUserName(order.userId, users)}
-                              </div>
-                              <span style={{ fontSize: 12, fontWeight: 600, color: getStatusColor(order.status) === 'green' ? '#34d399' : getStatusColor(order.status) === 'red' ? '#f87171' : getStatusColor(order.status) === 'orange' ? '#fb923c' : getStatusColor(order.status) === 'blue' ? '#60a5fa' : '#a78bfa' }}>
-                                {getStatusText(order.status, t)}
-                              </span>
-                            </div>
-
-                            {/* 手机号和查看按钮同行 */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
-                                {getUserPhone(order.userId, users) || '-'}
-                              </div>
-                              <button style={{ padding: '4px 8px', borderRadius: 6, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10', fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => { setViewing(order); setIsEditingInView(false) }}>
-                                {t('common.viewDetails')}
-                              </button>
-                            </div>
-
-                            {/* 商品列表和金额 */}
-                            <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(244,175,37,0.1)', display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                              {/* 商品列表 */}
-                              <div style={{ flex: 1 }}>
-                                {order.items.slice(0, 2).map((item: any, index: number) => (
-                                  <div key={`${order.id}_${item.cigarId}_${index}`} style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginBottom: 4 }}>
-                                    • {getCigarName(item.cigarId)} × {item.quantity}
+                            return (
+                              <div key={order.id} style={{ border: '1px solid rgba(244,175,37,0.2)', borderRadius: 12, padding: 12, background: 'rgba(34,28,16,0.5)', backdropFilter: 'blur(10px)' }}>
+                                {/* 订单号和日期同行 */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
+                                    {t('ordersAdmin.orderNo')}: {order.id.substring(0, 20)}
                                   </div>
-                                ))}
-                                {order.items.length > 2 && (
-                                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>
-                                    +{order.items.length - 2} {t('common.more')}
+                                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+                                    {formattedDate}
                                   </div>
-                                )}
-                              </div>
-
-                              {/* 金额和财务匹配状态 */}
-                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                  <div style={{ fontSize: 16, fontWeight: 800, color: '#f4af25' }}>RM {order.total.toFixed(2)}</div>
-                                  {/* 财务匹配状态 */}
-                                  {matchStatus.status === 'fully' && (
-                                    <CheckOutlined style={{ color: '#34d399', fontSize: '16px' }} />
-                                  )}
                                 </div>
-                                {matchStatus.status === 'partial' && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                                    <ClockCircleOutlined style={{ color: '#fb923c', fontSize: '14px' }} />
-                                    <span style={{ fontSize: 10, color: '#fb923c' }}>RM{matchStatus.matched.toFixed(2)}</span>
+
+                                {/* 用户名和状态同行 */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                                  <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>
+                                    {getUserName(order.userId, users)}
                                   </div>
-                                )}
+                                  <span style={{ fontSize: 12, fontWeight: 600, color: getStatusColor(order.status) === 'green' ? '#34d399' : getStatusColor(order.status) === 'red' ? '#f87171' : getStatusColor(order.status) === 'orange' ? '#fb923c' : getStatusColor(order.status) === 'blue' ? '#60a5fa' : '#a78bfa' }}>
+                                    {getStatusText(order.status, t)}
+                                  </span>
+                                </div>
+
+                                {/* 手机号和查看按钮同行 */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
+                                    {getUserPhone(order.userId, users) || '-'}
+                                  </div>
+                                  <button style={{ padding: '4px 8px', borderRadius: 6, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10', fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => { setViewing(order); setIsEditingInView(false) }}>
+                                    {t('common.viewDetails')}
+                                  </button>
+                                </div>
+
+                                {/* 商品列表和金额 */}
+                                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(244,175,37,0.1)', display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                                  {/* 商品列表 */}
+                                  <div style={{ flex: 1 }}>
+                                    {order.items.slice(0, 2).map((item: any, index: number) => (
+                                      <div key={`${order.id}_${item.cigarId}_${index}`} style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginBottom: 4 }}>
+                                        • {getCigarName(item.cigarId)} × {item.quantity}
+                                      </div>
+                                    ))}
+                                    {order.items.length > 2 && (
+                                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>
+                                        +{order.items.length - 2} {t('common.more')}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* 金额和财务匹配状态 */}
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                      <div style={{ fontSize: 16, fontWeight: 800, color: '#f4af25' }}>RM {order.total.toFixed(2)}</div>
+                                      {/* 财务匹配状态 */}
+                                      {matchStatus.status === 'fully' && (
+                                        <CheckOutlined style={{ color: '#34d399', fontSize: '16px' }} />
+                                      )}
+                                    </div>
+                                    {matchStatus.status === 'partial' && (
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                                        <ClockCircleOutlined style={{ color: '#fb923c', fontSize: '14px' }} />
+                                        <span style={{ fontSize: 10, color: '#fb923c' }}>RM{matchStatus.matched.toFixed(2)}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          </div>
-                        )
-                      })}
-                      {filteredSorted.length === 0 && (
-                        <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
+                            )
+                          })}
+                          {filteredSorted.length === 0 && (
+                            <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
+                          )}
+                        </>
                       )}
                     </div>
                   )}

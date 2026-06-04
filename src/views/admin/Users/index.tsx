@@ -21,6 +21,7 @@ import { useAuthStore } from '../../../store/modules/auth'
 import { getModalThemeStyles, getModalWidth, getResponsiveModalConfig, modalButtonStyles } from '../../../config/modalTheme'
 import { normalizePhoneNumber } from '../../../utils/phoneNormalization'
 import { collection, query, where, getDocs, limit, doc, setDoc } from 'firebase/firestore'
+import { UserSkeletonList } from '../../../components/features/admin/UserSkeleton'
 import { db } from '../../../config/firebase'
 import { generateMemberId } from '../../../utils/memberId'
 
@@ -58,6 +59,7 @@ const AdminUsers: React.FC = () => {
     hasMore,
     currentPage,
     loadPage,
+    loadNext,
     refresh: refreshPaginated
   } = usePaginatedData(
     async (pageSize, lastDoc, filters) => {
@@ -121,7 +123,7 @@ const AdminUsers: React.FC = () => {
   // 数据加载已在下面的 useEffect 中处理
   const [appConfig, setAppConfig] = useState<any>(null)
 
-  // 加载所有用户数据（用于显示和搜索）
+  // 加载全量用户数据（仅用于关系树和客户端搜索）
   useEffect(() => {
     ; (async () => {
       try {
@@ -138,7 +140,16 @@ const AdminUsers: React.FC = () => {
         setLoading(false)
       }
     })()
-  }, []) // 只在组件挂载时加载一次
+  }, [])
+
+  // 初始加载第一页分页数据
+  useEffect(() => {
+    loadPage(1, {
+      role: roleFilter,
+      status: statusFilter,
+      level: levelFilter
+    })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const update = () => setIsMobile(window.innerWidth < 768)
@@ -681,7 +692,10 @@ const AdminUsers: React.FC = () => {
                     placeholder={t('usersAdmin.selectRole')}
                     value={roleFilter}
                     style={{ width: 140 }}
-                    onChange={(v) => setRoleFilter(v)}
+                    onChange={(v) => {
+                      setRoleFilter(v)
+                      loadPage(1, { role: v, status: statusFilter, level: levelFilter })
+                    }}
                     className="points-config-form"
                   >
                     <Option value="superAdmin">{t('auth.superAdmin')}</Option>
@@ -696,7 +710,10 @@ const AdminUsers: React.FC = () => {
                     placeholder={t('usersAdmin.selectLevel')}
                     value={levelFilter}
                     style={{ width: 140 }}
-                    onChange={(v) => setLevelFilter(v)}
+                    onChange={(v) => {
+                      setLevelFilter(v)
+                      loadPage(1, { role: roleFilter, status: statusFilter, level: v })
+                    }}
                     className="points-config-form"
                   >
                     <Option value="bronze">{t('usersAdmin.bronzeMember')}</Option>
@@ -709,7 +726,10 @@ const AdminUsers: React.FC = () => {
                     placeholder={t('usersAdmin.selectStatus')}
                     value={statusFilter}
                     style={{ width: 140 }}
-                    onChange={(v) => setStatusFilter(v)}
+                    onChange={(v) => {
+                      setStatusFilter(v)
+                      loadPage(1, { role: roleFilter, status: v, level: levelFilter })
+                    }}
                     className="points-config-form"
                   >
                     <Option value="active">{t('usersAdmin.active')}</Option>
@@ -722,6 +742,7 @@ const AdminUsers: React.FC = () => {
                       setLevelFilter(undefined)
                       setStatusFilter(undefined)
                       setSelectedRowKeys([])
+                      loadPage(1, {})
                     }}
                     style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.2)', color: '#FFFFFF' }}
                   >
@@ -775,31 +796,35 @@ const AdminUsers: React.FC = () => {
             {/* 桌面：表格 */}
             {!isMobile && (
               <div className="points-config-form">
-                <Table
-                  columns={columns}
-                  dataSource={filteredUsers}
-                  rowKey="id"
-                  loading={loading}
-                  rowSelection={{
-                    selectedRowKeys,
-                    onChange: setSelectedRowKeys,
-                  }}
-                  scroll={{
-                    y: 'calc(100vh - 300px)', // 启用虚拟滚动，设置固定高度
-                    x: 'max-content' // 水平滚动
-                  }}
-                  pagination={{
-                    pageSize: isMobile ? 10 : 20,
-                    total: filteredUsers.length,
-                    showSizeChanger: true,
-                    showQuickJumper: true,
-                    showTotal: (total, range) => t('common.paginationTotal', { start: range[0], end: range[1], total }),
-                    pageSizeOptions: ['10', '20', '50', '100'],
-                  }}
-                  style={{
-                    background: 'transparent'
-                  }}
-                />
+                  <Table
+                    columns={columns}
+                    dataSource={keyword ? filteredUsers : paginatedUsers}
+                    rowKey="id"
+                    loading={loading || paginatedLoading}
+                    virtual
+                    rowSelection={{
+                      selectedRowKeys,
+                      onChange: setSelectedRowKeys,
+                    }}
+                    scroll={{
+                      y: isMobile ? 'calc(100vh - 250px)' : 'calc(100vh - 350px)',
+                      x: 'max-content'
+                    }}
+                    pagination={keyword ? {
+                      pageSize: isMobile ? 10 : 20,
+                      total: filteredUsers.length,
+                      showSizeChanger: true,
+                    } : {
+                      current: currentPage,
+                      pageSize: isMobile ? 10 : 20,
+                      total: undefined, // 服务端分页不一定知道总数
+                      onChange: (page) => loadPage(page, { role: roleFilter, status: statusFilter, level: levelFilter }),
+                      showSizeChanger: false,
+                    }}
+                    style={{
+                      background: 'transparent'
+                    }}
+                  />
               </div>
             )}
 
@@ -840,7 +865,11 @@ const AdminUsers: React.FC = () => {
                           { key: 'guest', label: t('auth.guest') },
                           ...(currentUser?.role === 'developer' ? [{ key: 'developer', label: t('auth.developer') }] : []),
                         ],
-                        onClick: ({ key }) => setRoleFilter(key === 'all' ? undefined : (key as string)),
+                        onClick: ({ key }) => {
+                          const v = key === 'all' ? undefined : (key as string)
+                          setRoleFilter(v)
+                          loadPage(1, { role: v, status: statusFilter, level: levelFilter })
+                        },
                       }}
                     >
                       <Button
@@ -864,7 +893,11 @@ const AdminUsers: React.FC = () => {
                           { key: 'gold', label: t('usersAdmin.goldMember') },
                           { key: 'platinum', label: t('usersAdmin.platinumMember') },
                         ],
-                        onClick: ({ key }) => setLevelFilter(key === 'all' ? undefined : (key as string)),
+                        onClick: ({ key }) => {
+                          const v = key === 'all' ? undefined : (key as string)
+                          setLevelFilter(v)
+                          loadPage(1, { role: roleFilter, status: statusFilter, level: v })
+                        },
                       }}
                     >
                       <Button
@@ -886,7 +919,11 @@ const AdminUsers: React.FC = () => {
                           { key: 'active', label: t('usersAdmin.active') },
                           { key: 'inactive', label: t('usersAdmin.inactive') },
                         ],
-                        onClick: ({ key }) => setStatusFilter(key === 'all' ? undefined : (key as string)),
+                        onClick: ({ key }) => {
+                          const v = key === 'all' ? undefined : (key as string)
+                          setStatusFilter(v)
+                          loadPage(1, { role: roleFilter, status: v, level: levelFilter })
+                        },
                       }}
                     >
                       <Button
@@ -930,9 +967,9 @@ const AdminUsers: React.FC = () => {
                     zIndex: 1
                   }}
                 >
-                  {(loading || paginatedLoading) ? (
-                    <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
-                      <Spin />
+                  {(loading || paginatedLoading) && !paginatedUsers.length ? (
+                    <div style={{ padding: '0 16px' }}>
+                      <UserSkeletonList count={10} />
                     </div>
                   ) : (
                     <>
@@ -1008,6 +1045,23 @@ const AdminUsers: React.FC = () => {
                       ))}
                       {groupedByInitial.length === 0 && (
                         <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
+                      )}
+                      
+                      {hasMore && !keyword && (
+                        <div style={{ padding: '16px', textAlign: 'center' }}>
+                          <Button 
+                            onClick={() => loadNext({ role: roleFilter, status: statusFilter, level: levelFilter })}
+                            loading={paginatedLoading}
+                            style={{ 
+                              background: 'rgba(255, 255, 255, 0.1)', 
+                              border: '1px solid rgba(244, 175, 37, 0.4)', 
+                              color: '#f4af25',
+                              borderRadius: 8
+                            }}
+                          >
+                            {t('common.loadMore')}
+                          </Button>
+                        </div>
                       )}
                     </>
                   )}

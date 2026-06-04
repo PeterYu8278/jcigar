@@ -143,6 +143,17 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom', 'zustand'],
+          'vendor-antd': ['antd', '@ant-design/icons'],
+          'vendor-firebase': ['firebase/app', 'firebase/firestore', 'firebase/auth', 'firebase/storage', 'firebase/messaging'],
+          'vendor-utils': ['dayjs', 'axios', 'i18next', 'react-i18next'],
+          'vendor-ui': ['swiper', 'react-rnd', 'react-webcam', 'react-image-crop'],
+        }
+      }
+    }
   },
   test: {
     globals: true,

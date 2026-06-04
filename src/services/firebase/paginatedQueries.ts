@@ -14,7 +14,7 @@ import {
 import { db } from '../../config/firebase'
 import { COLLECTIONS } from './firestore'
 import { GLOBAL_COLLECTIONS } from '../../config/globalCollections'
-import type { User, Order, Transaction, VisitSession } from '../../types'
+import type { User, Order, Transaction, VisitSession, InboundOrder, OutboundOrder } from '../../types'
 import dayjs from 'dayjs'
 
 /**
@@ -308,6 +308,126 @@ export const getVisitSessionsPaginated = async (
     }
   } catch (error) {
     console.error('[getVisitSessionsPaginated] 查询失败:', error)
+    return { data: [], lastDoc: null, hasMore: false }
+  }
+}
+
+/**
+ * 获取入库单列表（分页）
+ */
+export const getInboundOrdersPaginated = async (
+  pageSize: number,
+  lastDoc: QueryDocumentSnapshot | null = null,
+  filters?: {
+    storeId?: string
+    startDate?: Date
+    endDate?: Date
+  }
+): Promise<{
+  data: InboundOrder[]
+  lastDoc: QueryDocumentSnapshot | null
+  hasMore: boolean
+}> => {
+  try {
+    let q: Query = query(
+      collection(db, COLLECTIONS.INBOUND_ORDERS),
+      orderBy('createdAt', 'desc'),
+      limit(pageSize + 1)
+    )
+
+    if (filters?.storeId) {
+      q = query(q, where('storeId', '==', filters.storeId))
+    }
+    if (filters?.startDate || filters?.endDate) {
+      if (filters.startDate) q = query(q, where('createdAt', '>=', Timestamp.fromDate(filters.startDate)))
+      if (filters.endDate) q = query(q, where('createdAt', '<=', Timestamp.fromDate(filters.endDate)))
+    }
+
+    if (lastDoc) {
+      q = query(q, startAfter(lastDoc))
+    }
+
+    const snapshot = await getDocs(q)
+    const docs = snapshot.docs
+    const hasMore = docs.length > pageSize
+
+    const data = (hasMore ? docs.slice(0, pageSize) : docs).map(doc => {
+      const d = doc.data()
+      return {
+        id: doc.id,
+        ...d,
+        createdAt: d.createdAt?.toDate?.() || new Date(d.createdAt),
+        updatedAt: d.updatedAt?.toDate?.() || new Date(d.updatedAt)
+      } as InboundOrder
+    })
+
+    return {
+      data,
+      lastDoc: hasMore ? docs[pageSize - 1] : (docs.length > 0 ? docs[docs.length - 1] : null),
+      hasMore
+    }
+  } catch (error) {
+    console.error('[getInboundOrdersPaginated] 查询失败:', error)
+    return { data: [], lastDoc: null, hasMore: false }
+  }
+}
+
+/**
+ * 获取出库单列表（分页）
+ */
+export const getOutboundOrdersPaginated = async (
+  pageSize: number,
+  lastDoc: QueryDocumentSnapshot | null = null,
+  filters?: {
+    storeId?: string
+    startDate?: Date
+    endDate?: Date
+  }
+): Promise<{
+  data: OutboundOrder[]
+  lastDoc: QueryDocumentSnapshot | null
+  hasMore: boolean
+}> => {
+  try {
+    let q: Query = query(
+      collection(db, COLLECTIONS.OUTBOUND_ORDERS),
+      orderBy('createdAt', 'desc'),
+      limit(pageSize + 1)
+    )
+
+    if (filters?.storeId) {
+      q = query(q, where('storeId', '==', filters.storeId))
+    }
+    if (filters?.startDate || filters?.endDate) {
+      if (filters.startDate) q = query(q, where('createdAt', '>=', Timestamp.fromDate(filters.startDate)))
+      if (filters.endDate) q = query(q, where('createdAt', '<=', Timestamp.fromDate(filters.endDate)))
+    }
+
+    if (lastDoc) {
+      q = query(q, startAfter(lastDoc))
+    }
+
+    const snapshot = await getDocs(q)
+    const docs = snapshot.docs
+    const hasMore = docs.length > pageSize
+
+    const data = (hasMore ? docs.slice(0, pageSize) : docs).map(doc => {
+      const d = doc.data()
+      return {
+        id: doc.id,
+        ...d,
+        createdAt: d.createdAt?.toDate?.() || new Date(d.createdAt),
+        updatedAt: d.updatedAt?.toDate?.() || new Date(d.updatedAt)
+      } as OutboundOrder
+    })
+
+    return {
+      data,
+      lastDoc: hasMore ? docs[pageSize - 1] : (docs.length > 0 ? docs[docs.length - 1] : null),
+      hasMore
+    }
+  } catch (error) {
+    console.error('[getOutboundOrdersPaginated] 查询失败:', error)
     return { data: [], lastDoc: null, hasMore: false }
   }
 }

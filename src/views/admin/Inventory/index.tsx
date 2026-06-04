@@ -1,7 +1,8 @@
 // Inventory Management Page
 import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Table, Button, Tag, Space, Typography, Input, Select, Modal, Form, InputNumber, message, Dropdown, Checkbox, Upload, Row, Col, App, Divider, AutoComplete } from 'antd'
+import { Table, Button, Tag, Space, Typography, Input, Select, Modal, Form, InputNumber, message, Dropdown, Checkbox, Upload, Row, Col, App, Divider, AutoComplete, DatePicker } from 'antd'
+import dayjs from 'dayjs'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, WarningOutlined, UploadOutlined, DownloadOutlined, MinusCircleOutlined, FilePdfOutlined, FileImageOutlined, EyeOutlined, ThunderboltOutlined, LoadingOutlined } from '@ant-design/icons'
 import type { Cigar, Brand, InboundOrder, OutboundOrder, InventoryMovement, Event, Store } from '../../../types'
 import type { UploadFile } from 'antd'
@@ -1016,11 +1017,11 @@ const AdminInventory: React.FC = () => {
       const value = quantity * unitPrice
 
       if (!brandMap.has(brand)) {
-        brandMap.set(brand, { 
-          quantity: 0, 
-          records: 0, 
+        brandMap.set(brand, {
+          quantity: 0,
+          records: 0,
           totalValue: 0,
-          products: new Map() 
+          products: new Map()
         })
       }
 
@@ -2475,10 +2476,14 @@ const AdminInventory: React.FC = () => {
                 afterOpenChange={(open) => {
                   if (open && editingOrder) {
                     // 编辑模式：初始化表单和附件
+                    const existingDate = editingOrder.createdAt
+                      ? dayjs((editingOrder.createdAt as any)?.toDate?.() || editingOrder.createdAt)
+                      : dayjs()
                     inForm.setFieldsValue({
                       storeId: editingOrder.storeId,
                       referenceNo: editingOrder.referenceNo,
                       reason: editingOrder.reason,
+                      movementDate: existingDate,
                       items: editingOrder.items.map(item => ({
                         ...item,
                         customName: item.itemType !== 'cigar' ? item.cigarName : undefined
@@ -2498,7 +2503,7 @@ const AdminInventory: React.FC = () => {
                   }
                 }}
               >
-                <Form form={inForm} layout="vertical" className="dark-theme-form" onFinish={async (values: { storeId?: string; referenceNo?: string; reason?: string; items: { itemType?: string; cigarId?: string; customName?: string; quantity: number; unitPrice?: number }[] }) => {
+                <Form form={inForm} layout="vertical" className="dark-theme-form" onFinish={async (values: { storeId?: string; referenceNo?: string; reason?: string; movementDate?: any; items: { itemType?: string; cigarId?: string; customName?: string; quantity: number; unitPrice?: number }[] }) => {
                   const lines = (values.items || []).filter(it => it?.quantity > 0 && (it?.cigarId || it?.customName))
                   if (lines.length === 0) { message.warning(t('inventory.pleaseAddAtLeastOneInStockDetail')); return }
 
@@ -2565,6 +2570,11 @@ const AdminInventory: React.FC = () => {
                     }
 
                     // 检查是否是编辑模式
+                    // Resolve the movement date (default to now if not set)
+                    const movementDate: Date = values.movementDate
+                      ? (values.movementDate as any).toDate()
+                      : new Date()
+
                     if (editingOrder) {
                       // 编辑模式：更新现有订单
                       const updateData = {
@@ -2579,7 +2589,8 @@ const AdminInventory: React.FC = () => {
                         // 保留原有类型和操作员
                         type: editingOrder.type,
                         operatorId: editingOrder.operatorId,
-                        storeId: assignedStoreId
+                        storeId: assignedStoreId,
+                        createdAt: movementDate
                       }
 
                       // 更新订单
@@ -2590,7 +2601,7 @@ const AdminInventory: React.FC = () => {
                       await Promise.all(oldMovements.map(m => deleteDocument(COLLECTIONS.INVENTORY_MOVEMENTS, m.id)))
 
                       // 创建新的 inventory_movements 以匹配更新后的订单
-                      const createdAt = editingOrder.createdAt instanceof Date ? editingOrder.createdAt : (editingOrder.createdAt ? new Date(editingOrder.createdAt) : new Date())
+                      const createdAt = movementDate
                       for (const item of orderItems) {
                         await createDocument(COLLECTIONS.INVENTORY_MOVEMENTS, {
                           cigarId: item.cigarId,
@@ -2622,7 +2633,7 @@ const AdminInventory: React.FC = () => {
                         status: 'completed',
                         operatorId: 'system',
                         storeId: assignedStoreId,
-                        createdAt: new Date()
+                        createdAt: movementDate
                       }
 
                       await createInboundOrder(inboundOrderData)
@@ -2663,6 +2674,19 @@ const AdminInventory: React.FC = () => {
                         </Form.Item>
                         <Form.Item label={t('inventory.reason')} name="reason" style={{ marginBottom: 12 }}>
                           <Input placeholder={t('inventory.forExample') + t('inventory.purchaseInStock')} />
+                        </Form.Item>
+                        <Form.Item
+                          label="Stock Movement Date"
+                          name="movementDate"
+                          initialValue={dayjs()}
+                          style={{ marginBottom: 12 }}
+                        >
+                          <DatePicker
+                            style={{ width: '100%' }}
+                            format="YYYY-MM-DD"
+                            allowClear={false}
+                            className="points-config-form"
+                          />
                         </Form.Item>
                       </Col>
 
@@ -2744,20 +2768,31 @@ const AdminInventory: React.FC = () => {
                     <Form.List name="items" initialValue={[{ itemType: 'cigar', cigarId: undefined, quantity: 1 }]}>
                       {(fields, { add, remove }) => (
                         <div>
-                          {fields.map((field) => {
+                          {/* 电脑端表头 */}
+                          {!isMobile && fields.length > 0 && (
+                            <Row gutter={12} style={{ marginBottom: 6, paddingLeft: 12, paddingRight: 72, color: 'rgba(255, 255, 255, 0.45)', fontSize: 12, fontWeight: 500 }}>
+                              <Col flex="120px">{t('inventory.itemType')}</Col>
+                              <Col flex="auto">{t('inventory.product')}</Col>
+                              <Col flex="100px">{t('inventory.quantity')}</Col>
+                              <Col flex="120px">{t('inventory.unitPrice')}</Col>
+                            </Row>
+                          )}
+
+                          {fields.map((field, index) => {
                             const { key, name, fieldKey, ...restField } = field
                             return (
                               <div key={key} style={{
-                                marginBottom: 12,
-                                padding: 10,
-                                border: '1px solid rgba(255, 255, 255, 0.1)',
-                                borderRadius: 8,
-                                background: 'rgba(0, 0, 0, 0.2)'
+                                marginBottom: isMobile ? 16 : 10,
+                                padding: isMobile ? 16 : 10,
+                                border: '1px solid rgba(255, 255, 255, 0.08)',
+                                borderRadius: isMobile ? 12 : 8,
+                                background: 'rgba(255, 255, 255, 0.02)',
+                                transition: 'all 0.3s'
                               }}>
                                 {/* 电脑端：一行显示所有字段 */}
                                 {!isMobile ? (
                                   <Row gutter={12} align="middle">
-                                    <Col flex="100px">
+                                    <Col flex="120px">
                                       <Form.Item
                                         {...restField}
                                         name={[name, 'itemType']}
@@ -2785,7 +2820,7 @@ const AdminInventory: React.FC = () => {
                                       </Form.Item>
                                     </Col>
 
-                                    <Col flex="200px">
+                                    <Col flex="auto">
                                       <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => {
                                         const prev = prevValues.items?.[name]?.itemType
                                         const curr = currentValues.items?.[name]?.itemType
@@ -2836,7 +2871,7 @@ const AdminInventory: React.FC = () => {
                                       </Form.Item>
                                     </Col>
 
-                                    <Col flex="80px">
+                                    <Col flex="100px">
                                       <Form.Item
                                         {...restField}
                                         name={[name, 'quantity']}
@@ -2848,7 +2883,7 @@ const AdminInventory: React.FC = () => {
                                       </Form.Item>
                                     </Col>
 
-                                    <Col flex="100px">
+                                    <Col flex="120px">
                                       <Form.Item
                                         {...restField}
                                         name={[name, 'unitPrice']}
@@ -2859,7 +2894,7 @@ const AdminInventory: React.FC = () => {
                                       </Form.Item>
                                     </Col>
 
-                                    <Col flex="60px">
+                                    <Col flex="60px" style={{ textAlign: 'right' }}>
                                       {fields.length > 1 && (
                                         <Button
                                           type="link"
@@ -2876,9 +2911,38 @@ const AdminInventory: React.FC = () => {
                                   </Row>
                                 ) : (
                                   <>
-                                    {/* 移动端：保持两行布局 */}
-                                    <Row gutter={12} style={{ marginBottom: 8 }}>
-                                      <Col flex="140px">
+                                    {/* 移动端：卡片布局，顶部显示产品序号与删除按钮 */}
+                                    <div style={{
+                                      display: 'flex',
+                                      justifyContent: 'space-between',
+                                      alignItems: 'center',
+                                      marginBottom: 12,
+                                      borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                                      paddingBottom: 8
+                                    }}>
+                                      <span style={{ fontWeight: 600, color: 'rgba(255, 255, 255, 0.85)', fontSize: 13 }}>
+                                        {t('inventory.product')} #{index + 1}
+                                      </span>
+                                      {fields.length > 1 && (
+                                        <Button
+                                          type="link"
+                                          danger
+                                          size="small"
+                                          icon={<MinusCircleOutlined />}
+                                          onClick={() => remove(name)}
+                                          style={{ padding: 0, height: 'auto', display: 'flex', alignItems: 'center' }}
+                                        >
+                                          {t('common.delete')}
+                                        </Button>
+                                      )}
+                                    </div>
+
+                                    <Row gutter={[12, 12]}>
+                                      {/* 类型选择 */}
+                                      <Col span={24}>
+                                        <div style={{ fontSize: 11, color: 'rgba(255, 255, 255, 0.45)', marginBottom: 4 }}>
+                                          {t('inventory.itemType')}
+                                        </div>
                                         <Form.Item
                                           {...restField}
                                           name={[name, 'itemType']}
@@ -2906,7 +2970,8 @@ const AdminInventory: React.FC = () => {
                                         </Form.Item>
                                       </Col>
 
-                                      <Col flex="auto">
+                                      {/* 产品/名称选择 */}
+                                      <Col span={24}>
                                         <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => {
                                           const prev = prevValues.items?.[name]?.itemType
                                           const curr = currentValues.items?.[name]?.itemType
@@ -2914,52 +2979,62 @@ const AdminInventory: React.FC = () => {
                                         }}>
                                           {({ getFieldValue }) => {
                                             const itemType = getFieldValue(['items', name, 'itemType']) || 'cigar'
-
-                                            return itemType === 'cigar' ? (
-                                              <Form.Item
-                                                {...restField}
-                                                name={[name, 'cigarId']}
-                                                fieldKey={fieldKey}
-                                                rules={[{ required: true, message: t('inventory.pleaseSelectProduct') }]}
-                                                style={{ marginBottom: 0 }}
-                                              >
-                                                <Select
-                                                  placeholder={t('inventory.pleaseSelectProduct')}
-                                                  showSearch
-                                                  optionFilterProp="children"
-                                                  filterOption={(input, option) => {
-                                                    const kw = (input || '').toLowerCase()
-                                                    const text = String((option?.children as any) || '').toLowerCase()
-                                                    return text.includes(kw)
-                                                  }}
-                                                >
-                                                  {groupedCigars.map(group => (
-                                                    <Select.OptGroup key={group.brand} label={group.brand}>
-                                                      {group.list.map(i => (
-                                                        <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（{t('inventory.stock')}：{getComputedStock(i.id)}）</Option>
+                                            const label = itemType === 'cigar' ? t('inventory.product') : t('inventory.customItemName')
+                                            
+                                            return (
+                                              <>
+                                                <div style={{ fontSize: 11, color: 'rgba(255, 255, 255, 0.45)', marginBottom: 4 }}>
+                                                  {label}
+                                                </div>
+                                                {itemType === 'cigar' ? (
+                                                  <Form.Item
+                                                    {...restField}
+                                                    name={[name, 'cigarId']}
+                                                    fieldKey={fieldKey}
+                                                    rules={[{ required: true, message: t('inventory.pleaseSelectProduct') }]}
+                                                    style={{ marginBottom: 0 }}
+                                                  >
+                                                    <Select
+                                                      placeholder={t('inventory.pleaseSelectProduct')}
+                                                      showSearch
+                                                      optionFilterProp="children"
+                                                      filterOption={(input, option) => {
+                                                        const kw = (input || '').toLowerCase()
+                                                        const text = String((option?.children as any) || '').toLowerCase()
+                                                        return text.includes(kw)
+                                                      }}
+                                                    >
+                                                      {groupedCigars.map(group => (
+                                                        <Select.OptGroup key={group.brand} label={group.brand}>
+                                                          {group.list.map(i => (
+                                                            <Option key={i.id} value={i.id}>{i.name} - RM{i.price}（{t('inventory.stock')}：{getComputedStock(i.id)}）</Option>
+                                                          ))}
+                                                        </Select.OptGroup>
                                                       ))}
-                                                    </Select.OptGroup>
-                                                  ))}
-                                                </Select>
-                                              </Form.Item>
-                                            ) : (
-                                              <Form.Item
-                                                {...restField}
-                                                name={[name, 'customName']}
-                                                fieldKey={fieldKey}
-                                                rules={[{ required: true, message: t('inventory.itemNameRequired') }]}
-                                                style={{ marginBottom: 0 }}
-                                              >
-                                                <Input placeholder={t('inventory.itemNamePlaceholder')} />
-                                              </Form.Item>
+                                                    </Select>
+                                                  </Form.Item>
+                                                ) : (
+                                                  <Form.Item
+                                                    {...restField}
+                                                    name={[name, 'customName']}
+                                                    fieldKey={fieldKey}
+                                                    rules={[{ required: true, message: t('inventory.itemNameRequired') }]}
+                                                    style={{ marginBottom: 0 }}
+                                                  >
+                                                    <Input placeholder={t('inventory.itemNamePlaceholder')} />
+                                                  </Form.Item>
+                                                )}
+                                              </>
                                             )
                                           }}
                                         </Form.Item>
                                       </Col>
-                                    </Row>
 
-                                    <Row gutter={12} align="middle">
-                                      <Col flex="100px">
+                                      {/* 数量与单价并排 */}
+                                      <Col span={12}>
+                                        <div style={{ fontSize: 11, color: 'rgba(255, 255, 255, 0.45)', marginBottom: 4 }}>
+                                          {t('inventory.quantity')}
+                                        </div>
                                         <Form.Item
                                           {...restField}
                                           name={[name, 'quantity']}
@@ -2970,7 +3045,11 @@ const AdminInventory: React.FC = () => {
                                           <InputNumber min={1} placeholder={t('inventory.quantity')} style={{ width: '100%' }} />
                                         </Form.Item>
                                       </Col>
-                                      <Col flex="120px">
+
+                                      <Col span={12}>
+                                        <div style={{ fontSize: 11, color: 'rgba(255, 255, 255, 0.45)', marginBottom: 4 }}>
+                                          {t('inventory.unitPrice')}
+                                        </div>
                                         <Form.Item
                                           {...restField}
                                           name={[name, 'unitPrice']}
@@ -2979,19 +3058,6 @@ const AdminInventory: React.FC = () => {
                                         >
                                           <InputNumber min={0} step={0.01} placeholder={t('inventory.price')} style={{ width: '100%' }} />
                                         </Form.Item>
-                                      </Col>
-                                      <Col flex="auto">
-                                        {fields.length > 1 && (
-                                          <Button
-                                            type="link"
-                                            danger
-                                            size="small"
-                                            icon={<MinusCircleOutlined />}
-                                            onClick={() => remove(name)}
-                                          >
-                                            {t('common.delete')}
-                                          </Button>
-                                        )}
                                       </Col>
                                     </Row>
                                   </>
@@ -4062,7 +4128,7 @@ const AdminInventory: React.FC = () => {
                   }
                 }}
               >
-                <Form form={outForm} layout="vertical" className="dark-theme-form" onFinish={async (values: { referenceNo?: string; reason?: string; items: { cigarId: string; quantity: number }[] }) => {
+                <Form form={outForm} layout="vertical" className="dark-theme-form" onFinish={async (values: { referenceNo?: string; reason?: string; movementDate?: any; items: { cigarId: string; quantity: number }[] }) => {
                   const lines = (values.items || []).filter(it => it?.cigarId && it?.quantity > 0)
                   if (lines.length === 0) { message.warning(t('inventory.pleaseAddAtLeastOneOutStockDetail')); return }
 
@@ -4097,6 +4163,11 @@ const AdminInventory: React.FC = () => {
                       totalValue += orderItem.subtotal
                     }
 
+                    // Resolve the movement date (default to now if not set)
+                    const movementDate: Date = values.movementDate
+                      ? (values.movementDate as any).toDate()
+                      : new Date()
+
                     const outboundOrderData: Omit<OutboundOrder, 'id' | 'updatedAt'> = {
                       referenceNo: values.referenceNo.trim(),
                       type: 'other',
@@ -4106,7 +4177,7 @@ const AdminInventory: React.FC = () => {
                       totalValue,
                       status: 'completed',
                       operatorId: 'system',
-                      createdAt: new Date()
+                      createdAt: movementDate
                     }
 
                     await createOutboundOrder(outboundOrderData)
@@ -4121,16 +4192,29 @@ const AdminInventory: React.FC = () => {
                   }
                 }}>
                   <div style={{ width: '100%', overflow: 'hidden' }}>
-                    {/* 单号和原因 */}
+                    {/* 单号、原因和日期变动 */}
                     <Row gutter={16}>
                       <Col span={12}>
                         <Form.Item label={t('inventory.referenceNo')} name="referenceNo" style={{ marginBottom: 12 }}>
                           <Input placeholder={t('inventory.pleaseInputReferenceNo')} />
                         </Form.Item>
-                      </Col>
-                      <Col span={12}>
                         <Form.Item label={t('inventory.reason')} name="reason" style={{ marginBottom: 12 }}>
                           <Input placeholder={t('inventory.forExample') + t('inventory.salesOutStock')} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item
+                          label="Stock Movement Date"
+                          name="movementDate"
+                          initialValue={dayjs()}
+                          style={{ marginBottom: 12 }}
+                        >
+                          <DatePicker
+                            style={{ width: '100%' }}
+                            format="YYYY-MM-DD"
+                            allowClear={false}
+                            className="points-config-form"
+                          />
                         </Form.Item>
                       </Col>
                     </Row>
