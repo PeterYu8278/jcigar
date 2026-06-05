@@ -17,11 +17,15 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
   const [stores, setStores] = useState<Store[]>([]);
   const [bookings, setBookings] = useState<RoomBooking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingBookings, setLoadingBookings] = useState(false);
+  
+  // Modal states
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(dayjs().format('YYYY-MM-DD'));
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [bookingInProgress, setBookingInProgress] = useState(false);
-  const [expandedRoom, setExpandedRoom] = useState<string | null>(null);
 
-  // 生成接下来 7 天的日期
+  // Generate date options for the next 7 days
   const dateOptions = Array.from({ length: 7 }, (_, i) => {
     const d = dayjs().add(i, 'day');
     return {
@@ -32,14 +36,16 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
   });
 
   useEffect(() => {
-    loadData();
+    loadRooms();
   }, []);
 
   useEffect(() => {
-    loadBookings(selectedDate);
-  }, [selectedDate]);
+    if (selectedRoom) {
+      loadBookings(selectedDate, selectedRoom.id);
+    }
+  }, [selectedDate, selectedRoom]);
 
-  const loadData = async () => {
+  const loadRooms = async () => {
     setLoading(true);
     try {
       const [roomsData, storesData] = await Promise.all([
@@ -48,7 +54,6 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
       ]);
       setRooms(roomsData);
       setStores(storesData);
-      await loadBookings(selectedDate);
     } catch (error) {
       console.error('Failed to load rooms:', error);
     } finally {
@@ -56,12 +61,15 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
     }
   };
 
-  const loadBookings = async (date: string) => {
+  const loadBookings = async (date: string, roomId?: string) => {
+    setLoadingBookings(true);
     try {
-      const data = await getBookingsByDate(date);
+      const data = await getBookingsByDate(date, roomId);
       setBookings(data);
     } catch (error) {
       console.error('Failed to load bookings:', error);
+    } finally {
+      setLoadingBookings(false);
     }
   };
 
@@ -70,17 +78,16 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
     return store?.name || '';
   };
 
-  const isSlotBooked = (roomId: string, timeslot: string) => {
-    return bookings.some(b => b.roomId === roomId && b.timeslot === timeslot);
+  const isSlotBooked = (timeslot: string) => {
+    return bookings.some(b => b.timeslot === timeslot);
   };
 
-  const isSlotBookedByMe = (roomId: string, timeslot: string) => {
-    return bookings.some(b => b.roomId === roomId && b.timeslot === timeslot && b.userId === user?.id);
+  const isSlotBookedByMe = (timeslot: string) => {
+    return bookings.some(b => b.timeslot === timeslot && b.userId === user?.id);
   };
 
   const isSlotPast = (timeslot: string) => {
     if (selectedDate !== dayjs().format('YYYY-MM-DD')) return false;
-    // 从timeslot中提取结束时间来判断是否已过
     const parts = timeslot.split('-').map(s => s.trim());
     if (parts.length < 2) return false;
     const endTime = parts[1];
@@ -90,91 +97,60 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
     return now.isAfter(slotEnd);
   };
 
-  const handleBookSlot = async (room: Room, timeslot: string) => {
+  const handleOpenBookingModal = (room: Room) => {
     if (!user?.id) {
       message.warning('Please login first');
       return;
     }
+    setSelectedRoom(room);
+    setSelectedDate(dayjs().format('YYYY-MM-DD'));
+    setSelectedSlot(null);
+  };
 
-    if (isSlotBooked(room.id!, timeslot)) {
-      if (isSlotBookedByMe(room.id!, timeslot)) {
-        message.info('You already booked this slot');
+  const handleCloseBookingModal = () => {
+    setSelectedRoom(null);
+    setSelectedSlot(null);
+  };
+
+  const handleConfirmBooking = async () => {
+    if (!selectedRoom || !selectedSlot) {
+      message.warning('Please select a time slot');
+      return;
+    }
+
+    const userPoints = user?.membership?.points || 0;
+    const fee = selectedRoom.fee || 0;
+
+    if (userPoints < fee) {
+      message.error('积分余额不足 (Insufficient points)');
+      return;
+    }
+
+    setBookingInProgress(true);
+    try {
+      const result = await createBooking({
+        roomId: selectedRoom.id!,
+        roomName: selectedRoom.name,
+        storeId: selectedRoom.storeId,
+        userId: user!.id,
+        userName: user!.displayName || user!.email || '',
+        date: selectedDate,
+        timeslot: selectedSlot,
+        fee,
+        status: 'confirmed',
+      });
+
+      if (result.success) {
+        message.success('Booking confirmed! 🎉');
+        handleCloseBookingModal();
       } else {
-        message.warning('This slot is already booked');
+        message.error((result as any).error || 'Booking failed');
       }
-      return;
+    } catch (error: any) {
+      message.error(error.message || 'Booking failed, please try again');
+    } finally {
+      setBookingInProgress(false);
     }
-
-    if (isSlotPast(timeslot)) {
-      message.warning('This time slot has already passed');
-      return;
-    }
-
-    Modal.confirm({
-      title: <span style={{ color: '#fff' }}>Confirm Booking</span>,
-      content: (
-        <div style={{ color: 'rgba(255,255,255,0.85)' }}>
-          <div style={{ marginBottom: 8 }}><strong>{room.name}</strong></div>
-          <div style={{ marginBottom: 4 }}>📅 {dayjs(selectedDate).format('D MMM YYYY (ddd)')}</div>
-          <div style={{ marginBottom: 4 }}>🕐 {timeslot}</div>
-          {room.fee > 0 && <div style={{ marginBottom: 4 }}>💰 RM {room.fee}</div>}
-        </div>
-      ),
-      okText: 'Confirm',
-      cancelText: 'Cancel',
-      centered: true,
-      okButtonProps: {
-        style: {
-          background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-          border: 'none',
-          color: '#111',
-          fontWeight: 700
-        }
-      },
-      cancelButtonProps: {
-        style: {
-          background: 'rgba(255,255,255,0.1)',
-          border: '1px solid rgba(255,255,255,0.2)',
-          color: '#fff'
-        }
-      },
-      styles: {
-        content: {
-          background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
-          border: '1px solid rgba(244,175,37,0.6)',
-        },
-        header: { background: 'transparent', borderBottom: '1px solid rgba(244,175,37,0.3)' },
-        body: { background: 'transparent' },
-        footer: { background: 'transparent', borderTop: '1px solid rgba(244,175,37,0.3)' },
-      },
-      onOk: async () => {
-        setBookingInProgress(true);
-        try {
-          const result = await createBooking({
-            roomId: room.id!,
-            roomName: room.name,
-            storeId: room.storeId,
-            userId: user.id,
-            userName: user.displayName || user.email || '',
-            date: selectedDate,
-            timeslot,
-            fee: room.fee,
-            status: 'confirmed',
-          });
-
-          if (result.success) {
-            message.success('Booking confirmed! 🎉');
-            await loadBookings(selectedDate);
-          } else {
-            message.error(result.error || 'Booking failed');
-          }
-        } catch (error) {
-          message.error('Booking failed, please try again');
-        } finally {
-          setBookingInProgress(false);
-        }
-      }
-    });
   };
 
   if (loading) {
@@ -223,12 +199,12 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
 
   return (
     <div style={{ marginBottom: 24, ...style }}>
-      {/* 标题 */}
+      {/* Title */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 12
+        marginBottom: 16
       }}>
         <h3 style={{
           margin: 0,
@@ -241,92 +217,40 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
         </h3>
       </div>
 
-      {/* 日期选择器 - 横向滚动 */}
-      <div style={{
-        display: 'flex',
-        gap: 8,
-        marginBottom: 16,
-        overflowX: 'auto',
-        paddingBottom: 4,
-        scrollbarWidth: 'none',
-      }}>
-        {dateOptions.map(opt => {
-          const isSelected = selectedDate === opt.value;
-          return (
-            <div
-              key={opt.value}
-              onClick={() => setSelectedDate(opt.value)}
-              style={{
-                minWidth: 64,
-                padding: '8px 12px',
-                borderRadius: 12,
-                cursor: 'pointer',
-                textAlign: 'center',
-                transition: 'all 0.25s ease',
-                background: isSelected
-                  ? 'linear-gradient(135deg, #FDE08D, #C48D3A)'
-                  : 'rgba(255,255,255,0.06)',
-                border: isSelected
-                  ? '1px solid transparent'
-                  : '1px solid rgba(255,255,255,0.1)',
-                flexShrink: 0,
-              }}
-            >
-              <div style={{
-                fontSize: 11,
-                fontWeight: 600,
-                color: isSelected ? '#111' : 'rgba(255,255,255,0.5)',
-                marginBottom: 2,
-              }}>
-                {opt.label}
-              </div>
-              <div style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: isSelected ? '#111' : '#fff',
-              }}>
-                {opt.dateLabel}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* 房间列表 */}
+      {/* Rooms List - directly displayed as cards */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {rooms.map(room => {
-          const isExpanded = expandedRoom === room.id;
           const storeName = getStoreName(room.storeId);
-          const bookedCount = room.timeslots.filter(ts => isSlotBooked(room.id!, ts)).length;
-          const availableCount = room.timeslots.length - bookedCount;
-
           return (
             <div
               key={room.id}
+              onClick={() => handleOpenBookingModal(room)}
               style={{
                 background: 'linear-gradient(135deg, rgba(26,26,26,0.95), rgba(40,35,25,0.9))',
                 border: '1px solid rgba(244,175,37,0.2)',
                 borderRadius: 16,
-                overflow: 'hidden',
+                padding: '16px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
                 transition: 'all 0.3s ease',
               }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(244,175,37,0.5)';
+                e.currentTarget.style.boxShadow = '0 4px 15px rgba(244,175,37,0.15)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(244,175,37,0.2)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
             >
-              {/* 房间头部 - 可点击展开 */}
-              <div
-                onClick={() => setExpandedRoom(isExpanded ? null : (room.id || null))}
-                style={{
-                  padding: '14px 16px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  transition: 'background 0.2s',
-                }}
-              >
-                {/* 房间图标 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                {/* Icon */}
                 <div style={{
-                  width: 42,
-                  height: 42,
+                  width: 44,
+                  height: 44,
                   borderRadius: 12,
                   background: 'linear-gradient(135deg, rgba(244,175,37,0.15), rgba(196,141,58,0.15))',
                   display: 'flex',
@@ -335,182 +259,324 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                   flexShrink: 0,
                   border: '1px solid rgba(244,175,37,0.25)',
                 }}>
-                  <span style={{ fontSize: 20 }}>🚪</span>
+                  <span style={{ fontSize: 22 }}>🚪</span>
                 </div>
 
-                {/* 房间信息 */}
-                <div style={{ flex: 1, minWidth: 0 }}>
+                {/* Details */}
+                <div style={{ minWidth: 0 }}>
                   <div style={{
                     fontSize: 15,
                     fontWeight: 700,
                     color: '#fff',
                     marginBottom: 3,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
                   }}>
                     {room.name}
                   </div>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    flexWrap: 'wrap',
-                  }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                     {storeName && (
                       <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
                         <EnvironmentOutlined style={{ marginRight: 3 }} />
                         {storeName}
                       </span>
                     )}
-                    {room.fee > 0 && (
-                      <span style={{
-                        fontSize: 11,
-                        color: '#FFD700',
-                        fontWeight: 600,
-                      }}>
-                        RM {room.fee}
-                      </span>
-                    )}
+                    <span style={{
+                      fontSize: 11,
+                      color: '#FFD700',
+                      fontWeight: 600,
+                    }}>
+                      {room.fee} 积分 (Points)
+                    </span>
                   </div>
-                </div>
-
-                {/* 可用数量 + 展开箭头 */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                  <span style={{
-                    fontSize: 11,
-                    padding: '3px 8px',
-                    borderRadius: 6,
-                    background: availableCount > 0
-                      ? 'rgba(52,211,153,0.15)'
-                      : 'rgba(248,113,113,0.15)',
-                    color: availableCount > 0 ? '#34d399' : '#f87171',
-                    fontWeight: 600,
-                  }}>
-                    {availableCount}/{room.timeslots.length}
-                  </span>
-                  <span style={{
-                    color: 'rgba(244,175,37,0.6)',
-                    fontSize: 14,
-                    transition: 'transform 0.25s ease',
-                    transform: isExpanded ? 'rotate(90deg)' : 'rotate(0)',
-                    display: 'inline-block',
-                  }}>
-                    ›
-                  </span>
                 </div>
               </div>
 
-              {/* 展开的时段选择 */}
-              {isExpanded && (
-                <div style={{
-                  padding: '4px 16px 16px',
-                  borderTop: '1px solid rgba(244,175,37,0.1)',
-                }}>
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
-                    gap: 8,
-                    marginTop: 10,
-                  }}>
-                    {room.timeslots.map((slot, idx) => {
-                      const booked = isSlotBooked(room.id!, slot);
-                      const bookedByMe = isSlotBookedByMe(room.id!, slot);
-                      const past = isSlotPast(slot);
-                      const disabled = booked || past;
-
-                      return (
-                        <div
-                          key={idx}
-                          onClick={() => !disabled && handleBookSlot(room, slot)}
-                          style={{
-                            padding: '10px 12px',
-                            borderRadius: 10,
-                            cursor: disabled ? 'not-allowed' : 'pointer',
-                            textAlign: 'center',
-                            transition: 'all 0.2s ease',
-                            background: bookedByMe
-                              ? 'linear-gradient(135deg, rgba(52,211,153,0.2), rgba(52,211,153,0.1))'
-                              : booked
-                                ? 'rgba(248,113,113,0.08)'
-                                : past
-                                  ? 'rgba(255,255,255,0.03)'
-                                  : 'rgba(255,255,255,0.06)',
-                            border: bookedByMe
-                              ? '1px solid rgba(52,211,153,0.4)'
-                              : booked
-                                ? '1px solid rgba(248,113,113,0.2)'
-                                : past
-                                  ? '1px solid rgba(255,255,255,0.05)'
-                                  : '1px solid rgba(244,175,37,0.2)',
-                            opacity: past ? 0.4 : 1,
-                            position: 'relative',
-                          }}
-                          onMouseEnter={(e) => {
-                            if (!disabled) {
-                              e.currentTarget.style.background = 'rgba(244,175,37,0.12)';
-                              e.currentTarget.style.borderColor = 'rgba(244,175,37,0.5)';
-                              e.currentTarget.style.transform = 'scale(1.02)';
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (!disabled) {
-                              e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
-                              e.currentTarget.style.borderColor = 'rgba(244,175,37,0.2)';
-                              e.currentTarget.style.transform = 'scale(1)';
-                            }
-                          }}
-                        >
-                          <div style={{
-                            fontSize: 12,
-                            fontWeight: 600,
-                            color: bookedByMe
-                              ? '#34d399'
-                              : booked
-                                ? 'rgba(248,113,113,0.7)'
-                                : past
-                                  ? 'rgba(255,255,255,0.3)'
-                                  : '#fff',
-                            marginBottom: 3,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: 4,
-                          }}>
-                            <ClockCircleOutlined style={{ fontSize: 10 }} />
-                            {slot}
-                          </div>
-                          <div style={{
-                            fontSize: 10,
-                            fontWeight: 600,
-                            color: bookedByMe
-                              ? '#34d399'
-                              : booked
-                                ? 'rgba(248,113,113,0.6)'
-                                : past
-                                  ? 'rgba(255,255,255,0.25)'
-                                  : 'rgba(244,175,37,0.7)',
-                          }}>
-                            {bookedByMe ? (
-                              <><CheckCircleOutlined style={{ marginRight: 3 }} />My Booking</>
-                            ) : booked ? (
-                              'Booked'
-                            ) : past ? (
-                              'Passed'
-                            ) : (
-                              'Available'
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+              {/* Action Button */}
+              <Button
+                type="primary"
+                style={{
+                  background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                  border: 'none',
+                  color: '#111',
+                  fontWeight: 700,
+                  borderRadius: 8,
+                  fontSize: 12,
+                  padding: '4px 12px',
+                  height: 'auto'
+                }}
+              >
+                预订 (Book)
+              </Button>
             </div>
           );
         })}
       </div>
+
+      {/* Booking Date & Slot Selection Modal */}
+      <Modal
+        open={selectedRoom !== null}
+        onCancel={handleCloseBookingModal}
+        title={
+          <div style={{ color: '#fff', fontSize: 17, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 10 }}>
+            🚪 预订包厢 - {selectedRoom?.name}
+          </div>
+        }
+        footer={null}
+        centered
+        destroyOnClose
+        width={420}
+        styles={{
+          content: {
+            background: 'linear-gradient(180deg, #1f1b14 0%, #15130f 100%)',
+            border: '1px solid rgba(244,175,37,0.4)',
+            borderRadius: 20,
+            padding: 24,
+          },
+          mask: {
+            backdropFilter: 'blur(4px)',
+          }
+        }}
+      >
+        {selectedRoom && (
+          <div>
+            {/* Store & Price Summary */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, fontSize: 13 }}>
+              <span style={{ color: 'rgba(255,255,255,0.5)' }}>
+                <EnvironmentOutlined style={{ marginRight: 4 }} />
+                {getStoreName(selectedRoom.storeId)}
+              </span>
+              <span style={{ color: '#FFD700', fontWeight: 700 }}>
+                费用: {selectedRoom.fee} 积分
+              </span>
+            </div>
+
+            {/* Date Picker inside Modal */}
+            <div style={{ marginBottom: 12, fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>
+              选择日期 (Select Date)
+            </div>
+            <div style={{
+              display: 'flex',
+              gap: 8,
+              marginBottom: 20,
+              overflowX: 'auto',
+              paddingBottom: 6,
+              scrollbarWidth: 'none',
+            }}>
+              {dateOptions.map(opt => {
+                const isSelected = selectedDate === opt.value;
+                return (
+                  <div
+                    key={opt.value}
+                    onClick={() => {
+                      setSelectedDate(opt.value);
+                      setSelectedSlot(null);
+                    }}
+                    style={{
+                      minWidth: 64,
+                      padding: '8px 10px',
+                      borderRadius: 12,
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      transition: 'all 0.25s ease',
+                      background: isSelected
+                        ? 'linear-gradient(135deg, #FDE08D, #C48D3A)'
+                        : 'rgba(255,255,255,0.06)',
+                      border: isSelected
+                        ? '1px solid transparent'
+                        : '1px solid rgba(255,255,255,0.1)',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <div style={{
+                      fontSize: 10,
+                      fontWeight: 600,
+                      color: isSelected ? '#111' : 'rgba(255,255,255,0.5)',
+                      marginBottom: 2,
+                    }}>
+                      {opt.label}
+                    </div>
+                    <div style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: isSelected ? '#111' : '#fff',
+                    }}>
+                      {opt.dateLabel}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Timeslot Selector */}
+            <div style={{ marginBottom: 10, fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>
+              选择时段 (Select Timeslot)
+            </div>
+            {loadingBookings ? (
+              <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                <Spin size="small" />
+              </div>
+            ) : (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 10,
+                marginBottom: 24,
+                maxHeight: 220,
+                overflowY: 'auto',
+                paddingRight: 4,
+              }}>
+                {selectedRoom.timeslots.map((slot, idx) => {
+                  const booked = isSlotBooked(slot);
+                  const bookedByMe = isSlotBookedByMe(slot);
+                  const past = isSlotPast(slot);
+                  const disabled = booked || past;
+                  const isSelected = selectedSlot === slot;
+
+                  return (
+                    <div
+                      key={idx}
+                      onClick={() => !disabled && setSelectedSlot(slot)}
+                      style={{
+                        padding: '12px 10px',
+                        borderRadius: 12,
+                        cursor: disabled ? 'not-allowed' : 'pointer',
+                        textAlign: 'center',
+                        transition: 'all 0.2s ease',
+                        background: bookedByMe
+                          ? 'linear-gradient(135deg, rgba(52,211,153,0.15), rgba(52,211,153,0.08))'
+                          : isSelected
+                            ? 'linear-gradient(135deg, rgba(244,175,37,0.25), rgba(196,141,58,0.25))'
+                            : booked
+                              ? 'rgba(248,113,113,0.06)'
+                              : past
+                                ? 'rgba(255,255,255,0.03)'
+                                : 'rgba(255,255,255,0.06)',
+                        border: bookedByMe
+                          ? '1px solid rgba(52,211,153,0.35)'
+                          : isSelected
+                            ? '1px solid #FFD700'
+                            : booked
+                              ? '1px solid rgba(248,113,113,0.15)'
+                              : past
+                                ? '1px solid rgba(255,255,255,0.04)'
+                                : '1px solid rgba(244,175,37,0.2)',
+                        opacity: past ? 0.45 : 1,
+                      }}
+                    >
+                      <div style={{
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: bookedByMe
+                          ? '#34d399'
+                          : isSelected
+                            ? '#FFD700'
+                            : booked
+                              ? 'rgba(248,113,113,0.7)'
+                              : past
+                                ? 'rgba(255,255,255,0.3)'
+                                : '#fff',
+                        marginBottom: 4,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 4
+                      }}>
+                        <ClockCircleOutlined style={{ fontSize: 10 }} />
+                        {slot}
+                      </div>
+                      <div style={{
+                        fontSize: 10,
+                        fontWeight: 600,
+                        color: bookedByMe
+                          ? '#34d399'
+                          : isSelected
+                            ? '#FFD700'
+                            : booked
+                              ? 'rgba(248,113,113,0.6)'
+                              : past
+                                ? 'rgba(255,255,255,0.25)'
+                                : 'rgba(255,255,255,0.4)',
+                      }}>
+                        {bookedByMe ? (
+                          <><CheckCircleOutlined style={{ marginRight: 2 }} />My Booking</>
+                        ) : booked ? (
+                          'Booked'
+                        ) : past ? (
+                          'Passed'
+                        ) : isSelected ? (
+                          'Selected'
+                        ) : (
+                          'Available'
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* User Points & Balance status */}
+            <div style={{
+              background: 'rgba(255,255,255,0.04)',
+              borderRadius: 12,
+              padding: 12,
+              marginBottom: 24,
+              border: '1px solid rgba(255,255,255,0.08)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 12 }}>
+                <span style={{ color: 'rgba(255,255,255,0.6)' }}>您的可用积分 (Your Points):</span>
+                <span style={{ color: '#fff', fontWeight: 600 }}>{user?.membership?.points || 0} 积分</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                <span style={{ color: 'rgba(255,255,255,0.6)' }}>扣除积分 (Deduction):</span>
+                <span style={{ color: '#FFD700', fontWeight: 700 }}>-{selectedRoom.fee} 积分</span>
+              </div>
+              {user && user.membership && (user.membership.points || 0) < selectedRoom.fee && (
+                <div style={{ color: '#f87171', fontSize: 11, marginTop: 8, fontWeight: 600, textAlign: 'center' }}>
+                  ⚠️ 积分余额不足 (Insufficient points balance)
+                </div>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div style={{ display: 'flex', gap: 12 }}>
+              <Button
+                onClick={handleCloseBookingModal}
+                style={{
+                  flex: 1,
+                  background: 'rgba(255,255,255,0.08)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  color: '#fff',
+                  borderRadius: 10,
+                  height: 40,
+                  fontWeight: 600
+                }}
+              >
+                取消 (Cancel)
+              </Button>
+              <Button
+                type="primary"
+                onClick={handleConfirmBooking}
+                loading={bookingInProgress}
+                disabled={
+                  !selectedSlot || 
+                  (user?.membership?.points || 0) < selectedRoom.fee
+                }
+                style={{
+                  flex: 2,
+                  background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                  border: 'none',
+                  color: '#111',
+                  borderRadius: 10,
+                  height: 40,
+                  fontWeight: 700
+                }}
+              >
+                确认预订 (Confirm)
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

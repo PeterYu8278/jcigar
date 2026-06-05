@@ -9,10 +9,12 @@ import {
   query, 
   where, 
   orderBy,
-  Timestamp
+  Timestamp,
+  runTransaction
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { convertFirestoreTimestamps } from './auth';
+import { GLOBAL_COLLECTIONS } from '../../config/globalCollections';
 
 const ROOMS_COLLECTION = 'rooms';
 const ROOM_BOOKINGS_COLLECTION = 'roomBookings';
@@ -198,25 +200,76 @@ export const getUserBookings = async (userId: string) => {
   }
 };
 
-/**
- * 创建预订
- */
 export const createBooking = async (bookingData: Omit<RoomBooking, 'id' | 'createdAt' | 'updatedAt'>) => {
   try {
-    // 检查该时段是否已被预订
-    const existing = await getBookingsByDate(bookingData.date, bookingData.roomId);
-    const conflict = existing.find(b => b.timeslot === bookingData.timeslot);
-    if (conflict) {
-      return { success: false, error: '该时段已被预订' };
-    }
-
     const now = new Date();
-    const docRef = await addDoc(collection(db, ROOM_BOOKINGS_COLLECTION), {
-      ...stripUndefined(bookingData as Record<string, any>),
-      createdAt: Timestamp.fromDate(now),
-      updatedAt: Timestamp.fromDate(now)
+    
+    // Deterministic ID to prevent concurrent double-booking
+    const bookingDocId = `${bookingData.roomId}_${bookingData.date}_${bookingData.timeslot.replace(/[\s:-]+/g, '_')}`;
+    const bookingDocRef = doc(db, ROOM_BOOKINGS_COLLECTION, bookingDocId);
+    
+    const userDocRef = doc(db, GLOBAL_COLLECTIONS.USERS, bookingData.userId);
+    
+    const result = await runTransaction(db, async (transaction) => {
+      // 1. Check booking slot conflict
+      const bookingSnap = await transaction.get(bookingDocRef);
+      if (bookingSnap.exists()) {
+        const data = bookingSnap.data();
+        if (data.status === 'confirmed') {
+          throw new Error('该时段已被预订');
+        }
+      }
+      
+      // 2. Check user points
+      const userSnap = await transaction.get(userDocRef);
+      if (!userSnap.exists()) {
+        throw new Error('用户不存在');
+      }
+      
+      const userData = userSnap.data();
+      const currentPoints = userData.membership?.points || 0;
+      const fee = bookingData.fee || 0;
+      
+      if (currentPoints < fee) {
+        throw new Error('积分余额不足');
+      }
+      
+      const newPoints = currentPoints - fee;
+      
+      // 3. Deduct points from user
+      transaction.update(userDocRef, {
+        'membership.points': newPoints,
+        updatedAt: Timestamp.fromDate(now)
+      });
+      
+      // 4. Create points record (generate random ID and set)
+      const pointsRecordRef = doc(collection(db, GLOBAL_COLLECTIONS.POINTS_RECORDS));
+      const pointsRecordData = {
+        userId: bookingData.userId,
+        userName: bookingData.userName || userData.displayName || '',
+        type: 'spend',
+        amount: fee,
+        source: 'visit',
+        description: `房间预订: ${bookingData.roomName} (${bookingData.date} ${bookingData.timeslot})`,
+        relatedId: bookingDocId,
+        balance: newPoints,
+        createdAt: Timestamp.fromDate(now)
+      };
+      transaction.set(pointsRecordRef, pointsRecordData);
+      
+      // 5. Create the booking document
+      const bookingDocData = {
+        ...stripUndefined(bookingData as Record<string, any>),
+        status: 'confirmed',
+        createdAt: Timestamp.fromDate(now),
+        updatedAt: Timestamp.fromDate(now)
+      };
+      transaction.set(bookingDocRef, bookingDocData);
+      
+      return { success: true, id: bookingDocId };
     });
-    return { success: true, id: docRef.id };
+    
+    return result;
   } catch (error: any) {
     console.error('[Rooms Service] createBooking error:', error);
     return { success: false, error: error.message };
