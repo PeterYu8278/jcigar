@@ -85,6 +85,17 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     icon: 'DatabaseOutlined',
     defaultVisible: true,
   },
+  {
+    key: 'rooms-booking',
+    name: '房间预订',
+    nameEn: 'Rooms Booking',
+    description: '浏览和预订门店房间/包厢',
+    descriptionEn: 'Browse and book store rooms',
+    route: '/rooms',
+    category: 'frontend',
+    icon: 'HomeOutlined',
+    defaultVisible: true,
+  },
   // 管理后台功能
   {
     key: 'dashboard',

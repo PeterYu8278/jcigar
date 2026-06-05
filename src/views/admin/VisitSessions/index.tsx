@@ -1,6 +1,6 @@
 // 驻店记录管理页面
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Button, Space, Tag, Modal, message, Input, Typography, App, Form, Select, InputNumber, Spin } from 'antd';
+import { Card, Table, Button, Space, Tag, Modal, message, Input, Typography, App, Form, Select, InputNumber, Spin, Tabs } from 'antd';
 import { ReloadOutlined, CheckOutlined, ClockCircleOutlined, QrcodeOutlined, LoginOutlined, LogoutOutlined, GiftOutlined, PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import {
   getUserVisitSessions,
@@ -19,6 +19,7 @@ import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { QRScanner } from '../../../components/admin/QRScanner';
 import { OrderSkeleton } from '../../../components/features/admin/OrderSkeleton';
+import { RoomManagement } from '../../../components/admin/RoomManagement';
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -378,64 +379,75 @@ const VisitSessionsPage: React.FC = () => {
       }}>
         {t('visitSessions.title')}
       </h1>
-      <Text style={{ color: 'rgba(255, 255, 255, 0.6)', display: 'block' }}>
-        {t('visitSessions.subtitle')}
-      </Text>
-      <div>
-        <Space direction="vertical" size="large" style={{ width: '100%' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
-            <div style={{ flex: 1 }} />
-            <Space wrap>
-              <Button
-                icon={<LoginOutlined />}
-                onClick={() => {
-                  setQrScannerMode('checkin');
-                  setQrScannerVisible(true);
-                }}
-                style={{
-                  background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                  border: 'none',
-                  color: '#111',
-                  fontWeight: 700,
-                  boxShadow: '0 4px 15px rgba(244,175,37,0.35)'
-                }}
-              >
-                Check-in
-              </Button>
-              <Button
-                icon={<LogoutOutlined />}
-                onClick={() => {
-                  setQrScannerMode('checkout');
-                  setQrScannerVisible(true);
-                }}
-                style={{
-                  background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                  border: 'none',
-                  color: '#111',
-                  fontWeight: 700,
-                  boxShadow: '0 4px 15px rgba(244,175,37,0.35)'
-                }}
-              >
-                Check-out
-              </Button>
 
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={async () => {
-                  // 重新加载所有数据
-                  await loadAllSessions()
-                }}
-                loading={loading}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  color: '#FFFFFF'
-                }}
-              >
-                {t('visitSessions.refresh')}
-              </Button>
-            </Space>
-          </div>
+      <Tabs
+        defaultActiveKey="sessions"
+        className="points-config-form"
+        style={{ color: '#fff' }}
+        items={[
+          {
+            key: 'sessions',
+            label: <span style={{ fontSize: 16, fontWeight: 700, paddingInline: 8 }}>驻店记录</span>,
+            children: (
+              <div>
+                <Text style={{ color: 'rgba(255, 255, 255, 0.6)', display: 'block', marginBottom: 16 }}>
+                  {t('visitSessions.subtitle')}
+                </Text>
+                <Space direction="vertical" size="large" style={{ width: '100%' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+                    <div style={{ flex: 1 }} />
+                    <Space wrap>
+                      <Button
+                        icon={<LoginOutlined />}
+                        onClick={() => {
+                          setQrScannerMode('checkin');
+                          setQrScannerVisible(true);
+                        }}
+                        style={{
+                          background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                          border: 'none',
+                          color: '#111',
+                          fontWeight: 700,
+                          boxShadow: '0 4px 15px rgba(244,175,37,0.35)'
+                        }}
+                      >
+                        Check-in
+                      </Button>
+                      <Button
+                        icon={<LogoutOutlined />}
+                        onClick={() => {
+                          setQrScannerMode('checkout');
+                          setQrScannerVisible(true);
+                        }}
+                        style={{
+                          background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                          border: 'none',
+                          color: '#111',
+                          fontWeight: 700,
+                          boxShadow: '0 4px 15px rgba(244,175,37,0.35)'
+                        }}
+                      >
+                        Check-out
+                      </Button>
+
+                      <Button
+                        icon={<ReloadOutlined />}
+                        onClick={async () => {
+                          // 重新加载所有数据
+                          await loadAllSessions()
+                        }}
+                        loading={loading}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.1)',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          color: '#FFFFFF'
+                        }}
+                      >
+                        {t('visitSessions.refresh')}
+                      </Button>
+                    </Space>
+                  </div>
+
 
           <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
             <Search
@@ -958,7 +970,16 @@ const VisitSessionsPage: React.FC = () => {
             </div>
           )}
         </Space>
-      </div>
+              </div>
+            )
+          },
+          {
+            key: 'rooms',
+            label: <span style={{ fontSize: 16, fontWeight: 700, paddingInline: 8 }}>Room Management</span>,
+            children: <RoomManagement />
+          }
+        ]}
+      />
 
       {/* QR扫描器 */}
       <QRScanner

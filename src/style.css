@@ -916,21 +916,27 @@ button+button {
   color: rgba(255, 255, 255, 0.85) !important;
 }
 
-.points-config-form .ant-table-tbody>tr {
+.points-config-form .ant-table-tbody>tr,
+.points-config-form .ant-table-row {
   background: transparent !important;
 }
 
-.points-config-form .ant-table-tbody>tr>td {
+.points-config-form .ant-table-tbody>tr>td,
+.points-config-form .ant-table-cell {
   background: transparent !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
   color: rgba(255, 255, 255, 0.85) !important;
 }
 
-.points-config-form .ant-table-tbody>tr:hover>td {
+.points-config-form .ant-table-tbody>tr:hover>td,
+.points-config-form .ant-table-row:hover .ant-table-cell,
+.points-config-form .ant-table-row:hover>div {
   background: rgba(255, 255, 255, 0.05) !important;
 }
 
-.points-config-form .ant-table-tbody>tr.ant-table-row-selected>td {
+.points-config-form .ant-table-tbody>tr.ant-table-row-selected>td,
+.points-config-form .ant-table-row-selected .ant-table-cell,
+.points-config-form .ant-table-row-selected>div {
   background: rgba(244, 175, 37, 0.1) !important;
 }
 

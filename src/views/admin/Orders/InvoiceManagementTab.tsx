@@ -125,7 +125,7 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
       dataIndex: 'id',
       key: 'id',
       width: 180,
-      render: (id: string) => <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{id}</span>,
+      render: (id: string) => <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#FDE08D', fontWeight: 600 }}>{id}</span>,
     },
     {
       title: t('ordersAdmin.user'),
@@ -133,8 +133,8 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
       key: 'userId',
       render: (userId: string) => (
         <div>
-          <div style={{ fontWeight: 700 }}>{getUserName(userId, users)}</div>
-          <div style={{ fontSize: 12, opacity: 0.75 }}>{getUserPhone(userId, users) || '-'}</div>
+          <div style={{ fontWeight: 700, color: '#FFFFFF' }}>{getUserName(userId, users)}</div>
+          <div style={{ fontSize: 12, color: '#CCCCCC' }}>{getUserPhone(userId, users) || '-'}</div>
         </div>
       ),
     },
@@ -448,7 +448,7 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
                     backdropFilter: 'blur(10px)'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', fontFamily: 'monospace' }}>
+                      <div style={{ fontSize: 12, color: '#FDE08D', fontFamily: 'monospace', fontWeight: 600 }}>
                         {record.id.substring(0, 30)}
                       </div>
                       <Tag color={getStatusColor(record.status)} style={{ margin: 0 }}>
@@ -457,8 +457,8 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
                     </div>
 
                     <div style={{ marginBottom: 8 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{getUserName(record.userId, users)}</div>
-                      <div style={{ fontSize: 11, opacity: 0.6, color: '#fff' }}>{getUserPhone(record.userId, users) || '-'}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#FFFFFF' }}>{getUserName(record.userId, users)}</div>
+                      <div style={{ fontSize: 11, color: '#CCCCCC' }}>{getUserPhone(record.userId, users) || '-'}</div>
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>

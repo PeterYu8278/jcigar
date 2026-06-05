@@ -627,17 +627,17 @@ const AdminOrders: React.FC = () => {
                               <div key={order.id} style={{ border: '1px solid rgba(244,175,37,0.2)', borderRadius: 12, padding: 12, background: 'rgba(34,28,16,0.5)', backdropFilter: 'blur(10px)' }}>
                                 {/* 订单号和日期同行 */}
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
-                                    {t('ordersAdmin.orderNo')}: {order.id.substring(0, 20)}
+                                  <div style={{ fontSize: 12, color: '#FFFFFF', fontWeight: 500 }}>
+                                    {t('ordersAdmin.orderNo')}: <span style={{ color: '#FDE08D' }}>{order.id.substring(0, 20)}</span>
                                   </div>
-                                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+                                  <div style={{ fontSize: 12, color: '#CCCCCC' }}>
                                     {formattedDate}
                                   </div>
                                 </div>
 
                                 {/* 用户名和状态同行 */}
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                                  <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>
+                                  <div style={{ fontSize: 13, fontWeight: 700, color: '#FFFFFF' }}>
                                     {getUserName(order.userId, users)}
                                   </div>
                                   <span style={{ fontSize: 12, fontWeight: 600, color: getStatusColor(order.status) === 'green' ? '#34d399' : getStatusColor(order.status) === 'red' ? '#f87171' : getStatusColor(order.status) === 'orange' ? '#fb923c' : getStatusColor(order.status) === 'blue' ? '#60a5fa' : '#a78bfa' }}>
@@ -647,7 +647,7 @@ const AdminOrders: React.FC = () => {
 
                                 {/* 手机号和查看按钮同行 */}
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
+                                  <div style={{ fontSize: 11, color: '#CCCCCC' }}>
                                     {getUserPhone(order.userId, users) || '-'}
                                   </div>
                                   <button style={{ padding: '4px 8px', borderRadius: 6, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10', fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => { setViewing(order); setIsEditingInView(false) }}>
@@ -660,12 +660,12 @@ const AdminOrders: React.FC = () => {
                                   {/* 商品列表 */}
                                   <div style={{ flex: 1 }}>
                                     {order.items.slice(0, 2).map((item: any, index: number) => (
-                                      <div key={`${order.id}_${item.cigarId}_${index}`} style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginBottom: 4 }}>
-                                        • {getCigarName(item.cigarId)} × {item.quantity}
+                                      <div key={`${order.id}_${item.cigarId}_${index}`} style={{ fontSize: 12, color: '#FFFFFF', marginBottom: 4 }}>
+                                        • {getCigarName(item.cigarId)} × <span style={{ color: '#FDE08D', fontWeight: 600 }}>{item.quantity}</span>
                                       </div>
                                     ))}
                                     {order.items.length > 2 && (
-                                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>
+                                      <div style={{ fontSize: 11, color: '#CCCCCC', marginTop: 4 }}>
                                         +{order.items.length - 2} {t('common.more')}
                                       </div>
                                     )}

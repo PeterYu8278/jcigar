@@ -30,6 +30,7 @@ import { isFeatureVisible } from '../../../services/firebase/featureVisibility'
 import { getAppConfig } from '../../../services/firebase/appConfig'
 import type { AppConfig } from '../../../types'
 import { CigarRatingBadge } from '../../../components/common/CigarRatingBadge'
+import { RoomBookingSection } from '../../../components/home/RoomBookingSection'
 
 const Home: React.FC = () => {
   const navigate = useNavigate()
@@ -47,6 +48,7 @@ const Home: React.FC = () => {
   const [eventsFeatureVisible, setEventsFeatureVisible] = useState<boolean>(true)
   const [shopFeatureVisible, setShopFeatureVisible] = useState<boolean>(true)
   const [visitSessionsFeatureVisible, setVisitSessionsFeatureVisible] = useState<boolean>(true)
+  const [roomsBookingFeatureVisible, setRoomsBookingFeatureVisible] = useState<boolean>(false)
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
 
   // 会员等级文本获取函数
@@ -151,6 +153,10 @@ const Home: React.FC = () => {
         // 检查驻店记录功能是否可见（developer 不受限制）
         const visitSessionsVisible = user?.role === 'developer' ? true : await isFeatureVisible('visit-sessions')
         setVisitSessionsFeatureVisible(visitSessionsVisible)
+
+        // 检查房间预订功能是否可见
+        const roomsBookingVisible = user?.role === 'developer' ? true : await isFeatureVisible('rooms-booking')
+        setRoomsBookingFeatureVisible(roomsBookingVisible)
 
         setLoadingEvents(true)
         setLoadingCigars(true)
@@ -633,6 +639,11 @@ const Home: React.FC = () => {
             </div>
           )}
         </div>
+      )}
+
+      {/* 房间预订板块 - 仅在rooms-booking功能可见时显示 */}
+      {roomsBookingFeatureVisible && (
+        <RoomBookingSection />
       )}
 
       {/* 最新活动 列表（真实数据） - 仅在活动功能可见时显示 */}

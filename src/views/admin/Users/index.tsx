@@ -268,8 +268,8 @@ const AdminUsers: React.FC = () => {
       key: 'displayName',
       render: (_: any, record: any) => (
         <div>
-          <div style={{ fontWeight: 500 }}>{record.displayName || '-'}</div>
-          <div style={{ fontSize: 12, color: '#666' }}>{(record as any)?.profile?.phone || ''}</div>
+          <div style={{ fontWeight: 600, color: '#FFFFFF' }}>{record.displayName || '-'}</div>
+          <div style={{ fontSize: 12, color: '#CCCCCC' }}>{(record as any)?.profile?.phone || ''}</div>
         </div>
       ),
     },
@@ -277,6 +277,7 @@ const AdminUsers: React.FC = () => {
       title: t('usersAdmin.email'),
       dataIndex: 'email',
       key: 'email',
+      render: (val: string) => <span style={{ color: '#FFFFFF' }}>{val || '-'}</span>
     },
     ...(canManageDiscount ? [{
       title: t('usersAdmin.discount'),
@@ -285,7 +286,9 @@ const AdminUsers: React.FC = () => {
       width: 80,
       render: (_: any, record: any) => {
         const rate = record.discount?.rate
-        return rate !== undefined && rate !== null ? `${rate}%` : '-'
+        return rate !== undefined && rate !== null ? (
+          <span style={{ color: '#FDE08D', fontWeight: 600 }}>{rate}%</span>
+        ) : '-'
       }
     }] : []),
     {
@@ -984,21 +987,21 @@ const AdminUsers: React.FC = () => {
                                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                                   <div style={{ flex: 1 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                      <div style={{ fontWeight: 700, color: '#f0f0f0' }}>{u.displayName || '-'}</div>
+                                      <div style={{ fontWeight: 700, color: '#FFFFFF' }}>{u.displayName || '-'}</div>
                                       <Tag color={getRoleColor(role)} style={{ margin: 0 }}>
                                         {getRoleText(role)}
                                       </Tag>
                                     </div>
-                                    <div style={{ marginTop: 4, fontSize: 12, color: '#aaa' }}>
-                                      {u.memberId && <span style={{ marginRight: 8, fontFamily: 'monospace' }}>{t('usersAdmin.memberId')}: {u.memberId}</span>}
-                                      {maskPhone((u as any)?.profile?.phone)}
+                                    <div style={{ marginTop: 4, fontSize: 12, color: '#CCCCCC' }}>
+                                      {u.memberId && <span style={{ marginRight: 8, fontFamily: 'monospace', color: '#FDE08D', fontWeight: 500 }}>{t('usersAdmin.memberId')}: {u.memberId}</span>}
+                                      <span style={{ color: '#FFFFFF' }}>{maskPhone((u as any)?.profile?.phone)}</span>
                                       {canManageDiscount && u.discount?.rate !== undefined && (
-                                        <span style={{ marginLeft: 8, color: '#FDE08D' }}>{t('usersAdmin.discount')} {u.discount.rate}%</span>
+                                        <span style={{ marginLeft: 8, color: '#FDE08D', fontWeight: 600 }}>{t('usersAdmin.discount')} {u.discount.rate}%</span>
                                       )}
                                     </div>
                                     <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
                                       <span style={{ width: 8, height: 8, borderRadius: 999, background: status === 'active' ? '#52c41a' : '#ff4d4f', display: 'inline-block' }} />
-                                      <span style={{ fontSize: 12, color: '#ccc' }}>{getStatusText(status)}</span>
+                                      <span style={{ fontSize: 12, color: '#FFFFFF', fontWeight: 500 }}>{getStatusText(status)}</span>
                                     </div>
                                   </div>
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>

@@ -62,7 +62,7 @@ export const getOrderColumns = ({
       key: 'id',
       width: 150,
       render: (id: string) => (
-        <span style={{ fontFamily: 'monospace', fontSize: '12px', wordBreak: 'break-all', whiteSpace: 'normal' }}>
+        <span style={{ fontFamily: 'monospace', fontSize: '12px', wordBreak: 'break-all', whiteSpace: 'normal', color: '#FDE08D', fontWeight: 600 }}>
           {id}
         </span>
       ),
@@ -73,8 +73,8 @@ export const getOrderColumns = ({
       key: 'userId',
       render: (userId: string) => (
         <div>
-          <div style={{ fontWeight: 'bold' }}>{getUserName(userId, users)}</div>
-          <div style={{ fontSize: '12px', color: '#666' }}>{getUserPhone(userId, users) || '-'}</div>
+          <div style={{ fontWeight: 'bold', color: '#FFFFFF' }}>{getUserName(userId, users)}</div>
+          <div style={{ fontSize: '12px', color: '#CCCCCC' }}>{getUserPhone(userId, users) || '-'}</div>
         </div>
       ),
     },
@@ -84,12 +84,12 @@ export const getOrderColumns = ({
       render: (_: any, record: Order) => (
         <div>
           {record.items.slice(0, 2).map((item, index) => (
-            <div key={`${record.id}_${item.cigarId}_${index}`} style={{ fontSize: '12px', marginBottom: 2 }}>
-              {getCigarInfo(item.cigarId, cigars)} × {item.quantity}
+            <div key={`${record.id}_${item.cigarId}_${index}`} style={{ fontSize: '12px', marginBottom: 2, color: '#FFFFFF' }}>
+              {getCigarInfo(item.cigarId, cigars)} × <span style={{ color: '#FDE08D', fontWeight: 600 }}>{item.quantity}</span>
             </div>
           ))}
           {record.items.length > 2 && (
-            <div style={{ fontSize: '11px', color: '#666' }}>
+            <div style={{ fontSize: '11px', color: '#CCCCCC' }}>
               +{record.items.length - 2} {t('common.more')}
             </div>
           )}
@@ -104,7 +104,7 @@ export const getOrderColumns = ({
         const matchStatus = getOrderMatchStatus(record.id)
         return (
           <div>
-            <div style={{ fontWeight: 'bold', color: '#1890ff', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ fontWeight: 'bold', color: '#FDE08D', display: 'flex', alignItems: 'center', gap: 8 }}>
               RM{Number(record.total || 0).toFixed(2)}
               {matchStatus.status === 'fully' && (
                 <CheckOutlined style={{ color: '#52c41a', fontSize: '16px' }} />
@@ -135,7 +135,7 @@ export const getOrderColumns = ({
         const display = addr ? (addr.length > 20 ? `${addr.substring(0, 20)}...` : addr) : '-'
         return (
           <div>
-            <div style={{ fontSize: '12px' }}>{display}</div>
+            <div style={{ fontSize: '12px', color: '#FFFFFF' }}>{display}</div>
             <div style={{ marginTop: 4 }}>
               <Tag color={getStatusColor(record.status)}>{getStatusText(record.status, t)}</Tag>
             </div>
@@ -153,7 +153,7 @@ export const getOrderColumns = ({
           d = d.toDate()
         }
         const m = dayjs(d)
-        return m.isValid() ? m.format(i18n.language === 'en-US' ? 'D MMM, YYYY' : 'YYYY-MM-DD') : '-'
+        return m.isValid() ? <span style={{ color: '#FFFFFF' }}>{m.format(i18n.language === 'en-US' ? 'D MMM, YYYY' : 'YYYY-MM-DD')}</span> : '-'
       },
     },
     {
