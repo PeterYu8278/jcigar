@@ -68,40 +68,18 @@ export const updateRedemptionConfig = async (
 };
 
 /**
- * 获取用户当前会员期限内的累计驻店时长
+ * 获取用户累计驻店时长（取消年度重计，计算全期所有完成驻店）
  */
 export const getUserTotalVisitHoursInPeriod = async (userId: string): Promise<number> => {
   try {
-    // 获取会员期限
-    const { getUserMembershipPeriod } = await import('./membershipFee');
-    const period = await getUserMembershipPeriod(userId);
-    
     // 获取驻店记录
     const { getUserVisitSessions } = await import('./visitSessions');
     const sessions = await getUserVisitSessions(userId);
 
-    if (!period) {
-      // 如果没有会员期限，则计算所有已完成记录（兼容未缴纳年费或迁移数据）
-      const totalHours = sessions
-        .filter(s => s.status === 'completed' && s.durationHours && s.checkInType !== 'daypass')
-        .reduce((sum, s) => sum + (s.durationHours || 0), 0);
-      return totalHours;
-    }
-
-    // 筛选出在会员期限内的completed sessions，且排除 Day Pass
-    const periodSessions = sessions.filter(session => {
-      if (session.status !== 'completed' || !session.checkOutAt || session.checkInType === 'daypass') {
-        return false;
-      }
-      // 确保日期对象比较正确
-      const checkOutDate = session.checkOutAt instanceof Date ? session.checkOutAt : new Date(session.checkOutAt);
-      const inPeriod = checkOutDate.getTime() >= period.startDate.getTime() && checkOutDate.getTime() < period.endDate.getTime();
-      return inPeriod;
-    });
-    
-    // 累计时长
-    const totalHours = periodSessions.reduce((sum, session) => sum + (session.durationHours || 0), 0);
-    
+    // 计算所有已完成记录（排除 Day Pass）
+    const totalHours = sessions
+      .filter(s => s.status === 'completed' && s.durationHours && s.checkInType !== 'daypass')
+      .reduce((sum, s) => sum + (s.durationHours || 0), 0);
     return totalHours;
   } catch (error) {
     console.error('[getUserTotalVisitHoursInPeriod] Error:', error);
@@ -111,7 +89,7 @@ export const getUserTotalVisitHoursInPeriod = async (userId: string): Promise<nu
 
 /**
  * 获取用户兑换限额
- * 基于当前会员期限内的累计驻店时长计算里程碑奖励
+ * 基于累计驻店时长计算里程碑奖励：每50小时增加50支额度，无上限，取消年度重计
  */
 export const getUserRedemptionLimits = async (userId: string): Promise<{
   dailyLimit: number;
@@ -126,27 +104,13 @@ export const getUserRedemptionLimits = async (userId: string): Promise<{
     const baseTotalLimit = config?.totalLimit || 25;
     const hourlyLimit = config?.hourlyLimit;
 
-    // 获取当前会员期限内的累计驻店时长
+    // 获取累计驻店时长
     const totalVisitHours = await getUserTotalVisitHoursInPeriod(userId);
     
-    // 里程碑奖励计算（固定规则：50/100/150小时）
-    let dailyLimitBonus = 0;
-    let totalLimitBonus = 0;
-    
-    if (totalVisitHours >= 150) {
-      // 150小时：dailyLimit +3, totalLimit +75
-      dailyLimitBonus = 3;
-      totalLimitBonus = 75;
-    } else if (totalVisitHours >= 100) {
-      // 100小时：dailyLimit +2, totalLimit +50
-      dailyLimitBonus = 2;
-      totalLimitBonus = 50;
-    } else if (totalVisitHours >= 50) {
-      // 50小时：dailyLimit +1, totalLimit +25
-      dailyLimitBonus = 1;
-      totalLimitBonus = 25;
-    }
-    // 超过150小时不再增加
+    // 每50小时增加限额（totalLimit +50，无上限；每日上限保持基础设定，取消小时数加成）
+    const intervals = Math.floor(totalVisitHours / 50);
+    const dailyLimitBonus = 0;
+    const totalLimitBonus = intervals * 50;
 
     const finalLimits = {
       dailyLimit: baseDailyLimit + dailyLimitBonus,
@@ -730,10 +694,6 @@ export const getHourlyRedemptions = async (
  */
 export const getTotalRedemptions = async (userId: string): Promise<RedemptionRecord[]> => {
   try {
-    // 获取会员期限
-    const { getUserMembershipPeriod } = await import('./membershipFee');
-    const period = await getUserMembershipPeriod(userId);
-    
     // 注意：REDEMPTION_RECORDS 集合中的文档是按 visitSessionId 分组的
     // 文档本身没有 redeemedAt 字段，该字段在 redemptions 数组项中
     const q = query(
@@ -767,14 +727,6 @@ export const getTotalRedemptions = async (userId: string): Promise<RedemptionRec
         } as RedemptionRecord);
       });
     });
-    
-    // 如果存在会员期限，过滤出在会员期限内的记录
-    if (period) {
-      allRecords = allRecords.filter(record => {
-        const rDate = record.redeemedAt;
-        return rDate >= period.startDate && rDate < period.endDate;
-      });
-    }
     
     // 按时间排序
     allRecords.sort((a, b) => a.redeemedAt.getTime() - b.redeemedAt.getTime());

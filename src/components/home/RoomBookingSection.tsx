@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { message, Modal, Spin, Tag, Button } from 'antd';
+import { message, Modal, Spin, Tag, Button, Select, Slider } from 'antd';
 import { CalendarOutlined, ClockCircleOutlined, CheckCircleOutlined, EnvironmentOutlined } from '@ant-design/icons';
 import { getActiveRooms, getBookingsByDate, createBooking, type Room, type RoomBooking } from '../../services/firebase/rooms';
 import { getAllStores } from '../../services/firebase/stores';
@@ -16,14 +16,261 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
   const [rooms, setRooms] = useState<Room[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [bookings, setBookings] = useState<RoomBooking[]>([]);
+  const [allDayBookings, setAllDayBookings] = useState<RoomBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingBookings, setLoadingBookings] = useState(false);
-  
+
   // Modal states
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(dayjs().format('YYYY-MM-DD'));
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [startTime, setStartTime] = useState<string | null>(null);
+  const [endTime, setEndTime] = useState<string | null>(null);
   const [bookingInProgress, setBookingInProgress] = useState(false);
+
+  // Time conversion helper functions
+  const timeToMinutes = (timeStr: string): number => {
+    const parts = timeStr.split(':').map(Number);
+    return (parts[0] || 0) * 60 + (parts[1] || 0);
+  };
+
+  const minutesToTime = (mins: number): string => {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  };
+
+  // Get booked intervals for checking overlaps
+  const getBookedIntervals = () => {
+    return bookings
+      .filter(b => b.status === 'confirmed')
+      .map(b => {
+        const parts = b.timeslot.split('-').map(s => s.trim());
+        return {
+          start: timeToMinutes(parts[0]),
+          end: timeToMinutes(parts[1])
+        };
+      });
+  };
+
+  // Check if candidate start time has passed for today
+  const isTimePast = (timeStr: string) => {
+    if (selectedDate !== dayjs().format('YYYY-MM-DD')) return false;
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    const now = dayjs();
+    const slotTime = dayjs().hour(hours).minute(minutes || 0);
+    return now.isAfter(slotTime);
+  };
+
+  // Grid Selection states
+  const [sliderValue, setSliderValue] = useState<[number, number] | null>(null);
+  const [selectedStartPoint, setSelectedStartPoint] = useState<number | null>(null);
+  const [isRangeFinalized, setIsRangeFinalized] = useState<boolean>(false);
+
+  // Reset selection when room or date changes, or pre-populate if user has an existing booking
+  useEffect(() => {
+    if (selectedRoom) {
+      const myExistingBooking = bookings.find(b => b.userId === user?.id && b.status === 'confirmed');
+      if (myExistingBooking) {
+        const parts = myExistingBooking.timeslot.split('-').map(s => s.trim());
+        const startH = timeToMinutes(parts[0]) / 60;
+        const endH = timeToMinutes(parts[1]) / 60;
+        setSliderValue([startH, endH]);
+        setStartTime(parts[0]);
+        setEndTime(parts[1]);
+        setSelectedStartPoint(startH);
+        setIsRangeFinalized(true);
+      } else {
+        setSliderValue(null);
+        setStartTime(null);
+        setEndTime(null);
+        setSelectedStartPoint(null);
+        setIsRangeFinalized(false);
+      }
+    }
+  }, [selectedRoom, selectedDate, bookings]);
+
+  // Check if current slider selection is invalid (overlaps with booked or past hours, or less than configured minimum hours duration)
+  const isSliderValueInvalid = () => {
+    if (!sliderValue || !selectedRoom) return true;
+
+    // Minimum hours check (configured per room, default to 2)
+    const minHours = selectedRoom.minBookingHours || 2;
+    const hours = sliderValue[1] - sliderValue[0];
+    if (hours < minHours) return true;
+
+    const startMins = sliderValue[0] * 60;
+    const endMins = sliderValue[1] * 60;
+
+    // 1. Check overlaps with already booked intervals (excluding current user's own bookings to allow extension)
+    const bookedByOthers = bookings
+      .filter(b => (b.status === 'confirmed' || b.status === 'checked_in') && b.userId !== user?.id)
+      .map(b => {
+        const parts = b.timeslot.split('-').map(s => s.trim());
+        return {
+          start: timeToMinutes(parts[0]),
+          end: timeToMinutes(parts[1])
+        };
+      });
+
+    // Add unavailable periods to treat them as booked
+    if (selectedRoom.unavailablePeriods) {
+      selectedRoom.unavailablePeriods.forEach(p => {
+        bookedByOthers.push({
+          start: timeToMinutes(p.start),
+          end: timeToMinutes(p.end)
+        });
+      });
+    }
+
+    const hasOverlap = bookedByOthers.some(interval => startMins < interval.end && interval.start < endMins);
+    if (hasOverlap) return true;
+
+    // 2. Check if selected start time has already passed for today
+    for (let h = sliderValue[0]; h < sliderValue[1]; h++) {
+      if (isTimePast(`${String(h + 1).padStart(2, '0')}:00`)) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  // Click handler to select start and end times via repeat clicks or instant extensions
+  const handleCellClick = (h: number) => {
+    if (!selectedRoom) return;
+    const startMins = h * 60;
+    const endMins = (h + 1) * 60;
+
+    // Find bookings by other users
+    const bookedByOthers = bookings
+      .filter(b => (b.status === 'confirmed' || b.status === 'checked_in') && b.userId !== user?.id)
+      .map(b => {
+        const parts = b.timeslot.split('-').map(s => s.trim());
+        return {
+          start: timeToMinutes(parts[0]),
+          end: timeToMinutes(parts[1])
+        };
+      });
+
+    // Add unavailable periods to treat them as booked/unavailable
+    if (selectedRoom.unavailablePeriods) {
+      selectedRoom.unavailablePeriods.forEach(p => {
+        bookedByOthers.push({
+          start: timeToMinutes(p.start),
+          end: timeToMinutes(p.end)
+        });
+      });
+    }
+
+    const isBookedByOthers = bookedByOthers.some(interval => startMins < interval.end && interval.start < endMins);
+    const isPast = isTimePast(`${String(h + 1).padStart(2, '0')}:00`);
+    if (isBookedByOthers || isPast) {
+      message.warning('该时段不可预约 (This slot is unavailable)');
+      return;
+    }
+
+    // Check if current user has an existing booking on this day
+    const myExistingBooking = bookings.find(b => b.userId === user?.id && b.status === 'confirmed');
+
+    if (myExistingBooking) {
+      const parts = myExistingBooking.timeslot.split('-').map(s => s.trim());
+      const existStart = timeToMinutes(parts[0]) / 60;
+      const existEnd = timeToMinutes(parts[1]) / 60;
+
+      const currentStart = sliderValue ? sliderValue[0] : existStart;
+      const currentEnd = sliderValue ? sliderValue[1] : existEnd;
+
+      if (h < existStart) {
+        // 1. Advance the start time: check conflicts on path [h, existStart]
+        let hasConflict = false;
+        for (let checkH = h; checkH < existStart; checkH++) {
+          const checkStartMins = checkH * 60;
+          const checkEndMins = (checkH + 1) * 60;
+          const checkBookedByOthers = bookedByOthers.some(interval => checkStartMins < interval.end && interval.start < checkEndMins);
+          const checkPast = isTimePast(`${String(checkH + 1).padStart(2, '0')}:00`);
+          if (checkBookedByOthers || checkPast) {
+            hasConflict = true;
+            break;
+          }
+        }
+
+        if (hasConflict) {
+          message.warning('延长的起始时段存在已被占用或过期的格子，无法延长。');
+        } else {
+          setSliderValue([h, currentEnd]);
+          setStartTime(`${String(h).padStart(2, '0')}:00`);
+          setEndTime(`${String(currentEnd).padStart(2, '0')}:00`);
+        }
+      } else {
+        // 2. Extend the end time: check conflicts on path [existEnd, h + 1]
+        let hasConflict = false;
+        for (let checkH = existEnd; checkH < h + 1; checkH++) {
+          const checkStartMins = checkH * 60;
+          const checkEndMins = (checkH + 1) * 60;
+          const checkBookedByOthers = bookedByOthers.some(interval => checkStartMins < interval.end && interval.start < checkEndMins);
+          const checkPast = isTimePast(`${String(checkH + 1).padStart(2, '0')}:00`);
+          if (checkBookedByOthers || checkPast) {
+            hasConflict = true;
+            break;
+          }
+        }
+
+        if (hasConflict) {
+          message.warning('延长的结束时段存在已被占用或过期的格子，无法延长。');
+        } else {
+          setSliderValue([currentStart, h + 1]);
+          setStartTime(`${String(currentStart).padStart(2, '0')}:00`);
+          setEndTime(`${String(h + 1).padStart(2, '0')}:00`);
+        }
+      }
+    } else {
+      // Normal booking: first click start, second click end
+      if (selectedStartPoint === null || isRangeFinalized) {
+        setSelectedStartPoint(h);
+        setSliderValue([h, h + 1]);
+        setStartTime(`${String(h).padStart(2, '0')}:00`);
+        setEndTime(`${String(h + 1).padStart(2, '0')}:00`);
+        setIsRangeFinalized(false);
+      } else {
+        if (h < selectedStartPoint) {
+          // Reset start point
+          setSelectedStartPoint(h);
+          setSliderValue([h, h + 1]);
+          setStartTime(`${String(h).padStart(2, '0')}:00`);
+          setEndTime(`${String(h + 1).padStart(2, '0')}:00`);
+          setIsRangeFinalized(false);
+        } else {
+          let hasConflict = false;
+          const newStart = selectedStartPoint;
+          const newEnd = h + 1;
+          for (let checkH = newStart; checkH < newEnd; checkH++) {
+            const checkStartMins = checkH * 60;
+            const checkEndMins = (checkH + 1) * 60;
+            const checkBookedByOthers = bookedByOthers.some(interval => checkStartMins < interval.end && interval.start < checkEndMins);
+            const checkPast = isTimePast(`${String(checkH + 1).padStart(2, '0')}:00`);
+            if (checkBookedByOthers || checkPast) {
+              hasConflict = true;
+              break;
+            }
+          }
+
+          if (hasConflict) {
+            setSelectedStartPoint(h);
+            setSliderValue([h, h + 1]);
+            setStartTime(`${String(h).padStart(2, '0')}:00`);
+            setEndTime(`${String(h + 1).padStart(2, '0')}:00`);
+            setIsRangeFinalized(false);
+          } else {
+            setSliderValue([newStart, newEnd]);
+            setStartTime(`${String(newStart).padStart(2, '0')}:00`);
+            setEndTime(`${String(newEnd).padStart(2, '0')}:00`);
+            setIsRangeFinalized(true);
+          }
+        }
+      }
+    }
+  };
 
   // Generate date options for the next 7 days
   const dateOptions = Array.from({ length: 7 }, (_, i) => {
@@ -44,6 +291,18 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
       loadBookings(selectedDate, selectedRoom.id);
     }
   }, [selectedDate, selectedRoom]);
+
+  useEffect(() => {
+    const fetchAllDayBookings = async () => {
+      try {
+        const data = await getBookingsByDate(selectedDate);
+        setAllDayBookings(data);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchAllDayBookings();
+  }, [selectedDate]);
 
   const loadRooms = async () => {
     setLoading(true);
@@ -78,24 +337,7 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
     return store?.name || '';
   };
 
-  const isSlotBooked = (timeslot: string) => {
-    return bookings.some(b => b.timeslot === timeslot);
-  };
 
-  const isSlotBookedByMe = (timeslot: string) => {
-    return bookings.some(b => b.timeslot === timeslot && b.userId === user?.id);
-  };
-
-  const isSlotPast = (timeslot: string) => {
-    if (selectedDate !== dayjs().format('YYYY-MM-DD')) return false;
-    const parts = timeslot.split('-').map(s => s.trim());
-    if (parts.length < 2) return false;
-    const endTime = parts[1];
-    const [hours, minutes] = endTime.split(':').map(Number);
-    const now = dayjs();
-    const slotEnd = dayjs().hour(hours === 0 ? 24 : hours).minute(minutes || 0);
-    return now.isAfter(slotEnd);
-  };
 
   const handleOpenBookingModal = (room: Room) => {
     if (!user?.id) {
@@ -105,23 +347,51 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
     setSelectedRoom(room);
     setSelectedDate(dayjs().format('YYYY-MM-DD'));
     setSelectedSlot(null);
+    setStartTime(null);
+    setEndTime(null);
   };
 
   const handleCloseBookingModal = () => {
     setSelectedRoom(null);
     setSelectedSlot(null);
+    setStartTime(null);
+    setEndTime(null);
+  };
+
+  const calculateHours = (timeslot: string): number => {
+    const parts = timeslot.split('-').map(s => s.trim());
+    if (parts.length < 2) return 0;
+    const startMins = timeToMinutes(parts[0]);
+    const endMins = timeToMinutes(parts[1]);
+    return (endMins - startMins) / 60;
   };
 
   const handleConfirmBooking = async () => {
-    if (!selectedRoom || !selectedSlot) {
-      message.warning('Please select a time slot');
+    if (!selectedRoom || !startTime || !endTime || !sliderValue) {
+      message.warning('Please select start and end times');
       return;
     }
 
-    const userPoints = user?.membership?.points || 0;
-    const fee = selectedRoom.fee || 0;
+    const minHours = selectedRoom.minBookingHours || 2;
+    const hours = sliderValue[1] - sliderValue[0];
+    if (hours < minHours) {
+      message.error(`最低预约时间为 ${minHours} 小时 (Minimum booking duration is ${minHours} hours)`);
+      return;
+    }
 
-    if (userPoints < fee) {
+    const totalFee = hours * selectedRoom.fee;
+    const depositFee = Math.round(totalFee * 0.5);
+
+    // Find if user has an existing booking to determine points delta
+    const myExistingBooking = bookings.find(b => b.userId === user?.id && b.status === 'confirmed');
+    const oldPaidFee = myExistingBooking
+      ? (myExistingBooking.paidFee || Math.round((calculateHours(myExistingBooking.timeslot) * selectedRoom.fee) * 0.5))
+      : 0;
+
+    const netPointsRequired = Math.max(0, depositFee - oldPaidFee);
+    const userPoints = user?.membership?.points || 0;
+
+    if (userPoints < netPointsRequired) {
       message.error('积分余额不足 (Insufficient points)');
       return;
     }
@@ -135,13 +405,20 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
         userId: user!.id,
         userName: user!.displayName || user!.email || '',
         date: selectedDate,
-        timeslot: selectedSlot,
-        fee,
+        timeslot: `${startTime} - ${endTime}`,
+        fee: totalFee,
+        paidFee: depositFee,
         status: 'confirmed',
       });
 
       if (result.success) {
         message.success('Booking confirmed! 🎉');
+        try {
+          const updatedBookings = await getBookingsByDate(selectedDate);
+          setAllDayBookings(updatedBookings);
+        } catch (e) {
+          console.error(e);
+        }
         handleCloseBookingModal();
       } else {
         message.error((result as any).error || 'Booking failed');
@@ -212,103 +489,156 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
           fontWeight: 700,
           color: '#f8f8f8'
         }}>
-          <CalendarOutlined style={{ marginRight: 8, color: '#FFD700' }} />
           Rooms Booking
         </h3>
       </div>
 
-      {/* Rooms List - directly displayed as cards */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {rooms.map(room => {
-          const storeName = getStoreName(room.storeId);
-          return (
-            <div
-              key={room.id}
-              onClick={() => handleOpenBookingModal(room)}
-              style={{
-                background: 'linear-gradient(135deg, rgba(26,26,26,0.95), rgba(40,35,25,0.9))',
-                border: '1px solid rgba(244,175,37,0.2)',
-                borderRadius: 16,
-                padding: '16px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 12,
-                transition: 'all 0.3s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(244,175,37,0.5)';
-                e.currentTarget.style.boxShadow = '0 4px 15px rgba(244,175,37,0.15)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(244,175,37,0.2)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-                {/* Icon */}
-                <div style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 12,
-                  background: 'linear-gradient(135deg, rgba(244,175,37,0.15), rgba(196,141,58,0.15))',
+      {/* Rooms List - horizontally scrollable row */}
+      <style>{`
+        .rooms-scroll-container::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
+      <div
+        className="rooms-scroll-container"
+        style={{
+          display: 'flex',
+          flexDirection: 'row',
+          gap: 12,
+          overflowX: 'auto',
+          paddingBottom: 8,
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+        }}
+      >
+        {(() => {
+          const hasUserBooking = (roomId: string) => {
+            return allDayBookings.some(b =>
+              b.roomId === roomId &&
+              b.userId === user?.id &&
+              (b.status === 'confirmed' || b.status === 'checked_in')
+            );
+          };
+
+          const sortedRooms = [...rooms].sort((a, b) => {
+            const aBooked = a.id ? hasUserBooking(a.id) : false;
+            const bBooked = b.id ? hasUserBooking(b.id) : false;
+            if (aBooked && !bBooked) return -1;
+            if (!aBooked && bBooked) return 1;
+            return 0;
+          });
+
+          return sortedRooms.map(room => {
+            const storeName = getStoreName(room.storeId);
+            const userBooked = room.id ? hasUserBooking(room.id) : false;
+            return (
+              <div
+                key={room.id}
+                onClick={() => handleOpenBookingModal(room)}
+                style={{
+                  background: 'linear-gradient(135deg, rgba(26,26,26,0.95), rgba(40,35,25,0.9))',
+                  border: userBooked ? '1px solid rgba(82, 196, 26, 0.4)' : '1px solid rgba(244,175,37,0.2)',
+                  borderRadius: 16,
+                  padding: '14px 16px',
+                  cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
+                  justifyContent: 'space-between',
+                  gap: 12,
+                  width: 280,
                   flexShrink: 0,
-                  border: '1px solid rgba(244,175,37,0.25)',
-                }}>
-                  <span style={{ fontSize: 22 }}>🚪</span>
-                </div>
-
-                {/* Details */}
-                <div style={{ minWidth: 0 }}>
-                  <div style={{
-                    fontSize: 15,
-                    fontWeight: 700,
-                    color: '#fff',
-                    marginBottom: 3,
-                  }}>
-                    {room.name}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                    {storeName && (
-                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
-                        <EnvironmentOutlined style={{ marginRight: 3 }} />
-                        {storeName}
-                      </span>
-                    )}
-                    <span style={{
-                      fontSize: 11,
-                      color: '#FFD700',
-                      fontWeight: 600,
-                    }}>
-                      {room.fee} 积分 (Points)
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Button */}
-              <Button
-                type="primary"
-                style={{
-                  background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                  border: 'none',
-                  color: '#111',
-                  fontWeight: 700,
-                  borderRadius: 8,
-                  fontSize: 12,
-                  padding: '4px 12px',
-                  height: 'auto'
+                  transition: 'all 0.3s ease',
+                  boxShadow: userBooked ? '0 0 10px rgba(82, 196, 26, 0.15)' : 'none'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = userBooked ? 'rgba(82, 196, 26, 0.7)' : 'rgba(244,175,37,0.5)';
+                  e.currentTarget.style.boxShadow = userBooked
+                    ? '0 4px 15px rgba(82, 196, 26, 0.25)'
+                    : '0 4px 15px rgba(244,175,37,0.15)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = userBooked ? 'rgba(82, 196, 26, 0.4)' : 'rgba(244,175,37,0.2)';
+                  e.currentTarget.style.boxShadow = userBooked ? '0 0 10px rgba(82, 196, 26, 0.15)' : 'none';
                 }}
               >
-                预订 (Book)
-              </Button>
-            </div>
-          );
-        })}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                  {/* Icon */}
+                  <div style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 12,
+                    background: userBooked
+                      ? 'linear-gradient(135deg, rgba(82, 196, 26, 0.15), rgba(56, 158, 13, 0.15))'
+                      : 'linear-gradient(135deg, rgba(244,175,37,0.15), rgba(196,141,58,0.15))',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    border: userBooked ? '1px solid rgba(82, 196, 26, 0.3)' : '1px solid rgba(244,175,37,0.25)',
+                  }}>
+                    <span style={{ fontSize: 22 }}>🚪</span>
+                  </div>
+
+                  {/* Details */}
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{
+                      fontSize: 15,
+                      fontWeight: 700,
+                      color: '#fff',
+                      marginBottom: 3,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}>
+                      {room.name}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {storeName && (
+                        <span style={{
+                          fontSize: 11,
+                          color: 'rgba(255,255,255,0.45)',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}>
+                          <EnvironmentOutlined style={{ marginRight: 3 }} />
+                          {storeName}
+                        </span>
+                      )}
+                      <span style={{
+                        fontSize: 11,
+                        color: '#FFD700',
+                        fontWeight: 600,
+                      }}>
+                        {room.fee} 积分 (Points)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Button */}
+                <Button
+                  type="primary"
+                  style={{
+                    background: userBooked
+                      ? 'linear-gradient(to right, #52c41a, #389e0d)'
+                      : 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                    border: 'none',
+                    color: userBooked ? '#fff' : '#111',
+                    fontWeight: 700,
+                    borderRadius: 8,
+                    fontSize: 12,
+                    padding: '4px 12px',
+                    height: 'auto',
+                    flexShrink: 0
+                  }}
+                >
+                  {userBooked ? '已预约' : '预订 (Book)'}
+                </Button>
+              </div>
+            );
+          });
+        })()}
       </div>
 
       {/* Booking Date & Slot Selection Modal */}
@@ -406,174 +736,277 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
               })}
             </div>
 
-            {/* Timeslot Selector */}
-            <div style={{ marginBottom: 10, fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>
-              选择时段 (Select Timeslot)
-            </div>
-            {loadingBookings ? (
-              <div style={{ textAlign: 'center', padding: '24px 0' }}>
-                <Spin size="small" />
-              </div>
-            ) : (
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 10,
-                marginBottom: 24,
-                maxHeight: 220,
-                overflowY: 'auto',
-                paddingRight: 4,
-              }}>
-                {selectedRoom.timeslots.map((slot, idx) => {
-                  const booked = isSlotBooked(slot);
-                  const bookedByMe = isSlotBookedByMe(slot);
-                  const past = isSlotPast(slot);
-                  const disabled = booked || past;
-                  const isSelected = selectedSlot === slot;
+            {/* Clickable Hourly Grid Selector */}
+            {(() => {
+              const open = selectedRoom.bookingStart ? parseInt(selectedRoom.bookingStart.split(':')[0], 10) : 10;
+              const close = selectedRoom.bookingEnd ? parseInt(selectedRoom.bookingEnd.split(':')[0], 10) : 22;
+              const bookedIntervals = getBookedIntervals();
+              const segments = [];
+              for (let h = open; h < close; h++) {
+                const startMins = h * 60;
+                const endMins = (h + 1) * 60;
 
-                  return (
-                    <div
-                      key={idx}
-                      onClick={() => !disabled && setSelectedSlot(slot)}
+                // Find matching booking to determine ownership
+                const matchingBooking = bookings.find(b => {
+                  if (b.status !== 'confirmed' && b.status !== 'checked_in') return false;
+                  const parts = b.timeslot.split('-').map(s => s.trim());
+                  const bStart = timeToMinutes(parts[0]);
+                  const bEnd = timeToMinutes(parts[1]);
+                  return startMins < bEnd && bStart < endMins;
+                });
+
+                const isUnavailable = selectedRoom.unavailablePeriods?.some(p => {
+                  const pStart = timeToMinutes(p.start);
+                  const pEnd = timeToMinutes(p.end);
+                  return startMins < pEnd && pStart < endMins;
+                }) || false;
+
+                const isBooked = !!matchingBooking || isUnavailable;
+                const isMyBooking = matchingBooking ? (matchingBooking.userId === user?.id && matchingBooking.status === 'confirmed') : false;
+                const isMyCheckedIn = matchingBooking ? (matchingBooking.userId === user?.id && matchingBooking.status === 'checked_in') : false;
+                const isPast = isTimePast(`${String(h + 1).padStart(2, '0')}:00`);
+                const isSelected = sliderValue && h >= sliderValue[0] && (h + 1) <= sliderValue[1];
+                segments.push({ hour: h, isBooked, isMyBooking, isMyCheckedIn, isPast, isSelected, isUnavailable });
+              }
+
+              return (
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.8)', marginBottom: 12 }}>
+                    选择预订时段 (点击时格选择，可连续多选)
+                  </div>
+
+                  {/* Visual Clickable Grid */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gap: 10,
+                    marginBottom: 16
+                  }}>
+                    {segments.map((seg, i) => {
+                      const disabled = (seg.isBooked && !seg.isMyBooking) || seg.isPast;
+
+                      let bg = 'rgba(255,255,255,0.04)';
+                      let border = '1px solid rgba(255,255,255,0.08)';
+                      let color = '#fff';
+                      let statusText = '可预订';
+
+                      if (seg.isPast) {
+                        bg = 'rgba(255,255,255,0.01)';
+                        border = '1px solid rgba(255,255,255,0.03)';
+                        color = 'rgba(255,255,255,0.2)';
+                        statusText = '已过期';
+                      } else if (seg.isMyBooking) {
+                        bg = 'rgba(52, 211, 153, 0.08)';
+                        border = '1px solid rgba(52, 211, 153, 0.2)';
+                        color = '#34d399';
+                        statusText = '我的预订';
+                      } else if (seg.isMyCheckedIn) {
+                        bg = 'rgba(196, 141, 58, 0.15)';
+                        border = '1px solid rgba(196, 141, 58, 0.4)';
+                        color = '#FFD700';
+                        statusText = '已签到使用';
+                      } else if (seg.isUnavailable) {
+                        bg = 'rgba(255,255,255,0.02)';
+                        border = '1px solid rgba(255,255,255,0.06)';
+                        color = 'rgba(255,255,255,0.3)';
+                        statusText = '不可预约';
+                      } else if (seg.isBooked) {
+                        bg = 'rgba(248,113,113,0.08)';
+                        border = '1px solid rgba(248,113,113,0.18)';
+                        color = '#f87171';
+                        statusText = '已被预订';
+                      } else if (seg.isSelected) {
+                        bg = 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)';
+                        border = '1px solid transparent';
+                        color = '#111';
+                        statusText = '已选择';
+                      }
+
+                      return (
+                        <div
+                          key={i}
+                          onClick={() => !disabled && handleCellClick(seg.hour)}
+                          style={{
+                            padding: '12px 6px',
+                            borderRadius: 12,
+                            textAlign: 'center',
+                            cursor: disabled ? 'not-allowed' : 'pointer',
+                            background: bg,
+                            border,
+                            color,
+                            transition: 'all 0.25s ease',
+                            userSelect: 'none',
+                            transform: seg.isSelected ? 'scale(1.02)' : 'none',
+                            boxShadow: seg.isSelected ? '0 4px 12px rgba(244,175,37,0.25)' : 'none'
+                          }}
+                        >
+                          <div style={{ fontSize: 11, fontWeight: 700 }}>
+                            {String(seg.hour).padStart(2, '0')}:00 - {String(seg.hour + 1).padStart(2, '0')}:00
+                          </div>
+                          <div style={{ fontSize: 9, fontWeight: 600, marginTop: 4, opacity: 0.8 }}>
+                            {statusText}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Selected label display */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, padding: '0 4px' }}>
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>当前选择区间:</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: '#FFD700' }}>
+                      {startTime && endTime && sliderValue ? `${startTime} - ${endTime} (${sliderValue[1] - sliderValue[0]} 小时)` : '未选择'}
+                    </span>
+                  </div>
+
+                  {/* Color keys legend */}
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 12, fontSize: 10, color: 'rgba(255,255,255,0.4)', marginTop: 14, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: 2, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }} />
+                      <span>空闲</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: 2, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.18)' }} />
+                      <span>已被预订</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: 2, background: 'rgba(52, 211, 153, 0.08)', border: '1px solid rgba(52, 211, 153, 0.2)' }} />
+                      <span>我的预订</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: 2, background: 'rgba(196, 141, 58, 0.15)', border: '1px solid rgba(196, 141, 58, 0.4)' }} />
+                      <span>已签到使用</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: 2, background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)' }} />
+                      <span>已选中</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {(() => {
+              const hours = sliderValue ? (sliderValue[1] - sliderValue[0]) : 0;
+              const totalFee = hours * selectedRoom.fee;
+              const depositFee = Math.round(totalFee * 0.5);
+
+              const myExistingBooking = bookings.find(b => b.userId === user?.id && b.status === 'confirmed');
+              const oldPaidFee = myExistingBooking
+                ? (myExistingBooking.paidFee || Math.round((calculateHours(myExistingBooking.timeslot) * selectedRoom.fee) * 0.5))
+                : 0;
+
+              const netPointsRequired = Math.max(0, depositFee - oldPaidFee);
+              const userPoints = user?.membership?.points || 0;
+              const minHours = selectedRoom.minBookingHours || 2;
+              const isInsufficient = userPoints < netPointsRequired;
+              const isMinDurationInvalid = hours > 0 && hours < minHours;
+
+              return (
+                <>
+                  {/* User Points & Balance status */}
+                  <div style={{
+                    background: 'rgba(255,255,255,0.04)',
+                    borderRadius: 12,
+                    padding: 12,
+                    marginBottom: 24,
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 6
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                      <span style={{ color: 'rgba(255,255,255,0.6)' }}>单价 (Hourly Rate):</span>
+                      <span style={{ color: '#fff', fontWeight: 600 }}>{selectedRoom.fee} 积分 / 小时</span>
+                    </div>
+                    {hours > 0 && (
+                      <>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>预约时长 (Duration):</span>
+                          <span style={{ color: '#fff', fontWeight: 600 }}>{hours} 小时</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>总费用 (Total Price):</span>
+                          <span style={{ color: '#fff', fontWeight: 600 }}>{totalFee} 积分</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>本次预订扣除 50% 订金 (Deposit - Non-refundable):</span>
+                          <span style={{ color: '#FFD700', fontWeight: 700 }}>{depositFee} 积分</span>
+                        </div>
+                        {myExistingBooking && (
+                          <>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderTop: '1px dashed rgba(255,255,255,0.1)', paddingTop: 6 }}>
+                              <span style={{ color: 'rgba(255,255,255,0.6)' }}>已付订金 (Paid Deposit):</span>
+                              <span style={{ color: 'rgba(255,255,255,0.8)' }}>{oldPaidFee} 积分</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                              <span style={{ color: 'rgba(255,255,255,0.6)' }}>需补订金差额 (Net Deposit Difference):</span>
+                              <span style={{ color: '#FFD700', fontWeight: 700 }}>{netPointsRequired} 积分</span>
+                            </div>
+                          </>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 6 }}>
+                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>入座签到时扣除余款 50% (Balance at Check-in):</span>
+                          <span style={{ color: 'rgba(255,255,255,0.8)' }}>{totalFee - depositFee} 积分</span>
+                        </div>
+                      </>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 6 }}>
+                      <span style={{ color: 'rgba(255,255,255,0.6)' }}>您的可用积分 (Your Points):</span>
+                      <span style={{ color: '#fff', fontWeight: 600 }}>{userPoints} 积分</span>
+                    </div>
+                    {isMinDurationInvalid && (
+                      <div style={{ color: '#f87171', fontSize: 11, marginTop: 4, fontWeight: 600, textAlign: 'center' }}>
+                        ⚠️ 包厢最少需预订 {minHours} 小时 (Min booking: {minHours} hours)
+                      </div>
+                    )}
+                    {isInsufficient && !isMinDurationInvalid && (
+                      <div style={{ color: '#f87171', fontSize: 11, marginTop: 4, fontWeight: 600, textAlign: 'center' }}>
+                        ⚠️ 积分余额不足 (Insufficient points balance)
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Modal Actions */}
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <Button
+                      onClick={handleCloseBookingModal}
                       style={{
-                        padding: '12px 10px',
-                        borderRadius: 12,
-                        cursor: disabled ? 'not-allowed' : 'pointer',
-                        textAlign: 'center',
-                        transition: 'all 0.2s ease',
-                        background: bookedByMe
-                          ? 'linear-gradient(135deg, rgba(52,211,153,0.15), rgba(52,211,153,0.08))'
-                          : isSelected
-                            ? 'linear-gradient(135deg, rgba(244,175,37,0.25), rgba(196,141,58,0.25))'
-                            : booked
-                              ? 'rgba(248,113,113,0.06)'
-                              : past
-                                ? 'rgba(255,255,255,0.03)'
-                                : 'rgba(255,255,255,0.06)',
-                        border: bookedByMe
-                          ? '1px solid rgba(52,211,153,0.35)'
-                          : isSelected
-                            ? '1px solid #FFD700'
-                            : booked
-                              ? '1px solid rgba(248,113,113,0.15)'
-                              : past
-                                ? '1px solid rgba(255,255,255,0.04)'
-                                : '1px solid rgba(244,175,37,0.2)',
-                        opacity: past ? 0.45 : 1,
+                        flex: 1,
+                        background: 'rgba(255,255,255,0.08)',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        color: '#fff',
+                        borderRadius: 10,
+                        height: 40,
+                        fontWeight: 600
                       }}
                     >
-                      <div style={{
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: bookedByMe
-                          ? '#34d399'
-                          : isSelected
-                            ? '#FFD700'
-                            : booked
-                              ? 'rgba(248,113,113,0.7)'
-                              : past
-                                ? 'rgba(255,255,255,0.3)'
-                                : '#fff',
-                        marginBottom: 4,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 4
-                      }}>
-                        <ClockCircleOutlined style={{ fontSize: 10 }} />
-                        {slot}
-                      </div>
-                      <div style={{
-                        fontSize: 10,
-                        fontWeight: 600,
-                        color: bookedByMe
-                          ? '#34d399'
-                          : isSelected
-                            ? '#FFD700'
-                            : booked
-                              ? 'rgba(248,113,113,0.6)'
-                              : past
-                                ? 'rgba(255,255,255,0.25)'
-                                : 'rgba(255,255,255,0.4)',
-                      }}>
-                        {bookedByMe ? (
-                          <><CheckCircleOutlined style={{ marginRight: 2 }} />My Booking</>
-                        ) : booked ? (
-                          'Booked'
-                        ) : past ? (
-                          'Passed'
-                        ) : isSelected ? (
-                          'Selected'
-                        ) : (
-                          'Available'
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* User Points & Balance status */}
-            <div style={{
-              background: 'rgba(255,255,255,0.04)',
-              borderRadius: 12,
-              padding: 12,
-              marginBottom: 24,
-              border: '1px solid rgba(255,255,255,0.08)'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 12 }}>
-                <span style={{ color: 'rgba(255,255,255,0.6)' }}>您的可用积分 (Your Points):</span>
-                <span style={{ color: '#fff', fontWeight: 600 }}>{user?.membership?.points || 0} 积分</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                <span style={{ color: 'rgba(255,255,255,0.6)' }}>扣除积分 (Deduction):</span>
-                <span style={{ color: '#FFD700', fontWeight: 700 }}>-{selectedRoom.fee} 积分</span>
-              </div>
-              {user && user.membership && (user.membership.points || 0) < selectedRoom.fee && (
-                <div style={{ color: '#f87171', fontSize: 11, marginTop: 8, fontWeight: 600, textAlign: 'center' }}>
-                  ⚠️ 积分余额不足 (Insufficient points balance)
-                </div>
-              )}
-            </div>
-
-            {/* Modal Actions */}
-            <div style={{ display: 'flex', gap: 12 }}>
-              <Button
-                onClick={handleCloseBookingModal}
-                style={{
-                  flex: 1,
-                  background: 'rgba(255,255,255,0.08)',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  color: '#fff',
-                  borderRadius: 10,
-                  height: 40,
-                  fontWeight: 600
-                }}
-              >
-                取消 (Cancel)
-              </Button>
-              <Button
-                type="primary"
-                onClick={handleConfirmBooking}
-                loading={bookingInProgress}
-                disabled={
-                  !selectedSlot || 
-                  (user?.membership?.points || 0) < selectedRoom.fee
-                }
-                style={{
-                  flex: 2,
-                  background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                  border: 'none',
-                  color: '#111',
-                  borderRadius: 10,
-                  height: 40,
-                  fontWeight: 700
-                }}
-              >
-                确认预订 (Confirm)
-              </Button>
-            </div>
+                      取消 (Cancel)
+                    </Button>
+                    <Button
+                      type="primary"
+                      onClick={handleConfirmBooking}
+                      loading={bookingInProgress}
+                      disabled={
+                        isSliderValueInvalid() ||
+                        isInsufficient
+                      }
+                      style={{
+                        flex: 2,
+                        background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                        border: 'none',
+                        color: '#111',
+                        borderRadius: 10,
+                        height: 40,
+                        fontWeight: 700
+                      }}
+                    >
+                      确认预订 (Confirm)
+                    </Button>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         )}
       </Modal>

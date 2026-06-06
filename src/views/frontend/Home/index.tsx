@@ -258,75 +258,84 @@ const Home: React.FC = () => {
       {/* 顶部标题栏 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
       </div>
-      {/* 欢迎横幅 */}
-      <Card
-        className="cigar-card"
-        style={{
-          background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.9) 0%, rgba(45, 45, 45, 0.8) 100%)',
-          border: '2px solid rgba(255, 215, 0, 0.3)',
-          borderRadius: '20px',
-          overflow: 'hidden',
-          position: 'relative'
-        }}
-      >
-        {/* 背景装饰 */}
-        <div style={{
-          position: 'absolute',
-          background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, transparent 100%)',
-          pointerEvents: 'none'
-        }} />
+      {/* 欢迎横幅 与 计时器模块 */}
+      <Row gutter={[12, 12]} style={{ marginBottom: 24, display: 'flex', alignItems: 'stretch' }}>
+        <Col xs={24} lg={visitSessionsFeatureVisible ? 12 : 24} style={{ display: 'flex' }}>
+          <Card
+            className="cigar-card"
+            style={{
+              background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.9) 0%, rgba(45, 45, 45, 0.8) 100%)',
+              border: '2px solid rgba(255, 215, 0, 0.3)',
+              borderRadius: '20px',
+              overflow: 'hidden',
+              position: 'relative',
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between'
+            }}
+          >
+            {/* 背景装饰 */}
+            <div style={{
+              position: 'absolute',
+              background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, transparent 100%)',
+              pointerEvents: 'none'
+            }} />
 
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          {/* 欢迎标题 - 独立一行 */}
-          <h1 style={{
-            color: '#f8f8f8',
-            background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-            fontWeight: 700,
-            fontSize: '24px',
-            textAlign: 'left',
-            margin: 0,
-            padding: 0,
-            lineHeight: 1.8
-          }}>
-            {t('home.welcomeTitle')} {appConfig?.appName || 'Cigar Club'}
-          </h1>
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              {/* 欢迎标题 - 独立一行 */}
+              <h1 style={{
+                color: '#f8f8f8',
+                background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                fontWeight: 700,
+                fontSize: '24px',
+                textAlign: 'left',
+                margin: 0,
+                padding: 0,
+                lineHeight: 1.8
+              }}>
+                {t('home.welcomeTitle')} {appConfig?.appName || 'Cigar Club'}
+              </h1>
 
-          {/* 副标题和火焰图标 - 并排显示 */}
-          <Row align="middle" justify="center" style={{ marginBottom: 3 }}>
-            <Col span={16}>
-              <Paragraph style={{ color: '#c0c0c0', fontSize: '12px', lineHeight: 1.4, textAlign: 'left' }}>
-                {t('home.welcomeSubtitle')}
-              </Paragraph>
-            </Col>
-            <Col span={8} style={{ textAlign: 'center' }}>
-              <FireOutlined style={{
-                fontSize: '55px',
-                color: 'rgba(255, 215, 0, 0.6)',
-                filter: 'drop-shadow(0 0 20px rgba(255, 215, 0, 0.3))'
-              }} />
-            </Col>
-          </Row>
-        </div>
-        {/* 会员卡 UI - 使用MemberProfileCard组件 */}
-        <div style={{ padding: '0 0px 0px 0px' }}>
-          <MemberProfileCard
-            user={user}
-            showMemberCard={true}
-            onToggleMemberCard={() => { }} // 主页不需要切换功能
-            getMembershipText={getMembershipText}
-            style={{ margin: '0 auto' }}
-            enableQrModal={true} // 启用点击会员卡放大QR code功能
-          />
-        </div>
-      </Card>
+              {/* 副标题和火焰图标 - 并排显示 */}
+              <Row align="middle" justify="center" style={{ marginBottom: 3 }}>
+                <Col span={16}>
+                  <Paragraph style={{ color: '#c0c0c0', fontSize: '12px', lineHeight: 1.4, textAlign: 'left' }}>
+                    {t('home.welcomeSubtitle')}
+                  </Paragraph>
+                </Col>
+                <Col span={8} style={{ textAlign: 'center' }}>
+                  <FireOutlined style={{
+                    fontSize: '55px',
+                    color: 'rgba(255, 215, 0, 0.6)',
+                    filter: 'drop-shadow(0 0 20px rgba(255, 215, 0, 0.3))'
+                  }} />
+                </Col>
+              </Row>
+            </div>
+            {/* 会员卡 UI - 使用MemberProfileCard组件 */}
+            <div style={{ marginTop: 'auto' }}>
+              <MemberProfileCard
+                user={user}
+                showMemberCard={true}
+                onToggleMemberCard={() => { }} // 主页不需要切换功能
+                getMembershipText={getMembershipText}
+                style={{ margin: '0 auto' }}
+                enableQrModal={true} // 启用点击会员卡放大QR code功能
+              />
+            </div>
+          </Card>
+        </Col>
 
-      {/* 合并后的计时器和兑换模块 - 仅在驻店记录功能可见时显示 */}
-      {visitSessionsFeatureVisible && (
-        <VisitTimerRedemption style={{ marginTop: 24 }} />
-      )}
+        {visitSessionsFeatureVisible && (
+          <Col xs={24} lg={12} style={{ display: 'flex' }}>
+            <VisitTimerRedemption style={{ width: '100%', height: '100%' }} />
+          </Col>
+        )}
+      </Row>
 
       {/* CTA 横幅 - 神秘礼物 - 仅在驻店记录功能可见时显示 */}
       {visitSessionsFeatureVisible && (

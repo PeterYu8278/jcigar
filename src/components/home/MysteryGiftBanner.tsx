@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Typography, Space, Divider, Progress } from 'antd';
-import { GiftOutlined, ClockCircleOutlined, TrophyOutlined, InfoCircleOutlined, UserAddOutlined } from '@ant-design/icons';
+import { Modal, Typography, Space, Progress } from 'antd';
+import { GiftOutlined, InfoCircleOutlined, UserAddOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { getAppConfig } from '../../services/firebase/appConfig';
 import { useAuth } from '../../hooks/useAuth';
-import { getUserTotalVisitHoursInPeriod, getTotalRedemptions, getUserRedemptionLimits } from '../../services/firebase/redemption';
 import { getSuccessfulReferralCount } from '../../services/firebase/firestore';
 import { getUserMembershipPeriod } from '../../services/firebase/membershipFee';
 import { useTranslation } from 'react-i18next';
@@ -23,11 +22,7 @@ export const MysteryGiftBanner: React.FC<MysteryGiftBannerProps> = ({ style }) =
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [progress, setProgress] = useState({
-    hours: 0,
     referrals: 0,
-    totalRedeemed: 0,
-    dailyLimit: 3,
-    totalLimit: 25,
     loading: false
   });
 
@@ -51,27 +46,15 @@ export const MysteryGiftBanner: React.FC<MysteryGiftBannerProps> = ({ style }) =
       const loadProgress = async () => {
         setProgress(prev => ({ ...prev, loading: true }));
         try {
-          // 获取会员期限，用于重置计算
           const period = await getUserMembershipPeriod(user.id);
 
-          const [hours, referrals, totalRedemptions, limits] = await Promise.all([
-            getUserTotalVisitHoursInPeriod(user.id),
-            getSuccessfulReferralCount(
-              user.id,
-              period?.startDate,
-              period?.endDate
-            ),
-            getTotalRedemptions(user.id),
-            getUserRedemptionLimits(user.id)
-          ]);
-          const completedTotal = totalRedemptions.filter(r => r.status === 'completed');
-          const totalRedeemed = completedTotal.reduce((sum, r) => sum + r.quantity, 0);
+          const referrals = await getSuccessfulReferralCount(
+            user.id,
+            period?.startDate,
+            period?.endDate
+          );
           setProgress({
-            hours,
             referrals,
-            totalRedeemed,
-            dailyLimit: limits.dailyLimit,
-            totalLimit: limits.totalLimit,
             loading: false
           });
         } catch (error) {
@@ -153,65 +136,6 @@ export const MysteryGiftBanner: React.FC<MysteryGiftBannerProps> = ({ style }) =
               </ul>
             </div>
 
-            {/* 里程碑奖励 */}
-            <div style={{ background: 'rgba(255,255,255,0.03)', padding: 12, borderRadius: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <TrophyOutlined style={{ color: '#FDE08D' }} />
-                  <Text strong style={{ color: '#FFF' }}>{t('redemptionMechanism.hourMilestones')}</Text>
-                </div>
-                <Text style={{ fontSize: 12, color: '#FDE08D' }}>
-                  {t('redemptionMechanism.current')}: <Text style={{ color: '#FFF', fontWeight: 600 }}>{Math.floor(progress.hours)}h</Text>
-                </Text>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {[{ hours: 50, dailyBonus: 1, totalBonus: 25 }, { hours: 100, dailyBonus: 2, totalBonus: 50 }, { hours: 150, dailyBonus: 3, totalBonus: 75 }].map((item) => {
-                  const isCompleted = progress.hours >= item.hours;
-                  const currentPercent = Math.min(100, (progress.hours / item.hours) * 100);
-
-                  return (
-                    <div key={item.hours}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                        <Text style={{ color: isCompleted ? '#FDE08D' : 'rgba(255,255,255,0.6)' }}>{t('redemptionMechanism.stayHours', { count: item.hours })}</Text>
-                        <Text style={{ color: isCompleted ? '#FDE08D' : 'rgba(255,255,255,0.4)', fontSize: 12 }}>
-                          {t('redemptionMechanism.dailyBonus')} +{item.dailyBonus} · {t('redemptionMechanism.totalBonus')} +{item.totalBonus}
-                        </Text>
-                      </div>
-                      <Progress
-                        percent={currentPercent}
-                        size="small"
-                        showInfo={false}
-                        strokeColor={isCompleted ? '#FDE08D' : '#C48D3A'}
-                        trailColor="rgba(255,255,255,0.05)"
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* 累计兑换总额 */}
-            <div style={{ background: 'rgba(255,255,255,0.03)', padding: 12, borderRadius: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <ClockCircleOutlined style={{ color: '#FDE08D' }} />
-                  <Text strong style={{ color: '#FFF' }}>{t('redemptionMechanism.totalQuotaTitle')}</Text>
-                </div>
-                <Text style={{ fontSize: 12, color: '#FDE08D' }}>
-                  <Text style={{ color: '#FFF', fontWeight: 600 }}>{progress.totalRedeemed}</Text> / {progress.totalLimit}
-                </Text>
-              </div>
-              <Progress
-                percent={Math.min(100, (progress.totalRedeemed / progress.totalLimit) * 100)}
-                size="small"
-                showInfo={false}
-                strokeColor={progress.totalRedeemed >= progress.totalLimit ? '#ff4d4f' : '#FDE08D'}
-                trailColor="rgba(255,255,255,0.05)"
-              />
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 6 }}>
-                {t('redemptionMechanism.totalQuotaDesc')}
-              </div>
-            </div>
 
             {/* 邀请奖励 */}
             <div style={{ background: 'rgba(255,255,255,0.03)', padding: 12, borderRadius: 8 }}>
