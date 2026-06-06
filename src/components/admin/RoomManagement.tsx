@@ -33,7 +33,7 @@ export const RoomManagement: React.FC = () => {
       setStores(storesData);
     } catch (error) {
       console.error('Failed to load rooms/stores:', error);
-      message.error('加载房间和门店数据失败');
+      message.error(t('roomManagement.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -55,7 +55,7 @@ export const RoomManagement: React.FC = () => {
       setDailyBookings(bookingsData);
     } catch (error) {
       console.error('Failed to load daily bookings:', error);
-      message.error('加载预约记录失败');
+      message.error(t('roomManagement.loadBookingsFailed'));
     } finally {
       setLoadingBookings(false);
     }
@@ -66,13 +66,13 @@ export const RoomManagement: React.FC = () => {
       setLoadingBookings(true);
       const result = await cancelBooking(bookingId);
       if (result.success) {
-        message.success('取消预约成功');
+        message.success(t('roomManagement.cancelSuccess'));
         loadDailyBookings();
       } else {
-        message.error('取消失败: ' + (result as any).error);
+        message.error(t('roomManagement.cancelFailed') + (result as any).error);
       }
     } catch (error: any) {
-      message.error('取消失败: ' + error.message);
+      message.error(t('roomManagement.cancelFailed') + error.message);
     } finally {
       setLoadingBookings(false);
     }
@@ -83,13 +83,13 @@ export const RoomManagement: React.FC = () => {
       setLoadingBookings(true);
       const result = await checkInBooking(bookingId);
       if (result.success) {
-        message.success('办理签到成功');
+        message.success(t('roomManagement.checkInSuccess'));
         loadDailyBookings();
       } else {
-        message.error('签到失败: ' + (result as any).error);
+        message.error(t('roomManagement.checkInFailed') + (result as any).error);
       }
     } catch (error: any) {
-      message.error('签到失败: ' + error.message);
+      message.error(t('roomManagement.checkInFailed') + error.message);
     } finally {
       setLoadingBookings(false);
     }
@@ -129,13 +129,13 @@ export const RoomManagement: React.FC = () => {
     try {
       const result = await deleteRoom(id);
       if (result.success) {
-        message.success('删除成功');
+        message.success(t('common.success', 'Success'));
         loadData();
       } else {
-        message.error('删除失败: ' + (result as any).error);
+        message.error(t('common.error', 'Error') + ': ' + (result as any).error);
       }
     } catch (error) {
-      message.error('删除失败');
+      message.error(t('common.error', 'Error'));
     }
   };
 
@@ -159,20 +159,20 @@ export const RoomManagement: React.FC = () => {
       if (editingRoom && editingRoom.id) {
         const result = await updateRoom(editingRoom.id, roomData);
         if (result.success) {
-          message.success('更新房间成功');
+          message.success(t('roomManagement.updateSuccess'));
           setModalVisible(false);
           loadData();
         } else {
-          message.error('更新失败: ' + result.error);
+          message.error(t('roomManagement.updateFailed') + result.error);
         }
       } else {
         const result = await createRoom(roomData);
         if (result.success) {
-          message.success('创建房间成功');
+          message.success(t('roomManagement.createSuccess'));
           setModalVisible(false);
           loadData();
         } else {
-          message.error('创建失败: ' + result.error);
+          message.error(t('roomManagement.createFailed') + result.error);
         }
       }
     } catch (error) {
@@ -194,25 +194,25 @@ export const RoomManagement: React.FC = () => {
 
   const columns = [
     {
-      title: '门店',
+      title: t('roomManagement.store'),
       dataIndex: 'storeId',
       key: 'storeId',
       render: (storeId: string) => <Text style={{ color: '#fff' }}>{getStoreName(storeId)}</Text>
     },
     {
-      title: '房间/包厢名称',
+      title: t('roomManagement.roomName'),
       dataIndex: 'name',
       key: 'name',
       render: (name: string) => <Text strong style={{ color: '#FFD700' }}>{name}</Text>
     },
     {
-      title: '费用 (RM)',
+      title: t('roomManagement.fee'),
       dataIndex: 'fee',
       key: 'fee',
       render: (fee: number) => <Text style={{ color: '#fff' }}>RM {fee}</Text>
     },
     {
-      title: '营业时间范围',
+      title: t('roomManagement.bookingRange'),
       key: 'bookingRange',
       render: (_: any, record: Room) => (
         <Tag color="gold" style={{ background: 'rgba(244,175,37,0.1)', border: '1px solid rgba(244,175,37,0.3)', color: '#FFD700' }}>
@@ -221,17 +221,17 @@ export const RoomManagement: React.FC = () => {
       )
     },
     {
-      title: '状态',
+      title: t('roomManagement.status'),
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => (
         <Tag color={status === 'active' ? 'green' : 'red'}>
-          {status === 'active' ? '启用' : '禁用'}
+          {status === 'active' ? t('roomManagement.active') : t('roomManagement.inactive')}
         </Tag>
       )
     },
     {
-      title: '操作',
+      title: t('roomManagement.actions'),
       key: 'action',
       render: (_: any, record: Room) => (
         <Space>
@@ -245,13 +245,13 @@ export const RoomManagement: React.FC = () => {
               color: '#FFFFFF'
             }}
           >
-            编辑
+            {t('common.edit')}
           </Button>
           <Popconfirm
-            title="确定要删除这个房间吗？"
+            title={t('roomManagement.deleteRoomConfirm')}
             onConfirm={() => record.id && handleDeleteRoom(record.id)}
-            okText="确定"
-            cancelText="取消"
+            okText={t('common.confirm')}
+            cancelText={t('common.cancel')}
             okButtonProps={{ danger: true }}
           >
             <Button
@@ -264,7 +264,7 @@ export const RoomManagement: React.FC = () => {
                 color: '#ff4d4f'
               }}
             >
-              删除
+              {t('common.delete')}
             </Button>
           </Popconfirm>
         </Space>
@@ -274,25 +274,25 @@ export const RoomManagement: React.FC = () => {
 
   const bookingColumns = [
     {
-      title: '门店',
+      title: t('roomManagement.store'),
       dataIndex: 'storeId',
       key: 'storeId',
       render: (storeId: string) => <Text style={{ color: '#fff' }}>{getStoreName(storeId)}</Text>
     },
     {
-      title: '包厢/房间名称',
+      title: t('roomManagement.roomName'),
       dataIndex: 'roomName',
       key: 'roomName',
       render: (roomName: string) => <Text strong style={{ color: '#FFD700' }}>{roomName}</Text>
     },
     {
-      title: '预约日期',
+      title: t('roomManagement.bookingDate'),
       dataIndex: 'date',
       key: 'date',
       render: (date: string) => <Text style={{ color: '#fff' }}>{date}</Text>
     },
     {
-      title: '预订人',
+      title: t('roomManagement.bookedBy'),
       dataIndex: 'userName',
       key: 'userName',
       render: (userName: string, record: RoomBooking) => (
@@ -303,43 +303,43 @@ export const RoomManagement: React.FC = () => {
       )
     },
     {
-      title: '预约时段',
+      title: t('roomManagement.bookingSlot'),
       dataIndex: 'timeslot',
       key: 'timeslot',
       render: (timeslot: string) => <Tag color="blue">{timeslot}</Tag>
     },
     {
-      title: '所用积分',
+      title: t('roomManagement.pointsUsed'),
       dataIndex: 'fee',
       key: 'fee',
-      render: (fee: number) => <Text style={{ color: '#fff' }}>{fee} 积分</Text>
+      render: (fee: number) => <Text style={{ color: '#fff' }}>{fee} {t('roomManagement.points')}</Text>
     },
     {
-      title: '状态',
+      title: t('roomManagement.status'),
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => {
         if (status === 'checked_in') {
-          return <Tag color="gold">已入座/已签到</Tag>;
+          return <Tag color="gold">{t('roomManagement.statusCheckedIn')}</Tag>;
         }
         return (
           <Tag color={status === 'confirmed' ? 'green' : 'red'}>
-            {status === 'confirmed' ? '已确认 (未签到)' : '已取消'}
+            {status === 'confirmed' ? t('roomManagement.statusConfirmed') : t('roomManagement.statusCancelled')}
           </Tag>
         );
       }
     },
     {
-      title: '操作',
+      title: t('roomManagement.actions'),
       key: 'action',
       render: (_: any, record: RoomBooking) => (
         record.status === 'confirmed' ? (
           <Space>
             <Popconfirm
-              title="确定办理签到并扣除剩余 50% 积分吗？"
+              title={t('roomManagement.checkInConfirm')}
               onConfirm={() => record.id && handleAdminCheckInBooking(record.id)}
-              okText="确定"
-              cancelText="取消"
+              okText={t('common.confirm')}
+              cancelText={t('common.cancel')}
             >
               <Button
                 size="small"
@@ -351,14 +351,14 @@ export const RoomManagement: React.FC = () => {
                   fontWeight: 600
                 }}
               >
-                办理签到
+                {t('roomManagement.checkIn')}
               </Button>
             </Popconfirm>
             <Popconfirm
-              title="确定要取消这个预约吗？已扣除的 50% 积分订金将不退还。"
+              title={t('roomManagement.cancelBookingConfirm')}
               onConfirm={() => record.id && handleAdminCancelBooking(record.id)}
-              okText="确定"
-              cancelText="取消"
+              okText={t('common.confirm')}
+              cancelText={t('common.cancel')}
               okButtonProps={{ danger: true }}
             >
               <Button
@@ -370,7 +370,7 @@ export const RoomManagement: React.FC = () => {
                   color: '#ff4d4f'
                 }}
               >
-                取消预约
+                {t('roomManagement.cancelBooking')}
               </Button>
             </Popconfirm>
           </Space>
@@ -378,6 +378,7 @@ export const RoomManagement: React.FC = () => {
       )
     }
   ];
+
 
   return (
     <div style={{ marginTop: 16 }}>
@@ -388,16 +389,12 @@ export const RoomManagement: React.FC = () => {
             key: '1',
             label: (
               <span style={{ color: '#fff' }}>
-                <AppstoreOutlined />
-                房间配置管理
+                {t('roomManagement.roomConfigTitle')}
               </span>
             ),
             children: (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                  <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                    在此管理各门店房间/包厢名称、营业时间范围及预订费用配置。
-                  </Text>
                   <Button
                     type="primary"
                     icon={<PlusOutlined />}
@@ -410,7 +407,7 @@ export const RoomManagement: React.FC = () => {
                       boxShadow: '0 4px 15px rgba(244,175,37,0.35)'
                     }}
                   >
-                    添加房间
+                    {t('roomManagement.addRoom')}
                   </Button>
                 </div>
 
@@ -430,14 +427,13 @@ export const RoomManagement: React.FC = () => {
             key: '2',
             label: (
               <span style={{ color: '#fff' }}>
-                <CalendarOutlined />
-                预约记录查看
+                {t('roomManagement.viewBookingsTitle')}
               </span>
             ),
             children: (
               <>
                 <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ color: '#fff', fontSize: 14 }}>选择日期：</span>
+                  <span style={{ color: '#fff', fontSize: 14 }}>{t('roomManagement.selectDate')}</span>
                   <DatePicker
                     value={viewDate}
                     onChange={(date) => date && setViewDate(date)}
@@ -457,7 +453,7 @@ export const RoomManagement: React.FC = () => {
                       border: '1px solid rgba(255, 255, 255, 0.2)'
                     }}
                   >
-                    刷新记录
+                    {t('roomManagement.refreshRecords')}
                   </Button>
                 </div>
 
@@ -477,7 +473,7 @@ export const RoomManagement: React.FC = () => {
       />
 
       <Modal
-        title={<span style={{ color: '#FFFFFF' }}>{editingRoom ? '编辑房间' : '添加房间'}</span>}
+        title={<span style={{ color: '#FFFFFF' }}>{editingRoom ? t('roomManagement.editRoom') : t('roomManagement.addRoom')}</span>}
         open={modalVisible}
         onCancel={() => setModalVisible(false)}
         onOk={handleSave}
@@ -520,10 +516,10 @@ export const RoomManagement: React.FC = () => {
         <Form form={form} layout="vertical" className="points-config-form">
           <Form.Item
             name="storeId"
-            label={<span style={{ color: 'rgba(255,255,255,0.85)' }}>所属门店</span>}
-            rules={[{ required: true, message: '请选择门店' }]}
+            label={<span style={{ color: 'rgba(255,255,255,0.85)' }}>{t('roomManagement.store')}</span>}
+            rules={[{ required: true, message: t('roomManagement.storeRequired') }]}
           >
-            <Select placeholder="选择所属门店">
+            <Select placeholder={t('roomManagement.selectStore')}>
               {stores.map(store => (
                 <Select.Option key={store.id} value={store.id}>
                   {store.name}
@@ -534,39 +530,39 @@ export const RoomManagement: React.FC = () => {
 
           <Form.Item
             name="name"
-            label={<span style={{ color: 'rgba(255,255,255,0.85)' }}>房间/包厢名称</span>}
-            rules={[{ required: true, message: '请输入房间/包厢名称' }]}
+            label={<span style={{ color: 'rgba(255,255,255,0.85)' }}>{t('roomManagement.roomName')}</span>}
+            rules={[{ required: true, message: t('roomManagement.roomNameRequired') }]}
           >
-            <Input placeholder="例如: 尊享VIP房, 大厅8号座" />
+            <Input placeholder={t('roomManagement.roomNamePlaceholder')} />
           </Form.Item>
 
           <Form.Item
             name="fee"
-            label={<span style={{ color: 'rgba(255,255,255,0.85)' }}>预订费用 (RM)</span>}
-            rules={[{ required: true, message: '请输入预订费用' }]}
+            label={<span style={{ color: 'rgba(255,255,255,0.85)' }}>{t('roomManagement.fee')}</span>}
+            rules={[{ required: true, message: t('roomManagement.feeRequired') }]}
           >
-            <InputNumber min={0} style={{ width: '100%' }} placeholder="每场次或每小时费用" />
+            <InputNumber min={0} style={{ width: '100%' }} placeholder={t('roomManagement.feePlaceholder')} />
           </Form.Item>
 
           <Form.Item
             name="status"
-            label={<span style={{ color: 'rgba(255,255,255,0.85)' }}>状态</span>}
+            label={<span style={{ color: 'rgba(255,255,255,0.85)' }}>{t('roomManagement.status')}</span>}
             valuePropName="checked"
             getValueFromEvent={(checked) => checked ? 'active' : 'inactive'}
             getValueProps={(value) => ({ checked: value === 'active' })}
           >
-            <Switch checkedChildren="启用" unCheckedChildren="禁用" />
+            <Switch checkedChildren={t('roomManagement.active')} unCheckedChildren={t('roomManagement.inactive')} />
           </Form.Item>
 
           <Form.Item
             name="minBookingHours"
-            label={<span style={{ color: 'rgba(255,255,255,0.85)' }}>最低预约小时数 (Min Booking Hours)</span>}
-            rules={[{ required: true, message: '请输入最低预约小时数' }]}
+            label={<span style={{ color: 'rgba(255,255,255,0.85)' }}>{t('roomManagement.minBookingHours')}</span>}
+            rules={[{ required: true, message: t('roomManagement.minBookingHoursRequired') }]}
           >
-            <InputNumber min={1} style={{ width: '100%' }} placeholder="例如: 2" />
+            <InputNumber min={1} style={{ width: '100%' }} placeholder={t('roomManagement.minBookingHoursPlaceholder')} />
           </Form.Item>
 
-          <Form.Item label={<span style={{ color: 'rgba(255,255,255,0.85)' }}>不可预约时段 (Unavailable Periods)</span>}>
+          <Form.Item label={<span style={{ color: 'rgba(255,255,255,0.85)' }}>{t('roomManagement.unavailablePeriods')}</span>}>
             <Form.List name="unavailablePeriods">
               {(fields, { add, remove }) => (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -575,46 +571,46 @@ export const RoomManagement: React.FC = () => {
                       <Form.Item
                         {...field}
                         name={[field.name, 'start']}
-                        rules={[{ required: true, message: '请选择开始时间' }]}
+                        rules={[{ required: true, message: t('roomManagement.startTimeRequired') }]}
                         style={{ flex: 1, marginBottom: 0 }}
                       >
-                        <Select placeholder="开始时间">
+                        <Select placeholder={t('roomManagement.startTimePlaceholder')}>
                           {hourOptions.map(h => (
                             <Select.Option key={h} value={h}>{h}</Select.Option>
                           ))}
                         </Select>
                       </Form.Item>
-                      <span style={{ color: '#fff' }}>至</span>
+                      <span style={{ color: '#fff' }}>{t('roomManagement.to')}</span>
                       <Form.Item
                         {...field}
                         name={[field.name, 'end']}
                         rules={[
-                          { required: true, message: '请选择结束时间' },
+                          { required: true, message: t('roomManagement.endTimeRequired') },
                           ({ getFieldValue }) => ({
                             validator(_, value) {
                               const start = getFieldValue(['unavailablePeriods', field.name, 'start']);
                               if (!value || !start || value > start) {
-                                  return Promise.resolve();
+                                return Promise.resolve();
                               }
-                              return Promise.reject(new Error('结束时间必须晚于开始时间'));
+                              return Promise.reject(new Error(t('roomManagement.endTimeBeforeStartError')));
                             },
                           }),
                         ]}
                         style={{ flex: 1, marginBottom: 0 }}
                       >
-                        <Select placeholder="结束时间">
+                        <Select placeholder={t('roomManagement.endTimePlaceholder')}>
                           {hourOptions.map(h => (
                             <Select.Option key={h} value={h}>{h}</Select.Option>
                           ))}
                         </Select>
                       </Form.Item>
                       <Button type="link" danger onClick={() => remove(field.name)} style={{ padding: 0 }}>
-                        删除
+                        {t('common.delete')}
                       </Button>
                     </div>
                   ))}
                   <Button type="dashed" onClick={() => add()} style={{ width: '100%', color: '#fff', border: '1px dashed rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.02)' }}>
-                    + 添加不可预约时段
+                    {t('roomManagement.addUnavailablePeriod')}
                   </Button>
                 </div>
               )}
@@ -624,35 +620,35 @@ export const RoomManagement: React.FC = () => {
           <div style={{ display: 'flex', gap: 16 }}>
             <Form.Item
               name="bookingStart"
-              label={<span style={{ color: 'rgba(255,255,255,0.85)' }}>营业开始时间 (Start Time)</span>}
-              rules={[{ required: true, message: '请选择营业开始时间' }]}
+              label={<span style={{ color: 'rgba(255,255,255,0.85)' }}>{t('roomManagement.businessStartTime')}</span>}
+              rules={[{ required: true, message: t('roomManagement.businessStartTimeRequired') }]}
               style={{ flex: 1 }}
             >
-              <Select placeholder="选择开始时间">
+              <Select placeholder={t('roomManagement.startTimePlaceholder')}>
                 {hourOptions.map(h => (
                   <Select.Option key={h} value={h}>{h}</Select.Option>
                 ))}
               </Select>
             </Form.Item>
-            
+
             <Form.Item
               name="bookingEnd"
-              label={<span style={{ color: 'rgba(255,255,255,0.85)' }}>营业结束时间 (End Time)</span>}
+              label={<span style={{ color: 'rgba(255,255,255,0.85)' }}>{t('roomManagement.businessEndTime')}</span>}
               rules={[
-                { required: true, message: '请选择营业结束时间' },
+                { required: true, message: t('roomManagement.businessEndTimeRequired') },
                 ({ getFieldValue }) => ({
                   validator(_, value) {
                     const start = getFieldValue('bookingStart');
                     if (!value || !start || value > start) {
                       return Promise.resolve();
                     }
-                    return Promise.reject(new Error('结束时间必须晚于开始时间'));
+                    return Promise.reject(new Error(t('roomManagement.endTimeBeforeStartError')));
                   },
                 }),
               ]}
               style={{ flex: 1 }}
             >
-              <Select placeholder="选择结束时间">
+              <Select placeholder={t('roomManagement.endTimePlaceholder')}>
                 {hourOptions.map(h => (
                   <Select.Option key={h} value={h}>{h}</Select.Option>
                 ))}
