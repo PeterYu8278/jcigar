@@ -4,7 +4,8 @@ import { CalendarOutlined, ClockCircleOutlined, CheckCircleOutlined, Environment
 import { getActiveRooms, getBookingsByDate, createBooking, type Room, type RoomBooking } from '../../services/firebase/rooms';
 import { getAllStores } from '../../services/firebase/stores';
 import { useAuthStore } from '../../store/modules/auth';
-import type { Store } from '../../types';
+import { useTranslation } from 'react-i18next';
+import { Store } from '../../types';
 import dayjs from 'dayjs';
 
 interface RoomBookingSectionProps {
@@ -12,6 +13,7 @@ interface RoomBookingSectionProps {
 }
 
 export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style }) => {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
@@ -412,7 +414,7 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
       });
 
       if (result.success) {
-        message.success('Booking confirmed! 🎉');
+        message.success(t('roomBooking.bookingSuccess'));
         try {
           const updatedBookings = await getBookingsByDate(selectedDate);
           setAllDayBookings(updatedBookings);
@@ -421,10 +423,10 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
         }
         handleCloseBookingModal();
       } else {
-        message.error((result as any).error || 'Booking failed');
+        message.error((result as any).error || t('roomBooking.bookingFailed'));
       }
     } catch (error: any) {
-      message.error(error.message || 'Booking failed, please try again');
+      message.error(error.message || t('roomBooking.bookingFailed'));
     } finally {
       setBookingInProgress(false);
     }
@@ -451,9 +453,9 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
         ...style
       }}>
         <CalendarOutlined style={{ fontSize: 32, color: '#FFD700', marginBottom: 12 }} />
-        <h3 style={{ margin: '0 0 8px', color: '#fff', fontSize: 16, fontWeight: 700 }}>Rooms Booking</h3>
+        <h3 style={{ margin: '0 0 8px', color: '#fff', fontSize: 16, fontWeight: 700 }}>{t('roomBooking.title')}</h3>
         <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, margin: '0 0 16px' }}>
-          暂无可用房间，请联系管理员配置。 (No rooms available for booking)
+          {t('roomBooking.noRoomsAvailable')}
         </p>
         {isAdminOrDeveloper && (
           <Button
@@ -467,7 +469,7 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
               borderRadius: 8
             }}
           >
-            去配置房间 (Go to Settings)
+            {t('roomBooking.goToSettings')}
           </Button>
         )}
       </div>
@@ -489,7 +491,7 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
           fontWeight: 700,
           color: '#f8f8f8'
         }}>
-          Rooms Booking
+          {t('roomBooking.title')}
         </h3>
       </div>
 
@@ -610,7 +612,7 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                         color: '#FFD700',
                         fontWeight: 600,
                       }}>
-                        {room.fee} 积分 (Points)
+                        {room.fee} {t('roomBooking.points')}
                       </span>
                     </div>
                   </div>
@@ -633,7 +635,7 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                     flexShrink: 0
                   }}
                 >
-                  {userBooked ? '已预约' : '预订 (Book)'}
+                  {userBooked ? t('roomBooking.booked') : t('roomBooking.book')}
                 </Button>
               </div>
             );
@@ -647,7 +649,7 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
         onCancel={handleCloseBookingModal}
         title={
           <div style={{ color: '#fff', fontSize: 17, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 10 }}>
-            🚪 预订包厢 - {selectedRoom?.name}
+            🚪 {t('roomBooking.modalTitle', { roomName: selectedRoom?.name })}
           </div>
         }
         footer={null}
@@ -675,13 +677,13 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                 {getStoreName(selectedRoom.storeId)}
               </span>
               <span style={{ color: '#FFD700', fontWeight: 700 }}>
-                费用: {selectedRoom.fee} 积分
+                {t('roomBooking.hourlyRate', { fee: selectedRoom.fee })}
               </span>
             </div>
 
             {/* Date Picker inside Modal */}
             <div style={{ marginBottom: 12, fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>
-              选择日期 (Select Date)
+              {t('roomBooking.selectDate')}
             </div>
             <div style={{
               display: 'flex',
@@ -772,7 +774,7 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
               return (
                 <div style={{ marginBottom: 24 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.8)', marginBottom: 12 }}>
-                    选择预订时段 (点击时格选择，可连续多选)
+                    {t('roomBooking.selectTimeslot')}
                   </div>
 
                   {/* Visual Clickable Grid */}
@@ -788,38 +790,38 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                       let bg = 'rgba(255,255,255,0.04)';
                       let border = '1px solid rgba(255,255,255,0.08)';
                       let color = '#fff';
-                      let statusText = '可预订';
+                      let statusText = t('roomBooking.statusAvailable');
 
                       if (seg.isPast) {
                         bg = 'rgba(255,255,255,0.01)';
                         border = '1px solid rgba(255,255,255,0.03)';
                         color = 'rgba(255,255,255,0.2)';
-                        statusText = '已过期';
+                        statusText = t('roomBooking.statusPast');
                       } else if (seg.isMyBooking) {
                         bg = 'rgba(52, 211, 153, 0.08)';
                         border = '1px solid rgba(52, 211, 153, 0.2)';
                         color = '#34d399';
-                        statusText = '我的预订';
+                        statusText = t('roomBooking.statusMyBooking');
                       } else if (seg.isMyCheckedIn) {
                         bg = 'rgba(196, 141, 58, 0.15)';
                         border = '1px solid rgba(196, 141, 58, 0.4)';
                         color = '#FFD700';
-                        statusText = '已签到使用';
+                        statusText = t('roomBooking.statusCheckedIn');
                       } else if (seg.isUnavailable) {
                         bg = 'rgba(255,255,255,0.02)';
                         border = '1px solid rgba(255,255,255,0.06)';
                         color = 'rgba(255,255,255,0.3)';
-                        statusText = '不可预约';
+                        statusText = t('roomBooking.statusUnavailable');
                       } else if (seg.isBooked) {
                         bg = 'rgba(248,113,113,0.08)';
                         border = '1px solid rgba(248,113,113,0.18)';
                         color = '#f87171';
-                        statusText = '已被预订';
+                        statusText = t('roomBooking.statusBooked');
                       } else if (seg.isSelected) {
                         bg = 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)';
                         border = '1px solid transparent';
                         color = '#111';
-                        statusText = '已选择';
+                        statusText = t('roomBooking.statusSelected');
                       }
 
                       return (
@@ -853,9 +855,9 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
 
                   {/* Selected label display */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, padding: '0 4px' }}>
-                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>当前选择区间:</span>
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{t('roomBooking.selectedInterval')}</span>
                     <span style={{ fontSize: 14, fontWeight: 700, color: '#FFD700' }}>
-                      {startTime && endTime && sliderValue ? `${startTime} - ${endTime} (${sliderValue[1] - sliderValue[0]} 小时)` : '未选择'}
+                      {startTime && endTime && sliderValue ? `${startTime} - ${endTime} (${sliderValue[1] - sliderValue[0]} ${t('roomBooking.hours')})` : t('roomBooking.notSelected')}
                     </span>
                   </div>
 
@@ -863,23 +865,23 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                   <div style={{ display: 'flex', justifyContent: 'center', gap: 12, fontSize: 10, color: 'rgba(255,255,255,0.4)', marginTop: 14, flexWrap: 'wrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       <span style={{ width: 8, height: 8, borderRadius: 2, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }} />
-                      <span>空闲</span>
+                      <span>{t('roomBooking.legendAvailable')}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       <span style={{ width: 8, height: 8, borderRadius: 2, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.18)' }} />
-                      <span>已被预订</span>
+                      <span>{t('roomBooking.legendBooked')}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       <span style={{ width: 8, height: 8, borderRadius: 2, background: 'rgba(52, 211, 153, 0.08)', border: '1px solid rgba(52, 211, 153, 0.2)' }} />
-                      <span>我的预订</span>
+                      <span>{t('roomBooking.legendMyBooking')}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       <span style={{ width: 8, height: 8, borderRadius: 2, background: 'rgba(196, 141, 58, 0.15)', border: '1px solid rgba(196, 141, 58, 0.4)' }} />
-                      <span>已签到使用</span>
+                      <span>{t('roomBooking.legendCheckedIn')}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       <span style={{ width: 8, height: 8, borderRadius: 2, background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)' }} />
-                      <span>已选中</span>
+                      <span>{t('roomBooking.legendSelected')}</span>
                     </div>
                   </div>
                 </div>
@@ -918,12 +920,12 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                     {/* Top Row: Rate and Available Points */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 8 }}>
                       <div>
-                        <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, display: 'block' }}>单价 (Hourly Rate)</span>
-                        <span style={{ color: '#fff', fontWeight: 600, fontSize: 13 }}>{selectedRoom.fee} 积分/小时</span>
+                        <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, display: 'block' }}>{t('roomBooking.hourlyRateLabel')}</span>
+                        <span style={{ color: '#fff', fontWeight: 600, fontSize: 13 }}>{selectedRoom.fee} {t('roomBooking.pointsPerHour')}</span>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, display: 'block' }}>可用积分 (Your Points)</span>
-                        <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 13 }}>{userPoints} 积分</span>
+                        <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, display: 'block' }}>{t('roomBooking.availablePointsLabel')}</span>
+                        <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 13 }}>{userPoints} {t('roomBooking.points')}</span>
                       </div>
                     </div>
 
@@ -931,44 +933,44 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {/* Duration and Total */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
-                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>预约时长 (Duration):</span>
-                          <span style={{ color: '#fff', fontWeight: 500 }}>{hours} 小时 (共 {totalFee} 积分)</span>
+                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('roomBooking.duration')}</span>
+                          <span style={{ color: '#fff', fontWeight: 500 }}>{t('roomBooking.hoursTotal', { hours, total: totalFee })}</span>
                         </div>
 
                         {myExistingBooking ? (
                           <>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
-                              <span style={{ color: 'rgba(255,255,255,0.6)' }}>已付订金 (Paid Deposit):</span>
-                              <span style={{ color: 'rgba(255,255,255,0.8)' }}>{oldPaidFee} 积分</span>
+                              <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('roomBooking.paidDeposit')}</span>
+                              <span style={{ color: 'rgba(255,255,255,0.8)' }}>{oldPaidFee} {t('roomBooking.points')}</span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
-                              <span style={{ color: 'rgba(255,255,255,0.6)' }}>需补订金 (Net Deposit Required):</span>
-                              <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 14 }}>{netPointsRequired} 积分</span>
+                              <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('roomBooking.netDepositRequired')}</span>
+                              <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 14 }}>{netPointsRequired} {t('roomBooking.points')}</span>
                             </div>
                           </>
                         ) : (
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
-                            <span style={{ color: 'rgba(255,255,255,0.6)' }}>需付订金 50% (Deposit Required):</span>
-                            <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 14 }}>{depositFee} 积分</span>
+                            <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('roomBooking.depositRequired')}</span>
+                            <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 14 }}>{depositFee} {t('roomBooking.points')}</span>
                           </div>
                         )}
 
                         {/* Check-in Balance */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
-                          <span style={{ color: 'rgba(255,255,255,0.45)' }}>签到付余款 50% (Balance at Check-in):</span>
-                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>{totalFee - depositFee} 积分</span>
+                          <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomBooking.balanceAtCheckin')}</span>
+                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>{totalFee - depositFee} {t('roomBooking.points')}</span>
                         </div>
                       </div>
                     )}
 
                     {isMinDurationInvalid && (
                       <div style={{ color: '#f87171', fontSize: 11, marginTop: 4, fontWeight: 600, textAlign: 'center' }}>
-                        ⚠️ 包厢最少需预订 {minHours} 小时 (Min booking: {minHours} hours)
+                        {t('roomBooking.minBookingHoursError', { count: minHours })}
                       </div>
                     )}
                     {isInsufficient && !isMinDurationInvalid && (
                       <div style={{ color: '#f87171', fontSize: 11, marginTop: 4, fontWeight: 600, textAlign: 'center' }}>
-                        ⚠️ 积分余额不足 (Insufficient points balance)
+                        {t('roomBooking.insufficientPointsError')}
                       </div>
                     )}
                   </div>
@@ -987,7 +989,7 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                         fontWeight: 600
                       }}
                     >
-                      取消 (Cancel)
+                      {t('common.cancel')}
                     </Button>
                     <Button
                       type="primary"
@@ -1007,7 +1009,7 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                         fontWeight: 700
                       }}
                     >
-                      确认预订 (Confirm)
+                      {t('roomBooking.confirmBooking')}
                     </Button>
                   </div>
                 </>
