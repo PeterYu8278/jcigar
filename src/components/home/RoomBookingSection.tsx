@@ -906,55 +906,61 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                 <>
                   {/* User Points & Balance status */}
                   <div style={{
-                    background: 'rgba(255,255,255,0.04)',
+                    background: 'rgba(255,255,255,0.03)',
                     borderRadius: 12,
-                    padding: 12,
-                    marginBottom: 24,
+                    padding: '12px 16px',
+                    marginBottom: 20,
                     border: '1px solid rgba(255,255,255,0.08)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: 6
+                    gap: 10
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                      <span style={{ color: 'rgba(255,255,255,0.6)' }}>单价 (Hourly Rate):</span>
-                      <span style={{ color: '#fff', fontWeight: 600 }}>{selectedRoom.fee} 积分 / 小时</span>
+                    {/* Top Row: Rate and Available Points */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 8 }}>
+                      <div>
+                        <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, display: 'block' }}>单价 (Hourly Rate)</span>
+                        <span style={{ color: '#fff', fontWeight: 600, fontSize: 13 }}>{selectedRoom.fee} 积分/小时</span>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, display: 'block' }}>可用积分 (Your Points)</span>
+                        <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 13 }}>{userPoints} 积分</span>
+                      </div>
                     </div>
+
                     {hours > 0 && (
-                      <>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {/* Duration and Total */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
                           <span style={{ color: 'rgba(255,255,255,0.6)' }}>预约时长 (Duration):</span>
-                          <span style={{ color: '#fff', fontWeight: 600 }}>{hours} 小时</span>
+                          <span style={{ color: '#fff', fontWeight: 500 }}>{hours} 小时 (共 {totalFee} 积分)</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>总费用 (Total Price):</span>
-                          <span style={{ color: '#fff', fontWeight: 600 }}>{totalFee} 积分</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>本次预订扣除 50% 订金 (Deposit - Non-refundable):</span>
-                          <span style={{ color: '#FFD700', fontWeight: 700 }}>{depositFee} 积分</span>
-                        </div>
-                        {myExistingBooking && (
+
+                        {myExistingBooking ? (
                           <>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderTop: '1px dashed rgba(255,255,255,0.1)', paddingTop: 6 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
                               <span style={{ color: 'rgba(255,255,255,0.6)' }}>已付订金 (Paid Deposit):</span>
                               <span style={{ color: 'rgba(255,255,255,0.8)' }}>{oldPaidFee} 积分</span>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                              <span style={{ color: 'rgba(255,255,255,0.6)' }}>需补订金差额 (Net Deposit Difference):</span>
-                              <span style={{ color: '#FFD700', fontWeight: 700 }}>{netPointsRequired} 积分</span>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
+                              <span style={{ color: 'rgba(255,255,255,0.6)' }}>需补订金 (Net Deposit Required):</span>
+                              <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 14 }}>{netPointsRequired} 积分</span>
                             </div>
                           </>
+                        ) : (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
+                            <span style={{ color: 'rgba(255,255,255,0.6)' }}>需付订金 50% (Deposit Required):</span>
+                            <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 14 }}>{depositFee} 积分</span>
+                          </div>
                         )}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 6 }}>
-                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>入座签到时扣除余款 50% (Balance at Check-in):</span>
-                          <span style={{ color: 'rgba(255,255,255,0.8)' }}>{totalFee - depositFee} 积分</span>
+
+                        {/* Check-in Balance */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
+                          <span style={{ color: 'rgba(255,255,255,0.45)' }}>签到付余款 50% (Balance at Check-in):</span>
+                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>{totalFee - depositFee} 积分</span>
                         </div>
-                      </>
+                      </div>
                     )}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 6 }}>
-                      <span style={{ color: 'rgba(255,255,255,0.6)' }}>您的可用积分 (Your Points):</span>
-                      <span style={{ color: '#fff', fontWeight: 600 }}>{userPoints} 积分</span>
-                    </div>
+
                     {isMinDurationInvalid && (
                       <div style={{ color: '#f87171', fontSize: 11, marginTop: 4, fontWeight: 600, textAlign: 'center' }}>
                         ⚠️ 包厢最少需预订 {minHours} 小时 (Min booking: {minHours} hours)
