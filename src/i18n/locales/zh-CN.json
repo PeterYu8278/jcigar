@@ -1892,6 +1892,11 @@
     "insufficientPointsError": "⚠️ 积分余额不足",
     "confirmBooking": "确认预订",
     "bookingSuccess": "预约成功！🎉",
-    "bookingFailed": "预约失败，请重试。"
+    "bookingFailed": "预约失败，请重试。",
+    "selectStore": "选择门店",
+    "selectRoom": "选择包厢",
+    "unifiedTitle": "包厢预约",
+    "unifiedSubTitle": "选择门店、包厢和日期时间来预留您的专属空间",
+    "unifiedBtn": "立即预约"
   }
 }

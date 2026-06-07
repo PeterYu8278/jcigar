@@ -24,6 +24,7 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
 
   // Modal states
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(dayjs().format('YYYY-MM-DD'));
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [startTime, setStartTime] = useState<string | null>(null);
@@ -341,12 +342,24 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
 
 
 
-  const handleOpenBookingModal = (room: Room) => {
+  const handleOpenBookingModal = (room: Room | null) => {
     if (!user?.id) {
-      message.warning('Please login first');
+      message.warning(t('auth.pleaseLogin') || 'Please login first');
       return;
     }
-    setSelectedRoom(room);
+    if (room) {
+      setSelectedRoom(room);
+      setSelectedStoreId(room.storeId);
+    } else {
+      const firstStoreId = stores.length > 0 ? stores[0].id : null;
+      setSelectedStoreId(firstStoreId);
+      if (firstStoreId) {
+        const activeStoreRooms = rooms.filter(r => r.storeId === firstStoreId && r.status === 'active');
+        setSelectedRoom(activeStoreRooms.length > 0 ? activeStoreRooms[0] : null);
+      } else {
+        setSelectedRoom(null);
+      }
+    }
     setSelectedDate(dayjs().format('YYYY-MM-DD'));
     setSelectedSlot(null);
     setStartTime(null);
@@ -355,6 +368,28 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
 
   const handleCloseBookingModal = () => {
     setSelectedRoom(null);
+    setSelectedStoreId(null);
+    setSelectedSlot(null);
+    setStartTime(null);
+    setEndTime(null);
+  };
+
+  const handleStoreChange = (storeId: string) => {
+    setSelectedStoreId(storeId);
+    const storeRooms = rooms.filter(r => r.storeId === storeId && r.status === 'active');
+    if (storeRooms.length > 0) {
+      setSelectedRoom(storeRooms[0]);
+    } else {
+      setSelectedRoom(null);
+    }
+    setSelectedSlot(null);
+    setStartTime(null);
+    setEndTime(null);
+  };
+
+  const handleRoomSelectChange = (roomId: string) => {
+    const room = rooms.find(r => r.id === roomId) || null;
+    setSelectedRoom(room);
     setSelectedSlot(null);
     setStartTime(null);
     setEndTime(null);
@@ -476,6 +511,10 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
     );
   }
 
+  const myActiveBookingToday = allDayBookings.find(
+    b => b.userId === user?.id && (b.status === 'confirmed' || b.status === 'checked_in')
+  );
+
   return (
     <div style={{ marginBottom: 24, ...style }}>
       {/* Title */}
@@ -495,527 +534,471 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
         </h3>
       </div>
 
-      {/* Rooms List - horizontally scrollable row */}
-      <style>{`
-        .rooms-scroll-container::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
+      {/* Unified Private Room Booking Entry */}
       <div
-        className="rooms-scroll-container"
+        onClick={() => handleOpenBookingModal(null)}
         style={{
+          background: 'linear-gradient(135deg, rgba(26,26,26,0.95), rgba(40,35,25,0.9))',
+          border: '1px solid rgba(244,175,37,0.25)',
+          borderRadius: 16,
+          padding: '16px 20px',
+          cursor: 'pointer',
           display: 'flex',
-          flexDirection: 'row',
-          gap: 12,
-          overflowX: 'auto',
-          paddingBottom: 8,
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 16,
+          transition: 'all 0.3s ease',
+          boxShadow: '0 4px 15px rgba(244,175,37,0.08)'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = 'rgba(244,175,37,0.5)';
+          e.currentTarget.style.boxShadow = '0 6px 20px rgba(244,175,37,0.15)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = 'rgba(244,175,37,0.25)';
+          e.currentTarget.style.boxShadow = '0 4px 15px rgba(244,175,37,0.08)';
         }}
       >
-        {(() => {
-          const hasUserBooking = (roomId: string) => {
-            return allDayBookings.some(b =>
-              b.roomId === roomId &&
-              b.userId === user?.id &&
-              (b.status === 'confirmed' || b.status === 'checked_in')
-            );
-          };
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
+          <div style={{
+            width: 48,
+            height: 48,
+            borderRadius: 12,
+            background: 'linear-gradient(135deg, rgba(244,175,37,0.15), rgba(196,141,58,0.15))',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            border: '1px solid rgba(244,175,37,0.25)',
+          }}>
+            <span style={{ fontSize: 24 }}>🚪</span>
+          </div>
 
-          const sortedRooms = [...rooms].sort((a, b) => {
-            const aBooked = a.id ? hasUserBooking(a.id) : false;
-            const bBooked = b.id ? hasUserBooking(b.id) : false;
-            if (aBooked && !bBooked) return -1;
-            if (!aBooked && bBooked) return 1;
-            return 0;
-          });
-
-          return sortedRooms.map(room => {
-            const storeName = getStoreName(room.storeId);
-            const userBooked = room.id ? hasUserBooking(room.id) : false;
-            return (
-              <div
-                key={room.id}
-                onClick={() => handleOpenBookingModal(room)}
-                style={{
-                  background: 'linear-gradient(135deg, rgba(26,26,26,0.95), rgba(40,35,25,0.9))',
-                  border: userBooked ? '1px solid rgba(82, 196, 26, 0.4)' : '1px solid rgba(244,175,37,0.2)',
-                  borderRadius: 16,
-                  padding: '14px 16px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 12,
-                  width: 280,
-                  flexShrink: 0,
-                  transition: 'all 0.3s ease',
-                  boxShadow: userBooked ? '0 0 10px rgba(82, 196, 26, 0.15)' : 'none'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = userBooked ? 'rgba(82, 196, 26, 0.7)' : 'rgba(244,175,37,0.5)';
-                  e.currentTarget.style.boxShadow = userBooked
-                    ? '0 4px 15px rgba(82, 196, 26, 0.25)'
-                    : '0 4px 15px rgba(244,175,37,0.15)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = userBooked ? 'rgba(82, 196, 26, 0.4)' : 'rgba(244,175,37,0.2)';
-                  e.currentTarget.style.boxShadow = userBooked ? '0 0 10px rgba(82, 196, 26, 0.15)' : 'none';
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-                  {/* Icon */}
-                  <div style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 12,
-                    background: userBooked
-                      ? 'linear-gradient(135deg, rgba(82, 196, 26, 0.15), rgba(56, 158, 13, 0.15))'
-                      : 'linear-gradient(135deg, rgba(244,175,37,0.15), rgba(196,141,58,0.15))',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    border: userBooked ? '1px solid rgba(82, 196, 26, 0.3)' : '1px solid rgba(244,175,37,0.25)',
-                  }}>
-                    <span style={{ fontSize: 22 }}>🚪</span>
-                  </div>
-
-                  {/* Details */}
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{
-                      fontSize: 15,
-                      fontWeight: 700,
-                      color: '#fff',
-                      marginBottom: 3,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}>
-                      {room.name}
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      {storeName && (
-                        <span style={{
-                          fontSize: 11,
-                          color: 'rgba(255,255,255,0.45)',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                        }}>
-                          <EnvironmentOutlined style={{ marginRight: 3 }} />
-                          {storeName}
-                        </span>
-                      )}
-                      <span style={{
-                        fontSize: 11,
-                        color: '#FFD700',
-                        fontWeight: 600,
-                      }}>
-                        {room.fee} {t('roomBooking.points')}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Button */}
-                <Button
-                  type="primary"
-                  style={{
-                    background: userBooked
-                      ? 'linear-gradient(to right, #52c41a, #389e0d)'
-                      : 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                    border: 'none',
-                    color: userBooked ? '#fff' : '#111',
-                    fontWeight: 700,
-                    borderRadius: 8,
-                    fontSize: 12,
-                    padding: '4px 12px',
-                    height: 'auto',
-                    flexShrink: 0
-                  }}
-                >
-                  {userBooked ? t('roomBooking.booked') : t('roomBooking.book')}
-                </Button>
+          <div style={{ minWidth: 0 }}>
+            <h4 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#fff' }}>
+              {t('roomBooking.unifiedTitle')}
+            </h4>
+            <p style={{ margin: '4px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {t('roomBooking.unifiedSubTitle')}
+            </p>
+            {myActiveBookingToday && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#52c41a' }} />
+                <span style={{ fontSize: 11, color: '#52c41a', fontWeight: 600 }}>
+                  {t('roomBooking.legendMyBooking')}: {myActiveBookingToday.roomName} ({myActiveBookingToday.timeslot})
+                </span>
               </div>
-            );
-          });
-        })()}
+            )}
+          </div>
+        </div>
+
+        <Button
+          type="primary"
+          style={{
+            background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+            border: 'none',
+            color: '#111',
+            fontWeight: 700,
+            borderRadius: 8,
+            fontSize: 13,
+            padding: '6px 16px',
+            height: 'auto',
+            flexShrink: 0
+          }}
+        >
+          {t('roomBooking.unifiedBtn')}
+        </Button>
       </div>
 
       {/* Booking Date & Slot Selection Modal */}
       <Modal
-        open={selectedRoom !== null}
+        open={selectedStoreId !== null}
         onCancel={handleCloseBookingModal}
         title={
-          <div style={{ color: '#fff', fontSize: 15, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 6 }}>
-            🚪 {t('roomBooking.modalTitle', { roomName: selectedRoom?.name })}
+          <div style={{ color: '#fff', fontSize: 16, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 8 }}>
+            🚪 {t('roomBooking.unifiedTitle')}
           </div>
         }
         footer={null}
         centered
         destroyOnClose
-        width={400}
+        width={420}
         styles={{
           content: {
             background: 'linear-gradient(180deg, #1f1b14 0%, #15130f 100%)',
             border: '1px solid rgba(244,175,37,0.4)',
-            borderRadius: 16,
+            borderRadius: 20,
             padding: '12px 16px',
-            maxHeight: '98vh',
+            maxHeight: '95vh',
             display: 'flex',
             flexDirection: 'column'
           },
           body: {
             background: 'transparent',
-            marginTop: 6
+            overflowY: 'hidden',
+            paddingRight: 0,
+            marginTop: 8
           },
           mask: {
             backdropFilter: 'blur(4px)',
           }
         }}
       >
-        {selectedRoom && (
+        {selectedStoreId && (
           <div>
-            {/* Store & Price Summary */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 11 }}>
-              <span style={{ color: 'rgba(255,255,255,0.5)' }}>
-                <EnvironmentOutlined style={{ marginRight: 4 }} />
-                {getStoreName(selectedRoom.storeId)}
-              </span>
-              <span style={{ color: '#FFD700', fontWeight: 700 }}>
-                {t('roomBooking.hourlyRate', { fee: selectedRoom.fee })}
-              </span>
+            {/* Store & Room Selectors */}
+            <div className="points-config-form" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 8 }}>
+              <div>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>
+                  {t('roomBooking.selectStore')}
+                </div>
+                <Select
+                  value={selectedStoreId || undefined}
+                  onChange={handleStoreChange}
+                  style={{ width: '100%', height: 32 }}
+                  placeholder={t('roomBooking.selectStore')}
+                  options={stores.map(s => ({ value: s.id, label: s.name }))}
+                />
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>
+                  {t('roomBooking.selectRoom')}
+                </div>
+                <Select
+                  value={selectedRoom?.id || undefined}
+                  onChange={handleRoomSelectChange}
+                  style={{ width: '100%', height: 32 }}
+                  placeholder={t('roomBooking.selectRoom')}
+                  disabled={!selectedStoreId}
+                  options={rooms.filter(r => r.storeId === selectedStoreId && r.status === 'active').map(r => ({ value: r.id, label: r.name }))}
+                />
+              </div>
             </div>
 
-            {/* Date Picker inside Modal */}
-            <div style={{ marginBottom: 4, fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>
-              {t('roomBooking.selectDate')}
-            </div>
-            <div style={{
-              display: 'flex',
-              gap: 6,
-              marginBottom: 8,
-              overflowX: 'auto',
-              paddingBottom: 4,
-              scrollbarWidth: 'none',
-            }}>
-              {dateOptions.map(opt => {
-                const isSelected = selectedDate === opt.value;
-                return (
-                  <div
-                    key={opt.value}
-                    onClick={() => {
-                      setSelectedDate(opt.value);
-                      setSelectedSlot(null);
-                    }}
-                    style={{
-                      minWidth: 54,
-                      padding: '4px 6px',
-                      borderRadius: 8,
-                      cursor: 'pointer',
-                      textAlign: 'center',
-                      transition: 'all 0.25s ease',
-                      background: isSelected
-                        ? 'linear-gradient(135deg, #FDE08D, #C48D3A)'
-                        : 'rgba(255,255,255,0.06)',
-                      border: isSelected
-                        ? '1px solid transparent'
-                        : '1px solid rgba(255,255,255,0.1)',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <div style={{
-                      fontSize: 8.5,
-                      fontWeight: 600,
-                      color: isSelected ? '#111' : 'rgba(255,255,255,0.5)',
-                      marginBottom: 1,
-                    }}>
-                      {opt.label}
+            {!selectedRoom ? (
+              <div style={{ textAlign: 'center', padding: '24px 0', color: 'rgba(255,255,255,0.5)' }}>
+                {t('roomBooking.noRoomsAvailable')}
+              </div>
+            ) : (
+              <div>
+                {/* Date Picker inside Modal */}
+                <div style={{ marginBottom: 6, fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>
+                  {t('roomBooking.selectDate')}
+                </div>
+                <div style={{
+                  display: 'flex',
+                  gap: 6,
+                  marginBottom: 10,
+                  overflowX: 'auto',
+                  paddingBottom: 4,
+                  scrollbarWidth: 'none',
+                }}>
+                  {dateOptions.map(opt => {
+                    const isSelected = selectedDate === opt.value;
+                    return (
+                      <div
+                        key={opt.value}
+                        onClick={() => {
+                          setSelectedDate(opt.value);
+                          setSelectedSlot(null);
+                        }}
+                        style={{
+                          minWidth: 54,
+                          padding: '4px 6px',
+                          borderRadius: 8,
+                          cursor: 'pointer',
+                          textAlign: 'center',
+                          transition: 'all 0.25s ease',
+                          background: isSelected
+                            ? 'linear-gradient(135deg, #FDE08D, #C48D3A)'
+                            : 'rgba(255,255,255,0.06)',
+                          border: isSelected
+                            ? '1px solid transparent'
+                            : '1px solid rgba(255,255,255,0.1)',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <div style={{
+                          fontSize: 9,
+                          fontWeight: 600,
+                          color: isSelected ? '#111' : 'rgba(255,255,255,0.5)',
+                          marginBottom: 1,
+                        }}>
+                          {opt.label}
+                        </div>
+                        <div style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: isSelected ? '#111' : '#fff',
+                        }}>
+                          {opt.dateLabel}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Clickable Hourly Grid Selector */}
+                {(() => {
+                  const open = selectedRoom.bookingStart ? parseInt(selectedRoom.bookingStart.split(':')[0], 10) : 10;
+                  const close = selectedRoom.bookingEnd ? parseInt(selectedRoom.bookingEnd.split(':')[0], 10) : 22;
+                  const bookedIntervals = getBookedIntervals();
+                  const segments = [];
+                  for (let h = open; h < close; h++) {
+                    const startMins = h * 60;
+                    const endMins = (h + 1) * 60;
+
+                    // Find matching booking to determine ownership
+                    const matchingBooking = bookings.find(b => {
+                      if (b.status !== 'confirmed' && b.status !== 'checked_in') return false;
+                      const parts = b.timeslot.split('-').map(s => s.trim());
+                      const bStart = timeToMinutes(parts[0]);
+                      const bEnd = timeToMinutes(parts[1]);
+                      return startMins < bEnd && bStart < endMins;
+                    });
+
+                    const isUnavailable = selectedRoom.unavailablePeriods?.some(p => {
+                      const pStart = timeToMinutes(p.start);
+                      const pEnd = timeToMinutes(p.end);
+                      return startMins < pEnd && pStart < endMins;
+                    }) || false;
+
+                    const isBooked = !!matchingBooking || isUnavailable;
+                    const isMyBooking = matchingBooking ? (matchingBooking.userId === user?.id && matchingBooking.status === 'confirmed') : false;
+                    const isMyCheckedIn = matchingBooking ? (matchingBooking.userId === user?.id && matchingBooking.status === 'checked_in') : false;
+                    const isPast = isTimePast(`${String(h + 1).padStart(2, '0')}:00`);
+                    const isSelected = sliderValue && h >= sliderValue[0] && (h + 1) <= sliderValue[1];
+                    segments.push({ hour: h, isBooked, isMyBooking, isMyCheckedIn, isPast, isSelected, isUnavailable });
+                  }
+
+                  return (
+                    <div style={{ marginBottom: 8 }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.8)', marginBottom: 6 }}>
+                        {t('roomBooking.selectTimeslot')}
+                      </div>
+
+                      {/* Visual Clickable Grid */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(4, 1fr)',
+                        gap: 6,
+                        marginBottom: 8
+                      }}>
+                        {segments.map((seg, i) => {
+                          const disabled = (seg.isBooked && !seg.isMyBooking) || seg.isPast;
+
+                          let bg = 'rgba(255,255,255,0.04)';
+                          let border = '1px solid rgba(255,255,255,0.08)';
+                          let color = '#fff';
+                          let statusText = t('roomBooking.statusAvailable');
+
+                          if (seg.isPast) {
+                            bg = 'rgba(255,255,255,0.01)';
+                            border = '1px solid rgba(255,255,255,0.03)';
+                            color = 'rgba(255,255,255,0.2)';
+                            statusText = t('roomBooking.statusPast');
+                          } else if (seg.isMyBooking) {
+                            bg = 'rgba(52, 211, 153, 0.08)';
+                            border = '1px solid rgba(52, 211, 153, 0.2)';
+                            color = '#34d399';
+                            statusText = t('roomBooking.statusMyBooking');
+                          } else if (seg.isMyCheckedIn) {
+                            bg = 'rgba(196, 141, 58, 0.15)';
+                            border = '1px solid rgba(196, 141, 58, 0.4)';
+                            color = '#FFD700';
+                            statusText = t('roomBooking.statusCheckedIn');
+                          } else if (seg.isUnavailable) {
+                            bg = 'rgba(255,255,255,0.02)';
+                            border = '1px solid rgba(255,255,255,0.06)';
+                            color = 'rgba(255,255,255,0.3)';
+                            statusText = t('roomBooking.statusUnavailable');
+                          } else if (seg.isBooked) {
+                            bg = 'rgba(248,113,113,0.08)';
+                            border = '1px solid rgba(248,113,113,0.18)';
+                            color = '#f87171';
+                            statusText = t('roomBooking.statusBooked');
+                          } else if (seg.isSelected) {
+                            bg = 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)';
+                            border = '1px solid transparent';
+                            color = '#111';
+                            statusText = t('roomBooking.statusSelected');
+                          }
+
+                          return (
+                            <div
+                              key={i}
+                              onClick={() => !disabled && handleCellClick(seg.hour)}
+                              style={{
+                                padding: '6px 2px',
+                                borderRadius: 8,
+                                textAlign: 'center',
+                                cursor: disabled ? 'not-allowed' : 'pointer',
+                                background: bg,
+                                border,
+                                color,
+                                transition: 'all 0.25s ease',
+                                userSelect: 'none',
+                                transform: seg.isSelected ? 'scale(1.02)' : 'none',
+                                boxShadow: seg.isSelected ? '0 4px 12px rgba(244,175,37,0.25)' : 'none'
+                              }}
+                            >
+                              <div style={{ fontSize: 9, fontWeight: 700 }}>
+                                {String(seg.hour).padStart(2, '0')}:00 - {String(seg.hour + 1).padStart(2, '0')}:00
+                              </div>
+                              <div style={{ fontSize: 7, fontWeight: 600, marginTop: 1, opacity: 0.8 }}>
+                                {statusText}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Selected label display */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, padding: '0 4px' }}>
+                        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>{t('roomBooking.selectedInterval')}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#FFD700' }}>
+                          {startTime && endTime && sliderValue ? `${startTime} - ${endTime} (${sliderValue[1] - sliderValue[0]} ${t('roomBooking.hours')})` : t('roomBooking.notSelected')}
+                        </span>
+                      </div>
+
+                      {/* Color keys legend */}
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: 6, fontSize: 8, color: 'rgba(255,255,255,0.4)', marginTop: 6, flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ width: 6, height: 6, borderRadius: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }} />
+                          <span>{t('roomBooking.legendAvailable')}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ width: 6, height: 6, borderRadius: 1, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.18)' }} />
+                          <span>{t('roomBooking.legendBooked')}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ width: 6, height: 6, borderRadius: 1, background: 'rgba(52, 211, 153, 0.08)', border: '1px solid rgba(52, 211, 153, 0.2)' }} />
+                          <span>{t('roomBooking.legendMyBooking')}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ width: 6, height: 6, borderRadius: 1, background: 'rgba(196, 141, 58, 0.15)', border: '1px solid rgba(196, 141, 58, 0.4)' }} />
+                          <span>{t('roomBooking.legendCheckedIn')}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ width: 6, height: 6, borderRadius: 1, background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)' }} />
+                          <span>{t('roomBooking.legendSelected')}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div style={{
-                      fontSize: 10.5,
-                      fontWeight: 700,
-                      color: isSelected ? '#111' : '#fff',
-                    }}>
-                      {opt.dateLabel}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })()}
 
-            {/* Clickable Hourly Grid Selector */}
-            {(() => {
-              const open = selectedRoom.bookingStart ? parseInt(selectedRoom.bookingStart.split(':')[0], 10) : 10;
-              const close = selectedRoom.bookingEnd ? parseInt(selectedRoom.bookingEnd.split(':')[0], 10) : 22;
-              const bookedIntervals = getBookedIntervals();
-              const segments = [];
-              for (let h = open; h < close; h++) {
-                const startMins = h * 60;
-                const endMins = (h + 1) * 60;
+                {(() => {
+                  const hours = sliderValue ? (sliderValue[1] - sliderValue[0]) : 0;
+                  const totalFee = hours * selectedRoom.fee;
+                  const depositFee = Math.round(totalFee * 0.5);
 
-                // Find matching booking to determine ownership
-                const matchingBooking = bookings.find(b => {
-                  if (b.status !== 'confirmed' && b.status !== 'checked_in') return false;
-                  const parts = b.timeslot.split('-').map(s => s.trim());
-                  const bStart = timeToMinutes(parts[0]);
-                  const bEnd = timeToMinutes(parts[1]);
-                  return startMins < bEnd && bStart < endMins;
-                });
+                  const myExistingBooking = bookings.find(b => b.userId === user?.id && b.status === 'confirmed');
+                  const oldPaidFee = myExistingBooking
+                    ? (myExistingBooking.paidFee || Math.round((calculateHours(myExistingBooking.timeslot) * selectedRoom.fee) * 0.5))
+                    : 0;
 
-                const isUnavailable = selectedRoom.unavailablePeriods?.some(p => {
-                  const pStart = timeToMinutes(p.start);
-                  const pEnd = timeToMinutes(p.end);
-                  return startMins < pEnd && pStart < endMins;
-                }) || false;
+                  const netPointsRequired = Math.max(0, depositFee - oldPaidFee);
+                  const userPoints = user?.membership?.points || 0;
+                  const minHours = selectedRoom.minBookingHours || 2;
+                  const isInsufficient = userPoints < netPointsRequired;
+                  const isMinDurationInvalid = hours > 0 && hours < minHours;
 
-                const isBooked = !!matchingBooking || isUnavailable;
-                const isMyBooking = matchingBooking ? (matchingBooking.userId === user?.id && matchingBooking.status === 'confirmed') : false;
-                const isMyCheckedIn = matchingBooking ? (matchingBooking.userId === user?.id && matchingBooking.status === 'checked_in') : false;
-                const isPast = isTimePast(`${String(h + 1).padStart(2, '0')}:00`);
-                const isSelected = sliderValue && h >= sliderValue[0] && (h + 1) <= sliderValue[1];
-                segments.push({ hour: h, isBooked, isMyBooking, isMyCheckedIn, isPast, isSelected, isUnavailable });
-              }
+                  return (
+                    <>
+                      {/* User Points & Balance status */}
+                      <div style={{
+                        background: 'rgba(255,255,255,0.03)',
+                        borderRadius: 12,
+                        padding: '6px 10px',
+                        marginBottom: 10,
+                        border: '1px solid rgba(255,255,255,0.08)',
+                      }}>
+                        {/* Rate and Available points */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 8px', fontSize: 10 }}>
+                          <div>
+                            <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomBooking.hourlyRateLabel')}: </span>
+                            <span style={{ color: '#fff', fontWeight: 600 }}>{selectedRoom.fee} pts/h</span>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomBooking.availablePointsLabel')}: </span>
+                            <span style={{ color: '#FFD700', fontWeight: 700 }}>{userPoints} pts</span>
+                          </div>
+                        </div>
 
-              return (
-                <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.8)', marginBottom: 4 }}>
-                    {t('roomBooking.selectTimeslot')}
-                  </div>
+                        {hours > 0 && (
+                          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 4, marginTop: 4, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 8px', fontSize: 10 }}>
+                            <div>{t('roomBooking.duration')}: <span style={{ color: '#fff', fontWeight: 600 }}>{hours}h ({totalFee} pts)</span></div>
+                            {myExistingBooking ? (
+                              <>
+                                <div style={{ textAlign: 'right' }}>{t('roomBooking.paidDeposit')}: <span style={{ color: '#fff' }}>{oldPaidFee} pts</span></div>
+                                <div style={{ gridColumn: 'span 2', textAlign: 'right' }}>{t('roomBooking.netDepositRequired')}: <span style={{ color: '#FFD700', fontWeight: 700 }}>{netPointsRequired} pts</span></div>
+                              </>
+                            ) : (
+                              <div style={{ textAlign: 'right' }}>{t('roomBooking.depositRequired')}: <span style={{ color: '#FFD700', fontWeight: 700 }}>{depositFee} pts</span></div>
+                            )}
+                            <div style={{ gridColumn: 'span 2', fontSize: 9, color: 'rgba(255,255,255,0.4)', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: 2, marginTop: 2 }}>
+                              {t('roomBooking.balanceAtCheckin')}: {totalFee - depositFee} pts
+                            </div>
+                          </div>
+                        )}
 
-                  {/* Visual Clickable Grid */}
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(4, 1fr)',
-                    gap: 6,
-                    marginBottom: 8
-                  }}>
-                    {segments.map((seg, i) => {
-                      const disabled = (seg.isBooked && !seg.isMyBooking) || seg.isPast;
+                        {isMinDurationInvalid && (
+                          <div style={{ color: '#f87171', fontSize: 9, marginTop: 2, fontWeight: 600, textAlign: 'center' }}>
+                            {t('roomBooking.minBookingHoursError', { count: minHours })}
+                          </div>
+                        )}
+                        {isInsufficient && !isMinDurationInvalid && (
+                          <div style={{ color: '#f87171', fontSize: 9, marginTop: 2, fontWeight: 600, textAlign: 'center' }}>
+                            {t('roomBooking.insufficientPointsError')}
+                          </div>
+                        )}
+                      </div>
 
-                      let bg = 'rgba(255,255,255,0.04)';
-                      let border = '1px solid rgba(255,255,255,0.08)';
-                      let color = '#fff';
-                      let statusText = t('roomBooking.statusAvailable');
-
-                      if (seg.isPast) {
-                        bg = 'rgba(255,255,255,0.01)';
-                        border = '1px solid rgba(255,255,255,0.03)';
-                        color = 'rgba(255,255,255,0.2)';
-                        statusText = t('roomBooking.statusPast');
-                      } else if (seg.isMyBooking) {
-                        bg = 'rgba(52, 211, 153, 0.08)';
-                        border = '1px solid rgba(52, 211, 153, 0.2)';
-                        color = '#34d399';
-                        statusText = t('roomBooking.statusMyBooking');
-                      } else if (seg.isMyCheckedIn) {
-                        bg = 'rgba(196, 141, 58, 0.15)';
-                        border = '1px solid rgba(196, 141, 58, 0.4)';
-                        color = '#FFD700';
-                        statusText = t('roomBooking.statusCheckedIn');
-                      } else if (seg.isUnavailable) {
-                        bg = 'rgba(255,255,255,0.02)';
-                        border = '1px solid rgba(255,255,255,0.06)';
-                        color = 'rgba(255,255,255,0.3)';
-                        statusText = t('roomBooking.statusUnavailable');
-                      } else if (seg.isBooked) {
-                        bg = 'rgba(248,113,113,0.08)';
-                        border = '1px solid rgba(248,113,113,0.18)';
-                        color = '#f87171';
-                        statusText = t('roomBooking.statusBooked');
-                      } else if (seg.isSelected) {
-                        bg = 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)';
-                        border = '1px solid transparent';
-                        color = '#111';
-                        statusText = t('roomBooking.statusSelected');
-                      }
-
-                      return (
-                        <div
-                          key={i}
-                          onClick={() => !disabled && handleCellClick(seg.hour)}
+                      {/* Modal Actions */}
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        <Button
+                          onClick={handleCloseBookingModal}
                           style={{
-                            padding: '6px 2px',
-                            borderRadius: 8,
-                            textAlign: 'center',
-                            cursor: disabled ? 'not-allowed' : 'pointer',
-                            background: bg,
-                            border,
-                            color,
-                            transition: 'all 0.25s ease',
-                            userSelect: 'none',
-                            transform: seg.isSelected ? 'scale(1.02)' : 'none',
-                            boxShadow: seg.isSelected ? '0 4px 12px rgba(244,175,37,0.25)' : 'none'
+                            flex: 1,
+                            background: 'rgba(255,255,255,0.08)',
+                            border: '1px solid rgba(255,255,255,0.15)',
+                            color: '#fff',
+                            borderRadius: 10,
+                            height: 36,
+                            fontWeight: 600,
+                            fontSize: 13
                           }}
                         >
-                          <div style={{ fontSize: 9.5, fontWeight: 700 }}>
-                            {String(seg.hour).padStart(2, '0')}:00
-                          </div>
-                          <div style={{ fontSize: 7.5, fontWeight: 600, marginTop: 1, opacity: 0.8 }}>
-                            {statusText}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Selected label display */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, padding: '0 2px' }}>
-                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>{t('roomBooking.selectedInterval')}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#FFD700' }}>
-                      {startTime && endTime && sliderValue ? `${startTime} - ${endTime} (${sliderValue[1] - sliderValue[0]} ${t('roomBooking.hours')})` : t('roomBooking.notSelected')}
-                    </span>
-                  </div>
-
-                  {/* Color keys legend */}
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: 8, fontSize: 8, color: 'rgba(255,255,255,0.4)', marginTop: 4, flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <span style={{ width: 5, height: 5, borderRadius: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }} />
-                      <span>{t('roomBooking.legendAvailable')}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <span style={{ width: 5, height: 5, borderRadius: 1, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.18)' }} />
-                      <span>{t('roomBooking.legendBooked')}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <span style={{ width: 5, height: 5, borderRadius: 1, background: 'rgba(52, 211, 153, 0.08)', border: '1px solid rgba(52, 211, 153, 0.2)' }} />
-                      <span>{t('roomBooking.legendMyBooking')}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <span style={{ width: 5, height: 5, borderRadius: 1, background: 'rgba(196, 141, 58, 0.15)', border: '1px solid rgba(196, 141, 58, 0.4)' }} />
-                      <span>{t('roomBooking.legendCheckedIn')}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <span style={{ width: 5, height: 5, borderRadius: 1, background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)' }} />
-                      <span>{t('roomBooking.legendSelected')}</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {(() => {
-              const hours = sliderValue ? (sliderValue[1] - sliderValue[0]) : 0;
-              const totalFee = hours * selectedRoom.fee;
-              const depositFee = Math.round(totalFee * 0.5);
-
-              const myExistingBooking = bookings.find(b => b.userId === user?.id && b.status === 'confirmed');
-              const oldPaidFee = myExistingBooking
-                ? (myExistingBooking.paidFee || Math.round((calculateHours(myExistingBooking.timeslot) * selectedRoom.fee) * 0.5))
-                : 0;
-
-              const netPointsRequired = Math.max(0, depositFee - oldPaidFee);
-              const userPoints = user?.membership?.points || 0;
-              const minHours = selectedRoom.minBookingHours || 2;
-              const isInsufficient = userPoints < netPointsRequired;
-              const isMinDurationInvalid = hours > 0 && hours < minHours;
-
-              return (
-                <>
-                  {/* User Points & Balance status */}
-                  <div style={{
-                    background: 'rgba(255,255,255,0.03)',
-                    borderRadius: 12,
-                    padding: '6px 10px',
-                    marginBottom: 8,
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 4
-                  }}>
-                    {/* Top Row: Rate and Available Points */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 4 }}>
-                      <div>
-                        <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 9, display: 'block' }}>{t('roomBooking.hourlyRateLabel')}</span>
-                        <span style={{ color: '#fff', fontWeight: 600, fontSize: 11 }}>{selectedRoom.fee} {t('roomBooking.pointsPerHour')}</span>
+                          {t('common.cancel')}
+                        </Button>
+                        <Button
+                          type="primary"
+                          onClick={handleConfirmBooking}
+                          loading={bookingInProgress}
+                          disabled={
+                            isSliderValueInvalid() ||
+                            isInsufficient
+                          }
+                          style={{
+                            flex: 2,
+                            background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                            border: 'none',
+                            color: '#111',
+                            borderRadius: 10,
+                            height: 36,
+                            fontWeight: 700,
+                            fontSize: 13
+                          }}
+                        >
+                          {t('roomBooking.confirmBooking')}
+                        </Button>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 9, display: 'block' }}>{t('roomBooking.availablePointsLabel')}</span>
-                        <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 11 }}>{userPoints} {t('roomBooking.points')}</span>
-                      </div>
-                    </div>
-
-                    {hours > 0 && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: 4 }}>
-                        {/* Duration & Total */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10.5 }}>
-                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>
-                            {t('roomBooking.duration')}: {hours} {t('roomBooking.hours')} ({totalFee} {t('roomBooking.points')})
-                          </span>
-                          <span style={{ color: '#FFD700', fontWeight: 700 }}>
-                            {myExistingBooking ? t('roomBooking.netDepositRequired') : t('roomBooking.depositRequired')}: {netPointsRequired} {t('roomBooking.points')}
-                          </span>
-                        </div>
-
-                        {/* Additional Info Row */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 9.5, color: 'rgba(255,255,255,0.45)' }}>
-                          {myExistingBooking ? (
-                            <>
-                              <span>{t('roomBooking.paidDeposit')}: {oldPaidFee} {t('roomBooking.points')}</span>
-                              <span>{t('roomBooking.balanceAtCheckin')}: {totalFee - depositFee} {t('roomBooking.points')}</span>
-                            </>
-                          ) : (
-                            <span>{t('roomBooking.balanceAtCheckin')}: {totalFee - depositFee} {t('roomBooking.points')}</span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {isMinDurationInvalid && (
-                      <div style={{ color: '#f87171', fontSize: 9, marginTop: 1, fontWeight: 600, textAlign: 'center' }}>
-                        {t('roomBooking.minBookingHoursError', { count: minHours })}
-                      </div>
-                    )}
-                    {isInsufficient && !isMinDurationInvalid && (
-                      <div style={{ color: '#f87171', fontSize: 9, marginTop: 1, fontWeight: 600, textAlign: 'center' }}>
-                        {t('roomBooking.insufficientPointsError')}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Modal Actions */}
-                  <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                    <Button
-                      onClick={handleCloseBookingModal}
-                      style={{
-                        flex: 1,
-                        background: 'rgba(255,255,255,0.06)',
-                        border: '1px solid rgba(255,255,255,0.12)',
-                        color: '#fff',
-                        borderRadius: 8,
-                        height: 32,
-                        fontWeight: 600,
-                        fontSize: 12
-                      }}
-                    >
-                      {t('common.cancel')}
-                    </Button>
-                    <Button
-                      type="primary"
-                      onClick={handleConfirmBooking}
-                      loading={bookingInProgress}
-                      disabled={
-                        isSliderValueInvalid() ||
-                        isInsufficient
-                      }
-                      style={{
-                        flex: 2,
-                        background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                        border: 'none',
-                        color: '#111',
-                        borderRadius: 8,
-                        height: 32,
-                        fontWeight: 700,
-                        fontSize: 12
-                      }}
-                    >
-                      {t('roomBooking.confirmBooking')}
-                    </Button>
-                  </div>
-                </>
-              );
-            })()}
+                    </>
+                  );
+                })()}
+              </div>
+            )}
           </div>
         )}
       </Modal>

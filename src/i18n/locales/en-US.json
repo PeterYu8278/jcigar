@@ -1890,6 +1890,11 @@
     "insufficientPointsError": "⚠️ Insufficient points balance",
     "confirmBooking": "Confirm Booking",
     "bookingSuccess": "Booking confirmed! 🎉",
-    "bookingFailed": "Booking failed, please try again."
+    "bookingFailed": "Booking failed, please try again.",
+    "selectStore": "Select Store",
+    "selectRoom": "Select Room",
+    "unifiedTitle": "Room Booking",
+    "unifiedSubTitle": "Select store, room, date and time to reserve your space",
+    "unifiedBtn": "Book Now"
   }
 }
