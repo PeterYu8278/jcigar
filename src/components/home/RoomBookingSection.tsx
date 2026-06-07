@@ -959,7 +959,9 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                             <>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
                                 <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('roomBooking.paidDeposit')}</span>
-                                <span style={{ color: 'rgba(255,255,255,0.8)' }}>{oldPaidFee} {t('roomBooking.points')}</span>
+                                <span style={{ color: 'rgba(255,255,255,0.8)' }}>
+                                  {oldPaidFee ? `${oldPaidFee} ${t('roomBooking.points')}` : '-'}
+                                </span>
                               </div>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
                                 <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('roomBooking.netDepositRequired')}</span>
