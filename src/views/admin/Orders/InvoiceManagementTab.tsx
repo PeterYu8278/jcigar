@@ -10,6 +10,7 @@ import { COLLECTIONS, updateDocument } from '@/services/firebase/firestore'
 import { generateInvoicePdfAndDownload, openInvoicePdfPreview } from '@/utils/invoicePdfRenderer'
 import { getStatusColor, getStatusText, getUserName, getUserPhone } from './helpers'
 import { OrderSkeleton } from '../../../components/features/admin/OrderSkeleton'
+import { SearchOutlined } from '@ant-design/icons'
 
 type InvoiceFormValues = {
   invoiceNo: string
@@ -73,6 +74,8 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
   const [form] = Form.useForm<InvoiceFormValues>()
   const [latestAppConfig, setLatestAppConfig] = useState<AppConfig | null>(null)
 
+  const [searchText, setSearchText] = useState('')
+
   const resolveAppConfig = async (): Promise<AppConfig | null> => {
     try {
       const cfg = await getAppConfig()
@@ -116,10 +119,31 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
   }
 
   const filteredOrders = useMemo(() => {
-    if (invoiceFilter === 'all') return orders
-    if (invoiceFilter === 'invoiced') return orders.filter(o => !!(o as any)?.invoice)
-    return orders.filter(o => !(o as any)?.invoice)
-  }, [orders, invoiceFilter])
+    let result = orders
+    if (invoiceFilter === 'invoiced') {
+      result = result.filter(o => !!(o as any)?.invoice)
+    } else if (invoiceFilter === 'notInvoiced') {
+      result = result.filter(o => !(o as any)?.invoice)
+    }
+
+    if (searchText.trim()) {
+      const q = searchText.toLowerCase().trim()
+      result = result.filter(o => {
+        const idMatch = String(o.id || '').toLowerCase().includes(q)
+        const addrMatch = String((o as any)?.shipping?.address || '').toLowerCase().includes(q)
+        
+        const userName = getUserName(o.userId, users).toLowerCase()
+        const userPhone = (getUserPhone(o.userId, users) || '').toLowerCase()
+        const userMatch = userName.includes(q) || userPhone.includes(q)
+        
+        const totalStr = Number(o.total || 0).toFixed(2)
+        const totalMatch = totalStr.includes(q) || String(o.total || '').includes(q)
+        
+        return idMatch || addrMatch || userMatch || totalMatch
+      })
+    }
+    return result
+  }, [orders, invoiceFilter, searchText, users])
 
   const columns: ColumnsType<Order> = useMemo(() => [
     {
@@ -129,7 +153,7 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
       width: 160,
       render: (id: string, record: Order) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <Button
+          <div><Button
             type="link"
             style={{
               padding: 0,
@@ -144,9 +168,10 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
           >
             {id}
           </Button>
-          <div style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.45)', marginTop: 2, wordBreak: 'break-all', whiteSpace: 'normal' }}>
-            {(record as any)?.shipping?.address || '-'}
           </div>
+          <span style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.45)', marginTop: 2, wordBreak: 'break-all', whiteSpace: 'normal' }}>
+            {(record as any)?.shipping?.address || '-'}
+          </span>
         </div>
       ),
     },
@@ -310,7 +335,7 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
     }
 
     // Write back to all activeOrders
-    const promises = activeOrders.map(order => 
+    const promises = activeOrders.map(order =>
       updateDocument<Order>(COLLECTIONS.ORDERS, order.id, {
         invoice,
       } as any)
@@ -325,7 +350,7 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
     await onRefresh()
 
     const cfg = await resolveAppConfig()
-    
+
     // Create a virtual order that merges all activeOrders
     const mergedItems = activeOrders.flatMap(o => o.items || [])
     const totalAmount = activeOrders.reduce((sum, o) => sum + (o.total || 0), 0)
@@ -362,6 +387,15 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
       }}>
         {!isMobile ? (
           <Space size="middle">
+            <Input
+              placeholder={t('ordersAdmin.searchPlaceholder')}
+              allowClear
+              style={{ width: 220 }}
+              prefix={<SearchOutlined />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              className="points-config-form"
+            />
             <Select
               value={invoiceFilter}
               onChange={setInvoiceFilter}
@@ -411,6 +445,14 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
           </Space>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <Input
+              placeholder={t('ordersAdmin.searchPlaceholder')}
+              allowClear
+              prefix={<SearchOutlined />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              className="points-config-form"
+            />
             <Select
               value={invoiceFilter}
               onChange={setInvoiceFilter}
