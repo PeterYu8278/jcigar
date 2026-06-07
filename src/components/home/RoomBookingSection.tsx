@@ -652,12 +652,12 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
             padding: '12px 16px',
             maxHeight: '95vh',
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            overflow: 'hidden'
           },
           body: {
             background: 'transparent',
-            overflowY: 'hidden',
-            paddingRight: 0,
+            overflow: 'hidden',
             marginTop: 8
           },
           mask: {
