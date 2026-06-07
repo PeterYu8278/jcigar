@@ -126,23 +126,28 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
       title: t('ordersAdmin.orderId'),
       dataIndex: 'id',
       key: 'id',
-      width: 140,
+      width: 160,
       render: (id: string, record: Order) => (
-        <Button
-          type="link"
-          style={{
-            padding: 0,
-            height: 'auto',
-            fontFamily: 'monospace',
-            fontSize: 11,
-            color: '#FDE08D',
-            fontWeight: 600,
-            textAlign: 'left'
-          }}
-          onClick={() => onViewOrder?.(record)}
-        >
-          {id}
-        </Button>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <Button
+            type="link"
+            style={{
+              padding: 0,
+              height: 'auto',
+              fontFamily: 'monospace',
+              fontSize: 11,
+              color: '#FDE08D',
+              fontWeight: 600,
+              textAlign: 'left'
+            }}
+            onClick={() => onViewOrder?.(record)}
+          >
+            {id}
+          </Button>
+          <div style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.45)', marginTop: 2, wordBreak: 'break-all', whiteSpace: 'normal' }}>
+            {(record as any)?.shipping?.address || '-'}
+          </div>
+        </div>
       ),
     },
     {
