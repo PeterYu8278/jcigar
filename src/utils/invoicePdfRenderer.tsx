@@ -13,7 +13,7 @@ export interface InvoicePdfPayload {
 }
 
 /**
- * 核心逻辑：100% 调用发票模板组件生成 PDF
+ * 核心逻辑：100% 调用发票模板组件生成 PDF（支持多页）
  * 通过在内存中渲染 React 组件并捕获 canvas 实现
  */
 export const generateInvoicePdfAndDownload = async (payload: InvoicePdfPayload) => {
@@ -61,16 +61,13 @@ export const generateInvoicePdfAndDownload = async (payload: InvoicePdfPayload) 
       import('html2canvas').then(m => m.default)
     ])
 
-    // 5. 捕获 DOM 为 Canvas
-    const canvas = await html2canvas(container.firstElementChild as HTMLElement, {
-      scale: 2, // 提高清晰度
-      useCORS: true,
-      logging: false,
-      backgroundColor: '#ffffff'
-    })
+    // 5. 查找所有页面 div（每个 data-page-index 代表一页）
+    const pageDivs = container.querySelectorAll('[data-page-index]')
+    const pageElements = pageDivs.length > 0
+      ? Array.from(pageDivs) as HTMLElement[]
+      : [container.firstElementChild as HTMLElement] // fallback: single page
 
-    // 5. 将 Canvas 转为 PDF
-    const imgData = canvas.toDataURL('image/png')
+    // 6. 创建 PDF
     const pdf = new jsPDF({
       orientation: 'p',
       unit: 'mm',
@@ -80,13 +77,30 @@ export const generateInvoicePdfAndDownload = async (payload: InvoicePdfPayload) 
     const pdfWidth = pdf.internal.pageSize.getWidth()
     const pdfHeight = pdf.internal.pageSize.getHeight()
 
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+    for (let i = 0; i < pageElements.length; i++) {
+      const pageEl = pageElements[i]
 
-    // 6. 下载
+      const canvas = await html2canvas(pageEl, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      })
+
+      const imgData = canvas.toDataURL('image/png')
+
+      if (i > 0) {
+        pdf.addPage()
+      }
+
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+    }
+
+    // 7. 下载
     const filename = payload.filename || `${String(invoice.invoiceNo || 'invoice').replaceAll(/[\\/:*?"<>|]/g, '-')}.pdf`
     pdf.save(filename)
 
-    // 7. 清理
+    // 8. 清理
     root.unmount()
   } finally {
     document.body.removeChild(container)
@@ -102,5 +116,3 @@ export const openInvoicePdfPreview = async (payload: InvoicePdfPayload): Promise
   await generateInvoicePdfAndDownload(payload)
   return true
 }
-
-

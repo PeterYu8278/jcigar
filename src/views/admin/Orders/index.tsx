@@ -621,7 +621,7 @@ const AdminOrders: React.FC = () => {
                             const createdDate = order.createdAt ?
                               (typeof (order.createdAt as any).toDate === 'function' ? (order.createdAt as any).toDate() : order.createdAt)
                               : new Date()
-                            const formattedDate = dayjs(createdDate).isValid() ? dayjs(createdDate).format(i18n.language === 'en-US' ? 'D MMM, YYYY' : 'YYYY-MM-DD') : '-'
+                            const formattedDate = dayjs(createdDate).isValid() ? dayjs(createdDate).format('DD MMM YYYY') : '-'
 
                             return (
                               <div key={order.id} style={{ border: '1px solid rgba(244,175,37,0.2)', borderRadius: 12, padding: 12, background: 'rgba(34,28,16,0.5)', backdropFilter: 'blur(10px)' }}>
@@ -723,6 +723,7 @@ const AdminOrders: React.FC = () => {
                 orders={filteredSorted}
                 users={users}
                 cigars={cigars}
+                transactions={transactions}
                 appConfig={appConfig}
                 loading={loading || paginatedLoading}
                 isMobile={isMobile}

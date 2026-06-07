@@ -172,7 +172,7 @@ export const getOrderColumns = ({
           d = d.toDate()
         }
         const m = dayjs(d)
-        return m.isValid() ? <span style={{ color: '#FFFFFF' }}>{m.format(i18n.language === 'en-US' ? 'D MMM, YYYY' : 'YYYY-MM-DD')}</span> : '-'
+        return m.isValid() ? <span style={{ color: '#FFFFFF' }}>{m.format('DD MMM YYYY')}</span> : '-'
       },
     },
     {

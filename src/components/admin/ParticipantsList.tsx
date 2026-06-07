@@ -1,10 +1,9 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import { Spin, Select, InputNumber, Button, Modal, message, Tag } from 'antd'
 import { CheckCircleOutlined, UserOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
-import type { User, Cigar, Event, Order } from '../../types'
-import { updateDocument, COLLECTIONS, unregisterFromEvent, getAllOrders } from '../../services/firebase/firestore'
+import type { User, Cigar, Event, Order, Transaction } from '../../types'
+import { updateDocument, COLLECTIONS, unregisterFromEvent, getAllOrders, getAllTransactions } from '../../services/firebase/firestore'
 import { useTranslation } from 'react-i18next'
-import { PaymentStatusTag } from '../common/StatusTag'
 
 interface ParticipantsListProps {
   event: Event | null
@@ -31,24 +30,55 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
   const lang = i18n.language?.startsWith('zh') ? 'zh' : 'en'
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
   const [orders, setOrders] = useState<Order[]>([])
+  const [transactions, setTransactions] = useState<Transaction[]>([])
 
   useEffect(() => {
     let active = true
-    const loadOrders = async () => {
+    const loadData = async () => {
       try {
-        const list = await getAllOrders()
+        const [ordersList, transactionsList] = await Promise.all([
+          getAllOrders(),
+          getAllTransactions()
+        ])
         if (active) {
-          setOrders(list)
+          setOrders(ordersList)
+          setTransactions(transactionsList)
         }
       } catch (err) {
-        console.error('Failed to load orders in ParticipantsList:', err)
+        console.error('Failed to load data in ParticipantsList:', err)
       }
     }
-    loadOrders()
+    loadData()
     return () => {
       active = false
     }
   }, [event])
+
+  // 计算订单匹配状态
+  const getOrderMatchStatus = (orderId: string) => {
+    const order = orders.find(o => o.id === orderId)
+    if (!order) return { matched: 0, total: 0, status: 'none' }
+    
+    const orderTotal = Number(order.total || 0)
+    const matchedAmount = transactions
+      .filter(t => {
+        const relatedOrders = (t as any)?.relatedOrders || []
+        return relatedOrders.some((ro: any) => ro.orderId === orderId)
+      })
+      .reduce((sum, t) => {
+        const relatedOrders = (t as any)?.relatedOrders || []
+        const orderMatch = relatedOrders.find((ro: any) => ro.orderId === orderId)
+        return sum + (orderMatch ? Number(orderMatch.amount || 0) : 0)
+      }, 0)
+    
+    if (matchedAmount >= orderTotal) {
+      return { matched: matchedAmount, total: orderTotal, status: 'fully' }
+    } else if (matchedAmount > 0) {
+      return { matched: matchedAmount, total: orderTotal, status: 'partial' }
+    } else {
+      return { matched: matchedAmount, total: orderTotal, status: 'none' }
+    }
+  }
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768)
@@ -119,11 +149,6 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
         const user = participantsUsers.find(x => x.id === uid)
         const allocation = (event as any)?.allocations?.[uid]
         const cigar = cigars.find(c => c.id === allocation?.cigarId)
-        
-        // Find corresponding order and calculate payment status
-        const order = allocation?.orderId ? orders.find(o => o.id === allocation.orderId) : null
-        const isPaid = order ? (order.payment?.paidAt !== undefined && order.payment?.paidAt !== null) : false
-        const paymentStatus = isPaid ? 'paid' : 'unpaid'
         
         return (
           <div 
@@ -245,7 +270,28 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                 </span>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
                   <Tag color="green" style={{ margin: 0 }}>{t('participants.orderCreated')}</Tag>
-                  <PaymentStatusTag status={paymentStatus} language={lang} style={{ margin: 0 }} />
+                  {(() => {
+                    const matchStatus = getOrderMatchStatus(allocation.orderId)
+                    if (matchStatus.status === 'fully') {
+                      return (
+                        <Tag color="green" style={{ margin: 0 }}>
+                          {t('financeAdmin.fullyMatched')}
+                        </Tag>
+                      )
+                    } else if (matchStatus.status === 'partial') {
+                      return (
+                        <Tag color="orange" style={{ margin: 0 }}>
+                          {t('financeAdmin.partialMatched')}: RM{matchStatus.matched.toFixed(2)}
+                        </Tag>
+                      )
+                    } else {
+                      return (
+                        <Tag color="red" style={{ margin: 0 }}>
+                          {lang === 'zh' ? '未支付' : 'Unpaid'}
+                        </Tag>
+                      )
+                    }
+                  })()}
                 </div>
               </div>
             )}

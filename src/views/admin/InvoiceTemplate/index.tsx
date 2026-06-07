@@ -184,7 +184,7 @@ const InvoiceTemplateEditor: React.FC = () => {
       },
       invoice: {
         invoiceNo: previewPayload.invoice.invoiceNo,
-        invoiceDate: dayjs(previewPayload.invoice.invoiceDate).format('DD/MM/YYYY'),
+        invoiceDate: dayjs(previewPayload.invoice.invoiceDate).format('DD MMM YYYY'),
         terms: previewPayload.invoice.terms,
         yourRef: previewPayload.invoice.yourRef,
         ourDoNo: previewPayload.invoice.ourDoNo,

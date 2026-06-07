@@ -77,6 +77,8 @@ export const filterOrders = (
       (user?.email?.toLowerCase().includes(kw)) ||
       // 允许在 shipping address 栏搜索
       (String((order as any)?.shipping?.address || '').toLowerCase().includes(kw)) ||
+      // 允许搜索 invoice no
+      (String((order as any)?.invoice?.invoiceNo || '').toLowerCase().includes(kw)) ||
       // 允许在 item 栏搜索：按 cigarId、数量、价格，以及产品名称和品牌
       (Array.isArray(order.items) && order.items.some(it => {
         const fields = [String(it.cigarId || '').toLowerCase(), String(it.quantity || ''), String(it.price || '')]

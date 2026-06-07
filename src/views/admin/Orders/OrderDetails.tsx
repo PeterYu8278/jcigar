@@ -215,7 +215,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
                 <p style={theme.text.body}>
                   {(() => {
                     const date = toDateSafe(order.createdAt)
-                    return date ? dayjs(date).format('YYYY-MM-DD') : '-'
+                    return date ? dayjs(date).format('DD MMM YYYY') : '-'
                   })()}
                 </p>
               </div>
@@ -247,7 +247,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
                           <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#f4af25' }}>{txId}</span>
                           {tx && (
                             <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)' }}>
-                              {dayjs(toDateSafe(tx.createdAt)).format('YYYY-MM-DD HH:mm')}
+                              {dayjs(toDateSafe(tx.createdAt)).format('DD MMM YYYY HH:mm')}
                             </span>
                           )}
                         </div>
@@ -269,7 +269,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
                 <p style={theme.text.body}>
                   {(() => {
                     const date = toDateSafe(order.payment?.paidAt)
-                    return date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-'
+                    return date ? dayjs(date).format('DD MMM YYYY HH:mm') : '-'
                   })()}
                 </p>
               </div>

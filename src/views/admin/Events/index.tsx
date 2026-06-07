@@ -51,7 +51,8 @@ const STATUS_TRANSITIONS: Record<EventStatus, EventStatus[]> = {
 }
 
 const AdminEvents: React.FC = () => {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const lang = i18n.language?.startsWith('zh') ? 'zh' : 'en'
   const { user: currentUser, isSuperAdmin } = useAuthStore()
   
   // Main data state
@@ -498,6 +499,90 @@ const AdminEvents: React.FC = () => {
     return map
   }, [events, getCigarPriceById, getCigarCostById])
 
+  // 计算活动的所有订单付款状态
+  const getEventOrdersPaymentStatus = (event: any) => {
+    const allocations = event.allocations || {}
+    const registered = event.participants?.registered || []
+    
+    if (registered.length === 0) {
+      return null
+    }
+    
+    // 找出所有订单ID
+    const orderIds: string[] = []
+    let missingOrderCount = 0
+    
+    registered.forEach((uid: string) => {
+      const alloc = allocations[uid]
+      if (alloc?.orderId) {
+        orderIds.push(alloc.orderId)
+      } else {
+        missingOrderCount++
+      }
+    })
+    
+    if (orderIds.length === 0) {
+      return { status: 'no_orders', text: lang === 'zh' ? '未生成订单' : 'Order Pending', color: 'orange' }
+    }
+    
+    // 检查所有订单的匹配状态
+    let fullyPaidCount = 0
+    let partialPaidCount = 0
+    let unpaidCount = 0
+    
+    orderIds.forEach(orderId => {
+      const order = orders.find(o => o.id === orderId)
+      if (!order) {
+        unpaidCount++
+        return
+      }
+      
+      const orderTotal = Number(order.total || 0)
+      const matchedAmount = allTransactions
+        .filter(t => {
+          const relatedOrders = (t as any)?.relatedOrders || []
+          return relatedOrders.some((ro: any) => ro.orderId === orderId)
+        })
+        .reduce((sum, t) => {
+          const relatedOrders = (t as any)?.relatedOrders || []
+          const orderMatch = relatedOrders.find((ro: any) => ro.orderId === orderId)
+          return sum + (orderMatch ? Number(orderMatch.amount || 0) : 0)
+        }, 0)
+      
+      if (matchedAmount >= orderTotal) {
+        fullyPaidCount++
+      } else if (matchedAmount > 0) {
+        partialPaidCount++
+      } else {
+        unpaidCount++
+      }
+    })
+    
+    const totalOrders = orderIds.length
+    
+    if (missingOrderCount > 0) {
+      return {
+        status: 'partial_generated',
+        text: lang === 'zh' ? `订单未齐 (${totalOrders}/${registered.length})` : `Incomplete (${totalOrders}/${registered.length})`,
+        color: 'warning'
+      }
+    }
+    
+    if (fullyPaidCount === totalOrders) {
+      return { status: 'all_paid', text: lang === 'zh' ? '已全额付款' : 'All Paid', color: 'green' }
+    }
+    
+    if (unpaidCount === totalOrders && partialPaidCount === 0) {
+      return { status: 'all_unpaid', text: lang === 'zh' ? '全额未付' : 'Unpaid', color: 'red' }
+    }
+    
+    return {
+      status: 'partially_paid',
+      text: lang === 'zh' ? `部分已付 (${fullyPaidCount}/${totalOrders})` : `Partially Paid (${fullyPaidCount}/${totalOrders})`,
+      color: 'orange'
+    }
+  }
+
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
   const theme = getModalTheme()
 
@@ -639,19 +724,29 @@ const AdminEvents: React.FC = () => {
       title: t('events.eventName'),
       dataIndex: 'title',
       key: 'title',
-      render: (title: string, record: any) => (
-        <div>
-          <div style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>{title}</div>
-          <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
-            {(record?.location?.name || '') && (
-              <span style={{ marginRight: 8 }}>{record.location.name}</span>
-            )}
-            {(record.description || '').length > 50 
-              ? `${record.description.substring(0, 50)}...` 
-              : record.description}
+      render: (title: string, record: any) => {
+        const payStatus = getEventOrdersPaymentStatus(record)
+        return (
+          <div>
+            <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ whiteSpace: 'nowrap' }}>{title}</span>
+              {payStatus && (
+                <Tag color={payStatus.color} style={{ margin: 0, fontSize: '10px', lineHeight: '16px', height: '18px' }}>
+                  {payStatus.text}
+                </Tag>
+              )}
+            </div>
+            <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
+              {(record?.location?.name || '') && (
+                <span style={{ marginRight: 8 }}>{record.location.name}</span>
+              )}
+              {(record.description || '').length > 50 
+                ? `${record.description.substring(0, 50)}...` 
+                : record.description}
+            </div>
           </div>
-        </div>
-      ),
+        )
+      },
     },
     {
       title: t('events.eventTime'),
