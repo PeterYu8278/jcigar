@@ -29,6 +29,16 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
   const [startTime, setStartTime] = useState<string | null>(null);
   const [endTime, setEndTime] = useState<string | null>(null);
   const [bookingInProgress, setBookingInProgress] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Time conversion helper functions
   const timeToMinutes = (timeStr: string): number => {
@@ -653,22 +663,31 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
           </div>
         }
         footer={null}
-        centered
+        centered={!isMobile}
         destroyOnClose
-        width={420}
+        width={isMobile ? '100vw' : 420}
+        style={isMobile ? {
+          top: 0,
+          margin: 0,
+          padding: 0,
+          maxWidth: '100vw',
+          height: '100vh'
+        } : undefined}
         styles={{
           content: {
             background: 'linear-gradient(180deg, #1f1b14 0%, #15130f 100%)',
-            border: '1px solid rgba(244,175,37,0.4)',
-            borderRadius: 20,
+            border: isMobile ? 'none' : '1px solid rgba(244,175,37,0.4)',
+            borderRadius: isMobile ? 0 : 20,
             padding: '16px 20px',
-            maxHeight: '92vh',
+            height: isMobile ? '100vh' : 'auto',
+            maxHeight: isMobile ? '100vh' : '92vh',
             display: 'flex',
             flexDirection: 'column'
           },
           body: {
             background: 'transparent',
-            maxHeight: 'calc(92vh - 60px)',
+            flex: 1,
+            maxHeight: isMobile ? 'calc(100vh - 60px)' : 'calc(92vh - 60px)',
             overflowY: 'auto',
             paddingRight: 4,
             marginTop: 10
