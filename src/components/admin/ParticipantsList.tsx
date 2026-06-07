@@ -1,9 +1,10 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import { Spin, Select, InputNumber, Button, Modal, message, Tag } from 'antd'
 import { CheckCircleOutlined, UserOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
-import type { User, Cigar, Event } from '../../types'
-import { updateDocument, COLLECTIONS, unregisterFromEvent } from '../../services/firebase/firestore'
+import type { User, Cigar, Event, Order } from '../../types'
+import { updateDocument, COLLECTIONS, unregisterFromEvent, getAllOrders } from '../../services/firebase/firestore'
 import { useTranslation } from 'react-i18next'
+import { PaymentStatusTag } from '../common/StatusTag'
 
 interface ParticipantsListProps {
   event: Event | null
@@ -26,8 +27,28 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
   onAllocSavingChange,
   getCigarPriceById
 }) => {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const lang = i18n.language?.startsWith('zh') ? 'zh' : 'en'
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
+  const [orders, setOrders] = useState<Order[]>([])
+
+  useEffect(() => {
+    let active = true
+    const loadOrders = async () => {
+      try {
+        const list = await getAllOrders()
+        if (active) {
+          setOrders(list)
+        }
+      } catch (err) {
+        console.error('Failed to load orders in ParticipantsList:', err)
+      }
+    }
+    loadOrders()
+    return () => {
+      active = false
+    }
+  }, [event])
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768)
@@ -98,6 +119,11 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
         const user = participantsUsers.find(x => x.id === uid)
         const allocation = (event as any)?.allocations?.[uid]
         const cigar = cigars.find(c => c.id === allocation?.cigarId)
+        
+        // Find corresponding order and calculate payment status
+        const order = allocation?.orderId ? orders.find(o => o.id === allocation.orderId) : null
+        const isPaid = order ? (order.payment?.paidAt !== undefined && order.payment?.paidAt !== null) : false
+        const paymentStatus = isPaid ? 'paid' : 'unpaid'
         
         return (
           <div 
@@ -217,8 +243,9 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
                 <span style={{ fontSize: 11, color: 'rgba(255, 255, 255, 0.6)', whiteSpace: 'nowrap' }}>
                   ID: {allocation.orderId}
                 </span>
-                <div style={{ flexShrink: 0 }}>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
                   <Tag color="green" style={{ margin: 0 }}>{t('participants.orderCreated')}</Tag>
+                  <PaymentStatusTag status={paymentStatus} language={lang} style={{ margin: 0 }} />
                 </div>
               </div>
             )}
