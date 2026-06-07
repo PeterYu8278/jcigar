@@ -124,18 +124,14 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
       title: t('ordersAdmin.orderId'),
       dataIndex: 'id',
       key: 'id',
-      width: 100,
-      render: (id: string) => (
-        <span title={id} style={{ fontFamily: 'monospace', fontSize: 12, color: '#FDE08D', fontWeight: 600 }}>
-          {id.slice(0, 8)}...
-        </span>
-      ),
+      width: 200,
+      render: (id: string) => <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#FDE08D', fontWeight: 600 }}>{id}</span>,
     },
     {
       title: t('ordersAdmin.user'),
       dataIndex: 'userId',
       key: 'userId',
-      width: 140,
+      width: 180,
       render: (userId: string) => (
         <div>
           <div style={{ fontWeight: 700, color: '#FFFFFF' }}>{getUserName(userId, users)}</div>
@@ -147,7 +143,7 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
       title: t('ordersAdmin.totalAmount'),
       dataIndex: 'total',
       key: 'total',
-      width: 110,
+      width: 120,
       render: (v: number) => <span style={{ fontWeight: 800, color: '#f4af25' }}>RM{Number(v || 0).toFixed(2)}</span>,
     },
     {
@@ -162,13 +158,13 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
     {
       title: t('ordersAdmin.invoice.status'),
       key: 'invoice',
-      width: 130,
+      width: 220,
       render: (_: any, record: Order) => {
         const inv = (record as any)?.invoice as OrderInvoiceMeta | undefined
         if (!inv) return <Tag>{t('ordersAdmin.invoice.notGenerated')}</Tag>
         return (
-          <Space size={4}>
-            <Tag color="green" style={{ marginRight: 0 }}>{t('ordersAdmin.invoice.generated')}</Tag>
+          <Space size={6}>
+            <Tag color="green">{t('ordersAdmin.invoice.generated')}</Tag>
             <Button
               size="small"
               type="link"
@@ -186,9 +182,9 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
     {
       title: t('ordersAdmin.actions'),
       key: 'actions',
-      width: 210,
+      width: 280,
       render: (_: any, record: Order) => (
-        <Space size={4}>
+        <Space>
           <Button
             size="small"
             type="default"
@@ -426,7 +422,7 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
               rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
               virtual={filteredOrders.length > 50}
               pagination={{ pageSize: 20 }}
-              scroll={{ x: 790, y: 'calc(100vh - 400px)' }}
+              scroll={{ x: 'max-content', y: 'calc(100vh - 400px)' }}
               style={{
                 background: 'transparent',
                 borderRadius: 12,
