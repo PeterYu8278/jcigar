@@ -1897,6 +1897,8 @@
     "selectRoom": "选择包厢",
     "unifiedTitle": "包厢预约",
     "unifiedSubTitle": "选择门店、包厢和日期时间来预留您的专属空间",
-    "unifiedBtn": "立即预约"
+    "unifiedBtn": "立即预约",
+    "today": "今天",
+    "tomorrow": "明天"
   }
 }

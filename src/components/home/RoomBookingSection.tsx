@@ -280,7 +280,7 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
     const d = dayjs().add(i, 'day');
     return {
       value: d.format('YYYY-MM-DD'),
-      label: i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : d.format('ddd'),
+      label: i === 0 ? t('roomBooking.today') : i === 1 ? t('roomBooking.tomorrow') : d.format('ddd'),
       dateLabel: d.format('D MMM'),
     };
   });
@@ -347,9 +347,30 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
       message.warning(t('auth.pleaseLogin') || 'Please login first');
       return;
     }
+    
+    // Check if there is an active booking today for this user to prioritize
+    const existingToday = allDayBookings.find(
+      b => b.userId === user?.id && (b.status === 'confirmed' || b.status === 'checked_in')
+    );
+
     if (room) {
       setSelectedRoom(room);
       setSelectedStoreId(room.storeId);
+    } else if (existingToday) {
+      const bookedRoom = rooms.find(r => r.id === existingToday.roomId);
+      if (bookedRoom) {
+        setSelectedRoom(bookedRoom);
+        setSelectedStoreId(bookedRoom.storeId);
+      } else {
+        const firstStoreId = stores.length > 0 ? stores[0].id : null;
+        setSelectedStoreId(firstStoreId);
+        if (firstStoreId) {
+          const activeStoreRooms = rooms.filter(r => r.storeId === firstStoreId && r.status === 'active');
+          setSelectedRoom(activeStoreRooms.length > 0 ? activeStoreRooms[0] : null);
+        } else {
+          setSelectedRoom(null);
+        }
+      }
     } else {
       const firstStoreId = stores.length > 0 ? stores[0].id : null;
       setSelectedStoreId(firstStoreId);
@@ -686,12 +707,10 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                   {t('roomBooking.selectDate')}
                 </div>
                 <div style={{
-                  display: 'flex',
-                  gap: 6,
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(7, 1fr)',
+                  gap: 4,
                   marginBottom: 10,
-                  overflowX: 'auto',
-                  paddingBottom: 4,
-                  scrollbarWidth: 'none',
                 }}>
                   {dateOptions.map(opt => {
                     const isSelected = selectedDate === opt.value;
@@ -703,8 +722,7 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                           setSelectedSlot(null);
                         }}
                         style={{
-                          minWidth: 54,
-                          padding: '4px 6px',
+                          padding: '4px 2px',
                           borderRadius: 8,
                           cursor: 'pointer',
                           textAlign: 'center',
@@ -715,7 +733,6 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                           border: isSelected
                             ? '1px solid transparent'
                             : '1px solid rgba(255,255,255,0.1)',
-                          flexShrink: 0,
                         }}
                       >
                         <div style={{
@@ -727,7 +744,7 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                           {opt.label}
                         </div>
                         <div style={{
-                          fontSize: 10,
+                          fontSize: 9,
                           fontWeight: 700,
                           color: isSelected ? '#111' : '#fff',
                         }}>

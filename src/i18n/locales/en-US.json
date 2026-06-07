@@ -1895,6 +1895,8 @@
     "selectRoom": "Select Room",
     "unifiedTitle": "Room Booking",
     "unifiedSubTitle": "Select store, room, date and time to reserve your space",
-    "unifiedBtn": "Book Now"
+    "unifiedBtn": "Book Now",
+    "today": "Today",
+    "tomorrow": "Tomorrow"
   }
 }
