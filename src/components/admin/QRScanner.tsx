@@ -346,15 +346,16 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
       {checkInError && (
         <div style={{
           padding: '12px 16px',
-          background: 'rgba(239, 68, 68, 0.2)',
-          border: '1px solid rgba(239, 68, 68, 0.4)',
-          borderRadius: '8px',
+          background: 'rgba(239, 68, 68, 0.15)',
+          border: '1px solid rgba(239, 68, 68, 0.35)',
+          borderRadius: '12px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '8px'
+          gap: '8px',
+          marginBottom: 16
         }}>
-          <Text style={{ color: '#ff6b6b', fontSize: 14, fontWeight: 500 }}>
+          <Text style={{ color: '#f87171', fontSize: 13, fontWeight: 500 }}>
             {checkInError}
           </Text>
         </div>
@@ -362,50 +363,76 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
       
       <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         {processing ? (
-          <div>
-            <CheckCircleOutlined style={{ fontSize: 48, color: '#52c41a' }} />
-            <Text style={{ display: 'block', marginTop: 16, color: '#FFFFFF' }}>
+          <div style={{ padding: '24px 0' }}>
+            <CheckCircleOutlined style={{ fontSize: 48, color: '#34d399', marginBottom: 16 }} />
+            <Text style={{ display: 'block', color: '#FFFFFF', fontSize: 14 }}>
               {mode === 'checkin' ? '正在检查用户状态及未完成 Session...' : '正在获取驻店记录...'}
             </Text>
             {scannedData && (
-              <Text type="secondary" style={{ display: 'block', marginTop: 8, fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>
+              <Text type="secondary" style={{ display: 'block', marginTop: 8, fontSize: 12, color: 'rgba(255, 255, 255, 0.45)' }}>
                 扫描到: {scannedData.substring(0, 30)}...
               </Text>
             )}
           </div>
         ) : cameraError ? (
-          <div>
-            <QrcodeOutlined style={{ fontSize: 48, color: '#ff4d4f' }} />
-            <Text type="danger" style={{ display: 'block', marginTop: 16, padding: '0 20px' }}>
+          <div style={{ padding: '24px 0' }}>
+            <QrcodeOutlined style={{ fontSize: 48, color: '#f87171', marginBottom: 16 }} />
+            <Text type="danger" style={{ display: 'block', padding: '0 20px', color: '#f87171', fontSize: 13 }}>
               {cameraError}
             </Text>
-            <Space style={{ marginTop: 16 }}>
-              <Button type="primary" onClick={handleRetry} loading={retrying}>
+            <Space style={{ marginTop: 20 }}>
+              <Button
+                type="primary"
+                onClick={handleRetry}
+                loading={retrying}
+                style={{
+                  background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                  border: 'none',
+                  color: '#111',
+                  fontWeight: 700,
+                  borderRadius: 8
+                }}
+              >
                 重试
               </Button>
-              <Button onClick={handleManualInput}>
+              <Button
+                onClick={handleManualInput}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  color: '#FFFFFF',
+                  borderRadius: 8
+                }}
+              >
                 手动输入
               </Button>
             </Space>
           </div>
         ) : (
-          <div
-            style={{
-              position: 'relative',
-              width: '100%',
-              maxWidth: '350px',
-              margin: '0 auto'
-            }}
-          >
-            <div id="qr-reader-view" style={{ width: '100%' }}></div>
-            <Text type="secondary" style={{ display: 'block', marginTop: 16, color: 'rgba(255, 255, 255, 0.6)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div
+              style={{
+                position: 'relative',
+                width: '240px',
+                height: '240px',
+                margin: '12px auto',
+                borderRadius: '16px',
+                overflow: 'hidden',
+                border: '2px solid rgba(244, 175, 37, 0.6)',
+                boxShadow: '0 0 20px rgba(244, 175, 37, 0.25)',
+                background: '#000'
+              }}
+            >
+              <div id="qr-reader-view" style={{ width: '100%', height: '100%' }}></div>
+            </div>
+            <Text type="secondary" style={{ display: 'block', marginTop: 12, fontSize: 12, color: 'rgba(255, 255, 255, 0.45)' }}>
               请将QR码对准扫描框
             </Text>
           </div>
         )}
       </div>
 
-      <div style={{ marginTop: 20}}>
+      <div style={{ marginTop: 24 }}>
         <Space wrap style={{ justifyContent: 'center' }}>
           <Button 
             onClick={() => {
@@ -418,11 +445,13 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
               background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
               border: 'none',
               color: '#111',
-              fontWeight: 700
+              fontWeight: 700,
+              borderRadius: 8
             } : {
-              background: 'rgba(255, 255, 255, 0.1)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              color: '#FFFFFF'
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              color: '#FFFFFF',
+              borderRadius: 8
             }}
           >
             Check-in
@@ -438,11 +467,13 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
               background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
               border: 'none',
               color: '#111',
-              fontWeight: 700
+              fontWeight: 700,
+              borderRadius: 8
             } : {
-              background: 'rgba(255, 255, 255, 0.1)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              color: '#FFFFFF'
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              color: '#FFFFFF',
+              borderRadius: 8
             }}
           >
             Check-out
@@ -451,9 +482,10 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
             onClick={handleManualInput} 
             disabled={processing}
             style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              color: '#FFFFFF'
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              color: '#FFFFFF',
+              borderRadius: 8
             }}
           >
             手动输入
@@ -463,9 +495,10 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
               onClick={onClose} 
               disabled={processing}
               style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                color: '#FFFFFF'
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                color: '#FFFFFF',
+                borderRadius: 8
               }}
             >
               关闭
@@ -494,16 +527,37 @@ export const QRScanner: React.FC<QRScannerProps> = ({ visible, onClose, mode: in
   return (
     <Modal
       title={
-        <Space>
-          <QrcodeOutlined />
-          <span>{mode === 'checkin' ? 'Check-in 扫描' : 'Check-out 扫描'}</span>
-        </Space>
+        <span style={{ color: '#FFFFFF', fontSize: 17, fontWeight: 700 }}>
+          <QrcodeOutlined style={{ marginRight: 8, color: '#FFD700' }} />
+          {mode === 'checkin' ? 'Check-in 扫描' : 'Check-out 扫描'}
+        </span>
       }
       open={visible}
       onCancel={onClose}
       footer={null}
-      width={600}
-      destroyOnHidden
+      width={420}
+      destroyOnClose
+      centered
+      styles={{
+        content: {
+          background: 'linear-gradient(180deg, #1f1b14 0%, #15130f 100%)',
+          border: '1px solid rgba(244, 175, 37, 0.5)',
+          borderRadius: 20,
+          padding: 24,
+        },
+        header: {
+          background: 'transparent',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          paddingBottom: 12,
+          marginBottom: 16
+        },
+        body: {
+          background: 'transparent',
+        },
+        mask: {
+          backdropFilter: 'blur(4px)',
+        }
+      }}
     >
       {/* Pass active=visible to trigger camera start/stop */}
       <QRScannerView
