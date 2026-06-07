@@ -955,29 +955,26 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                             </span>
                           </div>
 
-                          {myExistingBooking ? (
-                            <>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
-                                <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('roomBooking.paidDeposit')}</span>
-                                <span style={{ color: 'rgba(255,255,255,0.8)' }}>
-                                  {oldPaidFee ? `${oldPaidFee} ${t('roomBooking.points')}` : '-'}
-                                </span>
-                              </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
-                                <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('roomBooking.netDepositRequired')}</span>
-                                <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 13 }}>
-                                  {hours > 0 ? `${netPointsRequired} ${t('roomBooking.points')}` : '-'}
-                                </span>
-                              </div>
-                            </>
-                          ) : (
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
-                              <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('roomBooking.depositRequired')}</span>
-                              <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 13 }}>
-                                {hours > 0 ? `${depositFee} ${t('roomBooking.points')}` : '-'}
-                              </span>
-                            </div>
-                          )}
+                          {/* Paid Deposit */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
+                            <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('roomBooking.paidDeposit')}</span>
+                            <span style={{ color: 'rgba(255,255,255,0.8)' }}>
+                              {myExistingBooking ? `${oldPaidFee} ${t('roomBooking.points')}` : '-'}
+                            </span>
+                          </div>
+
+                          {/* Deposit Required / Net Deposit Required */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
+                            <span style={{ color: 'rgba(255,255,255,0.6)' }}>
+                              {myExistingBooking ? t('roomBooking.netDepositRequired') : t('roomBooking.depositRequired')}
+                            </span>
+                            <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 13 }}>
+                              {hours > 0 
+                                ? (myExistingBooking ? `${netPointsRequired} ${t('roomBooking.points')}` : `${depositFee} ${t('roomBooking.points')}`)
+                                : '-'
+                              }
+                            </span>
+                          </div>
 
                           {/* Check-in Balance */}
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
