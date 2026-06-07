@@ -910,46 +910,66 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                       <div style={{
                         background: 'rgba(255,255,255,0.03)',
                         borderRadius: 12,
-                        padding: '6px 10px',
-                        marginBottom: 10,
+                        padding: '8px 12px',
+                        marginBottom: 12,
                         border: '1px solid rgba(255,255,255,0.08)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 6
                       }}>
-                        {/* Rate and Available points */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 8px', fontSize: 10 }}>
+                        {/* Top Row: Rate and Available Points */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 6 }}>
                           <div>
-                            <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomBooking.hourlyRateLabel')}: </span>
-                            <span style={{ color: '#fff', fontWeight: 600 }}>{selectedRoom.fee} pts/h</span>
+                            <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, display: 'block' }}>{t('roomBooking.hourlyRateLabel')}</span>
+                            <span style={{ color: '#fff', fontWeight: 600, fontSize: 12 }}>{selectedRoom.fee} {t('roomBooking.pointsPerHour')}</span>
                           </div>
                           <div style={{ textAlign: 'right' }}>
-                            <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomBooking.availablePointsLabel')}: </span>
-                            <span style={{ color: '#FFD700', fontWeight: 700 }}>{userPoints} pts</span>
+                            <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, display: 'block' }}>{t('roomBooking.availablePointsLabel')}</span>
+                            <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 12 }}>{userPoints} {t('roomBooking.points')}</span>
                           </div>
                         </div>
 
                         {hours > 0 && (
-                          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 4, marginTop: 4, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 8px', fontSize: 10 }}>
-                            <div>{t('roomBooking.duration')}: <span style={{ color: '#fff', fontWeight: 600 }}>{hours}h ({totalFee} pts)</span></div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            {/* Duration and Total */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
+                              <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('roomBooking.duration')}</span>
+                              <span style={{ color: '#fff', fontWeight: 500 }}>{t('roomBooking.hoursTotal', { hours, total: totalFee })}</span>
+                            </div>
+
                             {myExistingBooking ? (
                               <>
-                                <div style={{ textAlign: 'right' }}>{t('roomBooking.paidDeposit')}: <span style={{ color: '#fff' }}>{oldPaidFee} pts</span></div>
-                                <div style={{ gridColumn: 'span 2', textAlign: 'right' }}>{t('roomBooking.netDepositRequired')}: <span style={{ color: '#FFD700', fontWeight: 700 }}>{netPointsRequired} pts</span></div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
+                                  <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('roomBooking.paidDeposit')}</span>
+                                  <span style={{ color: 'rgba(255,255,255,0.8)' }}>{oldPaidFee} {t('roomBooking.points')}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
+                                  <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('roomBooking.netDepositRequired')}</span>
+                                  <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 13 }}>{netPointsRequired} {t('roomBooking.points')}</span>
+                                </div>
                               </>
                             ) : (
-                              <div style={{ textAlign: 'right' }}>{t('roomBooking.depositRequired')}: <span style={{ color: '#FFD700', fontWeight: 700 }}>{depositFee} pts</span></div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
+                                <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('roomBooking.depositRequired')}</span>
+                                <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 13 }}>{depositFee} {t('roomBooking.points')}</span>
+                              </div>
                             )}
-                            <div style={{ gridColumn: 'span 2', fontSize: 9, color: 'rgba(255,255,255,0.4)', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: 2, marginTop: 2 }}>
-                              {t('roomBooking.balanceAtCheckin')}: {totalFee - depositFee} pts
+
+                            {/* Check-in Balance */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
+                              <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomBooking.balanceAtCheckin')}</span>
+                              <span style={{ color: 'rgba(255,255,255,0.6)' }}>{totalFee - depositFee} {t('roomBooking.points')}</span>
                             </div>
                           </div>
                         )}
 
                         {isMinDurationInvalid && (
-                          <div style={{ color: '#f87171', fontSize: 9, marginTop: 2, fontWeight: 600, textAlign: 'center' }}>
+                          <div style={{ color: '#f87171', fontSize: 10, marginTop: 2, fontWeight: 600, textAlign: 'center' }}>
                             {t('roomBooking.minBookingHoursError', { count: minHours })}
                           </div>
                         )}
                         {isInsufficient && !isMinDurationInvalid && (
-                          <div style={{ color: '#f87171', fontSize: 9, marginTop: 2, fontWeight: 600, textAlign: 'center' }}>
+                          <div style={{ color: '#f87171', fontSize: 10, marginTop: 2, fontWeight: 600, textAlign: 'center' }}>
                             {t('roomBooking.insufficientPointsError')}
                           </div>
                         )}
