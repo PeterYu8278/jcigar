@@ -66,7 +66,7 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
   const { user } = useAuthStore()
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
   const [invoiceFilter, setInvoiceFilter] = useState<'all' | 'invoiced' | 'notInvoiced'>('all')
-  const [activeOrder, setActiveOrder] = useState<Order | null>(null)
+  const [activeOrders, setActiveOrders] = useState<Order[]>([])
   const [modalOpen, setModalOpen] = useState(false)
   const [form] = Form.useForm<InvoiceFormValues>()
   const [latestAppConfig, setLatestAppConfig] = useState<AppConfig | null>(null)
@@ -165,16 +165,6 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
         return (
           <Space size={4} style={{ display: 'flex', flexWrap: 'wrap' }}>
             <Tag color="green" style={{ margin: 0, fontSize: 11 }}>{t('ordersAdmin.invoice.generated')}</Tag>
-            <Button
-              size="small"
-              type="link"
-              style={{ padding: 0, height: 'auto', fontFamily: 'monospace', fontSize: 11 }}
-              onClick={async () => {
-                await previewInvoicePdf(record, inv)
-              }}
-            >
-              {inv.invoiceNo}
-            </Button>
           </Space>
         )
       }
@@ -188,7 +178,7 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
         const hasInvoice = !!inv
 
         const handleGenerateEdit = () => {
-          setActiveOrder(record)
+          setActiveOrders([record])
           const defaultDate = inv?.invoiceDate ? dayjs(toDateSafe(inv.invoiceDate)) : dayjs()
           form.setFieldsValue({
             invoiceNo: inv?.invoiceNo || guessInvoiceNo(record, defaultDate.toDate()),
@@ -278,7 +268,7 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
   ], [t, users, cigars, appConfig, form, user?.id])
 
   const generateAndPrint = async () => {
-    if (!activeOrder) return
+    if (activeOrders.length === 0) return
     const values = await form.validateFields()
     const invoiceDate = values.invoiceDate?.toDate?.() ? values.invoiceDate.toDate() : dayjs(values.invoiceDate).toDate()
     const invoice: OrderInvoiceMeta = {
@@ -296,11 +286,15 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
       generatedBy: user?.id || '',
     }
 
-    // 写回订单（仅管理员路径可写）
-    const res = await updateDocument<Order>(COLLECTIONS.ORDERS, activeOrder.id, {
-      invoice,
-    } as any)
-    if (!res.success) {
+    // Write back to all activeOrders
+    const promises = activeOrders.map(order => 
+      updateDocument<Order>(COLLECTIONS.ORDERS, order.id, {
+        invoice,
+      } as any)
+    )
+    const results = await Promise.all(promises)
+    const allSuccessful = results.every(res => res.success)
+    if (!allSuccessful) {
       message.error(t('ordersAdmin.invoice.saveFailed'))
       return
     }
@@ -308,15 +302,27 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
     await onRefresh()
 
     const cfg = await resolveAppConfig()
+    
+    // Create a virtual order that merges all activeOrders
+    const mergedItems = activeOrders.flatMap(o => o.items || [])
+    const totalAmount = activeOrders.reduce((sum, o) => sum + (o.total || 0), 0)
+    const virtualOrder: Order = {
+      ...activeOrders[0],
+      id: activeOrders.map(o => o.id).join(','),
+      orderNo: activeOrders.map(o => o.orderNo).join(', '),
+      total: totalAmount,
+      items: mergedItems,
+    }
+
     await generateInvoicePdfAndDownload({
-      order: enrichOrderItems({ ...activeOrder, invoice }),
+      order: enrichOrderItems(virtualOrder),
       invoice,
       appConfig: cfg,
       filename: `${invoice.invoiceNo}.pdf`,
     })
     message.success(t('ordersAdmin.invoice.generatedAndOpened'))
     setModalOpen(false)
-    setActiveOrder(null)
+    setActiveOrders([])
     setSelectedRowKeys([])
   }
 
@@ -345,31 +351,31 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
               ]}
             />
             <Button
-              disabled={selectedRowKeys.length !== 1}
+              disabled={selectedRowKeys.length === 0}
               className="points-config-form"
               style={{
-                background: selectedRowKeys.length === 1 ? 'linear-gradient(to right,#FDE08D,#C48D3A)' : 'rgba(255,255,255,0.1)',
+                background: selectedRowKeys.length >= 1 ? 'linear-gradient(to right,#FDE08D,#C48D3A)' : 'rgba(255,255,255,0.1)',
                 border: 'none',
-                color: selectedRowKeys.length === 1 ? '#111' : 'rgba(255,255,255,0.3)',
+                color: selectedRowKeys.length >= 1 ? '#111' : 'rgba(255,255,255,0.3)',
                 fontWeight: 700
               }}
               onClick={() => {
-                if (selectedRowKeys.length !== 1) {
+                if (selectedRowKeys.length === 0) {
                   message.info(t('ordersAdmin.invoice.selectOneOrder'))
                   return
                 }
-                const id = String(selectedRowKeys[0])
-                const order = filteredOrders.find(o => o.id === id)
-                if (!order) return
-                setActiveOrder(order)
-                const inv = (order as any)?.invoice as OrderInvoiceMeta | undefined
+                const selected = filteredOrders.filter(o => selectedRowKeys.includes(o.id))
+                if (selected.length === 0) return
+                setActiveOrders(selected)
+                const firstOrder = selected[0]
+                const inv = (firstOrder as any)?.invoice as OrderInvoiceMeta | undefined
                 const defaultDate = inv?.invoiceDate ? dayjs(toDateSafe(inv.invoiceDate)) : dayjs()
                 form.setFieldsValue({
-                  invoiceNo: inv?.invoiceNo || guessInvoiceNo(order, defaultDate.toDate()),
+                  invoiceNo: inv?.invoiceNo || guessInvoiceNo(firstOrder, defaultDate.toDate()),
                   invoiceDate: defaultDate,
-                  invoiceToName: inv?.invoiceTo?.name || getUserName(order.userId, users),
-                  invoiceToAddress: inv?.invoiceTo?.address || (order as any)?.shipping?.address || '',
-                  invoiceToPhone: inv?.invoiceTo?.phone || getUserPhone(order.userId, users) || '',
+                  invoiceToName: inv?.invoiceTo?.name || getUserName(firstOrder.userId, users),
+                  invoiceToAddress: inv?.invoiceTo?.address || (firstOrder as any)?.shipping?.address || '',
+                  invoiceToPhone: inv?.invoiceTo?.phone || getUserPhone(firstOrder.userId, users) || '',
                   terms: inv?.terms || 'CASH',
                   yourRef: inv?.yourRef || '',
                   ourDoNo: inv?.ourDoNo || '',
@@ -377,7 +383,7 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
                 setModalOpen(true)
               }}
             >
-              {t('ordersAdmin.invoice.generate')}
+              {selectedRowKeys.length <= 1 ? t('ordersAdmin.invoice.generate') : `${t('ordersAdmin.invoice.generate')} (${selectedRowKeys.length})`}
             </Button>
           </Space>
         ) : (
@@ -393,7 +399,7 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
                 { value: 'notInvoiced', label: t('ordersAdmin.invoice.filterNotInvoiced') },
               ]}
             />
-            {selectedRowKeys.length === 1 && (
+            {selectedRowKeys.length >= 1 && (
               <Button
                 block
                 className="points-config-form"
@@ -404,18 +410,18 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
                   fontWeight: 700
                 }}
                 onClick={() => {
-                  const id = String(selectedRowKeys[0])
-                  const order = filteredOrders.find(o => o.id === id)
-                  if (!order) return
-                  setActiveOrder(order)
-                  const inv = (order as any)?.invoice as OrderInvoiceMeta | undefined
+                  const selected = filteredOrders.filter(o => selectedRowKeys.includes(o.id))
+                  if (selected.length === 0) return
+                  setActiveOrders(selected)
+                  const firstOrder = selected[0]
+                  const inv = (firstOrder as any)?.invoice as OrderInvoiceMeta | undefined
                   const defaultDate = inv?.invoiceDate ? dayjs(toDateSafe(inv.invoiceDate)) : dayjs()
                   form.setFieldsValue({
-                    invoiceNo: inv?.invoiceNo || guessInvoiceNo(order, defaultDate.toDate()),
+                    invoiceNo: inv?.invoiceNo || guessInvoiceNo(firstOrder, defaultDate.toDate()),
                     invoiceDate: defaultDate,
-                    invoiceToName: inv?.invoiceTo?.name || getUserName(order.userId, users),
-                    invoiceToAddress: inv?.invoiceTo?.address || (order as any)?.shipping?.address || '',
-                    invoiceToPhone: inv?.invoiceTo?.phone || getUserPhone(order.userId, users) || '',
+                    invoiceToName: inv?.invoiceTo?.name || getUserName(firstOrder.userId, users),
+                    invoiceToAddress: inv?.invoiceTo?.address || (firstOrder as any)?.shipping?.address || '',
+                    invoiceToPhone: inv?.invoiceTo?.phone || getUserPhone(firstOrder.userId, users) || '',
                     terms: inv?.terms || 'CASH',
                     yourRef: inv?.yourRef || '',
                     ourDoNo: inv?.ourDoNo || '',
@@ -423,7 +429,7 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
                   setModalOpen(true)
                 }}
               >
-                {t('ordersAdmin.invoice.generateSelected')}
+                {selectedRowKeys.length === 1 ? t('ordersAdmin.invoice.generateSelected') : `${t('ordersAdmin.invoice.generate')} (${selectedRowKeys.length})`}
               </Button>
             )}
           </div>
@@ -488,7 +494,6 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
                       {inv ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                           <Tag color="green" style={{ margin: 0 }}>{t('ordersAdmin.invoice.generated')}</Tag>
-                          <span style={{ fontSize: 11, color: '#FDE08D', fontFamily: 'monospace' }}>{inv.invoiceNo}</span>
                         </div>
                       ) : (
                         <Tag style={{ margin: 0 }}>{t('ordersAdmin.invoice.notGenerated')}</Tag>
@@ -496,7 +501,7 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <div style={{ display: 'flex', gap: 8 }}>
+                      <div style={{ display: 'flex' }}>
                         <Button
                           style={{
                             flex: 1,
@@ -548,7 +553,7 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
                           boxShadow: '0 4px 12px rgba(196, 141, 58, 0.2)'
                         }}
                         onClick={() => {
-                          setActiveOrder(record)
+                          setActiveOrders([record])
                           const defaultDate = inv?.invoiceDate ? dayjs(toDateSafe(inv.invoiceDate)) : dayjs()
                           form.setFieldsValue({
                             invoiceNo: inv?.invoiceNo || guessInvoiceNo(record, defaultDate.toDate()),
@@ -582,7 +587,7 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
         open={modalOpen}
         onCancel={() => {
           setModalOpen(false)
-          setActiveOrder(null)
+          setActiveOrders([])
         }}
         onOk={generateAndPrint}
         okText={t('ordersAdmin.invoice.downloadPdf')}
