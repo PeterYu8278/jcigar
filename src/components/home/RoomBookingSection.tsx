@@ -29,16 +29,6 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
   const [startTime, setStartTime] = useState<string | null>(null);
   const [endTime, setEndTime] = useState<string | null>(null);
   const [bookingInProgress, setBookingInProgress] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   // Time conversion helper functions
   const timeToMinutes = (timeStr: string): number => {
@@ -658,39 +648,30 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
         open={selectedRoom !== null}
         onCancel={handleCloseBookingModal}
         title={
-          <div style={{ color: '#fff', fontSize: 15, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 6 }}>
+          <div style={{ color: '#fff', fontSize: 16, fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 8 }}>
             🚪 {t('roomBooking.modalTitle', { roomName: selectedRoom?.name })}
           </div>
         }
         footer={null}
-        centered={!isMobile}
+        centered
         destroyOnClose
-        width={isMobile ? '100vw' : 420}
-        style={isMobile ? {
-          top: 0,
-          margin: 0,
-          padding: 0,
-          maxWidth: '100vw',
-          height: '100vh'
-        } : undefined}
+        width={420}
         styles={{
           content: {
             background: 'linear-gradient(180deg, #1f1b14 0%, #15130f 100%)',
-            border: isMobile ? 'none' : '1px solid rgba(244,175,37,0.4)',
-            borderRadius: isMobile ? 0 : 20,
-            padding: isMobile ? '12px 14px' : '14px 18px',
-            height: isMobile ? '100vh' : 'auto',
-            maxHeight: isMobile ? '100vh' : '92vh',
+            border: '1px solid rgba(244,175,37,0.4)',
+            borderRadius: 20,
+            padding: '16px 20px',
+            maxHeight: '92vh',
             display: 'flex',
             flexDirection: 'column'
           },
           body: {
             background: 'transparent',
-            flex: 1,
-            maxHeight: isMobile ? 'calc(100vh - 48px)' : 'calc(92vh - 48px)',
+            maxHeight: 'calc(92vh - 60px)',
             overflowY: 'auto',
             paddingRight: 4,
-            marginTop: 6
+            marginTop: 10
           },
           mask: {
             backdropFilter: 'blur(4px)',
@@ -700,7 +681,7 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
         {selectedRoom && (
           <div>
             {/* Store & Price Summary */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 11 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, fontSize: 12 }}>
               <span style={{ color: 'rgba(255,255,255,0.5)' }}>
                 <EnvironmentOutlined style={{ marginRight: 4 }} />
                 {getStoreName(selectedRoom.storeId)}
@@ -711,15 +692,15 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
             </div>
 
             {/* Date Picker inside Modal */}
-            <div style={{ marginBottom: 6, fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>
+            <div style={{ marginBottom: 8, fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>
               {t('roomBooking.selectDate')}
             </div>
             <div style={{
               display: 'flex',
-              gap: 6,
-              marginBottom: 8,
+              gap: 8,
+              marginBottom: 12,
               overflowX: 'auto',
-              paddingBottom: 4,
+              paddingBottom: 6,
               scrollbarWidth: 'none',
             }}>
               {dateOptions.map(opt => {
@@ -801,17 +782,17 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
               }
 
               return (
-                <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.8)', marginBottom: 6 }}>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.8)', marginBottom: 8 }}>
                     {t('roomBooking.selectTimeslot')}
                   </div>
 
-                  {/* Visual Clickable Grid in 4 Columns */}
+                  {/* Visual Clickable Grid */}
                   <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(4, 1fr)',
-                    gap: 6,
-                    marginBottom: 8
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gap: 8,
+                    marginBottom: 12
                   }}>
                     {segments.map((seg, i) => {
                       const disabled = (seg.isBooked && !seg.isMyBooking) || seg.isPast;
@@ -819,31 +800,38 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                       let bg = 'rgba(255,255,255,0.04)';
                       let border = '1px solid rgba(255,255,255,0.08)';
                       let color = '#fff';
+                      let statusText = t('roomBooking.statusAvailable');
 
                       if (seg.isPast) {
                         bg = 'rgba(255,255,255,0.01)';
                         border = '1px solid rgba(255,255,255,0.03)';
                         color = 'rgba(255,255,255,0.2)';
+                        statusText = t('roomBooking.statusPast');
                       } else if (seg.isMyBooking) {
                         bg = 'rgba(52, 211, 153, 0.08)';
                         border = '1px solid rgba(52, 211, 153, 0.2)';
                         color = '#34d399';
+                        statusText = t('roomBooking.statusMyBooking');
                       } else if (seg.isMyCheckedIn) {
                         bg = 'rgba(196, 141, 58, 0.15)';
                         border = '1px solid rgba(196, 141, 58, 0.4)';
                         color = '#FFD700';
+                        statusText = t('roomBooking.statusCheckedIn');
                       } else if (seg.isUnavailable) {
                         bg = 'rgba(255,255,255,0.02)';
                         border = '1px solid rgba(255,255,255,0.06)';
                         color = 'rgba(255,255,255,0.3)';
+                        statusText = t('roomBooking.statusUnavailable');
                       } else if (seg.isBooked) {
                         bg = 'rgba(248,113,113,0.08)';
                         border = '1px solid rgba(248,113,113,0.18)';
                         color = '#f87171';
+                        statusText = t('roomBooking.statusBooked');
                       } else if (seg.isSelected) {
                         bg = 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)';
                         border = '1px solid transparent';
                         color = '#111';
+                        statusText = t('roomBooking.statusSelected');
                       }
 
                       return (
@@ -851,8 +839,8 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                           key={i}
                           onClick={() => !disabled && handleCellClick(seg.hour)}
                           style={{
-                            padding: '6px 2px',
-                            borderRadius: 8,
+                            padding: '8px 4px',
+                            borderRadius: 10,
                             textAlign: 'center',
                             cursor: disabled ? 'not-allowed' : 'pointer',
                             background: bg,
@@ -861,11 +849,14 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                             transition: 'all 0.25s ease',
                             userSelect: 'none',
                             transform: seg.isSelected ? 'scale(1.02)' : 'none',
-                            boxShadow: seg.isSelected ? '0 2px 8px rgba(244,175,37,0.2)' : 'none'
+                            boxShadow: seg.isSelected ? '0 4px 12px rgba(244,175,37,0.25)' : 'none'
                           }}
                         >
                           <div style={{ fontSize: 10, fontWeight: 700 }}>
-                            {String(seg.hour).padStart(2, '0')}:00
+                            {String(seg.hour).padStart(2, '0')}:00 - {String(seg.hour + 1).padStart(2, '0')}:00
+                          </div>
+                          <div style={{ fontSize: 8, fontWeight: 600, marginTop: 2, opacity: 0.8 }}>
+                            {statusText}
                           </div>
                         </div>
                       );
@@ -873,33 +864,33 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                   </div>
 
                   {/* Selected label display */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, padding: '0 2px' }}>
-                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>{t('roomBooking.selectedInterval')}</span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#FFD700' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, padding: '0 4px' }}>
+                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{t('roomBooking.selectedInterval')}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#FFD700' }}>
                       {startTime && endTime && sliderValue ? `${startTime} - ${endTime} (${sliderValue[1] - sliderValue[0]} ${t('roomBooking.hours')})` : t('roomBooking.notSelected')}
                     </span>
                   </div>
 
                   {/* Color keys legend */}
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: '6px 10px', fontSize: 8, color: 'rgba(255,255,255,0.4)', marginTop: 6, flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                      <span style={{ width: 5, height: 5, borderRadius: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }} />
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 10, fontSize: 9, color: 'rgba(255,255,255,0.4)', marginTop: 8, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }} />
                       <span>{t('roomBooking.legendAvailable')}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                      <span style={{ width: 5, height: 5, borderRadius: 1, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.18)' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: 1, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.18)' }} />
                       <span>{t('roomBooking.legendBooked')}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                      <span style={{ width: 5, height: 5, borderRadius: 1, background: 'rgba(52, 211, 153, 0.08)', border: '1px solid rgba(52, 211, 153, 0.2)' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: 1, background: 'rgba(52, 211, 153, 0.08)', border: '1px solid rgba(52, 211, 153, 0.2)' }} />
                       <span>{t('roomBooking.legendMyBooking')}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                      <span style={{ width: 5, height: 5, borderRadius: 1, background: 'rgba(196, 141, 58, 0.15)', border: '1px solid rgba(196, 141, 58, 0.4)' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: 1, background: 'rgba(196, 141, 58, 0.15)', border: '1px solid rgba(196, 141, 58, 0.4)' }} />
                       <span>{t('roomBooking.legendCheckedIn')}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                      <span style={{ width: 5, height: 5, borderRadius: 1, background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: 1, background: 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)' }} />
                       <span>{t('roomBooking.legendSelected')}</span>
                     </div>
                   </div>
@@ -927,55 +918,55 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                 <>
                   {/* User Points & Balance status */}
                   <div style={{
-                    background: 'rgba(255,255,255,0.02)',
-                    borderRadius: 10,
-                    padding: '6px 10px',
-                    marginBottom: 8,
-                    border: '1px solid rgba(255,255,255,0.06)',
+                    background: 'rgba(255,255,255,0.03)',
+                    borderRadius: 12,
+                    padding: '8px 12px',
+                    marginBottom: 12,
+                    border: '1px solid rgba(255,255,255,0.08)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: 4
+                    gap: 6
                   }}>
                     {/* Top Row: Rate and Available Points */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: 4 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 6 }}>
                       <div>
-                        <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 9, display: 'block' }}>{t('roomBooking.hourlyRateLabel')}</span>
-                        <span style={{ color: '#fff', fontWeight: 600, fontSize: 11 }}>{selectedRoom.fee} {t('roomBooking.pointsPerHour')}</span>
+                        <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, display: 'block' }}>{t('roomBooking.hourlyRateLabel')}</span>
+                        <span style={{ color: '#fff', fontWeight: 600, fontSize: 12 }}>{selectedRoom.fee} {t('roomBooking.pointsPerHour')}</span>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 9, display: 'block' }}>{t('roomBooking.availablePointsLabel')}</span>
-                        <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 11 }}>{userPoints} {t('roomBooking.points')}</span>
+                        <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, display: 'block' }}>{t('roomBooking.availablePointsLabel')}</span>
+                        <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 12 }}>{userPoints} {t('roomBooking.points')}</span>
                       </div>
                     </div>
 
                     {hours > 0 && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         {/* Duration and Total */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
                           <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('roomBooking.duration')}</span>
                           <span style={{ color: '#fff', fontWeight: 500 }}>{t('roomBooking.hoursTotal', { hours, total: totalFee })}</span>
                         </div>
 
                         {myExistingBooking ? (
                           <>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
                               <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('roomBooking.paidDeposit')}</span>
                               <span style={{ color: 'rgba(255,255,255,0.8)' }}>{oldPaidFee} {t('roomBooking.points')}</span>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
                               <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('roomBooking.netDepositRequired')}</span>
-                              <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 12 }}>{netPointsRequired} {t('roomBooking.points')}</span>
+                              <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 13 }}>{netPointsRequired} {t('roomBooking.points')}</span>
                             </div>
                           </>
                         ) : (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
                             <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('roomBooking.depositRequired')}</span>
-                            <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 12 }}>{depositFee} {t('roomBooking.points')}</span>
+                            <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 13 }}>{depositFee} {t('roomBooking.points')}</span>
                           </div>
                         )}
 
                         {/* Check-in Balance */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
                           <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomBooking.balanceAtCheckin')}</span>
                           <span style={{ color: 'rgba(255,255,255,0.6)' }}>{totalFee - depositFee} {t('roomBooking.points')}</span>
                         </div>
@@ -983,30 +974,30 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                     )}
 
                     {isMinDurationInvalid && (
-                      <div style={{ color: '#f87171', fontSize: 9, marginTop: 1, fontWeight: 600, textAlign: 'center' }}>
+                      <div style={{ color: '#f87171', fontSize: 10, marginTop: 2, fontWeight: 600, textAlign: 'center' }}>
                         {t('roomBooking.minBookingHoursError', { count: minHours })}
                       </div>
                     )}
                     {isInsufficient && !isMinDurationInvalid && (
-                      <div style={{ color: '#f87171', fontSize: 9, marginTop: 1, fontWeight: 600, textAlign: 'center' }}>
+                      <div style={{ color: '#f87171', fontSize: 10, marginTop: 2, fontWeight: 600, textAlign: 'center' }}>
                         {t('roomBooking.insufficientPointsError')}
                       </div>
                     )}
                   </div>
 
                   {/* Modal Actions */}
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ display: 'flex', gap: 10 }}>
                     <Button
                       onClick={handleCloseBookingModal}
                       style={{
                         flex: 1,
-                        background: 'rgba(255,255,255,0.06)',
-                        border: '1px solid rgba(255,255,255,0.12)',
+                        background: 'rgba(255,255,255,0.08)',
+                        border: '1px solid rgba(255,255,255,0.15)',
                         color: '#fff',
-                        borderRadius: 8,
-                        height: 32,
+                        borderRadius: 10,
+                        height: 36,
                         fontWeight: 600,
-                        fontSize: 12
+                        fontSize: 13
                       }}
                     >
                       {t('common.cancel')}
@@ -1024,10 +1015,10 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                         background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
                         border: 'none',
                         color: '#111',
-                        borderRadius: 8,
-                        height: 32,
+                        borderRadius: 10,
+                        height: 36,
                         fontWeight: 700,
-                        fontSize: 12
+                        fontSize: 13
                       }}
                     >
                       {t('roomBooking.confirmBooking')}
