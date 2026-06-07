@@ -124,18 +124,18 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
       title: t('ordersAdmin.orderId'),
       dataIndex: 'id',
       key: 'id',
-      width: 200,
-      render: (id: string) => <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#FDE08D', fontWeight: 600 }}>{id}</span>,
+      width: 140,
+      render: (id: string) => <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#FDE08D', fontWeight: 600 }}>{id}</span>,
     },
     {
       title: t('ordersAdmin.user'),
       dataIndex: 'userId',
       key: 'userId',
-      width: 180,
+      width: 130,
       render: (userId: string) => (
-        <div>
-          <div style={{ fontWeight: 700, color: '#FFFFFF' }}>{getUserName(userId, users)}</div>
-          <div style={{ fontSize: 12, color: '#CCCCCC' }}>{getUserPhone(userId, users) || '-'}</div>
+        <div style={{ wordBreak: 'break-all', whiteSpace: 'normal' }}>
+          <div style={{ fontWeight: 700, color: '#FFFFFF', fontSize: 12 }}>{getUserName(userId, users)}</div>
+          <div style={{ fontSize: 11, color: '#CCCCCC' }}>{getUserPhone(userId, users) || '-'}</div>
         </div>
       ),
     },
@@ -143,32 +143,32 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
       title: t('ordersAdmin.totalAmount'),
       dataIndex: 'total',
       key: 'total',
-      width: 120,
-      render: (v: number) => <span style={{ fontWeight: 800, color: '#f4af25' }}>RM{Number(v || 0).toFixed(2)}</span>,
+      width: 100,
+      render: (v: number) => <span style={{ fontWeight: 800, color: '#f4af25', fontSize: 12 }}>RM{Number(v || 0).toFixed(2)}</span>,
     },
     {
       title: t('ordersAdmin.status.title'),
       dataIndex: 'status',
       key: 'status',
-      width: 100,
+      width: 90,
       render: (_: any, record: Order) => (
-        <Tag color={getStatusColor(record.status)}>{getStatusText(record.status, t)}</Tag>
+        <Tag color={getStatusColor(record.status)} style={{ margin: 0, fontSize: 11 }}>{getStatusText(record.status, t)}</Tag>
       ),
     },
     {
       title: t('ordersAdmin.invoice.status'),
       key: 'invoice',
-      width: 220,
+      width: 130,
       render: (_: any, record: Order) => {
         const inv = (record as any)?.invoice as OrderInvoiceMeta | undefined
-        if (!inv) return <Tag>{t('ordersAdmin.invoice.notGenerated')}</Tag>
+        if (!inv) return <Tag style={{ margin: 0, fontSize: 11 }}>{t('ordersAdmin.invoice.notGenerated')}</Tag>
         return (
-          <Space size={6}>
-            <Tag color="green">{t('ordersAdmin.invoice.generated')}</Tag>
+          <Space size={4} style={{ display: 'flex', flexWrap: 'wrap' }}>
+            <Tag color="green" style={{ margin: 0, fontSize: 11 }}>{t('ordersAdmin.invoice.generated')}</Tag>
             <Button
               size="small"
               type="link"
-              style={{ padding: 0, height: 'auto', fontFamily: 'monospace', fontSize: 12 }}
+              style={{ padding: 0, height: 'auto', fontFamily: 'monospace', fontSize: 11 }}
               onClick={async () => {
                 await previewInvoicePdf(record, inv)
               }}
@@ -182,77 +182,98 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
     {
       title: t('ordersAdmin.actions'),
       key: 'actions',
-      width: 280,
-      render: (_: any, record: Order) => (
-        <Space>
-          <Button
-            size="small"
-            type="default"
-            style={{
-              background: 'rgba(255,255,255,0.1)',
-              color: '#fff',
-              border: '1px solid rgba(255,255,255,0.2)'
-            }}
-            onClick={async () => {
-              const inv = (record as any)?.invoice as OrderInvoiceMeta | undefined
-              if (!inv) {
-                message.info(t('ordersAdmin.invoice.needGenerateFirst'))
-                return
-              }
-              await previewInvoicePdf(record, inv)
-            }}
-          >
-            {t('ordersAdmin.invoice.view')}
-          </Button>
-          <Button
-            size="small"
-            type="default"
-            style={{
-              background: 'rgba(255,255,255,0.1)',
-              color: '#fff',
-              border: '1px solid rgba(255,255,255,0.2)'
-            }}
-            onClick={async () => {
-              const inv = (record as any)?.invoice as OrderInvoiceMeta | undefined
-              if (!inv) {
-                message.info(t('ordersAdmin.invoice.needGenerateFirst'))
-                return
-              }
-              await downloadInvoicePdf(record, inv)
-            }}
-          >
-            {t('ordersAdmin.invoice.print')}
-          </Button>
-          <Button
-            size="small"
-            type="primary"
-            style={{
-              background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-              border: 'none',
-              color: '#111',
-              fontWeight: 700
-            }}
-            onClick={() => {
-              setActiveOrder(record)
-              const inv = (record as any)?.invoice as OrderInvoiceMeta | undefined
-              const defaultDate = inv?.invoiceDate ? dayjs(toDateSafe(inv.invoiceDate)) : dayjs()
-              form.setFieldsValue({
-                invoiceNo: inv?.invoiceNo || guessInvoiceNo(record, defaultDate.toDate()),
-                invoiceDate: defaultDate,
-                invoiceToName: inv?.invoiceTo?.name || getUserName(record.userId, users),
-                invoiceToAddress: inv?.invoiceTo?.address || (record as any)?.shipping?.address || '',
-                invoiceToPhone: inv?.invoiceTo?.phone || getUserPhone(record.userId, users) || '',
-                terms: inv?.terms || 'CASH',
-                yourRef: inv?.yourRef || '',
-                ourDoNo: inv?.ourDoNo || '',
-              })
-              setModalOpen(true)
-            }}
-          >
-            {t('ordersAdmin.invoice.generate')}
-          </Button>
-        </Space>
-      ),
+      width: 180,
+      render: (_: any, record: Order) => {
+        const inv = (record as any)?.invoice as OrderInvoiceMeta | undefined
+        const hasInvoice = !!inv
+
+        const handleGenerateEdit = () => {
+          setActiveOrder(record)
+          const defaultDate = inv?.invoiceDate ? dayjs(toDateSafe(inv.invoiceDate)) : dayjs()
+          form.setFieldsValue({
+            invoiceNo: inv?.invoiceNo || guessInvoiceNo(record, defaultDate.toDate()),
+            invoiceDate: defaultDate,
+            invoiceToName: inv?.invoiceTo?.name || getUserName(record.userId, users),
+            invoiceToAddress: inv?.invoiceTo?.address || (record as any)?.shipping?.address || '',
+            invoiceToPhone: inv?.invoiceTo?.phone || getUserPhone(record.userId, users) || '',
+            terms: inv?.terms || 'CASH',
+            yourRef: inv?.yourRef || '',
+            ourDoNo: inv?.ourDoNo || '',
+          })
+          setModalOpen(true)
+        }
+
+        return (
+          <Space size={4}>
+            {hasInvoice ? (
+              <>
+                <Button
+                  size="small"
+                  type="default"
+                  style={{
+                    background: 'rgba(255,255,255,0.06)',
+                    color: '#fff',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    fontSize: 11,
+                    padding: '2px 8px'
+                  }}
+                  onClick={async () => {
+                    await previewInvoicePdf(record, inv)
+                  }}
+                >
+                  {t('ordersAdmin.invoice.view')}
+                </Button>
+                <Button
+                  size="small"
+                  type="default"
+                  style={{
+                    background: 'rgba(255,255,255,0.06)',
+                    color: '#fff',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    fontSize: 11,
+                    padding: '2px 8px'
+                  }}
+                  onClick={async () => {
+                    await downloadInvoicePdf(record, inv)
+                  }}
+                >
+                  {t('ordersAdmin.invoice.print')}
+                </Button>
+                <Button
+                  size="small"
+                  type="default"
+                  style={{
+                    background: 'rgba(255,255,255,0.06)',
+                    color: '#FFD700',
+                    border: '1px solid rgba(254,224,141,0.3)',
+                    fontSize: 11,
+                    padding: '2px 8px'
+                  }}
+                  onClick={handleGenerateEdit}
+                >
+                  {t('common.edit')}
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="small"
+                type="primary"
+                style={{
+                  background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                  border: 'none',
+                  color: '#111',
+                  fontWeight: 700,
+                  fontSize: 11,
+                  padding: '2px 8px'
+                }}
+                onClick={handleGenerateEdit}
+              >
+                {t('ordersAdmin.invoice.generate')}
+              </Button>
+            )}
+          </Space>
+        )
+      },
     },
   ], [t, users, cigars, appConfig, form, user?.id])
 
