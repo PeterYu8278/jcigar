@@ -946,39 +946,45 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                           </div>
                         </div>
 
-                        {hours > 0 && (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            {/* Duration and Total */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
-                              <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('roomBooking.duration')}</span>
-                              <span style={{ color: '#fff', fontWeight: 500 }}>{t('roomBooking.hoursTotal', { hours, total: totalFee })}</span>
-                            </div>
-
-                            {myExistingBooking ? (
-                              <>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
-                                  <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('roomBooking.paidDeposit')}</span>
-                                  <span style={{ color: 'rgba(255,255,255,0.8)' }}>{oldPaidFee} {t('roomBooking.points')}</span>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
-                                  <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('roomBooking.netDepositRequired')}</span>
-                                  <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 13 }}>{netPointsRequired} {t('roomBooking.points')}</span>
-                                </div>
-                              </>
-                            ) : (
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
-                                <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('roomBooking.depositRequired')}</span>
-                                <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 13 }}>{depositFee} {t('roomBooking.points')}</span>
-                              </div>
-                            )}
-
-                            {/* Check-in Balance */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
-                              <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomBooking.balanceAtCheckin')}</span>
-                              <span style={{ color: 'rgba(255,255,255,0.6)' }}>{totalFee - depositFee} {t('roomBooking.points')}</span>
-                            </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {/* Duration and Total */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
+                            <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('roomBooking.duration')}</span>
+                            <span style={{ color: '#fff', fontWeight: 500 }}>
+                              {hours > 0 ? t('roomBooking.hoursTotal', { hours, total: totalFee }) : '-'}
+                            </span>
                           </div>
-                        )}
+
+                          {myExistingBooking ? (
+                            <>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
+                                <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('roomBooking.paidDeposit')}</span>
+                                <span style={{ color: 'rgba(255,255,255,0.8)' }}>{oldPaidFee} {t('roomBooking.points')}</span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
+                                <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('roomBooking.netDepositRequired')}</span>
+                                <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 13 }}>
+                                  {hours > 0 ? `${netPointsRequired} ${t('roomBooking.points')}` : '-'}
+                                </span>
+                              </div>
+                            </>
+                          ) : (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
+                              <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('roomBooking.depositRequired')}</span>
+                              <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 13 }}>
+                                {hours > 0 ? `${depositFee} ${t('roomBooking.points')}` : '-'}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Check-in Balance */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
+                            <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomBooking.balanceAtCheckin')}</span>
+                            <span style={{ color: 'rgba(255,255,255,0.6)' }}>
+                              {hours > 0 ? `${totalFee - depositFee} ${t('roomBooking.points')}` : '-'}
+                            </span>
+                          </div>
+                        </div>
 
                         {isMinDurationInvalid && (
                           <div style={{ color: '#f87171', fontSize: 10, marginTop: 2, fontWeight: 600, textAlign: 'center' }}>
