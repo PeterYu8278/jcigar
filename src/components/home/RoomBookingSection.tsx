@@ -581,20 +581,6 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
-          <div style={{
-            width: 48,
-            height: 48,
-            borderRadius: 12,
-            background: 'linear-gradient(135deg, rgba(244,175,37,0.15), rgba(196,141,58,0.15))',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            border: '1px solid rgba(244,175,37,0.25)',
-          }}>
-            <span style={{ fontSize: 24 }}>🚪</span>
-          </div>
-
           <div style={{ minWidth: 0 }}>
             <h4 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#fff' }}>
               {t('roomBooking.unifiedTitle')}
@@ -687,7 +673,6 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%', maxHeight: 'calc(95vh - 24px)', overflow: 'hidden' }}>
               {/* Image Banner with Title Overlay */}
               <div style={{
-                margin: '-1px -1px 1px -1px',
                 width: 'calc(100%)',
                 height: 110,
                 overflow: 'hidden',
@@ -701,8 +686,8 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                     width: '100%',
                     height: '100%',
                     objectFit: 'cover',
-                    borderTopLeftRadius: 20,
-                    borderTopRightRadius: 20,
+                    borderTopLeftRadius: 12,
+                    borderTopRightRadius: 12,
                   }}
                 />
                 <div style={{
