@@ -124,13 +124,18 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
       title: t('ordersAdmin.orderId'),
       dataIndex: 'id',
       key: 'id',
-      width: 180,
-      render: (id: string) => <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#FDE08D', fontWeight: 600 }}>{id}</span>,
+      width: 100,
+      render: (id: string) => (
+        <span title={id} style={{ fontFamily: 'monospace', fontSize: 12, color: '#FDE08D', fontWeight: 600 }}>
+          {id.slice(0, 8)}...
+        </span>
+      ),
     },
     {
       title: t('ordersAdmin.user'),
       dataIndex: 'userId',
       key: 'userId',
+      width: 140,
       render: (userId: string) => (
         <div>
           <div style={{ fontWeight: 700, color: '#FFFFFF' }}>{getUserName(userId, users)}</div>
@@ -142,14 +147,14 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
       title: t('ordersAdmin.totalAmount'),
       dataIndex: 'total',
       key: 'total',
-      width: 140,
+      width: 110,
       render: (v: number) => <span style={{ fontWeight: 800, color: '#f4af25' }}>RM{Number(v || 0).toFixed(2)}</span>,
     },
     {
       title: t('ordersAdmin.status.title'),
       dataIndex: 'status',
       key: 'status',
-      width: 120,
+      width: 100,
       render: (_: any, record: Order) => (
         <Tag color={getStatusColor(record.status)}>{getStatusText(record.status, t)}</Tag>
       ),
@@ -157,13 +162,13 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
     {
       title: t('ordersAdmin.invoice.status'),
       key: 'invoice',
-      width: 140,
+      width: 130,
       render: (_: any, record: Order) => {
         const inv = (record as any)?.invoice as OrderInvoiceMeta | undefined
         if (!inv) return <Tag>{t('ordersAdmin.invoice.notGenerated')}</Tag>
         return (
-          <Space size={6}>
-            <Tag color="green">{t('ordersAdmin.invoice.generated')}</Tag>
+          <Space size={4}>
+            <Tag color="green" style={{ marginRight: 0 }}>{t('ordersAdmin.invoice.generated')}</Tag>
             <Button
               size="small"
               type="link"
@@ -181,9 +186,9 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
     {
       title: t('ordersAdmin.actions'),
       key: 'actions',
-      width: 200,
+      width: 210,
       render: (_: any, record: Order) => (
-        <Space>
+        <Space size={4}>
           <Button
             size="small"
             type="default"
@@ -421,7 +426,7 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
               rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
               virtual={filteredOrders.length > 50}
               pagination={{ pageSize: 20 }}
-              scroll={{ x: 'max-content', y: 'calc(100vh - 400px)' }}
+              scroll={{ x: 790, y: 'calc(100vh - 400px)' }}
               style={{
                 background: 'transparent',
                 borderRadius: 12,

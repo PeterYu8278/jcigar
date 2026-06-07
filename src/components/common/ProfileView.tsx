@@ -956,7 +956,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                             {t('profile.memberNumber')}: {referred.memberId || '-'}
                           </div>
                           <div style={{ fontSize: '12px', marginTop: '2px' }}>
-                            <span style={{ color: 'rgba(255,255,255,0.5)' }}>{t('profile.activatedMembership')}: </span>
+                            <span style={{ color: 'rgba(255,255,255,0.5)' }}>{t('profile.membership')}: </span>
                             {(() => {
                               const activatedAt = referralActivationMap[referred.id];
                               if (activatedAt) {

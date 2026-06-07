@@ -1519,7 +1519,9 @@
     "notActivated": "Not Activated",
     "avatarUpdated": "Avatar updated",
     "discount": "Discount Rate",
-    "activatedMembershipAt": "Membership activated at"
+    "membership": "Membership",
+    "activatedMembershipAt": "Membership activated at",
+    "activatedMembership": "Activated Membership"
   },
   "pointsConfig": {
     "title": "Points Configuration",
