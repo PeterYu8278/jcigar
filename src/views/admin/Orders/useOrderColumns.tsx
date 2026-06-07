@@ -1,5 +1,5 @@
 import React from 'react'
-import { Tag } from 'antd'
+import { Tag, Button } from 'antd'
 import { CheckOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { useTranslation } from 'react-i18next'
@@ -61,10 +61,24 @@ export const getOrderColumns = ({
       dataIndex: 'id',
       key: 'id',
       width: 150,
-      render: (id: string) => (
-        <span style={{ fontFamily: 'monospace', fontSize: '12px', wordBreak: 'break-all', whiteSpace: 'normal', color: '#FDE08D', fontWeight: 600 }}>
+      render: (id: string, record: Order) => (
+        <Button
+          type="link"
+          style={{
+            padding: 0,
+            height: 'auto',
+            fontFamily: 'monospace',
+            fontSize: '12px',
+            wordBreak: 'break-all',
+            whiteSpace: 'normal',
+            color: '#FDE08D',
+            fontWeight: 600,
+            textAlign: 'left'
+          }}
+          onClick={() => onViewOrder(record)}
+        >
           {id}
-        </span>
+        </Button>
       ),
     },
     {

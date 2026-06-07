@@ -51,6 +51,7 @@ interface InvoiceManagementTabProps {
   loading: boolean
   isMobile: boolean
   onRefresh: () => Promise<void>
+  onViewOrder?: (order: Order) => void
 }
 
 export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
@@ -61,6 +62,7 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
   loading,
   isMobile,
   onRefresh,
+  onViewOrder,
 }) => {
   const { t } = useTranslation()
   const { user } = useAuthStore()
@@ -125,7 +127,23 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
       dataIndex: 'id',
       key: 'id',
       width: 140,
-      render: (id: string) => <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#FDE08D', fontWeight: 600 }}>{id}</span>,
+      render: (id: string, record: Order) => (
+        <Button
+          type="link"
+          style={{
+            padding: 0,
+            height: 'auto',
+            fontFamily: 'monospace',
+            fontSize: 11,
+            color: '#FDE08D',
+            fontWeight: 600,
+            textAlign: 'left'
+          }}
+          onClick={() => onViewOrder?.(record)}
+        >
+          {id}
+        </Button>
+      ),
     },
     {
       title: t('ordersAdmin.user'),
@@ -265,7 +283,7 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
         )
       },
     },
-  ], [t, users, cigars, appConfig, form, user?.id])
+  ], [t, users, cigars, appConfig, form, user?.id, onViewOrder])
 
   const generateAndPrint = async () => {
     if (activeOrders.length === 0) return
@@ -476,9 +494,21 @@ export const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({
                     backdropFilter: 'blur(10px)'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                      <div style={{ fontSize: 12, color: '#FDE08D', fontFamily: 'monospace', fontWeight: 600 }}>
+                      <Button
+                        type="link"
+                        style={{
+                          padding: 0,
+                          height: 'auto',
+                          fontFamily: 'monospace',
+                          fontSize: 12,
+                          color: '#FDE08D',
+                          fontWeight: 600,
+                          textAlign: 'left'
+                        }}
+                        onClick={() => onViewOrder?.(record)}
+                      >
                         {record.id.substring(0, 30)}
-                      </div>
+                      </Button>
                       <Tag color={getStatusColor(record.status)} style={{ margin: 0 }}>
                         {getStatusText(record.status, t)}
                       </Tag>

@@ -1,8 +1,8 @@
 // 订单管理页面
 import React, { useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
-import { Table, Space, Input, Select, DatePicker, message, Modal, Tabs } from 'antd'
-import { SearchOutlined, CheckOutlined, ClockCircleOutlined, PlusOutlined } from '@ant-design/icons'
+import { Table, Space, Input, Select, DatePicker, message, Modal, Tabs, Button, Drawer } from 'antd'
+import { SearchOutlined, CheckOutlined, ClockCircleOutlined, PlusOutlined, CloseOutlined } from '@ant-design/icons'
 import BatchDeleteButton from '../../../components/common/BatchDeleteButton'
 import CreateButton from '../../../components/common/CreateButton'
 import OrderDetails from './OrderDetails'
@@ -628,7 +628,20 @@ const AdminOrders: React.FC = () => {
                                 {/* 订单号和日期同行 */}
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                                   <div style={{ fontSize: 12, color: '#FFFFFF', fontWeight: 500 }}>
-                                    {t('ordersAdmin.orderNo')}: <span style={{ color: '#FDE08D' }}>{order.id.substring(0, 20)}</span>
+                                    {t('ordersAdmin.orderNo')}: <Button
+                                      type="link"
+                                      style={{
+                                        padding: 0,
+                                        height: 'auto',
+                                        fontFamily: 'monospace',
+                                        fontSize: 12,
+                                        color: '#FDE08D',
+                                        fontWeight: 600,
+                                      }}
+                                      onClick={() => handleViewOrder(order)}
+                                    >
+                                      {order.id.substring(0, 20)}
+                                    </Button>
                                   </div>
                                   <div style={{ fontSize: 12, color: '#CCCCCC' }}>
                                     {formattedDate}
@@ -714,6 +727,7 @@ const AdminOrders: React.FC = () => {
                 loading={loading || paginatedLoading}
                 isMobile={isMobile}
                 onRefresh={refreshAllOrders}
+                onViewOrder={handleViewOrder}
               />
             ),
           }
@@ -721,18 +735,29 @@ const AdminOrders: React.FC = () => {
       />
 
       {/* 查看订单详情 */}
-      <Modal
-        title={null}
+      <Drawer
         open={!!viewing}
-        onCancel={() => { setViewing(null); setIsEditingInView(false) }}
-        footer={null}
+        onClose={() => { setViewing(null); setIsEditingInView(false) }}
         width={isMobile ? '100%' : 820}
-        style={{
-          top: isMobile ? 0 : 20,
+        styles={{
+          body: { padding: 0, background: '#1a160d' },
+          header: { background: '#1a160d', borderBottom: '1px solid rgba(244,175,37,0.2)' }
         }}
-        styles={getModalThemeStyles(isMobile, true)}
-        className="order-details-modal"
+        title={
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ color: '#f4af25', fontWeight: 800 }}>
+              {t('ordersAdmin.orderNo')}: {viewing?.id}
+            </span>
+          </div>
+        }
         closable={false}
+        extra={
+          <Button
+            type="text"
+            icon={<CloseOutlined style={{ color: '#fff' }} />}
+            onClick={() => { setViewing(null); setIsEditingInView(false) }}
+          />
+        }
       >
         {viewing && (
           <OrderDetails
@@ -748,7 +773,7 @@ const AdminOrders: React.FC = () => {
             }}
           />
         )}
-      </Modal>
+      </Drawer>
 
       {/* 手动创建订单 */}
       <Modal
