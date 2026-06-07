@@ -347,7 +347,7 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
       message.warning(t('auth.pleaseLogin') || 'Please login first');
       return;
     }
-    
+
     // Check if there is an active booking today for this user to prioritize
     const existingToday = allDayBookings.find(
       b => b.userId === user?.id && (b.status === 'confirmed' || b.status === 'checked_in')
@@ -667,12 +667,12 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
         {selectedStoreId && (() => {
           const open = selectedRoom ? (selectedRoom.bookingStart ? parseInt(selectedRoom.bookingStart.split(':')[0], 10) : 10) : 10;
           const close = selectedRoom ? (selectedRoom.bookingEnd ? parseInt(selectedRoom.bookingEnd.split(':')[0], 10) : 22) : 22;
-          
+
           // Calculate values for User Points & Balance status
           const hours = sliderValue ? (sliderValue[1] - sliderValue[0]) : 0;
           const totalFee = selectedRoom ? hours * selectedRoom.fee : 0;
           const depositFee = Math.round(totalFee * 0.5);
-          
+
           const myExistingBooking = bookings.find(b => b.userId === user?.id && b.status === 'confirmed');
           const oldPaidFee = myExistingBooking
             ? (myExistingBooking.paidFee || Math.round((calculateHours(myExistingBooking.timeslot) * (selectedRoom?.fee || 0)) * 0.5))
@@ -685,10 +685,10 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
 
           return (
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%', maxHeight: 'calc(95vh - 24px)', overflow: 'hidden' }}>
-              {/* Image Banner */}
+              {/* Image Banner with Title Overlay */}
               <div style={{
-                margin: '-12px -16px 12px -16px',
-                width: 'calc(100% + 32px)',
+                margin: '-1px -1px 1px -1px',
+                width: 'calc(100%)',
                 height: 110,
                 overflow: 'hidden',
                 position: 'relative',
@@ -711,14 +711,21 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  background: 'linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 40%, rgba(21,19,15,1) 100%)',
+                  background: 'linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.4) 60%, rgba(21,19,15,1) 100%)',
                 }} />
-              </div>
-
-              {/* Title */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 6, flexShrink: 0 }}>
-                <span style={{ fontSize: 16 }}>🚪</span>
-                <span style={{ color: '#fff', fontSize: 15, fontWeight: 700 }}>{t('roomBooking.unifiedTitle')}</span>
+                <div style={{
+                  position: 'absolute',
+                  bottom: 8,
+                  left: 16,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  zIndex: 2
+                }}>
+                  <span style={{ color: '#fff', fontSize: 15, fontWeight: 700, textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
+                    {t('roomBooking.unifiedTitle')}
+                  </span>
+                </div>
               </div>
 
               {/* Scrollable Container */}
@@ -802,18 +809,18 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                               }}
                             >
                               <div style={{
-                                  fontSize: 9,
-                                  fontWeight: 600,
-                                  color: isSelected ? '#111' : 'rgba(255,255,255,0.5)',
-                                  marginBottom: 1,
-                                }}>
+                                fontSize: 9,
+                                fontWeight: 600,
+                                color: isSelected ? '#111' : 'rgba(255,255,255,0.5)',
+                                marginBottom: 1,
+                              }}>
                                 {opt.label}
                               </div>
                               <div style={{
-                                  fontSize: 9,
-                                  fontWeight: 700,
-                                  color: isSelected ? '#111' : '#fff',
-                                }}>
+                                fontSize: 9,
+                                fontWeight: 700,
+                                color: isSelected ? '#111' : '#fff',
+                              }}>
                                 {opt.dateLabel}
                               </div>
                             </div>
@@ -892,16 +899,16 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                                   background: isSlotSelected
                                     ? 'rgba(254,224,141,0.15)'
                                     : isCheckedInByMe
-                                    ? 'rgba(212,175,55,0.12)'
-                                    : isBookedByMe
-                                    ? 'rgba(82,196,26,0.1)'
-                                    : isBookedByOthers
-                                    ? 'rgba(255,77,79,0.05)'
-                                    : isUnavailable
-                                    ? 'rgba(255,255,255,0.03)'
-                                    : isPast
-                                    ? 'rgba(255,255,255,0.02)'
-                                    : 'rgba(255,255,255,0.04)',
+                                      ? 'rgba(212,175,55,0.12)'
+                                      : isBookedByMe
+                                        ? 'rgba(82,196,26,0.1)'
+                                        : isBookedByOthers
+                                          ? 'rgba(255,77,79,0.05)'
+                                          : isUnavailable
+                                            ? 'rgba(255,255,255,0.03)'
+                                            : isPast
+                                              ? 'rgba(255,255,255,0.02)'
+                                              : 'rgba(255,255,255,0.04)',
                                 }}
                               >
                                 <div style={{
@@ -910,12 +917,12 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                                   color: isSlotSelected
                                     ? '#FFD700'
                                     : isCheckedInByMe
-                                    ? '#D4AF37'
-                                    : isBookedByMe
-                                    ? '#52c41a'
-                                    : (isPast || isBookedByOthers || isUnavailable)
-                                    ? 'rgba(255,255,255,0.2)'
-                                    : '#fff',
+                                      ? '#D4AF37'
+                                      : isBookedByMe
+                                        ? '#52c41a'
+                                        : (isPast || isBookedByOthers || isUnavailable)
+                                          ? 'rgba(255,255,255,0.2)'
+                                          : '#fff',
                                   textDecoration: (isPast || isBookedByOthers) ? 'line-through' : 'none'
                                 }}>
                                   {`${String(h).padStart(2, '0')}:00`}
@@ -926,31 +933,31 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                                   color: isSlotSelected
                                     ? '#FFD700'
                                     : isCheckedInByMe
-                                    ? '#D4AF37'
-                                    : isBookedByMe
-                                    ? '#52c41a'
-                                    : isBookedByOthers
-                                    ? '#ff4d4f'
-                                    : isUnavailable
-                                    ? 'rgba(255,255,255,0.25)'
-                                    : isPast
-                                    ? 'rgba(255,255,255,0.15)'
-                                    : 'rgba(255,255,255,0.4)',
+                                      ? '#D4AF37'
+                                      : isBookedByMe
+                                        ? '#52c41a'
+                                        : isBookedByOthers
+                                          ? '#ff4d4f'
+                                          : isUnavailable
+                                            ? 'rgba(255,255,255,0.25)'
+                                            : isPast
+                                              ? 'rgba(255,255,255,0.15)'
+                                              : 'rgba(255,255,255,0.4)',
                                   fontWeight: (isSlotSelected || isBookedByMe || isCheckedInByMe) ? 600 : 400
                                 }}>
                                   {isSlotSelected
                                     ? t('roomBooking.statusSelected')
                                     : isCheckedInByMe
-                                    ? t('roomBooking.statusCheckedIn')
-                                    : isBookedByMe
-                                    ? t('roomBooking.statusMyBooking')
-                                    : isBookedByOthers
-                                    ? t('roomBooking.statusBooked')
-                                    : isUnavailable
-                                    ? t('roomBooking.statusUnavailable')
-                                    : isPast
-                                    ? t('roomBooking.statusPast')
-                                    : t('roomBooking.statusAvailable')}
+                                      ? t('roomBooking.statusCheckedIn')
+                                      : isBookedByMe
+                                        ? t('roomBooking.statusMyBooking')
+                                        : isBookedByOthers
+                                          ? t('roomBooking.statusBooked')
+                                          : isUnavailable
+                                            ? t('roomBooking.statusUnavailable')
+                                            : isPast
+                                              ? t('roomBooking.statusPast')
+                                              : t('roomBooking.statusAvailable')}
                                 </div>
                               </div>
                             );
@@ -1035,7 +1042,7 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                           {myExistingBooking ? t('roomBooking.netDepositRequired') : t('roomBooking.depositRequired')}
                         </span>
                         <span style={{ color: '#FFD700', fontWeight: 700, fontSize: 13 }}>
-                          {hours > 0 
+                          {hours > 0
                             ? (myExistingBooking ? `${netPointsRequired} ${t('roomBooking.points')}` : `${depositFee} ${t('roomBooking.points')}`)
                             : '-'
                           }
