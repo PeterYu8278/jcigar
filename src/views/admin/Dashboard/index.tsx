@@ -19,6 +19,8 @@ import { useTranslation } from 'react-i18next'
 import { isFeatureVisible } from '../../../services/firebase/featureVisibility'
 import { useAuthStore } from '../../../store/modules/auth'
 import { getAppConfig } from '../../../services/firebase/appConfig'
+import { getAllVisitSessions } from '../../../services/firebase/visitSessions'
+import { getAllRoomBookings } from '../../../services/firebase/rooms'
 import OrderDetails from '../Orders/OrderDetails'
 
 const { Title } = Typography
@@ -140,6 +142,198 @@ const PlanSelector: React.FC<{ value?: string; onChange?: (val: string) => void;
   );
 };
 
+const TrendChart: React.FC<{ data: Array<{ label: string; value: number }>; isMobile: boolean }> = ({ data, isMobile }) => {
+  const [hoveredPoint, setHoveredPoint] = useState<any>(null);
+  if (data.length === 0) return <div style={{ color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '40px 0' }}>No Data</div>;
+
+  const maxValue = Math.max(...data.map(d => d.value), 5); // Default min max-value to 5 to avoid flat chart
+  
+  // Chart dimensions
+  const width = 500;
+  const height = 220;
+  const paddingLeft = 35;
+  const paddingRight = 15;
+  const paddingTop = 20;
+  const paddingBottom = 30;
+  
+  const chartWidth = width - paddingLeft - paddingRight;
+  const chartHeight = height - paddingTop - paddingBottom;
+  
+  // Coordinates calculation
+  const points = data.map((d, index) => {
+    const x = paddingLeft + (index / (data.length - 1 || 1)) * chartWidth;
+    const y = paddingTop + chartHeight - (d.value / maxValue) * chartHeight;
+    return { x, y, label: d.label, value: d.value };
+  });
+
+  // Construct SVG path string
+  let pathD = '';
+  let areaD = '';
+  if (points.length > 0) {
+    pathD = `M ${points[0].x} ${points[0].y}`;
+    areaD = `M ${points[0].x} ${paddingTop + chartHeight} L ${points[0].x} ${points[0].y}`;
+    for (let i = 1; i < points.length; i++) {
+      // Use smooth Bezier control points or standard line
+      const prev = points[i - 1];
+      const curr = points[i];
+      const cpX1 = prev.x + (curr.x - prev.x) / 3;
+      const cpY1 = prev.y;
+      const cpX2 = prev.x + 2 * (curr.x - prev.x) / 3;
+      const cpY2 = curr.y;
+      pathD += ` C ${cpX1} ${cpY1}, ${cpX2} ${cpY2}, ${curr.x} ${curr.y}`;
+      areaD += ` C ${cpX1} ${cpY1}, ${cpX2} ${cpY2}, ${curr.x} ${curr.y}`;
+    }
+    areaD += ` L ${points[points.length - 1].x} ${paddingTop + chartHeight} Z`;
+  }
+
+  // Y-axis grid lines (4 lines)
+  const gridLines = [];
+  for (let i = 0; i <= 4; i++) {
+    const ratio = i / 4;
+    const y = paddingTop + chartHeight - ratio * chartHeight;
+    const val = Math.round(ratio * maxValue);
+    gridLines.push({ y, val });
+  }
+
+  return (
+    <div style={{ position: 'relative', background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: 12, border: '1px solid rgba(244,175,37,0.15)', backdropFilter: 'blur(10px)' }}>
+      <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="100%" style={{ overflow: 'visible' }}>
+        <defs>
+          {/* Background area gradient */}
+          <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#f4af25" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="#f4af25" stopOpacity="0.0" />
+          </linearGradient>
+          {/* Smooth line gradient */}
+          <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#FDE08D" />
+            <stop offset="100%" stopColor="#C48D3A" />
+          </linearGradient>
+          {/* Shadow filter for glow effect */}
+          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#f4af25" floodOpacity="0.3" />
+          </filter>
+        </defs>
+        
+        {/* Y Axis Grid Lines & Labels */}
+        {gridLines.map((gl, index) => (
+          <g key={index}>
+            <line 
+              x1={paddingLeft} 
+              y1={gl.y} 
+              x2={width - paddingRight} 
+              y2={gl.y} 
+              stroke="rgba(255, 255, 255, 0.08)" 
+              strokeDasharray="4 4" 
+            />
+            <text 
+              x={paddingLeft - 8} 
+              y={gl.y + 4} 
+              fill="rgba(255, 255, 255, 0.45)" 
+              fontSize="10px" 
+              textAnchor="end"
+              fontFamily="monospace"
+            >
+              {gl.val}
+            </text>
+          </g>
+        ))}
+
+        {/* X Axis Labels */}
+        {points.map((pt, idx) => {
+          // Render fewer labels on mobile to avoid overlap
+          const showLabel = isMobile 
+            ? idx % 3 === 0 || idx === points.length - 1
+            : idx % 2 === 0 || idx === points.length - 1;
+            
+          if (!showLabel) return null;
+          return (
+            <text
+              key={idx}
+              x={pt.x}
+              y={paddingTop + chartHeight + 16}
+              fill="rgba(255, 255, 255, 0.45)"
+              fontSize="9px"
+              textAnchor="middle"
+            >
+              {pt.label}
+            </text>
+          );
+        })}
+
+        {/* Shaded Area */}
+        {areaD && (
+          <path d={areaD} fill="url(#areaGradient)" />
+        )}
+
+        {/* Curve Path */}
+        {pathD && (
+          <path 
+            d={pathD} 
+            fill="none" 
+            stroke="url(#lineGradient)" 
+            strokeWidth="3" 
+            strokeLinecap="round"
+            filter="url(#glow)"
+          />
+        )}
+
+        {/* Data points & Interactive Hover Areas */}
+        {points.map((pt, idx) => (
+          <g key={idx}>
+            {/* Invisible large hover target circle */}
+            <circle
+              cx={pt.x}
+              cy={pt.y}
+              r="14"
+              fill="transparent"
+              style={{ cursor: 'pointer' }}
+              onMouseEnter={() => setHoveredPoint(pt)}
+              onMouseLeave={() => setHoveredPoint(null)}
+            />
+            {/* Actual dot */}
+            <circle
+              cx={pt.x}
+              cy={pt.y}
+              r={hoveredPoint?.label === pt.label ? 6 : 4}
+              fill={hoveredPoint?.label === pt.label ? "#FDE08D" : "#1a160d"}
+              stroke="#f4af25"
+              strokeWidth={hoveredPoint?.label === pt.label ? 3 : 2}
+              style={{ transition: 'all 0.15s ease' }}
+            />
+          </g>
+        ))}
+      </svg>
+      
+      {/* Floating Tooltip HTML */}
+      {hoveredPoint && (
+        <div style={{
+          position: 'absolute',
+          left: `${Math.min(Math.max((hoveredPoint.x / width) * 100 - 10, 2), 78)}%`,
+          top: `${(hoveredPoint.y / height) * 100 - 22}%`,
+          transform: 'translate(-50%, -100%)',
+          background: 'rgba(26, 22, 13, 0.95)',
+          border: '1px solid rgba(244, 175, 37, 0.6)',
+          padding: '6px 10px',
+          borderRadius: '6px',
+          fontSize: '11px',
+          color: '#fff',
+          pointerEvents: 'none',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+          zIndex: 10,
+          textAlign: 'center',
+          whiteSpace: 'nowrap'
+        }}>
+          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '9px', marginBottom: 2 }}>{hoveredPoint.label}</div>
+          <div style={{ fontWeight: 'bold' }}>
+            {hoveredPoint.value} 次
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate()
   const { t } = useTranslation()
@@ -150,6 +344,11 @@ const AdminDashboard: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [cigars, setCigars] = useState<Cigar[]>([])
+  const [visitSessions, setVisitSessions] = useState<any[]>([])
+  const [roomBookings, setRoomBookings] = useState<any[]>([])
+  const [trendDrawerVisible, setTrendDrawerVisible] = useState(false)
+  const [trendType, setTrendType] = useState<'members' | 'bookings'>('members')
+  const [trendPeriod, setTrendPeriod] = useState<'daily' | 'monthly' | 'yearly'>('daily')
   const [inventoryFeatureVisible, setInventoryFeatureVisible] = useState<boolean>(true)
   const [eventsAdminFeatureVisible, setEventsAdminFeatureVisible] = useState<boolean>(true)
   const [ordersFeatureVisible, setOrdersFeatureVisible] = useState<boolean>(true)
@@ -212,12 +411,22 @@ const AdminDashboard: React.FC = () => {
   const loadDashboardData = async () => {
     setLoading(true)
     try {
-      const [usersData, ordersData, eventsData, transactionsData, cigarsData] = await Promise.all([
+      const [
+        usersData,
+        ordersData,
+        eventsData,
+        transactionsData,
+        cigarsData,
+        visitSessionsData,
+        roomBookingsData
+      ] = await Promise.all([
         getUsers(),
         getAllOrders(isSuperAdmin ? undefined : user?.storeId),
         getEvents(isSuperAdmin ? undefined : user?.id),
         getAllTransactions(isSuperAdmin ? undefined : user?.storeId),
-        getCigars()
+        getCigars(),
+        getAllVisitSessions(undefined, isSuperAdmin ? undefined : user?.storeId),
+        getAllRoomBookings(isSuperAdmin ? undefined : user?.storeId)
       ])
 
       setUsers(usersData)
@@ -225,7 +434,10 @@ const AdminDashboard: React.FC = () => {
       setEvents(eventsData)
       setTransactions(transactionsData)
       setCigars(cigarsData)
+      setVisitSessions(visitSessionsData)
+      setRoomBookings(roomBookingsData)
     } catch (error) {
+      console.error(error)
       message.error(t('messages.dataLoadFailed'))
     } finally {
       setLoading(false)
@@ -237,6 +449,82 @@ const AdminDashboard: React.FC = () => {
   const totalOrders = orders.length
   const activeEvents = events.filter(e => e.status === 'ongoing').length
   const totalRevenue = transactions.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0)
+
+  // 当下驻店总人数
+  const currentCheckedIn = visitSessions.filter(s => s.status === 'pending').length
+  // 房间预定数量（有效订单：confirmed 或 checked_in）
+  const activeBookingsCount = roomBookings.filter(b => b.status === 'confirmed' || b.status === 'checked_in').length
+
+  const getTrendData = () => {
+    const dataMap = new Map<string, number>()
+    
+    if (trendType === 'members') {
+      // 聚合驻店签到人数
+      visitSessions.forEach(s => {
+        const dateObj = s.checkInAt instanceof Date ? s.checkInAt : new Date(s.checkInAt)
+        if (!dateObj || isNaN(dateObj.getTime())) return
+        
+        if (trendPeriod === 'daily') {
+          const key = dayjs(dateObj).format('YYYY-MM-DD')
+          dataMap.set(key, (dataMap.get(key) || 0) + 1)
+        } else if (trendPeriod === 'monthly') {
+          const key = dayjs(dateObj).format('YYYY-MM')
+          dataMap.set(key, (dataMap.get(key) || 0) + 1)
+        } else if (trendPeriod === 'yearly') {
+          const key = dayjs(dateObj).format('YYYY')
+          dataMap.set(key, (dataMap.get(key) || 0) + 1)
+        }
+      })
+    } else {
+      // 聚合房间预订数
+      roomBookings.forEach(b => {
+        if (b.status === 'cancelled') return
+        const bookingDateStr = b.date // YYYY-MM-DD
+        if (!bookingDateStr) return
+        
+        if (trendPeriod === 'daily') {
+          const key = bookingDateStr
+          dataMap.set(key, (dataMap.get(key) || 0) + 1)
+        } else if (trendPeriod === 'monthly') {
+          const key = bookingDateStr.substring(0, 7) // YYYY-MM
+          dataMap.set(key, (dataMap.get(key) || 0) + 1)
+        } else if (trendPeriod === 'yearly') {
+          const key = bookingDateStr.substring(0, 4) // YYYY
+          dataMap.set(key, (dataMap.get(key) || 0) + 1)
+        }
+      })
+    }
+
+    const list: Array<{ label: string; value: number }> = []
+    if (trendPeriod === 'daily') {
+      // 过去15天
+      for (let i = 14; i >= 0; i--) {
+        const d = dayjs().subtract(i, 'day')
+        const key = d.format('YYYY-MM-DD')
+        const label = d.format('DD MMM')
+        list.push({ label, value: dataMap.get(key) || 0 })
+      }
+    } else if (trendPeriod === 'monthly') {
+      // 过去12个月
+      for (let i = 11; i >= 0; i--) {
+        const m = dayjs().subtract(i, 'month')
+        const key = m.format('YYYY-MM')
+        const label = m.format('MMM YY')
+        list.push({ label, value: dataMap.get(key) || 0 })
+      }
+    } else if (trendPeriod === 'yearly') {
+      // 过去5年
+      const currentYear = dayjs().year()
+      for (let i = 4; i >= 0; i--) {
+        const y = currentYear - i
+        const key = String(y)
+        const label = String(y)
+        list.push({ label, value: dataMap.get(key) || 0 })
+      }
+    }
+    
+    return list
+  }
 
   // 本月数据
   const currentMonth = dayjs().format('YYYY-MM')
@@ -379,6 +667,15 @@ const AdminDashboard: React.FC = () => {
           background: rgba(255, 255, 255, 0.1) !important;
           transform: translateY(-1px);
         }
+        .dashboard-clickable-card {
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        .dashboard-clickable-card:hover {
+          background: rgba(244, 175, 37, 0.1) !important;
+          border-color: rgba(244, 175, 37, 0.4) !important;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(244, 175, 37, 0.1);
+        }
       `}</style>
       {/* 顶部 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -388,16 +685,16 @@ const AdminDashboard: React.FC = () => {
       <h1 style={{ fontSize: 22, fontWeight: 800, backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', WebkitBackgroundClip: 'text', color: 'transparent', marginBottom: 12 }}>{t('dashboard.overview')}</h1>
 
       {/* 概览卡片 */}
-      <div style={window.innerWidth < 768 ? {
+      <div style={isMobile ? {
         backgroundColor: 'rgba(57, 51, 40, 0.5)',
         backdropFilter: 'blur(10px)',
         borderRadius: 12,
-        padding: '16px 8px',
+        padding: '12px',
         border: '1px solid rgba(244, 175, 37, 0.3)',
-        display: 'flex',
-        gap: 4,
-        marginBottom: 16,
-        justifyContent: 'space-around'
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: '8px',
+        marginBottom: 16
       } : {
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
@@ -443,31 +740,39 @@ const AdminDashboard: React.FC = () => {
             isExpired?: boolean;
             extraInfo?: string;
             showButton?: boolean;
+            onClick?: () => void;
           }> = [
             { label: t('dashboard.totalMembers'), value: `${totalUsers}/${currentPlan.maxMembers || 50}` },
             { label: '', value: statusValue, subText, isSubscription: true, isExpired: isExpired || !isActive, showButton },
+            { label: t('dashboard.currentCheckedInMembers'), value: currentCheckedIn.toString(), onClick: () => { setTrendType('members'); setTrendPeriod('daily'); setTrendDrawerVisible(true); } },
+            { label: t('dashboard.activeRoomBookings'), value: activeBookingsCount.toString(), onClick: () => { setTrendType('bookings'); setTrendPeriod('daily'); setTrendDrawerVisible(true); } },
             { label: t('dashboard.monthlyOrders'), value: monthlyOrders.toLocaleString() },
             isSuperAdmin ? { label: t('dashboard.monthlyRevenue'), value: `RM${monthlyRevenue.toLocaleString()}` } : null
           ].filter(Boolean) as any[];
 
-          const isMobile = window.innerWidth < 768;
-
           return cards.map((card: any, idx) => (
-            <div key={idx} style={{
-              flex: 1,
-              textAlign: 'center',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: isMobile ? 'flex-start' : 'center',
-              minHeight: isMobile ? 'auto' : 110,
-              padding: isMobile ? '0 2px' : 12,
-              backgroundColor: isMobile ? 'transparent' : 'rgba(255,255,255,0.05)',
-              borderRadius: isMobile ? 0 : 12,
-              border: isMobile ? 'none' : '1px solid rgba(255,255,255,0.05)',
-              borderRight: isMobile && idx !== cards.length - 1 ? '1px solid rgba(244, 175, 37, 0.2)' : (isMobile ? 'none' : '1px solid rgba(255,255,255,0.05)'),
-              position: 'relative'
-            }}>
-              {!isMobile && <div style={{ fontSize: 12, color: '#A0A0A0', marginBottom: 4 }}>{card.label}</div>}
+            <div 
+              key={idx} 
+              onClick={card.onClick}
+              style={{
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                minHeight: isMobile ? 85 : 110,
+                padding: isMobile ? '8px 4px' : 12,
+                backgroundColor: 'rgba(255,255,255,0.05)',
+                borderRadius: 12,
+                border: '1px solid rgba(255,255,255,0.05)',
+                position: 'relative',
+                cursor: card.onClick ? 'pointer' : 'default',
+                transition: 'all 0.2s ease',
+              }}
+              className={card.onClick ? 'dashboard-clickable-card' : ''}
+            >
+              <div style={{ fontSize: isMobile ? 10 : 12, color: '#A0A0A0', marginBottom: 4 }}>
+                {card.label || 'Subscription'}
+              </div>
 
               <div style={{
                 fontSize: isMobile ? (card.isSubscription ? 11 : 16) : (card.isSubscription ? 18 : 24),
@@ -517,17 +822,14 @@ const AdminDashboard: React.FC = () => {
                 </div>
               )}
 
-              {isMobile && !card.isSubscription && (
-                <div style={{ fontSize: 9, color: 'rgba(255, 255, 255, 0.6)', marginTop: 2 }}>
-                  {card.label.split(' ').pop()}
-                </div>
-              )}
-
               {card.isSubscription && card.showButton && (
                 <Button
                   size="small"
                   type="primary"
-                  onClick={() => setShowRenewModal(true)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowRenewModal(true);
+                  }}
                   style={{
                     marginTop: 6,
                     fontSize: isMobile ? 8 : 11,
@@ -801,6 +1103,90 @@ const AdminDashboard: React.FC = () => {
             onOrderUpdate={loadDashboardData}
           />
         )}
+      </Drawer>
+
+      {/* 趋势图表抽屉 */}
+      <Drawer
+        open={trendDrawerVisible}
+        onClose={() => setTrendDrawerVisible(false)}
+        width={isMobile ? '100%' : 560}
+        styles={{
+          body: { padding: '24px', background: '#1a160d', color: '#fff' },
+          header: { background: '#1a160d', borderBottom: '1px solid rgba(244,175,37,0.2)' }
+        }}
+        title={
+          <div style={{ color: '#f4af25', fontWeight: 800, fontSize: 16 }}>
+            {trendType === 'members' ? t('dashboard.trendTitleCheckedIn') : t('dashboard.trendTitleBookings')}
+          </div>
+        }
+        closable={false}
+        extra={
+          <Button
+            type="text"
+            icon={<CloseOutlined style={{ color: '#fff' }} />}
+            onClick={() => setTrendDrawerVisible(false)}
+          />
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* 日期粒度切换按钮 */}
+          <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', padding: '4px', alignSelf: 'flex-start' }}>
+            {(['daily', 'monthly', 'yearly'] as const).map((period) => {
+              const isActive = trendPeriod === period;
+              return (
+                <button
+                  key={period}
+                  onClick={() => setTrendPeriod(period)}
+                  style={{
+                    padding: '6px 16px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    fontWeight: 700,
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    background: isActive ? 'linear-gradient(to right, #FDE08D, #C48D3A)' : 'transparent',
+                    color: isActive ? '#111' : 'rgba(255, 255, 255, 0.6)',
+                    transition: 'all 0.2s ease',
+                    outline: 'none'
+                  }}
+                >
+                  {period === 'daily' ? '日' : period === 'monthly' ? '月' : '年'}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* 趋势折线图 */}
+          <div style={{ marginTop: '8px' }}>
+            <TrendChart data={getTrendData()} isMobile={isMobile} />
+          </div>
+
+          {/* 数据明细列表 */}
+          <div style={{ marginTop: '12px' }}>
+            <h3 style={{ color: '#f4af25', fontSize: '14px', fontWeight: 800, marginBottom: '12px' }}>数据明细</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto', paddingRight: '4px' }}>
+              {getTrendData().slice().reverse().map((item, idx) => (
+                <div 
+                  key={idx} 
+                  style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    padding: '10px 14px', 
+                    background: 'rgba(255,255,255,0.03)', 
+                    borderRadius: '8px',
+                    border: '1px solid rgba(255,255,255,0.02)'
+                  }}
+                >
+                  <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>{item.label}</span>
+                  <span style={{ fontSize: '14px', fontWeight: 800, color: '#FDE08D' }}>
+                    {item.value} <span style={{ fontSize: '11px', fontWeight: 'normal', color: 'rgba(255,255,255,0.5)' }}>次</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </Drawer>
     </div>
   )

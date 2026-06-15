@@ -528,3 +528,25 @@ export const checkInBooking = async (bookingId: string, operatorId: string = 'ad
     return { success: false, error: error.message };
   }
 };
+
+/**
+ * 获取所有房间预订记录
+ */
+export const getAllRoomBookings = async (storeId?: string): Promise<RoomBooking[]> => {
+  try {
+    let q;
+    if (storeId) {
+      q = query(collection(db, ROOM_BOOKINGS_COLLECTION), where('storeId', '==', storeId));
+    } else {
+      q = query(collection(db, ROOM_BOOKINGS_COLLECTION));
+    }
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...convertFirestoreTimestamps(doc.data())
+    })) as RoomBooking[];
+  } catch (error) {
+    console.error('[Rooms Service] getAllRoomBookings error:', error);
+    return [];
+  }
+};

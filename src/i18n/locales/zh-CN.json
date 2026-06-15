@@ -709,6 +709,10 @@
   "dashboard": {
     "overview": "概况",
     "totalMembers": "总会员数",
+    "currentCheckedInMembers": "当下驻店人数",
+    "activeRoomBookings": "包厢预订数量",
+    "trendTitleCheckedIn": "驻店人数趋势",
+    "trendTitleBookings": "包厢预订趋势",
     "monthlyOrders": "本月订单",
     "monthlyRevenue": "本月收入",
     "quickActions": "快速操作",

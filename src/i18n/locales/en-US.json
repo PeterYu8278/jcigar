@@ -709,6 +709,10 @@
   "dashboard": {
     "overview": "Overview",
     "totalMembers": "Total Members",
+    "currentCheckedInMembers": "Checked-in Members",
+    "activeRoomBookings": "Active Bookings",
+    "trendTitleCheckedIn": "Checked-in Members Trend",
+    "trendTitleBookings": "Room Bookings Trend",
     "monthlyOrders": "Monthly Orders",
     "monthlyRevenue": "Monthly Revenue",
     "quickActions": "Quick Actions",
