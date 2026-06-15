@@ -96,33 +96,33 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
   }
 
   return (
-    <div style={{ 
-      background: 'transparent', 
+    <div style={{
+      background: 'transparent',
       minHeight: isMobile ? '100%' : 'auto',
       color: '#FFFFFF'
     }}>
       {/* Header */}
-      <div style={{ 
-        position: 'sticky', 
-        top: 0, 
-        zIndex: 10, 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between', 
+      <div style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 10,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
         padding: '16px',
         background: 'transparent',
         backdropFilter: 'blur(10px)'
       }}>
-        <Button 
-          type="text" 
+        <Button
+          type="text"
           icon={<ArrowLeftOutlined />}
           onClick={onClose}
           style={{ color: '#FFFFFF', fontSize: '20px' }}
         />
-        <h1 style={{ 
-          fontSize: '18px', 
-          fontWeight: 'bold', 
-          color: '#FFFFFF', 
+        <h1 style={{
+          fontSize: '18px',
+          fontWeight: 'bold',
+          color: '#FFFFFF',
           margin: 0,
           textAlign: 'center',
           flex: 1
@@ -134,7 +134,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
       {/* Content */}
       <div style={{ padding: '0 0 0' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginBottom: '30px' }}>
-          
+
           {/* 商品列表 */}
           <section style={theme.content.section}>
             <h2 style={theme.content.sectionTitle}>
@@ -144,10 +144,10 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
               {order.items.map((item) => {
                 const cigar = cigars.find(c => c.id === item.cigarId)
                 return (
-                  <li key={`${order.id}_${item.cigarId}`} style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '16px' 
+                  <li key={`${order.id}_${item.cigarId}`} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px'
                   }}>
                     <div style={{
                       width: '80px',
@@ -177,13 +177,13 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
                 )
               })}
             </ul>
-            <div style={{ 
-              marginTop: '16px', 
-              paddingTop: '16px', 
+            <div style={{
+              marginTop: '16px',
+              paddingTop: '16px',
               borderTop: '1px solid #393328',
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center' 
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
             }}>
               <p style={theme.text.secondary}>
                 {t('ordersAdmin.totalAmount')}:
@@ -233,9 +233,9 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
                     const matchedAmount = relatedOrders.find((ro: any) => ro.orderId === order.id)?.amount
 
                     return (
-                      <div key={txId} style={{ 
-                        padding: '8px 12px', 
-                        background: 'rgba(255,255,255,0.05)', 
+                      <div key={txId} style={{
+                        padding: '8px 12px',
+                        background: 'rgba(255,255,255,0.05)',
                         borderRadius: '6px',
                         border: '1px solid rgba(255,255,255,0.1)',
                         display: 'flex',
@@ -330,27 +330,27 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
         borderTop: '1px solid #393328',
         marginTop: 'auto'
       }}>
-        <div style={{ 
-          display: 'flex', 
-          gap: '4px', 
+        <div style={{
+          display: 'flex',
+          gap: '4px',
           maxWidth: '100%',
           overflow: 'hidden'
         }}>
           {!isEditingInView && (
             <>
-              <button 
+              <button
                 onClick={() => handleStatusUpdate('confirmed')}
                 style={{ ...theme.button.primary, flex: 2, height: '40px', transition: 'all 0.2s ease' }}
               >
                 {t('ordersAdmin.confirmOrder')}
               </button>
-              <button 
+              <button
                 onClick={() => handleStatusUpdate('shipped')}
                 style={{ ...theme.button.primary, flex: 2, height: '40px', transition: 'all 0.2s ease' }}
               >
                 {t('ordersAdmin.markShipped')}
               </button>
-              <button 
+              <button
                 onClick={() => handleStatusUpdate('delivered')}
                 style={{ ...theme.button.primary, flex: 2, height: '40px', transition: 'all 0.2s ease' }}
               >
@@ -359,14 +359,14 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
             </>
           )}
           {!isEditingInView && (
-            <button 
+            <button
               onClick={() => handleStatusUpdate('cancelled')}
               style={{ ...theme.button.primary, flex: 1, height: '40px', transition: 'all 0.2s ease', background: 'rgba(255, 77, 79, 0.6)', color: '#fff' }}
             >
               {t('ordersAdmin.cancelOrder')}
             </button>
           )}
-          <button 
+          <button
             onClick={onEditToggle}
             style={{ ...theme.button.primary, flex: 1, height: '40px', transition: 'all 0.2s ease' }}
           >

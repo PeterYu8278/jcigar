@@ -475,8 +475,8 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
                     width: 56,
                     height: 56,
                     borderRadius: '50%',
-                    backgroundImage: user?.profile?.avatar 
-                      ? `url(${user.profile.avatar.includes('cloudinary') ? getThumbnailUrl(extractPublicIdFromUrl(user.profile.avatar) || '', 120) : user.profile.avatar})` 
+                    backgroundImage: user?.profile?.avatar
+                      ? `url(${user.profile.avatar.includes('cloudinary') ? getThumbnailUrl(extractPublicIdFromUrl(user.profile.avatar) || '', 120) : user.profile.avatar})`
                       : 'url(https://lh3.googleusercontent.com/aida-public/AB6AXuDs5P-wl44y-z3P55qwZDWCSmApe-9yEsTNGmr02UNzEVBeCMwE7hIq_ikKnzQespBptCZg7RY1P5pvidROpLwXpyUdWETLOFTJYuGtSIN_2d53icCJctg5HZDPl5zRc3QfbeMOn0fl6RWLZplcDWF9frxhgWKf4-RKyNaQsWhBGRCkTAVvLMDnCcZUDGLg-c8YjnHcY8-gFFEmIaa-bHoz3lEcP-SgonuSLCTv4Fa7-_dYYF8uQ3H5a7nAxZocj7UyH0Jl9CAQQWET)',
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
@@ -520,10 +520,10 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
                         if (user?.status === 'suspended') {
                           return `${baseRole} (Suspended)`
                         }
-                        
+
                         // Special case: if status is not active and baseRole is member/guest, ensure consistency
                         if (user?.status !== 'active' && baseRole === t('auth.member') && user?.status !== 'inactive' && user?.status !== 'suspended') {
-                           return t('auth.guest')
+                          return t('auth.guest')
                         }
 
                         return baseRole;
@@ -602,8 +602,8 @@ export const MemberProfileCard: React.FC<MemberProfileCardProps> = ({
               width: '128px',
               height: '128px',
               borderRadius: '50%',
-              background: user?.profile?.avatar 
-                ? `url(${user.profile.avatar.includes('cloudinary') ? getThumbnailUrl(extractPublicIdFromUrl(user.profile.avatar) || '', 200) : user.profile.avatar})` 
+              background: user?.profile?.avatar
+                ? `url(${user.profile.avatar.includes('cloudinary') ? getThumbnailUrl(extractPublicIdFromUrl(user.profile.avatar) || '', 200) : user.profile.avatar})`
                 : 'linear-gradient(to right,#FDE08D,#C48D3A)',
               backgroundSize: 'cover',
               backgroundPosition: 'center',

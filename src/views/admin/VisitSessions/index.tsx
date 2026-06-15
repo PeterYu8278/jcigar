@@ -226,60 +226,83 @@ const VisitSessionsPage: React.FC = () => {
       title: t('visitSessions.checkInTime'),
       dataIndex: 'checkInAt',
       key: 'checkInAt',
-      width: 180,
-      render: (date: Date) => dayjs(date).format('YYYY-MM-DD HH:mm:ss')
+      width: 130,
+      render: (date: Date) => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <span style={{ fontWeight: 500 }}>{dayjs(date).format('YYYY-MM-DD')}</span>
+          <span style={{ fontSize: 11, color: 'rgba(255, 255, 255, 0.45)' }}>{dayjs(date).format('HH:mm:ss')}</span>
+        </div>
+      )
     },
     {
       title: t('visitSessions.user'),
       dataIndex: 'userName',
       key: 'userName',
-      width: 150,
-      render: (name: string, record: VisitSession) => name || record.userId
+      width: 120,
+      render: (name: string, record: VisitSession) => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <span style={{ fontWeight: 600, color: '#fff' }}>{name || '-'}</span>
+          {record.userId && (
+            <span style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.35)', fontFamily: 'monospace' }}>
+              ID: {record.userId.substring(0, 8)}...
+            </span>
+          )}
+        </div>
+      )
     },
     {
       title: t('visitSessions.store'),
       dataIndex: 'storeId',
       key: 'storeId',
-      width: 150,
+      width: 120,
       render: (storeId: string, record: VisitSession) => {
         if (!storeId) return '-';
         const store = stores.find(s => s.id === storeId);
-        return store?.name || record.storeName || storeId;
+        return <span style={{ color: 'rgba(255,255,255,0.85)' }}>{store?.name || record.storeName || storeId}</span>;
       }
     },
     {
       title: t('visitSessions.type'),
       dataIndex: 'checkInType',
       key: 'checkInType',
-      width: 120,
+      width: 100,
       render: (type: string, record: VisitSession) => {
         if (type === 'daypass' || record.dayPass?.isPurchased) {
-          return <Tag color="gold">Day Pass</Tag>;
+          return <Tag color="gold" style={{ margin: 0, fontSize: 11 }}>Day Pass</Tag>;
         }
-        return <Tag color="blue">{t('visitSessions.memberCheckIn')}</Tag>;
+        return <Tag color="blue" style={{ margin: 0, fontSize: 11 }}>{t('visitSessions.memberCheckIn')}</Tag>;
       }
     },
     {
       title: t('visitSessions.checkOutTime'),
       dataIndex: 'checkOutAt',
       key: 'checkOutAt',
-      width: 180,
-      render: (date: Date | undefined) => date ? dayjs(date).format('YYYY-MM-DD HH:mm:ss') : '-'
+      width: 130,
+      render: (date: Date | undefined) => date ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <span style={{ fontWeight: 500 }}>{dayjs(date).format('YYYY-MM-DD')}</span>
+          <span style={{ fontSize: 11, color: 'rgba(255, 255, 255, 0.45)' }}>{dayjs(date).format('HH:mm:ss')}</span>
+        </div>
+      ) : <span style={{ color: 'rgba(255, 255, 255, 0.35)' }}>-</span>
     },
     {
       title: t('visitSessions.duration'),
       key: 'duration',
-      width: 120,
+      width: 90,
       render: (_: any, record: VisitSession) => {
         if (record.durationHours !== undefined) {
-          return `${record.durationHours} ${t('visitSessions.hours')}`;
+          return <span style={{ fontWeight: 500 }}>{record.durationHours} {t('visitSessions.hours')}</span>;
         }
         if (record.status === 'pending') {
           const now = new Date();
           const diffMs = now.getTime() - record.checkInAt.getTime();
           const hours = Math.floor(diffMs / (1000 * 60 * 60));
           const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-          return `${hours}:${String(minutes).padStart(2, '0')}`;
+          return (
+            <span style={{ color: '#FDE08D', fontWeight: 600 }}>
+              {hours}:{String(minutes).padStart(2, '0')}
+            </span>
+          );
         }
         return '-';
       }
@@ -288,14 +311,16 @@ const VisitSessionsPage: React.FC = () => {
       title: t('visitSessions.pointsDeducted'),
       dataIndex: 'pointsDeducted',
       key: 'pointsDeducted',
-      width: 100,
-      render: (points: number | undefined) => points !== undefined ? `-${points}` : '-'
+      width: 80,
+      render: (points: number | undefined) => points !== undefined ? (
+        <span style={{ color: '#ff4d4f', fontWeight: 600 }}>-{points}</span>
+      ) : '-'
     },
     {
       title: t('visitSessions.status'),
       dataIndex: 'status',
       key: 'status',
-      width: 100,
+      width: 90,
       render: (status: string, record: VisitSession) => {
         const statusMap: Record<string, { color: string; text: string }> = {
           pending: { color: 'orange', text: t('visitSessions.statusPending') },
@@ -304,30 +329,29 @@ const VisitSessionsPage: React.FC = () => {
         };
         const statusInfo = statusMap[status] || { color: 'default', text: status };
 
-        // 检查是否超过24小时
         if (status === 'pending') {
           const now = new Date();
           const diffMs = now.getTime() - record.checkInAt.getTime();
           const hours = diffMs / (1000 * 60 * 60);
           if (hours >= 24) {
-            return <Tag color="red">{t('visitSessions.expiredPending')}</Tag>;
+            return <Tag color="red" style={{ margin: 0, fontSize: 11 }}>{t('visitSessions.expiredPending')}</Tag>;
           }
         }
 
-        return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
+        return <Tag color={statusInfo.color} style={{ margin: 0, fontSize: 11 }}>{statusInfo.text}</Tag>;
       }
     },
     {
       title: t('visitSessions.actions'),
       key: 'action',
-      width: 200,
+      width: 180,
       render: (_: any, record: VisitSession) => {
         if (record.status !== 'pending') {
           return null;
         }
 
         return (
-          <Space>
+          <Space size={4}>
             <Button
               size="small"
               icon={<CheckOutlined />}
@@ -339,7 +363,8 @@ const VisitSessionsPage: React.FC = () => {
                 background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
                 border: 'none',
                 color: '#111',
-                fontWeight: 700
+                fontWeight: 700,
+                fontSize: 12
               }}
             >
               {t('visitSessions.checkout')}
@@ -353,9 +378,10 @@ const VisitSessionsPage: React.FC = () => {
                 setForceCheckoutModalVisible(true);
               }}
               style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                color: '#FFFFFF'
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                color: '#FFFFFF',
+                fontSize: 12
               }}
             >
               {t('visitSessions.forceCheckout')}
@@ -378,126 +404,161 @@ const VisitSessionsPage: React.FC = () => {
             label: <span style={{ fontSize: 16, fontWeight: 700, paddingInline: 8 }}>{t('visitSessions.title')}</span>,
             children: (
               <div>
-
                 <Space direction="vertical" size="large" style={{ width: '100%' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
-                    <div style={{ flex: 1 }} />
-                    <Space wrap>
-                      <Button
-                        icon={<LoginOutlined />}
-                        onClick={() => {
-                          setQrScannerMode('checkin');
-                          setQrScannerVisible(true);
-                        }}
-                        style={{
-                          background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                          border: 'none',
-                          color: '#111',
-                          fontWeight: 700,
-                          boxShadow: '0 4px 15px rgba(244,175,37,0.35)'
-                        }}
-                      >
-                        Check-in
-                      </Button>
-                      <Button
-                        icon={<LogoutOutlined />}
-                        onClick={() => {
-                          setQrScannerMode('checkout');
-                          setQrScannerVisible(true);
-                        }}
-                        style={{
-                          background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                          border: 'none',
-                          color: '#111',
-                          fontWeight: 700,
-                          boxShadow: '0 4px 15px rgba(244,175,37,0.35)'
-                        }}
-                      >
-                        Check-out
-                      </Button>
+                  {isMobile ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
+                      {/* Row 1: Search Input */}
+                      <div style={{ display: 'flex', width: '100%' }}>
+                        <Search
+                          placeholder={t('visitSessions.searchPlaceholder')}
+                          allowClear
+                          enterButton={t('common.search')}
+                          style={{ width: '100%' }}
+                          onSearch={(value) => {
+                            setSearchUserId(value || '');
+                          }}
+                          className="points-config-form"
+                        />
+                      </div>
+                      {/* Row 2: Status Filter and check-in, check-out, refresh buttons */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <Space align="center" style={{ flexShrink: 0, gap: 4 }}>
+                          <Text style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 13 }}>{t('visitSessions.statusFilter')}</Text>
+                          <Select
+                            value={statusFilter}
+                            onChange={(value) => setStatusFilter(value)}
+                            style={{ width: 105 }}
+                            className="points-config-form"
+                            popupClassName="points-config-form"
+                            options={[
+                              { value: 'all', label: t('visitSessions.all') },
+                              { value: 'pending', label: t('visitSessions.pending') },
+                              { value: 'completed', label: t('visitSessions.completed') },
+                              { value: 'expired', label: t('visitSessions.statusExpired') },
+                            ]}
+                          />
+                        </Space>
+                        <Space wrap={false} style={{ flexShrink: 0, gap: 4 }}>
+                          <Button
+                            icon={<LoginOutlined />}
+                            onClick={() => {
+                              setQrScannerMode('checkin');
+                              setQrScannerVisible(true);
+                            }}
+                            style={{
+                              background: 'rgba(255, 255, 255, 0.05)',
+                              border: '1px solid #C48D3A',
+                              color: '#FDE08D',
+                            }}
+                          />
+                          <Button
+                            icon={<LogoutOutlined />}
+                            onClick={() => {
+                              setQrScannerMode('checkout');
+                              setQrScannerVisible(true);
+                            }}
+                            style={{
+                              background: 'rgba(255, 255, 255, 0.05)',
+                              border: '1px solid #C48D3A',
+                              color: '#FDE08D',
+                            }}
+                          />
+                          <Button
+                            icon={<ReloadOutlined />}
+                            onClick={async () => {
+                              await loadAllSessions()
+                            }}
+                            loading={loading}
+                            style={{
+                              background: 'rgba(255, 255, 255, 0.1)',
+                              border: '1px solid rgba(255, 255, 255, 0.2)',
+                              color: '#FFFFFF'
+                            }}
+                          />
+                        </Space>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', gap: 8, flex: 1, minWidth: 300, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <Search
+                          placeholder={t('visitSessions.searchPlaceholder')}
+                          allowClear
+                          enterButton={t('common.search')}
+                          style={{ flex: 1, minWidth: 200 }}
+                          onSearch={(value) => {
+                            setSearchUserId(value || '');
+                          }}
+                          className="points-config-form"
+                        />
+                        <Space align="center" style={{ flexShrink: 0 }}>
+                          <Text style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('visitSessions.statusFilter')}</Text>
+                          <Select
+                            value={statusFilter}
+                            onChange={(value) => setStatusFilter(value)}
+                            style={{ width: 140 }}
+                            className="points-config-form"
+                            popupClassName="points-config-form"
+                            options={[
+                              { value: 'all', label: t('visitSessions.all') },
+                              { value: 'pending', label: t('visitSessions.pending') },
+                              { value: 'completed', label: t('visitSessions.completed') },
+                              { value: 'expired', label: t('visitSessions.statusExpired') },
+                            ]}
+                          />
+                        </Space>
+                      </div>
+                      <Space wrap style={{ flexShrink: 0 }}>
+                        <Button
+                          icon={<LoginOutlined />}
+                          onClick={() => {
+                            setQrScannerMode('checkin');
+                            setQrScannerVisible(true);
+                          }}
+                          style={{
+                            background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                            border: 'none',
+                            color: '#111',
+                            fontWeight: 700,
+                            boxShadow: '0 4px 15px rgba(244,175,37,0.35)'
+                          }}
+                        >
+                          Check-in
+                        </Button>
+                        <Button
+                          icon={<LogoutOutlined />}
+                          onClick={() => {
+                            setQrScannerMode('checkout');
+                            setQrScannerVisible(true);
+                          }}
+                          style={{
+                            background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                            border: 'none',
+                            color: '#111',
+                            fontWeight: 700,
+                            boxShadow: '0 4px 15px rgba(244,175,37,0.35)'
+                          }}
+                        >
+                          Check-out
+                        </Button>
 
-                      <Button
-                        icon={<ReloadOutlined />}
-                        onClick={async () => {
-                          // 重新加载所有数据
-                          await loadAllSessions()
-                        }}
-                        loading={loading}
-                        style={{
-                          background: 'rgba(255, 255, 255, 0.1)',
-                          border: '1px solid rgba(255, 255, 255, 0.2)',
-                          color: '#FFFFFF'
-                        }}
-                      >
-                        {t('visitSessions.refresh')}
-                      </Button>
-                    </Space>
-                  </div>
-
-
-                  <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
-                    <Search
-                      placeholder={t('visitSessions.searchPlaceholder')}
-                      allowClear
-                      enterButton={t('common.search')}
-                      size="large"
-                      style={{ flex: 1, minWidth: 300 }}
-                      onSearch={(value) => {
-                        setSearchUserId(value || '');
-                        // useEffect会自动处理数据加载
-                      }}
-                      className="points-config-form"
-                    />
-                    <Space wrap>
-                      <Text style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{t('visitSessions.statusFilter')}</Text>
-                      <Button
-                        onClick={() => setStatusFilter('all')}
-                        style={statusFilter === 'all' ? {
-                          background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                          border: 'none',
-                          color: '#111',
-                          fontWeight: 700
-                        } : {
-                          background: 'rgba(255, 255, 255, 0.1)',
-                          border: '1px solid rgba(255, 255, 255, 0.2)',
-                          color: '#FFFFFF'
-                        }}
-                      >
-                        {t('visitSessions.all')}
-                      </Button>
-                      <Button
-                        onClick={() => setStatusFilter('pending')}
-                        style={statusFilter === 'pending' ? {
-                          background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                          border: 'none',
-                          color: '#111',
-                          fontWeight: 700
-                        } : {
-                          background: 'rgba(255, 255, 255, 0.1)',
-                          border: '1px solid rgba(255, 255, 255, 0.2)',
-                          color: '#FFFFFF'
-                        }}
-                      >
-                        {t('visitSessions.pending')}
-                      </Button>
-                      <Button
-                        onClick={() => setStatusFilter('completed')}
-                        style={statusFilter === 'completed' ? {
-                          background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                          border: 'none',
-                          color: '#111',
-                          fontWeight: 700
-                        } : {
-                          background: 'rgba(255, 255, 255, 0.1)',
-                          border: '1px solid rgba(255, 255, 255, 0.2)',
-                          color: '#FFFFFF'
-                        }}
-                      >
-                        {t('visitSessions.completed')}
-                      </Button>
-
-                    </Space>
-                  </div>
+                        <Button
+                          icon={<ReloadOutlined />}
+                          onClick={async () => {
+                            await loadAllSessions()
+                          }}
+                          loading={loading}
+                          style={{
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            color: '#FFFFFF'
+                          }}
+                        >
+                          {t('visitSessions.refresh')}
+                        </Button>
+                      </Space>
+                    </div>
+                  )}
 
                   {!isMobile ? (
                     <div className="points-config-form">
@@ -505,6 +566,7 @@ const VisitSessionsPage: React.FC = () => {
                         <OrderSkeleton isMobile={false} />
                       ) : (
                         <Table
+                          size="small"
                           columns={columns}
                           dataSource={sessions}
                           rowKey="id"
@@ -960,9 +1022,9 @@ const VisitSessionsPage: React.FC = () => {
             )
           },
           {
-            key: 'rooms',
-            label: <span style={{ fontSize: 16, fontWeight: 700, paddingInline: 8 }}>{t('roomManagement.roomConfigTitle')}</span>,
-            children: <RoomManagement />
+            key: 'bookings',
+            label: <span style={{ fontSize: 16, fontWeight: 700, paddingInline: 8 }}>{t('roomManagement.viewBookingsTitle')}</span>,
+            children: <RoomManagement hideRoomConfig={true} />
           }
         ]}
       />

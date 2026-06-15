@@ -1,7 +1,7 @@
 // 管理后台仪表板（自定义样式版本）
 import React, { useEffect, useState } from 'react'
-import { Typography, Button, message, Spin, Modal, Form, Select, Input, Alert } from 'antd'
-import { ReloadOutlined, PlusOutlined } from '@ant-design/icons'
+import { Typography, Button, message, Spin, Modal, Form, Select, Input, Alert, Drawer } from 'antd'
+import { ReloadOutlined, PlusOutlined, CloseOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import {
@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next'
 import { isFeatureVisible } from '../../../services/firebase/featureVisibility'
 import { useAuthStore } from '../../../store/modules/auth'
 import { getAppConfig } from '../../../services/firebase/appConfig'
+import OrderDetails from '../Orders/OrderDetails'
 
 const { Title } = Typography
 import { createBill } from '../../../services/billplz'
@@ -155,6 +156,19 @@ const AdminDashboard: React.FC = () => {
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
   const [showRenewModal, setShowRenewModal] = useState(false)
   const [renewLoading, setRenewLoading] = useState(false)
+  const [viewing, setViewing] = useState<Order | null>(null)
+  const [isEditingInView, setIsEditingInView] = useState(false)
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    return window.innerWidth < 768
+  })
+
+  useEffect(() => {
+    const update = () => setIsMobile(window.innerWidth < 768)
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
 
   // 检查功能可见性（developer 不受限制）
   useEffect(() => {
@@ -231,9 +245,16 @@ const AdminDashboard: React.FC = () => {
     .filter(t => t.amount > 0 && dayjs(t.createdAt).format('YYYY-MM') === currentMonth)
     .reduce((sum, t) => sum + t.amount, 0)
 
+  // 安全日期转换函数
+  const getOrderDate = (order: any) => {
+    if (!order?.createdAt) return new Date(0)
+    if (typeof order.createdAt.toDate === 'function') return order.createdAt.toDate()
+    return new Date(order.createdAt)
+  }
+
   // 最近订单（前5个），拆分完成/未完成
   const recentOrders = orders
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .sort((a, b) => getOrderDate(b).getTime() - getOrderDate(a).getTime())
     .slice(0, 5)
     .map(order => ({
       ...order,
@@ -241,8 +262,29 @@ const AdminDashboard: React.FC = () => {
     }))
   const completedOrders = recentOrders.filter(o => o.status === 'delivered')
   const pendingOrders = recentOrders.filter(o => o.status !== 'delivered')
-
   const [activeTab, setActiveTab] = useState<'completed' | 'pending'>('pending')
+
+  const getOrderPaymentStatus = (order: Order) => {
+    // 1) 积分支付或金额为 0 的订单自动视为已付
+    if (order.payment?.method === 'points' || Number(order.total || 0) === 0) {
+      return { label: t('dashboard.paid'), color: '#52c41a', bg: 'rgba(82,196,26,0.15)' };
+    }
+    const orderTotal = Number(order.total || 0);
+    const matchedAmount = transactions
+      .filter(t => (t as any)?.relatedOrders?.some((ro: any) => ro.orderId === order.id))
+      .reduce((sum, t) => {
+        const orderMatch = (t as any)?.relatedOrders?.find((ro: any) => ro.orderId === order.id);
+        return sum + (orderMatch ? Number(orderMatch.amount || 0) : 0);
+      }, 0);
+
+    if (matchedAmount >= orderTotal) {
+      return { label: t('dashboard.paid'), color: '#52c41a', bg: 'rgba(82,196,26,0.15)' };
+    } else if (matchedAmount > 0) {
+      return { label: `${t('dashboard.partialPaid')} (RM${matchedAmount.toFixed(2)})`, color: '#fa8c16', bg: 'rgba(250,140,22,0.15)' };
+    } else {
+      return { label: t('dashboard.unpaid'), color: '#ff4d4f', bg: 'rgba(255,77,79,0.15)' };
+    }
+  };
 
   // 低库存统计
   const lowStockCount = cigars.reduce((count, c) => {
@@ -291,9 +333,9 @@ const AdminDashboard: React.FC = () => {
             // 关联 Billplz ID 并设置支付方式为在线
             requestData.billplzId = billResponse.data.id;
             requestData.paymentMethod = 'online';
-            
+
             await addDoc(collection(db, GLOBAL_COLLECTIONS.SUBSCRIPTION_REQUESTS), requestData);
-            
+
             message.loading('Redirecting to payment page...', 2);
             setTimeout(() => {
               window.location.href = billResponse.data!.url;
@@ -320,6 +362,16 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div style={{ minHeight: '100vh', marginBottom: 100 }}>
+      <style>{`
+        .dashboard-order-card {
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .dashboard-order-card:hover {
+          background: rgba(255, 255, 255, 0.1) !important;
+          transform: translateY(-1px);
+        }
+      `}</style>
       {/* 顶部 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
 
@@ -384,11 +436,11 @@ const AdminDashboard: React.FC = () => {
             extraInfo?: string;
             showButton?: boolean;
           }> = [
-              { label: t('dashboard.totalMembers'), value: `${totalUsers}/${currentPlan.maxMembers || 50}` },
-              { label: '', value: statusValue, subText, isSubscription: true, isExpired: isExpired || !isActive, showButton },
-              { label: t('dashboard.monthlyOrders'), value: monthlyOrders.toLocaleString() },
-              isSuperAdmin ? { label: t('dashboard.monthlyRevenue'), value: `RM${monthlyRevenue.toLocaleString()}` } : null
-            ].filter(Boolean) as any[];
+            { label: t('dashboard.totalMembers'), value: `${totalUsers}/${currentPlan.maxMembers || 50}` },
+            { label: '', value: statusValue, subText, isSubscription: true, isExpired: isExpired || !isActive, showButton },
+            { label: t('dashboard.monthlyOrders'), value: monthlyOrders.toLocaleString() },
+            isSuperAdmin ? { label: t('dashboard.monthlyRevenue'), value: `RM${monthlyRevenue.toLocaleString()}` } : null
+          ].filter(Boolean) as any[];
 
           const isMobile = window.innerWidth < 768;
 
@@ -548,18 +600,18 @@ const AdminDashboard: React.FC = () => {
           {eventsAdminFeatureVisible && (
             <button onClick={() => navigate('/admin/events')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 12, padding: 8, background: appConfig?.colorTheme?.primaryButton ? `linear-gradient(to right, ${appConfig.colorTheme.primaryButton.startColor}, ${appConfig.colorTheme.primaryButton.endColor})` : 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, boxShadow: '0 4px 15px rgba(244,175,37,0.35)', cursor: 'pointer' }}>
               <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v6h6a1 1 0 110 2h-6v6a1 1 0 11-2 0v-6H3a1 1 0 110-2h6V3a1 1 0 011-1z" /></svg>
-              <span>{t('dashboard.createEvent')}</span>
+              <span>{t('dashboard.event')}</span>
             </button>
           )}
           {ordersFeatureVisible && (
             <button onClick={() => navigate('/admin/orders')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 12, padding: 8, background: appConfig?.colorTheme?.secondaryButton?.backgroundColor || 'rgba(255,255,255,0.05)', color: appConfig?.colorTheme?.secondaryButton?.textColor || '#EAEAEA', cursor: 'pointer' }}>
               <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path clipRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h14a1 1 0 001-1V4a1 1 0 00-1-1H3zm12 11H5V5h10v9z" fillRule="evenodd"></path><path d="M9 7a1 1 0 100 2h2a1 1 0 100-2H9z"></path></svg>
-              <span>{t('dashboard.viewOrders')}</span>
+              <span>{t('dashboard.orders')}</span>
             </button>
           )}
           <button onClick={() => navigate('/admin/users')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 12, padding: 8, background: appConfig?.colorTheme?.secondaryButton?.backgroundColor || 'rgba(255,255,255,0.05)', color: appConfig?.colorTheme?.secondaryButton?.textColor || '#EAEAEA', cursor: 'pointer' }}>
             <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path clipRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" fillRule="evenodd"></path></svg>
-            <span>{t('dashboard.createUser')}</span>
+            <span>{t('dashboard.user')}</span>
           </button>
           {inventoryFeatureVisible && (
             <button onClick={() => navigate('/admin/inventory')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 12, padding: 8, background: appConfig?.colorTheme?.secondaryButton?.backgroundColor || 'rgba(255,255,255,0.05)', color: appConfig?.colorTheme?.secondaryButton?.textColor || '#EAEAEA', cursor: 'pointer' }}>
@@ -621,19 +673,29 @@ const AdminDashboard: React.FC = () => {
           </div>
           <div style={{ marginTop: 12 }}>
             {(activeTab === 'completed' ? completedOrders : pendingOrders).map((order) => (
-              <div key={order.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, borderRadius: 12, background: 'rgba(255,255,255,0.05)', marginBottom: 8 }}>
+              <div key={order.id} className="dashboard-order-card" onClick={() => setViewing(order)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, borderRadius: 12, background: 'rgba(255,255,255,0.05)', marginBottom: 8 }}>
                 <div style={{ width: 48, height: 48, borderRadius: 9999, background: 'rgba(45,39,26,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <img alt="avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqh6yOfMjU5qQSoCZPZvRqAiz-okAgrdu0FpYXfw5uHOQsuU4n9sXB0tgWxKp0S0CeRoIfGobj8db5AYyR99MzIRYRhGQ6FTM8hDdbqiekQypZbWKI-hdGzfS2pxYZNJ6bYvPj6CXp9XlDHxFyPDtN3i6CETf5OL_Cwg7QBM79IF0fAn-CPEBxheKV9HTDuDr0eao0xcYzNAf_ho8FNb9cgnap5ZOygDZktOCV_aV3y2MBiYrxtLFdefqLos7npLS50yvMaM7cH9MK" style={{ width: 48, height: 48, borderRadius: 9999 }} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, color: '#EAEAEA' }}>{order.user}</div>
-                  <div style={{ fontSize: 12, color: '#A0A0A0' }}>{t('dashboard.orderNumber')} #{String(order.id).slice(0, 8)}</div>
+                  <div style={{ fontSize: 12, color: '#A0A0A0' }}>{t('dashboard.orderNumber')} #{String(order.id).slice(0, 20)}</div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
+                <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
                   <div style={{ fontWeight: 800, color: '#FDE08D' }}>RM{order.total.toFixed(2)}</div>
-                  <span style={{ fontSize: 12, padding: '2px 8px', borderRadius: 9999, background: order.status === 'delivered' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)', color: order.status === 'delivered' ? '#22c55e' : '#ef4444' }}>
-                    {order.status === 'delivered' ? t('dashboard.completed') : t('dashboard.pending')}
-                  </span>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <span style={{ fontSize: 11, padding: '2px 6px', borderRadius: 4, background: order.status === 'delivered' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)', color: order.status === 'delivered' ? '#22c55e' : '#ef4444' }}>
+                      {order.status === 'delivered' ? t('dashboard.completed') : t('dashboard.pending')}
+                    </span>
+                    {activeTab === 'pending' && (() => {
+                      const payStatus = getOrderPaymentStatus(order);
+                      return (
+                        <span style={{ fontSize: 11, padding: '2px 6px', borderRadius: 4, background: payStatus.bg, color: payStatus.color }}>
+                          {payStatus.label}
+                        </span>
+                      );
+                    })()}
+                  </div>
                 </div>
               </div>
             ))}
@@ -693,6 +755,45 @@ const AdminDashboard: React.FC = () => {
           </div>
         </div>
       )}
+      {/* 订单详情抽屉 */}
+      <Drawer
+        open={!!viewing}
+        onClose={() => { setViewing(null); setIsEditingInView(false) }}
+        width={isMobile ? '100%' : 820}
+        styles={{
+          body: { padding: 0, background: '#1a160d' },
+          header: { background: '#1a160d', borderBottom: '1px solid rgba(244,175,37,0.2)' }
+        }}
+        title={
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ color: '#f4af25', fontWeight: 800 }}>
+              {t('ordersAdmin.orderNo')}: {viewing?.id}
+            </span>
+          </div>
+        }
+        closable={false}
+        extra={
+          <Button
+            type="text"
+            icon={<CloseOutlined style={{ color: '#fff' }} />}
+            onClick={() => { setViewing(null); setIsEditingInView(false) }}
+          />
+        }
+      >
+        {viewing && (
+          <OrderDetails
+            order={viewing}
+            users={users}
+            cigars={cigars}
+            transactions={transactions}
+            isMobile={isMobile}
+            isEditingInView={isEditingInView}
+            onClose={() => { setViewing(null); setIsEditingInView(false) }}
+            onEditToggle={() => setIsEditingInView(v => !v)}
+            onOrderUpdate={loadDashboardData}
+          />
+        )}
+      </Drawer>
     </div>
   )
 }

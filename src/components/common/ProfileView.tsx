@@ -329,7 +329,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             marginBottom: '8px',
             color: 'rgba(255, 255, 255, 0.7)'
           }}>
-            <span>{getMembershipText(user.membership?.level || 'bronze')}</span>
             <div style={{ width: '1px', height: '16px', background: 'rgba(255, 255, 255, 0.2)' }} />
             <span>{t('profile.points')}: {(user.membership as any)?.points || 0}</span>
           </div>
@@ -974,11 +973,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                             })()}
                           </div>
                         </div>
-
-                        {/* Membership Level Tag */}
-                        <Tag color={getMembershipColor(referred.membership?.level || 'bronze')}>
-                          {getMembershipText(referred.membership?.level || 'bronze')}
-                        </Tag>
                       </div>
                     );
                   })}

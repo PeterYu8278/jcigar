@@ -22,7 +22,8 @@ import {
   PhoneOutlined,
   MailOutlined,
   CheckCircleOutlined,
-  CloseCircleOutlined
+  CloseCircleOutlined,
+  CalendarOutlined
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -33,6 +34,7 @@ import {
 } from '../../../services/firebase/stores';
 import { getAppConfig } from '../../../services/firebase/appConfig';
 import type { Store, AppConfig } from '../../../types';
+import { RoomManagement } from '../../../components/admin/RoomManagement';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -44,6 +46,8 @@ const StoreManagement: React.FC = () => {
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingStore, setEditingStore] = useState<Store | null>(null);
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
+  const [isRoomModalVisible, setIsRoomModalVisible] = useState(false);
   const [form] = Form.useForm();
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
 
@@ -406,6 +410,28 @@ const StoreManagement: React.FC = () => {
                 </div>
               </div>
 
+              {/* Card Footer - Room Config Button */}
+              <div style={{
+                padding: '12px 20px',
+                borderTop: '1px solid rgba(255,255,255,0.05)',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                background: 'rgba(255,255,255,0.01)'
+              }}>
+                <Button
+                  type="link"
+                  size="small"
+                  icon={<CalendarOutlined />}
+                  onClick={() => {
+                    setSelectedStoreId(store.id);
+                    setIsRoomModalVisible(true);
+                  }}
+                  style={{ color: '#FDE08D', padding: 0, height: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}
+                >
+                  {t('roomManagement.roomConfigTitle', 'Room Management')}
+                </Button>
+              </div>
+
               {/* Subtle gold border glow on the left */}
               <div style={{
                 position: 'absolute',
@@ -503,6 +529,41 @@ const StoreManagement: React.FC = () => {
             <Input placeholder="Store email" />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Room Management Modal */}
+      <Modal
+        title={
+          <span style={{ color: '#FDE08D', fontSize: 18, fontWeight: 700 }}>
+            {t('roomManagement.roomConfigTitle', 'Room Management')} - {stores.find(s => s.id === selectedStoreId)?.name}
+          </span>
+        }
+        open={isRoomModalVisible}
+        onCancel={() => {
+          setIsRoomModalVisible(false);
+          setSelectedStoreId(null);
+        }}
+        footer={null}
+        width={1000}
+        className="dark-modal"
+        styles={{
+          content: {
+            background: 'linear-gradient(180deg, #221c10 0%, #181611 100%)',
+            border: '1px solid rgba(244, 175, 37, 0.6)'
+          },
+          header: {
+            background: 'transparent',
+            borderBottom: '1px solid rgba(244, 175, 37, 0.6)'
+          },
+          body: {
+            background: 'transparent',
+            paddingTop: 16
+          }
+        }}
+      >
+        {selectedStoreId && (
+          <RoomManagement filterStoreId={selectedStoreId} hideViewBookings={true} />
+        )}
       </Modal>
 
       <style dangerouslySetInnerHTML={{ __html: `

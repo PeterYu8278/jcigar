@@ -9,7 +9,17 @@ import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 
-export const RoomManagement: React.FC = () => {
+export interface RoomManagementProps {
+  filterStoreId?: string;
+  hideRoomConfig?: boolean;
+  hideViewBookings?: boolean;
+}
+
+export const RoomManagement: React.FC<RoomManagementProps> = ({
+  filterStoreId,
+  hideRoomConfig = false,
+  hideViewBookings = false
+}) => {
   const { t } = useTranslation();
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -31,7 +41,7 @@ export const RoomManagement: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [filterStoreId]);
 
   const loadData = async () => {
     setLoading(true);
@@ -40,7 +50,10 @@ export const RoomManagement: React.FC = () => {
         getAllRooms(),
         getAllStores()
       ]);
-      setRooms(roomsData);
+      const filteredRooms = filterStoreId 
+        ? roomsData.filter(r => r.storeId === filterStoreId) 
+        : roomsData;
+      setRooms(filteredRooms);
       setStores(storesData);
     } catch (error) {
       console.error('Failed to load rooms/stores:', error);
@@ -56,14 +69,17 @@ export const RoomManagement: React.FC = () => {
 
   useEffect(() => {
     loadDailyBookings();
-  }, [viewDate]);
+  }, [viewDate, filterStoreId]);
 
   const loadDailyBookings = async () => {
     setLoadingBookings(true);
     try {
       const formattedDate = viewDate.format('YYYY-MM-DD');
       const bookingsData = await getBookingsByDate(formattedDate);
-      setDailyBookings(bookingsData);
+      const filteredBookings = filterStoreId 
+        ? bookingsData.filter(b => b.storeId === filterStoreId) 
+        : bookingsData;
+      setDailyBookings(filteredBookings);
     } catch (error) {
       console.error('Failed to load daily bookings:', error);
       message.error(t('roomManagement.loadBookingsFailed'));
@@ -110,6 +126,7 @@ export const RoomManagement: React.FC = () => {
     setEditingRoom(null);
     form.resetFields();
     form.setFieldsValue({
+      storeId: filterStoreId || undefined,
       status: 'active',
       bookingStart: '10:00',
       bookingEnd: '22:00',
@@ -391,302 +408,312 @@ export const RoomManagement: React.FC = () => {
   ];
 
 
-  return (
-    <div style={{ marginTop: 16 }}>
-      <Tabs
-        defaultActiveKey="1"
-        items={[
-          {
-            key: '1',
-            label: (
-              <span style={{ color: '#fff' }}>
-                {t('roomManagement.roomConfigTitle')}
-              </span>
-            ),
-            children: (
-              <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+  const renderRoomConfig = () => (
+    <>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={handleAddRoom}
+          style={{
+            background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+            border: 'none',
+            color: '#111',
+            fontWeight: 700,
+            boxShadow: '0 4px 15px rgba(244,175,37,0.35)'
+          }}
+        >
+          {t('roomManagement.addRoom')}
+        </Button>
+      </div>
+
+      {isMobile ? (
+        <Spin spinning={loading}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {rooms.map(room => (
+              <div key={room.id} style={{
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: 12,
+                padding: 16,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontWeight: 700, fontSize: 16, color: '#FFD700' }}>{room.name}</span>
+                  <Tag color={room.status === 'active' ? 'green' : 'red'} style={{ marginRight: 0 }}>
+                    {room.status === 'active' ? t('roomManagement.active') : t('roomManagement.inactive')}
+                  </Tag>
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomManagement.store')}</span>
+                    <span style={{ color: '#fff' }}>{getStoreName(room.storeId)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomManagement.fee')}</span>
+                    <span style={{ color: '#fff' }}>RM {room.fee}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomManagement.bookingRange')}</span>
+                    <Tag color="gold" style={{ background: 'rgba(244,175,37,0.1)', border: '1px solid rgba(244,175,37,0.3)', color: '#FFD700', marginRight: 0 }}>
+                      {room.bookingStart || '10:00'} - {room.bookingEnd || '22:00'}
+                    </Tag>
+                  </div>
+                </div>
+                
+                <div style={{ display: 'flex', gap: 10, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12, marginTop: 4 }}>
                   <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={handleAddRoom}
+                    size="middle"
+                    icon={<EditOutlined />}
+                    onClick={() => handleEditRoom(room)}
                     style={{
-                      background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                      border: 'none',
-                      color: '#111',
-                      fontWeight: 700,
-                      boxShadow: '0 4px 15px rgba(244,175,37,0.35)'
+                      flex: 1,
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      color: '#FFFFFF',
+                      borderRadius: 8
                     }}
                   >
-                    {t('roomManagement.addRoom')}
+                    {t('common.edit')}
                   </Button>
-                </div>
-
-                {isMobile ? (
-                  <Spin spinning={loading}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      {rooms.map(room => (
-                        <div key={room.id} style={{
-                          background: 'rgba(255, 255, 255, 0.03)',
-                          border: '1px solid rgba(255, 255, 255, 0.08)',
-                          borderRadius: 12,
-                          padding: 16,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 10
-                        }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontWeight: 700, fontSize: 16, color: '#FFD700' }}>{room.name}</span>
-                            <Tag color={room.status === 'active' ? 'green' : 'red'} style={{ marginRight: 0 }}>
-                              {room.status === 'active' ? t('roomManagement.active') : t('roomManagement.inactive')}
-                            </Tag>
-                          </div>
-                          
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomManagement.store')}</span>
-                              <span style={{ color: '#fff' }}>{getStoreName(room.storeId)}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomManagement.fee')}</span>
-                              <span style={{ color: '#fff' }}>RM {room.fee}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomManagement.bookingRange')}</span>
-                              <Tag color="gold" style={{ background: 'rgba(244,175,37,0.1)', border: '1px solid rgba(244,175,37,0.3)', color: '#FFD700', marginRight: 0 }}>
-                                {room.bookingStart || '10:00'} - {room.bookingEnd || '22:00'}
-                              </Tag>
-                            </div>
-                          </div>
-                          
-                          <div style={{ display: 'flex', gap: 10, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12, marginTop: 4 }}>
-                            <Button
-                              size="middle"
-                              icon={<EditOutlined />}
-                              onClick={() => handleEditRoom(room)}
-                              style={{
-                                flex: 1,
-                                background: 'rgba(255, 255, 255, 0.1)',
-                                border: '1px solid rgba(255, 255, 255, 0.2)',
-                                color: '#FFFFFF',
-                                borderRadius: 8
-                              }}
-                            >
-                              {t('common.edit')}
-                            </Button>
-                            <Popconfirm
-                              title={t('roomManagement.deleteRoomConfirm')}
-                              onConfirm={() => room.id && handleDeleteRoom(room.id)}
-                              okText={t('common.confirm')}
-                              cancelText={t('common.cancel')}
-                              okButtonProps={{ danger: true }}
-                            >
-                              <Button
-                                size="middle"
-                                danger
-                                icon={<DeleteOutlined />}
-                                style={{
-                                  flex: 1,
-                                  background: 'rgba(255, 77, 79, 0.1)',
-                                  border: '1px solid rgba(255, 77, 79, 0.2)',
-                                  color: '#ff4d4f',
-                                  borderRadius: 8
-                                }}
-                              >
-                                {t('common.delete')}
-                              </Button>
-                            </Popconfirm>
-                          </div>
-                        </div>
-                      ))}
-                      {rooms.length === 0 && (
-                        <div style={{ textAlign: 'center', padding: '24px 0', color: 'rgba(255,255,255,0.45)' }}>
-                          {t('common.noData')}
-                        </div>
-                      )}
-                    </div>
-                  </Spin>
-                ) : (
-                  <Table
-                    dataSource={rooms}
-                    columns={columns}
-                    rowKey="id"
-                    loading={loading}
-                    pagination={{ pageSize: 10 }}
-                    style={{ background: 'transparent' }}
-                    className="points-config-form"
-                  />
-                )}
-              </>
-            )
-          },
-          {
-            key: '2',
-            label: (
-              <span style={{ color: '#fff' }}>
-                {t('roomManagement.viewBookingsTitle')}
-              </span>
-            ),
-            children: (
-              <>
-                <div style={{ 
-                  marginBottom: 16, 
-                  display: 'flex', 
-                  flexDirection: isMobile ? 'column' : 'row', 
-                  alignItems: isMobile ? 'stretch' : 'center', 
-                  gap: 12 
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ color: '#fff', fontSize: 14, whiteSpace: 'nowrap' }}>{t('roomManagement.selectDate')}</span>
-                    <DatePicker
-                      value={viewDate}
-                      onChange={(date) => date && setViewDate(date)}
-                      allowClear={false}
+                  <Popconfirm
+                    title={t('roomManagement.deleteRoomConfirm')}
+                    onConfirm={() => room.id && handleDeleteRoom(room.id)}
+                    okText={t('common.confirm')}
+                    cancelText={t('common.cancel')}
+                    okButtonProps={{ danger: true }}
+                  >
+                    <Button
+                      size="middle"
+                      danger
+                      icon={<DeleteOutlined />}
                       style={{
                         flex: 1,
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        border: '1px solid rgba(255, 255, 255, 0.15)',
-                        color: '#fff'
+                        background: 'rgba(255, 77, 79, 0.1)',
+                        border: '1px solid rgba(255, 77, 79, 0.2)',
+                        color: '#ff4d4f',
+                        borderRadius: 8
                       }}
-                    />
-                  </div>
-                  <Button
-                    onClick={loadDailyBookings}
-                    loading={loadingBookings}
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      color: '#fff',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      width: isMobile ? '100%' : 'auto'
-                    }}
-                  >
-                    {t('roomManagement.refreshRecords')}
-                  </Button>
+                    >
+                      {t('common.delete')}
+                    </Button>
+                  </Popconfirm>
+                </div>
+              </div>
+            ))}
+            {rooms.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '24px 0', color: 'rgba(255,255,255,0.45)' }}>
+                {t('common.noData')}
+              </div>
+            )}
+          </div>
+        </Spin>
+      ) : (
+        <Table
+          dataSource={rooms}
+          columns={columns}
+          rowKey="id"
+          loading={loading}
+          pagination={{ pageSize: 10 }}
+          style={{ background: 'transparent' }}
+          className="points-config-form"
+        />
+      )}
+    </>
+  );
+
+  const renderViewBookings = () => (
+    <>
+      <div style={{ 
+        marginBottom: 16, 
+        display: 'flex', 
+        flexDirection: isMobile ? 'column' : 'row', 
+        alignItems: isMobile ? 'stretch' : 'center', 
+        gap: 12 
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ color: '#fff', fontSize: 14, whiteSpace: 'nowrap' }}>{t('roomManagement.selectDate')}</span>
+          <DatePicker
+            value={viewDate}
+            onChange={(date) => date && setViewDate(date)}
+            allowClear={false}
+            style={{
+              flex: 1,
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              color: '#fff'
+            }}
+          />
+        </div>
+        <Button
+          onClick={loadDailyBookings}
+          loading={loadingBookings}
+          style={{
+            background: 'rgba(255, 255, 255, 0.1)',
+            color: '#fff',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            width: isMobile ? '100%' : 'auto'
+          }}
+        >
+          {t('roomManagement.refreshRecords')}
+        </Button>
+      </div>
+
+      {isMobile ? (
+        <Spin spinning={loadingBookings}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {dailyBookings.map(record => (
+              <div key={record.id} style={{
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: 12,
+                padding: 16,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontWeight: 700, fontSize: 15, color: '#FFD700' }}>{record.roomName}</span>
+                  {record.status === 'checked_in' ? (
+                    <Tag color="gold" style={{ marginRight: 0 }}>{t('roomManagement.statusCheckedIn')}</Tag>
+                  ) : (
+                    <Tag color={record.status === 'confirmed' ? 'green' : 'red'} style={{ marginRight: 0 }}>
+                      {record.status === 'confirmed' ? t('roomManagement.statusConfirmed') : t('roomManagement.statusCancelled')}
+                    </Tag>
+                  )}
                 </div>
 
-                {isMobile ? (
-                  <Spin spinning={loadingBookings}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      {dailyBookings.map(record => (
-                        <div key={record.id} style={{
-                          background: 'rgba(255, 255, 255, 0.03)',
-                          border: '1px solid rgba(255, 255, 255, 0.08)',
-                          borderRadius: 12,
-                          padding: 16,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 10
-                        }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontWeight: 700, fontSize: 15, color: '#FFD700' }}>{record.roomName}</span>
-                            {record.status === 'checked_in' ? (
-                              <Tag color="gold" style={{ marginRight: 0 }}>{t('roomManagement.statusCheckedIn')}</Tag>
-                            ) : (
-                              <Tag color={record.status === 'confirmed' ? 'green' : 'red'} style={{ marginRight: 0 }}>
-                                {record.status === 'confirmed' ? t('roomManagement.statusConfirmed') : t('roomManagement.statusCancelled')}
-                              </Tag>
-                            )}
-                          </div>
-
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomManagement.store')}</span>
-                              <span style={{ color: '#fff' }}>{getStoreName(record.storeId)}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomManagement.bookingDate')}</span>
-                              <span style={{ color: '#fff' }}>{record.date}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                              <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomManagement.bookedBy')}</span>
-                              <div style={{ textAlign: 'right' }}>
-                                <span style={{ color: '#fff', display: 'block' }}>{record.userName}</span>
-                                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>ID: {record.userId}</span>
-                              </div>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomManagement.bookingSlot')}</span>
-                              <Tag color="blue" style={{ marginRight: 0 }}>{record.timeslot}</Tag>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomManagement.pointsUsed')}</span>
-                              <span style={{ color: '#fff' }}>{record.fee} {t('roomManagement.points')}</span>
-                            </div>
-                          </div>
-
-                          {record.status === 'confirmed' && (
-                            <div style={{ display: 'flex', gap: 10, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12, marginTop: 4 }}>
-                              <Popconfirm
-                                title={t('roomManagement.checkInConfirm')}
-                                onConfirm={() => record.id && handleAdminCheckInBooking(record.id)}
-                                okText={t('common.confirm')}
-                                cancelText={t('common.cancel')}
-                                style={{ flex: 1 }}
-                              >
-                                <Button
-                                  size="middle"
-                                  type="primary"
-                                  style={{
-                                    width: '100%',
-                                    background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                                    border: 'none',
-                                    color: '#111',
-                                    fontWeight: 600,
-                                    borderRadius: 8
-                                  }}
-                                >
-                                  {t('roomManagement.checkIn')}
-                                </Button>
-                              </Popconfirm>
-                              <Popconfirm
-                                title={t('roomManagement.cancelBookingConfirm')}
-                                onConfirm={() => record.id && handleAdminCancelBooking(record.id)}
-                                okText={t('common.confirm')}
-                                cancelText={t('common.cancel')}
-                                okButtonProps={{ danger: true }}
-                                style={{ flex: 1 }}
-                              >
-                                <Button
-                                  size="middle"
-                                  danger
-                                  style={{
-                                    width: '100%',
-                                    background: 'rgba(255, 77, 79, 0.1)',
-                                    border: '1px solid rgba(255, 77, 79, 0.2)',
-                                    color: '#ff4d4f',
-                                    borderRadius: 8
-                                  }}
-                                >
-                                  {t('roomManagement.cancelBooking')}
-                                </Button>
-                              </Popconfirm>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                      {dailyBookings.length === 0 && (
-                        <div style={{ textAlign: 'center', padding: '24px 0', color: 'rgba(255,255,255,0.45)' }}>
-                          {t('common.noData')}
-                        </div>
-                      )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomManagement.store')}</span>
+                    <span style={{ color: '#fff' }}>{getStoreName(record.storeId)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomManagement.bookingDate')}</span>
+                    <span style={{ color: '#fff' }}>{record.date}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomManagement.bookedBy')}</span>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ color: '#fff', display: 'block' }}>{record.userName}</span>
+                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>ID: {record.userId}</span>
                     </div>
-                  </Spin>
-                ) : (
-                  <Table
-                    dataSource={dailyBookings}
-                    columns={bookingColumns}
-                    rowKey="id"
-                    loading={loadingBookings}
-                    pagination={{ pageSize: 10 }}
-                    style={{ background: 'transparent' }}
-                    className="points-config-form"
-                  />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomManagement.bookingSlot')}</span>
+                    <Tag color="blue" style={{ marginRight: 0 }}>{record.timeslot}</Tag>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomManagement.pointsUsed')}</span>
+                    <span style={{ color: '#fff' }}>{record.fee} {t('roomManagement.points')}</span>
+                  </div>
+                </div>
+
+                {record.status === 'confirmed' && (
+                  <div style={{ display: 'flex', gap: 10, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12, marginTop: 4 }}>
+                    <Popconfirm
+                      title={t('roomManagement.checkInConfirm')}
+                      onConfirm={() => record.id && handleAdminCheckInBooking(record.id)}
+                      okText={t('common.confirm')}
+                      cancelText={t('common.cancel')}
+                      style={{ flex: 1 }}
+                    >
+                      <Button
+                        size="middle"
+                        type="primary"
+                        style={{
+                          width: '100%',
+                          background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                          border: 'none',
+                          color: '#111',
+                          fontWeight: 600,
+                          borderRadius: 8
+                        }}
+                      >
+                        {t('roomManagement.checkIn')}
+                      </Button>
+                    </Popconfirm>
+                    <Popconfirm
+                      title={t('roomManagement.cancelBookingConfirm')}
+                      onConfirm={() => record.id && handleAdminCancelBooking(record.id)}
+                      okText={t('common.confirm')}
+                      cancelText={t('common.cancel')}
+                      okButtonProps={{ danger: true }}
+                      style={{ flex: 1 }}
+                    >
+                      <Button
+                        size="middle"
+                        danger
+                        style={{
+                          width: '100%',
+                          background: 'rgba(255, 77, 79, 0.1)',
+                          border: '1px solid rgba(255, 77, 79, 0.2)',
+                          color: '#ff4d4f',
+                          borderRadius: 8
+                        }}
+                      >
+                        {t('roomManagement.cancelBooking')}
+                      </Button>
+                    </Popconfirm>
+                  </div>
                 )}
-              </>
-            )
-          }
-        ]}
-      />
+              </div>
+            ))}
+            {dailyBookings.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '24px 0', color: 'rgba(255,255,255,0.45)' }}>
+                {t('common.noData')}
+              </div>
+            )}
+          </div>
+        </Spin>
+      ) : (
+        <Table
+          dataSource={dailyBookings}
+          columns={bookingColumns}
+          rowKey="id"
+          loading={loadingBookings}
+          pagination={{ pageSize: 10 }}
+          style={{ background: 'transparent' }}
+          className="points-config-form"
+        />
+      )}
+    </>
+  );
+
+  return (
+    <div style={{ marginTop: hideRoomConfig || hideViewBookings ? 0 : 16 }}>
+      {hideRoomConfig ? (
+        renderViewBookings()
+      ) : hideViewBookings ? (
+        renderRoomConfig()
+      ) : (
+        <Tabs
+          defaultActiveKey="1"
+          items={[
+            {
+              key: '1',
+              label: (
+                <span style={{ color: '#fff' }}>
+                  {t('roomManagement.roomConfigTitle')}
+                </span>
+              ),
+              children: renderRoomConfig()
+            },
+            {
+              key: '2',
+              label: (
+                <span style={{ color: '#fff' }}>
+                  {t('roomManagement.viewBookingsTitle')}
+                </span>
+              ),
+              children: renderViewBookings()
+            }
+          ]}
+        />
+      )}
 
       <Modal
         title={<span style={{ color: '#FFFFFF' }}>{editingRoom ? t('roomManagement.editRoom') : t('roomManagement.addRoom')}</span>}
@@ -735,7 +762,7 @@ export const RoomManagement: React.FC = () => {
             label={<span style={{ color: 'rgba(255,255,255,0.85)' }}>{t('roomManagement.store')}</span>}
             rules={[{ required: true, message: t('roomManagement.storeRequired') }]}
           >
-            <Select placeholder={t('roomManagement.selectStore')}>
+            <Select placeholder={t('roomManagement.selectStore')} disabled={!!filterStoreId}>
               {stores.map(store => (
                 <Select.Option key={store.id} value={store.id}>
                   {store.name}

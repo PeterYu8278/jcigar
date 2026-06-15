@@ -972,6 +972,7 @@ button+button {
   color: #FFFFFF !important;
 }
 
+.points-config-form.ant-select-dropdown,
 .points-config-form .ant-select-dropdown {
   background: linear-gradient(180deg, #221c10 0%, #181611 100%) !important;
   border: 1px solid rgba(244, 175, 37, 0.6) !important;
@@ -988,6 +989,45 @@ button+button {
 
 .points-config-form .ant-select-item:hover:not(.ant-select-item-option-disabled) {
   background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Custom styles for inputs and search under points-config-form */
+.points-config-form .ant-input,
+.points-config-form .ant-input-affix-wrapper,
+.points-config-form .ant-input-number,
+.points-config-form .ant-input-number-affix-wrapper {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(244, 175, 37, 0.6) !important;
+  color: #FFFFFF !important;
+}
+
+.points-config-form .ant-input::placeholder,
+.points-config-form .ant-input-affix-wrapper input::placeholder {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.points-config-form .ant-input:focus,
+.points-config-form .ant-input-focused,
+.points-config-form .ant-input-affix-wrapper-focused,
+.points-config-form .ant-input-number-focused {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(244, 175, 37, 0.6) !important;
+  box-shadow: 0 0 0 2px rgba(244, 175, 37, 0.1) !important;
+}
+
+.points-config-form .ant-input-search-button {
+  background: linear-gradient(to right, #FDE08D, #C48D3A) !important;
+  border: none !important;
+  color: #111 !important;
+  font-weight: 700 !important;
+}
+
+.points-config-form .ant-input-search-button:hover,
+.points-config-form .ant-input-search-button:focus {
+  filter: brightness(1.05) !important;
+  background: linear-gradient(to right, #FDE08D, #C48D3A) !important;
+  color: #111 !important;
+  box-shadow: 0 4px 12px rgba(196, 141, 58, 0.45) !important;
 }
 
 /* Gemini 模型下拉菜单样式 */
