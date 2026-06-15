@@ -224,7 +224,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
                 <p style={theme.text.body}>{getPaymentText(order.payment.method, t)}</p>
               </div>
               <div style={{ ...theme.content.row, alignItems: 'flex-start', gap: '16px' }}>
-                <p style={{ ...theme.text.secondary, whiteSpace: 'nowrap', marginBottom: 0, width: '100px' }}>{t('ordersAdmin.transactionIds', '交易流水记录')}</p>
+                <p style={{ ...theme.text.secondary, whiteSpace: 'nowrap', marginBottom: 0, flexShrink: 0 }}>{t('ordersAdmin.transactionIds', '交易流水记录')}</p>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
                   {(order.payment?.transactionIds || (order.payment?.transactionId ? [order.payment.transactionId] : [])).map(txId => {
                     // 如果传入了 transactions 列表，则尝试查找匹配的详细信息
@@ -241,7 +241,9 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        width: '100%'
+                        gap: '12px',
+                        width: '100%',
+                        maxWidth: '220px'
                       }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                           <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#f4af25' }}>{txId}</span>
