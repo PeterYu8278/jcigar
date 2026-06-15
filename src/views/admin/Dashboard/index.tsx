@@ -252,16 +252,24 @@ const AdminDashboard: React.FC = () => {
     return new Date(order.createdAt)
   }
 
-  // 最近订单（前5个），拆分完成/未完成
-  const recentOrders = orders
+  // 分别计算最新5个完成的订单和最新5个未完成的订单
+  const completedOrders = orders
+    .filter(o => o.status === 'delivered')
     .sort((a, b) => getOrderDate(b).getTime() - getOrderDate(a).getTime())
     .slice(0, 5)
     .map(order => ({
       ...order,
       user: users.find(u => u.id === order.userId)?.displayName || t('dashboard.unknownUser')
     }))
-  const completedOrders = recentOrders.filter(o => o.status === 'delivered')
-  const pendingOrders = recentOrders.filter(o => o.status !== 'delivered')
+
+  const pendingOrders = orders
+    .filter(o => o.status !== 'delivered')
+    .sort((a, b) => getOrderDate(b).getTime() - getOrderDate(a).getTime())
+    .slice(0, 5)
+    .map(order => ({
+      ...order,
+      user: users.find(u => u.id === order.userId)?.displayName || t('dashboard.unknownUser')
+    }))
   const [activeTab, setActiveTab] = useState<'completed' | 'pending'>('pending')
 
   const getOrderPaymentStatus = (order: Order) => {
