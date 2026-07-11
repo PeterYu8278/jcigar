@@ -161,16 +161,16 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
     >
       <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(244, 175, 37, 0.1)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 16, fontWeight: 600 }}>通知中心</span>
+          <span style={{ fontSize: 16, fontWeight: 600 }}>{t("common.notificationCenter")}</span>
           <div style={{ display: 'flex', gap: 8 }}>
             {unreadCount > 0 && onMarkAllAsRead && (
               <Button size="small" type="link" onClick={onMarkAllAsRead}>
-                全部已读
+                {t("common.markAllRead")}
               </Button>
             )}
             {notifications.length > 0 && onClearAll && (
               <Button size="small" type="link" danger onClick={onClearAll}>
-                清空
+                {t("common.clearAll")}
               </Button>
             )}
           </div>
@@ -181,8 +181,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
         activeKey={activeTab}
         onChange={setActiveTab}
         items={[
-          { key: 'all', label: `全部 (${notifications.length})` },
-          { key: 'unread', label: `未读 (${unreadCount})` }
+          { key: 'all', label: t("common.allWithCount", { count: notifications.length }) },
+          { key: 'unread', label: t("common.unreadWithCount", { count: unreadCount }) }
         ]}
         style={{ margin: 0 }}
       />

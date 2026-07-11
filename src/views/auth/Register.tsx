@@ -80,7 +80,7 @@ const Register: React.FC = () => {
     const refCode = params.get('ref');
     if (refCode) {
       form.setFieldsValue({ referralCode: refCode.toUpperCase() });
-      message.info('已自动填写引荐码');
+      message.info(t('auth.referralCodeAutoFilled'));
     }
   }, [location, form]);
 
@@ -172,7 +172,7 @@ const Register: React.FC = () => {
             indicator={<LoadingOutlined style={{ fontSize: 24, color: '#ffd700' }} spin />}
             spinning={isRefreshing}
           />
-          <span>{isRefreshing ? '正在刷新...' : pullDistance > 80 ? '释放刷新' : '下拉刷新'}</span>
+          <span>{isRefreshing ? t('common.refreshing') : pullDistance > 80 ? t('common.releaseToRefresh') : t('common.pullToRefresh')}</span>
         </div>
       )}
       
@@ -236,7 +236,7 @@ const Register: React.FC = () => {
                 { required: true, message: t('auth.phoneRequired') },
                 { 
                   pattern: /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/, 
-                  message: '手机号格式无效（需10-12位数字）' 
+                  message: t('profile.phoneInvalidLength')
                 },
                 {
                   validator: async (_, value) => {
@@ -270,7 +270,7 @@ const Register: React.FC = () => {
                       const phoneSnap = await getDocs(phoneQuery)
                       
                       if (!phoneSnap.empty) {
-                        return Promise.reject(new Error('该手机号已被其他用户使用'))
+                        return Promise.reject(new Error(t('profile.phoneUsed')))
                       }
                     } catch (error) {
                       // 如果查询失败，允许通过（不阻止用户提交）
@@ -326,7 +326,7 @@ const Register: React.FC = () => {
                       const emailSnap = await getDocs(emailQuery)
                       
                       if (!emailSnap.empty) {
-                        return Promise.reject(new Error('该邮箱已被其他用户使用'))
+                        return Promise.reject(new Error(t('profile.emailUsed')))
                       }
                     } catch (error) {
                       // 如果查询失败，允许通过（不阻止用户提交）
@@ -418,13 +418,13 @@ const Register: React.FC = () => {
                     try {
                       const result = await getUserByMemberId(normalized);
                       if (!result.success) {
-                        return Promise.reject(new Error(result.error || '引荐码不存在'));
+                        return Promise.reject(new Error(result.error || t('auth.referralCodeNotFound')));
                       }
                       
                       // 验证成功
                       return Promise.resolve();
                     } catch (error) {
-                      return Promise.reject(new Error('验证引荐码失败，请重试'));
+                      return Promise.reject(new Error(t('auth.referralCodeVerifyFailed')));
                     }
                   }
                 }
@@ -434,7 +434,7 @@ const Register: React.FC = () => {
             >
               <Input
                 prefix={<GiftOutlined style={{ color: '#ffd700' }} />}
-                placeholder="引荐码"
+                placeholder={t('auth.referralCode')}
                 maxLength={20}
                 onInput={(e) => {
                   const input = e.currentTarget;
@@ -474,7 +474,7 @@ const Register: React.FC = () => {
 
           <div style={{ textAlign: 'center', paddingBottom: '20px' }}>
             <Text style={{ color: '#999999' }}>
-              已有账户？{' '}
+              {t('auth.alreadyHaveAccount')}{' '}
               <Button 
                 type="link" 
                 onClick={() => navigate('/login')}

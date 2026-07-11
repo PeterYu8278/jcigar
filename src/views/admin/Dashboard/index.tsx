@@ -1,5 +1,7 @@
 // 管理后台仪表板（自定义样式版本）
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
+import { useFirestoreQuery } from '../../../hooks/useFirestoreQuery'
+import { useDetailDrawer } from '../../../hooks/useDetailDrawer'
 import { Typography, Button, message, Spin, Modal, Form, Select, Input, Alert, Drawer } from 'antd'
 import { ReloadOutlined, PlusOutlined, CloseOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
@@ -27,12 +29,13 @@ const { Title } = Typography
 import { createBill } from '../../../services/billplz'
 
 const PlanSelector: React.FC<{ value?: string; onChange?: (val: string) => void; plans: any[]; currentPlanId?: string; memberCount?: number }> = ({ value, onChange, plans, currentPlanId, memberCount = 0 }) => {
+  const { t } = useTranslation()
   const isMobile = window.innerWidth < 768;
 
   if (!plans || plans.length === 0) {
     return (
       <div style={{ padding: 20, textAlign: 'center', color: '#666', border: '1px dashed #444', borderRadius: 12 }}>
-        No subscription plans available. Please contact admin.
+        {t("dashboard.noPlansAvailable")}
       </div>
     );
   }
@@ -98,7 +101,7 @@ const PlanSelector: React.FC<{ value?: string; onChange?: (val: string) => void;
                 padding: '2px 8px',
                 borderRadius: '0 10px 0 8px',
                 letterSpacing: 0.5
-              }}>CURRENT</div>
+              }}>{t("dashboard.planCurrentBadge")}</div>
             )}
             {isDisabled && (
               <div style={{
@@ -112,15 +115,15 @@ const PlanSelector: React.FC<{ value?: string; onChange?: (val: string) => void;
                 padding: '2px 8px',
                 borderRadius: '10px 0 8px 0',
                 letterSpacing: 0.5
-              }}>INSUFFICIENT</div>
+              }}>{t("dashboard.planInsufficientBadge")}</div>
             )}
             <div>
               <div style={{ color: isSelected ? '#FDE08D' : '#fff', fontWeight: 800, fontSize: 16, marginBottom: 4 }}>
                 {p.name}
               </div>
               <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>
-                <span style={{ color: '#aaa' }}>{p.maxMembers || '∞'}</span> Members<br />
-                <span style={{ color: '#aaa' }}>{p.validPeriodMonth}</span> Months
+                <span style={{ color: '#aaa' }}>{p.maxMembers || '∞'}</span> {t("dashboard.planMembersLabel")}<br />
+                <span style={{ color: '#aaa' }}>{p.validPeriodMonth}</span> {t("dashboard.planMonthsLabel")}
               </div>
             </div>
             <div style={{ textAlign: 'right', marginTop: 12 }}>
@@ -133,7 +136,7 @@ const PlanSelector: React.FC<{ value?: string; onChange?: (val: string) => void;
               }}>
                 RM {p.fee}
               </div>
-              <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 9, letterSpacing: 1 }}>ANNUAL</div>
+              <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 9, letterSpacing: 1 }}>{t("dashboard.planAnnualLabel")}</div>
             </div>
           </div>
         );
@@ -143,8 +146,9 @@ const PlanSelector: React.FC<{ value?: string; onChange?: (val: string) => void;
 };
 
 const TrendChart: React.FC<{ data: Array<{ label: string; value: number }>; isMobile: boolean }> = ({ data, isMobile }) => {
+  const { t } = useTranslation()
   const [hoveredPoint, setHoveredPoint] = useState<any>(null);
-  if (data.length === 0) return <div style={{ color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '40px 0' }}>No Data</div>;
+  if (data.length === 0) return <div style={{ color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '40px 0' }}>{t("common.noData")}</div>;
 
   const maxValue = Math.max(...data.map(d => d.value), 5); // Default min max-value to 5 to avoid flat chart
   
@@ -326,7 +330,7 @@ const TrendChart: React.FC<{ data: Array<{ label: string; value: number }>; isMo
         }}>
           <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '9px', marginBottom: 2 }}>{hoveredPoint.label}</div>
           <div style={{ fontWeight: 'bold' }}>
-            {hoveredPoint.value} 次
+            {hoveredPoint.value} {t("dashboard.trendCountUnit")}
           </div>
         </div>
       )}
@@ -338,14 +342,45 @@ const AdminDashboard: React.FC = () => {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const { user, isSuperAdmin } = useAuthStore()
-  const [loading, setLoading] = useState(false)
-  const [users, setUsers] = useState<User[]>([])
-  const [orders, setOrders] = useState<Order[]>([])
-  const [events, setEvents] = useState<Event[]>([])
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [cigars, setCigars] = useState<Cigar[]>([])
-  const [visitSessions, setVisitSessions] = useState<any[]>([])
-  const [roomBookings, setRoomBookings] = useState<any[]>([])
+  const startOfMonth = useMemo(() => {
+    const now = new Date()
+    return new Date(now.getFullYear(), now.getMonth(), 1)
+  }, [])
+
+  const { data: users, refresh: refreshUsers } = useFirestoreQuery<User>(
+    () => getUsers({ limit: 300 })
+  )
+  const { data: orders, refresh: refreshOrders } = useFirestoreQuery<Order>(
+    () => getAllOrders(isSuperAdmin ? undefined : user?.storeId, { limit: 100 }),
+    [isSuperAdmin, user?.storeId]
+  )
+  const { data: events, loading: eventsLoading, refresh: refreshEvents } = useFirestoreQuery<Event>(
+    () => getEvents(isSuperAdmin ? undefined : user?.id),
+    [isSuperAdmin, user?.id]
+  )
+  const { data: transactions, refresh: refreshTransactions } = useFirestoreQuery<Transaction>(
+    () => getAllTransactions(isSuperAdmin ? undefined : user?.storeId, { startDate: startOfMonth, limit: 500 }),
+    [isSuperAdmin, user?.storeId]
+  )
+  const { data: cigars, refresh: refreshCigars } = useFirestoreQuery<Cigar>(getCigars)
+  const { data: visitSessions, refresh: refreshVisitSessions } = useFirestoreQuery<any>(
+    () => getAllVisitSessions(undefined, isSuperAdmin ? undefined : user?.storeId),
+    [isSuperAdmin, user?.storeId]
+  )
+  const { data: roomBookings, refresh: refreshRoomBookings } = useFirestoreQuery<any>(
+    () => getAllRoomBookings(isSuperAdmin ? undefined : user?.storeId),
+    [isSuperAdmin, user?.storeId]
+  )
+
+  const refreshAll = () => {
+    refreshUsers()
+    refreshOrders()
+    refreshEvents()
+    refreshTransactions()
+    refreshCigars()
+    refreshVisitSessions()
+    refreshRoomBookings()
+  }
   const [trendDrawerVisible, setTrendDrawerVisible] = useState(false)
   const [trendType, setTrendType] = useState<'members' | 'bookings'>('members')
   const [trendPeriod, setTrendPeriod] = useState<'daily' | 'monthly' | 'yearly'>('daily')
@@ -355,7 +390,7 @@ const AdminDashboard: React.FC = () => {
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
   const [showRenewModal, setShowRenewModal] = useState(false)
   const [renewLoading, setRenewLoading] = useState(false)
-  const [viewing, setViewing] = useState<Order | null>(null)
+  const { item: viewing, open: drawerOpen, openDrawer, closeDrawer } = useDetailDrawer<Order>()
   const [isEditingInView, setIsEditingInView] = useState(false)
   const [isMobile, setIsMobile] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false
@@ -391,9 +426,8 @@ const AdminDashboard: React.FC = () => {
     checkFeatureVisibility()
   }, [user?.role])
 
-  // 加载数据
+  // 加载应用配置
   useEffect(() => {
-    loadDashboardData()
     loadAppConfig()
   }, [])
 
@@ -405,42 +439,6 @@ const AdminDashboard: React.FC = () => {
       }
     } catch (error) {
       console.error('加载应用配置失败:', error)
-    }
-  }
-
-  const loadDashboardData = async () => {
-    setLoading(true)
-    try {
-      const [
-        usersData,
-        ordersData,
-        eventsData,
-        transactionsData,
-        cigarsData,
-        visitSessionsData,
-        roomBookingsData
-      ] = await Promise.all([
-        getUsers(),
-        getAllOrders(isSuperAdmin ? undefined : user?.storeId),
-        getEvents(isSuperAdmin ? undefined : user?.id),
-        getAllTransactions(isSuperAdmin ? undefined : user?.storeId),
-        getCigars(),
-        getAllVisitSessions(undefined, isSuperAdmin ? undefined : user?.storeId),
-        getAllRoomBookings(isSuperAdmin ? undefined : user?.storeId)
-      ])
-
-      setUsers(usersData)
-      setOrders(ordersData)
-      setEvents(eventsData)
-      setTransactions(transactionsData)
-      setCigars(cigarsData)
-      setVisitSessions(visitSessionsData)
-      setRoomBookings(roomBookingsData)
-    } catch (error) {
-      console.error(error)
-      message.error(t('messages.dataLoadFailed'))
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -632,7 +630,7 @@ const AdminDashboard: React.FC = () => {
 
             await addDoc(collection(db, GLOBAL_COLLECTIONS.SUBSCRIPTION_REQUESTS), requestData);
 
-            message.loading('Redirecting to payment page...', 2);
+            message.loading(t('dashboard.redirectingToPayment'), 2);
             setTimeout(() => {
               window.location.href = billResponse.data!.url;
             }, 1000);
@@ -645,11 +643,11 @@ const AdminDashboard: React.FC = () => {
 
       await addDoc(collection(db, GLOBAL_COLLECTIONS.SUBSCRIPTION_REQUESTS), requestData)
 
-      message.success('Activation request submitted successfully. Waiting for developer verification.')
+      message.success(t('dashboard.activationRequestSubmitted'))
       setShowRenewModal(false)
     } catch (error) {
       console.error('Failed to submit renewal request:', error)
-      message.error('Failed to submit request')
+      message.error(t('dashboard.submitRequestFailed'))
     } finally {
       setRenewLoading(false)
     }
@@ -711,7 +709,7 @@ const AdminDashboard: React.FC = () => {
           let daysLeft = 999;
 
           if (!isActive && appConfig?.subscription) {
-            statusValue = 'Inactive';
+            statusValue = t('dashboard.subscriptionInactive');
             isExpired = true;
           } else if (expiryDate) {
             try {
@@ -771,7 +769,7 @@ const AdminDashboard: React.FC = () => {
               className={card.onClick ? 'dashboard-clickable-card' : ''}
             >
               <div style={{ fontSize: isMobile ? 10 : 12, color: '#A0A0A0', marginBottom: 4 }}>
-                {card.label || 'Subscription'}
+                {card.label || t('dashboard.subscriptionLabel')}
               </div>
 
               <div style={{
@@ -843,7 +841,7 @@ const AdminDashboard: React.FC = () => {
                     marginInline: 'auto'
                   }}
                 >
-                  {isOverlimit || hasHigherPlan ? 'Upgrade' : (isExpired ? 'Activate' : 'Renew')}
+                  {isOverlimit || hasHigherPlan ? t('dashboard.planUpgrade') : (isExpired ? t('dashboard.planActivate') : t('dashboard.planRenew'))}
                 </Button>
               )}
             </div>
@@ -853,7 +851,7 @@ const AdminDashboard: React.FC = () => {
 
       {/* Subscription Renewal Modal */}
       <Modal
-        title={<span style={{ color: '#FDE08D' }}>Subscription Activation / Renewal / Upgrade</span>}
+        title={<span style={{ color: '#FDE08D' }}>{t("dashboard.subscriptionModalTitle")}</span>}
         open={showRenewModal}
         onCancel={() => setShowRenewModal(false)}
         footer={null}
@@ -864,29 +862,29 @@ const AdminDashboard: React.FC = () => {
         <Form layout="vertical" onFinish={handleRenewSubmit}>
           <Form.Item
             name="planId"
-            label={<span style={{ color: '#ccc' }}>Choose Your Plan</span>}
-            rules={[{ required: true, message: 'Please select a plan' }]}
+            label={<span style={{ color: '#ccc' }}>{t("dashboard.choosePlan")}</span>}
+            rules={[{ required: true, message: t("dashboard.pleaseSelectPlan") }]}
             initialValue={appConfig?.subscription?.planId || appConfig?.subscription?.plan || 'basic'}
           >
             <PlanSelector plans={appConfig?.subscription?.plans || []} currentPlanId={appConfig?.subscription?.planId || appConfig?.subscription?.plan} memberCount={totalUsers} />
           </Form.Item>
 
-          <Form.Item name="adminNotes" label={<span style={{ color: '#ccc' }}>Notes (Optional)</span>}>
-            <Input.TextArea placeholder="Any payment notes or special requests..." />
+          <Form.Item name="adminNotes" label={<span style={{ color: '#ccc' }}>{t("dashboard.notesOptional")}</span>}>
+            <Input.TextArea placeholder={t("dashboard.notesPlaceholder")} />
           </Form.Item>
 
           <Alert
-            message="Activation Process"
-            description="After submitting, our developer will verify your payment and activate your subscription. Reference the member reload mechanism for proof submission if required."
+            message={t("dashboard.activationProcess")}
+            description={t("dashboard.activationProcessDesc")}
             type="info"
             showIcon
             style={{ marginBottom: 16, background: 'rgba(255,255,255,0.05)', border: '1px solid #C48D3A' }}
           />
 
           <div style={{ textAlign: 'right' }}>
-            <Button onClick={() => setShowRenewModal(false)} style={{ marginRight: 8, background: 'transparent', color: '#fff', border: '1px solid #444' }}>Cancel</Button>
+            <Button onClick={() => setShowRenewModal(false)} style={{ marginRight: 8, background: 'transparent', color: '#fff', border: '1px solid #444' }}>{t("common.cancel")}</Button>
             <Button type="primary" htmlType="submit" loading={renewLoading} style={{ background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', border: 'none', fontWeight: 600 }}>
-              Submit Request
+              {t("dashboard.submitRequest")}
             </Button>
           </div>
         </Form>
@@ -983,7 +981,7 @@ const AdminDashboard: React.FC = () => {
           </div>
           <div style={{ marginTop: 12 }}>
             {(activeTab === 'completed' ? completedOrders : pendingOrders).map((order) => (
-              <div key={order.id} className="dashboard-order-card" onClick={() => setViewing(order)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, borderRadius: 12, background: 'rgba(255,255,255,0.05)', marginBottom: 8 }}>
+              <div key={order.id} className="dashboard-order-card" onClick={() => openDrawer(order)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, borderRadius: 12, background: 'rgba(255,255,255,0.05)', marginBottom: 8 }}>
                 <div style={{ width: 48, height: 48, borderRadius: 9999, background: 'rgba(45,39,26,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <img alt="avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqh6yOfMjU5qQSoCZPZvRqAiz-okAgrdu0FpYXfw5uHOQsuU4n9sXB0tgWxKp0S0CeRoIfGobj8db5AYyR99MzIRYRhGQ6FTM8hDdbqiekQypZbWKI-hdGzfS2pxYZNJ6bYvPj6CXp9XlDHxFyPDtN3i6CETf5OL_Cwg7QBM79IF0fAn-CPEBxheKV9HTDuDr0eao0xcYzNAf_ho8FNb9cgnap5ZOygDZktOCV_aV3y2MBiYrxtLFdefqLos7npLS50yvMaM7cH9MK" style={{ width: 48, height: 48, borderRadius: 9999 }} />
                 </div>
@@ -1021,7 +1019,7 @@ const AdminDashboard: React.FC = () => {
         <div style={{ marginBottom: 16 }}>
           <h2 style={{ fontSize: 16, fontWeight: 800, color: '#EAEAEA', paddingInline: 8 }}>{t('dashboard.recentActivities')}</h2>
           <div style={{ marginTop: 8, borderRadius: 12, padding: 12, background: 'rgba(255,255,255,0.05)' }}>
-            {loading ? (
+            {eventsLoading ? (
               <div style={{ textAlign: 'center', padding: '24px 0' }}><Spin /></div>
             ) : events.length > 0 ? (
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
@@ -1067,8 +1065,8 @@ const AdminDashboard: React.FC = () => {
       )}
       {/* 订单详情抽屉 */}
       <Drawer
-        open={!!viewing}
-        onClose={() => { setViewing(null); setIsEditingInView(false) }}
+        open={drawerOpen}
+        onClose={() => { closeDrawer(); setIsEditingInView(false) }}
         width={isMobile ? '100%' : 820}
         styles={{
           body: { padding: 0, background: '#1a160d' },
@@ -1086,7 +1084,7 @@ const AdminDashboard: React.FC = () => {
           <Button
             type="text"
             icon={<CloseOutlined style={{ color: '#fff' }} />}
-            onClick={() => { setViewing(null); setIsEditingInView(false) }}
+            onClick={() => { closeDrawer(); setIsEditingInView(false) }}
           />
         }
       >
@@ -1098,9 +1096,9 @@ const AdminDashboard: React.FC = () => {
             transactions={transactions}
             isMobile={isMobile}
             isEditingInView={isEditingInView}
-            onClose={() => { setViewing(null); setIsEditingInView(false) }}
+            onClose={() => { closeDrawer(); setIsEditingInView(false) }}
             onEditToggle={() => setIsEditingInView(v => !v)}
-            onOrderUpdate={loadDashboardData}
+            onOrderUpdate={refreshAll}
           />
         )}
       </Drawer>
@@ -1150,7 +1148,7 @@ const AdminDashboard: React.FC = () => {
                     outline: 'none'
                   }}
                 >
-                  {period === 'daily' ? '日' : period === 'monthly' ? '月' : '年'}
+                  {period === 'daily' ? t('dashboard.periodDay') : period === 'monthly' ? t('dashboard.periodMonth') : t('dashboard.periodYear')}
                 </button>
               );
             })}
@@ -1163,7 +1161,7 @@ const AdminDashboard: React.FC = () => {
 
           {/* 数据明细列表 */}
           <div style={{ marginTop: '12px' }}>
-            <h3 style={{ color: '#f4af25', fontSize: '14px', fontWeight: 800, marginBottom: '12px' }}>数据明细</h3>
+            <h3 style={{ color: '#f4af25', fontSize: '14px', fontWeight: 800, marginBottom: '12px' }}>{t("dashboard.dataDetails")}</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto', paddingRight: '4px' }}>
               {getTrendData().slice().reverse().map((item, idx) => (
                 <div 
@@ -1180,7 +1178,7 @@ const AdminDashboard: React.FC = () => {
                 >
                   <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>{item.label}</span>
                   <span style={{ fontSize: '14px', fontWeight: 800, color: '#FDE08D' }}>
-                    {item.value} <span style={{ fontSize: '11px', fontWeight: 'normal', color: 'rgba(255,255,255,0.5)' }}>次</span>
+                    {item.value} <span style={{ fontSize: '11px', fontWeight: 'normal', color: 'rgba(255,255,255,0.5)' }}>{t("dashboard.trendCountUnit")}</span>
                   </span>
                 </div>
               ))}

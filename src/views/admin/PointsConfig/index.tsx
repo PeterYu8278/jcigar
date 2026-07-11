@@ -1,5 +1,6 @@
 // 积分配置管理页面
 import React, { useState, useEffect } from 'react';
+import { useFirestoreQuery } from '../../../hooks/useFirestoreQuery';
 import { Card, Form, InputNumber, Button, Space, Typography, Row, Col, Divider, message, Spin, Tabs, Table, Tag, DatePicker, Select, Modal } from 'antd';
 import { SaveOutlined, ReloadOutlined, HistoryOutlined, SettingOutlined, PlusOutlined, DeleteOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import { getPointsConfig, updatePointsConfig, getDefaultPointsConfig } from '../../../services/firebase/pointsConfig';
@@ -25,16 +26,27 @@ const PointsConfigPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'config' | 'records' | 'reload' | 'membershipFees'>(isSuperAdmin ? 'config' : 'reload');
-  const [pointsRecords, setPointsRecords] = useState<PointsRecord[]>([]);
-  const [loadingRecords, setLoadingRecords] = useState(false);
   const [processingFees, setProcessingFees] = useState(false);
-  const [membershipFeeRecords, setMembershipFeeRecords] = useState<MembershipFeeRecord[]>([]);
-  const [loadingMembershipFeeRecords, setLoadingMembershipFeeRecords] = useState(false);
   const [membershipFeeStatusFilter, setMembershipFeeStatusFilter] = useState<'all' | 'pending' | 'paid' | 'failed' | 'cancelled'>('all');
   const [creatingFeeRecord, setCreatingFeeRecord] = useState(false);
   const [feeRecordForm] = Form.useForm();
-  const [users, setUsers] = useState<User[]>([]);
-  const [stores, setStores] = useState<Store[]>([]);
+
+  const { data: pointsRecords = [], loading: loadingRecords, refresh: refreshPointsRecords } = useFirestoreQuery(
+    () => getAllPointsRecords(200),
+    [activeTab]
+  );
+
+  const { data: membershipFeeRecords = [], loading: loadingMembershipFeeRecords, refresh: refreshMembershipFeeRecords } = useFirestoreQuery(
+    () => getAllMembershipFeeRecords(membershipFeeStatusFilter === 'all' ? undefined : membershipFeeStatusFilter),
+    [activeTab, membershipFeeStatusFilter]
+  );
+
+  const { data: users = [] } = useFirestoreQuery(
+    () => creatingFeeRecord ? getUsers({ limit: 300 }) : Promise.resolve([]),
+    [creatingFeeRecord]
+  );
+
+  const { data: stores = [] } = useFirestoreQuery(getAllStores);
   const { t, i18n } = useTranslation();
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false;
   const [eventsAdminFeatureVisible, setEventsAdminFeatureVisible] = useState<boolean>(true);
@@ -54,42 +66,6 @@ const PointsConfigPage: React.FC = () => {
   useEffect(() => {
     loadConfig();
   }, []);
-
-  // 加载积分记录
-  useEffect(() => {
-    if (activeTab === 'records') {
-      loadPointsRecords();
-    }
-  }, [activeTab]);
-
-  // 加载年费记录
-  useEffect(() => {
-    if (activeTab === 'membershipFees') {
-      loadMembershipFeeRecords();
-      loadUsers();
-      loadStores();
-    }
-  }, [activeTab, membershipFeeStatusFilter]);
-
-  // 加载门店列表
-  const loadStores = async () => {
-    try {
-      const storeList = await getAllStores();
-      setStores(storeList);
-    } catch (error) {
-      console.error('加载门店列表失败:', error);
-    }
-  };
-
-  // 加载用户列表
-  const loadUsers = async () => {
-    try {
-      const userList = await getUsers();
-      setUsers(userList);
-    } catch (error) {
-      console.error('加载用户列表失败:', error);
-    }
-  };
 
   // 自动执行扣除年费（管理员访问页面时自动执行，无需手动点击）
   useEffect(() => {
@@ -254,36 +230,6 @@ const PointsConfigPage: React.FC = () => {
     message.info(t('pointsConfig.resetSuccess'));
   };
 
-  // 加载积分记录
-  const loadPointsRecords = async () => {
-    setLoadingRecords(true);
-    try {
-      const records = await getAllPointsRecords(200);
-      setPointsRecords(records);
-    } catch (error) {
-      message.error(t('pointsConfig.loadRecordsFailed'));
-    } finally {
-      setLoadingRecords(false);
-    }
-  };
-
-  // 加载年费记录
-  const loadMembershipFeeRecords = async () => {
-    setLoadingMembershipFeeRecords(true);
-    try {
-      const filter = membershipFeeStatusFilter === 'all' ? undefined : membershipFeeStatusFilter;
-      
-      const records = await getAllMembershipFeeRecords(filter);
-      
-      setMembershipFeeRecords(records);
-    } catch (error) {
-      console.error('[PointsConfigPage] 加载年费记录失败:', error);
-      message.error(t('pointsConfig.membershipFee.loadFailed'));
-    } finally {
-      setLoadingMembershipFeeRecords(false);
-    }
-  };
-
   // 创建年费记录
   const handleCreateFeeRecord = async (values: { userId: string; dueDate: dayjs.Dayjs; storeId: string }) => {
     if (!user?.id) {
@@ -306,7 +252,7 @@ const PointsConfigPage: React.FC = () => {
         message.success(t('pointsConfig.membershipFee.createSuccess'));
         setCreatingFeeRecord(false);
         feeRecordForm.resetFields();
-        loadMembershipFeeRecords();
+        refreshMembershipFeeRecords();
       } else {
         message.error(result.error || t('pointsConfig.membershipFee.createFailed'));
       }
@@ -804,7 +750,7 @@ const PointsConfigPage: React.FC = () => {
                     <div style={{ marginBottom: 16, textAlign: 'right' }}>
                       <Button
                         icon={<ReloadOutlined />}
-                        onClick={loadPointsRecords}
+                        onClick={refreshPointsRecords}
                         loading={loadingRecords}
                 style={{
                   background: 'rgba(255, 255, 255, 0.1)',
@@ -913,7 +859,7 @@ const PointsConfigPage: React.FC = () => {
 
         {activeTab === 'reload' && (
           <div>
-            <ReloadVerification onRefresh={loadPointsRecords} />
+            <ReloadVerification onRefresh={refreshPointsRecords} />
           </div>
         )}
 
@@ -947,8 +893,8 @@ const PointsConfigPage: React.FC = () => {
                 >
                 {t('pointsConfig.membershipFee.createRecord')}
                 </Button>
-                <Button 
-                  onClick={loadMembershipFeeRecords} 
+                <Button
+                  onClick={refreshMembershipFeeRecords}
                   loading={loadingMembershipFeeRecords}
                   style={{
                     background: 'rgba(255, 255, 255, 0.1)',

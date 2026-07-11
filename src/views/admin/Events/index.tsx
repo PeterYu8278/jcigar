@@ -1,5 +1,5 @@
 // 活动管理页面
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import { Table, Button, Tag, Space, Typography, Input, Select, DatePicker, message, Modal, Form, InputNumber, Switch, Dropdown, Checkbox, Upload, Spin, Descriptions, Progress, Tabs, Row, Col } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, EyeOutlined, DownloadOutlined, UploadOutlined, UserOutlined, CheckCircleOutlined } from '@ant-design/icons'
@@ -19,6 +19,8 @@ import StatusFilterDropdown from '../../../components/admin/StatusFilterDropdown
 import { useTranslation } from 'react-i18next'
 import { getResponsiveModalConfig, getModalTheme } from '../../../config/modalTheme'
 import { useAuthStore } from '../../../store/modules/auth'
+import { useDetailDrawer } from '../../../hooks/useDetailDrawer'
+import { useFirestoreQuery } from '../../../hooks/useFirestoreQuery'
 
 const { Title } = Typography
 const { Search } = Input
@@ -55,21 +57,31 @@ const AdminEvents: React.FC = () => {
   const lang = i18n.language?.startsWith('zh') ? 'zh' : 'en'
   const { user: currentUser, isSuperAdmin } = useAuthStore()
   
-  // Main data state
-  const [events, setEvents] = useState<Event[]>([])
-  const [cigars, setCigars] = useState<Cigar[]>([])
-  const [participantsUsers, setParticipantsUsers] = useState<User[]>([])
-  
-  // Loading states
+  // Loading states (for form submit / delete operations)
   const [loading, setLoading] = useState(false)
   const [participantsLoading, setParticipantsLoading] = useState(false)
+
+  // Data hooks
+  const fetchEventsWithAutoAdjust = useCallback(async () => {
+    const list = await getEvents(isSuperAdmin ? undefined : currentUser?.id)
+    const updatedList: Event[] = []
+    for (const event of list) {
+      const updatedStatus = await autoAdjustEventStatus(event)
+      updatedList.push({ ...event, status: updatedStatus })
+    }
+    return updatedList
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSuperAdmin, currentUser?.id])
+  const { data: events = [], loading: eventsLoading, refresh: refreshEvents } = useFirestoreQuery(fetchEventsWithAutoAdjust)
+  const { data: participantsUsers = [] } = useFirestoreQuery(() => getUsers({ limit: 500 }))
+  const { data: cigars = [] } = useFirestoreQuery(getCigars)
   const [allocSaving, setAllocSaving] = useState<string | null>(null)
   
   // Modal states
   const [creating, setCreating] = useState(false)
-  const [editing, setEditing] = useState<Event | null>(null)
+  const { item: editing, open: editingOpen, openDrawer: openEditing, closeDrawer: closeEditing } = useDetailDrawer<Event>()
   const [deleting, setDeleting] = useState<Event | null>(null)
-  const [viewing, setViewing] = useState<Event | null>(null)
+  const { item: viewing, open: viewingOpen, openDrawer: openViewing, closeDrawer: closeViewing } = useDetailDrawer<Event>()
   const [participantsEvent, setParticipantsEvent] = useState<Event | null>(null)
   
   // UI states
@@ -199,11 +211,10 @@ const AdminEvents: React.FC = () => {
           const res = await createDocument<Event>(COLLECTIONS.EVENTS, newEventData as any)
           if (res.success) {
             message.success(t('common.created'))
-            const list = await getEvents(isSuperAdmin ? undefined : currentUser?.id)
-            setEvents(list)
-            const newEvent = list.find(e => e.id === res.id)
+            refreshEvents()
+            const newEvent = await getEventById(res.id!)
             if (newEvent) {
-              setViewing(newEvent)
+              openViewing(newEvent as Event)
             }
           } else {
             message.error(t('common.createFailed'))
@@ -264,7 +275,7 @@ const AdminEvents: React.FC = () => {
           break
       }
       
-      setViewing(updatedViewing)
+      openViewing(updatedViewing)
       // 不显示提示，避免干扰用户
       return
     }
@@ -329,11 +340,10 @@ const AdminEvents: React.FC = () => {
       const res = await updateDocument(COLLECTIONS.EVENTS, viewing.id, updateData)
       if (res.success) {
         message.success(t('common.saved'))
-        const list = await getEvents(isSuperAdmin ? undefined : currentUser?.id)
-        setEvents(list)
-        const updatedEvent = list.find(e => e.id === viewing.id)
+        refreshEvents()
+        const updatedEvent = await getEventById(viewing.id)
         if (updatedEvent) {
-          setViewing(updatedEvent)
+          openViewing(updatedEvent as Event)
         }
       } else {
         message.error(t('common.saveFailed'))
@@ -371,33 +381,7 @@ const AdminEvents: React.FC = () => {
   }
 
   // ===== DATA LOADING & INITIALIZATION =====
-  useEffect(() => {
-    ;(async () => {
-      setLoading(true)
-      try {
-        const [list, users, cigars] = await Promise.all([
-          getEvents(isSuperAdmin ? undefined : currentUser?.id),
-          getUsers(),
-          getCigars()
-        ])
-        
-        // 自动调整所有活动的状态
-        const updatedList = []
-        for (const event of list) {
-          const updatedStatus = await autoAdjustEventStatus(event)
-          updatedList.push({ ...event, status: updatedStatus })
-        }
-        
-        setEvents(updatedList)
-        setParticipantsUsers(users)
-        setCigars(cigars)
-      } catch (error) {
-        message.error(t('common.loadFailed'))
-      } finally {
-        setLoading(false)
-      }
-    })()
-  }, [])
+  // Data is loaded via useFirestoreQuery hooks above
 
   // ===== UI STATE MANAGEMENT =====
   const [keyword, setKeyword] = useState('')
@@ -413,8 +397,9 @@ const AdminEvents: React.FC = () => {
     action: true,
   })
 
-  const [orders, setOrders] = useState<any[]>([])
-  const [allTransactions, setAllTransactions] = useState<Transaction[]>([])
+  const threeMonthsAgo = useMemo(() => { const d = new Date(); d.setMonth(d.getMonth() - 3); return d; }, [])
+  const { data: orders = [] } = useFirestoreQuery(() => getAllOrders(undefined, { limit: 500 }))
+  const { data: allTransactions = [] } = useFirestoreQuery(() => getAllTransactions(undefined, { startDate: threeMonthsAgo, limit: 1000 }), [threeMonthsAgo])
   
   const revenueMap = useMemo(() => {
     const map: Record<string, number> = {}
@@ -647,37 +632,6 @@ const AdminEvents: React.FC = () => {
     return event.status
   }
 
-  useEffect(() => {
-    ;(async () => {
-      setLoading(true)
-      try {
-        const [list, users, cigars] = await Promise.all([
-          getEvents(isSuperAdmin ? undefined : currentUser?.id),
-          getUsers(),
-          getCigars()
-        ])
-        
-        // 自动调整所有活动的状态
-        const updatedEvents = []
-        for (const event of list) {
-          const updatedStatus = await autoAdjustEventStatus(event)
-          updatedEvents.push({ ...event, status: updatedStatus })
-        }
-        
-        setEvents(updatedEvents)
-        setParticipantsUsers(users)
-        setCigars(cigars)
-        const [os, transactions] = await Promise.all([
-          getAllOrders(),
-          getAllTransactions()
-        ])
-        setOrders(os)
-        setAllTransactions(transactions)
-      } finally {
-        setLoading(false)
-      }
-    })()
-  }, [])
 
   const filtered = useMemo(() => {
     return events.filter(e => {
@@ -844,7 +798,7 @@ const AdminEvents: React.FC = () => {
         <ActionButtons
           itemId={record.id}
           itemName={record.title}
-          onView={() => setViewing(record)}
+          onView={() => openViewing(record)}
           showEdit={false}
           showDelete={false}
           buttonSize="small"
@@ -883,8 +837,7 @@ const AdminEvents: React.FC = () => {
                   return { success: true }
                 }}
                 onSuccess={async () => {
-                  const list = await getEvents(isSuperAdmin ? undefined : currentUser?.id)
-                  setEvents(list)
+                  refreshEvents()
                   setSelectedRowKeys([])
                 }}
                 buttonText={t('common.batchCancelled')}
@@ -904,9 +857,8 @@ const AdminEvents: React.FC = () => {
                   return { success: true }
                 }}
                 onSuccess={async () => {
-                      const list = await getEvents(isSuperAdmin ? undefined : currentUser?.id)
-                      setEvents(list)
-                      setSelectedRowKeys([])
+                  refreshEvents()
+                  setSelectedRowKeys([])
                 }}
                 itemTypeName="活动"
                 style={{ 
@@ -951,7 +903,7 @@ const AdminEvents: React.FC = () => {
                 createdAt: new Date(),
                 updatedAt: new Date()
               }
-              setViewing(newEvent)
+              openViewing(newEvent)
               setIsEditingDetails(true)
               setEditForm({
                 title: '',
@@ -1023,7 +975,7 @@ const AdminEvents: React.FC = () => {
             columns={columns}
             dataSource={filtered}
             rowKey="id"
-            loading={loading}
+            loading={loading || eventsLoading}
             rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
             pagination={{
               total: events.length,
@@ -1043,7 +995,7 @@ const AdminEvents: React.FC = () => {
               <EventCard
                 key={ev.id}
                 event={ev}
-                onView={setViewing}
+                onView={openViewing}
                 getStatusText={getStatusText}
                 getStatusColor={getStatusColor}
                 completedEvents={completedEvents}
@@ -1061,8 +1013,8 @@ const AdminEvents: React.FC = () => {
       {/* 查看活动详情 */}
       <Modal
         title={viewing?.id === 'new' ? t('dashboard.createEvent') : t('events.eventDetails')}
-        open={!!viewing}
-        onCancel={() => { setViewing(null); setIsEditingDetails(false) }}
+        open={viewingOpen}
+        onCancel={() => { closeViewing(); setIsEditingDetails(false) }}
         {...getResponsiveModalConfig(isMobile, true, 1000)}
         footer={null}
       >
@@ -1131,7 +1083,7 @@ const AdminEvents: React.FC = () => {
                     }
                   }}
                     onDelete={() => {
-                    setViewing(null)
+                    closeViewing()
                     setDeleting(viewing)
                   }}
                     onImageChange={async (url) => {
@@ -1143,11 +1095,10 @@ const AdminEvents: React.FC = () => {
                           const res = await updateDocument(COLLECTIONS.EVENTS, viewing.id, updateData)
                           if (res.success) {
                             message.success(t('common.saved'))
-                    const list = await getEvents(isSuperAdmin ? undefined : currentUser?.id)
-                    setEvents(list)
-                            const updatedEvent = list.find(e => e.id === viewing.id)
+                            refreshEvents()
+                            const updatedEvent = await getEventById(viewing.id)
                             if (updatedEvent) {
-                              setViewing(updatedEvent)
+                              openViewing(updatedEvent as Event)
                             }
                                     } else {
                             message.error(t('common.saveFailed'))
@@ -1169,8 +1120,8 @@ const AdminEvents: React.FC = () => {
                               participantsUsers={participantsUsers}
                               cigars={cigars}
                               onEventUpdate={(updatedEvent) => {
-                                setViewing(updatedEvent)
-                                setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e))
+                                openViewing(updatedEvent)
+                                refreshEvents()
                               }}
                               getCigarPriceById={getCigarPriceById}
                               getCigarCostById={getCigarCostById}
@@ -1257,9 +1208,9 @@ const AdminEvents: React.FC = () => {
                 const res = await registerForEvent((participantsEvent as any).id, userId)
                 if (res.success) {
                   message.success(t('common.participantAdded'));
-                  const list = await getEvents(isSuperAdmin ? undefined : currentUser?.id)
-                  setEvents(list)
-                  setParticipantsEvent(list.find(e => e.id === (participantsEvent as any).id) || null)
+                  refreshEvents()
+                  const refreshedEvent = await getEventById((participantsEvent as any).id)
+                  setParticipantsEvent(refreshedEvent as any || null)
                   setManualAddValue('')
                 } else {
                   message.error(t('common.addFailed'));
@@ -1352,9 +1303,9 @@ const AdminEvents: React.FC = () => {
                 const merged = Array.from(new Set([...(participantsEvent as any)?.participants?.registered || [], ...uniq]))
                 await updateDocument(COLLECTIONS.EVENTS, (participantsEvent as any).id, { 'participants.registered': merged } as any)
                 message.success(`${t('common.imported')} ${uniq.length} ${t('common.条')}`);
-                const list = await getEvents(isSuperAdmin ? undefined : currentUser?.id)
-                setEvents(list)
-                setParticipantsEvent(list.find(e => e.id === (participantsEvent as any).id) || null)
+                refreshEvents()
+                const refreshedEvent = await getEventById((participantsEvent as any).id)
+                setParticipantsEvent(refreshedEvent as any || null)
                 return false
               }}
               showUploadList={false}
@@ -1380,7 +1331,7 @@ const AdminEvents: React.FC = () => {
             allocSaving={allocSaving}
             onEventUpdate={(updatedEvent) => {
               setParticipantsEvent(updatedEvent)
-              setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e))
+              refreshEvents()
             }}
             onAllocSavingChange={setAllocSaving}
             getCigarPriceById={getCigarPriceById}
@@ -1393,7 +1344,7 @@ const AdminEvents: React.FC = () => {
           getCigarCostById={getCigarCostById}
           onEventUpdate={(updatedEvent) => {
             setParticipantsEvent(updatedEvent)
-            setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e))
+            refreshEvents()
           }}
         />
       </Modal>
@@ -1401,10 +1352,10 @@ const AdminEvents: React.FC = () => {
       {/* 创建/编辑 弹窗 */}
       <Modal
         title={editing ? t('common.edit') : t('common.add')}
-        open={creating || !!editing}
-        onCancel={() => { 
+        open={creating || editingOpen}
+        onCancel={() => {
           setCreating(false)
-          setEditing(null)
+          closeEditing()
           form.resetFields()
         }}
         {...getResponsiveModalConfig(isMobile, true, 720)}
@@ -1414,9 +1365,9 @@ const AdminEvents: React.FC = () => {
             type="button" 
             onClick={() => {
               setCreating(false)
-              setEditing(null)
+              closeEditing()
               form.resetFields()
-            }} 
+            }}
             style={{ 
               padding: '6px 14px', 
               borderRadius: 8, 
@@ -1523,12 +1474,10 @@ const AdminEvents: React.FC = () => {
               message.success(t('common.created'))
             }
             
-            const list = await getEvents(isSuperAdmin ? undefined : currentUser?.id)
-            
-            setEvents(list)
+            refreshEvents()
             setCreating(false)
-            setEditing(null)
-            
+            closeEditing()
+
           } finally {
             setLoading(false)
           }
@@ -1726,8 +1675,7 @@ const AdminEvents: React.FC = () => {
             const res = await deleteDocument(COLLECTIONS.EVENTS, deleting.id)
             if (res.success) {
               message.success(t('common.deleted'))
-              const list = await getEvents(isSuperAdmin ? undefined : currentUser?.id)
-              setEvents(list)
+              refreshEvents()
             }
           } finally {
             setLoading(false)

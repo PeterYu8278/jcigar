@@ -11,8 +11,12 @@ import { getOrderColumns } from './useOrderColumns'
 import InvoiceManagementTab from './InvoiceManagementTab'
 import type { Order, User, Cigar, Transaction, OutboundOrder, InventoryMovement, AppConfig } from '../../../types'
 import { getAllOrders, getUsers, getCigars, updateDocument, deleteDocument, COLLECTIONS, getAllTransactions, getAllOutboundOrders, getAllInventoryMovements, deleteOutboundOrder } from '../../../services/firebase/firestore'
+import { db } from '../../../config/firebase'
+import { collection, query as firestoreQuery, where, getDocs, limit as firestoreLimit, orderBy as firestoreOrderBy } from 'firebase/firestore'
 import { getOrdersPaginated } from '../../../services/firebase/paginatedQueries'
 import { usePaginatedData } from '../../../hooks/usePaginatedData'
+import { useFirestoreQuery } from '../../../hooks/useFirestoreQuery'
+import { useDetailDrawer } from '../../../hooks/useDetailDrawer'
 import { useTranslation } from 'react-i18next'
 import { filterOrders, sortOrders, getStatusColor, getStatusText, getUserName, getUserPhone } from './helpers'
 import { getModalThemeStyles, getModalWidth, getResponsiveModalConfig } from '../../../config/modalTheme'
@@ -62,11 +66,18 @@ const AdminOrders: React.FC = () => {
     }
   )
 
-  const [viewing, setViewing] = useState<Order | null>(null)
+  const { item: viewing, open: drawerOpen, openDrawer, closeDrawer } = useDetailDrawer<Order>()
   const [isEditingInView, setIsEditingInView] = useState(false)
-  const [users, setUsers] = useState<User[]>([])
-  const [cigars, setCigars] = useState<Cigar[]>([])
-  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const { data: users = [] } = useFirestoreQuery<User>(() => getUsers({ limit: 500 }))
+  const { data: cigars = [] } = useFirestoreQuery<Cigar>(getCigars)
+  const { data: transactions = [] } = useFirestoreQuery<Transaction>(
+    () => {
+      const ninetyDaysAgo = new Date()
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+      return getAllTransactions(isSuperAdmin ? undefined : authUser?.storeId, { startDate: ninetyDaysAgo, limit: 1000 })
+    },
+    [isSuperAdmin, authUser?.storeId]
+  )
   const [creating, setCreating] = useState(false)
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
   const [keyword, setKeyword] = useState('')
@@ -89,7 +100,6 @@ const AdminOrders: React.FC = () => {
   })
 
   useEffect(() => {
-    loadData()
     loadAppConfig()
     const filters: any = {}
     if (statusFilter) filters.status = statusFilter
@@ -123,36 +133,23 @@ const AdminOrders: React.FC = () => {
     loadPage(1, Object.keys(filters).length > 0 ? filters : undefined)
   }, [statusFilter, paymentFilter, dateRange, isSuperAdmin, authUser?.storeId])
 
-  const loadData = async () => {
-    setLoading(true)
-    try {
-      const [usersData, cigarsData, transactionsData] = await Promise.all([
-        getUsers(),
-        getCigars(),
-        getAllTransactions(isSuperAdmin ? undefined : authUser?.storeId)
-      ])
-      setUsers(usersData)
-      setCigars(cigarsData)
-      setTransactions(transactionsData)
-    } catch (error) {
-      message.error(t('messages.dataLoadFailed'))
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
     const hasFilters = statusFilter || paymentFilter || (dateRange && dateRange[0] && dateRange[1])
-    if (keyword.trim() || !hasFilters) {
+    if (!hasFilters) {
       setLoading(true)
-      getAllOrders(isSuperAdmin ? undefined : authUser?.storeId)
+      const opts: { limit: number; startDate?: Date; endDate?: Date } = { limit: 500 }
+      if (dateRange && dateRange[0] && dateRange[1]) {
+        opts.startDate = dateRange[0].toDate()
+        opts.endDate = dateRange[1].toDate()
+      }
+      getAllOrders(isSuperAdmin ? undefined : authUser?.storeId, opts)
         .then(setOrders)
         .catch(() => message.error(t('messages.dataLoadFailed')))
         .finally(() => setLoading(false))
     } else {
       setOrders(paginatedOrders)
     }
-  }, [keyword, paginatedOrders, statusFilter, paymentFilter, dateRange, isSuperAdmin, authUser?.storeId, t])
+  }, [paginatedOrders, statusFilter, paymentFilter, dateRange, isSuperAdmin, authUser?.storeId, t])
 
   // 分页处理函数
   const handlePaginationChange = async (page: number, pageSize?: number) => {
@@ -193,10 +190,13 @@ const AdminOrders: React.FC = () => {
 
   const deleteOrderOutboundRecords = async (orderId: string) => {
     try {
-      const outboundOrders = await getAllOutboundOrders(isSuperAdmin ? undefined : authUser?.storeId)
-      const relatedOutboundOrders = outboundOrders.filter((o: OutboundOrder) => o.referenceNo === orderId)
-      if (relatedOutboundOrders.length > 0) {
-        await Promise.all(relatedOutboundOrders.map((o: OutboundOrder) => deleteOutboundOrder(o.id)))
+      const q = firestoreQuery(
+        collection(db, 'outbound_orders'),
+        where('referenceNo', '==', orderId)
+      )
+      const snap = await getDocs(q)
+      if (!snap.empty) {
+        await Promise.all(snap.docs.map((d) => deleteOutboundOrder(d.id)))
       }
     } catch (error) {
       console.error('❌ [Orders] Error deleting outbound records:', error)
@@ -205,8 +205,14 @@ const AdminOrders: React.FC = () => {
 
   const deleteOrderFromEventAllocations = async (orderId: string) => {
     try {
-      const { getEvents } = await import('../../../services/firebase/firestore')
-      const events = await getEvents()
+      const eventsSnap = await getDocs(
+        firestoreQuery(
+          collection(db, 'events'),
+          firestoreOrderBy('schedule.startDate', 'desc'),
+          firestoreLimit(200)
+        )
+      )
+      const events = eventsSnap.docs.map(d => ({ id: d.id, ...d.data() }))
       for (const event of events) {
         const allocations = (event as any)?.allocations
         if (allocations) {
@@ -229,8 +235,14 @@ const AdminOrders: React.FC = () => {
     try {
       if (!orderIds || orderIds.length === 0) return
       const orderIdSet = new Set(orderIds.map(String))
-      const { getEvents } = await import('../../../services/firebase/firestore')
-      const events = await getEvents()
+      const eventsSnap = await getDocs(
+        firestoreQuery(
+          collection(db, 'events'),
+          firestoreOrderBy('schedule.startDate', 'desc'),
+          firestoreLimit(200)
+        )
+      )
+      const events = eventsSnap.docs.map(d => ({ id: d.id, ...d.data() }))
 
       for (const event of events) {
         const allocations = (event as any)?.allocations
@@ -293,10 +305,10 @@ const AdminOrders: React.FC = () => {
     return sortOrders(filtered, sortDesc)
   }, [filtered, sortDesc])
 
-  const handleViewOrder = React.useCallback((order: Order) => { 
-    setViewing(order); 
-    setIsEditingInView(false); 
-  }, []);
+  const handleViewOrder = React.useCallback((order: Order) => {
+    openDrawer(order);
+    setIsEditingInView(false);
+  }, [openDrawer]);
 
   const handleDeleteOrder = React.useCallback(async (id: string) => {
     // 先退还积分并清理记录（如果是积分支付的订单）
@@ -663,7 +675,7 @@ const AdminOrders: React.FC = () => {
                                   <div style={{ fontSize: 11, color: '#CCCCCC' }}>
                                     {getUserPhone(order.userId, users) || '-'}
                                   </div>
-                                  <button style={{ padding: '4px 8px', borderRadius: 6, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10', fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => { setViewing(order); setIsEditingInView(false) }}>
+                                  <button style={{ padding: '4px 8px', borderRadius: 6, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10', fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => { openDrawer(order); setIsEditingInView(false) }}>
                                     {t('common.viewDetails')}
                                   </button>
                                 </div>
@@ -737,8 +749,8 @@ const AdminOrders: React.FC = () => {
 
       {/* 查看订单详情 */}
       <Drawer
-        open={!!viewing}
-        onClose={() => { setViewing(null); setIsEditingInView(false) }}
+        open={drawerOpen}
+        onClose={() => { closeDrawer(); setIsEditingInView(false) }}
         width={isMobile ? '100%' : 820}
         styles={{
           body: { padding: 0, background: '#1a160d' },
@@ -756,7 +768,7 @@ const AdminOrders: React.FC = () => {
           <Button
             type="text"
             icon={<CloseOutlined style={{ color: '#fff' }} />}
-            onClick={() => { setViewing(null); setIsEditingInView(false) }}
+            onClick={() => { closeDrawer(); setIsEditingInView(false) }}
           />
         }
       >
@@ -767,7 +779,7 @@ const AdminOrders: React.FC = () => {
             cigars={cigars}
             isMobile={isMobile}
             isEditingInView={isEditingInView}
-            onClose={() => { setViewing(null); setIsEditingInView(false) }}
+            onClose={() => { closeDrawer(); setIsEditingInView(false) }}
             onEditToggle={() => setIsEditingInView(v => !v)}
             onOrderUpdate={async () => {
               await refreshPaginated()
@@ -930,7 +942,7 @@ const AdminOrders: React.FC = () => {
               {selectedRowKeys.length}
             </div>
             <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14, fontWeight: 600 }}>
-              {isMobile ? `已选 ${selectedRowKeys.length} 项` : t('common.itemsSelected', { count: selectedRowKeys.length })}
+              {t('common.itemsSelected', { count: selectedRowKeys.length })}
             </div>
           </div>
 
@@ -1039,7 +1051,7 @@ const AdminOrders: React.FC = () => {
                 await refreshPaginated()
                 setSelectedRowKeys([])
               }}
-              itemTypeName="订单"
+              itemTypeName={t('ordersAdmin.order')}
               size="middle"
               type="default"
               danger={true}

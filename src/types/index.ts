@@ -1,4 +1,5 @@
 // 全局类型定义
+export type { ServiceResponse, ServiceListResponse } from './api'
 
 // 用户相关类型
 export type UserRole = 'superAdmin' | 'admin' | 'member' | 'guest' | 'vip' | 'developer';

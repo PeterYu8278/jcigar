@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, Button, Space, Typography, Alert, Table, Tag, App, Spin, Popconfirm } from 'antd';
 import { DeleteOutlined, SyncOutlined, WarningOutlined } from '@ant-design/icons';
 import { collection, getDocs, doc, deleteDoc, getDoc, updateDoc, arrayRemove } from 'firebase/firestore';
@@ -23,6 +24,7 @@ interface OrphanedUser {
 }
 
 const OrphanedUserCleanup: React.FC = () => {
+  const { t } = useTranslation();
   const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [orphanedUsers, setOrphanedUsers] = useState<OrphanedUser[]>([]);
@@ -54,7 +56,7 @@ const OrphanedUserCleanup: React.FC = () => {
           orphaned.push({
             uid: uid,
             email: userData.email || '',
-            displayName: userData.displayName || '未命名',
+            displayName: userData.displayName || t('orphanedUsers.unnamedUser'),
             memberId: userData.memberId,
             createdAt: userData.createdAt,
             hasOrders: false,  // 需要进一步查询
@@ -68,7 +70,7 @@ const OrphanedUserCleanup: React.FC = () => {
       setOrphanedUsers(orphaned);
       
       if (orphaned.length === 0) {
-        message.success('没有发现孤立用户');
+        message.success(t('orphanedUsers.noOrphanedFound'));
       } else {
         message.warning(`找到 ${orphaned.length} 个用户，请手动在 Firebase Console 验证其 Auth 状态`);
       }
@@ -163,58 +165,58 @@ const OrphanedUserCleanup: React.FC = () => {
       render: (text: string) => <Text code style={{ fontSize: 11 }}>{text}</Text>
     },
     {
-      title: '邮箱',
+      title: t('orphanedUsers.colEmail'),
       dataIndex: 'email',
       key: 'email',
       width: 200,
       render: (text: string) => <Text strong>{text}</Text>
     },
     {
-      title: '显示名称',
+      title: t('orphanedUsers.colDisplayName'),
       dataIndex: 'displayName',
       key: 'displayName',
       width: 150
     },
     {
-      title: '会员编号',
+      title: t('orphanedUsers.colMemberId'),
       dataIndex: 'memberId',
       key: 'memberId',
       width: 120,
       render: (text: string) => text ? <Tag color="blue">{text}</Tag> : <Text type="secondary">-</Text>
     },
     {
-      title: '状态',
+      title: t('orphanedUsers.colStatus'),
       key: 'status',
       width: 150,
-      render: () => <Tag color="red" icon={<WarningOutlined />}>Auth 缺失</Tag>
+      render: () => <Tag color="red" icon={<WarningOutlined />}>{t('orphanedUsers.authMissing')}</Tag>
     },
     {
-      title: '操作',
+      title: t('orphanedUsers.colAction'),
       key: 'action',
       width: 150,
       render: (_: any, record: OrphanedUser) => (
         <Popconfirm
-          title="删除孤立用户"
+          title={t('orphanedUsers.deletePopconfirmTitle')}
           description={
             <div style={{ maxWidth: 300 }}>
               <p>确定要删除用户 <Text strong>{record.email}</Text> 的所有数据吗？</p>
               <p style={{ marginTop: 8, color: '#ff4d4f' }}>
-                此操作将删除：
+                {t('orphanedUsers.deleteWillRemove')}
               </p>
               <ul style={{ marginTop: 4, paddingLeft: 20 }}>
-                <li>Firestore 用户文档</li>
-                <li>用户的所有订单</li>
-                <li>活动参与记录</li>
-                <li>引荐关系</li>
+                <li>{t('orphanedUsers.deleteItemFirestore')}</li>
+                <li>{t('orphanedUsers.deleteItemOrders')}</li>
+                <li>{t('orphanedUsers.deleteItemEvents')}</li>
+                <li>{t('orphanedUsers.deleteItemReferrals')}</li>
               </ul>
               <p style={{ marginTop: 8, fontWeight: 'bold' }}>
-                此操作不可恢复！
+                {t('orphanedUsers.deleteIrreversible')}
               </p>
             </div>
           }
           onConfirm={() => deleteOrphanedUser(record.uid, record.email)}
-          okText="确认删除"
-          cancelText="取消"
+          okText={t('orphanedUsers.confirmDelete')}
+          cancelText={t('common.cancel')}
           okButtonProps={{ danger: true }}
         >
           <Button
@@ -224,7 +226,7 @@ const OrphanedUserCleanup: React.FC = () => {
             icon={<DeleteOutlined />}
             loading={deleting === record.uid}
           >
-            删除
+            {t('common.delete')}
           </Button>
         </Popconfirm>
       )
@@ -236,14 +238,14 @@ const OrphanedUserCleanup: React.FC = () => {
       <Card>
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
           <div>
-            <Title level={4}>孤立用户清理工具</Title>
+            <Title level={4}>{t('orphanedUsers.title')}</Title>
             <Text type="secondary">
               查找 Firestore 中存在但 Firebase Authentication 中不存在的用户，并提供清理功能
             </Text>
           </div>
 
           <Alert
-            message="重要说明"
+            message={t('orphanedUsers.alertImportantTitle')}
             description={
               <div>
                 <p><strong>什么是孤立用户？</strong></p>
@@ -266,7 +268,7 @@ const OrphanedUserCleanup: React.FC = () => {
           />
 
           <Alert
-            message="注意：此工具无法验证 Firebase Auth 状态"
+            message={t('orphanedUsers.alertLimitationTitle')}
             description="由于客户端 SDK 限制，此工具只能列出所有 Firestore 用户。请手动在 Firebase Console 的 Authentication 页面验证哪些用户缺失 Auth 记录。"
             type="info"
             showIcon
@@ -279,7 +281,7 @@ const OrphanedUserCleanup: React.FC = () => {
               onClick={findOrphanedUsers}
               loading={loading}
             >
-              {loading ? '扫描中...' : '扫描 Firestore 用户'}
+              {loading ? t('orphanedUsers.scanning') : t('orphanedUsers.scanFirestore')}
             </Button>
           </Space>
 
@@ -288,7 +290,7 @@ const OrphanedUserCleanup: React.FC = () => {
             <Card type="inner">
               <Space>
                 <Spin />
-                <Text>正在扫描 Firestore users 集合...</Text>
+                <Text>{t('orphanedUsers.scanningCollection')}</Text>
               </Space>
             </Card>
           )}

@@ -46,14 +46,14 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
       <div style={{ width: '100%', overflow: 'hidden' }}>
         {/* 基本信息卡片 */}
         <div style={theme.card.elevated}>
-          <div style={theme.text.subtitle}>基本信息</div>
+          <div style={theme.text.subtitle}>{t('events.basicInfo')}</div>
           
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 12, color: '#aaa', marginBottom: 4 }}>{t('events.eventName')}</div>
             <Input
               value={editForm.title}
               onChange={(e) => onEditFormChange({...editForm, title: e.target.value})}
-              placeholder="请输入活动名称"
+              placeholder={t('events.namePlaceholder')}
             />
           </div>
           
@@ -63,7 +63,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
               value={editForm.description}
               onChange={(e) => onEditFormChange({...editForm, description: e.target.value})}
               rows={2}
-              placeholder="请输入活动描述"
+              placeholder={t('events.descriptionPlaceholder')}
             />
           </div>
           
@@ -72,14 +72,14 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
             <Input
               value={editForm.locationName}
               onChange={(e) => onEditFormChange({...editForm, locationName: e.target.value})}
-              placeholder="请输入活动地点"
+              placeholder={t('events.locationPlaceholder')}
             />
           </div>
         </div>
         
         {/* 时间设置卡片 */}
         <div style={theme.card.elevated}>
-          <div style={theme.text.subtitle}>📅 时间设置</div>
+          <div style={theme.text.subtitle}>{t('events.timeSettings')}</div>
           
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 12, color: '#aaa', marginBottom: 4 }}>{t('common.startDate')}</div>
@@ -108,7 +108,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
         
         {/* 参与设置卡片 */}
         <div style={theme.card.elevated}>
-          <div style={theme.text.subtitle}>参与设置</div>
+          <div style={theme.text.subtitle}>{t('events.participationSettings')}</div>
           
           <Row gutter={12} style={{ marginBottom: 12 }}>
             <Col span={12}>
@@ -119,7 +119,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
                 min={0}
                 style={{ width: '100%' }}
               controls={false}
-                placeholder="费用"
+                placeholder={t('events.feePlaceholder')}
               />
             </Col>
             <Col span={12}>
@@ -130,7 +130,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
                 min={0}
                 style={{ width: '100%' }}
               controls={false}
-                placeholder="人数上限"
+                placeholder={t('events.maxParticipantsPlaceholder')}
               />
             </Col>
           </Row>

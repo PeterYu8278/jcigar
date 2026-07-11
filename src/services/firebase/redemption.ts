@@ -593,15 +593,16 @@ export const getDailyRedemptions = async (
     const { getUserMembershipPeriod } = await import('./membershipFee');
     const period = await getUserMembershipPeriod(userId);
     
-    // 查询所有包含该userId的文档
+    // 查询所有包含该userId的文档（每用户每日最多100条驻店记录）
     const q = query(
       collection(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS),
-      where('userId', '==', userId)
+      where('userId', '==', userId),
+      limit(100)
     );
 
     const snapshot = await getDocs(q);
     let allRecords: RedemptionRecord[] = [];
-    
+
     // 遍历所有文档，提取redemptions数组中dayKey匹配的记录
     snapshot.docs.forEach(docSnap => {
       const data = docSnap.data() as RedemptionRecordDocument;
@@ -649,15 +650,16 @@ export const getHourlyRedemptions = async (
   hourKey: string
 ): Promise<RedemptionRecord[]> => {
   try {
-    // 查询所有包含该userId的文档
+    // 查询所有包含该userId的文档（每用户每小时最多50条驻店记录）
     const q = query(
       collection(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS),
-      where('userId', '==', userId)
+      where('userId', '==', userId),
+      limit(50)
     );
 
     const snapshot = await getDocs(q);
     const allRecords: RedemptionRecord[] = [];
-    
+
     // 遍历所有文档，提取redemptions数组中hourKey匹配的记录
     snapshot.docs.forEach(docSnap => {
       const data = docSnap.data() as RedemptionRecordDocument;
@@ -696,9 +698,11 @@ export const getTotalRedemptions = async (userId: string): Promise<RedemptionRec
   try {
     // 注意：REDEMPTION_RECORDS 集合中的文档是按 visitSessionId 分组的
     // 文档本身没有 redeemedAt 字段，该字段在 redemptions 数组项中
+    // limit(500) 防止无界读取；超出500条时仍以计数器字段作为精确计数的长远方案
     const q = query(
       collection(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS),
-      where('userId', '==', userId)
+      where('userId', '==', userId),
+      limit(500)
     );
 
     const snapshot = await getDocs(q);

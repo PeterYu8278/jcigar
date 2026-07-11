@@ -51,7 +51,7 @@ export const AICigarScanner: React.FC = () => {
     const saveRecognitionResult = useCallback(async (recognitionResult: CigarAnalysisResult, imageSource: string) => {
         // 检查是否启用数据存储
         if (!dataStorageEnabled) {
-            message.info('数据存储已禁用，识别结果不会保存到数据库');
+            message.info(t('aiScanner.dataStorageDisabled'));
             return;
         }
 
@@ -71,9 +71,9 @@ export const AICigarScanner: React.FC = () => {
             
             if (aggregated) {
                 setAggregatedData(aggregated);
-                message.success(`识别结果已保存（基于 ${aggregated.totalRecognitions} 次识别的统计数据）`);
+                message.success(t('aiScanner.savedWithStats', { count: aggregated.totalRecognitions }));
                 } else {
-                message.success('识别结果已保存到数据库');
+                message.success(t('aiScanner.savedToDb'));
             }
         } catch (error) {
             message.error(`保存失败: ${error instanceof Error ? error.message : '未知错误'}`);
@@ -88,8 +88,8 @@ export const AICigarScanner: React.FC = () => {
             setLoadingSuggestions(true);
             try {
                 const [cigarsData, brandsData] = await Promise.all([
-                    getCigars(),
-                    getBrands()
+                    getCigars({ limit: 500 }),
+                    getBrands({ limit: 200 }),
                 ]);
                 setCigars(cigarsData);
                 setBrands(brandsData);
@@ -125,7 +125,7 @@ export const AICigarScanner: React.FC = () => {
         brands.forEach(brand => {
             options.push({
                 value: brand.name,
-                label: `品牌: ${brand.name}${brand.country ? ` (${brand.country})` : ''}`
+                label: t('aiScanner.brandOptionLabel', { name: brand.name, country: brand.country ? ` (${brand.country})` : '' })
             });
         });
         
@@ -137,7 +137,7 @@ export const AICigarScanner: React.FC = () => {
             if (fullName) {
                 options.push({
                     value: fullName,
-                    label: `雪茄: ${fullName}${cigar.size ? ` (${cigar.size})` : ''}`
+                    label: t('aiScanner.cigarOptionLabel', { name: fullName, size: cigar.size ? ` (${cigar.size})` : '' })
                 });
             }
         });
@@ -191,10 +191,10 @@ export const AICigarScanner: React.FC = () => {
             
              if (aggregated) {
                  setAggregatedData(aggregated);
-                 message.success(`识别成功！数据基于 ${aggregated.totalRecognitions} 次识别统计`);
+                 message.success(t('aiScanner.recognitionSuccessWithStats', { count: aggregated.totalRecognitions }));
              }
                 } catch (error) {
-                    message.warning('数据统计更新失败，但识别结果已显示');
+                    message.warning(t('aiScanner.statsUpdateFailed'));
                 }
             }
             
@@ -210,10 +210,10 @@ export const AICigarScanner: React.FC = () => {
             
             // 根据可信度显示提示
             if (data.confidence < 0.5) {
-                message.warning('识别可信度较低，建议重新拍摄');
+                message.warning(t('aiScanner.lowConfidence'));
             }
         } catch (error) {
-            message.error('识别失败，请重试');
+            message.error(t('aiScanner.recognitionFailed'));
             setImgSrc(null); // Reset to camera
         } finally {
             setAnalyzing(false);
@@ -258,21 +258,21 @@ export const AICigarScanner: React.FC = () => {
                         (videoTrack as any).torch = newState;
                         setFlashEnabled(newState);
                     } else {
-                        message.warning('当前设备不支持闪光灯控制');
+                        message.warning(t('aiScanner.flashNotSupported'));
                         setFlashSupported(false);
                     }
                 }
             } else {
-                message.warning('当前设备不支持闪光灯控制');
+                message.warning(t('aiScanner.flashNotSupported'));
                 setFlashSupported(false);
             }
         } catch (error: any) {
             // 如果错误是因为不支持，隐藏闪光灯按钮
             if (error?.name === 'NotSupportedError' || error?.name === 'NotReadableError') {
                 setFlashSupported(false);
-                message.warning('当前设备不支持闪光灯控制');
+                message.warning(t('aiScanner.flashNotSupported'));
             } else {
-                message.error('切换闪光灯失败');
+                message.error(t('aiScanner.flashToggleFailed'));
             }
         }
     }, [flashEnabled]);
@@ -409,14 +409,14 @@ export const AICigarScanner: React.FC = () => {
     const handleFileUpload: UploadProps['beforeUpload'] = (file) => {
         // 验证文件类型
         if (!file.type.startsWith('image/')) {
-            message.error('请选择图片文件');
+            message.error(t('upload.selectImageFile'));
             return false;
         }
 
         // 验证文件大小（限制为 10MB）
         const maxSize = 10 * 1024 * 1024; // 10MB
         if (file.size > maxSize) {
-            message.error('图片文件大小不能超过 10MB');
+            message.error(t('aiScanner.imageTooLarge'));
             return false;
         }
 
@@ -429,7 +429,7 @@ export const AICigarScanner: React.FC = () => {
             }
         };
         reader.onerror = () => {
-            message.error('读取图片失败，请重试');
+            message.error(t('aiScanner.readImageFailed'));
         };
         reader.readAsDataURL(file);
         return false; // 阻止自动上传
@@ -438,7 +438,7 @@ export const AICigarScanner: React.FC = () => {
     // 处理文本搜索
     const handleTextSearch = async () => {
         if (!userHint || !userHint.trim()) {
-            message.warning('请输入雪茄品牌和名称');
+            message.warning(t('aiScanner.pleaseInputBrandAndName'));
             return;
         }
         
@@ -451,7 +451,7 @@ export const AICigarScanner: React.FC = () => {
             
             if (searchResult) {
                 setResult(searchResult);
-                message.success('搜索成功');
+                message.success(t('aiScanner.searchSuccess'));
                 
                 // 更新用户 AI 识茄使用统计
                 if (user?.id) {
@@ -489,20 +489,20 @@ export const AICigarScanner: React.FC = () => {
                         
                         if (aggregated) {
                             setAggregatedData(aggregated);
-                            message.success(`识别成功！数据基于 ${aggregated.totalRecognitions} 次识别统计`);
+                            message.success(t('aiScanner.recognitionSuccessWithStats', { count: aggregated.totalRecognitions }));
                         }
                     } catch (error) {
                         console.error('[AICigarScanner] 文本搜索 - 保存失败:', error);
-                        message.warning('数据统计更新失败，但识别结果已显示');
+                        message.warning(t('aiScanner.statsUpdateFailed'));
                     }
                 } else {
                     console.log('[AICigarScanner] 文本搜索 - 数据存储已禁用');
                 }
             } else {
-                message.error('未找到匹配的雪茄信息');
+                message.error(t('aiScanner.noMatchFound'));
             }
         } catch (error) {
-            message.error('搜索失败，请重试');
+            message.error(t('aiScanner.searchFailed'));
         } finally {
             setAnalyzing(false);
         }
@@ -512,12 +512,12 @@ export const AICigarScanner: React.FC = () => {
         // 如果后置摄像头失败，尝试前置摄像头
         if (facingMode === 'environment') {
             setFacingMode('user');
-            setCameraError('后置摄像头不可用，已切换到前置摄像头');
-            message.warning('后置摄像头不可用，已切换到前置摄像头');
+            setCameraError(t('aiScanner.backCameraFallback'));
+            message.warning(t('aiScanner.backCameraFallback'));
         } else {
-            const errorMessage = typeof error === 'string' ? error : error.message || '无法访问摄像头';
+            const errorMessage = typeof error === 'string' ? error : error.message || t('aiScanner.cameraUnavailable');
             setCameraError(errorMessage);
-            message.error('无法访问摄像头，请检查权限设置');
+            message.error(t('aiScanner.cameraPermissionError'));
         }
     }, [facingMode]);
 
@@ -578,7 +578,7 @@ export const AICigarScanner: React.FC = () => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <EditOutlined style={{ color: '#ffd700' }} />
                             <Text style={{ color: '#fff', fontSize: '14px', fontWeight: 500 }}>
-                                    输入雪茄型号
+                                    {t('aiScanner.inputCigarModel')}
                             </Text>
                             </div>
                             {userHint && userHint.trim() && (
@@ -594,13 +594,13 @@ export const AICigarScanner: React.FC = () => {
                                         color: '#111'
                                     }}
                                 >
-                                    直接搜索
+                                    {t('aiScanner.directSearch')}
                                 </Button>
                             )}
                         </div>
                         <AutoComplete
                             style={{ width: '100%' }}
-                            placeholder="输入品牌或雪茄名称，例如：Cohiba Robusto（可直接搜索或辅助拍照识别）"
+                            placeholder={t('aiScanner.inputPlaceholder')}
                             value={userHint}
                             onChange={setUserHint}
                             onSelect={(value) => setUserHint(value)}
@@ -612,7 +612,7 @@ export const AICigarScanner: React.FC = () => {
                         />
                         {userHint && (
                             <Text type="secondary" style={{ fontSize: '12px', color: '#aaa' }}>
-                                提示：可以直接点击"直接搜索"按钮查询，或拍照/上传图片时作为辅助信息
+                                {t('aiScanner.inputHint')}
                             </Text>
                         )}
                     </Space>
@@ -643,7 +643,7 @@ export const AICigarScanner: React.FC = () => {
                                 }}
                                 style={{ marginTop: 8 }}
                             >
-                                重试
+                                {t('common.retry')}
                             </Button>
                         </div>
                     ) : (
@@ -680,7 +680,7 @@ export const AICigarScanner: React.FC = () => {
                                 color: '#fff'
                             }}
                             onClick={toggleCamera}
-                            title={facingMode === 'environment' ? '切换到前置摄像头' : '切换到后置摄像头'}
+                            title={facingMode === 'environment' ? t('aiScanner.switchToFront') : t('aiScanner.switchToBack')}
                         />
                         {flashSupported && facingMode === 'environment' && (
                             <Button
@@ -700,7 +700,7 @@ export const AICigarScanner: React.FC = () => {
                                     color: flashEnabled ? '#111' : '#fff'
                                 }}
                                 onClick={() => toggleFlash()}
-                                title={flashEnabled ? '关闭闪光灯' : '打开闪光灯'}
+                                title={flashEnabled ? t('aiScanner.flashOff') : t('aiScanner.flashOn')}
                             />
                         )}
                         <Button
@@ -733,7 +733,7 @@ export const AICigarScanner: React.FC = () => {
                                     border: '2px solid rgba(255,255,255,0.3)',
                                     color: '#fff'
                                 }}
-                                title="上传图片"
+                                title={t('aiScanner.uploadImage')}
                             />
                         </Upload>
                     </div>
@@ -758,7 +758,7 @@ export const AICigarScanner: React.FC = () => {
                         }}>
                     <Spin indicator={<LoadingOutlined style={{ fontSize: 64, color: '#ffd700' }} spin />} />
                     <Text style={{ color: '#fff', marginTop: 24, fontSize: '18px', fontWeight: 500 }}>
-                        {imgSrc ? 'AI 正在识别雪茄...' : 'AI 正在搜索雪茄信息...'}
+                        {imgSrc ? t('aiScanner.analyzingImage') : t('aiScanner.analyzingText')}
                     </Text>
                 </div>
             )}
@@ -824,7 +824,7 @@ export const AICigarScanner: React.FC = () => {
                                         fontWeight: 500,
                                         color: '#ffd700'
                                     }}>
-                                        雪茄茄标图像
+                                        {t('aiScanner.cigarBandImage')}
                                     </Text>
                                     <div style={{
                                         display: 'flex',
@@ -868,14 +868,14 @@ export const AICigarScanner: React.FC = () => {
                                 border: '1px solid rgba(255, 215, 0, 0.3)'
                             }}>
                                 <Text style={{ color: '#ffd700', fontSize: '12px' }}>
-                                    数据来源: 基于 {aggregatedData.totalRecognitions} 次 AI 识别统计
+                                    {t('aiScanner.dataSource', { count: aggregatedData.totalRecognitions })}
                                 </Text>
                             </div>
                         )}
 
                         <Space split={<Divider type="vertical" style={{ borderColor: '#555' }} />}>
                             <Text style={{ color: '#ddd' }} type="secondary">
-                                产地: <span style={{ color: '#ddd' }}>
+                                {t('inventory.origin')}: <span style={{ color: '#ddd' }}>
                                     {aggregatedData ? aggregatedData.origin : result!.origin}
                                     {aggregatedData && aggregatedData.originConsistency < 100 && (
                                         <Text type="secondary" style={{ color: '#999', fontSize: '11px', marginLeft: 4 }}>
@@ -884,7 +884,7 @@ export const AICigarScanner: React.FC = () => {
                                     )}
                                 </span>
                             </Text>
-                            <Text style={{ color: '#ddd' }} type="secondary">可信度: <span style={{ color: '#ddd' }}>{Math.round(result!.confidence * 100)}%</span></Text>
+                            <Text style={{ color: '#ddd' }} type="secondary">{t('aiScanner.confidenceLabel')}: <span style={{ color: '#ddd' }}>{Math.round(result!.confidence * 100)}%</span></Text>
                         </Space>
 
                         {/* 风味特征：优先使用聚合数据（Top 10） */}
@@ -931,9 +931,9 @@ export const AICigarScanner: React.FC = () => {
                                         fontWeight: 500,
                                         color: '#ffd700'
                                     }}>
-                                        雪茄构造 {aggregatedData && aggregatedData.totalRecognitions > 1 && (
+                                        {t('aiScanner.cigarConstruction')} {aggregatedData && aggregatedData.totalRecognitions > 1 && (
                                             <span style={{ fontSize: '11px', color: '#999' }}>
-                                                (Top 5 统计最多)
+                                                {t('aiScanner.top5Stats')}
                                             </span>
                                         )}
                                     </Text>
@@ -942,7 +942,7 @@ export const AICigarScanner: React.FC = () => {
                                         {(aggregatedData && aggregatedData.wrappers.length > 0) ? (
                                             <div>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: 4 }}>
-                                                    🍂 茄衣 (Wrapper):
+                                                    {t('aiScanner.wrapper')}
                                                 </Text>
                                                 {aggregatedData.wrappers.map((item, index) => (
                                                     <div key={index} style={{ marginLeft: 8, marginBottom: 2 }}>
@@ -957,7 +957,7 @@ export const AICigarScanner: React.FC = () => {
                                             </div>
                                         ) : result!.wrapper && (
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                                                <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', minWidth: '80px' }}>茄衣 (Wrapper):</Text>
+                                                <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', minWidth: '80px' }}>{t('aiScanner.wrapperPlain')}</Text>
                                                 <Text style={{ color: '#ddd', fontSize: '12px', textAlign: 'right', flex: 1 }}>{result!.wrapper}</Text>
                                             </div>
                                         )}
@@ -966,7 +966,7 @@ export const AICigarScanner: React.FC = () => {
                                         {(aggregatedData && aggregatedData.binders.length > 0) ? (
                                             <div>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: 4 }}>
-                                                    🌿 茄套 (Binder):
+                                                    {t('aiScanner.binder')}
                                                 </Text>
                                                 {aggregatedData.binders.map((item, index) => (
                                                     <div key={index} style={{ marginLeft: 8, marginBottom: 2 }}>
@@ -981,7 +981,7 @@ export const AICigarScanner: React.FC = () => {
                                             </div>
                                         ) : result!.binder && (
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                                                <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', minWidth: '80px' }}>茄套 (Binder):</Text>
+                                                <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', minWidth: '80px' }}>{t('aiScanner.binderPlain')}</Text>
                                                 <Text style={{ color: '#ddd', fontSize: '12px', textAlign: 'right', flex: 1 }}>{result!.binder}</Text>
                                             </div>
                                         )}
@@ -990,7 +990,7 @@ export const AICigarScanner: React.FC = () => {
                                         {(aggregatedData && aggregatedData.fillers.length > 0) ? (
                                             <div>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: 4 }}>
-                                                    🌾 茄芯 (Filler):
+                                                    {t('aiScanner.filler')}
                                                 </Text>
                                                 {aggregatedData.fillers.map((item, index) => (
                                                     <div key={index} style={{ marginLeft: 8, marginBottom: 2 }}>
@@ -1005,7 +1005,7 @@ export const AICigarScanner: React.FC = () => {
                                             </div>
                                         ) : result!.filler && (
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                                                <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', minWidth: '80px' }}>茄芯 (Filler):</Text>
+                                                <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', minWidth: '80px' }}>{t('aiScanner.fillerPlain')}</Text>
                                                 <Text style={{ color: '#ddd', fontSize: '12px', textAlign: 'right', flex: 1 }}>{result!.filler}</Text>
                                             </div>
                                         )}
@@ -1032,9 +1032,9 @@ export const AICigarScanner: React.FC = () => {
                                         fontWeight: 500,
                                         color: '#ffd700'
                                     }}>
-                                        品吸笔记 {aggregatedData && aggregatedData.totalRecognitions > 1 && (
+                                        {t('aiScanner.tastingNotes')} {aggregatedData && aggregatedData.totalRecognitions > 1 && (
                                             <span style={{ fontSize: '11px', color: '#999' }}>
-                                                (Top 5 统计最多)
+                                                {t('aiScanner.top5Stats')}
                                             </span>
                                         )}
                                     </Text>
@@ -1043,7 +1043,7 @@ export const AICigarScanner: React.FC = () => {
                                         {(aggregatedData && aggregatedData.footTasteNotes.length > 0) ? (
                                             <div>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: '4px', fontWeight: 500 }}>
-                                                    👃 脚部 (Foot) - 前1/3:
+                                                    {t('aiScanner.footSection')}
                                                 </Text>
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                                                     {aggregatedData.footTasteNotes.map((item, index) => (
@@ -1061,7 +1061,7 @@ export const AICigarScanner: React.FC = () => {
                                         ) : (result!.footTasteNotes && Array.isArray(result!.footTasteNotes) && result!.footTasteNotes.length > 0) && (
                                             <div>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: '4px', fontWeight: 500 }}>
-                                                    脚部 (Foot) - 前1/3:
+                                                    {t('aiScanner.footSectionPlain')}
                                                 </Text>
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                                                     {result!.footTasteNotes.map((note: string, index: number) => (
@@ -1074,7 +1074,7 @@ export const AICigarScanner: React.FC = () => {
                                         {(aggregatedData && aggregatedData.bodyTasteNotes.length > 0) ? (
                                             <div>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: '4px', fontWeight: 500 }}>
-                                                    👃 主体 (Body) - 中1/3:
+                                                    {t('aiScanner.bodySection')}
                                                 </Text>
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                                                     {aggregatedData.bodyTasteNotes.map((item, index) => (
@@ -1092,7 +1092,7 @@ export const AICigarScanner: React.FC = () => {
                                         ) : (result!.bodyTasteNotes && Array.isArray(result!.bodyTasteNotes) && result!.bodyTasteNotes.length > 0) && (
                                             <div>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: '4px', fontWeight: 500 }}>
-                                                    主体 (Body) - 中1/3:
+                                                    {t('aiScanner.bodySectionPlain')}
                                                 </Text>
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                                                     {result!.bodyTasteNotes.map((note: string, index: number) => (
@@ -1105,7 +1105,7 @@ export const AICigarScanner: React.FC = () => {
                                         {(aggregatedData && aggregatedData.headTasteNotes.length > 0) ? (
                                             <div>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: '4px', fontWeight: 500 }}>
-                                                    👃 头部 (Head) - 后1/3:
+                                                    {t('aiScanner.headSection')}
                                                 </Text>
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                                                     {aggregatedData.headTasteNotes.map((item, index) => (
@@ -1123,7 +1123,7 @@ export const AICigarScanner: React.FC = () => {
                                         ) : (result!.headTasteNotes && Array.isArray(result!.headTasteNotes) && result!.headTasteNotes.length > 0) && (
                                             <div>
                                                 <Text type="secondary" style={{ color: '#ddd', fontSize: '12px', display: 'block', marginBottom: '4px', fontWeight: 500 }}>
-                                                    头部 (Head) - 后1/3:
+                                                    {t('aiScanner.headSectionPlain')}
                                                 </Text>
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                                                     {result!.headTasteNotes.map((note: string, index: number) => (
@@ -1196,7 +1196,7 @@ export const AICigarScanner: React.FC = () => {
                                                 fontWeight: 500,
                                                 color: '#ffd700'
                                             }}>
-                                                雪茄图片 ({allImages.length} 张)
+                                                {t('aiScanner.cigarImages', { count: allImages.length })}
                                             </Text>
                                             <Image.PreviewGroup>
                                                 <div style={{ 
@@ -1226,7 +1226,7 @@ export const AICigarScanner: React.FC = () => {
                                                                     objectFit: 'cover'
                                                                 }}
                                                                 preview={{
-                                                                    mask: '预览'
+                                                                    mask: t('aiScanner.imagePreviewMask')
                                                                 }}
                                                                 fallback="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzMzMzMzMyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM2NjY2NjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7lm77niYfliqDovb3lpLHotKU8L3RleHQ+PC9zdmc+"
                                                             />
@@ -1255,7 +1255,7 @@ export const AICigarScanner: React.FC = () => {
                                 textAlign: 'center'
                             }}>
                                 <Spin size="small" style={{ marginRight: 8 }} />
-                                <Text style={{ color: '#1890ff', fontSize: '13px' }}>正在保存到数据库...</Text>
+                                <Text style={{ color: '#1890ff', fontSize: '13px' }}>{t('aiScanner.savingToDb')}</Text>
                             </div>
                         )}
                         {savingScreenshot && (
@@ -1267,7 +1267,7 @@ export const AICigarScanner: React.FC = () => {
                                 textAlign: 'center'
                             }}>
                                 <Spin size="small" style={{ marginRight: 8 }} />
-                                <Text style={{ color: '#1890ff', fontSize: '13px' }}>正在生成截图...</Text>
+                                <Text style={{ color: '#1890ff', fontSize: '13px' }}>{t('aiScanner.generatingScreenshot')}</Text>
                             </div>
                         )}
                         
@@ -1314,7 +1314,7 @@ export const AICigarScanner: React.FC = () => {
                                 boxShadow: '0 4px 16px rgba(255, 215, 0, 0.3)'
                             }}
                         >
-                            重新拍摄
+                            {t('aiScanner.retake')}
                         </Button>
                     </Space>
                 </>

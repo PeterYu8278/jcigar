@@ -6,13 +6,17 @@ import {
   ShoppingOutlined,
   TrophyOutlined,
   UserOutlined,
-  DatabaseOutlined
+  DatabaseOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  TeamOutlined,
+  NumberOutlined
 } from '@ant-design/icons'
 
 const { Text } = Typography
 
-import { getEventsByUser, getUsers, getOrdersByUser, getCigars, getDocument } from '../../services/firebase/firestore'
-import { collection, getDocs } from 'firebase/firestore'
+import { getEventsByUser, getOrdersByUser, getCigarById, getUsersByIds, getDocument } from '../../services/firebase/firestore'
+import { collection, getDocs, query, limit } from 'firebase/firestore'
 import { db } from '../../config/firebase'
 import { getUserPointsRecords } from '../../services/firebase/pointsRecords'
 import type { User, Event, Order, Cigar, PointsRecord } from '../../types'
@@ -56,6 +60,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const canViewDiscount = authUser?.role === 'developer' || authUser?.role === 'superAdmin'
   const [loadingPointsRecords, setLoadingPointsRecords] = useState(false)
   const [referralActivationMap, setReferralActivationMap] = useState<Record<string, Date | null>>({})
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)')
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   // Load user data if userId is provided
   useEffect(() => {
@@ -127,13 +140,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       if (!user?.id) return
       setLoadingOrders(true)
       try {
-        const [orders, cigars] = await Promise.all([
-          getOrdersByUser(user.id),
-          getCigars()
-        ])
-
-        // Map cigar ID to name
-        const cigarMap = new Map(cigars.map(c => [c.id, c.name]))
+        const orders = await getOrdersByUser(user.id)
+        const cigarIds = [...new Set(orders.flatMap(o => o.items.map(i => i.cigarId)).filter(Boolean))]
+        const cigarDocs = await Promise.all(cigarIds.map(id => getCigarById(id)))
+        const cigarMap = new Map(cigarDocs.filter(Boolean).map(c => [c!.id, c!.name]))
 
         // Fill cigar names for each item
         const ordersWithNames = orders.map(order => ({
@@ -164,12 +174,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       setLoadingReferrals(true)
       try {
-        const allUsers = await getUsers()
-        // Filter referrals (compat for string[] or object[])
         const referralUserIds = user.referral.referrals.map((r: any) =>
           typeof r === 'string' ? r : r.userId
-        );
-        const referred = allUsers.filter(u => referralUserIds.includes(u.id))
+        )
+        const referred = await getUsersByIds(referralUserIds)
         // Sort by join date descending
         referred.sort((a, b) => {
           const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt)
@@ -190,7 +198,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       if (!user?.id) return
       try {
         const referralsRef = collection(db, 'users', user.id, 'referrals')
-        const snap = await getDocs(referralsRef)
+        const snap = await getDocs(query(referralsRef, limit(200)))
         const map: Record<string, Date | null> = {}
         snap.docs.forEach(docSnap => {
           const data = docSnap.data()
@@ -468,8 +476,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               }
               const activeStyle: React.CSSProperties = {
                 color: 'transparent',
-                background: 'none',
                 backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                backgroundColor: 'transparent',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent'
               }
@@ -516,34 +524,41 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <div style={{ paddingBottom: '24px' }}>
           {activeTab === 'cigar' && (
             loadingOrders ? (
-              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                <Space direction="vertical" size="middle">
-                  <div style={{
-                    fontSize: '24px',
-                    background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text'
-                  }}>
-                    <ShoppingOutlined spin />
-                  </div>
-                  <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                    {t('common.loading')}
-                  </Text>
-                </Space>
+              <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                <div style={{
+                  fontSize: '36px',
+                  background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  marginBottom: 12
+                }}>
+                  <ShoppingOutlined spin />
+                </div>
+                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
+                  {t('common.loading')}
+                </Text>
               </div>
             ) : userOrders.length === 0 ? (
-              <div style={{
-                textAlign: 'center',
-                padding: '40px 20px',
-                color: 'rgba(255, 255, 255, 0.6)'
-              }}>
-                <p style={{ margin: 0, fontSize: '14px' }}>
+              <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                <div style={{
+                  fontSize: '48px',
+                  marginBottom: 16,
+                  opacity: 0.25,
+                  color: '#F4AF25'
+                }}>
+                  <ShoppingOutlined />
+                </div>
+                <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14, display: 'block' }}>
                   {t('profile.noCigarRecords')}
-                </p>
+                </Text>
               </div>
             ) : (
-              <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+                gap: isMobile ? 12 : 16
+              }}>
                 {userOrders.map((order) => {
                   const orderDate = order.createdAt instanceof Date
                     ? order.createdAt
@@ -553,41 +568,74 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
                   const totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0)
 
+                  const statusConfig: Record<string, { bg: string; border: string; color: string; label: string }> = {
+                    completed: { bg: 'rgba(82,196,26,0.12)', border: 'rgba(82,196,26,0.45)', color: '#52c41a', label: t('ordersAdmin.status.completed') },
+                    confirmed: { bg: 'rgba(82,196,26,0.12)', border: 'rgba(82,196,26,0.45)', color: '#52c41a', label: t('ordersAdmin.status.confirmed') || 'Confirmed' },
+                    pending: { bg: 'rgba(244,175,37,0.12)', border: 'rgba(244,175,37,0.45)', color: '#F4AF25', label: t('ordersAdmin.status.pending') },
+                    cancelled: { bg: 'rgba(255,77,79,0.12)', border: 'rgba(255,77,79,0.4)', color: '#ff4d4f', label: t('ordersAdmin.status.cancelled') },
+                  }
+                  const status = statusConfig[order.status] ?? { bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.6)', label: order.status }
+
                   return (
-                    <Card
+                    <div
                       key={order.id}
-                      size="small"
                       style={{
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)'
+                        background: 'rgba(255,255,255,0.04)',
+                        borderRadius: 12,
+                        border: '1px solid rgba(244,175,37,0.18)',
+                        borderLeft: '3px solid #C48D3A',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column'
                       }}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                      {/* Card header */}
+                      <div style={{
+                        padding: isMobile ? '12px 14px 10px' : '14px 16px 10px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        borderBottom: '1px solid rgba(255,255,255,0.06)'
+                      }}>
                         <div>
-                          <Text strong style={{ fontSize: '14px', display: 'block' }}>
-                            <span style={{
-                              background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                              WebkitBackgroundClip: 'text',
-                              WebkitTextFillColor: 'transparent',
-                              backgroundClip: 'text'
-                            }}>
-                              {t('ordersAdmin.order')} #{order.id.slice(-6).toUpperCase()}
-                            </span>
-                          </Text>
-                          <div style={{ marginTop: '4px' }}>
-                            <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
-                              {formatDate(orderDate)}
-                            </Text>
+                          <div style={{
+                            fontSize: isMobile ? 13 : 14,
+                            fontWeight: 700,
+                            background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            backgroundClip: 'text',
+                            letterSpacing: '0.5px'
+                          }}>
+                            # {order.id.slice(-6).toUpperCase()}
+                          </div>
+                          <div style={{
+                            fontSize: 11,
+                            color: 'rgba(255,255,255,0.4)',
+                            marginTop: 3,
+                            letterSpacing: '0.2px'
+                          }}>
+                            {formatDate(orderDate)}
                           </div>
                         </div>
-                        <Tag color={order.status === 'completed' ? 'success' : order.status === 'pending' ? 'warning' : 'default'}>
-                          {order.status === 'completed' ? t('ordersAdmin.status.completed') :
-                            order.status === 'pending' ? t('ordersAdmin.status.pending') :
-                              order.status === 'cancelled' ? t('ordersAdmin.status.cancelled') : order.status}
-                        </Tag>
+                        <div style={{
+                          padding: '3px 10px',
+                          borderRadius: 20,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          background: status.bg,
+                          border: `1px solid ${status.border}`,
+                          color: status.color,
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0,
+                          marginLeft: 8
+                        }}>
+                          {status.label}
+                        </div>
                       </div>
 
-                      <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                      {/* Items list */}
+                      <div style={{ padding: isMobile ? '8px 14px' : '8px 16px', flex: 1 }}>
                         {order.items.map((item, index) => {
                           const displayName = item.cigarId.startsWith('FEE:')
                             ? t('eventsAdmin.eventFee')
@@ -597,73 +645,110 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                             <div key={index} style={{
                               display: 'flex',
                               justifyContent: 'space-between',
-                              padding: '8px 0',
-                              borderTop: index > 0 ? '1px solid rgba(255, 255, 255, 0.05)' : 'none'
+                              alignItems: 'center',
+                              padding: '7px 0',
+                              borderBottom: index < order.items.length - 1
+                                ? '1px solid rgba(255,255,255,0.05)'
+                                : 'none',
+                              gap: 8
                             }}>
-                              <Text style={{ color: 'rgba(255, 255, 255, 0.85)' }}>
-                                {displayName}
-                              </Text>
-                              <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                                × {item.quantity}
-                              </Text>
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                minWidth: 0,
+                                flex: 1
+                              }}>
+                                <div style={{
+                                  width: 4,
+                                  height: 4,
+                                  borderRadius: '50%',
+                                  background: 'rgba(244,175,37,0.5)',
+                                  flexShrink: 0
+                                }} />
+                                <span style={{
+                                  color: 'rgba(255,255,255,0.82)',
+                                  fontSize: isMobile ? 12 : 13,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }}>
+                                  {displayName}
+                                </span>
+                              </div>
+                              <span style={{
+                                color: 'rgba(255,255,255,0.4)',
+                                fontSize: 12,
+                                flexShrink: 0,
+                                background: 'rgba(255,255,255,0.06)',
+                                padding: '1px 7px',
+                                borderRadius: 10
+                              }}>
+                                ×{item.quantity}
+                              </span>
                             </div>
                           )
                         })}
-                      </Space>
+                      </div>
 
+                      {/* Footer */}
                       <div style={{
-                        marginTop: '12px',
-                        paddingTop: '12px',
-                        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                        padding: isMobile ? '10px 14px' : '10px 16px',
+                        borderTop: '1px solid rgba(255,255,255,0.06)',
+                        background: 'rgba(0,0,0,0.15)',
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center'
                       }}>
-                        <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
-                          {t('ordersAdmin.totalQuantity')}: {totalQuantity}
-                        </Text>
-                        <Text strong style={{ fontSize: '16px' }}>
-                          <span style={{
-                            background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            backgroundClip: 'text'
-                          }}>
-                            RM {order.total.toFixed(2)}
-                          </span>
-                        </Text>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          color: 'rgba(255,255,255,0.35)',
+                          fontSize: 11
+                        }}>
+                          <ShoppingOutlined style={{ fontSize: 11 }} />
+                          <span>{totalQuantity} {t('ordersAdmin.totalQuantity') || 'items'}</span>
+                        </div>
+                        <div style={{
+                          fontSize: isMobile ? 15 : 16,
+                          fontWeight: 700,
+                          background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                          backgroundClip: 'text'
+                        }}>
+                          RM {order.total.toFixed(2)}
+                        </div>
                       </div>
-                    </Card>
+                    </div>
                   )
                 })}
-              </Space>
+              </div>
             )
           )}
 
           {activeTab === 'points' && (
             loadingPointsRecords ? (
-              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                <Space direction="vertical" size="middle">
-                  <div style={{ fontSize: '24px', color: '#ffd700' }}>
-                    <TrophyOutlined spin />
-                  </div>
-                  <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                    {t('common.loading')}
-                  </Text>
-                </Space>
+              <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                <div style={{ fontSize: 36, color: '#F4AF25', marginBottom: 12 }}>
+                  <TrophyOutlined spin />
+                </div>
+                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
+                  {t('common.loading')}
+                </Text>
               </div>
             ) : pointsRecords.length === 0 ? (
-              <div style={{
-                textAlign: 'center',
-                padding: '40px 20px',
-                color: 'rgba(255, 255, 255, 0.6)'
-              }}>
-                <p style={{ margin: 0, fontSize: '14px' }}>
+              <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.25, color: '#F4AF25' }}>
+                  <TrophyOutlined />
+                </div>
+                <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14, display: 'block' }}>
                   {t('profile.noPointsRecords')}
-                </p>
+                </Text>
               </div>
             ) : (
-              <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {pointsRecords.map((record) => {
                   const recordDate = record.createdAt instanceof Date
                     ? record.createdAt
@@ -671,136 +756,210 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       ? (record.createdAt as any).toDate()
                       : new Date(record.createdAt)
 
-                  const getSourceText = (source: string) => {
-                    return t(`pointsConfig.records.sources.${source}`) || source
-                  }
+                  const isEarn = record.type === 'earn'
+                  const accentColor = isEarn ? '#52c41a' : '#ff4d4f'
+                  const accentBg = isEarn ? 'rgba(82,196,26,0.06)' : 'rgba(255,77,79,0.06)'
 
                   return (
-                    <Card
+                    <div
                       key={record.id}
-                      size="small"
                       style={{
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)'
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: isMobile ? 12 : 16,
+                        padding: isMobile ? '12px 14px' : '13px 16px',
+                        borderRadius: 10,
+                        background: accentBg,
+                        border: '1px solid rgba(255,255,255,0.07)',
+                        borderLeft: `3px solid ${accentColor}`,
                       }}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                            <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
-                              {formatDate(recordDate)}
-                            </Text>
-                            <span style={{ color: 'rgba(255, 255, 255, 0.3)' }}>•</span>
-                            <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>
-                              {getSourceText(record.source)}
-                            </Text>
-                          </div>
-                          <Text style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: '14px', display: 'block' }}>
-                            {record.description}
-                          </Text>
+                      {/* Icon */}
+                      <div style={{
+                        width: isMobile ? 36 : 40,
+                        height: isMobile ? 36 : 40,
+                        borderRadius: '50%',
+                        background: isEarn ? 'rgba(82,196,26,0.12)' : 'rgba(255,77,79,0.12)',
+                        border: `1px solid ${isEarn ? 'rgba(82,196,26,0.3)' : 'rgba(255,77,79,0.3)'}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        fontSize: 16,
+                        color: accentColor
+                      }}>
+                        {isEarn ? <TrophyOutlined /> : <ShoppingOutlined />}
+                      </div>
+
+                      {/* Content */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          fontSize: isMobile ? 13 : 14,
+                          fontWeight: 600,
+                          color: 'rgba(255,255,255,0.88)',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          marginBottom: 3
+                        }}>
+                          {record.description}
                         </div>
-                        <div style={{ textAlign: 'right', marginLeft: '16px' }}>
-                          <Text
-                            strong
-                            style={{
-                              color: record.type === 'earn' ? '#52c41a' : '#ff4d4f',
-                              fontSize: '18px',
-                              display: 'block'
-                            }}
-                          >
-                            {record.type === 'earn' ? '+' : '-'}{record.amount}
-                          </Text>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <span style={{
+                            fontSize: 11,
+                            color: 'rgba(255,255,255,0.35)',
+                          }}>
+                            {formatDate(recordDate)}
+                          </span>
+                          <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10 }}>•</span>
+                          <span style={{
+                            fontSize: 11,
+                            padding: '1px 7px',
+                            borderRadius: 10,
+                            background: 'rgba(244,175,37,0.1)',
+                            border: '1px solid rgba(244,175,37,0.2)',
+                            color: 'rgba(244,175,37,0.8)',
+                          }}>
+                            {t(`pointsConfig.records.sources.${record.source}`) || record.source}
+                          </span>
                         </div>
                       </div>
-                    </Card>
+
+                      {/* Amount */}
+                      <div style={{
+                        flexShrink: 0,
+                        textAlign: 'right'
+                      }}>
+                        <div style={{
+                          fontSize: isMobile ? 18 : 20,
+                          fontWeight: 800,
+                          color: accentColor,
+                          lineHeight: 1,
+                          letterSpacing: '-0.5px'
+                        }}>
+                          {isEarn ? '+' : '-'}{record.amount}
+                        </div>
+                        <div style={{
+                          fontSize: 10,
+                          color: 'rgba(255,255,255,0.3)',
+                          marginTop: 3,
+                          textAlign: 'right'
+                        }}>
+                          pts
+                        </div>
+                      </div>
+                    </div>
                   )
                 })}
-              </Space>
+              </div>
             )
           )}
 
           {activeTab === 'activity' && (
             loadingEvents ? (
-              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                <Space direction="vertical" size="middle">
-                  <div style={{ fontSize: '24px', color: '#ffd700' }}>
-                    <CalendarOutlined spin />
-                  </div>
-                  <Text style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                    {t('common.loading')}
-                  </Text>
-                </Space>
+              <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                <div style={{ fontSize: 36, color: '#F4AF25', marginBottom: 12 }}>
+                  <CalendarOutlined spin />
+                </div>
+                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
+                  {t('common.loading')}
+                </Text>
               </div>
             ) : userEvents.length === 0 ? (
-              <div style={{
-                textAlign: 'center',
-                padding: '40px 20px',
-                color: 'rgba(255, 255, 255, 0.6)'
-              }}>
-                <p style={{ margin: 0, fontSize: '14px' }}>
+              <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.25, color: '#F4AF25' }}>
+                  <CalendarOutlined />
+                </div>
+                <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14, display: 'block' }}>
                   {t('profile.noActivityRecords')}
-                </p>
+                </Text>
               </div>
             ) : (
-              <Space direction="vertical" size={12} style={{ width: '100%' }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+                gap: isMobile ? 12 : 16
+              }}>
                 {userEvents.map((event) => {
                   const startDate = event.schedule.startDate instanceof Date
                     ? event.schedule.startDate
                     : (event.schedule.startDate as any)?.toDate
                       ? (event.schedule.startDate as any).toDate()
-                      : new Date(event.schedule.startDate);
+                      : new Date(event.schedule.startDate)
 
-                  const isRegistered = event.participants?.registered?.includes(user?.id || '');
-                  const isCheckedIn = event.participants?.checkedIn?.includes(user?.id || '');
+                  const isRegistered = event.participants?.registered?.includes(user?.id || '')
+                  const isCheckedIn = event.participants?.checkedIn?.includes(user?.id || '')
+
+                  const eventStatusConfig: Record<string, { bg: string; border: string; color: string; label: string }> = {
+                    upcoming: { bg: 'rgba(64,169,255,0.12)', border: 'rgba(64,169,255,0.4)', color: '#40a9ff', label: t('profile.eventStatus.upcoming') },
+                    ongoing:  { bg: 'rgba(82,196,26,0.12)',  border: 'rgba(82,196,26,0.4)',  color: '#52c41a', label: t('profile.eventStatus.ongoing') },
+                    completed:{ bg: 'rgba(255,255,255,0.06)',border: 'rgba(255,255,255,0.15)',color: 'rgba(255,255,255,0.5)', label: t('profile.eventStatus.completed') },
+                    cancelled:{ bg: 'rgba(255,77,79,0.12)',  border: 'rgba(255,77,79,0.4)',  color: '#ff4d4f', label: t('profile.eventStatus.cancelled') },
+                  }
+                  const evStatus = eventStatusConfig[event.status] ?? eventStatusConfig.completed
 
                   return (
                     <div
                       key={event.id}
                       style={{
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        borderRadius: '12px',
-                        padding: '16px',
-                        border: '1px solid rgba(244, 175, 37, 0.6)',
+                        borderRadius: 12,
+                        border: '1px solid rgba(244,175,37,0.15)',
+                        overflow: 'hidden',
+                        background: 'rgba(255,255,255,0.04)',
                         display: 'flex',
-                        gap: '12px'
+                        flexDirection: 'column'
                       }}
                     >
-                      {/* Event Cover */}
+                      {/* Cover image */}
                       <div style={{
-                        width: '80px',
-                        height: '80px',
-                        borderRadius: '8px',
+                        width: '100%',
+                        height: isMobile ? 100 : 120,
+                        position: 'relative',
                         overflow: 'hidden',
-                        flexShrink: 0,
-                        background: 'rgba(255, 255, 255, 0.1)'
+                        background: 'rgba(255,255,255,0.06)',
+                        flexShrink: 0
                       }}>
                         {event.coverImage ? (
                           <img
                             src={event.coverImage}
                             alt={event.title}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                           />
                         ) : (
                           <div style={{
-                            width: '100%',
-                            height: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: 'rgba(255, 255, 255, 0.3)'
+                            width: '100%', height: '100%',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            color: 'rgba(255,255,255,0.15)', fontSize: 36
                           }}>
-                            <CalendarOutlined style={{ fontSize: '32px' }} />
+                            <CalendarOutlined />
+                          </div>
+                        )}
+                        {/* Participation overlay badge */}
+                        {(isCheckedIn || isRegistered) && (
+                          <div style={{
+                            position: 'absolute', top: 8, right: 8,
+                            padding: '3px 9px',
+                            borderRadius: 20,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            backdropFilter: 'blur(8px)',
+                            ...(isCheckedIn
+                              ? { background: 'rgba(82,196,26,0.85)', color: '#fff' }
+                              : { background: 'linear-gradient(to right, #FDE08D, #C48D3A)', color: '#111' })
+                          }}>
+                            {isCheckedIn
+                              ? `✓ ${t('profile.participationStatus.checkedIn')}`
+                              : t('profile.participationStatus.registered')}
                           </div>
                         )}
                       </div>
 
-                      {/* Event Info */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
+                      {/* Info */}
+                      <div style={{ padding: isMobile ? '12px 14px' : '12px 16px', flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
                         <div style={{
-                          fontSize: '16px',
-                          fontWeight: '600',
-                          color: '#FFFFFF',
-                          marginBottom: '4px',
+                          fontSize: isMobile ? 14 : 15,
+                          fontWeight: 700,
+                          color: '#fff',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap'
@@ -809,174 +968,236 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         </div>
 
                         <div style={{
-                          fontSize: '12px',
-                          color: 'rgba(255, 255, 255, 0.6)',
-                          marginBottom: '8px'
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: 8
                         }}>
-                          {formatDate(startDate)}
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                          {/* Status Tag */}
-                          <Tag
-                            color={
-                              event.status === 'upcoming' ? 'blue' :
-                                event.status === 'ongoing' ? 'green' :
-                                  event.status === 'completed' ? 'default' :
-                                    'red'
-                            }
-                            style={{ margin: 0, fontSize: '11px' }}
-                          >
-                            {
-                              event.status === 'upcoming' ? t('profile.eventStatus.upcoming') :
-                                event.status === 'ongoing' ? t('profile.eventStatus.ongoing') :
-                                  event.status === 'completed' ? t('profile.eventStatus.completed') :
-                                    t('profile.eventStatus.cancelled')
-                            }
-                          </Tag>
-
-                          {/* Check-in/Registration Tag */}
-                          {isCheckedIn && (
-                            <Tag color="success" style={{ margin: 0, fontSize: '11px' }}>
-                              {t('profile.participationStatus.checkedIn')}
-                            </Tag>
-                          )}
-                          {isRegistered && !isCheckedIn && (
-                            <Tag color="warning" style={{ margin: 0, fontSize: '11px' }}>
-                              {t('profile.participationStatus.registered')}
-                            </Tag>
-                          )}
+                          <div style={{
+                            display: 'flex', alignItems: 'center', gap: 5,
+                            color: 'rgba(255,255,255,0.4)', fontSize: 12
+                          }}>
+                            <CalendarOutlined style={{ fontSize: 11 }} />
+                            <span>{formatDate(startDate)}</span>
+                          </div>
+                          <div style={{
+                            padding: '2px 9px',
+                            borderRadius: 20,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            background: evStatus.bg,
+                            border: `1px solid ${evStatus.border}`,
+                            color: evStatus.color,
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0
+                          }}>
+                            {evStatus.label}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  );
+                  )
                 })}
-              </Space>
+              </div>
             )
           )}
 
           {activeTab === 'referral' && (
             <>
-              {/* Referral Stats - Unified Card */}
+              {/* Stats bar */}
               <div style={{
-                background: 'rgba(255, 255, 255, 0.05)',
-                borderRadius: '12px',
-                border: '1px solid rgba(244, 175, 37, 0.6)',
-                padding: '16px 0',
                 display: 'flex',
-                alignItems: 'center',
-                marginBottom: '16px'
+                borderRadius: 12,
+                overflow: 'hidden',
+                border: '1px solid rgba(244,175,37,0.2)',
+                marginBottom: 16,
+                background: 'rgba(255,255,255,0.03)'
               }}>
-                <div style={{ flex: 1, textAlign: 'center' }}>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ffd700' }}>
-                    {user?.referral?.referrals?.length || 0}
-                  </div>
-                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
-                    {t('profile.totalReferred')}
-                  </div>
-                </div>
-                <div style={{
-                  width: '1px',
-                  height: '36px',
-                  background: 'rgba(244, 175, 37, 0.25)',
-                  flexShrink: 0
-                }} />
-                <div style={{ flex: 1, textAlign: 'center' }}>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ffd700' }}>
-                    {user?.membership?.referralPoints || 0}
-                  </div>
-                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
-                    {t('profile.referralPoints')}
-                  </div>
-                </div>
+                {[
+                  { icon: <TeamOutlined />, value: user?.referral?.referrals?.length || 0, label: t('profile.totalReferred') },
+                  { icon: <TrophyOutlined />, value: user?.membership?.referralPoints || 0, label: t('profile.referralPoints') }
+                ].map((stat, i) => (
+                  <React.Fragment key={i}>
+                    {i > 0 && <div style={{ width: 1, background: 'rgba(244,175,37,0.15)', flexShrink: 0 }} />}
+                    <div style={{ flex: 1, textAlign: 'center', padding: '16px 8px' }}>
+                      <div style={{
+                        fontSize: isMobile ? 22 : 26,
+                        fontWeight: 800,
+                        background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                        lineHeight: 1,
+                        marginBottom: 6
+                      }}>
+                        {stat.value}
+                      </div>
+                      <div style={{
+                        fontSize: 11,
+                        color: 'rgba(255,255,255,0.45)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 4
+                      }}>
+                        <span style={{ fontSize: 10, color: 'rgba(244,175,37,0.6)' }}>{stat.icon}</span>
+                        {stat.label}
+                      </div>
+                    </div>
+                  </React.Fragment>
+                ))}
               </div>
 
               {/* Referral List */}
               {loadingReferrals ? (
-                <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                  <Spin />
+                <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                  <div style={{ fontSize: 36, color: '#F4AF25', marginBottom: 12 }}>
+                    <TeamOutlined spin />
+                  </div>
+                  <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
+                    {t('common.loading')}
+                  </Text>
                 </div>
               ) : referredUsers.length === 0 ? (
-                <div style={{
-                  textAlign: 'center',
-                  padding: '40px 20px',
-                  color: 'rgba(255, 255, 255, 0.6)'
-                }}>
-                  <p style={{ margin: 0, fontSize: '14px' }}>
+                <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                  <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.25, color: '#F4AF25' }}>
+                    <TeamOutlined />
+                  </div>
+                  <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14, display: 'block' }}>
                     {t('profile.noReferralRecords')}
-                  </p>
+                  </Text>
                 </div>
               ) : (
-                <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+                  gap: isMobile ? 10 : 14
+                }}>
                   {referredUsers.map((referred) => {
                     const joinDate = referred.createdAt instanceof Date
                       ? referred.createdAt
                       : (referred.createdAt as any)?.toDate
                         ? (referred.createdAt as any).toDate()
-                        : new Date(referred.createdAt);
+                        : new Date(referred.createdAt)
+
+                    const activatedAt = referralActivationMap[referred.id]
+                    const initial = (referred.displayName?.charAt(0) || '?').toUpperCase()
 
                     return (
                       <div key={referred.id} style={{
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        borderRadius: '12px',
-                        padding: '16px',
-                        border: '1px solid rgba(244, 175, 37, 0.6)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px'
+                        borderRadius: 12,
+                        border: '1px solid rgba(244,175,37,0.15)',
+                        background: 'rgba(255,255,255,0.04)',
+                        overflow: 'hidden'
                       }}>
-                        {/* User Avatar */}
+                        {/* Card header with avatar */}
                         <div style={{
-                          width: '48px',
-                          height: '48px',
-                          borderRadius: '50%',
-                          background: 'linear-gradient(135deg, rgba(244, 175, 37, 0.6), rgba(244, 175, 37, 0.1))',
+                          padding: isMobile ? '14px 14px 10px' : '16px 16px 12px',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '20px',
-                          fontWeight: 'bold',
-                          color: '#ffd700',
-                          border: '2px solid rgba(244, 175, 37, 0.6)',
-                          textTransform: 'uppercase'
+                          gap: 12,
+                          borderBottom: '1px solid rgba(255,255,255,0.06)'
                         }}>
-                          {referred.displayName?.charAt(0) || '?'}
+                          {/* Avatar */}
+                          <div style={{
+                            width: isMobile ? 44 : 48,
+                            height: isMobile ? 44 : 48,
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, rgba(253,224,141,0.15), rgba(196,141,58,0.08))',
+                            border: '2px solid rgba(244,175,37,0.35)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            <span style={{
+                              background: 'linear-gradient(135deg, #FDE08D, #C48D3A)',
+                              WebkitBackgroundClip: 'text',
+                              WebkitTextFillColor: 'transparent',
+                              backgroundClip: 'text',
+                              fontWeight: 800,
+                              fontSize: isMobile ? 18 : 20,
+                              lineHeight: 1
+                            }}>
+                              {initial}
+                            </span>
+                          </div>
+
+                          {/* Name + member number */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{
+                              fontSize: isMobile ? 14 : 15,
+                              fontWeight: 700,
+                              color: '#fff',
+                              textTransform: 'uppercase',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              letterSpacing: '0.3px'
+                            }}>
+                              {referred.displayName || t('profile.unknownUser')}
+                            </div>
+                            {referred.memberId && (
+                              <div style={{
+                                display: 'flex', alignItems: 'center', gap: 4,
+                                fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2
+                              }}>
+                                <NumberOutlined style={{ fontSize: 10 }} />
+                                <span>{referred.memberId}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
 
-                        {/* User Info */}
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '16px', fontWeight: '600', color: '#fff', textTransform: 'uppercase' }}>
-                            {referred.displayName || t('profile.unknownUser')}
+                        {/* Info rows */}
+                        <div style={{ padding: isMobile ? '10px 14px' : '10px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {/* Join date */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <CalendarOutlined style={{ fontSize: 11, color: 'rgba(244,175,37,0.5)', flexShrink: 0 }} />
+                            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+                              {t('profile.joinDate')}
+                            </span>
+                            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginLeft: 'auto' }}>
+                              {formatDate(joinDate)}
+                            </span>
                           </div>
-                          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '2px' }}>
-                            {t('profile.joinDate')}: {formatDate(joinDate)}
-                          </div>
-                          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>
-                            {t('profile.memberNumber')}: {referred.memberId || '-'}
-                          </div>
-                          <div style={{ fontSize: '12px', marginTop: '2px' }}>
-                            <span style={{ color: 'rgba(255,255,255,0.5)' }}>{t('profile.membership')}: </span>
-                            {(() => {
-                              const activatedAt = referralActivationMap[referred.id];
-                              if (activatedAt) {
-                                return (
-                                  <span style={{ color: '#52c41a' }}>
-                                    {formatDate(activatedAt)}
-                                  </span>
-                                );
-                              }
-                              return (
-                                <span style={{ color: 'rgba(255,255,255,0.35)' }}>
-                                  {t('profile.notActivated')}
-                                </span>
-                              );
-                            })()}
+
+                          {/* Membership activation */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            {activatedAt
+                              ? <CheckCircleOutlined style={{ fontSize: 11, color: '#52c41a', flexShrink: 0 }} />
+                              : <ClockCircleOutlined style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', flexShrink: 0 }} />
+                            }
+                            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+                              {t('profile.membership')}
+                            </span>
+                            {activatedAt ? (
+                              <span style={{
+                                fontSize: 12, marginLeft: 'auto',
+                                padding: '1px 8px', borderRadius: 10,
+                                background: 'rgba(82,196,26,0.12)',
+                                border: '1px solid rgba(82,196,26,0.3)',
+                                color: '#52c41a'
+                              }}>
+                                {formatDate(activatedAt)}
+                              </span>
+                            ) : (
+                              <span style={{
+                                fontSize: 11, marginLeft: 'auto',
+                                padding: '1px 8px', borderRadius: 10,
+                                background: 'rgba(255,255,255,0.05)',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                color: 'rgba(255,255,255,0.3)'
+                              }}>
+                                {t('profile.notActivated')}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
-                    );
+                    )
                   })}
-                </Space>
+                </div>
               )}
             </>
           )}

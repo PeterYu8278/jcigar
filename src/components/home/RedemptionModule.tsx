@@ -6,6 +6,7 @@ import { useAuthStore } from '../../store/modules/auth';
 import { getPendingVisitSession } from '../../services/firebase/visitSessions';
 import { getUserRedemptionLimits, canUserRedeem, getDailyRedemptions, getTotalRedemptions } from '../../services/firebase/redemption';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import type { RedemptionRecord } from '../../types';
 
 const { Title, Text } = Typography;
@@ -15,6 +16,7 @@ interface RedemptionModuleProps {
 }
 
 export const RedemptionModule: React.FC<RedemptionModuleProps> = ({ style }) => {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -51,33 +53,33 @@ export const RedemptionModule: React.FC<RedemptionModuleProps> = ({ style }) => 
     };
 
     loadData();
-    const interval = setInterval(loadData, 30000); // 每30秒刷新一次
+    const interval = setInterval(loadData, 60000);
 
     return () => clearInterval(interval);
   }, [user]);
 
   const handleRedeem = async () => {
     if (!user?.id) {
-      message.warning('请先登录');
+      message.warning(t('auth.pleaseLogin'));
       return;
     }
 
     // 检查是否有pending session
     const session = await getPendingVisitSession(user.id);
     if (!session) {
-      message.warning('请先check-in才能兑换');
+      message.warning(t('visitTimer.pleaseCheckInFirst'));
       return;
     }
 
     // 检查是否可以兑换
     const canRedeem = await canUserRedeem(user.id, 1);
     if (!canRedeem.canRedeem) {
-      message.warning(canRedeem.reason || '无法兑换');
+      message.warning(canRedeem.reason || t('visitTimer.cannotRedeem'));
       return;
     }
 
     // 跳转到兑换页面（需要在管理后台完成兑换）
-    message.info('兑换功能需在驻店时联系管理员操作');
+    message.info(t('visitTimer.contactAdminForRedemption'));
   };
 
   if (!user) {

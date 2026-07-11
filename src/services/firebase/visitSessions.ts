@@ -626,6 +626,7 @@ export const getUserVisitSessions = async (
   limitCount?: number,
   storeId?: string
 ): Promise<VisitSession[]> => {
+  if (!limitCount) limitCount = 200;
   try {
     let q = query(
       collection(db, GLOBAL_COLLECTIONS.VISIT_SESSIONS),
@@ -636,9 +637,8 @@ export const getUserVisitSessions = async (
     if (storeId) {
       q = query(q, where('storeId', '==', storeId));
     }
-    
-    // 如果指定了 limitCount，则应用限制；否则加载所有数据
-    if (limitCount !== undefined && limitCount > 0) {
+
+    if (limitCount > 0) {
       q = query(q, limit(limitCount));
     }
 

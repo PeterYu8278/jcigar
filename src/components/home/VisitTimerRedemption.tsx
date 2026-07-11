@@ -308,7 +308,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
   // 加载兑换数据和时长数据
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 30000); // 每30秒刷新一次
+    const interval = setInterval(loadData, 60000); // 每60秒刷新一次
 
     return () => clearInterval(interval);
   }, [user]);
@@ -316,7 +316,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
   // 开通会员
   const handleActivateMembership = async () => {
     if (!user?.id) {
-      message.warning('请先登录');
+      message.warning(t('auth.pleaseLogin'));
       return;
     }
 
@@ -348,7 +348,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
         );
 
         if (!result.success || !result.recordId) {
-          message.error(result.error || '创建年费记录失败');
+          message.error(result.error || t('visitTimer.createMembershipFeeRecordFailed'));
           setLoading(false);
           return;
         }
@@ -360,7 +360,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
       const deductResult = await deductMembershipFee(recordId);
 
       if (deductResult.success) {
-        message.success('会员开通成功！');
+        message.success(t('visitTimer.membershipActivateSuccess'));
 
         // 刷新用户信息
         try {
@@ -376,17 +376,17 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
         setMembershipModalVisible(false);
         setSelectedAccess(null);
       } else {
-        message.error(deductResult.error || '扣除年费失败，请稍后重试');
+        message.error(deductResult.error || t('visitTimer.deductFeeFailedRetry'));
       }
     } catch (error: any) {
-      message.error(error.message || '开通会员失败，请重试');
+      message.error(error.message || t('visitTimer.activateMembershipFailedRetry'));
     } finally {
       setLoading(false);
     }
   };
   const handleRedeem = async () => {
     if (!user?.id) {
-      message.warning('请先登录');
+      message.warning(t('auth.pleaseLogin'));
       return;
     }
 
@@ -399,14 +399,14 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
     try {
       const session = await getPendingVisitSession(user.id);
       if (!session) {
-        message.warning('请先check-in才能兑换');
+        message.warning(t('visitTimer.pleaseCheckInFirst'));
         setLoading(false);
         return;
       }
 
       const canRedeem = await canUserRedeem(user.id, 1);
       if (!canRedeem.canRedeem) {
-        message.warning(canRedeem.reason || '无法兑换');
+        message.warning(canRedeem.reason || t('visitTimer.cannotRedeem'));
         setLoading(false);
         return;
       }
@@ -415,15 +415,15 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
       const result = await createPendingRedemptionRecord(user.id, session.id, 1);
 
       if (result.success) {
-        message.success('兑换请求已提交，请等待管理员选择雪茄产品');
+        message.success(t('visitTimer.redeemRequestSubmitted'));
         const storageKey = `redeem_countdown_${user.id}`;
         localStorage.setItem(storageKey, Date.now().toString());
         setCountdownSeconds(3600);
       } else {
-        message.error(result.error || '提交兑换请求失败');
+        message.error(result.error || t('visitTimer.submitRedeemRequestFailed'));
       }
     } catch (error: any) {
-      message.error(error.message || '兑换失败，请重试');
+      message.error(error.message || t('visitTimer.redeemFailedRetry'));
     } finally {
       setLoading(false);
     }
@@ -431,7 +431,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
 
   const handleBuyDayPass = async () => {
     if (!user?.id) {
-      message.warning('请先登录');
+      message.warning(t('auth.pleaseLogin'));
       return;
     }
     if (loading) return;
@@ -441,17 +441,17 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
       const { purchaseDayPass } = await import('../../services/firebase/visitSessions');
       const result = await purchaseDayPass(user.id, selectedStoreId, selectedStoreName, user.displayName, currentSession?.id);
       if (result.success) {
-        message.success('Day Pass 购买成功，已为您自动办理签到及雪茄兑换！');
+        message.success(t('visitTimer.dayPassPurchaseSuccess'));
         const updatedUser = await getUserData(user.id);
         if (updatedUser) setUser(updatedUser);
         await loadData();
         setMembershipModalVisible(false);
         setSelectedAccess(null);
       } else {
-        message.error(result.error || '购买失败');
+        message.error(result.error || t('visitTimer.purchaseFailed'));
       }
     } catch (error: any) {
-      message.error(error.message || '购买失败');
+      message.error(error.message || t('visitTimer.purchaseFailed'));
     } finally {
       setLoading(false);
     }
@@ -660,17 +660,17 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
                     }}
                     title={
                       hasDayPass
-                        ? 'Day Pass 已包含一次兑换，无法手动提交'
+                        ? t('visitTimer.dayPassIncludesRedemption')
                         : isLowPoints
-                          ? `积分不足（当前: ${currentPoints}），请先充值`
+                          ? t('visitTimer.insufficientPointsTooltip', { currentPoints })
                           : dailyCount >= limits.dailyLimit
-                            ? '今日兑换限额已用完'
+                            ? t('visitTimer.dailyQuotaExhausted')
                             : countdownSeconds !== null && countdownSeconds > 0
-                              ? `请等待 ${formatCountdown(countdownSeconds)} 后再次兑换`
+                              ? t('visitTimer.waitBeforeRedeem', { countdown: formatCountdown(countdownSeconds) })
                               : !currentSession
-                                ? '请先check-in才能兑换'
+                                ? t('visitTimer.pleaseCheckInFirst')
                                 : !isBeforeCutoff
-                                  ? `兑换截止时间为 ${cutoffTime}，请明日再试`
+                                  ? t('visitTimer.cutoffPassedRetry', { cutoffTime })
                                   : undefined
                     }
                   >
@@ -745,7 +745,7 @@ export const VisitTimerRedemption: React.FC<VisitTimerRedemptionProps> = ({ styl
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
                 {/* 累计驻店时长 */}
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                  <Text style={{ fontSize: 12, color: '#9ca3af', fontWeight: 500 }}>累计</Text>
+                  <Text style={{ fontSize: 12, color: '#9ca3af', fontWeight: 500 }}>{t('visitTimer.accumulated')}</Text>
                   <Text style={{
                     fontSize: 22,
                     fontWeight: 800,

@@ -13,6 +13,8 @@ const { Option } = Select
 import { getUsers, createDocument, updateDocument, deleteDocument, COLLECTIONS, getEventsByUser, getOrdersByUser } from '../../../services/firebase/firestore'
 import { getUsersPaginated } from '../../../services/firebase/paginatedQueries'
 import { usePaginatedData } from '../../../hooks/usePaginatedData'
+import { useFirestoreQuery } from '../../../hooks/useFirestoreQuery'
+import { useDetailDrawer } from '../../../hooks/useDetailDrawer'
 import type { User, Event, Order } from '../../../types'
 import dayjs from 'dayjs'
 import { sendPasswordResetEmailFor, resetPasswordByPhone, generateResetPasswordMessageByPhone } from '../../../services/firebase/auth'
@@ -48,8 +50,6 @@ const AdminUsers: React.FC = () => {
   const { t, i18n } = useTranslation()
   const { modal } = App.useApp() // 使用 App.useApp() 获取 modal 实例以支持 React 19
   const { user: currentUser } = useAuthStore()
-  const [users, setUsers] = useState<User[]>([]) // 保留用于搜索和筛选
-  const [loading, setLoading] = useState(false)
   const canManageDiscount = currentUser?.role === 'developer' || currentUser?.role === 'superAdmin'
 
   // 服务端分页
@@ -72,10 +72,11 @@ const AdminUsers: React.FC = () => {
       initialLoad: false // 手动控制加载
     }
   )
-  const [editing, setEditing] = useState<null | User>(null)
+  const { item: editing, open: editingOpen, openDrawer: openEditing, closeDrawer: closeEditing } = useDetailDrawer<User>()
+  const { item: resettingPassword, open: resettingPasswordOpen, openDrawer: openResettingPassword, closeDrawer: closeResettingPassword } = useDetailDrawer<User>()
+  const [actionLoading, setLoading] = useState(false)
   const [creating, setCreating] = useState(false)
   const [deleting, setDeleting] = useState<null | User>(null)
-  const [resettingPassword, setResettingPassword] = useState<null | User>(null)
   const [resettingPasswordLoading, setResettingPasswordLoading] = useState(false)
   const [form] = Form.useForm()
   const [keyword, setKeyword] = useState('')
@@ -112,32 +113,37 @@ const AdminUsers: React.FC = () => {
     }
   })
   const [activeTab, setActiveTab] = useState<'list' | 'referralTree'>('list')
+  const [allUsersForTree, setAllUsersForTree] = useState<User[]>([])
+
+  useEffect(() => {
+    if (activeTab === 'referralTree') {
+      getUsers().then(setAllUsersForTree)
+    }
+  }, [activeTab])
   const [showMemberCard, setShowMemberCard] = useState(false) // 控制头像/会员卡切换
-  const [userOrders, setUserOrders] = useState<Order[]>([])
-  const [userEvents, setUserEvents] = useState<Event[]>([])
-  const [loadingUserData, setLoadingUserData] = useState(false)
+  const { data: userOrders = [], loading: loadingOrders } = useFirestoreQuery(
+    () => editing?.id ? getOrdersByUser(editing.id) : Promise.resolve([]),
+    [editing?.id]
+  )
+  const { data: userEvents = [], loading: loadingEvents } = useFirestoreQuery(
+    () => editing?.id ? getEventsByUser(editing.id) : Promise.resolve([]),
+    [editing?.id]
+  )
+  const loadingUserData = loadingOrders || loadingEvents
   const [activeIndex, setActiveIndex] = useState<string>('') // 当前高亮的字母
   const [showBubble, setShowBubble] = useState(false) // 字母气泡显示
   const [bubbleLetter, setBubbleLetter] = useState('') // 气泡字母
 
-  // 数据加载已在下面的 useEffect 中处理
   const [appConfig, setAppConfig] = useState<any>(null)
 
-  // 加载全量用户数据（仅用于关系树和客户端搜索）
+  // 加载应用配置
   useEffect(() => {
     ; (async () => {
       try {
-        setLoading(true)
-        const [list, config] = await Promise.all([
-          getUsers(),
-          import('../../../services/firebase/appConfig').then(m => m.getAppConfig())
-        ])
-        setUsers(list)
+        const config = await import('../../../services/firebase/appConfig').then(m => m.getAppConfig())
         setAppConfig(config)
       } catch (e) {
         message.error(t('messages.dataLoadFailed'))
-      } finally {
-        setLoading(false)
       }
     })()
   }, [])
@@ -157,32 +163,6 @@ const AdminUsers: React.FC = () => {
     window.addEventListener('resize', update)
     return () => window.removeEventListener('resize', update)
   }, [])
-
-  // 加载用户的订单和活动数据
-  useEffect(() => {
-    const loadUserData = async () => {
-      if (!editing?.id) {
-        setUserOrders([])
-        setUserEvents([])
-        return
-      }
-
-      setLoadingUserData(true)
-      try {
-        const [orders, events] = await Promise.all([
-          getOrdersByUser(editing.id),
-          getEventsByUser(editing.id)
-        ])
-        setUserOrders(orders)
-        setUserEvents(events)
-      } catch (error) {
-      } finally {
-        setLoadingUserData(false)
-      }
-    }
-
-    loadUserData()
-  }, [editing?.id])
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -409,7 +389,7 @@ const AdminUsers: React.FC = () => {
       render: (_: any, record: any) => (
         <Space size="small" style={{ justifyContent: 'center', width: '100%' }}>
           <Button type="link" icon={<EyeOutlined />} size="small" onClick={() => {
-            setEditing(record)
+            openEditing(record)
             form.setFieldsValue({
               displayName: record.displayName,
               email: record.email,
@@ -425,7 +405,7 @@ const AdminUsers: React.FC = () => {
             type="link"
             icon={<KeyOutlined />}
             size="small"
-            onClick={() => setResettingPassword(record)}
+            onClick={() => openResettingPassword(record)}
             title={t('usersAdmin.resetPassword')}
           >
           </Button>
@@ -437,7 +417,7 @@ const AdminUsers: React.FC = () => {
 
   const filteredUsers = useMemo(() => {
     const kw = keyword.trim().toLowerCase()
-    const filtered = users.filter(u => {
+    const filtered = paginatedUsers.filter(u => {
       // 如果不是开发者，过滤掉开发者角色的用户
       if (currentUser?.role !== 'developer' && u.role === 'developer') {
         return false
@@ -474,7 +454,7 @@ const AdminUsers: React.FC = () => {
       // 回退到旧的硬编码值
       return appConfig.subscription.plan === 'premium' ? 300 : (appConfig.subscription.plan === 'pro' ? 150 : 50);
     })())
-  }, [users, keyword, statusFilter, roleFilter, levelFilter, statusMap, currentUser?.role, appConfig])
+  }, [paginatedUsers, keyword, statusFilter, roleFilter, levelFilter, statusMap, currentUser?.role, appConfig])
 
   const groupedByInitial = useMemo(() => {
     const groups: Record<string, User[]> = {}
@@ -606,7 +586,7 @@ const AdminUsers: React.FC = () => {
 
       {
         activeTab === 'referralTree' && (
-          <ReferralTreeView users={users} />
+          <ReferralTreeView users={allUsersForTree} />
         )
       }
 
@@ -624,7 +604,7 @@ const AdminUsers: React.FC = () => {
                           setLoading(true)
                           try {
                             await Promise.all(selectedRowKeys.map(id => {
-                              const user = users.find(u => u.id === String(id))
+                              const user = paginatedUsers.find(u => u.id === String(id))
                               const updateData: Partial<User> = { status: 'inactive' }
                               if (user?.role === 'vip') updateData.role = 'member'
                               return updateDocument<User>(COLLECTIONS.USERS, String(id), updateData as any)
@@ -803,7 +783,7 @@ const AdminUsers: React.FC = () => {
                     columns={columns}
                     dataSource={keyword ? filteredUsers : paginatedUsers}
                     rowKey="id"
-                    loading={loading || paginatedLoading}
+                    loading={paginatedLoading}
                     virtual
                     rowSelection={{
                       selectedRowKeys,
@@ -970,7 +950,7 @@ const AdminUsers: React.FC = () => {
                     zIndex: 1
                   }}
                 >
-                  {(loading || paginatedLoading) && !paginatedUsers.length ? (
+                  {paginatedLoading && !paginatedUsers.length ? (
                     <div style={{ padding: '0 16px' }}>
                       <UserSkeletonList count={10} />
                     </div>
@@ -1006,7 +986,7 @@ const AdminUsers: React.FC = () => {
                                   </div>
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
                                     <button style={{ padding: '4px 8px', borderRadius: 6, background: 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#221c10', fontWeight: 600, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s ease', width: '100%', minWidth: '40px' }} onClick={() => {
-                                      setEditing(u)
+                                      openEditing(u)
                                       form.setFieldsValue({
                                         displayName: u.displayName,
                                         email: u.email,
@@ -1034,7 +1014,7 @@ const AdminUsers: React.FC = () => {
                                         width: '100%',
                                         minWidth: '40px'
                                       }}
-                                      onClick={() => setResettingPassword(u)}
+                                      onClick={() => openResettingPassword(u)}
                                       title={t('usersAdmin.resetPassword')}
                                     >
                                       <KeyOutlined style={{ fontSize: 14 }} />
@@ -1197,8 +1177,8 @@ const AdminUsers: React.FC = () => {
       {/* 查看用户详情弹窗 */}
       <Modal
         title={null}
-        open={!!editing}
-        onCancel={() => setEditing(null)}
+        open={editingOpen}
+        onCancel={closeEditing}
         footer={null}
         width={isMobile ? '100%' : 480}
         style={{ top: isMobile ? 0 : 20 }}
@@ -1239,7 +1219,7 @@ const AdminUsers: React.FC = () => {
               <Button
                 type="text"
                 icon={<ArrowLeftOutlined />}
-                onClick={() => setEditing(null)}
+                onClick={closeEditing}
                 style={{ color: '#FFFFFF', fontSize: '20px' }}
               />
               <h1 style={{
@@ -1284,10 +1264,10 @@ const AdminUsers: React.FC = () => {
         open={creating}
         onCancel={() => {
           setCreating(false)
-          setEditing(null)
+          closeEditing()
         }}
         onOk={() => form.submit()}
-        confirmLoading={loading}
+        confirmLoading={actionLoading}
         width={getModalWidth(isMobile, 520)}
         styles={getModalThemeStyles(isMobile, true)}
       >
@@ -1390,7 +1370,7 @@ const AdminUsers: React.FC = () => {
               }
               await refreshPaginated()
               setCreating(false)
-              setEditing(null)
+              closeEditing()
             } finally {
               setLoading(false)
             }
@@ -1617,8 +1597,8 @@ const AdminUsers: React.FC = () => {
       {/* 重置密码确认 */}
       <Modal
         title={<span style={{ color: '#FFFFFF' }}>{t('usersAdmin.resetPassword')}</span>}
-        open={!!resettingPassword}
-        onCancel={() => setResettingPassword(null)}
+        open={resettingPasswordOpen}
+        onCancel={closeResettingPassword}
         footer={null}
         {...getResponsiveModalConfig(isMobile, true, 500)}
         styles={getModalThemeStyles(isMobile, true)}
@@ -1663,7 +1643,7 @@ const AdminUsers: React.FC = () => {
                       const result = await sendPasswordResetEmailFor(resettingPassword.email!)
                       if (result.success) {
                         message.success(t('usersAdmin.passwordResetSent'))
-                        setResettingPassword(null)
+                        closeResettingPassword()
                       } else {
                         message.error(result.error?.message || t('usersAdmin.passwordResetFailed'))
                       }
@@ -1726,7 +1706,7 @@ const AdminUsers: React.FC = () => {
                       const result = await resetPasswordByPhone(phone)
                       if (result.success) {
                         message.success(t('usersAdmin.whatsappResetSuccess'))
-                        setResettingPassword(null)
+                        closeResettingPassword()
                       } else {
                         message.error(result.error || t('usersAdmin.passwordResetFailed'))
                       }

@@ -169,7 +169,7 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
     const isBookedByOthers = bookedByOthers.some(interval => startMins < interval.end && interval.start < endMins);
     const isPast = isTimePast(`${String(h + 1).padStart(2, '0')}:00`);
     if (isBookedByOthers || isPast) {
-      message.warning('该时段不可预约 (This slot is unavailable)');
+      message.warning(t('roomBooking.slotUnavailable'));
       return;
     }
 
@@ -199,7 +199,7 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
         }
 
         if (hasConflict) {
-          message.warning('延长的起始时段存在已被占用或过期的格子，无法延长。');
+          message.warning(t('roomBooking.extendStartConflict'));
         } else {
           setSliderValue([h, currentEnd]);
           setStartTime(`${String(h).padStart(2, '0')}:00`);
@@ -220,7 +220,7 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
         }
 
         if (hasConflict) {
-          message.warning('延长的结束时段存在已被占用或过期的格子，无法延长。');
+          message.warning(t('roomBooking.extendEndConflict'));
         } else {
           setSliderValue([currentStart, h + 1]);
           setStartTime(`${String(currentStart).padStart(2, '0')}:00`);
@@ -290,22 +290,20 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
   }, []);
 
   useEffect(() => {
-    if (selectedRoom) {
-      loadBookings(selectedDate, selectedRoom.id);
-    }
-  }, [selectedDate, selectedRoom]);
-
-  useEffect(() => {
-    const fetchAllDayBookings = async () => {
+    const fetchBookings = async () => {
+      setLoadingBookings(true);
       try {
         const data = await getBookingsByDate(selectedDate);
         setAllDayBookings(data);
+        setBookings(selectedRoom ? data.filter(b => b.roomId === selectedRoom.id) : []);
       } catch (e) {
         console.error(e);
+      } finally {
+        setLoadingBookings(false);
       }
     };
-    fetchAllDayBookings();
-  }, [selectedDate]);
+    fetchBookings();
+  }, [selectedDate, selectedRoom]);
 
   const loadRooms = async () => {
     setLoading(true);
@@ -320,18 +318,6 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
       console.error('Failed to load rooms:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadBookings = async (date: string, roomId?: string) => {
-    setLoadingBookings(true);
-    try {
-      const data = await getBookingsByDate(date, roomId);
-      setBookings(data);
-    } catch (error) {
-      console.error('Failed to load bookings:', error);
-    } finally {
-      setLoadingBookings(false);
     }
   };
 
@@ -426,14 +412,14 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
 
   const handleConfirmBooking = async () => {
     if (!selectedRoom || !startTime || !endTime || !sliderValue) {
-      message.warning('Please select start and end times');
+      message.warning(t('roomBooking.pleaseSelectTimes'));
       return;
     }
 
     const minHours = selectedRoom.minBookingHours || 2;
     const hours = sliderValue[1] - sliderValue[0];
     if (hours < minHours) {
-      message.error(`最低预约时间为 ${minHours} 小时 (Minimum booking duration is ${minHours} hours)`);
+      message.error(t('roomBooking.minBookingHoursError', { minHours }));
       return;
     }
 
@@ -450,7 +436,7 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
     const userPoints = user?.membership?.points || 0;
 
     if (userPoints < netPointsRequired) {
-      message.error('积分余额不足 (Insufficient points)');
+      message.error(t('roomBooking.insufficientPointsError'));
       return;
     }
 

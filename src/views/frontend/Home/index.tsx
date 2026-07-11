@@ -1,5 +1,6 @@
 // 首页组件 - Cigar Club黑金主题
 import React, { useEffect, useState } from 'react'
+import { useFirestoreQuery } from '../../../hooks/useFirestoreQuery'
 import { Row, Col, Card, Typography, Button, Space, Statistic, Badge, Spin, message } from 'antd'
 import {
   CalendarOutlined,
@@ -37,12 +38,26 @@ const Home: React.FC = () => {
   const { t } = useTranslation()
   const { user } = useAuthStore()
   const isMobile = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 991px)').matches : false
+  const [featuresReady, setFeaturesReady] = useState<boolean>(false)
+  const [eventsFeatureVisibleForQuery, setEventsFeatureVisibleForQuery] = useState<boolean>(false)
+  const [shopFeatureVisibleForQuery, setShopFeatureVisibleForQuery] = useState<boolean>(false)
+
+  const { data: fetchedEvents = [], loading: loadingEvents } = useFirestoreQuery(
+    () => featuresReady && eventsFeatureVisibleForQuery ? getUpcomingEvents() : Promise.resolve([]),
+    [featuresReady, eventsFeatureVisibleForQuery]
+  )
+  // Local copy of events to allow optimistic updates on registration
   const [events, setEvents] = useState<Event[]>([])
-  const [cigars, setCigars] = useState<Cigar[]>([])
-  const [brands, setBrands] = useState<Brand[]>([])
-  const [loadingEvents, setLoadingEvents] = useState<boolean>(false)
-  const [loadingCigars, setLoadingCigars] = useState<boolean>(false)
-  const [loadingBrands, setLoadingBrands] = useState<boolean>(false)
+  useEffect(() => { setEvents(fetchedEvents as Event[]) }, [fetchedEvents])
+
+  const { data: cigars = [], loading: loadingCigars } = useFirestoreQuery(
+    () => featuresReady && shopFeatureVisibleForQuery ? getCigars({ limit: 10 }) : Promise.resolve([]),
+    [featuresReady, shopFeatureVisibleForQuery]
+  )
+  const { data: brands = [], loading: loadingBrands } = useFirestoreQuery(
+    () => featuresReady && shopFeatureVisibleForQuery ? getBrands() : Promise.resolve([]),
+    [featuresReady, shopFeatureVisibleForQuery]
+  )
   const [registeringEvents, setRegisteringEvents] = useState<Set<string>>(new Set())
   const [swiperInstance, setSwiperInstance] = useState<any>(null)
   const [eventsFeatureVisible, setEventsFeatureVisible] = useState<boolean>(true)
@@ -140,49 +155,29 @@ const Home: React.FC = () => {
     import('swiper/css/navigation')
     import('swiper/css/pagination')
 
-    const load = async () => {
-      try {
-        // 检查活动功能是否可见（developer 不受限制）
-        const eventsVisible = user?.role === 'developer' ? true : await isFeatureVisible('events')
-        setEventsFeatureVisible(eventsVisible)
+    const loadFeatures = async () => {
+      // 检查活动功能是否可见（developer 不受限制）
+      const eventsVisible = user?.role === 'developer' ? true : await isFeatureVisible('events')
+      setEventsFeatureVisible(eventsVisible)
 
-        // 检查商城功能是否可见（developer 不受限制）
-        const shopVisible = user?.role === 'developer' ? true : await isFeatureVisible('shop')
-        setShopFeatureVisible(shopVisible)
+      // 检查商城功能是否可见（developer 不受限制）
+      const shopVisible = user?.role === 'developer' ? true : await isFeatureVisible('shop')
+      setShopFeatureVisible(shopVisible)
 
-        // 检查驻店记录功能是否可见（developer 不受限制）
-        const visitSessionsVisible = user?.role === 'developer' ? true : await isFeatureVisible('visit-sessions')
-        setVisitSessionsFeatureVisible(visitSessionsVisible)
+      // 检查驻店记录功能是否可见（developer 不受限制）
+      const visitSessionsVisible = user?.role === 'developer' ? true : await isFeatureVisible('visit-sessions')
+      setVisitSessionsFeatureVisible(visitSessionsVisible)
 
-        // 检查房间预订功能是否可见
-        const roomsBookingVisible = user?.role === 'developer' ? true : await isFeatureVisible('rooms-booking')
-        setRoomsBookingFeatureVisible(roomsBookingVisible)
+      // 检查房间预订功能是否可见
+      const roomsBookingVisible = user?.role === 'developer' ? true : await isFeatureVisible('rooms-booking')
+      setRoomsBookingFeatureVisible(roomsBookingVisible)
 
-        setLoadingEvents(true)
-        setLoadingCigars(true)
-        setLoadingBrands(true)
-
-        // 只有在功能可见时才加载对应数据
-        const [eventsData, cigarsData, brandsData] = await Promise.all([
-          eventsVisible ? getUpcomingEvents() : Promise.resolve([]),
-          shopVisible ? getCigars() : Promise.resolve([]),
-          shopVisible ? getBrands() : Promise.resolve([])
-        ])
-
-        setEvents(Array.isArray(eventsData) ? eventsData : [])
-        setCigars(Array.isArray(cigarsData) ? cigarsData : [])
-        setBrands(Array.isArray(brandsData) ? brandsData : [])
-      } catch (e) {
-        setEvents([])
-        setCigars([])
-        setBrands([])
-      } finally {
-        setLoadingEvents(false)
-        setLoadingCigars(false)
-        setLoadingBrands(false)
-      }
+      // 功能标志已就绪，触发数据查询
+      setEventsFeatureVisibleForQuery(eventsVisible)
+      setShopFeatureVisibleForQuery(shopVisible)
+      setFeaturesReady(true)
     }
-    load()
+    loadFeatures()
   }, [])
 
   return (

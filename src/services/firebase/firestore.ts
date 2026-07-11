@@ -1,12 +1,12 @@
 // Firestore数据库服务
-import { 
-  collection, 
-  doc, 
-  getDocs, 
-  getDoc, 
-  addDoc, 
+import {
+  collection,
+  doc,
+  getDocs,
+  getDoc,
+  addDoc,
   setDoc,
-  updateDoc, 
+  updateDoc,
   deleteDoc,
   query,
   where,
@@ -16,12 +16,16 @@ import {
   Timestamp,
   arrayUnion,
   arrayRemove,
-  FieldValue
+  FieldValue,
+  documentId,
+  QueryConstraint
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { GLOBAL_COLLECTIONS } from '../../config/globalCollections';
 import type { User, Brand, Cigar, Event, Order, Transaction, InboundOrder, OutboundOrder, InventoryMovement, AuditLogModule } from '../../types';
 import { saveAuditLog } from './auditLog';
+import { sanitizeForFirestore as _sanitizeForFirestore, toDateOrNull as _toDateOrNull } from './core/sanitize';
+export { sanitizeForFirestore, toDateOrNull, convertFirestoreTimestamps } from './core/sanitize';
 
 // 集合名称到模块的映射
 const COLLECTION_TO_MODULE: Record<string, AuditLogModule> = {
@@ -40,39 +44,8 @@ const COLLECTION_TO_MODULE: Record<string, AuditLogModule> = {
   [GLOBAL_COLLECTIONS.SUBSCRIPTION_REQUESTS]: 'subscription'
 };
 
-// 清洗数据：移除undefined，转换日期/时间戳，深拷贝数组和对象
-const sanitizeForFirestore = (input: any): any => {
-  if (input === undefined) return undefined; // 上层会删除该字段
-  if (input === null) return null;
-  // Firestore Timestamp → Date（保持可排序字段一致性）
-  if ((input as any)?.toDate && typeof (input as any).toDate === 'function') {
-    const d = (input as any).toDate();
-    if (d instanceof Date && !isNaN(d.getTime())) return d;
-    return undefined;
-  }
-  // Date → Date（原样返回，避免JSON序列化丢失）
-  if (input instanceof Date) {
-    if (!isNaN(input.getTime())) return input;
-    return undefined;
-  }
-  // 原始类型
-  if (typeof input !== 'object') return input;
-  // 数组
-  if (Array.isArray(input)) {
-    return input
-      .map(sanitizeForFirestore)
-      .filter(v => v !== undefined);
-  }
-  // 对象
-  const result: Record<string, any> = {};
-  Object.keys(input).forEach((key) => {
-    const value = sanitizeForFirestore((input as any)[key]);
-    if (value !== undefined) {
-      result[key] = value;
-    }
-  });
-  return result;
-};
+// 内部使用别名（向后兼容，避免重命名所有调用点）
+const sanitizeForFirestore = _sanitizeForFirestore;
 
 // 集合名称常量
 export const COLLECTIONS = {
@@ -87,21 +60,8 @@ export const COLLECTIONS = {
   INVENTORY_MOVEMENTS: GLOBAL_COLLECTIONS.INVENTORY_MOVEMENTS,
 } as const;
 
-// 通用日期转换工具
-export const toDateOrNull = (val: any): Date | null => {
-  if (!val) return null
-  if (val && typeof val.toDate === 'function') {
-    const d = val.toDate()
-    return isNaN(d?.getTime?.() || NaN) ? null : d
-  }
-  if ((val as any)?.toDate && typeof (val as any).toDate === 'function') {
-    const d = (val as any).toDate()
-    return isNaN(d?.getTime?.() || NaN) ? null : d
-  }
-  if (val instanceof Date) return isNaN(val.getTime()) ? null : val
-  const d = new Date(val)
-  return isNaN(d.getTime()) ? null : d
-}
+// toDateOrNull 已从 core/sanitize 重新导出，此处保留本地别名供文件内部使用
+const toDateOrNull = _toDateOrNull;
 
 // 通用CRUD操作
 export const createDocument = async <T>(collectionName: string, data: Omit<T, 'id'>) => {
@@ -215,9 +175,14 @@ export const deleteDocument = async (collectionName: string, id: string) => {
 };
 
 // 用户相关操作
-export const getUsers = async (): Promise<User[]> => {
+export const getUsers = async (options?: { limit?: number }): Promise<User[]> => {
   try {
-    const querySnapshot = await getDocs(collection(db, COLLECTIONS.USERS));
+    const constraints: QueryConstraint[] = [];
+    if (options?.limit) constraints.push(limit(options.limit));
+    const q = constraints.length > 0
+      ? query(collection(db, COLLECTIONS.USERS), ...constraints)
+      : collection(db, COLLECTIONS.USERS);
+    const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
   } catch (error) {
     return [];
@@ -233,20 +198,30 @@ export const getUserById = async (id: string): Promise<User | null> => {
 
 export const getUsersByIds = async (ids: string[]): Promise<User[]> => {
   try {
-    if (!ids || ids.length === 0) return []
-    // Firestore 无法直接 by ids 批量查询非索引字段，此处简化为并发 get
-    const tasks = ids.map(id => getUserById(id))
-    const results = await Promise.all(tasks)
-    return results.filter(Boolean) as User[]
+    if (!ids || ids.length === 0) return [];
+    const chunkSize = 30;
+    const chunks: string[][] = [];
+    for (let i = 0; i < ids.length; i += chunkSize) {
+      chunks.push(ids.slice(i, i + chunkSize));
+    }
+    const chunkResults = await Promise.all(
+      chunks.map(chunk =>
+        getDocs(query(collection(db, COLLECTIONS.USERS), where(documentId(), 'in', chunk)))
+          .then(snap => snap.docs.map(d => ({ id: d.id, ...d.data() } as User)))
+      )
+    );
+    return chunkResults.flat();
   } catch (error) {
-    return []
+    return [];
   }
 }
 
 // 品牌相关操作
-export const getBrands = async (): Promise<Brand[]> => {
+export const getBrands = async (options?: { limit?: number }): Promise<Brand[]> => {
   try {
-    const q = query(collection(db, COLLECTIONS.BRANDS), orderBy('createdAt', 'desc'));
+    const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc')];
+    if (options?.limit) constraints.push(limit(options.limit));
+    const q = query(collection(db, COLLECTIONS.BRANDS), ...constraints);
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Brand));
   } catch (error) {
@@ -287,23 +262,24 @@ export const getBrandsByCountry = async (country: string): Promise<Brand[]> => {
 };
 
 // 雪茄相关操作
-export const getCigars = async (): Promise<Cigar[]> => {
-  try {
-    const q = query(collection(db, COLLECTIONS.CIGARS), orderBy('createdAt', 'desc'));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Cigar));
-  } catch (error) {
-    return [];
-  }
+export const getCigars = async (options?: { limit?: number }): Promise<Cigar[]> => {
+  const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc')];
+  if (options?.limit) constraints.push(limit(options.limit));
+  const q = query(collection(db, COLLECTIONS.CIGARS), ...constraints);
+  const querySnapshot = await getDocs(q);
+  console.log('[getCigars] docs returned:', querySnapshot.docs.length, '| project:', import.meta.env.VITE_FIREBASE_PROJECT_ID);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Cigar));
 };
 
 export const getCigarById = async (id: string): Promise<Cigar | null> => {
   return getDocument<Cigar>(COLLECTIONS.CIGARS, id);
 };
 
-export const getCigarsByBrand = async (brand: string): Promise<Cigar[]> => {
+export const getCigarsByBrand = async (brand: string, options?: { limit?: number }): Promise<Cigar[]> => {
   try {
-    const q = query(collection(db, COLLECTIONS.CIGARS), where('brand', '==', brand));
+    const constraints: QueryConstraint[] = [where('brand', '==', brand)];
+    constraints.push(limit(options?.limit ?? 50));
+    const q = query(collection(db, COLLECTIONS.CIGARS), ...constraints);
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Cigar));
   } catch (error) {
@@ -312,18 +288,21 @@ export const getCigarsByBrand = async (brand: string): Promise<Cigar[]> => {
 };
 
 // 活动相关操作
-export const getEvents = async (creatorId?: string, storeId?: string): Promise<Event[]> => {
+export const getEvents = async (creatorId?: string, storeId?: string, options?: { limit?: number }): Promise<Event[]> => {
   try {
-    let q = query(collection(db, COLLECTIONS.EVENTS), orderBy('schedule.startDate', 'desc'));
-    
+    const constraints: QueryConstraint[] = [orderBy('schedule.startDate', 'desc')];
+
     if (creatorId) {
-      q = query(q, where('creatorId', '==', creatorId));
-    }
-    
-    if (storeId) {
-      q = query(q, where('storeId', '==', storeId));
+      constraints.push(where('creatorId', '==', creatorId));
     }
 
+    if (storeId) {
+      constraints.push(where('storeId', '==', storeId));
+    }
+
+    constraints.push(limit(options?.limit ?? 100));
+
+    const q = query(collection(db, COLLECTIONS.EVENTS), ...constraints);
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Event));
   } catch (error) {
@@ -337,44 +316,15 @@ export const getEventById = async (id: string): Promise<Event | null> => {
 
 export const getUpcomingEvents = async (): Promise<Event[]> => {
   try {
-    // 获取所有活动，然后在内存中过滤（避免 Firestore 复合索引问题）
-    const allEvents = await getEvents();
+    const allEvents = await getEvents(undefined, undefined, { limit: 100 });
     const now = new Date();
-    
-    return allEvents
-      .filter((event: Event) => {
-        // 检查活动是否有 schedule 和 startDate
-        if (!event.schedule || !event.schedule.startDate) return false;
-        
-        // 将 startDate 转换为 Date 对象
-        let startDate: Date;
-        if (event.schedule.startDate instanceof Date) {
-          startDate = event.schedule.startDate;
-        } else if ((event.schedule.startDate as any)?.toDate) {
-          // Firestore Timestamp
-          startDate = (event.schedule.startDate as any).toDate();
-        } else {
-          // 字符串或其他格式
-          startDate = new Date(event.schedule.startDate);
-        }
-        
-        // 过滤出未来的活动（不包括已取消的）
-        return startDate >= now && event.status !== 'cancelled';
-      })
-      .sort((a, b) => {
-        // 按开始日期升序排序
-        const dateA = a.schedule.startDate instanceof Date 
-          ? a.schedule.startDate 
-          : (a.schedule.startDate as any)?.toDate 
-            ? (a.schedule.startDate as any).toDate() 
-            : new Date(a.schedule.startDate);
-        const dateB = b.schedule.startDate instanceof Date 
-          ? b.schedule.startDate 
-          : (b.schedule.startDate as any)?.toDate 
-            ? (b.schedule.startDate as any).toDate() 
-            : new Date(b.schedule.startDate);
-        return dateA.getTime() - dateB.getTime();
-      });
+    return allEvents.filter((event: Event) => {
+      if (event.status === 'cancelled') return false;
+      const startDate = event.schedule?.startDate;
+      if (!startDate) return false;
+      const d = (startDate as any)?.toDate ? (startDate as any).toDate() : new Date(startDate as any);
+      return d >= now;
+    });
   } catch (error) {
     return [];
   }
@@ -425,30 +375,37 @@ export const unregisterFromEvent = async (eventId: string, userId: string) => {
 // 获取用户参与的活动（已报名 + 已签到）
 export const getEventsByUser = async (userId: string): Promise<Event[]> => {
   try {
-    // 获取所有活动，然后在内存中过滤用户参与的活动
-    const allEvents = await getEvents();
-    
-    return allEvents
-      .filter((event: Event) => {
-        const registered = event.participants?.registered || [];
-        const checkedIn = event.participants?.checkedIn || [];
-        // 用户在已报名或已签到列表中
-        return registered.includes(userId) || checkedIn.includes(userId);
-      })
-      .sort((a, b) => {
-        // 按开始日期降序排序（最新的在前）
-        const dateA = a.schedule.startDate instanceof Date 
-          ? a.schedule.startDate 
-          : (a.schedule.startDate as any)?.toDate 
-            ? (a.schedule.startDate as any).toDate() 
-            : new Date(a.schedule.startDate);
-        const dateB = b.schedule.startDate instanceof Date 
-          ? b.schedule.startDate 
-          : (b.schedule.startDate as any)?.toDate 
-            ? (b.schedule.startDate as any).toDate() 
-            : new Date(b.schedule.startDate);
-        return dateB.getTime() - dateA.getTime();
-      });
+    const [registeredSnap, checkedInSnap] = await Promise.all([
+      getDocs(query(
+        collection(db, COLLECTIONS.EVENTS),
+        where('participants.registered', 'array-contains', userId)
+      )),
+      getDocs(query(
+        collection(db, COLLECTIONS.EVENTS),
+        where('participants.checkedIn', 'array-contains', userId)
+      ))
+    ]);
+
+    const seen = new Set<string>();
+    const events: Event[] = [];
+    for (const snap of [registeredSnap, checkedInSnap]) {
+      for (const d of snap.docs) {
+        if (!seen.has(d.id)) {
+          seen.add(d.id);
+          events.push({ id: d.id, ...d.data() } as Event);
+        }
+      }
+    }
+
+    return events.sort((a, b) => {
+      const toMs = (v: any): number => {
+        if (!v) return 0;
+        if (v instanceof Date) return v.getTime();
+        if (v?.toDate) return v.toDate().getTime();
+        return new Date(v).getTime();
+      };
+      return toMs(b.schedule?.startDate) - toMs(a.schedule?.startDate);
+    });
   } catch (error) {
     return [];
   }
@@ -484,12 +441,14 @@ export const getOrdersByUser = async (userId: string): Promise<Order[]> => {
   }
 };
 
-export const getAllOrders = async (storeId?: string): Promise<Order[]> => {
+export const getAllOrders = async (storeId?: string, options?: { limit?: number; startDate?: Date | null; endDate?: Date | null }): Promise<Order[]> => {
   try {
-    let q = query(collection(db, COLLECTIONS.ORDERS), orderBy('createdAt', 'desc'));
-    if (storeId) {
-      q = query(q, where('storeId', '==', storeId));
-    }
+    const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc')];
+    if (storeId) constraints.push(where('storeId', '==', storeId));
+    if (options?.startDate) constraints.push(where('createdAt', '>=', Timestamp.fromDate(options.startDate)));
+    if (options?.endDate) constraints.push(where('createdAt', '<=', Timestamp.fromDate(options.endDate)));
+    if (options?.limit) constraints.push(limit(options.limit));
+    const q = query(collection(db, COLLECTIONS.ORDERS), ...constraints);
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
   } catch (error) {
@@ -519,9 +478,25 @@ export const createOrdersFromEventAllocations = async (eventId: string): Promise
     const registeredUsers = (event as any)?.participants?.registered || [];
     let createdOrdersCount = 0;
     let updatedOrdersCount = 0;
-    
+
     // 创建所有分配记录的副本，用于批量更新
     const updatedAllocations = { ...allocations };
+
+    // Pre-fetch all unique cigar IDs referenced across all allocations
+    const uniqueCigarIds = new Set<string>();
+    for (const userId of registeredUsers) {
+      const allocation = allocations[userId];
+      if (!allocation) continue;
+      const itemRows = (allocation as any)?.items as Array<{ cigarId: string }> | undefined;
+      if (Array.isArray(itemRows)) {
+        itemRows.forEach(r => r?.cigarId && uniqueCigarIds.add(r.cigarId));
+      } else if ((allocation as any).cigarId) {
+        uniqueCigarIds.add((allocation as any).cigarId);
+      }
+    }
+    const cigarList = await Promise.all([...uniqueCigarIds].map(id => getCigarById(id)));
+    const cigarMap = new Map<string, Cigar>();
+    cigarList.forEach(c => c && cigarMap.set(c.id, c));
 
     // 为每个参与者创建或更新订单
     for (const userId of registeredUsers) {
@@ -547,14 +522,14 @@ export const createOrdersFromEventAllocations = async (eventId: string): Promise
         if (Array.isArray(itemRows) && itemRows.length > 0) {
           for (const row of itemRows) {
             if (!row?.cigarId || !row?.quantity || row.quantity <= 0) continue
-            const rowCigar = await getCigarById(row.cigarId)
+            const rowCigar = cigarMap.get(row.cigarId) ?? null
             const unitPrice = (row as any)?.unitPrice != null ? Number((row as any).unitPrice) : (rowCigar?.price || 0)
             orderItems.push({ cigarId: String(row.cigarId), quantity: row.quantity, price: unitPrice })
             runningTotal += unitPrice * row.quantity
           }
         } else if ((allocation as any).cigarId && (allocation as any).quantity > 0) {
           // 3) 兼容旧结构：单行雪茄
-          const cigar = await getCigarById((allocation as any).cigarId)
+          const cigar = cigarMap.get((allocation as any).cigarId) ?? null
           const qty = (allocation as any).quantity || 1
           const unitPrice = (allocation as any).unitPrice != null ? Number((allocation as any).unitPrice) : (cigar?.price || 0)
           if ((allocation as any).cigarId) {
@@ -655,7 +630,7 @@ export const createOrdersFromEventAllocations = async (eventId: string): Promise
           
           for (const it of orderItems) {
             // 仅对真实存在的雪茄生成出库记录（费用行不会匹配到实体雪茄）
-            const cigar = await getCigarById(it.cigarId)
+            const cigar = cigarMap.get(it.cigarId) ?? null
             if (!cigar) continue
             
             const outboundItem = {
@@ -853,12 +828,14 @@ export const createDirectSaleOrder = async (params: { userId: string; items: { c
 }
 
 // 财务相关操作
-export const getAllTransactions = async (storeId?: string): Promise<Transaction[]> => {
+export const getAllTransactions = async (storeId?: string, options?: { limit?: number; startDate?: Date | null; endDate?: Date | null }): Promise<Transaction[]> => {
   try {
-    let q = query(collection(db, COLLECTIONS.TRANSACTIONS), orderBy('createdAt', 'desc'));
-    if (storeId) {
-      q = query(q, where('storeId', '==', storeId));
-    }
+    const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc')];
+    if (storeId) constraints.push(where('storeId', '==', storeId));
+    if (options?.startDate) constraints.push(where('createdAt', '>=', Timestamp.fromDate(options.startDate)));
+    if (options?.endDate) constraints.push(where('createdAt', '<=', Timestamp.fromDate(options.endDate)));
+    if (options?.limit) constraints.push(limit(options.limit));
+    const q = query(collection(db, COLLECTIONS.TRANSACTIONS), ...constraints);
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
   } catch (error) {
@@ -866,13 +843,14 @@ export const getAllTransactions = async (storeId?: string): Promise<Transaction[
   }
 };
 
-export const getTransactionsByType = async (type: Transaction['type']): Promise<Transaction[]> => {
+export const getTransactionsByType = async (type: Transaction['type'], options?: { limit?: number }): Promise<Transaction[]> => {
   try {
-    const q = query(
-      collection(db, COLLECTIONS.TRANSACTIONS), 
+    const constraints: QueryConstraint[] = [
       where('type', '==', type),
       orderBy('createdAt', 'desc')
-    );
+    ];
+    if (options?.limit) constraints.push(limit(options.limit));
+    const q = query(collection(db, COLLECTIONS.TRANSACTIONS), ...constraints);
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
   } catch (error) {
@@ -937,10 +915,11 @@ export const subscribeToCollection = <T>(
   queryConstraints?: any[]
 ) => {
   const col = collection(db, collectionName);
-  const q = queryConstraints && queryConstraints.length > 0 
-    ? query(col, ...queryConstraints)
-    : col;
-  
+  const constraints: any[] = queryConstraints && queryConstraints.length > 0 ? [...queryConstraints] : [];
+  // Only add a safety limit when the caller passed no constraints at all (fully unbounded listener)
+  if (constraints.length === 0) constraints.push(limit(200));
+  const q = query(col, ...constraints);
+
   return onSnapshot(q, (querySnapshot) => {
     const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
     callback(data);
@@ -954,12 +933,14 @@ export const subscribeToCollection = <T>(
 /**
  * 获取所有入库订单
  */
-export const getAllInboundOrders = async (storeId?: string): Promise<InboundOrder[]> => {
+export const getAllInboundOrders = async (storeId?: string, options?: { limit?: number; startDate?: Date | null; endDate?: Date | null }): Promise<InboundOrder[]> => {
   try {
-    let q = query(collection(db, COLLECTIONS.INBOUND_ORDERS), orderBy('createdAt', 'desc'));
-    if (storeId) {
-      q = query(q, where('storeId', '==', storeId));
-    }
+    const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc')];
+    if (storeId) constraints.push(where('storeId', '==', storeId));
+    if (options?.startDate) constraints.push(where('createdAt', '>=', Timestamp.fromDate(options.startDate)));
+    if (options?.endDate) constraints.push(where('createdAt', '<=', Timestamp.fromDate(options.endDate)));
+    if (options?.limit) constraints.push(limit(options.limit));
+    const q = query(collection(db, COLLECTIONS.INBOUND_ORDERS), ...constraints);
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InboundOrder));
   } catch (error) {
@@ -1106,12 +1087,14 @@ export const deleteInboundOrder = async (id: string): Promise<void> => {
 /**
  * 获取所有出库订单
  */
-export const getAllOutboundOrders = async (storeId?: string): Promise<OutboundOrder[]> => {
+export const getAllOutboundOrders = async (storeId?: string, options?: { limit?: number; startDate?: Date | null; endDate?: Date | null }): Promise<OutboundOrder[]> => {
   try {
-    let q = query(collection(db, COLLECTIONS.OUTBOUND_ORDERS), orderBy('createdAt', 'desc'));
-    if (storeId) {
-      q = query(q, where('storeId', '==', storeId));
-    }
+    const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc')];
+    if (storeId) constraints.push(where('storeId', '==', storeId));
+    if (options?.startDate) constraints.push(where('createdAt', '>=', Timestamp.fromDate(options.startDate)));
+    if (options?.endDate) constraints.push(where('createdAt', '<=', Timestamp.fromDate(options.endDate)));
+    if (options?.limit) constraints.push(limit(options.limit));
+    const q = query(collection(db, COLLECTIONS.OUTBOUND_ORDERS), ...constraints);
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as OutboundOrder));
   } catch (error) {
@@ -1255,12 +1238,14 @@ export const updateOutboundOrder = async (id: string, updates: Partial<OutboundO
 /**
  * 获取所有库存变动记录（索引表）
  */
-export const getAllInventoryMovements = async (storeId?: string): Promise<InventoryMovement[]> => {
+export const getAllInventoryMovements = async (storeId?: string, options?: { limit?: number; startDate?: Date | null; endDate?: Date | null }): Promise<InventoryMovement[]> => {
   try {
-    let q = query(collection(db, COLLECTIONS.INVENTORY_MOVEMENTS), orderBy('createdAt', 'desc'));
-    if (storeId) {
-      q = query(q, where('storeId', '==', storeId));
-    }
+    const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc')];
+    if (storeId) constraints.push(where('storeId', '==', storeId));
+    if (options?.startDate) constraints.push(where('createdAt', '>=', Timestamp.fromDate(options.startDate)));
+    if (options?.endDate) constraints.push(where('createdAt', '<=', Timestamp.fromDate(options.endDate)));
+    if (options?.limit) constraints.push(limit(options.limit));
+    const q = query(collection(db, COLLECTIONS.INVENTORY_MOVEMENTS), ...constraints);
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryMovement));
   } catch (error) {

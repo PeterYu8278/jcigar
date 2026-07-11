@@ -7,7 +7,7 @@ import {
 import { DollarOutlined, ShoppingOutlined, CalendarOutlined, ArrowUpOutlined, ArrowDownOutlined, PlusOutlined, EyeOutlined, BarChartOutlined, PieChartOutlined, DeleteOutlined, CheckOutlined, SearchOutlined, CloseOutlined } from '@ant-design/icons'
 import OrderDetails from '../Orders/OrderDetails'
 import type { Transaction, User, InboundOrder, OutboundOrder, InventoryMovement, Order } from '../../../types'
-import { getAllTransactions, getAllOrders, createTransaction, COLLECTIONS, getAllUsers, updateDocument, deleteDocument, getCigars, getAllInboundOrders, getAllOutboundOrders, getAllInventoryMovements, getOutboundOrdersByReferenceNo } from '../../../services/firebase/firestore'
+import { getAllTransactions, getAllOrders, createTransaction, COLLECTIONS, getAllUsers, getUsers, updateDocument, deleteDocument, getCigars, getAllInboundOrders, getAllOutboundOrders, getAllInventoryMovements, getOutboundOrdersByReferenceNo } from '../../../services/firebase/firestore'
 import { db } from '../../../config/firebase'
 import { collection, query, where, getDocs, updateDoc } from 'firebase/firestore'
 // 不再使用服务端分页，改为加载所有数据并使用客户端分页
@@ -16,6 +16,8 @@ import { useTranslation } from 'react-i18next'
 import { getModalThemeStyles, getModalWidth, getModalTheme, getResponsiveModalConfig } from '../../../config/modalTheme'
 import { calculateFifoProfit, aggregateProfitByPeriod, ProfitRecord } from '../../../utils/finance'
 import { useAuthStore } from '../../../store/modules/auth'
+import { useDetailDrawer } from '../../../hooks/useDetailDrawer'
+import { useFirestoreQuery } from '../../../hooks/useFirestoreQuery'
 
 const { Title } = Typography
 const { RangePicker } = DatePicker
@@ -44,19 +46,37 @@ const AdminFinance: React.FC = () => {
     )
   }
 
-  const [transactions, setTransactions] = useState<Transaction[]>([]) // 保留用于搜索和筛选
-  const [orders, setOrders] = useState<any[]>([])
-  const [users, setUsers] = useState<any[]>([])
-  const [cigars, setCigars] = useState<any[]>([])
+  const [financeStartDate] = useState<Date>(() => { const d = new Date(); d.setMonth(d.getMonth() - 6); return d })
+  const [financeEndDate] = useState<Date>(() => new Date())
+
+  const { data: transactions, loading: txLoading, refresh: refreshTransactions } = useFirestoreQuery(
+    () => getAllTransactions(isSuperAdmin ? undefined : currentUser?.storeId, { startDate: financeStartDate, endDate: financeEndDate, limit: 1000 }),
+    [isSuperAdmin, currentUser?.storeId, financeStartDate, financeEndDate]
+  )
+  const { data: orders, refresh: refreshOrders } = useFirestoreQuery(
+    () => getAllOrders(isSuperAdmin ? undefined : currentUser?.storeId, { startDate: financeStartDate, endDate: financeEndDate, limit: 500 }),
+    [isSuperAdmin, currentUser?.storeId, financeStartDate, financeEndDate]
+  )
+  const { data: users } = useFirestoreQuery(() => getUsers({ limit: 500 }), [])
+  const { data: cigars } = useFirestoreQuery(getCigars)
 
   // 新架构数据
-  const [inboundOrders, setInboundOrders] = useState<InboundOrder[]>([])
-  const [outboundOrders, setOutboundOrders] = useState<OutboundOrder[]>([])
-  const [inventoryMovements, setInventoryMovements] = useState<InventoryMovement[]>([])
+  const { data: inboundOrders, refresh: refreshInboundOrders } = useFirestoreQuery(
+    () => getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId, { startDate: financeStartDate, endDate: financeEndDate, limit: 500 }),
+    [isSuperAdmin, currentUser?.storeId, financeStartDate, financeEndDate]
+  )
+  const { data: outboundOrders } = useFirestoreQuery(
+    () => getAllOutboundOrders(isSuperAdmin ? undefined : currentUser?.storeId, { startDate: financeStartDate, endDate: financeEndDate, limit: 500 }),
+    [isSuperAdmin, currentUser?.storeId, financeStartDate, financeEndDate]
+  )
+  const { data: inventoryMovements } = useFirestoreQuery(
+    () => getAllInventoryMovements(isSuperAdmin ? undefined : currentUser?.storeId, { startDate: financeStartDate, endDate: financeEndDate, limit: 1000 }),
+    [isSuperAdmin, currentUser?.storeId, financeStartDate, financeEndDate]
+  )
 
   const [loading, setLoading] = useState(false)
   const [creating, setCreating] = useState(false)
-  const [viewing, setViewing] = useState<Transaction | null>(null)
+  const { item: viewing, open: viewingOpen, openDrawer: openViewing, closeDrawer: closeViewing } = useDetailDrawer<Transaction>()
   const [isEditing, setIsEditing] = useState(false)
   const [deleting, setDeleting] = useState<Transaction | null>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'profit'>('overview')
@@ -69,7 +89,7 @@ const AdminFinance: React.FC = () => {
   const theme = getModalTheme(true) // 使用暗色主题
   const [selectedDateRange, setSelectedDateRange] = useState<'week' | 'month' | 'year' | null>(null)
   const [productExpandedKeys, setProductExpandedKeys] = useState<React.Key[]>([])
-  const [viewingOrder, setViewingOrder] = useState<Order | null>(null)
+  const { item: viewingOrder, open: viewingOrderOpen, openDrawer: openViewingOrder, closeDrawer: closeViewingOrder } = useDetailDrawer<Order>()
   const [importing, setImporting] = useState(false)
   const [profitPage, setProfitPage] = useState(1)
   const [profitTypeFilter, setProfitTypeFilter] = useState<'all' | 'surplus' | 'deficit'>('all')
@@ -343,49 +363,11 @@ const AdminFinance: React.FC = () => {
   }
 
   const refreshData = async () => {
-    setLoading(true)
-    try {
-      // 加载所有数据（用于显示和筛选）
-      const [allTransactions, inOrders, outOrders, movements, orderList, userList, cigarList] = await Promise.all([
-        getAllTransactions(isSuperAdmin ? undefined : currentUser?.storeId),
-        getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId),
-        getAllOutboundOrders(isSuperAdmin ? undefined : currentUser?.storeId),
-        getAllInventoryMovements(isSuperAdmin ? undefined : currentUser?.storeId),
-        getAllOrders(isSuperAdmin ? undefined : currentUser?.storeId),
-        getAllUsers(),
-        getCigars()
-      ])
-
-      setTransactions(allTransactions)
-      setInboundOrders(inOrders)
-      setOutboundOrders(outOrders)
-      setInventoryMovements(movements)
-      setOrders(orderList || [])
-      setUsers(userList || [])
-      setCigars(cigarList || [])
-    } catch (error) {
-      console.error('❌ [Finance] Load data error:', error)
-      message.error(t('financeAdmin.loadTransactionsFailed'))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // 加载数据
-  useEffect(() => {
-    refreshData()
-  }, []) // 只在组件挂载时加载一次
-
-  const loadTransactions = async () => {
-    setLoading(true)
-    try {
-      const data = await getAllTransactions(isSuperAdmin ? undefined : currentUser?.storeId)
-      setTransactions(data)
-    } catch (error) {
-      message.error(t('financeAdmin.loadTransactionsFailed'))
-    } finally {
-      setLoading(false)
-    }
+    await Promise.all([
+      refreshTransactions(),
+      refreshOrders(),
+      refreshInboundOrders(),
+    ])
   }
 
   // 删除交易记录
@@ -402,11 +384,10 @@ const AdminFinance: React.FC = () => {
       if (result.success) {
         message.success(t('financeAdmin.transactionDeleted'))
         // 重新加载所有交易数据
-        const data = await getAllTransactions(isSuperAdmin ? undefined : currentUser?.storeId)
-        setTransactions(data)
+        await refreshTransactions()
         // 如果正在查看被删除的交易，关闭查看 Modal
         if (viewing?.id === deleting.id) {
-          setViewing(null)
+          closeViewing()
           setIsEditing(false)
         }
         setDeleting(null)
@@ -564,7 +545,7 @@ const AdminFinance: React.FC = () => {
       render: (_: any, record: Transaction) => (
         <Space size="small" style={{ justifyContent: 'center', width: '100%' }}>
           <Button type="link" icon={<EyeOutlined />} size="small" onClick={() => {
-            setViewing(record)
+            openViewing(record)
           }}>
           </Button>
         </Space>
@@ -1715,7 +1696,7 @@ const AdminFinance: React.FC = () => {
                             style={{ color: '#f4af25', fontWeight: 700, fontSize: 15, textDecoration: 'underline', cursor: 'pointer' }}
                             onClick={() => {
                               const order = orders.find(o => o.id === r.referenceNo)
-                              if (order) setViewingOrder(order)
+                              if (order) openViewingOrder(order)
                               else message.warning(t('common.noData'))
                             }}
                           >
@@ -1841,7 +1822,7 @@ const AdminFinance: React.FC = () => {
                               }}
                               onClick={() => {
                                 const order = orders.find(o => o.id === v)
-                                if (order) setViewingOrder(order)
+                                if (order) openViewingOrder(order)
                                 else message.warning(t('common.noData'))
                               }}
                             >
@@ -2253,7 +2234,7 @@ const AdminFinance: React.FC = () => {
                 columns={columns}
                 dataSource={enriched}
                 rowKey="id"
-                loading={loading}
+                loading={txLoading || loading}
                 style={{
                   background: 'transparent'
                 }}
@@ -2324,7 +2305,7 @@ const AdminFinance: React.FC = () => {
                     icon={<EyeOutlined />}
                     size="small"
                     onClick={() => {
-                      setViewing(transaction)
+                      openViewing(transaction)
                     }}
                     style={{ marginLeft: 8 }}
                   />
@@ -2337,14 +2318,14 @@ const AdminFinance: React.FC = () => {
 
       {/* 交易详情（可编辑） */}
       <Modal
-        open={!!viewing}
+        open={viewingOpen}
         onCancel={() => {
-          setViewing(null)
+          closeViewing()
           setIsEditing(false)
         }}
         footer={[
           <button key="cancel" type="button" onClick={() => {
-            setViewing(null)
+            closeViewing()
             setIsEditing(false)
           }} style={theme.button.secondary}>
             {t('common.cancel')}
@@ -2532,7 +2513,7 @@ const AdminFinance: React.FC = () => {
 
                   message.success(t('financeAdmin.updated'))
                   setIsEditing(false)
-                  setViewing(null)
+                  closeViewing()
 
                   // 重新加载相关数据以反映变化
                   await refreshData() // 获取最新支付日期的订单，并同步更新交易列表
@@ -2927,8 +2908,7 @@ const AdminFinance: React.FC = () => {
               if (result.success) {
                 message.success(t('financeAdmin.transactionAdded'))
                 // 重新加载所有交易数据
-                const data = await getAllTransactions()
-                setTransactions(data)
+                await refreshTransactions()
                 setCreating(false)
                 form.resetFields()
               } else {
@@ -3030,8 +3010,7 @@ const AdminFinance: React.FC = () => {
 
           setImportRows([])
           // 重新加载所有交易数据
-          const data = await getAllTransactions()
-          setTransactions(data)
+          await refreshTransactions()
         }}
         confirmLoading={loading}
       >
@@ -3470,8 +3449,8 @@ const AdminFinance: React.FC = () => {
         <p style={{ color: '#FFFFFF' }}>{t('financeAdmin.deleteTransactionConfirm')}</p>
       </Modal>
       <Drawer
-        open={!!viewingOrder}
-        onClose={() => setViewingOrder(null)}
+        open={viewingOrderOpen}
+        onClose={() => closeViewingOrder()}
         width={getModalWidth(isMobile, 820)}
         styles={{
           body: { padding: 0, background: '#1a160d' },
@@ -3487,7 +3466,7 @@ const AdminFinance: React.FC = () => {
           <Button
             type="text"
             icon={<CloseOutlined style={{ color: '#fff' }} />}
-            onClick={() => setViewingOrder(null)}
+            onClick={() => closeViewingOrder()}
           />
         }
       >
@@ -3499,7 +3478,7 @@ const AdminFinance: React.FC = () => {
             transactions={transactions}
             isMobile={isMobile}
             isEditingInView={false}
-            onClose={() => setViewingOrder(null)}
+            onClose={() => closeViewingOrder()}
             onEditToggle={() => { }} // 禁止在此处编辑
             onOrderUpdate={async () => { }} // 静态查看
           />

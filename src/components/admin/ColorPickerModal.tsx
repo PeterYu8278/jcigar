@@ -4,6 +4,7 @@
  */
 import React, { useState, useEffect } from 'react';
 import { Modal, ColorPicker, Input, Button, Space, Typography, Row, Col, Tag } from 'antd';
+import { useTranslation } from 'react-i18next';
 import type { ColorThemeConfig } from '../../types';
 
 const { Text } = Typography;
@@ -25,6 +26,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
   onCancel,
   onConfirm,
 }) => {
+  const { t } = useTranslation();
   // 根据类型初始化颜色状态
   const getInitialColors = (): Record<string, string> => {
     switch (type) {
@@ -173,7 +175,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
         return (
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
             <div>
-              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>起始颜色</Text>
+              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>{t('colorPicker.startColor')}</Text>
               <Row gutter={16} align="middle">
                 <Col>
                   <ColorPicker
@@ -197,7 +199,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
               </Row>
             </div>
             <div>
-              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>结束颜色</Text>
+              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>{t('colorPicker.endColor')}</Text>
               <Row gutter={16} align="middle">
                 <Col>
                   <ColorPicker
@@ -221,7 +223,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
               </Row>
             </div>
             <div style={{ padding: 16, background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
-              <Text style={{ color: '#c0c0c0', display: 'block', marginBottom: 8 }}>预览</Text>
+              <Text style={{ color: '#c0c0c0', display: 'block', marginBottom: 8 }}>{t('colorPicker.preview')}</Text>
               <Button
                 style={{
                   background: `linear-gradient(to right, ${colors.startColor}, ${colors.endColor})`,
@@ -231,7 +233,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
                   width: '100%',
                 }}
               >
-                保存更改
+                {t('common.saveChanges')}
               </Button>
             </div>
           </Space>
@@ -246,7 +248,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
         return (
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
             <div>
-              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>背景颜色</Text>
+              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>{t('colorPicker.backgroundColor')}</Text>
               <Row gutter={16} align="middle">
                 <Col>
                   {!isRgba && (
@@ -258,7 +260,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
                   )}
                   {isRgba && (
                     <Text style={{ color: '#c0c0c0', fontSize: 12 }}>
-                      RGBA 格式，请直接输入
+                      {t('colorPicker.rgbaDirectInput')}
                     </Text>
                   )}
                 </Col>
@@ -277,7 +279,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
               </Row>
             </div>
             <div>
-              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>边框颜色</Text>
+              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>{t('colorPicker.borderColor')}</Text>
               <Row gutter={16} align="middle">
                 <Col>
                   <ColorPicker
@@ -300,7 +302,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
               </Row>
             </div>
             <div>
-              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>文字颜色</Text>
+              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>{t('colorPicker.textColor')}</Text>
               <Row gutter={16} align="middle">
                 <Col>
                   <ColorPicker
@@ -323,7 +325,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
               </Row>
             </div>
             <div style={{ padding: 16, background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
-              <Text style={{ color: '#c0c0c0', display: 'block', marginBottom: 8 }}>预览</Text>
+              <Text style={{ color: '#c0c0c0', display: 'block', marginBottom: 8 }}>{t('colorPicker.preview')}</Text>
               <Button
                 style={{
                   background: colors.backgroundColor,
@@ -332,7 +334,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
                   width: '100%',
                 }}
               >
-                {type === 'secondaryButton' ? '取消' : '警告'}
+                {type === 'secondaryButton' ? t('common.cancel') : t('common.warning')}
               </Button>
             </div>
           </Space>
@@ -342,7 +344,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
         return (
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
             <div>
-              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>主边框</Text>
+              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>{t('colorPicker.primaryBorder')}</Text>
               <Row gutter={16} align="middle">
                 <Col>
                   <ColorPicker
@@ -365,7 +367,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
               </Row>
             </div>
             <div>
-              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>次边框</Text>
+              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>{t('colorPicker.secondaryBorder')}</Text>
               <Row gutter={16} align="middle">
                 <Col>
                   <ColorPicker
@@ -388,7 +390,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
               </Row>
             </div>
             <div style={{ padding: 16, background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
-              <Text style={{ color: '#c0c0c0', display: 'block', marginBottom: 8 }}>预览</Text>
+              <Text style={{ color: '#c0c0c0', display: 'block', marginBottom: 8 }}>{t('colorPicker.preview')}</Text>
               <div
                 style={{
                   padding: 16,
@@ -397,7 +399,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
                   background: 'rgba(255,255,255,0.05)',
                 }}
               >
-                <Text style={{ color: '#f8f8f8' }}>内容区域</Text>
+                <Text style={{ color: '#f8f8f8' }}>{t('colorPicker.contentArea')}</Text>
               </div>
             </div>
           </Space>
@@ -407,7 +409,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
         return (
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
             <div>
-              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>成功标签 - 背景颜色</Text>
+              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>{t('colorPicker.successTagBg')}</Text>
               <Row gutter={16} align="middle">
                 <Col>
                   <ColorPicker
@@ -430,7 +432,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
               </Row>
             </div>
             <div>
-              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>成功标签 - 文字颜色</Text>
+              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>{t('colorPicker.successTagText')}</Text>
               <Row gutter={16} align="middle">
                 <Col>
                   <ColorPicker
@@ -453,7 +455,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
               </Row>
             </div>
             <div>
-              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>警告标签 - 背景颜色</Text>
+              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>{t('colorPicker.warningTagBg')}</Text>
               <Row gutter={16} align="middle">
                 <Col>
                   <ColorPicker
@@ -476,7 +478,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
               </Row>
             </div>
             <div>
-              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>警告标签 - 文字颜色</Text>
+              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>{t('colorPicker.warningTagText')}</Text>
               <Row gutter={16} align="middle">
                 <Col>
                   <ColorPicker
@@ -499,7 +501,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
               </Row>
             </div>
             <div>
-              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>错误标签 - 背景颜色</Text>
+              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>{t('colorPicker.errorTagBg')}</Text>
               <Row gutter={16} align="middle">
                 <Col>
                   <ColorPicker
@@ -522,7 +524,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
               </Row>
             </div>
             <div>
-              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>错误标签 - 文字颜色</Text>
+              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>{t('colorPicker.errorTagText')}</Text>
               <Row gutter={16} align="middle">
                 <Col>
                   <ColorPicker
@@ -545,11 +547,11 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
               </Row>
             </div>
             <div style={{ padding: 16, background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
-              <Text style={{ color: '#c0c0c0', display: 'block', marginBottom: 8 }}>预览</Text>
+              <Text style={{ color: '#c0c0c0', display: 'block', marginBottom: 8 }}>{t('colorPicker.preview')}</Text>
               <Space>
-                <Tag style={{ background: colors.successBackground, color: colors.successText, border: 'none' }}>成功</Tag>
-                <Tag style={{ background: colors.warningBackground, color: colors.warningText, border: 'none' }}>警告</Tag>
-                <Tag style={{ background: colors.errorBackground, color: colors.errorText, border: 'none' }}>错误</Tag>
+                <Tag style={{ background: colors.successBackground, color: colors.successText, border: 'none' }}>{t('common.success')}</Tag>
+                <Tag style={{ background: colors.warningBackground, color: colors.warningText, border: 'none' }}>{t('common.warning')}</Tag>
+                <Tag style={{ background: colors.errorBackground, color: colors.errorText, border: 'none' }}>{t('common.error')}</Tag>
               </Space>
             </div>
           </Space>
@@ -559,7 +561,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
         return (
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
             <div>
-              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>主要文字</Text>
+              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>{t('colorPicker.primaryText')}</Text>
               <Row gutter={16} align="middle">
                 <Col>
                   <ColorPicker
@@ -582,7 +584,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
               </Row>
             </div>
             <div>
-              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>次要文字</Text>
+              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>{t('colorPicker.secondaryText')}</Text>
               <Row gutter={16} align="middle">
                 <Col>
                   <ColorPicker
@@ -605,7 +607,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
               </Row>
             </div>
             <div>
-              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>第三级文字</Text>
+              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>{t('colorPicker.tertiaryText')}</Text>
               <Row gutter={16} align="middle">
                 <Col>
                   <ColorPicker
@@ -628,11 +630,11 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
               </Row>
             </div>
             <div style={{ padding: 16, background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
-              <Text style={{ color: '#c0c0c0', display: 'block', marginBottom: 8 }}>预览</Text>
+              <Text style={{ color: '#c0c0c0', display: 'block', marginBottom: 8 }}>{t('colorPicker.preview')}</Text>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <Text style={{ color: colors.primary, fontSize: 14 }}>主要文字</Text>
-                <Text style={{ color: colors.secondary, fontSize: 12 }}>次要文字</Text>
-                <Text style={{ color: colors.tertiary, fontSize: 11 }}>第三级文字</Text>
+                <Text style={{ color: colors.primary, fontSize: 14 }}>{t('colorPicker.primaryText')}</Text>
+                <Text style={{ color: colors.secondary, fontSize: 12 }}>{t('colorPicker.secondaryText')}</Text>
+                <Text style={{ color: colors.tertiary, fontSize: 11 }}>{t('colorPicker.tertiaryText')}</Text>
               </div>
             </div>
           </Space>
@@ -642,7 +644,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
         return (
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
             <div>
-              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>图标颜色</Text>
+              <Text style={{ color: '#f8f8f8', display: 'block', marginBottom: 8 }}>{t('colorPicker.iconColor')}</Text>
               <Row gutter={16} align="middle">
                 <Col>
                   <ColorPicker
@@ -665,7 +667,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
               </Row>
             </div>
             <div style={{ padding: 16, background: 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
-              <Text style={{ color: '#c0c0c0', display: 'block', marginBottom: 8 }}>预览</Text>
+              <Text style={{ color: '#c0c0c0', display: 'block', marginBottom: 8 }}>{t('colorPicker.preview')}</Text>
               <div style={{ display: 'flex', gap: 16, fontSize: 24 }}>
                 <span style={{ color: colors.primary }}></span>
                 <span style={{ color: colors.primary }}>🔔</span>
@@ -684,11 +686,11 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
   return (
     <Modal
       open={open}
-      title={`编辑 ${title} 颜色`}
+      title={t('colorPicker.editTitle', { title })}
       onCancel={onCancel}
       footer={[
         <Button key="cancel" onClick={onCancel}>
-          取消
+          {t('common.cancel')}
         </Button>,
         <Button
           key="confirm"
@@ -699,7 +701,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
             border: 'none',
           }}
         >
-          确认
+          {t('common.confirm')}
         </Button>,
       ]}
       width={600}

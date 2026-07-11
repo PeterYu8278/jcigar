@@ -3,6 +3,7 @@
  */
 
 import { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
     Card, 
     Upload, 
@@ -38,6 +39,7 @@ const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;
 
 export default function GeminiModelTester() {
+    const { t } = useTranslation();
     // 测试配置
     const [config, setConfig] = useState<TestConfig>({
         testImage: null,
@@ -74,14 +76,14 @@ export default function GeminiModelTester() {
             setConfig({ ...config, testImage: file });
             message.success(`已选择图片: ${file.name}`);
         } else {
-            message.error('请上传图片文件');
+            message.error(t('geminiTester.uploadImageRequired'));
         }
     };
     
     // 开始测试
     const handleStartTest = async () => {
         if (!config.testImage) {
-            message.error('请先上传测试图片');
+            message.error(t('geminiTester.uploadTestImageFirst'));
             return;
         }
         
@@ -125,7 +127,7 @@ export default function GeminiModelTester() {
             // 打印控制台报告
             printConsoleReport(testReport);
             
-            message.success('测试完成！请查看控制台获取详细统计');
+            message.success(t('geminiTester.testCompleted'));
             
         } catch (error: any) {
             message.error(`测试失败: ${error.message}`);
@@ -139,7 +141,7 @@ export default function GeminiModelTester() {
     const handleStopTest = () => {
         setIsRunning(false);
         setProgress(prev => ({ ...prev, status: 'paused' }));
-        message.info('测试已停止');
+        message.info(t('geminiTester.testStopped'));
     };
     
     // 重置
@@ -154,13 +156,13 @@ export default function GeminiModelTester() {
             status: 'idle'
         });
         setReport(null);
-        message.info('已重置');
+        message.info(t('geminiTester.resetComplete'));
     };
     
     // 导出结果
     const handleExport = () => {
         if (!report) {
-            message.warning('没有可导出的测试结果');
+            message.warning(t('geminiTester.noResultsToExport'));
             return;
         }
         
@@ -173,26 +175,26 @@ export default function GeminiModelTester() {
         link.click();
         URL.revokeObjectURL(url);
         
-        message.success('报告已导出');
+        message.success(t('geminiTester.reportExported'));
     };
     
     // 模型结果表格列
     const modelColumns = [
         {
-            title: '排名',
+            title: t('geminiTester.colRank'),
             dataIndex: 'index',
             key: 'index',
             width: 60,
             render: (_: any, __: any, index: number) => index + 1
         },
         {
-            title: '模型名称',
+            title: t('geminiTester.colModelName'),
             dataIndex: 'modelName',
             key: 'modelName',
             width: 280
         },
         {
-            title: '成功率',
+            title: t('geminiTester.colSuccessRate'),
             dataIndex: 'successes',
             key: 'successRate',
             width: 100,
@@ -202,7 +204,7 @@ export default function GeminiModelTester() {
                 (a.successes / a.attempts) - (b.successes / b.attempts)
         },
         {
-            title: '响应时间',
+            title: t('geminiTester.colResponseTime'),
             dataIndex: 'avgResponseTime',
             key: 'avgResponseTime',
             width: 100,
@@ -211,7 +213,7 @@ export default function GeminiModelTester() {
                 a.avgResponseTime - b.avgResponseTime
         },
         {
-            title: '数据完整度',
+            title: t('geminiTester.statDataCompleteness'),
             dataIndex: 'dataQuality',
             key: 'dataQuality',
             width: 120,
@@ -219,7 +221,7 @@ export default function GeminiModelTester() {
                 `${((quality.avgFieldCount / 15) * 100).toFixed(1)}%`
         },
         {
-            title: '可靠性评分',
+            title: t('geminiTester.colReliabilityScore'),
             dataIndex: 'reliabilityScore',
             key: 'reliabilityScore',
             width: 120,
@@ -234,7 +236,7 @@ export default function GeminiModelTester() {
                 a.reliabilityScore - b.reliabilityScore
         },
         {
-            title: '推荐度',
+            title: t('geminiTester.colRecommendation'),
             dataIndex: 'recommendation',
             key: 'recommendation',
             width: 120,
@@ -246,10 +248,10 @@ export default function GeminiModelTester() {
                     'not_recommended': 'red'
                 };
                 const textMap: { [key: string]: string } = {
-                    'highly_recommended': '强烈推荐',
-                    'recommended': '推荐',
-                    'use_with_caution': '谨慎使用',
-                    'not_recommended': '不推荐'
+                    'highly_recommended': t('geminiTester.recHighlyRecommended'),
+                    'recommended': t('geminiTester.recRecommended'),
+                    'use_with_caution': t('geminiTester.recUseWithCaution'),
+                    'not_recommended': t('geminiTester.recNotRecommended')
                 };
                 return <Tag color={colorMap[rec]}>{textMap[rec]}</Tag>;
             }
@@ -258,19 +260,19 @@ export default function GeminiModelTester() {
     
     return (
         <div style={{ padding: '24px' }}>
-            <Title level={2}>🧪 Gemini 模型测试与优化系统</Title>
+            <Title level={2}>{t('geminiTester.title')}</Title>
             <Paragraph type="secondary">
-                全面测试所有 Gemini 模型的可用性、性能和数据质量，为模型选择提供数据支持
+                {t('geminiTester.subtitle')}
             </Paragraph>
             
             <Row gutter={[16, 16]}>
                 {/* 配置面板 */}
                 <Col span={24}>
-                    <Card title="测试配置" size="small">
+                    <Card title={t('geminiTester.configCard')} size="small">
                         <Space direction="vertical" style={{ width: '100%' }} size="middle">
                             {/* 图片上传 */}
                             <div>
-                                <Text strong>测试图片：</Text>
+                                <Text strong>{t('geminiTester.testImageLabel')}</Text>
                                 <Upload
                                     accept="image/*"
                                     maxCount={1}
@@ -278,7 +280,7 @@ export default function GeminiModelTester() {
                                     beforeUpload={() => false}
                                 >
                                     <Button icon={<UploadOutlined />}>
-                                        选择雪茄图片
+                                        {t('geminiTester.selectCigarImage')}
                                     </Button>
                                 </Upload>
                                 {config.testImage && (
@@ -292,7 +294,7 @@ export default function GeminiModelTester() {
                             <Row gutter={16}>
                                 <Col span={6}>
                                     <Space>
-                                        <Text>每个模型测试次数：</Text>
+                                        <Text>{t('geminiTester.testTimesPerModel')}</Text>
                                         <InputNumber
                                             min={1}
                                             max={10}
@@ -306,7 +308,7 @@ export default function GeminiModelTester() {
                                 </Col>
                                 <Col span={6}>
                                     <Space>
-                                        <Text>调用间隔（毫秒）：</Text>
+                                        <Text>{t('geminiTester.callIntervalMs')}</Text>
                                         <InputNumber
                                             min={1000}
                                             max={10000}
@@ -321,7 +323,7 @@ export default function GeminiModelTester() {
                                 </Col>
                                 <Col span={6}>
                                     <Space>
-                                        <Text>包含实验性模型：</Text>
+                                        <Text>{t('geminiTester.includeExperimental')}</Text>
                                         <Switch
                                             checked={config.includeExperimental}
                                             onChange={(checked) => 
@@ -333,7 +335,7 @@ export default function GeminiModelTester() {
                                 </Col>
                                 <Col span={6}>
                                     <Space>
-                                        <Text>包含预览版模型：</Text>
+                                        <Text>{t('geminiTester.includePreview')}</Text>
                                         <Switch
                                             checked={config.includePreview}
                                             onChange={(checked) => 
@@ -354,7 +356,7 @@ export default function GeminiModelTester() {
                                     disabled={!config.testImage || isRunning}
                                     size="large"
                                 >
-                                    开始测试
+                                    {t('geminiTester.startTest')}
                                 </Button>
                                 <Button
                                     danger
@@ -363,7 +365,7 @@ export default function GeminiModelTester() {
                                     disabled={!isRunning}
                                     size="large"
                                 >
-                                    停止测试
+                                    {t('geminiTester.stopTest')}
                                 </Button>
                                 <Button
                                     icon={<ReloadOutlined />}
@@ -371,7 +373,7 @@ export default function GeminiModelTester() {
                                     disabled={isRunning}
                                     size="large"
                                 >
-                                    重置
+                                    {t('common.reset')}
                                 </Button>
                                 <Button
                                     icon={<DownloadOutlined />}
@@ -379,7 +381,7 @@ export default function GeminiModelTester() {
                                     disabled={!report}
                                     size="large"
                                 >
-                                    导出报告
+                                    {t('common.exportReport')}
                                 </Button>
                             </Space>
                         </Space>
@@ -389,7 +391,7 @@ export default function GeminiModelTester() {
                 {/* 进度面板 */}
                 {progress.status !== 'idle' && (
                     <Col span={24}>
-                        <Card title="测试进度" size="small">
+                        <Card title={t('geminiTester.progressCard')} size="small">
                             <Progress 
                                 percent={progress.percentage} 
                                 status={progress.status === 'running' ? 'active' : 
@@ -398,7 +400,7 @@ export default function GeminiModelTester() {
                             />
                             <div style={{ marginTop: 16 }}>
                                 <Text>
-                                    当前测试: <Text strong>{progress.currentModel}</Text> 
+                                    {t('geminiTester.currentTestLabel')} <Text strong>{progress.currentModel}</Text>
                                     ({progress.completedModels}/{progress.totalModels} 模型)
                                 </Text>
                             </div>
@@ -409,48 +411,48 @@ export default function GeminiModelTester() {
                 {/* 统计面板 */}
                 {report && (
                     <Col span={24}>
-                        <Card title="📈 测试统计" size="small">
+                        <Card title={t('geminiTester.statsCard')} size="small">
                             <Row gutter={16}>
                                 <Col span={4}>
-                                    <Statistic 
-                                        title="测试时长" 
-                                        value={(report.duration / 1000 / 60).toFixed(1)} 
-                                        suffix="分钟"
+                                    <Statistic
+                                        title={t('geminiTester.statDuration')}
+                                        value={(report.duration / 1000 / 60).toFixed(1)}
+                                        suffix={t('geminiTester.minutesSuffix')}
                                     />
                                 </Col>
                                 <Col span={4}>
-                                    <Statistic 
-                                        title="测试模型" 
-                                        value={report.summary.totalModels} 
-                                        suffix="个"
+                                    <Statistic
+                                        title={t('geminiTester.statTotalModels')}
+                                        value={report.summary.totalModels}
+                                        suffix={t('geminiTester.countSuffix')}
                                     />
                                 </Col>
                                 <Col span={4}>
-                                    <Statistic 
-                                        title="可用模型" 
-                                        value={report.summary.reliableModels} 
-                                        suffix="个"
+                                    <Statistic
+                                        title={t('geminiTester.statReliableModels')}
+                                        value={report.summary.reliableModels}
+                                        suffix={t('geminiTester.countSuffix')}
                                         valueStyle={{ color: '#3f8600' }}
                                     />
                                 </Col>
                                 <Col span={4}>
-                                    <Statistic 
-                                        title="平均成功率" 
-                                        value={report.summary.avgSuccessRate.toFixed(1)} 
+                                    <Statistic
+                                        title={t('geminiTester.statAvgSuccessRate')}
+                                        value={report.summary.avgSuccessRate.toFixed(1)}
                                         suffix="%"
                                     />
                                 </Col>
                                 <Col span={4}>
-                                    <Statistic 
-                                        title="平均响应" 
-                                        value={report.summary.avgResponseTime.toFixed(0)} 
+                                    <Statistic
+                                        title={t('geminiTester.statAvgResponse')}
+                                        value={report.summary.avgResponseTime.toFixed(0)}
                                         suffix="ms"
                                     />
                                 </Col>
                                 <Col span={4}>
-                                    <Statistic 
-                                        title="数据完整度" 
-                                        value={report.summary.avgDataCompleteness.toFixed(1)} 
+                                    <Statistic
+                                        title={t('geminiTester.statDataCompleteness')}
+                                        value={report.summary.avgDataCompleteness.toFixed(1)}
                                         suffix="%"
                                     />
                                 </Col>
@@ -462,9 +464,9 @@ export default function GeminiModelTester() {
                 {/* 详细结果 */}
                 {report && (
                     <Col span={24}>
-                        <Card title="详细结果">
+                        <Card title={t('geminiTester.resultsCard')}>
                             <Tabs defaultActiveKey="models">
-                                <TabPane tab="模型列表" key="models">
+                                <TabPane tab={t('geminiTester.tabModels')} key="models">
                                     <Table
                                         columns={modelColumns}
                                         dataSource={[...report.modelResults].sort((a, b) => 
@@ -476,15 +478,15 @@ export default function GeminiModelTester() {
                                     />
                                 </TabPane>
                                 
-                                <TabPane tab="数据统计" key="data-stats">
+                                <TabPane tab={t('geminiTester.tabDataStats')} key="data-stats">
                                     <div style={{ padding: '16px' }}>
                                         <Space direction="vertical" style={{ width: '100%' }} size="large">
                                             {/* 模型选择 */}
                                             <div>
-                                                <Text strong style={{ marginRight: 8 }}>选择模型:</Text>
+                                                <Text strong style={{ marginRight: 8 }}>{t('geminiTester.selectModelLabel')}</Text>
                                                 <Select
                                                     style={{ width: 400 }}
-                                                    placeholder="选择模型查看详细数据统计"
+                                                    placeholder={t('geminiTester.selectModelPlaceholder')}
                                                     value={selectedModelForStats || undefined}
                                                     onChange={(value: string) => setSelectedModelForStats(value)}
                                                     options={report.modelResults
@@ -538,7 +540,7 @@ export default function GeminiModelTester() {
                                                                     }
                                                                     extra={
                                                                         <Tag color={fieldStats.fillRate >= 80 ? 'green' : fieldStats.fillRate >= 50 ? 'orange' : 'red'}>
-                                                                            填充率: {fieldStats.fillRate.toFixed(0)}% ({fieldStats.nonEmptyCount}/{fieldStats.totalResponses})
+                                                                            {t('geminiTester.fillRateLabel')} {fieldStats.fillRate.toFixed(0)}% ({fieldStats.nonEmptyCount}/{fieldStats.totalResponses})
                                                                         </Tag>
                                                                     }
                                                                     style={{ marginBottom: 16 }}
@@ -554,18 +556,18 @@ export default function GeminiModelTester() {
                                                                             dataSource={fieldStats.values.slice(0, 10)}
                                                                             columns={[
                                                                                 {
-                                                                                    title: '值',
+                                                                                    title: t('geminiTester.colValue'),
                                                                                     dataIndex: 'value',
                                                                                     key: 'value'
                                                                                 },
                                                                                 {
-                                                                                    title: '次数',
+                                                                                    title: t('geminiTester.colCount'),
                                                                                     dataIndex: 'count',
                                                                                     key: 'count',
                                                                                     render: (count) => `x${count}`
                                                                                 },
                                                                                 {
-                                                                                    title: '占比',
+                                                                                    title: t('geminiTester.colPercentage'),
                                                                                     dataIndex: 'percentage',
                                                                                     key: 'percentage',
                                                                                     render: (percentage) => (
@@ -584,12 +586,12 @@ export default function GeminiModelTester() {
                                                                             rowKey="value"
                                                                         />
                                                                     ) : (
-                                                                        <Text type="secondary">(无数据)</Text>
+                                                                        <Text type="secondary">{t('geminiTester.noData')}</Text>
                                                                     )}
                                                                     
                                                                     {fieldStats.emptyCount > 0 && (
                                                                         <Paragraph type="warning" style={{ marginTop: 8 }}>
-                                                                            未返回: {fieldStats.emptyCount}次 ({(fieldStats.emptyCount / fieldStats.totalResponses * 100).toFixed(0)}%)
+                                                                            {t('geminiTester.notReturned')} {fieldStats.emptyCount}次 ({(fieldStats.emptyCount / fieldStats.totalResponses * 100).toFixed(0)}%)
                                                                         </Paragraph>
                                                                     )}
                                                                 </Card>
@@ -602,7 +604,7 @@ export default function GeminiModelTester() {
                                     </div>
                                 </TabPane>
                                 
-                                <TabPane tab="优化建议" key="recommendations">
+                                <TabPane tab={t('geminiTester.tabRecommendations')} key="recommendations">
                                     <div style={{ padding: '16px' }}>
                                         {report.recommendations.map((rec, index) => (
                                             <Paragraph key={index}>

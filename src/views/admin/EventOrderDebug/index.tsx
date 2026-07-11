@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Card, Input, Button, Space, Typography, Alert, Tag, Divider, Descriptions, Table, Spin } from 'antd'
 import { SearchOutlined, CheckCircleOutlined, CloseCircleOutlined, WarningOutlined } from '@ant-design/icons'
 import { debugEventOrders, debugUserOrders } from '../../../utils/debugEventOrders'
@@ -12,6 +13,7 @@ import type { EventOrderDebugInfo } from '../../../utils/debugEventOrders'
 const { Title, Text, Paragraph } = Typography
 
 const EventOrderDebug: React.FC = () => {
+  const { t } = useTranslation()
   const [eventId, setEventId] = useState('')
   const [userId, setUserId] = useState('')
   const [loading, setLoading] = useState(false)
@@ -51,12 +53,12 @@ const EventOrderDebug: React.FC = () => {
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
       <Title level={2} style={{ color: '#ffd700', marginBottom: '24px' }}>
-        活动订单调试工具
+        {t("eventDebug.title")}
       </Title>
 
-      <Card title="检查活动数据" style={{ marginBottom: '24px' }}>
+      <Card title={t("eventDebug.checkEventCard")} style={{ marginBottom: '24px' }}>
         <Space direction="vertical" style={{ width: '100%' }}>
-          <Text>输入活动ID来检查雪茄分配和订单创建状态</Text>
+          <Text>{t("eventDebug.checkEventDesc")}</Text>
           <Space.Compact style={{ width: '100%' }}>
             <Input
               placeholder="输入活动ID (例: event123)"
@@ -71,15 +73,15 @@ const EventOrderDebug: React.FC = () => {
               onClick={handleDebugEvent}
               loading={loading}
             >
-              检查活动
+              {t("eventDebug.checkEventBtn")}
             </Button>
           </Space.Compact>
         </Space>
       </Card>
 
-      <Card title="检查用户订单" style={{ marginBottom: '24px' }}>
+      <Card title={t("eventDebug.checkUserCard")} style={{ marginBottom: '24px' }}>
         <Space direction="vertical" style={{ width: '100%' }}>
-          <Text>输入用户ID来检查该用户的所有订单（结果会显示在浏览器控制台）</Text>
+          <Text>{t("eventDebug.checkUserDesc")}</Text>
           <Space.Compact style={{ width: '100%' }}>
             <Input
               placeholder="输入用户ID (例: user123)"
@@ -94,7 +96,7 @@ const EventOrderDebug: React.FC = () => {
               onClick={handleDebugUser}
               loading={loading}
             >
-              检查用户
+              {t("eventDebug.checkUserBtn")}
             </Button>
           </Space.Compact>
         </Space>
@@ -110,11 +112,11 @@ const EventOrderDebug: React.FC = () => {
         <Space direction="vertical" style={{ width: '100%' }} size="large">
           {/* 活动基本信息 */}
           {debugInfo.event ? (
-            <Card title="活动基本信息">
+            <Card title={t("eventDebug.eventInfoCard")}>
               <Descriptions column={1} bordered>
-                <Descriptions.Item label="活动ID">{debugInfo.event.id}</Descriptions.Item>
-                <Descriptions.Item label="活动标题">{debugInfo.event.title}</Descriptions.Item>
-                <Descriptions.Item label="活动状态">
+                <Descriptions.Item label={t("eventDebug.labelEventId")}>{debugInfo.event.id}</Descriptions.Item>
+                <Descriptions.Item label={t("eventDebug.labelEventTitle")}>{debugInfo.event.title}</Descriptions.Item>
+                <Descriptions.Item label={t("eventDebug.labelEventStatus")}>
                   <Tag color={
                     debugInfo.eventStatus === 'completed' ? 'success' :
                     debugInfo.eventStatus === 'ongoing' ? 'processing' :
@@ -125,7 +127,7 @@ const EventOrderDebug: React.FC = () => {
                   </Tag>
                   {debugInfo.eventStatus !== 'completed' && (
                     <Text type="warning" style={{ marginLeft: '8px' }}>
-                      ⚠️ 只有"已完成"状态才会创建订单
+                      {t("eventDebug.onlyCompletedCreatesOrders")}
                     </Text>
                   )}
                 </Descriptions.Item>
@@ -133,7 +135,7 @@ const EventOrderDebug: React.FC = () => {
             </Card>
           ) : (
             <Alert
-              message="活动不存在"
+              message={t("eventDebug.eventNotFound")}
               description={`ID为 ${eventId} 的活动未找到`}
               type="error"
               showIcon
@@ -142,12 +144,12 @@ const EventOrderDebug: React.FC = () => {
 
           {/* 摘要统计 */}
           {debugInfo.event && (
-            <Card title="数据摘要">
+            <Card title={t("eventDebug.summaryCard")}>
               <Descriptions column={2} bordered>
-                <Descriptions.Item label="已报名用户">{debugInfo.summary.totalRegistered}</Descriptions.Item>
-                <Descriptions.Item label="有雪茄分配">{debugInfo.summary.totalAllocated}</Descriptions.Item>
-                <Descriptions.Item label="已创建订单">{debugInfo.summary.totalOrdersCreated}</Descriptions.Item>
-                <Descriptions.Item label="缺失订单">
+                <Descriptions.Item label={t("eventDebug.labelTotalRegistered")}>{debugInfo.summary.totalRegistered}</Descriptions.Item>
+                <Descriptions.Item label={t("eventDebug.labelTotalAllocated")}>{debugInfo.summary.totalAllocated}</Descriptions.Item>
+                <Descriptions.Item label={t("eventDebug.labelTotalOrders")}>{debugInfo.summary.totalOrdersCreated}</Descriptions.Item>
+                <Descriptions.Item label={t("eventDebug.labelMissingOrders")}>
                   <Text type={debugInfo.summary.missingOrders > 0 ? 'danger' : 'success'}>
                     {debugInfo.summary.missingOrders}
                     {debugInfo.summary.missingOrders > 0 && ''}
@@ -157,7 +159,7 @@ const EventOrderDebug: React.FC = () => {
 
               {debugInfo.summary.missingOrders > 0 && (
                 <Alert
-                  message="发现问题"
+                  message={t("eventDebug.issueFoundAlert")}
                   description={`有 ${debugInfo.summary.missingOrders} 个用户已报名并分配了雪茄，但没有对应的订单`}
                   type="warning"
                   showIcon
@@ -169,11 +171,11 @@ const EventOrderDebug: React.FC = () => {
 
           {/* 雪茄分配详情 */}
           {debugInfo.event && (
-            <Card title="🚬 雪茄分配详情">
+            <Card title={t("eventDebug.allocationCard")}>
               {!debugInfo.hasAllocations ? (
                 <Alert
-                  message="没有雪茄分配"
-                  description="该活动还没有为任何参与者分配雪茄"
+                  message={t("eventDebug.noAllocationAlert")}
+                  description={t("eventDebug.noAllocationDesc")}
                   type="warning"
                   showIcon
                 />
@@ -194,38 +196,38 @@ const EventOrderDebug: React.FC = () => {
 
           {/* 订单创建状态表格 */}
           {debugInfo.event && debugInfo.ordersCreated.length > 0 && (
-            <Card title="📦 订单创建状态">
+            <Card title={t("eventDebug.ordersCard")}>
               <Table
                 dataSource={debugInfo.ordersCreated}
                 rowKey="userId"
                 pagination={false}
                 columns={[
                   {
-                    title: '用户ID',
+                    title: t("eventDebug.colUserId"),
                     dataIndex: 'userId',
                     key: 'userId',
                     width: 200,
                     render: (text) => <Text code copyable>{text}</Text>
                   },
                   {
-                    title: '订单ID',
+                    title: t("eventDebug.colOrderId"),
                     dataIndex: 'orderId',
                     key: 'orderId',
-                    render: (text) => text ? <Text code copyable>{text}</Text> : <Text type="secondary">未创建</Text>
+                    render: (text) => text ? <Text code copyable>{text}</Text> : <Text type="secondary">{t("eventDebug.orderNotCreated")}</Text>
                   },
                   {
-                    title: '订单存在',
+                    title: t("eventDebug.colOrderExists"),
                     dataIndex: 'hasOrder',
                     key: 'hasOrder',
                     align: 'center',
                     render: (hasOrder) => hasOrder ? (
-                      <Tag icon={<CheckCircleOutlined />} color="success">是</Tag>
+                      <Tag icon={<CheckCircleOutlined />} color="success">{t("eventDebug.orderExistsYes")}</Tag>
                     ) : (
-                      <Tag icon={<CloseCircleOutlined />} color="error">否</Tag>
+                      <Tag icon={<CloseCircleOutlined />} color="error">{t("eventDebug.orderExistsNo")}</Tag>
                     )
                   },
                   {
-                    title: '订单状态',
+                    title: t("eventDebug.colOrderStatus"),
                     key: 'status',
                     render: (_, record) => record.orderDetails ? (
                       <Tag color={
@@ -240,14 +242,14 @@ const EventOrderDebug: React.FC = () => {
                     ) : <Text type="secondary">-</Text>
                   },
                   {
-                    title: '订单金额',
+                    title: t("eventDebug.colOrderTotal"),
                     key: 'total',
                     render: (_, record) => record.orderDetails ? (
                       <Text strong>RM {record.orderDetails.total?.toFixed(2) || '0.00'}</Text>
                     ) : <Text type="secondary">-</Text>
                   },
                   {
-                    title: '商品数',
+                    title: t("eventDebug.colItemCount"),
                     key: 'items',
                     align: 'center',
                     render: (_, record) => record.orderDetails ? (
@@ -261,11 +263,11 @@ const EventOrderDebug: React.FC = () => {
 
           {/* 诊断建议 */}
           {debugInfo.event && (
-            <Card title="诊断建议">
+            <Card title={t("eventDebug.diagCard")}>
               <Space direction="vertical" style={{ width: '100%' }}>
                 {debugInfo.eventStatus !== 'completed' && (
                   <Alert
-                    message="活动未完成"
+                    message={t("eventDebug.eventNotCompleted")}
                     description={
                       <div>
                         <Paragraph>当前活动状态为 <Tag>{debugInfo.eventStatus}</Tag></Paragraph>
@@ -288,7 +290,7 @@ const EventOrderDebug: React.FC = () => {
 
                 {!debugInfo.hasAllocations && (
                   <Alert
-                    message="没有雪茄分配"
+                    message={t("eventDebug.noAllocationAlert")}
                     description={
                       <div>
                         <Paragraph>该活动还没有为参与者分配雪茄</Paragraph>
@@ -334,8 +336,8 @@ const EventOrderDebug: React.FC = () => {
                 {debugInfo.summary.totalOrdersCreated === debugInfo.summary.totalRegistered && 
                  debugInfo.summary.totalRegistered > 0 && (
                   <Alert
-                    message="所有订单已创建"
-                    description="所有参与者的订单都已成功创建"
+                    message={t("eventDebug.allOrdersCreated")}
+                    description={t("eventDebug.allOrdersCreatedDesc")}
                     type="success"
                     showIcon
                   />

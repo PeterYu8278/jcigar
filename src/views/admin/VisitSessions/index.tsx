@@ -1,6 +1,7 @@
 // 驻店记录管理页面
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, Table, Button, Space, Tag, Modal, message, Input, Typography, App, Form, Select, InputNumber, Spin, Tabs } from 'antd';
+import { useFirestoreQuery } from '../../../hooks/useFirestoreQuery';
 import { ReloadOutlined, CheckOutlined, ClockCircleOutlined, QrcodeOutlined, LoginOutlined, LogoutOutlined, GiftOutlined, PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import {
   getUserVisitSessions,
@@ -12,8 +13,10 @@ import {
 } from '../../../services/firebase/visitSessions';
 // 不再使用服务端分页，改为加载所有数据并使用客户端分页
 import { getCigars } from '../../../services/firebase/firestore';
+import { getAllStores } from '../../../services/firebase/stores';
 import { createRedemptionRecord, updateRedemptionRecord, getRedemptionRecordsBySession } from '../../../services/firebase/redemption';
 import { useAuthStore } from '../../../store/modules/auth';
+import { useDetailDrawer } from '../../../hooks/useDetailDrawer';
 import type { VisitSession, Cigar } from '../../../types';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
@@ -29,59 +32,40 @@ const VisitSessionsPage: React.FC = () => {
   const { user, isSuperAdmin } = useAuthStore();
   const { modal } = App.useApp(); // 使用 App.useApp() 获取 modal 实例以支持 React 19
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
-  const [sessions, setSessions] = useState<VisitSession[]>([]); // 保留用于搜索
   const [searchUserId, setSearchUserId] = useState<string>('');
-  const [stores, setStores] = useState<any[]>([]);
 
   // 不再使用服务端分页，改为加载所有数据并使用客户端分页
   const [qrScannerVisible, setQrScannerVisible] = useState(false);
   const [qrScannerMode, setQrScannerMode] = useState<'checkin' | 'checkout'>('checkin');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'expired'>('all');
   const [addRedemptionModalVisible, setAddRedemptionModalVisible] = useState(false);
-  const [editRedemptionModalVisible, setEditRedemptionModalVisible] = useState(false);
   const [forceCheckoutModalVisible, setForceCheckoutModalVisible] = useState(false);
-  const [selectedSession, setSelectedSession] = useState<VisitSession | null>(null);
-  const [selectedRedemptionRecord, setSelectedRedemptionRecord] = useState<any>(null);
-  const [cigars, setCigars] = useState<Cigar[]>([]);
+  const { item: selectedSession, openDrawer: openSessionDrawer, closeDrawer: closeSessionDrawer } = useDetailDrawer<VisitSession>();
+  const { item: selectedRedemptionRecord, open: editRedemptionModalVisible, openDrawer: openRedemptionDrawer, closeDrawer: closeRedemptionDrawer } = useDetailDrawer<any>();
+  const { data: cigars = [] } = useFirestoreQuery(getCigars);
+  const { data: stores = [] } = useFirestoreQuery(getAllStores);
+  const { data: sessions = [], loading, refresh: refreshSessions } = useFirestoreQuery(
+    () => {
+      if (searchUserId) {
+        const storeId = isSuperAdmin ? undefined : user?.storeId;
+        return getUserVisitSessions(searchUserId, undefined, storeId).then(userSessions =>
+          statusFilter !== 'all' ? userSessions.filter(s => s.status === statusFilter) : userSessions
+        );
+      }
+      if (statusFilter === 'pending') {
+        return getAllPendingVisitSessions(isSuperAdmin ? undefined : user?.storeId);
+      }
+      return getAllVisitSessions(200, isSuperAdmin ? undefined : user?.storeId).then(allSessions =>
+        statusFilter !== 'all' ? allSessions.filter(s => s.status === statusFilter) : allSessions
+      );
+    },
+    [statusFilter, searchUserId, isSuperAdmin, user?.storeId]
+  );
   const [addingRedemption, setAddingRedemption] = useState(false);
   const [redemptionRecords, setRedemptionRecords] = useState<Map<string, any[]>>(new Map());
   const [forceCheckoutForm] = Form.useForm();
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false;
-
-  useEffect(() => {
-    loadCigars();
-    loadStores();
-    // 初始加载所有数据
-    loadAllSessions();
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const loadStores = async () => {
-    const { getAllStores } = await import('../../../services/firebase/stores');
-    const data = await getAllStores();
-    setStores(data);
-  };
-
-  // 监听筛选条件变化，重新加载数据
-  useEffect(() => {
-    if (searchUserId) {
-      // 如果搜索用户ID，加载该用户的记录
-      loadUserSessions(searchUserId);
-    } else {
-      // 否则加载所有记录
-      loadAllSessions();
-    }
-  }, [statusFilter, searchUserId, isSuperAdmin, user?.storeId]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const loadCigars = async () => {
-    try {
-      const cigarList = await getCigars();
-      setCigars(cigarList);
-    } catch (error) {
-      console.error(t('visitSessions.loadCigarsFailed') + ':', error);
-    }
-  };
 
   // 加载指定 session 的所有兑换记录（包括待处理和已完成）
   const loadRedemptionRecords = async (sessionId: string) => {
@@ -94,51 +78,6 @@ const VisitSessionsPage: React.FC = () => {
       });
     } catch (error) {
       console.error(t('visitSessions.loadRedemptionRecordsFailed') + ':', error);
-    }
-  };
-
-  const loadAllSessions = async () => {
-    setLoading(true);
-    try {
-      let allSessions: VisitSession[] = [];
-
-      if (statusFilter === 'pending') {
-        // 只加载待处理的记录
-        allSessions = await getAllPendingVisitSessions(isSuperAdmin ? undefined : user?.storeId);
-      } else {
-        // 加载所有记录，然后根据筛选器过滤
-        // 移除数量限制，加载所有数据
-        allSessions = await getAllVisitSessions(undefined, isSuperAdmin ? undefined : user?.storeId);
-        if (statusFilter !== 'all') {
-          allSessions = allSessions.filter(session => session.status === statusFilter);
-        }
-      }
-
-      setSessions(allSessions);
-    } catch (error) {
-      console.error(t('visitSessions.loadVisitSessionsFailed') + ':', error);
-      message.error(t('visitSessions.loadVisitSessionsFailed'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadUserSessions = async (userId: string) => {
-    setLoading(true);
-    try {
-      const storeId = isSuperAdmin ? undefined : user?.storeId;
-      // 移除数量限制，加载该用户的所有记录
-      const userSessions = await getUserVisitSessions(userId, undefined, storeId);
-      // 根据状态筛选
-      let filteredSessions = userSessions;
-      if (statusFilter !== 'all') {
-        filteredSessions = userSessions.filter(session => session.status === statusFilter);
-      }
-      setSessions(filteredSessions);
-    } catch (error) {
-      message.error(t('visitSessions.loadUserVisitSessionsFailed'));
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -164,20 +103,17 @@ const VisitSessionsPage: React.FC = () => {
         maskClosable: false,
         onOk: async () => {
           try {
-            setLoading(true);
             const result = await completeVisitSession(sessionId, user.id, user.storeId, forceHours);
             if (result.success) {
               message.success(t('visitSessions.checkoutSuccess', { points: result.pointsDeducted || 0 }));
               // 重新加载所有数据
-              await loadAllSessions();
+              await refreshSessions();
             } else {
               message.error(result.error || t('visitSessions.checkoutFailed'));
             }
           } catch (error: any) {
             console.error('[handleManualCheckout] 结算异常', error);
             message.error(error.message || t('visitSessions.checkoutFailed'));
-          } finally {
-            setLoading(false);
           }
         },
         onCancel: () => {
@@ -202,20 +138,17 @@ const VisitSessionsPage: React.FC = () => {
       okText: t('common.confirm'),
       cancelText: t('common.cancel'),
       onOk: async () => {
-        setLoading(true);
         try {
           const { processExpiredVisitSessions } = await import('../../../services/firebase/scheduledJobs');
           const result = await processExpiredVisitSessions();
           if (result.success) {
             message.success(t('visitSessions.batchProcessSuccess', { count: result.processed }));
-            loadAllSessions();
+            refreshSessions();
           } else {
             message.error(t('visitSessions.batchProcessFailed'));
           }
         } catch (error: any) {
           message.error(error.message || t('visitSessions.batchProcessFailed'));
-        } finally {
-          setLoading(false);
         }
       }
     });
@@ -373,7 +306,7 @@ const VisitSessionsPage: React.FC = () => {
               size="small"
               onClick={(e) => {
                 e.stopPropagation();
-                setSelectedSession(record);
+                openSessionDrawer(record);
                 forceCheckoutForm.setFieldsValue({ forceHours: 5 });
                 setForceCheckoutModalVisible(true);
               }}
@@ -466,7 +399,7 @@ const VisitSessionsPage: React.FC = () => {
                           <Button
                             icon={<ReloadOutlined />}
                             onClick={async () => {
-                              await loadAllSessions()
+                              await refreshSessions()
                             }}
                             loading={loading}
                             style={{
@@ -523,7 +456,7 @@ const VisitSessionsPage: React.FC = () => {
                             boxShadow: '0 4px 15px rgba(244,175,37,0.35)'
                           }}
                         >
-                          Check-in
+                          {t("visitSessions.checkIn")}
                         </Button>
                         <Button
                           icon={<LogoutOutlined />}
@@ -539,13 +472,13 @@ const VisitSessionsPage: React.FC = () => {
                             boxShadow: '0 4px 15px rgba(244,175,37,0.35)'
                           }}
                         >
-                          Check-out
+                          {t("visitSessions.checkOut")}
                         </Button>
 
                         <Button
                           icon={<ReloadOutlined />}
                           onClick={async () => {
-                            await loadAllSessions()
+                            await refreshSessions()
                           }}
                           loading={loading}
                           style={{
@@ -609,7 +542,7 @@ const VisitSessionsPage: React.FC = () => {
                                         size="small"
                                         icon={<PlusOutlined />}
                                         onClick={() => {
-                                          setSelectedSession(record);
+                                          openSessionDrawer(record);
                                           form.setFieldsValue({ items: [{ cigarId: undefined, quantity: 1 }] });
                                           setAddRedemptionModalVisible(true);
                                         }}
@@ -703,13 +636,12 @@ const VisitSessionsPage: React.FC = () => {
                                                   size="small"
                                                   icon={<EditOutlined />}
                                                   onClick={() => {
-                                                    setSelectedRedemptionRecord(redemptionRecord);
-                                                    setSelectedSession(record);
+                                                    openRedemptionDrawer(redemptionRecord);
+                                                    openSessionDrawer(record);
                                                     form.setFieldsValue({
                                                       cigarId: redemptionRecord.cigarId || undefined,
                                                       quantity: redemptionRecord.quantity || 1
                                                     });
-                                                    setEditRedemptionModalVisible(true);
                                                   }}
                                                 >
                                                   {t('common.edit')}
@@ -808,11 +740,11 @@ const VisitSessionsPage: React.FC = () => {
                                     {record.userName || record.userId.substring(0, 20)}
                                   </div>
                                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>
-                                    Check-in: {dayjs(checkInDate).format('YYYY-MM-DD HH:mm')}
+                                    {t("visitSessions.checkIn")}: {dayjs(checkInDate).format('YYYY-MM-DD HH:mm')}
                                   </div>
                                   {checkOutDate && (
                                     <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>
-                                      Check-out: {dayjs(checkOutDate).format('YYYY-MM-DD HH:mm')}
+                                      {t("visitSessions.checkOut")}: {dayjs(checkOutDate).format('YYYY-MM-DD HH:mm')}
                                     </div>
                                   )}
                                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
@@ -883,7 +815,7 @@ const VisitSessionsPage: React.FC = () => {
                                   <Button
                                     size="small"
                                     onClick={() => {
-                                      setSelectedSession(record);
+                                      openSessionDrawer(record);
                                       forceCheckoutForm.setFieldsValue({ forceHours: 5 });
                                       setForceCheckoutModalVisible(true);
                                     }}
@@ -910,7 +842,7 @@ const VisitSessionsPage: React.FC = () => {
                                         size="small"
                                         icon={<PlusOutlined />}
                                         onClick={() => {
-                                          setSelectedSession(record);
+                                          openSessionDrawer(record);
                                           form.setFieldsValue({ items: [{ cigarId: undefined, quantity: 1 }] });
                                           setAddRedemptionModalVisible(true);
                                         }}
@@ -986,13 +918,12 @@ const VisitSessionsPage: React.FC = () => {
                                                 size="small"
                                                 icon={<EditOutlined />}
                                                 onClick={() => {
-                                                  setSelectedRedemptionRecord(redemptionRecord);
-                                                  setSelectedSession(record);
+                                                  openRedemptionDrawer(redemptionRecord);
+                                                  openSessionDrawer(record);
                                                   form.setFieldsValue({
                                                     cigarId: redemptionRecord.cigarId || undefined,
                                                     quantity: redemptionRecord.quantity || 1
                                                   });
-                                                  setEditRedemptionModalVisible(true);
                                                 }}
                                                 style={{
                                                   color: '#FFD700',
@@ -1035,7 +966,7 @@ const VisitSessionsPage: React.FC = () => {
         onClose={() => setQrScannerVisible(false)}
         mode={qrScannerMode}
         onSuccess={() => {
-          loadAllSessions();
+          refreshSessions();
         }}
       />
 
@@ -1045,7 +976,7 @@ const VisitSessionsPage: React.FC = () => {
         open={addRedemptionModalVisible}
         onCancel={() => {
           setAddRedemptionModalVisible(false);
-          setSelectedSession(null);
+          closeSessionDrawer();
           form.resetFields();
         }}
         okButtonProps={{
@@ -1123,9 +1054,9 @@ const VisitSessionsPage: React.FC = () => {
 
             message.success(t('visitSessions.saveSuccess'));
             setAddRedemptionModalVisible(false);
-            setSelectedSession(null);
+            closeSessionDrawer();
             form.resetFields();
-            await loadAllSessions();
+            await refreshSessions();
 
             // 如果选中的 session 有展开，刷新其兑换记录
             if (selectedSession) {
@@ -1215,9 +1146,8 @@ const VisitSessionsPage: React.FC = () => {
         title={<span style={{ color: '#FFFFFF' }}>{t('visitSessions.editRedemption')}</span>}
         open={editRedemptionModalVisible}
         onCancel={() => {
-          setEditRedemptionModalVisible(false);
-          setSelectedRedemptionRecord(null);
-          setSelectedSession(null);
+          closeRedemptionDrawer();
+          closeSessionDrawer();
           form.resetFields();
         }}
         okButtonProps={{
@@ -1283,16 +1213,15 @@ const VisitSessionsPage: React.FC = () => {
             }
 
             message.success(t('visitSessions.saveSuccess'));
-            setEditRedemptionModalVisible(false);
-            setSelectedRedemptionRecord(null);
-            setSelectedSession(null);
+            closeRedemptionDrawer();
+            closeSessionDrawer();
             form.resetFields();
 
             // 刷新兑换记录
             if (selectedSession) {
               await loadRedemptionRecords(selectedSession.id);
             }
-            await loadAllSessions();
+            await refreshSessions();
           } catch (error: any) {
             console.error('更新兑换记录失败:', error);
             if (error.errorFields) {
@@ -1341,7 +1270,7 @@ const VisitSessionsPage: React.FC = () => {
         open={forceCheckoutModalVisible}
         onCancel={() => {
           setForceCheckoutModalVisible(false);
-          setSelectedSession(null);
+          closeSessionDrawer();
           forceCheckoutForm.resetFields();
         }}
         okButtonProps={{
@@ -1393,7 +1322,7 @@ const VisitSessionsPage: React.FC = () => {
 
             setForceCheckoutModalVisible(false);
             const sessionId = selectedSession.id;
-            setSelectedSession(null);
+            closeSessionDrawer();
             forceCheckoutForm.resetFields();
 
             // 调用结算函数

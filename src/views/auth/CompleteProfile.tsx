@@ -81,7 +81,7 @@ const CompleteProfile: React.FC = () => {
     const refCode = params.get('ref');
     if (refCode) {
       form.setFieldsValue({ referralCode: refCode.toUpperCase() });
-      message.info('已自动填写引荐码');
+      message.info(t('auth.referralCodeAutoFilled'));
     }
   }, [location, form]);
 
@@ -140,7 +140,7 @@ const CompleteProfile: React.FC = () => {
     const currentUser = auth.currentUser
     
     if (!currentUser) {
-      message.error('用户信息不存在，请重新登录')
+      message.error(t('auth.userNotFoundRelogin'))
       navigate('/login')
       return
     }
@@ -171,9 +171,9 @@ const CompleteProfile: React.FC = () => {
       if (result.success) {
         // ✅ 如果是账户合并，显示特殊消息
         const appName = appConfig?.appName || 'Cigar Club'
-        const successMessage = (result as any).mergedUserId 
-          ? '账户已成功关联到现有账户，欢迎回来！'
-          : `账户信息已完善，欢迎加入 ${appName}！`;
+        const successMessage = (result as any).mergedUserId
+          ? t('auth.accountMergedSuccess')
+          : t('auth.profileCompletedSuccess', { appName });
         
         message.success(successMessage);
         
@@ -204,10 +204,10 @@ const CompleteProfile: React.FC = () => {
         
         setupUserState();
       } else {
-        message.error((result as any).error?.message || '信息保存失败，请重试')
+        message.error((result as any).error?.message || t('auth.saveProfileFailed'))
       }
     } catch (error) {
-      message.error('信息保存失败，请重试')
+      message.error(t('auth.saveProfileFailed'))
     } finally {
       setLoading(false)
     }
@@ -217,10 +217,10 @@ const CompleteProfile: React.FC = () => {
   const handleLogout = async () => {
     try {
       await signOut(auth)
-      message.info('已退出登录')
+      message.info(t('auth.loggedOut'))
       navigate('/login', { replace: true })
     } catch (error) {
-      message.error('退出登录失败')
+      message.error(t('auth.signOutFailed'))
     }
   }
 
@@ -258,7 +258,7 @@ const CompleteProfile: React.FC = () => {
             indicator={<LoadingOutlined style={{ fontSize: 24, color: '#ffd700' }} spin />}
             spinning={isRefreshing}
           />
-          <span>{isRefreshing ? '正在刷新...' : pullDistance > 80 ? '释放刷新' : '下拉刷新'}</span>
+          <span>{isRefreshing ? t('common.refreshing') : pullDistance > 80 ? t('common.releaseToRefresh') : t('common.pullToRefresh')}</span>
         </div>
       )}
       
@@ -284,10 +284,10 @@ const CompleteProfile: React.FC = () => {
               fontWeight: 700,
               letterSpacing: '2px'
             }}>
-              完善您的信息
+              {t('auth.completeProfileTitle')}
             </Title>
             <Text style={{ color: '#c0c0c0', fontSize: '14px' }}>
-              为了更好地为您服务，请完善以下信息
+              {t('auth.completeProfileSubtitle')}
             </Text>
           </div>
 
@@ -341,7 +341,7 @@ const CompleteProfile: React.FC = () => {
                 display: 'block',
                 textAlign: 'center'
               }}>
-                当前 Google 账户信息
+                {t('auth.googleAccountInfo')}
               </Text>
             </div>
           )}
@@ -358,13 +358,13 @@ const CompleteProfile: React.FC = () => {
             <Form.Item
               name="displayName"
               rules={[
-                { required: true, message: '请输入您的姓名' },
-                { min: 2, message: '姓名至少2个字符' }
+                { required: true, message: t('profile.nameRequired') },
+                { min: 2, message: t('auth.nameMinLength') }
               ]}
             >
               <Input
                 prefix={<UserOutlined style={{ color: '#ffd700' }} />}
-                placeholder="姓名"
+                placeholder={t('auth.name')}
                 style={{
                   background: 'rgba(45, 45, 45, 0.8)',
                   border: '1px solid #444444',
@@ -378,10 +378,10 @@ const CompleteProfile: React.FC = () => {
             <Form.Item
               name="phone"
               rules={[
-                { required: true, message: '请输入手机号' },
-                { 
-                  pattern: /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/, 
-                  message: '手机号格式无效（需10-12位数字）' 
+                { required: true, message: t('auth.phoneOnlyRequired') },
+                {
+                  pattern: /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/,
+                  message: t('profile.phoneInvalidLength')
                 },
                 {
                   validator: async (_, value) => {
@@ -421,7 +421,7 @@ const CompleteProfile: React.FC = () => {
                         // ✅ 如果该手机号的用户已有邮箱，则提示已被使用
                         // （如果没有邮箱，后端会自动合并账户，所以不阻止）
                         if (existingEmail && existingEmail !== '') {
-                        return Promise.reject(new Error('该手机号已被其他用户使用'))
+                        return Promise.reject(new Error(t('profile.phoneUsed')))
                         }
                         
                         // 该手机号用户没有邮箱，允许通过（后端会合并账户）
@@ -459,13 +459,13 @@ const CompleteProfile: React.FC = () => {
             <Form.Item
               name="password"
               rules={[
-                { required: true, message: '请设置密码' },
-                { min: 6, message: '密码至少6位' }
+                { required: true, message: t('auth.setPasswordRequired') },
+                { min: 6, message: t('auth.passwordTooShort') }
               ]}
             >
               <Input.Password
                 prefix={<LockOutlined style={{ color: '#ffd700' }} />}
-                placeholder="设置密码（至少6位）"
+                placeholder={t('auth.setPasswordPlaceholder')}
                 style={{
                   background: 'rgba(45, 45, 45, 0.8)',
                   border: '1px solid #444444',
@@ -492,13 +492,13 @@ const CompleteProfile: React.FC = () => {
                     try {
                       const result = await getUserByMemberId(normalized);
                       if (!result.success) {
-                        return Promise.reject(new Error(result.error || '引荐码不存在'));
+                        return Promise.reject(new Error(result.error || t('auth.referralCodeNotFound')));
                       }
                       
                       // 验证成功
                       return Promise.resolve();
                     } catch (error) {
-                      return Promise.reject(new Error('验证引荐码失败，请重试'));
+                      return Promise.reject(new Error(t('auth.referralCodeVerifyFailed')));
                     }
                   }
                 }
@@ -508,7 +508,7 @@ const CompleteProfile: React.FC = () => {
             >
               <Input
                 prefix={<GiftOutlined style={{ color: '#ffd700' }} />}
-                placeholder="引荐码"
+                placeholder={t('auth.referralCode')}
                 maxLength={20}
                 onInput={(e) => {
                   const input = e.currentTarget;
@@ -542,7 +542,7 @@ const CompleteProfile: React.FC = () => {
                   boxShadow: '0 4px 20px rgba(255, 215, 0, 0.3)'
                 }}
               >
-                完成注册
+                {t('auth.completeRegistration')}
               </Button>
             </Form.Item>
 
@@ -562,14 +562,14 @@ const CompleteProfile: React.FC = () => {
                   fontSize: '14px'
                 }}
               >
-                返回登录
+                {t('auth.backToLogin')}
               </Button>
             </Form.Item>
           </Form>
 
           <div style={{ textAlign: 'center', paddingBottom: '20px' }}>
             <Text style={{ color: '#999999', fontSize: '12px' }}>
-              完善信息后，您可以使用 Google 或邮箱+密码登录
+              {t('auth.completeProfileNote')}
             </Text>
           </div>
         </Space>

@@ -256,12 +256,12 @@ const InvoiceTemplateEditor: React.FC = () => {
       <Form form={form} layout="vertical">
         <Row gutter={24}>
           <Col xs={24} xl={14}>
-            <Card 
-              title="Live Preview" 
+            <Card
+              title={t("invoiceTemplate.livePreview")}
               extra={
                 <Space>
-                  <Button onClick={handleDownload}>Download PDF</Button>
-                  <Button type="primary" onClick={handleSave} loading={loading}>Save Changes</Button>
+                  <Button onClick={handleDownload}>{t("invoiceTemplate.downloadPdf")}</Button>
+                  <Button type="primary" onClick={handleSave} loading={loading}>{t("invoiceTemplate.saveChanges")}</Button>
                 </Space>
               }
               bodyStyle={{ padding: '20px', background: '#F1F5F9', display: 'flex', justifyContent: 'center' }}
@@ -273,80 +273,80 @@ const InvoiceTemplateEditor: React.FC = () => {
           </Col>
 
           <Col xs={24} xl={10}>
-            <Card title="Business Details" style={{ marginBottom: '20px' }}>
-              <Form.Item label="Company Name" name="sellerName">
+            <Card title={t("invoiceTemplate.businessDetails")} style={{ marginBottom: '20px' }}>
+              <Form.Item label={t("invoiceTemplate.companyName")} name="sellerName">
                 <Input placeholder="JEP Ventures Sdn Bhd" />
               </Form.Item>
-              <Form.Item label="Reg No" name="sellerRegNo">
+              <Form.Item label={t("invoiceTemplate.regNo")} name="sellerRegNo">
                 <Input placeholder="e.g. 123456-X" />
               </Form.Item>
-              <Form.Item label="Address" name="sellerAddressLines">
+              <Form.Item label={t("invoiceTemplate.address")} name="sellerAddressLines">
                 <Input.TextArea rows={3} placeholder="Full business address..." />
               </Form.Item>
               <Row gutter={12}>
                 <Col span={12}>
-                  <Form.Item label="Phone" name="sellerPhone">
+                  <Form.Item label={t("invoiceTemplate.phone")} name="sellerPhone">
                     <Input />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item label="Fax" name="sellerFax">
+                  <Form.Item label={t("invoiceTemplate.fax")} name="sellerFax">
                     <Input />
                   </Form.Item>
                 </Col>
               </Row>
             </Card>
 
-            <Card title="Payment & Notes" style={{ marginBottom: '20px' }}>
+            <Card title={t("invoiceTemplate.paymentNotes")} style={{ marginBottom: '20px' }}>
               <Row gutter={12}>
                 <Col span={12}>
-                  <Form.Item label="Bank Name" name="bankName">
+                  <Form.Item label={t("invoiceTemplate.bankName")} name="bankName">
                     <Input />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item label="Account No" name="bankAccountNo">
+                  <Form.Item label={t("invoiceTemplate.accountNo")} name="bankAccountNo">
                     <Input />
                   </Form.Item>
                 </Col>
               </Row>
-              <Form.Item label="Default Remarks" name="notes">
+              <Form.Item label={t("invoiceTemplate.defaultRemarks")} name="notes">
                 <Input.TextArea rows={3} placeholder="1. Payment due in 7 days..." />
               </Form.Item>
             </Card>
 
-            <Card title="Labels & Customization">
-              <Form.Item label="Invoice Title" name="invoiceTitle">
+            <Card title={t("invoiceTemplate.labelsCustomization")}>
+              <Form.Item label={t("invoiceTemplate.invoiceTitleLabel")} name="invoiceTitle">
                 <Input />
               </Form.Item>
               <Row gutter={12}>
                 <Col span={12}>
-                  <Form.Item label="Currency Symbol" name="currencySymbol">
+                  <Form.Item label={t("invoiceTemplate.currencySymbol")} name="currencySymbol">
                     <Input />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item label="Table # Label" name="thNo">
+                  <Form.Item label={t("invoiceTemplate.tableNoLabel")} name="thNo">
                     <Input />
                   </Form.Item>
                 </Col>
               </Row>
-              <Form.Item label="Description Label" name="thDesc">
+              <Form.Item label={t("invoiceTemplate.descriptionLabel")} name="thDesc">
                 <Input />
               </Form.Item>
               <Row gutter={12}>
                 <Col span={8}>
-                  <Form.Item label="Qty Label" name="thQty">
+                  <Form.Item label={t("invoiceTemplate.qtyLabel")} name="thQty">
                     <Input />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item label="Price Label" name="thPrice">
+                  <Form.Item label={t("invoiceTemplate.priceLabel")} name="thPrice">
                     <Input />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item label="Amount Label" name="thAmount">
+                  <Form.Item label={t("invoiceTemplate.amountLabel")} name="thAmount">
                     <Input />
                   </Form.Item>
                 </Col>

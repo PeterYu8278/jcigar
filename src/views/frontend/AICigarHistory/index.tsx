@@ -11,6 +11,7 @@ import dayjs from 'dayjs';
 import { CigarRatingBadge } from '../../../components/common/CigarRatingBadge';
 import { getBrands } from '../../../services/firebase/firestore';
 import type { Brand } from '../../../types';
+import { useFirestoreQuery } from '../../../hooks/useFirestoreQuery';
 
 const DEFAULT_CIGAR_IMAGE = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQwIiB5PSI0MCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjY2NjY2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Q2lnYXI8L3RleHQ+Cjwvc3ZnPgo=';
 
@@ -25,49 +26,25 @@ const AICigarHistory: React.FC = () => {
     const { t, i18n } = useTranslation();
     const navigate = useNavigate();
     const { user } = useAuthStore();
-    const [loading, setLoading] = useState(false);
-    const [cigarHistory, setCigarHistory] = useState<UserCigarHistoryItem[]>([]);
-    const [brandsData, setBrandsData] = useState<Brand[]>([]);
     const [selectedBrand, setSelectedBrand] = useState<string>('all');
     const [searchKeyword, setSearchKeyword] = useState('');
     const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false;
     const sidebarRef = useRef<HTMLDivElement | null>(null);
     const brandRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
+    const { data: cigarHistory = [], loading, refresh: refreshHistory } = useFirestoreQuery(
+        () => getUserCigarScanHistory(user!.id),
+        [user?.id]
+    );
+
+    const { data: brandsData = [], refresh: refreshBrands } = useFirestoreQuery(() => getBrands({ limit: 200 }));
+
     useEffect(() => {
         if (!user?.id) {
             message.warning(t('aiHistory.pleaseLogin'));
             navigate('/');
-            return;
         }
-
-        loadHistory();
-        loadBrands();
     }, [user?.id]);
-
-    const loadBrands = async () => {
-        try {
-            const brands = await getBrands();
-            setBrandsData(brands);
-        } catch (error) {
-            console.error('[AICigarHistory] 加载品牌失败:', error);
-        }
-    };
-
-    const loadHistory = async () => {
-        if (!user?.id) return;
-
-        setLoading(true);
-        try {
-            const data = await getUserCigarScanHistory(user.id);
-            setCigarHistory(data);
-        } catch (error) {
-            console.error('[AICigarHistory] 加载失败:', error);
-            message.error(t('aiHistory.loadFailed'));
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const formatDate = (date: Date | null) => {
         if (!date) return '-';

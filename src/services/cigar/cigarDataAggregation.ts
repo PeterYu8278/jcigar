@@ -3,7 +3,7 @@
  * 基于多次 AI 识别的统计结果，提供可靠的雪茄数据
  */
 
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, increment, collection, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, increment, collection, getDocs, query, orderBy, limit as firestoreLimit } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import type { CigarAnalysisResult } from '../gemini/cigarRecognition';
 
@@ -555,8 +555,9 @@ export async function getUserCigarScanHistory(userId: string): Promise<Array<{
     aggregatedData: AggregatedCigarData;
 }>> {
     try {
-        // 1. 获取所有 cigar_database 文档
-        const snapshot = await getDocs(collection(db, 'cigar_database'));
+        // TODO: migrate contributors to contributorIds array for O(1) query instead of full scan
+        // 1. 获取所有 cigar_database 文档（contributors 是 map，无法用 where 过滤，需全量读取）
+        const snapshot = await getDocs(query(collection(db, 'cigar_database'), orderBy('createdAt', 'desc'), firestoreLimit(1000)));
         
         // 2. 过滤出 contributors 中包含该用户的文档
         const userHistory: Array<{
@@ -580,12 +581,7 @@ export async function getUserCigarScanHistory(userId: string): Promise<Array<{
             }
         });
         
-        // 3. 按最后识别时间排序（降序：最新的在前）
-        return userHistory.sort((a, b) => {
-            const timeA = a.aggregatedData.lastRecognizedAt?.getTime() || 0;
-            const timeB = b.aggregatedData.lastRecognizedAt?.getTime() || 0;
-            return timeB - timeA;
-        });
+        return userHistory;
         
     } catch (error) {
         console.error('[getUserCigarScanHistory] 查询失败:', error);

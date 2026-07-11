@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useDetailDrawer } from '../../../hooks/useDetailDrawer';
+import { useDeleteConfirm } from '../../../hooks/useDeleteConfirm';
+import { useFirestoreQuery } from '../../../hooks/useFirestoreQuery';
 import { 
   Button, 
   Space, 
@@ -41,13 +44,10 @@ const { Option } = Select;
 
 const StoreManagement: React.FC = () => {
   const { t } = useTranslation();
-  const [stores, setStores] = useState<Store[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: stores = [], loading, refresh } = useFirestoreQuery(getAllStores);
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [editingStore, setEditingStore] = useState<Store | null>(null);
-  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
-  const [isRoomModalVisible, setIsRoomModalVisible] = useState(false);
+  const { item: editingStore, open: isModalVisible, openDrawer: openEditDrawer, closeDrawer: closeEditDrawer } = useDetailDrawer<Store | null>();
+  const { item: selectedStoreId, open: isRoomModalVisible, openDrawer: openRoomDrawer, closeDrawer: closeRoomDrawer } = useDetailDrawer<string>();
   const [form] = Form.useForm();
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
 
@@ -58,7 +58,6 @@ const StoreManagement: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    loadStores();
     loadConfig();
   }, []);
 
@@ -71,17 +70,10 @@ const StoreManagement: React.FC = () => {
     }
   };
 
-  const loadStores = async () => {
-    try {
-      setLoading(true);
-      const data = await getAllStores();
-      setStores(data);
-    } catch (error) {
-      message.error(t('container.loadFailed'));
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { confirmDelete } = useDeleteConfirm(
+    async (id: string) => await deleteStore(id),
+    { onSuccess: refresh }
+  );
 
   const handleAdd = () => {
     // Check store quota
@@ -91,15 +83,13 @@ const StoreManagement: React.FC = () => {
       return;
     }
     
-    setEditingStore(null);
     form.resetFields();
-    setIsModalVisible(true);
+    openEditDrawer(null);
   };
 
   const handleEdit = (store: Store) => {
-    setEditingStore(store);
     form.setFieldsValue(store);
-    setIsModalVisible(true);
+    openEditDrawer(store);
   };
 
   const handleDelete = (id: string) => {
@@ -107,27 +97,7 @@ const StoreManagement: React.FC = () => {
       message.error(t('storeManagement.defaultStoreDeleteError'));
       return;
     }
-    Modal.confirm({
-      title: <span style={{ color: '#fff' }}>{t('storeManagement.confirmDelete')}</span>,
-      content: <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('storeManagement.deleteContent')}</span>,
-      okText: t('common.delete'),
-      okButtonProps: { danger: true },
-      cancelText: t('common.cancel'),
-      className: 'dark-modal',
-      styles: {
-        mask: { backdropFilter: 'blur(4px)' },
-        content: { background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)' }
-      },
-      onOk: async () => {
-        const res = await deleteStore(id);
-        if (res.success) {
-          message.success(t('storeManagement.deleteSuccess'));
-          loadStores();
-        } else {
-          message.error(res.error);
-        }
-      }
-    });
+    confirmDelete(id);
   };
 
   const handleModalOk = async () => {
@@ -137,8 +107,8 @@ const StoreManagement: React.FC = () => {
         const res = await updateStore(editingStore.id, values);
         if (res.success) {
           message.success(t('storeManagement.saveSuccess'));
-          setIsModalVisible(false);
-          loadStores();
+          closeEditDrawer();
+          refresh();
         } else {
           message.error(res.error);
         }
@@ -149,8 +119,8 @@ const StoreManagement: React.FC = () => {
         });
         if (res.success) {
           message.success(t('storeManagement.createSuccess'));
-          setIsModalVisible(false);
-          loadStores();
+          closeEditDrawer();
+          refresh();
         } else {
           message.error(res.error);
         }
@@ -422,10 +392,7 @@ const StoreManagement: React.FC = () => {
                   type="link"
                   size="small"
                   icon={<CalendarOutlined />}
-                  onClick={() => {
-                    setSelectedStoreId(store.id);
-                    setIsRoomModalVisible(true);
-                  }}
+                  onClick={() => openRoomDrawer(store.id)}
                   style={{ color: '#FDE08D', padding: 0, height: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}
                 >
                   {t('roomManagement.roomConfigTitle', 'Room Management')}
@@ -454,7 +421,7 @@ const StoreManagement: React.FC = () => {
         title={<span style={{ color: '#FDE08D', fontSize: 18, fontWeight: 700 }}>{editingStore ? t('storeManagement.editStore') : t('storeManagement.addStore')}</span>}
         open={isModalVisible}
         onOk={handleModalOk}
-        onCancel={() => setIsModalVisible(false)}
+        onCancel={closeEditDrawer}
         okText={editingStore ? t('common.save') : t('common.add')}
         className="dark-modal"
         width={520}
@@ -539,10 +506,7 @@ const StoreManagement: React.FC = () => {
           </span>
         }
         open={isRoomModalVisible}
-        onCancel={() => {
-          setIsRoomModalVisible(false);
-          setSelectedStoreId(null);
-        }}
+        onCancel={closeRoomDrawer}
         footer={null}
         width={1000}
         className="dark-modal"

@@ -22,6 +22,7 @@ import {
   CloseOutlined
 } from '@ant-design/icons'
 import { getBrands, getUpcomingEvents } from '../../../services/firebase/firestore'
+import { useFirestoreQuery } from '../../../hooks/useFirestoreQuery'
 import { loginWithEmailOrPhone, registerUser, loginWithGoogle } from '../../../services/firebase/auth'
 import { getAppConfig } from '../../../services/firebase/appConfig'
 import type { Brand, Event as CigarEvent, AppConfig } from '../../../types'
@@ -32,8 +33,18 @@ const { Title, Paragraph, Text } = Typography
 const Landing: React.FC = () => {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const [brands, setBrands] = useState<Brand[]>([])
-  const [events, setEvents] = useState<CigarEvent[]>([])
+  const { data: brands = [] } = useFirestoreQuery(
+    async () => {
+      const data = await getBrands()
+      return data.filter(b => b.status === 'active').slice(0, 10)
+    }
+  )
+  const { data: events = [] } = useFirestoreQuery(
+    async () => {
+      const data = await getUpcomingEvents()
+      return data.slice(0, 3)
+    }
+  )
   const [scrolled, setScrolled] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 992)
   const [mobileMenuVisible, setMobileMenuVisible] = useState(false)
@@ -71,21 +82,15 @@ const Landing: React.FC = () => {
   }, [])
 
   useEffect(() => {
-    const loadData = async () => {
+    const loadConfig = async () => {
       try {
-        const [brandsData, eventsData, config] = await Promise.all([
-          getBrands(),
-          getUpcomingEvents(),
-          getAppConfig()
-        ])
-        setBrands(brandsData.filter(b => b.status === 'active').slice(0, 10))
-        setEvents(eventsData.slice(0, 3))
+        const config = await getAppConfig()
         if (config) setAppConfig(config)
       } catch (error) {
         console.error('Failed to load landing data:', error)
       }
     }
-    loadData()
+    loadConfig()
   }, [])
 
   const handleLogin = async (values: any) => {

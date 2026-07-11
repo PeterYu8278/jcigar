@@ -189,7 +189,7 @@ const Login: React.FC = () => {
 
         if (result.success) {
           if ((result as any).needsProfile) {
-            message.info('请完善您的账户信息')
+            message.info(t('auth.completeProfileInfo'))
             navigate('/auth/complete-profile', { replace: true })
           } else {
             message.success(t('auth.loginSuccess'))
@@ -211,7 +211,7 @@ const Login: React.FC = () => {
     if (appConfig?.subscription?.isActive) {
       const expiryDate = new Date(appConfig.subscription.expiryDate);
       if (new Date() > expiryDate) {
-        setLoginError('System Access Suspended: Subscription Expired');
+        setLoginError(t('auth.subscriptionExpired'));
         return false;
       }
     }
@@ -234,10 +234,10 @@ const Login: React.FC = () => {
         navigate('/', { replace: true })
       } else {
         // 使用 placeholder 显示错误
-        setLoginError('登入失败：' + ((result as any).error?.message || t('auth.loginFailed')))
+        setLoginError(t('auth.loginFailedPrefix') + ((result as any).error?.message || t('auth.loginFailed')))
       }
     } catch (error) {
-      setLoginError('登入失败：' + t('auth.loginFailed'))
+      setLoginError(t('auth.loginFailedPrefix') + t('auth.loginFailed'))
     } finally {
       setLoading(false)
     }
@@ -259,13 +259,13 @@ const Login: React.FC = () => {
         // 检查是否正在重定向
         if ((res as any).isRedirecting) {
           // 重定向中，页面即将刷新，保持 loading 状态
-          message.loading('正在跳转到 Google 登录...', 0)
+          message.loading(t('auth.redirectingToGoogle'), 0)
           return
         }
 
         // 检查是否需要完善信息
         if ((res as any).needsProfile) {
-          message.info('请完善您的账户信息')
+          message.info(t('auth.completeProfileInfo'))
           navigate('/auth/complete-profile', { replace: true })
         } else {
           message.success(t('auth.loginSuccess'))
@@ -273,11 +273,11 @@ const Login: React.FC = () => {
         }
       } else {
         // 使用 placeholder 显示错误
-        setLoginError('登入失败：' + ((res as any).error?.message || t('auth.loginFailed')))
+        setLoginError(t('auth.loginFailedPrefix') + ((res as any).error?.message || t('auth.loginFailed')))
         setLoading(false)
       }
     } catch (error) {
-      setLoginError('登入失败：' + t('auth.loginFailed'))
+      setLoginError(t('auth.loginFailedPrefix') + t('auth.loginFailed'))
       setLoading(false)
     }
   }
@@ -308,11 +308,11 @@ const Login: React.FC = () => {
         if (result.success) {
           const sendTime = Date.now()
           saveLastResetPasswordTime(sendTime) // 保存发送时间到 localStorage
-          message.success('密码已重置，临时密码已发送到您的手机')
+          message.success(t('auth.passwordResetSentToPhone'))
           setResetPasswordVisible(false)
           resetPasswordForm.resetFields()
         } else {
-          message.error(result.error || '重置密码失败')
+          message.error(result.error || t('auth.resetPasswordFailed'))
         }
         return
       }
@@ -326,11 +326,11 @@ const Login: React.FC = () => {
         if (result.success) {
           const sendTime = Date.now()
           saveLastResetPasswordTime(sendTime) // 保存发送时间到 localStorage
-          message.success('重置密码邮件已发送，请查收您的邮箱')
+          message.success(t('auth.resetEmailSent'))
           setResetPasswordVisible(false)
           resetPasswordForm.resetFields()
         } else {
-          message.error(result.error?.message || '发送重置密码邮件失败')
+          message.error(result.error?.message || t('auth.sendResetEmailFailed'))
         }
       } else if (type === 'phone') {
         // 手机号重置：生成临时密码并通过 whapi 发送
@@ -338,17 +338,17 @@ const Login: React.FC = () => {
         if (result.success) {
           const sendTime = Date.now()
           saveLastResetPasswordTime(sendTime) // 保存发送时间到 localStorage
-          message.success('密码已重置，临时密码已发送到您的手机')
+          message.success(t('auth.passwordResetSentToPhone'))
           setResetPasswordVisible(false)
           resetPasswordForm.resetFields()
         } else {
-          message.error(result.error || '重置密码失败')
+          message.error(result.error || t('auth.resetPasswordFailed'))
         }
       } else {
-        message.error('请输入有效的邮箱地址或手机号')
+        message.error(t('auth.invalidEmailOrPhone'))
       }
     } catch (error: any) {
-      message.error(error.message || '重置密码失败')
+      message.error(error.message || t('auth.resetPasswordFailed'))
     } finally {
       setResetPasswordLoading(false)
     }
@@ -388,7 +388,7 @@ const Login: React.FC = () => {
             indicator={<LoadingOutlined style={{ fontSize: 24, color: '#ffd700' }} spin />}
             spinning={isRefreshing}
           />
-          <span>{isRefreshing ? '正在刷新...' : pullDistance > 80 ? '释放刷新' : '下拉刷新'}</span>
+          <span>{isRefreshing ? t('common.refreshing') : pullDistance > 80 ? t('common.releaseToRefresh') : t('common.pullToRefresh')}</span>
         </div>
       )}
 
@@ -416,7 +416,7 @@ const Login: React.FC = () => {
               indicator={<LoadingOutlined style={{ fontSize: 32, color: '#ffd700' }} spin />}
               size="large"
             />
-            <Text style={{ color: '#c0c0c0' }}>加载中...</Text>
+            <Text style={{ color: '#c0c0c0' }}>{t('common.loading')}</Text>
           </div>
         ) : (
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
@@ -474,31 +474,31 @@ const Login: React.FC = () => {
               <Form.Item
                 name="email"
                 rules={[
-                  { required: true, message: appConfig?.auth?.disableEmailLogin ? '请输入手机号' : '请输入邮箱或手机号' },
+                  { required: true, message: appConfig?.auth?.disableEmailLogin ? t('auth.phoneOnlyRequired') : t('auth.emailOrPhoneRequired') },
                   {
                     validator: (_, value) => {
                       if (!value) return Promise.resolve()
 
                       // 检查中文字符
                       if (/[\u4e00-\u9fa5]/.test(value)) {
-                        return Promise.reject(new Error('不允许输入中文字符'))
+                        return Promise.reject(new Error(t('auth.noChinese')))
                       }
 
                       const type = identifyInputType(value)
 
                       if (type === 'unknown') {
-                        return Promise.reject(new Error(appConfig?.auth?.disableEmailLogin ? '请输入有效的手机号' : '请输入有效的邮箱或手机号'))
+                        return Promise.reject(new Error(appConfig?.auth?.disableEmailLogin ? t('auth.phoneOnlyInvalid') : t('auth.invalidEmailOrPhone')))
                       }
 
                       // 如果禁用了电邮登录，不允许使用邮箱
                       if (appConfig?.auth?.disableEmailLogin && type === 'email') {
-                        return Promise.reject(new Error('请输入有效的手机号'))
+                        return Promise.reject(new Error(t('auth.phoneOnlyInvalid')))
                       }
 
                       // 邮箱验证：必须包含 @ 和 .
                       if (type === 'email') {
                         if (!isValidEmail(value)) {
-                          return Promise.reject(new Error('邮箱格式无效'))
+                          return Promise.reject(new Error(t('auth.emailFormatInvalid')))
                         }
                       }
 
@@ -506,7 +506,7 @@ const Login: React.FC = () => {
                       if (type === 'phone') {
                         const normalized = normalizePhoneNumber(value)
                         if (!normalized) {
-                          return Promise.reject(new Error('手机号格式无效（需10-15位数字）'))
+                          return Promise.reject(new Error(t('auth.phoneFormatInvalidLogin')))
                         }
                       }
 
@@ -745,21 +745,21 @@ const Login: React.FC = () => {
               fontSize: '14px',
               textAlign: 'center'
             }}>
-              发送过于频繁，请等待 {resetPasswordCooldown} 秒后再试
+              {t('auth.cooldownMessage', { resetPasswordCooldown })}
             </div>
           )}
           <Form.Item
             name="identifier"
             label={<span style={{ color: '#c0c0c0' }}>
               {appConfig?.auth?.disableEmailLogin && appConfig?.auth?.disableGoogleLogin
-                ? '手机号'
-                : '邮箱地址或手机号'}
+                ? t('auth.phone')
+                : t('auth.emailOrPhoneLabel')}
             </span>}
             rules={[
               {
                 required: true, message: appConfig?.auth?.disableEmailLogin && appConfig?.auth?.disableGoogleLogin
-                  ? '请输入手机号'
-                  : '请输入邮箱地址或手机号'
+                  ? t('auth.phoneOnlyRequired')
+                  : t('auth.pleaseEnterEmailOrPhone')
               },
               {
                 validator: (_, value) => {
@@ -769,7 +769,7 @@ const Login: React.FC = () => {
                   if (appConfig?.auth?.disableEmailLogin && appConfig?.auth?.disableGoogleLogin) {
                     const normalized = normalizePhoneNumber(value)
                     if (!normalized) {
-                      return Promise.reject(new Error('手机号格式无效'))
+                      return Promise.reject(new Error(t('profile.phoneInvalidFormat')))
                     }
                     return Promise.resolve()
                   }
@@ -777,19 +777,19 @@ const Login: React.FC = () => {
                   // 否则验证邮箱或手机号
                   const type = identifyInputType(value)
                   if (type === 'unknown') {
-                    return Promise.reject(new Error('请输入有效的邮箱地址或手机号'))
+                    return Promise.reject(new Error(t('auth.invalidEmailOrPhone')))
                   }
 
                   if (type === 'email') {
                     if (!isValidEmail(value)) {
-                      return Promise.reject(new Error('邮箱格式无效'))
+                      return Promise.reject(new Error(t('auth.emailFormatInvalid')))
                     }
                   }
 
                   if (type === 'phone') {
                     const normalized = normalizePhoneNumber(value)
                     if (!normalized) {
-                      return Promise.reject(new Error('手机号格式无效'))
+                      return Promise.reject(new Error(t('profile.phoneInvalidFormat')))
                     }
                   }
 
@@ -802,8 +802,8 @@ const Login: React.FC = () => {
               prefix={<UserOutlined style={{ color: '#ffd700' }} />}
               placeholder={
                 appConfig?.auth?.disableEmailLogin && appConfig?.auth?.disableGoogleLogin
-                  ? "手机号 (例: 0123456789)"
-                  : "请输入您的邮箱地址或手机号"
+                  ? t('auth.phone')
+                  : t('auth.emailOrPhonePlaceholder')
               }
               onInput={(e) => {
                 const input = e.currentTarget
@@ -860,7 +860,7 @@ const Login: React.FC = () => {
                   borderColor: '#444444'
                 }}
               >
-                取消
+                {t('common.cancel')}
               </Button>
               <Button
                 type="primary"
@@ -883,8 +883,8 @@ const Login: React.FC = () => {
                 }}
               >
                 {resetPasswordCooldown !== null && resetPasswordCooldown > 0
-                  ? `请等待 ${resetPasswordCooldown} 秒`
-                  : '发送重置'}
+                  ? t('auth.waitSecondsButton', { resetPasswordCooldown })
+                  : t('auth.sendReset')}
               </Button>
             </Space>
           </Form.Item>

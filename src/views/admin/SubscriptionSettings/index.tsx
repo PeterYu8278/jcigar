@@ -5,89 +5,74 @@ import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import { getAppConfig, updateAppConfig } from '../../../services/firebase/appConfig';
 import { useAuthStore } from '../../../store/modules/auth';
-import { collection, query, orderBy, getDocs, doc, updateDoc, where } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, doc, updateDoc, where, limit } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
 import { GLOBAL_COLLECTIONS } from '../../../config/globalCollections';
 import type { AppConfig, SubscriptionRequest, User } from '../../../types';
 import { getAllStores } from '../../../services/firebase/stores';
 import PaymentTester from '../../../components/admin/PaymentTester';
+import { useFirestoreQuery } from '../../../hooks/useFirestoreQuery';
+
+const fetchAdmins = async (): Promise<User[]> => {
+  const q = query(
+    collection(db, 'users'),
+    where('role', 'in', ['superAdmin', 'admin']),
+    limit(50)
+  );
+  const snapshot = await getDocs(q);
+  const data: User[] = [];
+  snapshot.forEach(d => {
+    data.push({ id: d.id, ...d.data() } as User);
+  });
+  return data;
+};
 
 const AdminAccountList: React.FC = () => {
-  const [admins, setAdmins] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [stores, setStores] = useState<any[]>([]);
-
-  useEffect(() => {
-    loadAdmins();
-    loadStores();
-  }, []);
-
-  const loadAdmins = async () => {
-    try {
-      setLoading(true);
-      const q = query(
-        collection(db, 'users'), 
-        where('role', 'in', ['superAdmin', 'admin'])
-      );
-      const snapshot = await getDocs(q);
-      const data: User[] = [];
-      snapshot.forEach(doc => {
-        data.push({ id: doc.id, ...doc.data() } as User);
-      });
-      setAdmins(data);
-    } catch (error) {
-      console.error('Failed to load admins:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadStores = async () => {
-    const data = await getAllStores();
-    setStores(data);
-  };
+  const { t } = useTranslation();
+  const { data: admins = [], loading, refresh: refreshAdmins } = useFirestoreQuery(fetchAdmins);
+  const { data: stores = [] } = useFirestoreQuery(getAllStores);
 
   const handleUpdateStore = async (userId: string, storeId: string) => {
     try {
       const userRef = doc(db, 'users', userId);
       await updateDoc(userRef, { storeId });
-      message.success('User store updated');
-      loadAdmins();
+      message.success(t('subscriptionSettings.userStoreUpdated'));
+      refreshAdmins();
     } catch (error) {
-      message.error('Failed to update store');
+      message.error(t('subscriptionSettings.updateStoreFailed'));
     }
   };
 
   const columns = [
     {
-      title: 'Name',
+      title: t('subscriptionSettings.colName'),
       dataIndex: 'displayName',
       key: 'displayName',
       render: (text: string, record: User) => (
         <Space>
-          <span>{text || 'No Name'}</span>
+          <span>{text || t('subscriptionSettings.noName')}</span>
           {record.role === 'superAdmin' && <Tag color="gold">SUPER</Tag>}
           {record.role === 'admin' && <Tag color="blue">STORE ADMIN</Tag>}
         </Space>
       )
     },
     {
-      title: 'Email',
+      title: t('subscriptionSettings.colEmail'),
       dataIndex: 'email',
       key: 'email',
     },
     {
-      title: 'Assigned Store',
+      title: t('subscriptionSettings.assignedStore'),
       dataIndex: 'storeId',
       key: 'storeId',
       render: (storeId: string, record: User) => {
-        if (record.role === 'superAdmin') return <span style={{ color: '#888' }}>Global (All Stores)</span>;
-        
+        if (record.role === 'superAdmin') return <span style={{ color: '#888' }}>{t('subscriptionSettings.globalAllStores')}</span>;
+
         return (
-          <Select 
-            value={storeId} 
-            style={{ width: 200 }} 
-            placeholder="Select Store"
+          <Select
+            value={storeId}
+            style={{ width: 200 }}
+            placeholder={t('subscriptionSettings.selectStore')}
             onChange={(val) => handleUpdateStore(record.id, val)}
             dropdownStyle={{ background: '#1a1a1a', border: '1px solid #444' }}
           >
@@ -120,6 +105,16 @@ const { Option } = Select;
 const { TabPane } = Tabs;
 type SubTabKey = 'settings' | 'records' | 'accounts' | 'payment';
 
+const fetchRequests = async (): Promise<SubscriptionRequest[]> => {
+  const q = query(collection(db, GLOBAL_COLLECTIONS.SUBSCRIPTION_REQUESTS), orderBy('createdAt', 'desc'), limit(100));
+  const snapshot = await getDocs(q);
+  const data: SubscriptionRequest[] = [];
+  snapshot.forEach(d => {
+    data.push({ id: d.id, ...d.data() } as SubscriptionRequest);
+  });
+  return data;
+};
+
 export const SubscriptionSettings: React.FC = () => {
   const { t } = useTranslation();
   const [form] = Form.useForm();
@@ -128,24 +123,23 @@ export const SubscriptionSettings: React.FC = () => {
   const { user, isSuperAdmin } = useAuthStore();
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   const [activeTab, setActiveTab] = useState<SubTabKey>('settings');
-  
-  const [loadingRequests, setLoadingRequests] = useState(false);
-  const [requests, setRequests] = useState<SubscriptionRequest[]>([]);
+
+  const { data: requests = [], loading: loadingRequests, refresh: refreshRequests } = useFirestoreQuery(fetchRequests);
   const [counts, setCounts] = useState({ stores: 0, superAdmins: 0, admins: 0 });
 
   useEffect(() => {
     loadConfig();
-    loadRequests();
     loadCounts();
   }, []);
 
   const loadCounts = async () => {
     try {
       const stores = await getAllStores();
-      
+
       const adminQuery = query(
-        collection(db, 'users'), 
-        where('role', 'in', ['superAdmin', 'admin'])
+        collection(db, 'users'),
+        where('role', 'in', ['superAdmin', 'admin']),
+        limit(50)
       );
       const adminSnapshot = await getDocs(adminQuery);
       let superAdmins = 0;
@@ -168,7 +162,7 @@ export const SubscriptionSettings: React.FC = () => {
       const config = await getAppConfig();
       if (config) {
         setAppConfig(config);
-        
+
         // Default plans if none exist
         const defaultPlans = config.subscription?.plans || [
           { id: 'basic', name: 'Basic', fee: 2400, maxMembers: 50, validPeriodMonth: 12, maxStores: 1, maxSuperAdmins: 1, maxAdmins: 3 },
@@ -193,33 +187,16 @@ export const SubscriptionSettings: React.FC = () => {
         });
       }
     } catch (error) {
-      message.error('Failed to load subscription settings');
+      message.error(t('subscriptionSettings.loadFailed'));
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadRequests = async () => {
-    try {
-      setLoadingRequests(true);
-      const q = query(collection(db, GLOBAL_COLLECTIONS.SUBSCRIPTION_REQUESTS), orderBy('createdAt', 'desc'));
-      const snapshot = await getDocs(q);
-      const data: SubscriptionRequest[] = [];
-      snapshot.forEach(doc => {
-        data.push({ id: doc.id, ...doc.data() } as SubscriptionRequest);
-      });
-      setRequests(data);
-    } catch (error) {
-      console.error('Failed to load subscription requests:', error);
-    } finally {
-      setLoadingRequests(false);
     }
   };
 
   const handleSaveConfig = async (values: any) => {
     try {
       setSaving(true);
-      
+
       // Find selected plan to sync quota
       const selectedPlan = values.plans?.find((p: any) => p.id === values.planId);
       const newQuota = selectedPlan ? {
@@ -250,11 +227,11 @@ export const SubscriptionSettings: React.FC = () => {
       };
 
       await updateAppConfig(updateData, user?.id || 'system');
-      message.success('Subscription settings updated successfully');
+      message.success(t('subscriptionSettings.saveSuccess'));
       loadConfig(); // Reload to get fresh state
       loadCounts(); // Refresh counts
     } catch (error) {
-      message.error('Failed to update subscription settings');
+      message.error(t('subscriptionSettings.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -262,7 +239,6 @@ export const SubscriptionSettings: React.FC = () => {
 
   const handleApproveRequest = async (request: SubscriptionRequest) => {
     try {
-      setLoadingRequests(true);
       // Update AppConfig
       const plan = appConfig?.subscription?.plans?.find(p => p.id === request.planId);
       const validMonths = plan?.validPeriodMonth || 12;
@@ -293,59 +269,54 @@ export const SubscriptionSettings: React.FC = () => {
       };
       await updateAppConfig(updateData, user?.id || 'system');
 
-      message.success('Subscription request approved and activated');
-      loadRequests();
+      message.success(t('subscriptionSettings.approveSuccess'));
+      refreshRequests();
       loadConfig();
     } catch (error) {
-      message.error('Failed to approve request');
-    } finally {
-      setLoadingRequests(false);
+      message.error(t('subscriptionSettings.approveFailed'));
     }
   };
 
   const handleRejectRequest = async (request: SubscriptionRequest) => {
     try {
-      setLoadingRequests(true);
       const requestRef = doc(db, GLOBAL_COLLECTIONS.SUBSCRIPTION_REQUESTS, request.id);
       await updateDoc(requestRef, {
         status: 'rejected',
         updatedAt: new Date(),
         verifiedBy: user?.id
       });
-      message.success('Subscription request rejected');
-      loadRequests();
+      message.success(t('subscriptionSettings.rejectSuccess'));
+      refreshRequests();
     } catch (error) {
-      message.error('Failed to reject request');
-    } finally {
-      setLoadingRequests(false);
+      message.error(t('subscriptionSettings.rejectFailed'));
     }
   };
 
   const requestColumns = [
     {
-      title: 'Requested By',
+      title: t('subscriptionSettings.requestedBy'),
       dataIndex: 'requestedBy',
       key: 'requestedBy',
     },
     {
-      title: 'Plan',
+      title: t('subscriptionSettings.plan'),
       dataIndex: 'planName',
       key: 'planName',
     },
     {
-      title: 'Validity',
+      title: t('subscriptionSettings.validity'),
       dataIndex: 'validPeriodMonth',
       key: 'validPeriodMonth',
-      render: (months: number) => months ? `${months} Months` : '-'
+      render: (months: number) => months ? t('subscriptionSettings.months', { months }) : '-'
     },
     {
-      title: 'Date',
+      title: t('subscriptionSettings.date'),
       dataIndex: 'createdAt',
       key: 'createdAt',
       render: (date: any) => date?.toDate ? dayjs(date.toDate()).format('YYYY-MM-DD HH:mm') : '-'
     },
     {
-      title: 'Status',
+      title: t('subscriptionSettings.status'),
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => {
@@ -354,29 +325,29 @@ export const SubscriptionSettings: React.FC = () => {
       }
     },
     {
-      title: 'Bill ID',
+      title: t('subscriptionSettings.billId'),
       dataIndex: 'billplzId',
       key: 'billplzId',
       render: (id: string, record: any) => id ? (
         <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#FDE08D' }}>{id}</span>
       ) : (
-        <Tag color="default">{record.paymentMethod === 'online' ? '-' : 'Manual'}</Tag>
+        <Tag color="default">{record.paymentMethod === 'online' ? '-' : t('subscriptionSettings.manual')}</Tag>
       )
     },
     {
-      title: 'Expiry Date',
+      title: t('subscriptionSettings.expiryDate'),
       dataIndex: 'expiryDate',
       key: 'expiryDate',
       render: (date: any) => date?.toDate ? dayjs(date.toDate()).format('YYYY-MM-DD') : (date ? dayjs(date).format('YYYY-MM-DD') : '-')
     },
     {
-      title: 'Actions',
+      title: t('subscriptionSettings.actions'),
       key: 'actions',
       render: (_: any, record: SubscriptionRequest) => (
         record.status === 'pending' ? (
           <Space>
-            <Button type="primary" size="small" onClick={() => handleApproveRequest(record)}>Approve</Button>
-            <Button danger size="small" onClick={() => handleRejectRequest(record)}>Reject</Button>
+            <Button type="primary" size="small" onClick={() => handleApproveRequest(record)}>{t('subscriptionSettings.approve')}</Button>
+            <Button danger size="small" onClick={() => handleRejectRequest(record)}>{t('subscriptionSettings.reject')}</Button>
           </Space>
         ) : null
       )
@@ -393,21 +364,21 @@ export const SubscriptionSettings: React.FC = () => {
 
   return (
     <div style={{ padding: '12px 16px', maxWidth: 1200, margin: '0 auto', marginBottom: 100 }}>
-      <h1 style={{ 
-        fontSize: 'calc(20px + 1vw)', 
-        fontWeight: 800, 
-        marginBottom: 24, 
-        backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
-        WebkitBackgroundClip: 'text', 
-        color: 'transparent' 
+      <h1 style={{
+        fontSize: 'calc(20px + 1vw)',
+        fontWeight: 800,
+        marginBottom: 24,
+        backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+        WebkitBackgroundClip: 'text',
+        color: 'transparent'
       }}>
-        Subscription Management
+        {t('subscriptionSettings.title')}
       </h1>
 
       {!isSuperAdmin && (
         <Alert
-          message="View Only"
-          description="You are viewing this page as an admin. Only superAdmins can modify these settings."
+          message={t('subscriptionSettings.viewOnly')}
+          description={t('subscriptionSettings.viewOnlyDesc')}
           type="info"
           showIcon
           style={{ marginBottom: 24, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}
@@ -421,7 +392,7 @@ export const SubscriptionSettings: React.FC = () => {
           borderBottom: '1px solid rgba(244,175,37,0.2)',
           marginBottom: 16
         }}>
-          {([{ key: 'settings', label: 'Subscription Settings' }, { key: 'payment', label: 'Payment Gateway' }, { key: 'records', label: 'Payment Records' }, { key: 'accounts', label: 'Admin Accounts' }] as const).map(({ key, label }) => {
+          {([{ key: 'settings', label: t('subscriptionSettings.tabSettings') }, { key: 'payment', label: t('subscriptionSettings.tabPayment') }, { key: 'records', label: t('subscriptionSettings.tabRecords') }, { key: 'accounts', label: t('subscriptionSettings.tabAccounts') }] as { key: SubTabKey; label: string }[]).map(({ key, label }) => {
             const isActive = activeTab === key;
             const baseStyle: React.CSSProperties = {
               flex: 1,
@@ -468,13 +439,13 @@ export const SubscriptionSettings: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: window.innerWidth < 768 ? 'column' : 'row', gap: 24 }}>
               {/* Left Column: Status & Quota */}
               <div style={{ flex: 1 }}>
-                <Card 
-                  title={<span style={{ color: '#FDE08D' }}>General Status</span>}
+                <Card
+                  title={<span style={{ color: '#FDE08D' }}>{t('subscriptionSettings.generalStatus')}</span>}
                   style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', marginBottom: 24 }}
                 >
                   <Form.Item
                     name="isActive"
-                    label={<span style={{ color: '#ccc' }}>Enable Subscription Mode</span>}
+                    label={<span style={{ color: '#ccc' }}>{t('subscriptionSettings.enableSubscriptionMode')}</span>}
                     valuePropName="checked"
                   >
                     <Switch disabled={!isSuperAdmin} />
@@ -482,7 +453,7 @@ export const SubscriptionSettings: React.FC = () => {
 
                   <Form.Item
                     name="planId"
-                    label={<span style={{ color: '#ccc' }}>Current Active Plan</span>}
+                    label={<span style={{ color: '#ccc' }}>{t('subscriptionSettings.currentActivePlan')}</span>}
                   >
                     <Select disabled={!isSuperAdmin} style={{ width: '100%' }} dropdownStyle={{ background: '#1a1a1a', border: '1px solid #444' }}>
                       {appConfig?.subscription?.plans?.map((p: any) => (
@@ -498,12 +469,12 @@ export const SubscriptionSettings: React.FC = () => {
                       )}
                     </Select>
                   </Form.Item>
-                  
+
                   {appConfig?.subscription?.expiryDate && (() => {
                     let dateStr = '';
                     try {
-                      const exp = (appConfig.subscription.expiryDate as any).toDate 
-                        ? (appConfig.subscription.expiryDate as any).toDate() 
+                      const exp = (appConfig.subscription.expiryDate as any).toDate
+                        ? (appConfig.subscription.expiryDate as any).toDate()
                         : new Date(appConfig.subscription.expiryDate as any);
                       if (!isNaN(exp.getTime())) {
                         dateStr = dayjs(exp).format('YYYY-MM-DD');
@@ -511,55 +482,55 @@ export const SubscriptionSettings: React.FC = () => {
                     } catch (e) {
                       console.warn('Invalid expiry date in settings', e);
                     }
-                    
+
                     if (!dateStr) return null;
 
                     return (
-                      <div style={{ 
-                        color: '#FDE08D', 
-                        fontSize: '14px', 
-                        padding: '12px', 
-                        background: 'rgba(253,224,141,0.1)', 
+                      <div style={{
+                        color: '#FDE08D',
+                        fontSize: '14px',
+                        padding: '12px',
+                        background: 'rgba(253,224,141,0.1)',
                         borderRadius: 8,
                         border: '1px solid rgba(253,224,141,0.2)',
                         marginBottom: 16
                       }}>
-                        <span style={{ color: '#aaa', marginRight: 8 }}>Current Expiry:</span>
+                        <span style={{ color: '#aaa', marginRight: 8 }}>{t('subscriptionSettings.currentExpiry')}</span>
                         {dateStr}
                       </div>
                     );
                   })()}
                 </Card>
 
-                <Card 
-                  title={<span style={{ color: '#FDE08D' }}>Current Account Quotas (Read Only)</span>}
+                <Card
+                  title={<span style={{ color: '#FDE08D' }}>{t('subscriptionSettings.currentAccountQuotas')}</span>}
                   style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                     {[
-                      { label: 'Max Stores', count: counts.stores, max: appConfig?.subscription?.quota?.maxStores || 1 },
-                      { label: 'Max Super Admins', count: counts.superAdmins, max: appConfig?.subscription?.quota?.maxSuperAdmins || 1 },
-                      { label: 'Max Admins (Store Admins)', count: counts.admins, max: appConfig?.subscription?.quota?.maxAdmins || 3 }
+                      { label: t('subscriptionSettings.maxStores'), count: counts.stores, max: appConfig?.subscription?.quota?.maxStores || 1 },
+                      { label: t('subscriptionSettings.maxSuperAdmins'), count: counts.superAdmins, max: appConfig?.subscription?.quota?.maxSuperAdmins || 1 },
+                      { label: t('subscriptionSettings.maxAdmins'), count: counts.admins, max: appConfig?.subscription?.quota?.maxAdmins || 3 }
                     ].map(item => (
                       <div key={item.label}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, color: '#ccc' }}>
                           <span style={{ fontSize: 13 }}>{item.label}</span>
-                          <span style={{ 
-                            fontWeight: 700, 
-                            color: item.count >= item.max ? '#ff4d4f' : '#52c41a' 
+                          <span style={{
+                            fontWeight: 700,
+                            color: item.count >= item.max ? '#ff4d4f' : '#52c41a'
                           }}>
                             {item.count} / {item.max}
                           </span>
                         </div>
-                        <div style={{ 
-                          height: 4, 
-                          background: 'rgba(255,255,255,0.05)', 
+                        <div style={{
+                          height: 4,
+                          background: 'rgba(255,255,255,0.05)',
                           borderRadius: 2,
                           overflow: 'hidden'
                         }}>
-                          <div style={{ 
-                            width: `${Math.min(100, (item.count / item.max) * 100)}%`, 
-                            height: '100%', 
+                          <div style={{
+                            width: `${Math.min(100, (item.count / item.max) * 100)}%`,
+                            height: '100%',
                             background: item.count >= item.max ? '#ff4d4f' : 'linear-gradient(to right, #FDE08D, #C48D3A)',
                             borderRadius: 2
                           }} />
@@ -569,101 +540,101 @@ export const SubscriptionSettings: React.FC = () => {
                   </div>
                 </Card>
               </div>
-              
+
               {/* Right Column: Plans Configuration */}
               <div style={{ flex: 2 }}>
-                <Card 
-                  title={<span style={{ color: '#FDE08D' }}>Available Plans Configuration</span>}
+                <Card
+                  title={<span style={{ color: '#FDE08D' }}>{t('subscriptionSettings.availablePlans')}</span>}
                   style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
                 >
                   <Form.List name="plans">
                     {(fields, { add, remove }) => (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                         {fields.map(({ key, name, ...restField }) => (
-                          <div 
-                            key={key} 
-                            style={{ 
-                              padding: 16, 
-                              background: 'rgba(255,255,255,0.03)', 
-                              borderRadius: 12, 
+                          <div
+                            key={key}
+                            style={{
+                              padding: 16,
+                              background: 'rgba(255,255,255,0.03)',
+                              borderRadius: 12,
                               border: '1px solid rgba(255,255,255,0.05)',
                               position: 'relative'
                             }}
                           >
-                            <MinusCircleOutlined 
-                              onClick={() => remove(name)} 
-                              style={{ 
-                                position: 'absolute', 
-                                right: 12, 
-                                top: 12, 
-                                color: '#ff4d4f', 
+                            <MinusCircleOutlined
+                              onClick={() => remove(name)}
+                              style={{
+                                position: 'absolute',
+                                right: 12,
+                                top: 12,
+                                color: '#ff4d4f',
                                 fontSize: 18,
                                 zIndex: 1
-                              }} 
+                              }}
                             />
-                            
-                            <div style={{ 
-                              display: 'grid', 
-                              gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(auto-fit, minmax(120px, 1fr))', 
-                              gap: '12px 16px' 
+
+                            <div style={{
+                              display: 'grid',
+                              gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(auto-fit, minmax(120px, 1fr))',
+                              gap: '12px 16px'
                             }}>
                               <Form.Item
                                 {...restField}
                                 name={[name, 'id']}
                                 label={<span style={{ color: '#888', fontSize: 12 }}>ID</span>}
-                                rules={[{ required: true, message: 'Missing ID' }]}
+                                rules={[{ required: true, message: t('subscriptionSettings.missingId') }]}
                               >
                                 <Input placeholder="basic" disabled={!isSuperAdmin} />
                               </Form.Item>
                               <Form.Item
                                 {...restField}
                                 name={[name, 'name']}
-                                label={<span style={{ color: '#888', fontSize: 12 }}>Name</span>}
-                                rules={[{ required: true, message: 'Missing Name' }]}
+                                label={<span style={{ color: '#888', fontSize: 12 }}>{t('subscriptionSettings.colName')}</span>}
+                                rules={[{ required: true, message: t('subscriptionSettings.missingName') }]}
                               >
                                 <Input placeholder="Plan Name" disabled={!isSuperAdmin} />
                               </Form.Item>
                               <Form.Item
                                 {...restField}
                                 name={[name, 'fee']}
-                                label={<span style={{ color: '#888', fontSize: 12 }}>Annual Fee</span>}
-                                rules={[{ required: true, message: 'Missing Fee' }]}
+                                label={<span style={{ color: '#888', fontSize: 12 }}>{t('subscriptionSettings.annualFee')}</span>}
+                                rules={[{ required: true, message: t('subscriptionSettings.missingFee') }]}
                               >
                                 <InputNumber placeholder="0" min={0} controls={false} addonBefore="RM" style={{ width: '100%' }} disabled={!isSuperAdmin} />
                               </Form.Item>
                               <Form.Item
                                 {...restField}
                                 name={[name, 'validPeriodMonth']}
-                                label={<span style={{ color: '#888', fontSize: 12 }}>Validity (Months)</span>}
-                                rules={[{ required: true, message: 'Missing Period' }]}
+                                label={<span style={{ color: '#888', fontSize: 12 }}>{t('subscriptionSettings.validityMonths')}</span>}
+                                rules={[{ required: true, message: t('subscriptionSettings.missingPeriod') }]}
                               >
                                 <InputNumber placeholder="12" min={1} controls={false} addonAfter="Mon" style={{ width: '100%' }} disabled={!isSuperAdmin} />
                               </Form.Item>
                               <Form.Item
                                 {...restField}
                                 name={[name, 'maxMembers']}
-                                label={<span style={{ color: '#888', fontSize: 12 }}>Max Members</span>}
+                                label={<span style={{ color: '#888', fontSize: 12 }}>{t('subscriptionSettings.maxMembers')}</span>}
                               >
-                                <InputNumber placeholder="Unlimited" min={0} controls={false} style={{ width: '100%' }} disabled={!isSuperAdmin} />
+                                <InputNumber placeholder={t('subscriptionSettings.unlimited')} min={0} controls={false} style={{ width: '100%' }} disabled={!isSuperAdmin} />
                               </Form.Item>
                               <Form.Item
                                 {...restField}
                                 name={[name, 'maxStores']}
-                                label={<span style={{ color: '#888', fontSize: 12 }}>Max Stores</span>}
+                                label={<span style={{ color: '#888', fontSize: 12 }}>{t('subscriptionSettings.maxStores')}</span>}
                               >
                                 <InputNumber placeholder="1" min={1} controls={false} style={{ width: '100%' }} disabled={!isSuperAdmin} />
                               </Form.Item>
                               <Form.Item
                                 {...restField}
                                 name={[name, 'maxSuperAdmins']}
-                                label={<span style={{ color: '#888', fontSize: 12 }}>Max Super Admins</span>}
+                                label={<span style={{ color: '#888', fontSize: 12 }}>{t('subscriptionSettings.maxSuperAdmins')}</span>}
                               >
                                 <InputNumber placeholder="1" min={1} controls={false} style={{ width: '100%' }} disabled={!isSuperAdmin} />
                               </Form.Item>
                               <Form.Item
                                 {...restField}
                                 name={[name, 'maxAdmins']}
-                                label={<span style={{ color: '#888', fontSize: 12 }}>Max Admins</span>}
+                                label={<span style={{ color: '#888', fontSize: 12 }}>{t('subscriptionSettings.maxAdmins')}</span>}
                               >
                                 <InputNumber placeholder="3" min={0} controls={false} style={{ width: '100%' }} disabled={!isSuperAdmin} />
                               </Form.Item>
@@ -671,21 +642,21 @@ export const SubscriptionSettings: React.FC = () => {
                           </div>
                         ))}
                         <Form.Item>
-                          <Button 
-                            type="dashed" 
-                            onClick={() => add({ validPeriodMonth: 12 })} 
-                            block 
-                            icon={<PlusOutlined />} 
+                          <Button
+                            type="dashed"
+                            onClick={() => add({ validPeriodMonth: 12 })}
+                            block
+                            icon={<PlusOutlined />}
                             disabled={!isSuperAdmin}
-                            style={{ 
-                              color: isSuperAdmin ? '#FDE08D' : '#666', 
-                              borderColor: isSuperAdmin ? 'rgba(253,224,141,0.3)' : 'rgba(255,255,255,0.05)', 
+                            style={{
+                              color: isSuperAdmin ? '#FDE08D' : '#666',
+                              borderColor: isSuperAdmin ? 'rgba(253,224,141,0.3)' : 'rgba(255,255,255,0.05)',
                               background: 'transparent',
                               height: 45,
                               borderRadius: 8
                             }}
                           >
-                            Add New Plan Package
+                            {t('subscriptionSettings.addNewPlan')}
                           </Button>
                         </Form.Item>
                       </div>
@@ -696,8 +667,8 @@ export const SubscriptionSettings: React.FC = () => {
             </div>
 
             {isSuperAdmin && (
-              <div style={{ 
-                marginTop: 32, 
+              <div style={{
+                marginTop: 32,
                 textAlign: 'right',
                 position: window.innerWidth < 768 ? 'fixed' : 'static',
                 bottom: window.innerWidth < 768 ? 80 : 'auto',
@@ -705,14 +676,14 @@ export const SubscriptionSettings: React.FC = () => {
                 left: window.innerWidth < 768 ? 16 : 'auto',
                 zIndex: 10
               }}>
-                <Button 
-                  type="primary" 
-                  htmlType="submit" 
+                <Button
+                  type="primary"
+                  htmlType="submit"
                   loading={saving}
-                  style={{ 
-                    background: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
-                    color: '#111', 
-                    border: 'none', 
+                  style={{
+                    background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                    color: '#111',
+                    border: 'none',
                     fontWeight: 800,
                     height: 45,
                     padding: '0 32px',
@@ -721,7 +692,7 @@ export const SubscriptionSettings: React.FC = () => {
                     width: window.innerWidth < 768 ? '100%' : 'auto'
                   }}
                 >
-                  Save All Settings
+                  {t('subscriptionSettings.saveAllSettings')}
                 </Button>
               </div>
             )}
@@ -734,14 +705,14 @@ export const SubscriptionSettings: React.FC = () => {
           layout="vertical"
           onFinish={handleSaveConfig}
         >
-          <Card 
+          <Card
             title={<span style={{ color: '#FDE08D' }}>{t('featureManagement.billplzConfigPlatform')}</span>}
             style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', marginBottom: 24 }}
           >
             <div style={{ marginBottom: 24 }}>
               <Alert
-                message="Platform Payment Configuration"
-                description="This configuration is used for system-level payments, such as annual fees from clients. These credentials should belong to the platform owner."
+                message={t('subscriptionSettings.platformPaymentTitle')}
+                description={t('subscriptionSettings.platformPaymentDesc')}
                 type="warning"
                 showIcon
                 style={{ marginBottom: 24, background: 'rgba(255,193,7,0.1)', border: '1px solid rgba(255,193,7,0.3)', color: '#fff' }}
@@ -791,17 +762,17 @@ export const SubscriptionSettings: React.FC = () => {
                 <Switch disabled={!isSuperAdmin} />
               </Form.Item>
             </div>
-            
+
             {isSuperAdmin && (
               <div style={{ marginTop: 24, textAlign: 'right' }}>
-                <Button 
-                  type="primary" 
-                  htmlType="submit" 
+                <Button
+                  type="primary"
+                  htmlType="submit"
                   loading={saving}
-                  style={{ 
-                    background: 'linear-gradient(to right,#FDE08D,#C48D3A)', 
-                    color: '#111', 
-                    border: 'none', 
+                  style={{
+                    background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                    color: '#111',
+                    border: 'none',
                     fontWeight: 800,
                     borderRadius: 22,
                     padding: '0 32px'
@@ -814,9 +785,9 @@ export const SubscriptionSettings: React.FC = () => {
           </Card>
 
           {/* 支付功能测试 */}
-          <PaymentTester 
-            paymentConfig={appConfig?.paymentPlatform} 
-            isPlatform={true} 
+          <PaymentTester
+            paymentConfig={appConfig?.paymentPlatform}
+            isPlatform={true}
           />
         </Form>
       )}

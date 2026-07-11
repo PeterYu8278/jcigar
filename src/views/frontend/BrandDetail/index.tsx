@@ -1,7 +1,7 @@
 // 品牌详情页面组件
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Card, Typography, Button, Space, Rate, Avatar, Spin, message, Modal } from 'antd'
+import { Card, Typography, Button, Space, Rate, Avatar, Spin, Modal } from 'antd'
 import { 
   ArrowLeftOutlined, 
   ShoppingCartOutlined,
@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import { getBrandById, getCigarsByBrand } from '../../../services/firebase/firestore'
+import { useFirestoreDoc, useFirestoreQuery } from '../../../hooks/useFirestoreQuery'
 import { useCartStore } from '../../../store/modules'
 import { CartModal } from '../../../components/common/CartModal'
 import { getModalThemeStyles } from '../../../config/modalTheme'
@@ -24,9 +25,15 @@ const BrandDetail: React.FC = () => {
   const { t } = useTranslation()
   const { brandId } = useParams<{ brandId: string }>()
   
-  const [brand, setBrand] = useState<Brand | null>(null)
-  const [products, setProducts] = useState<Cigar[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: brand, loading: brandLoading } = useFirestoreDoc(
+    () => brandId ? getBrandById(brandId) : Promise.resolve(null),
+    [brandId]
+  )
+  const { data: products, loading: productsLoading } = useFirestoreQuery(
+    () => brand ? getCigarsByBrand(brand.name, { limit: 50 }) : Promise.resolve([]),
+    [brand?.name]
+  )
+  const loading = brandLoading || productsLoading
   const [cartModalVisible, setCartModalVisible] = useState(false)
   const [confirmRemove, setConfirmRemove] = useState<{
     visible: boolean
@@ -41,36 +48,6 @@ const BrandDetail: React.FC = () => {
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
   
 
-
-  useEffect(() => {
-    const loadBrandData = async () => {
-      if (!brandId) return
-      
-      setLoading(true)
-      try {
-        const brandData = await getBrandById(brandId)
-        
-        if (brandData) {
-          setBrand(brandData)
-          // 如果获取到品牌数据，使用品牌名称查询产品
-          const cigarsData = await getCigarsByBrand(brandData.name)
-          setProducts(cigarsData)
-        } else {
-          // 如果品牌不存在，设置为null以显示错误页面
-          setBrand(null)
-          setProducts([])
-        }
-      } catch (error) {
-        message.error(t('brand.loadFailed'))
-        setBrand(null)
-        setProducts([])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadBrandData()
-  }, [brandId])
 
   // 计算购物车总数量和总价
   const cartItemCount = Object.values(quantities).reduce((sum, qty) => sum + qty, 0)

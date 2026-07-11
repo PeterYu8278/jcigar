@@ -3,6 +3,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useDetailDrawer } from '../../../hooks/useDetailDrawer';
+import { useFirestoreQuery } from '../../../hooks/useFirestoreQuery';
 import { useTranslation } from 'react-i18next';
 import {
   Table,
@@ -94,8 +96,6 @@ function getMostFrequentValue(stats: Record<string, number>): { value: string; c
 
 export const CigarDatabase: React.FC = () => {
   const { t } = useTranslation();
-  const [cigars, setCigars] = useState<CigarDatabaseRecord[]>([]);
-  const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [strengthFilter, setStrengthFilter] = useState<string | undefined>();
   const [pagination, setPagination] = useState({
@@ -108,116 +108,99 @@ export const CigarDatabase: React.FC = () => {
     totalRecognitions: 0,
     avgRecognitionsPerCigar: 0
   });
-  const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [selectedCigar, setSelectedCigar] = useState<CigarDatabaseRecord | null>(null);
+  const [searchMode, setSearchMode] = useState(false);
+  const [searchResults, setSearchResults] = useState<CigarDatabaseRecord[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const { item: selectedCigar, open: detailModalVisible, openDrawer, closeDrawer } = useDetailDrawer<CigarDatabaseRecord>();
 
-  // 加载数据
-  const loadCigars = async (page: number = 1) => {
-    setLoading(true);
-    try {
-      const cigarsRef = collection(db, GLOBAL_COLLECTIONS.CIGAR_DATABASE);
-      
-      // 构建查询
-      let q = query(
-        cigarsRef,
-        orderBy('createdAt', 'desc'),
-        firestoreLimit(pagination.pageSize)
-      );
+  // 纯 fetch 函数，返回 CigarDatabaseRecord[]
+  const fetchCigarsData = async (): Promise<CigarDatabaseRecord[]> => {
+    const cigarsRef = collection(db, GLOBAL_COLLECTIONS.CIGAR_DATABASE);
 
-      // 注意：cigar_database 中的 strengthStats 是对象，无法直接用 where 查询
-      // 搜索功能通过前端过滤实现
+    // 注意：cigar_database 中的 strengthStats 是对象，无法直接用 where 查询
+    // 搜索功能通过前端过滤实现
+    const q = query(
+      cigarsRef,
+      orderBy('createdAt', 'desc'),
+      firestoreLimit(pagination.pageSize)
+    );
 
-      const snapshot = await getDocs(q);
-      const cigarList: CigarDatabaseRecord[] = [];
+    const snapshot = await getDocs(q);
+    const cigarList: CigarDatabaseRecord[] = [];
 
-      snapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        cigarList.push({
-          id: docSnap.id,
-          productName: data.productName || '',
-          normalizedName: data.normalizedName || '',
-          brandStats: data.brandStats || {},
-          originStats: data.originStats || {},
-          strengthStats: data.strengthStats || {},
-          wrapperStats: data.wrapperStats || {},
-          binderStats: data.binderStats || {},
-          fillerStats: data.fillerStats || {},
-          flavorProfileStats: data.flavorProfileStats || {},
-          footTasteNotesStats: data.footTasteNotesStats || {},
-          bodyTasteNotesStats: data.bodyTasteNotesStats || {},
-          headTasteNotesStats: data.headTasteNotesStats || {},
-          ratingSum: data.ratingSum || 0,
-          ratingCount: data.ratingCount || 0,
-          description: data.description || '',
-          descriptionConfidence: data.descriptionConfidence,
-          descriptionUpdatedAt: data.descriptionUpdatedAt,
-          totalRecognitions: data.totalRecognitions || 0,
-          lastRecognizedAt: data.lastRecognizedAt,
-          createdAt: data.createdAt,
-          updatedAt: data.updatedAt,
-          // 🆕 贡献者信息
-          contributors: data.contributors || {}
-        });
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      cigarList.push({
+        id: docSnap.id,
+        productName: data.productName || '',
+        normalizedName: data.normalizedName || '',
+        brandStats: data.brandStats || {},
+        originStats: data.originStats || {},
+        strengthStats: data.strengthStats || {},
+        wrapperStats: data.wrapperStats || {},
+        binderStats: data.binderStats || {},
+        fillerStats: data.fillerStats || {},
+        flavorProfileStats: data.flavorProfileStats || {},
+        footTasteNotesStats: data.footTasteNotesStats || {},
+        bodyTasteNotesStats: data.bodyTasteNotesStats || {},
+        headTasteNotesStats: data.headTasteNotesStats || {},
+        ratingSum: data.ratingSum || 0,
+        ratingCount: data.ratingCount || 0,
+        description: data.description || '',
+        descriptionConfidence: data.descriptionConfidence,
+        descriptionUpdatedAt: data.descriptionUpdatedAt,
+        totalRecognitions: data.totalRecognitions || 0,
+        lastRecognizedAt: data.lastRecognizedAt,
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+        // 🆕 贡献者信息
+        contributors: data.contributors || {}
       });
+    });
 
-      setCigars(cigarList);
-      setPagination(prev => ({
-        ...prev,
-        current: page,
-        total: cigarList.length // 注意：Firestore 不提供总数，这里简化处理
-      }));
-
-      // 加载统计信息
-      await loadStats();
-    } catch (error) {
-      message.error(t('cigarDatabase.details.loadFailed'));
-    } finally {
-      setLoading(false);
-    }
+    return cigarList;
   };
 
-  // 加载统计信息
-  const loadStats = async () => {
-    try {
-      const cigarsRef = collection(db, GLOBAL_COLLECTIONS.CIGAR_DATABASE);
-      
-      // 获取所有记录计算统计
-      const allSnapshot = await getDocs(query(cigarsRef, firestoreLimit(1000)));
-      const total = allSnapshot.size;
-      
-      let totalRecognitions = 0;
-      allSnapshot.forEach(doc => {
-        const data = doc.data();
-        totalRecognitions += (data.totalRecognitions || 0);
-      });
+  const { data: fetchedCigars = [], loading: fetchLoading, refresh } = useFirestoreQuery(
+    fetchCigarsData,
+    [strengthFilter]
+  );
 
-      setStats({
-        total,
-        totalRecognitions,
-        avgRecognitionsPerCigar: total > 0 ? Math.round(totalRecognitions / total) : 0
-      });
-    } catch (error) {
-      // Silently fail
-    }
-  };
-
+  // fetchedCigars 变化时更新分页总数并计算统计（从已获取数据派生，避免额外 Firestore 查询）
   useEffect(() => {
-    loadCigars();
-  }, [strengthFilter]);
+    setPagination(prev => ({
+      ...prev,
+      total: fetchedCigars.length
+    }));
+    const total = fetchedCigars.length;
+    const totalRecognitions = fetchedCigars.reduce((sum, c) => sum + (c.totalRecognitions || 0), 0);
+    setStats({
+      total,
+      totalRecognitions,
+      avgRecognitionsPerCigar: total > 0 ? Math.round(totalRecognitions / total) : 0
+    });
+  }, [fetchedCigars]);
+
+  // 合并后的展示数据与 loading
+  const cigars = searchMode ? searchResults : fetchedCigars;
+  const loading = fetchLoading || searchLoading;
 
   // 搜索
   const handleSearch = async (value: string) => {
     setSearchText(value);
     if (!value.trim()) {
-      loadCigars();
+      setSearchMode(false);
+      setSearchResults([]);
       return;
     }
 
-    setLoading(true);
+    setSearchMode(true);
+    setSearchLoading(true);
     try {
       const cigarsRef = collection(db, GLOBAL_COLLECTIONS.CIGAR_DATABASE);
-      const snapshot = await getDocs(cigarsRef);
-      
+      // TODO: use Algolia/Typesense for proper text search
+      const snapshot = await getDocs(query(cigarsRef, firestoreLimit(1000)));
+
       const filtered = snapshot.docs
         .map(docSnap => {
           const data = docSnap.data();
@@ -246,15 +229,15 @@ export const CigarDatabase: React.FC = () => {
             updatedAt: data.updatedAt
           };
         })
-        .filter(cigar => 
+        .filter(cigar =>
           cigar.productName.toLowerCase().includes(value.toLowerCase())
         );
 
-      setCigars(filtered);
+      setSearchResults(filtered);
     } catch (error) {
       message.error(t('cigarDatabase.import.parseFailed', { error: '' })); // Generic error
     } finally {
-      setLoading(false);
+      setSearchLoading(false);
     }
   };
 
@@ -263,7 +246,7 @@ export const CigarDatabase: React.FC = () => {
     try {
       await deleteDoc(doc(db, GLOBAL_COLLECTIONS.CIGAR_DATABASE, id));
       message.success(t('cigarDatabase.actions.deleteSuccess'));
-      loadCigars();
+      refresh();
     } catch (error) {
       message.error(t('cigarDatabase.actions.deleteFailed'));
     }
@@ -278,8 +261,7 @@ export const CigarDatabase: React.FC = () => {
       return;
     }
     
-    setSelectedCigar(cigar);
-    setDetailModalVisible(true);
+    openDrawer(cigar);
     console.log('[CigarDatabase] 已设置 Modal 状态为显示');
   };
   
@@ -809,7 +791,7 @@ export const CigarDatabase: React.FC = () => {
           <div>
             <div style={{ color: '#ffd700', fontWeight: 500 }}>{originResult.value}</div>
             <div style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>
-              一致性: <span style={{ color: '#ffd700' }}>{originResult.percentage.toFixed(0)}%</span>
+              {t("cigarDatabase.details.consistency")}: <span style={{ color: '#ffd700' }}>{originResult.percentage.toFixed(0)}%</span>
             </div>
           </div>
         );
@@ -909,7 +891,7 @@ export const CigarDatabase: React.FC = () => {
                 e.currentTarget.style.color = '#ff4d4f';
               }}
             >
-              删除
+              {t("common.delete")}
             </Button>
           </Popconfirm>
         </Space>
@@ -1061,7 +1043,7 @@ export const CigarDatabase: React.FC = () => {
             letterSpacing: '0.5px'
           }}>
             <DatabaseOutlined style={{ fontSize: '18px', color: '#ffd700' }} />
-            AI识别数据库
+            {t("cigarDatabase.aiDatabaseTitle")}
             <span style={{ 
               fontSize: '12px', 
               color: '#999',
@@ -1073,7 +1055,7 @@ export const CigarDatabase: React.FC = () => {
           </div>
           <Space>
             <Search
-              placeholder="搜索产品名称"
+              placeholder={t("cigarDatabase.searchPlaceholder")}
               allowClear
               style={{ width: 300 }}
               onSearch={handleSearch}
@@ -1181,8 +1163,8 @@ export const CigarDatabase: React.FC = () => {
           </div>
         }
         open={detailModalVisible}
-        onOk={() => setDetailModalVisible(false)}
-        onCancel={() => setDetailModalVisible(false)}
+        onOk={closeDrawer}
+        onCancel={closeDrawer}
         width={900}
         centered
         className="cigar-detail-modal"
@@ -1215,7 +1197,7 @@ export const CigarDatabase: React.FC = () => {
         footer={[
           <Button 
             key="close" 
-            onClick={() => setDetailModalVisible(false)}
+            onClick={closeDrawer}
             style={{
               background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
               border: 'none',

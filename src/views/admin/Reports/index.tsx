@@ -74,7 +74,7 @@ const AdminReports: React.FC = () => {
           return new Date(d1).getTime() - new Date(d2).getTime()
         }).slice(0, currentPlan.maxMembers)
         
-        message.info(`Report limited to ${currentPlan.maxMembers} members based on your ${currentPlan.name} plan.`)
+        message.info(t('reports.memberLimitInfo', { maxMembers: currentPlan.maxMembers, name: currentPlan.name }))
       }
 
       const exportData = exportUsers.map(u => ({
@@ -100,11 +100,15 @@ const AdminReports: React.FC = () => {
   const exportInventory = async () => {
     setExporting('inventory')
     try {
+      const [startDate, endDate] = inventoryRange
+        ? [inventoryRange[0]?.toDate(), inventoryRange[1]?.toDate()]
+        : [null, null]
+
       const [cigars, movements, inOrders, outOrders] = await Promise.all([
-        getCigars(),
-        getAllInventoryMovements(),
-        getAllInboundOrders(),
-        getAllOutboundOrders()
+        getCigars({ limit: 2000 }),
+        getAllInventoryMovements(undefined, { startDate, endDate, limit: 5000 }),
+        getAllInboundOrders(undefined, { startDate, endDate, limit: 2000 }),
+        getAllOutboundOrders(undefined, { startDate, endDate, limit: 2000 })
       ])
 
       const cigarMap = new Map(cigars.map(c => [c.id, c]))
@@ -236,10 +240,14 @@ const AdminReports: React.FC = () => {
   const exportOrders = async () => {
     setExporting('orders')
     try {
+      const [startDate, endDate] = orderRange
+        ? [orderRange[0]?.toDate(), orderRange[1]?.toDate()]
+        : [null, null]
+
       const [orders, cigars, users] = await Promise.all([
-        getAllOrders(),
-        getCigars(),
-        getUsers()
+        getAllOrders(undefined, { startDate, endDate, limit: 5000 }),
+        getCigars({ limit: 2000 }),
+        getUsers({ limit: 500 })
       ])
       
       const cigarMap = new Map(cigars.map(c => [c.id, c.name]))
@@ -346,7 +354,7 @@ const AdminReports: React.FC = () => {
       key: 'members',
       title: t('navigation.users'),
       icon: <TeamOutlined style={{ fontSize: 32, color: '#f4af25' }} />,
-      description: 'Export all member records including points, level and contact info.',
+      description: t('reports.membersExportDesc'),
       action: exportMembers,
       color: '#f4af25'
     },
@@ -354,7 +362,7 @@ const AdminReports: React.FC = () => {
       key: 'inventory',
       title: t('navigation.inventory'),
       icon: <DatabaseOutlined style={{ fontSize: 32, color: '#52c41a' }} />,
-      description: 'Export inventory movements (Sheet 1) and opening stock levels (Sheet 2). Optionally filter movements by date range.',
+      description: t('reports.inventoryExportDesc'),
       action: exportInventory,
       hasFilter: true,
       range: inventoryRange,
@@ -365,7 +373,7 @@ const AdminReports: React.FC = () => {
       key: 'orders',
       title: t('navigation.orders'),
       icon: <ShoppingCartOutlined style={{ fontSize: 32, color: '#1890ff' }} />,
-      description: 'Export sales orders with customer info, amount and status.',
+      description: t('reports.ordersExportDesc'),
       action: exportOrders,
       hasFilter: true,
       range: orderRange,
@@ -376,7 +384,7 @@ const AdminReports: React.FC = () => {
       key: 'events',
       title: t('navigation.events'),
       icon: <CalendarOutlined style={{ fontSize: 32, color: '#eb2f96' }} />,
-      description: 'Export event history, participant counts and revenue.',
+      description: t('reports.eventsExportDesc'),
       action: exportEvents,
       hasFilter: true,
       range: eventRange,
@@ -391,7 +399,7 @@ const AdminReports: React.FC = () => {
       label: (
         <Space>
           <FileExcelOutlined />
-          <span>Excel Reports</span>
+          <span>{t('reports.tabExcelReports')}</span>
         </Space>
       ),
       children: (
@@ -433,7 +441,7 @@ const AdminReports: React.FC = () => {
                   {card.hasFilter && (
                     <div style={{ marginBottom: 16 }}>
                       <Text style={{ color: 'rgba(255, 255, 255, 0.45)', display: 'block', fontSize: 12, marginBottom: 8 }}>
-                        DATE RANGE (OPTIONAL)
+                        {t('reports.dateRangeOptional')}
                       </Text>
                       <RangePicker 
                         className="points-config-form"
@@ -472,7 +480,7 @@ const AdminReports: React.FC = () => {
       label: (
         <Space>
           <HistoryOutlined />
-          <span>Operation Logs</span>
+          <span>{t('reports.tabOperationLogs')}</span>
         </Space>
       ),
       children: <AuditLogTab />
@@ -486,7 +494,7 @@ const AdminReports: React.FC = () => {
           <BarChartOutlined /> {t('navigation.reports')}
         </Title>
         <Paragraph style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 16 }}>
-          Generate and download detailed Excel reports or monitor system operation logs.
+          {t('reports.subtitle')}
         </Paragraph>
       </div>
 
@@ -502,7 +510,7 @@ const AdminReports: React.FC = () => {
       
       <div style={{ textAlign: 'center' }}>
         <Text style={{ color: 'rgba(255, 255, 255, 0.3)', fontSize: 12 }}>
-          © {dayjs().year()} {t('common.appName') || 'Cigar Club'}. All rights reserved. Professional Operations Portal.
+          © {dayjs().year()} {t('common.appName') || 'Cigar Club'}. {t('reports.footerSuffix')}
         </Text>
       </div>
     </div>

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Table, Tag, Space, DatePicker, Select, Input, Card, Button, Tooltip, Modal } from 'antd';
-import { 
-  SearchOutlined, 
-  ReloadOutlined, 
+import {
+  SearchOutlined,
+  ReloadOutlined,
   InfoCircleOutlined,
   UserOutlined,
   SolutionOutlined,
@@ -15,14 +15,13 @@ import dayjs from 'dayjs';
 import { getAuditLogs } from '../../../services/firebase/auditLog';
 import type { AuditLog, AuditLogModule, AuditLogAction } from '../../../types';
 import { useTranslation } from 'react-i18next';
+import { useFirestoreQuery } from '../../../hooks/useFirestoreQuery';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
 
 const AuditLogTab: React.FC = () => {
   const { t } = useTranslation();
-  const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({
     module: undefined as AuditLogModule | undefined,
     action: undefined as AuditLogAction | undefined,
@@ -30,38 +29,27 @@ const AuditLogTab: React.FC = () => {
     operatorSearch: ''
   });
 
-  const loadLogs = async () => {
-    setLoading(true);
-    try {
-      const results = await getAuditLogs({
-        module: filters.module,
-        action: filters.action,
-        startDate: filters.dateRange ? filters.dateRange[0].toDate() : undefined,
-        endDate: filters.dateRange ? filters.dateRange[1].toDate() : undefined,
-        limitCount: 200
-      });
+  const { data: rawLogs = [], loading, refresh } = useFirestoreQuery(
+    () => getAuditLogs({
+      module: filters.module,
+      action: filters.action,
+      startDate: filters.dateRange ? filters.dateRange[0].toDate() : undefined,
+      endDate: filters.dateRange ? filters.dateRange[1].toDate() : undefined,
+      limitCount: 200
+    }),
+    [filters.module, filters.action, filters.dateRange]
+  );
 
-      // Client-side search for operator name (since Firestore prefix search is tricky)
-      let filteredResults = results;
-      if (filters.operatorSearch) {
+  // Client-side search for operator name (since Firestore prefix search is tricky)
+  const logs = filters.operatorSearch
+    ? rawLogs.filter(log => {
         const search = filters.operatorSearch.toLowerCase();
-        filteredResults = results.filter(log => 
-          log.operatorName.toLowerCase().includes(search) || 
+        return (
+          log.operatorName.toLowerCase().includes(search) ||
           log.description.toLowerCase().includes(search)
         );
-      }
-
-      setLogs(filteredResults);
-    } catch (error) {
-      console.error('Failed to load audit logs:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadLogs();
-  }, [filters.module, filters.action, filters.dateRange]);
+      })
+    : rawLogs;
 
   const getModuleIcon = (module: AuditLogModule) => {
     switch (module) {
@@ -77,16 +65,16 @@ const AuditLogTab: React.FC = () => {
 
   const getActionTag = (action: AuditLogAction) => {
     switch (action) {
-      case 'create': return <Tag color="green">CREATE</Tag>;
-      case 'update': return <Tag color="blue">UPDATE</Tag>;
-      case 'delete': return <Tag color="red">DELETE</Tag>;
-      default: return <Tag color="default">OTHER</Tag>;
+      case 'create': return <Tag color="green">{t('reports.actionCreate')}</Tag>;
+      case 'update': return <Tag color="blue">{t('reports.actionUpdate')}</Tag>;
+      case 'delete': return <Tag color="red">{t('reports.actionDelete')}</Tag>;
+      default: return <Tag color="default">{t('reports.actionOther')}</Tag>;
     }
   };
 
   const columns = [
     {
-      title: 'Timestamp',
+      title: t('reports.colTimestamp'),
       dataIndex: 'timestamp',
       key: 'timestamp',
       width: 180,
@@ -94,7 +82,7 @@ const AuditLogTab: React.FC = () => {
       sorter: (a: AuditLog, b: AuditLog) => a.timestamp.getTime() - b.timestamp.getTime(),
     },
     {
-      title: 'Operator',
+      title: t('reports.colOperator'),
       dataIndex: 'operatorName',
       key: 'operatorName',
       width: 150,
@@ -106,7 +94,7 @@ const AuditLogTab: React.FC = () => {
       ),
     },
     {
-      title: 'Module',
+      title: t('reports.colModule'),
       dataIndex: 'module',
       key: 'module',
       width: 120,
@@ -118,29 +106,29 @@ const AuditLogTab: React.FC = () => {
       ),
     },
     {
-      title: 'Action',
+      title: t('reports.colAction'),
       dataIndex: 'action',
       key: 'action',
       width: 100,
       render: (action: AuditLogAction) => getActionTag(action),
     },
     {
-      title: 'Description',
+      title: t('common.description'),
       dataIndex: 'description',
       key: 'description',
       render: (text: string) => <span style={{ color: '#EAEAEA' }}>{text}</span>,
     },
     {
-      title: 'Details',
+      title: t('reports.colDetails'),
       key: 'details',
       width: 80,
       render: (_: any, record: AuditLog) => record.details ? (
-        <Tooltip title="View JSON Details">
+        <Tooltip title={t('reports.viewJsonDetails')}>
           <Button 
             type="text" 
             icon={<InfoCircleOutlined />} 
             onClick={() => Modal.info({
-              title: 'Operation Details',
+              title: t('reports.operationDetails'),
               width: 600,
               content: (
                 <pre style={{ 
@@ -176,43 +164,43 @@ const AuditLogTab: React.FC = () => {
       >
         <Space wrap size="middle">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>MODULE</span>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{t('reports.filterModule')}</span>
             <Select 
               allowClear
-              placeholder="All Modules" 
+              placeholder={t('reports.allModules')}
               style={{ width: 140 }}
               value={filters.module}
               onChange={val => setFilters(prev => ({ ...prev, module: val }))}
               className="points-config-form"
             >
-              <Option value="users">Users</Option>
-              <Option value="events">Events</Option>
-              <Option value="orders">Orders</Option>
-              <Option value="inventory">Inventory</Option>
-              <Option value="transactions">Transactions</Option>
-              <Option value="system">System</Option>
+              <Option value="users">{t('reports.moduleUsers')}</Option>
+              <Option value="events">{t('reports.moduleEvents')}</Option>
+              <Option value="orders">{t('reports.moduleOrders')}</Option>
+              <Option value="inventory">{t('reports.moduleInventory')}</Option>
+              <Option value="transactions">{t('reports.moduleTransactions')}</Option>
+              <Option value="system">{t('reports.moduleSystem')}</Option>
             </Select>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>ACTION</span>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{t('reports.filterAction')}</span>
             <Select 
               allowClear
-              placeholder="All Actions" 
+              placeholder={t('reports.allActions')}
               style={{ width: 120 }}
               value={filters.action}
               onChange={val => setFilters(prev => ({ ...prev, action: val }))}
               className="points-config-form"
             >
-              <Option value="create">Create</Option>
-              <Option value="update">Update</Option>
-              <Option value="delete">Delete</Option>
-              <Option value="other">Other</Option>
+              <Option value="create">{t('reports.actionCreate')}</Option>
+              <Option value="update">{t('reports.actionUpdate')}</Option>
+              <Option value="delete">{t('reports.actionDelete')}</Option>
+              <Option value="other">{t('reports.actionOther')}</Option>
             </Select>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>DATE RANGE</span>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{t('reports.filterDateRange')}</span>
             <RangePicker 
               style={{ width: 280 }}
               value={filters.dateRange}
@@ -222,14 +210,14 @@ const AuditLogTab: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>SEARCH</span>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{t('common.search')}</span>
             <Input 
-              placeholder="Operator / Desc..." 
+              placeholder={t('reports.operatorSearchPlaceholder')}
               prefix={<SearchOutlined />} 
               style={{ width: 200 }}
               value={filters.operatorSearch}
               onChange={e => setFilters(prev => ({ ...prev, operatorSearch: e.target.value }))}
-              onPressEnter={loadLogs}
+              onPressEnter={refresh}
               className="points-config-form"
             />
           </div>
@@ -237,7 +225,7 @@ const AuditLogTab: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'flex-end', height: 48 }}>
             <Button 
               icon={<ReloadOutlined />} 
-              onClick={loadLogs}
+              onClick={refresh}
               style={{ background: 'transparent', color: '#FDE08D', borderColor: '#C48D3A' }}
             />
           </div>

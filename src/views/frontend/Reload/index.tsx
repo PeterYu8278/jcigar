@@ -10,93 +10,72 @@ import { createBill } from '../../../services/billplz';
 import { useNavigate } from 'react-router-dom';
 import type { ReloadRecord, Store, AppConfig } from '../../../types';
 import dayjs from 'dayjs';
+import { useFirestoreQuery, useFirestoreDoc } from '../../../hooks/useFirestoreQuery';
+import { useTranslation } from 'react-i18next';
 
 const { Title, Text } = Typography;
 
 const ReloadPage: React.FC = () => {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const { modal } = App.useApp(); // 使用 App.useApp() 获取 modal 实例以支持 React 19
   const [loading, setLoading] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
-  const [pendingRecord, setPendingRecord] = useState<ReloadRecord | null>(null);
-  const [checkingPending, setCheckingPending] = useState(true);
-  const [stores, setStores] = useState<Store[]>([]);
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
-  const [paymentConfig, setPaymentConfig] = useState<AppConfig['payment'] | null>(null);
 
   const amountOptions = [100, 200, 300, 500, 1000];
 
-  useEffect(() => {
-    const fetchStores = async () => {
-      try {
-        const data = await getAllStores();
-        const activeStores = data.filter(s => s.status === 'active');
-        setStores(activeStores);
-        if (activeStores.length > 0) {
-          setSelectedStoreId(activeStores[0].id);
-        }
-      } catch (error) {
-        console.error('Failed to load stores', error);
-      }
-    };
-    fetchStores();
+  // stores
+  const { data: allStores } = useFirestoreQuery(getAllStores);
+  const stores = allStores.filter(s => s.status === 'active');
 
-    // 加载支付配置
-    const fetchConfig = async () => {
-      const config = await getAppConfig();
-      if (config?.payment) {
-        setPaymentConfig(config.payment);
-      }
-    };
-    fetchConfig();
-  }, []);
+  // 初始化默认选中第一家门店
+  useEffect(() => {
+    if (stores.length > 0 && !selectedStoreId) {
+      setSelectedStoreId(stores[0].id);
+    }
+  }, [stores, selectedStoreId]);
+
+  // 支付配置
+  const { data: appConfig } = useFirestoreDoc(getAppConfig);
+  const paymentConfig = appConfig?.payment ?? null;
 
   // 检查是否有未验证的充值记录
-  useEffect(() => {
-    const checkPendingRecord = async () => {
-      if (!user?.id) {
-        setCheckingPending(false);
-        return;
-      }
-
+  const { data: pendingRecord, loading: checkingPending, refresh: refreshPendingRecord } = useFirestoreDoc(
+    async () => {
+      if (!user?.id) return null;
       try {
-        // 直接查询 pending 状态的记录
-        const pending = await getUserPendingReloadRecord(user.id);
-        setPendingRecord(pending);
+        return await getUserPendingReloadRecord(user.id);
       } catch (error) {
         console.error('[ReloadPage] 检查充值记录失败:', error);
-        // 如果直接查询失败，尝试从所有记录中查找
         try {
           const records = await getUserReloadRecords(user.id, 10);
-          const pending = records.find(r => r.status === 'pending');
-          setPendingRecord(pending || null);
+          return records.find(r => r.status === 'pending') ?? null;
         } catch (fallbackError) {
           console.error('[ReloadPage] 备用查询也失败:', fallbackError);
+          return null;
         }
-      } finally {
-        setCheckingPending(false);
       }
-    };
-
-    checkPendingRecord();
-  }, [user?.id]);
+    },
+    [user?.id]
+  );
 
   const handleReload = async (amount: number) => {
     if (!user?.id) {
-      message.warning('请先登录');
+      message.warning(t('auth.pleaseLogin'));
       navigate('/login');
       return;
     }
 
     // 如果有未验证的充值记录，不允许再次提交
     if (pendingRecord) {
-      message.warning('您已有待验证的充值请求，请等待管理员处理后再提交新的请求');
+      message.warning(t('reload.pendingReloadExists'));
       return;
     }
 
     if (!selectedStoreId) {
-      message.warning('请选择门店');
+      message.warning(t('reload.pleaseSelectStore'));
       return;
     }
 
@@ -122,13 +101,13 @@ const ReloadPage: React.FC = () => {
             billResponse.data.id
           );
           
-          message.loading('正在跳转到支付页面...', 2);
+          message.loading(t('common.redirectingToPayment'), 2);
           setTimeout(() => {
             window.location.href = billResponse.data!.url;
           }, 1000);
           return;
         } else {
-          message.error(billResponse.error || '无法初始化在线支付');
+          message.error(billResponse.error || t('common.paymentInitFailed'));
           setLoading(false);
           return;
         }
@@ -137,16 +116,15 @@ const ReloadPage: React.FC = () => {
       // 传统模式：提交请求等待管理员验证
       const result = await createReloadRecord(user.id, amount, user.displayName, selectedStoreId);
       if (result.success) {
-        message.success(`充值请求已提交（${amount} RM），等待管理员验证`);
+        message.success(t('reload.reloadRequestSubmitted', { amount }));
         setSelectedAmount(null);
-        const pending = await getUserPendingReloadRecord(user.id);
-        setPendingRecord(pending);
+        refreshPendingRecord();
         navigate('/');
       } else {
-        message.error(result.error || '提交充值请求失败');
+        message.error(result.error || t('reload.submitReloadFailed'));
       }
     } catch (error: any) {
-      message.error(error.message || '提交充值请求失败');
+      message.error(error.message || t('reload.submitReloadFailed'));
     } finally {
       setLoading(false);
     }
@@ -159,10 +137,10 @@ const ReloadPage: React.FC = () => {
     }
 
     modal.confirm({
-      title: '确认撤销充值请求',
-      content: `确定要撤销 ${pendingRecord.requestedAmount} RM 的充值请求吗？撤销后将无法恢复。`,
-      okText: '确认撤销',
-      cancelText: '取消',
+      title: t('reload.confirmCancelTitle'),
+      content: t('reload.confirmCancelContent', { pendingRecord }),
+      okText: t('reload.confirmCancel'),
+      cancelText: t('common.cancel'),
       okButtonProps: {
         danger: true
       },
@@ -171,14 +149,14 @@ const ReloadPage: React.FC = () => {
         try {
           const result = await cancelReloadRecord(pendingRecord.id, user.id);
           if (result.success) {
-            message.success('充值请求已撤销');
-            setPendingRecord(null);
+            message.success(t('reload.reloadCancelled'));
+            refreshPendingRecord();
           } else {
-            message.error(result.error || '撤销充值请求失败');
+            message.error(result.error || t('reload.cancelReloadFailed'));
           }
         } catch (error: any) {
           console.error('[ReloadPage] 撤销失败:', error);
-          message.error(error.message || '撤销充值请求失败');
+          message.error(error.message || t('reload.cancelReloadFailed'));
         } finally {
           setLoading(false);
         }
@@ -196,7 +174,7 @@ const ReloadPage: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'center'
       }}>
-        <Text style={{ color: '#c0c0c0', fontSize: 16 }}>请先登录</Text>
+        <Text style={{ color: '#c0c0c0', fontSize: 16 }}>{t('auth.pleaseLogin')}</Text>
       </div>
     );
   }
@@ -247,19 +225,19 @@ const ReloadPage: React.FC = () => {
             }}>
               <WalletOutlined style={{ marginRight: 8 }} /> RELOAD
             </Title>
-            <Text style={{ 
-              fontSize: 14, 
-              display: 'block', 
+            <Text style={{
+              fontSize: 14,
+              display: 'block',
               marginTop: 12,
               color: '#c0c0c0'
             }}>
-              当前余额: <Text strong style={{ 
-                color: '#FFD700', 
+              {t('reload.currentBalance')} <Text strong style={{
+                color: '#FFD700',
                 fontSize: 18,
                 fontWeight: 700,
                 textShadow: '0 2px 4px rgba(255, 215, 0, 0.3)'
               }}>
-                {currentPoints} 积分
+                {currentPoints} {t('visitTimer.points')}
               </Text>
             </Text>
           </div>
@@ -282,21 +260,21 @@ const ReloadPage: React.FC = () => {
                 color: '#FFD700',
                 marginBottom: 12
               }}>
-                待验证的充值请求
+                {t('reload.pendingReloadTitle')}
               </Title>
               <div style={{ marginBottom: 16 }}>
                 <Text style={{ color: '#c0c0c0', fontSize: 16, display: 'block', marginBottom: 8 }}>
-                  充值金额: <Text strong style={{ color: '#FFD700', fontSize: 20 }}>
+                  {t('reload.reloadAmount')} <Text strong style={{ color: '#FFD700', fontSize: 20 }}>
                     {pendingRecord.requestedAmount} RM
                   </Text>
                 </Text>
                 <Text style={{ color: '#c0c0c0', fontSize: 14, display: 'block', marginBottom: 8 }}>
-                  预计获得积分: <Text strong style={{ color: '#FFD700' }}>
-                    {pendingRecord.pointsEquivalent} 积分
+                  {t('reload.estimatedPoints')} <Text strong style={{ color: '#FFD700' }}>
+                    {pendingRecord.pointsEquivalent} {t('visitTimer.points')}
                   </Text>
                 </Text>
                 <Text style={{ color: '#999999', fontSize: 12, display: 'block' }}>
-                  提交时间: {dayjs(pendingRecord.createdAt).format('YYYY-MM-DD HH:mm:ss')}
+                  {t('reload.submittedAt')} {dayjs(pendingRecord.createdAt).format('YYYY-MM-DD HH:mm:ss')}
                 </Text>
               </div>
               <Tag color="orange" style={{ 
@@ -306,7 +284,7 @@ const ReloadPage: React.FC = () => {
                 margin: 0,
                 display: 'inline-block'
               }}>
-                等待管理员验证
+                {t('reload.waitingAdminVerification')}
               </Tag>
               <div style={{ marginTop: 20 }}>
                 <Button
@@ -324,7 +302,7 @@ const ReloadPage: React.FC = () => {
                     color: '#ff4d4f'
                   }}
                 >
-                  撤销充值请求
+                  {t('reload.cancelReloadBtn')}
                 </Button>
               </div>
               <div style={{ marginTop: 16 }}>
@@ -333,7 +311,7 @@ const ReloadPage: React.FC = () => {
                   color: '#999999',
                   display: 'block'
                 }}>
-                  * 请等待管理员验证后，积分将自动到账
+                  {t('reload.verificationNote1')}
                 </Text>
                 <Text style={{ 
                   fontSize: 12,
@@ -341,7 +319,7 @@ const ReloadPage: React.FC = () => {
                   display: 'block',
                   marginTop: 4
                 }}>
-                  * 验证完成后，您可以提交新的充值请求
+                  {t('reload.verificationNote2')}
                 </Text>
               </div>
             </div>
@@ -350,7 +328,7 @@ const ReloadPage: React.FC = () => {
               {/* 门店选择 */}
               <div style={{ marginBottom: 24 }}>
                 <Text style={{ color: '#c0c0c0', display: 'block', marginBottom: 8, fontSize: 14 }}>
-                  选择充值门店:
+                  {t('reload.selectStore')}
                 </Text>
                 <Select
                   value={selectedStoreId}
@@ -403,7 +381,7 @@ const ReloadPage: React.FC = () => {
                     {amount} RM
                     {selectedAmount === amount && (
                       <Text style={{ marginLeft: 8, fontSize: 14, color: '#111' }}>
-                        = {amount} 积分
+                        = {amount} {t('visitTimer.points')}
                       </Text>
                     )}
                   </Button>
@@ -440,7 +418,7 @@ const ReloadPage: React.FC = () => {
                     e.currentTarget.style.transform = 'translateY(0)';
                   }}
                 >
-                  确认充值 {selectedAmount} RM {paymentConfig?.billplz?.enabled ? '(在线支付)' : ''}
+                  {t('reload.confirmReloadBtn', { selectedAmount })} {paymentConfig?.billplz?.enabled ? t('reload.onlinePaymentLabel') : ''}
                 </Button>
               )}
 
@@ -450,7 +428,7 @@ const ReloadPage: React.FC = () => {
                   fontSize: 12,
                   color: '#999999'
                 }}>
-                  * 充值请求提交后，请等待管理员验证到账
+                  {t('reload.submitNote')}
                 </Text>
               </div>
             </>

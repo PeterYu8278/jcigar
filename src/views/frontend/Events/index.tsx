@@ -1,5 +1,5 @@
 // 活动页面
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { Row, Col, Card, Typography, Button, Tag, Space, Avatar, message } from 'antd'
 import {
   CalendarOutlined,
@@ -13,6 +13,7 @@ import {
 const { Title, Paragraph, Text } = Typography
 
 import { getEvents, registerForEvent, unregisterFromEvent } from '../../../services/firebase/firestore'
+import { useFirestoreQuery } from '../../../hooks/useFirestoreQuery'
 import { useAuthStore } from '../../../store/modules/auth'
 import type { Event } from '../../../types'
 import { useTranslation } from 'react-i18next'
@@ -21,17 +22,9 @@ const Events: React.FC = () => {
   const { user } = useAuthStore()
   const { t, i18n } = useTranslation()
   const isMobile = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 991px)').matches : false
-  const [events, setEvents] = useState<Event[]>([])
+  const { data: allEvents, refresh } = useFirestoreQuery(getEvents)
+  const events = (allEvents ?? []).filter(event => !event.isPrivate)
   const [loadingId, setLoadingId] = useState<string | null>(null)
-
-  useEffect(() => {
-    ; (async () => {
-      const list = await getEvents()
-      // 过滤掉私人活动
-      const publicEvents = list.filter(event => !event.isPrivate)
-      setEvents(publicEvents)
-    })()
-  }, [])
 
   // 获取所有已完成的活动，用于计算社交关系
   const completedEvents = useMemo(() => {
@@ -302,10 +295,7 @@ const Events: React.FC = () => {
                         : await registerForEvent(event.id, user.id)
                       if (res.success) {
                         message.success(isRegistered ? t('events.unregistered') : t('events.registered'))
-                        const updated = await getEvents()
-                        // 过滤掉私人活动
-                        const publicEvents = updated.filter(e => !e.isPrivate)
-                        setEvents(publicEvents)
+                        refresh()
                       } else {
                         message.error(t('messages.operationFailed'))
                       }

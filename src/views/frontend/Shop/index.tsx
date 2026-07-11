@@ -1,9 +1,10 @@
 // 商品导航页面
 import React, { useEffect, useState, useRef } from 'react'
+import { useFirestoreQuery } from '../../../hooks/useFirestoreQuery'
 import { Input, Slider, Button, Typography, Modal, Tag, Radio, Divider, message, Select } from 'antd'
 import { SearchOutlined, ArrowLeftOutlined, ReloadOutlined } from '@ant-design/icons'
 import type { Cigar, Brand, Event } from '../../../types'
-import { getCigars, getBrands, getEvents } from '../../../services/firebase/firestore'
+import { getCigars, getBrands, getUpcomingEvents } from '../../../services/firebase/firestore'
 import { useCartStore } from '../../../store/modules'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -22,8 +23,9 @@ const DEFAULT_CIGAR_IMAGE = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhla
 const Shop: React.FC = () => {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const [cigars, setCigars] = useState<Cigar[]>([])
-  const [brands, setBrands] = useState<Brand[]>([])
+  const { data: cigars = [], loading: cigarsLoading } = useFirestoreQuery(() => getCigars({ limit: 100 }))
+  const { data: brands = [], loading: brandsLoading } = useFirestoreQuery(() => getBrands({ limit: 200 }))
+  const { data: allEvents = [] } = useFirestoreQuery(getUpcomingEvents)
   const [confirmRemove, setConfirmRemove] = useState<{
     visible: boolean
     itemId: string | null
@@ -33,6 +35,7 @@ const Shop: React.FC = () => {
     itemId: null,
     itemName: null
   })
+  const dataLoading = cigarsLoading || brandsLoading
   const [loading, setLoading] = useState(false)
   const [searchKeyword, setSearchKeyword] = useState('')
   const [selectedBrand, setSelectedBrand] = useState<string>('all')
@@ -45,7 +48,12 @@ const Shop: React.FC = () => {
   const [deliveryMethod, setDeliveryMethod] = useState<'address' | 'event'>('address')
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
-  const [availableEvents, setAvailableEvents] = useState<Event[]>([])
+  const availableEvents = allEvents.filter(event => {
+    const now = new Date()
+    const isStatusValid = event.status === 'upcoming' || event.status === 'ongoing'
+    const isDeadlineValid = new Date(event.schedule.registrationDeadline) >= now
+    return isStatusValid && isDeadlineValid
+  })
   const { user } = useAuthStore()
   const { addToCart, toggleWishlist, wishlist, quantities, setQuantity, removeFromCart, clearCart } = useCartStore()
   const isMobile = typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false
@@ -60,41 +68,6 @@ const Shop: React.FC = () => {
     const displayState = translatedState.includes('address.states') ? address.province : translatedState
     return `${displayState} ${address.city || ''} ${address.district || ''} ${address.detail || ''} (${address.name || ''} ${address.phone || ''})`
   }
-
-  useEffect(() => {
-    ; (async () => {
-      setLoading(true)
-      try {
-        const [cigarsData, brandsData] = await Promise.all([
-          getCigars(),
-          getBrands()
-        ])
-        setCigars(cigarsData)
-        setBrands(brandsData)
-      } finally {
-        setLoading(false)
-      }
-    })()
-  }, [])
-
-  // 加载可用活动
-  useEffect(() => {
-    ; (async () => {
-      try {
-        const events = await getEvents()
-        // 筛选出状态为 upcoming 或 ongoing 的活动，且未过报名截止日期
-        const now = new Date()
-        const available = events.filter(event => {
-          const isStatusValid = event.status === 'upcoming' || event.status === 'ongoing'
-          const isDeadlineValid = new Date(event.schedule.registrationDeadline) >= now
-          return isStatusValid && isDeadlineValid
-        })
-        setAvailableEvents(available)
-      } catch (error) {
-        console.error('加载活动失败:', error)
-      }
-    })()
-  }, [])
 
   // 自动选择默认地址
   useEffect(() => {
@@ -650,7 +623,7 @@ const Shop: React.FC = () => {
             }}
           >
 
-            {loading ? (
+            {dataLoading ? (
               <div style={{
                 textAlign: 'center',
                 padding: '48px 24px',
@@ -1254,7 +1227,7 @@ const Shop: React.FC = () => {
               }}>
                 <div style={{ fontSize: '48px', marginBottom: '16px' }}></div>
                 <div style={{ fontSize: '16px', color: '#c0c0c0' }}>
-                  {searchKeyword ? '未找到匹配的商品' : '暂无商品数据'}
+                  {searchKeyword ? t('shop.noMatchingProducts') : t('shop.noProductData')}
                 </div>
               </div>
             )}
@@ -1806,7 +1779,7 @@ const Shop: React.FC = () => {
                   marginBottom: '11px',
                   width: '100%'
                 }}>
-                  <span style={{ fontSize: '11px', color: '#c0c0c0' }}>总计：</span>
+                  <span style={{ fontSize: '11px', color: '#c0c0c0' }}>{t('shop.total')}</span>
                   <span style={{ fontSize: '17px', color: '#F4AF25', fontWeight: 'bold' }}>
                     RM {cartTotal.toFixed(2)}
                   </span>
@@ -1911,16 +1884,16 @@ const Shop: React.FC = () => {
                               setSelectedEventId(null)
                               setDeliveryMethod('address')
                               
-                              message.loading('正在跳转到支付页面...', 2);
+                              message.loading(t('common.redirectingToPayment'), 2);
                               setTimeout(() => {
                                 window.location.href = billResponse.data!.url;
                               }, 1000);
                               return;
                             } else {
-                              throw new Error(orderResult.error || '创建订单失败');
+                              throw new Error(orderResult.error || t('shop.createOrderFailed'));
                             }
                           } else {
-                            throw new Error(billResponse.error || '无法初始化在线支付');
+                            throw new Error(billResponse.error || t('common.paymentInitFailed'));
                           }
                         }
 

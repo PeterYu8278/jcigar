@@ -2,6 +2,7 @@
  * Whapi 消息发送测试组件
  */
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, Form, Input, Button, Space, message, Typography, Divider, Tag, Switch, Radio } from 'antd';
 import { SendOutlined, CheckCircleOutlined, CloseCircleOutlined, ReloadOutlined } from '@ant-design/icons';
 import { sendTextMessage, sendEventReminder, sendVipExpiryReminder, sendPasswordReset, checkWhapiHealth, formatPhoneNumber } from '../../services/whapi';
@@ -21,6 +22,7 @@ interface WhapiMessageTesterProps {
 }
 
 const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) => {
+  const { t } = useTranslation();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [healthStatus, setHealthStatus] = useState<{ success: boolean; error?: string; data?: any } | null>(null);
@@ -44,12 +46,12 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
       const result = await checkWhapiHealth();
       setHealthStatus(result);
       if (result.success) {
-        message.success('Whapi 连接正常');
+        message.success(t('whapiTester.connectionOk'));
       } else {
-        message.error(result.error || '连接失败');
+        message.error(result.error || t('whapiTester.connectionFailed'));
       }
     } catch (error: any) {
-      message.error('检查连接失败: ' + error.message);
+      message.error(t('whapiTester.checkConnectionFailed') + error.message);
       setHealthStatus({ success: false, error: error.message });
     } finally {
       setLoading(false);
@@ -96,13 +98,13 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
 
       setLastResult(result);
       if (result.success) {
-        message.success('消息发送成功');
+        message.success(t('whapiTester.messageSentSuccess'));
         form.resetFields(['customMessage', 'eventName', 'eventDate', 'eventLocation', 'expiryDate', 'resetLink']);
       } else {
-        message.error('消息发送失败: ' + result.error);
+        message.error(t('whapiTester.messageSendFailed') + result.error);
       }
     } catch (error: any) {
-      message.error('发送失败: ' + error.message);
+      message.error(t('whapiTester.sendFailed') + error.message);
       setLastResult({ success: false, error: error.message });
     } finally {
       setLoading(false);
@@ -170,7 +172,7 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <Title level={4} style={{ color: '#f8f8f8', margin: 0, fontSize: '16px' }}>
-            连接状态
+            {t('whapiTester.connectionStatus')}
           </Title>
           <Space>
             <Button
@@ -179,14 +181,14 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
               loading={loading}
               size="small"
             >
-              检查连接
+              {t('whapiTester.checkConnection')}
             </Button>
             {healthStatus && (
               <Tag
                 icon={healthStatus.success ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
                 color={healthStatus.success ? 'success' : 'error'}
               >
-                {healthStatus.success ? '已连接' : '连接失败'}
+                {healthStatus.success ? t('whapiTester.connected') : t('whapiTester.connectionFailed')}
               </Tag>
             )}
           </Space>
@@ -198,7 +200,7 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
         )}
         {!whapiConfig?.enabled && (
           <Text type="warning" style={{ fontSize: '12px' }}>
-            WhatsApp 功能未启用，请在配置中启用
+            {t('whapiTester.notEnabled')}
           </Text>
         )}
       </Card>
@@ -212,7 +214,7 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
         }}
       >
         <Title level={4} style={{ color: '#f8f8f8', marginBottom: 16, fontSize: '16px' }}>
-          发送测试消息
+          {t('whapiTester.sendTestMessage')}
         </Title>
         <Form
           form={form}
@@ -224,9 +226,9 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
           }}
         >
           <Form.Item
-            label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>接收号码</span>}
+            label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>{t('whapiTester.recipientPhone')}</span>}
             name="phone"
-            rules={[{ required: true, message: '请输入接收号码' }]}
+            rules={[{ required: true, message: t('whapiTester.phoneRequired') }]}
           >
             <Input
               placeholder="例如: 60123456789 或 +60123456789"
@@ -239,7 +241,7 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
           </Form.Item>
 
           <Form.Item
-            label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>消息类型</span>}
+            label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>{t('whapiTester.messageType')}</span>}
             name="messageType"
             rules={[{ required: true }]}
           >
@@ -250,10 +252,10 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
               size={isMobile ? 'middle' : 'large'}
               className="whapi-message-type-group"
             >
-              <Radio.Button value="custom" style={isMobile ? { fontSize: '12px', padding: '4px 8px' } : {}}>自定义消息</Radio.Button>
-              <Radio.Button value="event_reminder" style={isMobile ? { fontSize: '12px', padding: '4px 8px' } : {}}>活动提醒</Radio.Button>
-              <Radio.Button value="vip_expiry" style={isMobile ? { fontSize: '12px', padding: '4px 8px' } : {}}>VIP到期提醒</Radio.Button>
-              <Radio.Button value="password_reset" style={isMobile ? { fontSize: '12px', padding: '4px 8px' } : {}}>重置密码</Radio.Button>
+              <Radio.Button value="custom" style={isMobile ? { fontSize: '12px', padding: '4px 8px' } : {}}>{t('whapiTester.customMessage')}</Radio.Button>
+              <Radio.Button value="event_reminder" style={isMobile ? { fontSize: '12px', padding: '4px 8px' } : {}}>{t('whapiTester.eventReminder')}</Radio.Button>
+              <Radio.Button value="vip_expiry" style={isMobile ? { fontSize: '12px', padding: '4px 8px' } : {}}>{t('whapiTester.vipExpiryReminder')}</Radio.Button>
+              <Radio.Button value="password_reset" style={isMobile ? { fontSize: '12px', padding: '4px 8px' } : {}}>{t('whapiTester.resetPassword')}</Radio.Button>
             </Radio.Group>
           </Form.Item>
 
@@ -264,13 +266,13 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
               if (messageType === 'custom') {
                 return (
                   <Form.Item
-                    label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>消息内容</span>}
+                    label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>{t('whapiTester.messageContent')}</span>}
                     name="customMessage"
-                    rules={[{ required: true, message: '请输入消息内容' }]}
+                    rules={[{ required: true, message: t('whapiTester.messageContentRequired') }]}
                   >
                     <TextArea
                       rows={4}
-                      placeholder="输入要发送的消息内容"
+                      placeholder={t('whapiTester.messageContentPlaceholder')}
                       style={{
                         background: 'rgba(255, 255, 255, 0.05)',
                         border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -285,11 +287,11 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
                 return (
                   <>
                     <Form.Item
-                      label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>用户名称</span>}
+                      label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>{t('whapiTester.userName')}</span>}
                       name="userName"
                     >
                       <Input
-                        placeholder="用户名称"
+                        placeholder={t('whapiTester.userName')}
                         style={{
                           background: 'rgba(255, 255, 255, 0.05)',
                           border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -298,11 +300,11 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
                       />
                     </Form.Item>
                     <Form.Item
-                      label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>活动名称</span>}
+                      label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>{t('whapiTester.eventName')}</span>}
                       name="eventName"
                     >
                       <Input
-                        placeholder="活动名称"
+                        placeholder={t('whapiTester.eventName')}
                         style={{
                           background: 'rgba(255, 255, 255, 0.05)',
                           border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -311,11 +313,11 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
                       />
                     </Form.Item>
                     <Form.Item
-                      label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>活动日期</span>}
+                      label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>{t('whapiTester.eventDate')}</span>}
                       name="eventDate"
                     >
                       <Input
-                        placeholder="活动日期"
+                        placeholder={t('whapiTester.eventDate')}
                         style={{
                           background: 'rgba(255, 255, 255, 0.05)',
                           border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -324,11 +326,11 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
                       />
                     </Form.Item>
                     <Form.Item
-                      label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>活动地点</span>}
+                      label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>{t('whapiTester.eventLocation')}</span>}
                       name="eventLocation"
                     >
                       <Input
-                        placeholder="活动地点"
+                        placeholder={t('whapiTester.eventLocation')}
                         style={{
                           background: 'rgba(255, 255, 255, 0.05)',
                           border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -344,11 +346,11 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
                 return (
                   <>
                     <Form.Item
-                      label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>用户名称</span>}
+                      label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>{t('whapiTester.userName')}</span>}
                       name="userName"
                     >
                       <Input
-                        placeholder="用户名称"
+                        placeholder={t('whapiTester.userName')}
                         style={{
                           background: 'rgba(255, 255, 255, 0.05)',
                           border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -357,11 +359,11 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
                       />
                     </Form.Item>
                     <Form.Item
-                      label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>到期日期</span>}
+                      label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>{t('whapiTester.expiryDate')}</span>}
                       name="expiryDate"
                     >
                       <Input
-                        placeholder="到期日期"
+                        placeholder={t('whapiTester.expiryDate')}
                         style={{
                           background: 'rgba(255, 255, 255, 0.05)',
                           border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -377,11 +379,11 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
                 return (
                   <>
                     <Form.Item
-                      label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>用户名称</span>}
+                      label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>{t('whapiTester.userName')}</span>}
                       name="userName"
                     >
                       <Input
-                        placeholder="用户名称"
+                        placeholder={t('whapiTester.userName')}
                         style={{
                           background: 'rgba(255, 255, 255, 0.05)',
                           border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -390,11 +392,11 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
                       />
                     </Form.Item>
                     <Form.Item
-                      label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>重置链接</span>}
+                      label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>{t('whapiTester.resetLink')}</span>}
                       name="resetLink"
                     >
                       <Input
-                        placeholder="重置链接"
+                        placeholder={t('whapiTester.resetLink')}
                         style={{
                           background: 'rgba(255, 255, 255, 0.05)',
                           border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -494,7 +496,7 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
 
               return (
                 <Form.Item
-                  label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>消息预览</span>}
+                  label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>{t('whapiTester.messagePreview')}</span>}
                 >
                   <div
                     style={{
@@ -531,7 +533,7 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
                   color: '#000',
                 }}
               >
-                发送消息
+                {t('whapiTester.sendMessage')}
               </Button>
             </div>
           </Form.Item>
@@ -541,25 +543,25 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
           <>
             <Divider style={{ margin: '16px 0', borderColor: 'rgba(255, 255, 255, 0.1)' }} />
             <div>
-            <Text style={{ color: '#f8f8f8', fontSize: '14px', fontWeight: 600 }}>发送结果：</Text>
+            <Text style={{ color: '#f8f8f8', fontSize: '14px', fontWeight: 600 }}>{t('whapiTester.sendResult')}</Text>
             <div style={{ marginTop: 8 }}>
               {lastResult.success ? (
                 <Tag icon={<CheckCircleOutlined />} color="success">
-                  成功
+                  {t('common.success')}
                 </Tag>
               ) : (
                 <Tag icon={<CloseCircleOutlined />} color="error">
-                  失败
+                  {t('common.failed')}
                 </Tag>
               )}
               {lastResult.messageId && (
                 <Text style={{ color: '#c0c0c0', fontSize: '12px', marginLeft: 8 }}>
-                  消息ID: {lastResult.messageId}
+                  {t('whapiTester.messageIdLabel')}{lastResult.messageId}
                 </Text>
               )}
               {lastResult.error && (
                 <Text type="danger" style={{ fontSize: '12px', display: 'block', marginTop: 4 }}>
-                  错误: {lastResult.error}
+                  {t('whapiTester.errorPrefix')}{lastResult.error}
                 </Text>
               )}
             </div>

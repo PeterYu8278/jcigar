@@ -100,7 +100,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const isProfileIncomplete = !user?.displayName || !user?.email || !user?.profile?.phone
   
   if (user && isProfileIncomplete && location.pathname !== '/auth/complete-profile') {
-    message.warning('请先完善您的账户信息')
+    message.warning(t('auth.completeProfileWarning'))
     return <Navigate to="/auth/complete-profile" state={{ from: location }} replace />
   }
 

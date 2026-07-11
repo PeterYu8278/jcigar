@@ -1,5 +1,6 @@
 // 功能管理页面
 import React, { useState, useEffect } from 'react';
+import { useFirestoreDoc } from '../../../hooks/useFirestoreQuery';
 import { Card, Switch, Button, Space, Typography, message, Spin, Tabs, Input, Checkbox, Form, Divider, Alert, Select, Modal, Table } from 'antd';
 const { TextArea } = Input;
 import { SaveOutlined, ReloadOutlined, EyeOutlined, EyeInvisibleOutlined, SearchOutlined, SettingOutlined, CopyOutlined, DownloadOutlined, FileTextOutlined, RocketOutlined, CheckCircleOutlined, LoadingOutlined, DatabaseOutlined } from '@ant-design/icons';
@@ -86,14 +87,14 @@ const DEFAULT_COLOR_THEME: ColorThemeConfig = {
 const FeatureManagement: React.FC = () => {
   const { user } = useAuthStore();
   const { t, i18n } = useTranslation();
-  const [loading, setLoading] = useState(false);
+  const { data: config, loading, refresh: refreshConfig } = useFirestoreDoc(getFeatureVisibilityConfig);
+  const { data: rawAppConfig, refresh: refreshAppConfig } = useFirestoreDoc(getAppConfig);
   const [saving, setSaving] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [activeTab, setActiveTab] = useState<'frontend' | 'admin' | 'cigar-database' | 'tools' | 'app' | 'whapi' | 'payment' | 'env'>('frontend');
   const [whapiForm] = Form.useForm();
   const [paymentForm] = Form.useForm();
   const [envForm] = Form.useForm();
-  const [config, setConfig] = useState<FeatureVisibilityConfig | null>(null);
   const [localFeatures, setLocalFeatures] = useState<Record<string, boolean>>({});
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
   const [appConfigForm] = Form.useForm();
@@ -137,16 +138,44 @@ const FeatureManagement: React.FC = () => {
   // 检查是否为开发者
   useEffect(() => {
     if (user?.role !== 'developer') {
-      message.error('仅开发者可以访问此页面');
+      message.error(t('featureManagement.developerOnly'));
       // 可以重定向到首页
     }
   }, [user]);
 
-  // 加载配置
+  // 当 config 加载完成时，初始化 localFeatures
   useEffect(() => {
-    loadConfig();
-    loadAppConfig();
-  }, []);
+    if (config) {
+      const visibility: Record<string, boolean> = {};
+      FEATURE_DEFINITIONS.forEach(feature => {
+        visibility[feature.key] = config.features[feature.key]?.visible ?? feature.defaultVisible;
+      });
+      setLocalFeatures(visibility);
+    }
+  }, [config]);
+
+  // 当 rawAppConfig 加载完成时，应用 colorTheme 默认值并更新本地状态
+  useEffect(() => {
+    if (rawAppConfig) {
+      const configWithTheme = {
+        ...rawAppConfig,
+        colorTheme: rawAppConfig.colorTheme || {
+          primaryButton: { startColor: '#FDE08D', endColor: '#C48D3A' },
+          secondaryButton: { backgroundColor: 'rgba(255,255,255,0.1)', borderColor: '#444444', textColor: '#ffffff' },
+          warningButton: { backgroundColor: '#faad14', borderColor: '#faad14', textColor: '#ffffff' },
+          border: { primary: '#333333', secondary: '#444444' },
+          tag: {
+            success: { backgroundColor: '#52c41a', textColor: '#ffffff' },
+            warning: { backgroundColor: '#faad14', textColor: '#ffffff' },
+            error: { backgroundColor: '#ff4d4f', textColor: '#ffffff' },
+          },
+          text: { primary: '#f8f8f8', secondary: '#c0c0c0', tertiary: '#999999' },
+          icon: { primary: '#ffd700' },
+        },
+      };
+      setAppConfig(configWithTheme as AppConfig);
+    }
+  }, [rawAppConfig]);
 
   // 当 appConfig 加载完成且切换到应用配置标签页时，设置表单值
   useEffect(() => {
@@ -203,54 +232,6 @@ const FeatureManagement: React.FC = () => {
     }
   }, [activeTab, appConfig, paymentForm]);
 
-  const loadConfig = async () => {
-    setLoading(true);
-    try {
-      const featureConfig = await getFeatureVisibilityConfig();
-      if (featureConfig) {
-        setConfig(featureConfig);
-        // 初始化本地状态
-        const visibility: Record<string, boolean> = {};
-        FEATURE_DEFINITIONS.forEach(feature => {
-          visibility[feature.key] = featureConfig.features[feature.key]?.visible ?? feature.defaultVisible;
-        });
-        setLocalFeatures(visibility);
-      }
-    } catch (error) {
-      message.error('加载配置失败');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadAppConfig = async () => {
-    try {
-      const config = await getAppConfig();
-      if (config) {
-        // 确保 colorTheme 存在，如果不存在则使用默认值
-        const configWithTheme = {
-          ...config,
-          colorTheme: config.colorTheme || {
-            primaryButton: { startColor: '#FDE08D', endColor: '#C48D3A' },
-            secondaryButton: { backgroundColor: 'rgba(255,255,255,0.1)', borderColor: '#444444', textColor: '#ffffff' },
-            warningButton: { backgroundColor: '#faad14', borderColor: '#faad14', textColor: '#ffffff' },
-            border: { primary: '#333333', secondary: '#444444' },
-            tag: {
-              success: { backgroundColor: '#52c41a', textColor: '#ffffff' },
-              warning: { backgroundColor: '#faad14', textColor: '#ffffff' },
-              error: { backgroundColor: '#ff4d4f', textColor: '#ffffff' },
-            },
-            text: { primary: '#f8f8f8', secondary: '#c0c0c0', tertiary: '#999999' },
-            icon: { primary: '#ffd700' },
-          },
-        };
-        setAppConfig(configWithTheme as AppConfig);
-      }
-    } catch (error) {
-      message.error('加载应用配置失败');
-    }
-  };
-
   // 切换功能可见性
   const handleToggleFeature = (featureKey: string, visible: boolean) => {
     setLocalFeatures(prev => ({
@@ -280,7 +261,7 @@ const FeatureManagement: React.FC = () => {
   // 保存更改
   const handleSave = async () => {
     if (!user?.id) {
-      message.error('用户未登录');
+      message.error(t('auth.notLoggedIn'));
       return;
     }
 
@@ -308,19 +289,19 @@ const FeatureManagement: React.FC = () => {
       });
 
       if (Object.keys(updates).length === 0) {
-        message.info('没有需要保存的更改');
+        message.info(t('common.noChangesToSave'));
         return;
       }
 
       const result = await updateFeatureVisibilityConfig(updates, user.id);
       if (result.success) {
         message.success('配置已保存');
-        await loadConfig(); // 重新加载配置
+        refreshConfig();
       } else {
-        message.error(result.error || '保存失败');
+        message.error(result.error || t('common.saveFailed'));
       }
     } catch (error) {
-      message.error('保存失败');
+      message.error(t('common.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -329,27 +310,27 @@ const FeatureManagement: React.FC = () => {
   // 重置为默认
   const handleReset = async () => {
     if (!user?.id) {
-      message.error('用户未登录');
+      message.error(t('auth.notLoggedIn'));
       return;
     }
 
     try {
       const result = await resetFeatureVisibilityConfig(user.id);
       if (result.success) {
-        message.success('已重置为默认配置');
-        await loadConfig();
+        message.success(t('featureManagement.resetSuccess'));
+        refreshConfig();
       } else {
-        message.error(result.error || '重置失败');
+        message.error(result.error || t('featureManagement.resetFailed'));
       }
     } catch (error) {
-      message.error('重置失败');
+      message.error(t('featureManagement.resetFailed'));
     }
   };
 
   // 保存应用配置
   const handleSaveAppConfig = async () => {
     if (!user?.id) {
-      message.error('用户未登录');
+      message.error(t('auth.notLoggedIn'));
       return;
     }
 
@@ -386,7 +367,7 @@ const FeatureManagement: React.FC = () => {
       );
 
       if (result.success) {
-        message.success('应用配置已保存');
+        message.success(t('featureManagement.appConfigSaved'));
         setPendingColorChanges({}); // 清空待保存的更改
 
         // 直接更新本地 appConfig 状态，保留其他字段（如 aiCigar、whapi）
@@ -402,10 +383,10 @@ const FeatureManagement: React.FC = () => {
           });
         }
       } else {
-        message.error(result.error || '保存失败');
+        message.error(result.error || t('common.saveFailed'));
       }
     } catch (error) {
-      message.error('保存失败');
+      message.error(t('common.saveFailed'));
     } finally {
       setSavingAppConfig(false);
     }
@@ -414,30 +395,30 @@ const FeatureManagement: React.FC = () => {
   // 重置应用配置
   const handleResetAppConfig = async () => {
     if (!user?.id) {
-      message.error('用户未登录');
+      message.error(t('auth.notLoggedIn'));
       return;
     }
 
     try {
       const result = await resetAppConfig(user.id);
       if (result.success) {
-        message.success('已重置为默认配置');
+        message.success(t('featureManagement.resetSuccess'));
         setPendingColorChanges({}); // 清空待保存的颜色更改
 
         // 重新加载配置（重置操作需要完整重载）
-        await loadAppConfig();
+        refreshAppConfig();
       } else {
-        message.error(result.error || '重置失败');
+        message.error(result.error || t('featureManagement.resetFailed'));
       }
     } catch (error) {
-      message.error('重置失败');
+      message.error(t('featureManagement.resetFailed'));
     }
   };
 
   // 保存支付配置
   const handleSavePaymentConfig = async () => {
     if (!user?.id) {
-      message.error('用户未登录');
+      message.error(t('auth.notLoggedIn'));
       return;
     }
 
@@ -462,7 +443,7 @@ const FeatureManagement: React.FC = () => {
       );
 
       if (result.success) {
-        message.success('支付配置已保存');
+        message.success(t('featureManagement.paymentConfigSaved'));
         if (appConfig) {
           setAppConfig({
             ...appConfig,
@@ -470,10 +451,10 @@ const FeatureManagement: React.FC = () => {
           });
         }
       } else {
-        message.error(result.error || '保存失败');
+        message.error(result.error || t('common.saveFailed'));
       }
     } catch (error) {
-      message.error('保存失败');
+      message.error(t('common.saveFailed'));
     } finally {
       setSavingAppConfig(false);
     }
@@ -529,15 +510,15 @@ const FeatureManagement: React.FC = () => {
       const extractedKeys = Object.keys(config);
 
       if (extractedKeys.length === 0) {
-        message.error('未能从粘贴的代码中提取到配置信息，请检查代码格式');
+        message.error(t('featureManagement.parseConfigNoResult'));
         return;
       }
 
       // 填充表单字段
       envForm.setFieldsValue(config);
-      message.success(`已自动填充 ${extractedKeys.length} 个配置项`);
+      message.success(t('featureManagement.autoFilled', { count: extractedKeys.length }));
     } catch (error) {
-      message.error('解析配置代码失败，请检查代码格式');
+      message.error(t('featureManagement.parseConfigFailed'));
     }
   };
 
@@ -661,7 +642,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
           const serviceAccountJson = JSON.stringify(parsed);
           envVars.push({ key: 'FIREBASE_SERVICE_ACCOUNT', value: serviceAccountJson, scopes: ['functions'] });
         } catch (error) {
-          message.warning('Firebase Service Account JSON 格式不正确，将使用原始值。请确保 JSON 格式正确。');
+          message.warning(t('featureManagement.serviceAccountJsonInvalid'));
           // 如果解析失败，使用压缩后的原始值
           const serviceAccountJson = values.firebaseServiceAccount.trim().replace(/\s+/g, ' ').replace(/\n/g, '');
           envVars.push({ key: 'FIREBASE_SERVICE_ACCOUNT', value: serviceAccountJson, scopes: ['functions'] });
@@ -697,7 +678,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
           deployUrl: result.deploy?.url,
         });
 
-        message.success('环境变量已更新，部署已触发');
+        message.success(t('featureManagement.envVarsUpdated'));
 
         // 轮询部署状态
         if (result.deploy?.id) {
@@ -705,7 +686,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
         } else {
           setDeployStatus({
             state: 'success',
-            message: '部署已触发，请前往 Netlify 控制台查看进度',
+            message: t('featureManagement.deployTriggered'),
           });
           setDeploying(false);
         }
@@ -826,21 +807,21 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
         if (deployState === 'ready') {
           setDeployStatus({
             state: 'success',
-            message: '部署成功！',
+            message: t('featureManagement.deploySuccess'),
             deployId: result.deploy.id,
             deployUrl: result.deploy.url,
           });
-          message.success('部署成功！');
+          message.success(t('featureManagement.deploySuccess'));
           setDeploying(false);
           return;
         } else if (deployState === 'error' || deployState === 'failed') {
           setDeployStatus({
             state: 'error',
-            message: '部署失败，请查看 Netlify 控制台',
+            message: t('featureManagement.deployFailed'),
             deployId: result.deploy.id,
             deployUrl: result.deploy.url,
           });
-          message.error('部署失败');
+          message.error(t('featureManagement.deployFailed'));
           setDeploying(false);
           return;
         } else if (deployState === 'building' || deployState === 'new' || deployState === 'enqueued') {
@@ -859,7 +840,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
         } else {
           setDeployStatus({
             state: 'success',
-            message: '部署已触发，请前往 Netlify 控制台查看进度',
+            message: t('featureManagement.deployTriggered'),
             deployId,
           });
           setDeploying(false);
@@ -868,7 +849,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
         console.error('[Poll Deploy Status] Error:', error);
         setDeployStatus({
           state: 'error',
-          message: '无法获取部署状态',
+          message: t('featureManagement.deployStatusFailed'),
         });
         setDeploying(false);
       }
@@ -899,12 +880,12 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
   // 保存颜色更改
   const handleSaveColorTheme = async () => {
     if (!user?.id || !appConfig || !appConfig.colorTheme) {
-      message.error('用户未登录或配置未加载');
+      message.error(t('featureManagement.notLoggedInOrConfigNotLoaded'));
       return;
     }
 
     if (Object.keys(pendingColorChanges).length === 0) {
-      message.info('没有需要保存的更改');
+      message.info(t('common.noChangesToSave'));
       return;
     }
 
@@ -923,14 +904,14 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
       );
 
       if (result.success) {
-        message.success('颜色配置已保存');
+        message.success(t('featureManagement.colorConfigSaved'));
         setPendingColorChanges({});
-        await loadAppConfig();
+        refreshAppConfig();
       } else {
-        message.error(result.error || '保存失败');
+        message.error(result.error || t('common.saveFailed'));
       }
     } catch (error) {
-      message.error('保存失败');
+      message.error(t('common.saveFailed'));
     } finally {
       setSavingAppConfig(false);
     }
@@ -939,21 +920,21 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
   // 重置颜色配置
   const handleResetColorTheme = async () => {
     if (!user?.id) {
-      message.error('用户未登录');
+      message.error(t('auth.notLoggedIn'));
       return;
     }
 
     try {
       const result = await resetAppConfig(user.id);
       if (result.success) {
-        message.success('已重置为默认配置');
+        message.success(t('featureManagement.resetSuccess'));
         setPendingColorChanges({});
-        await loadAppConfig();
+        refreshAppConfig();
       } else {
-        message.error(result.error || '重置失败');
+        message.error(result.error || t('featureManagement.resetFailed'));
       }
     } catch (error) {
-      message.error('重置失败');
+      message.error(t('featureManagement.resetFailed'));
     }
   };
 
@@ -1114,9 +1095,9 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
             onFinish={handleSaveAppConfig}
           >
             <Form.Item
-              label={<span style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600 }}>应用 Logo</span>}
+              label={<span style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600 }}>{t('featureManagement.appLogo')}</span>}
               name="logoUrl"
-              rules={[{ required: true, message: '请上传应用 Logo' }]}
+              rules={[{ required: true, message: t('featureManagement.appLogoRequired') }]}
             >
               <ImageUpload
                 folder="app-config"
@@ -1130,9 +1111,9 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
             </Form.Item>
 
             <Form.Item
-              label={<span style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600 }}>应用名称</span>}
+              label={<span style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600 }}>{t('featureManagement.appName')}</span>}
               name="appName"
-              rules={[{ required: true, message: '请输入应用名称' }]}
+              rules={[{ required: true, message: t('featureManagement.appNameRequired') }]}
             >
               <Input
                 placeholder="例如：Cigar Club"
@@ -1145,13 +1126,13 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
             </Form.Item>
 
             <Form.Item
-              label={<span style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600 }}>隐藏 Footer</span>}
+              label={<span style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600 }}>{t('featureManagement.hideFooter')}</span>}
               name="hideFooter"
               valuePropName="checked"
             >
               <Switch
-                checkedChildren={<span style={{ color: '#000' }}>隐藏</span>}
-                unCheckedChildren={<span style={{ color: '#000' }}>显示</span>}
+                checkedChildren={<span style={{ color: '#000' }}>{t('featureManagement.hidden')}</span>}
+                unCheckedChildren={<span style={{ color: '#000' }}>{t('featureManagement.visible')}</span>}
                 style={{
                   background: appConfigForm.getFieldValue('hideFooter') ? 'linear-gradient(to right,#FDE08D,#C48D3A)' : undefined,
                 }}
@@ -1162,33 +1143,33 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
 
             <div style={{ marginBottom: 16 }}>
               <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600 }}>
-                登录方式配置
+                {t('featureManagement.loginMethodConfig')}
               </Text>
             </div>
 
             <Form.Item
-              label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>禁用 Google 登录</span>}
+              label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>{t('featureManagement.disableGoogleLogin')}</span>}
               name="disableGoogleLogin"
               valuePropName="checked"
               getValueFromEvent={(checked) => checked}
               style={{ marginBottom: 16 }}
             >
               <Switch
-                checkedChildren={<span style={{ color: '#000' }}>禁用</span>}
-                unCheckedChildren={<span style={{ color: '#000' }}>启用</span>}
+                checkedChildren={<span style={{ color: '#000' }}>{t('featureManagement.disable')}</span>}
+                unCheckedChildren={<span style={{ color: '#000' }}>{t('featureManagement.enable')}</span>}
               />
             </Form.Item>
 
             <Form.Item
-              label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>禁用电邮登录</span>}
+              label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>{t('featureManagement.disableEmailLogin')}</span>}
               name="disableEmailLogin"
               valuePropName="checked"
               getValueFromEvent={(checked) => checked}
               style={{ marginBottom: 16 }}
             >
               <Switch
-                checkedChildren={<span style={{ color: '#000' }}>禁用</span>}
-                unCheckedChildren={<span style={{ color: '#000' }}>启用</span>}
+                checkedChildren={<span style={{ color: '#000' }}>{t('featureManagement.disable')}</span>}
+                unCheckedChildren={<span style={{ color: '#000' }}>{t('featureManagement.enable')}</span>}
               />
             </Form.Item>
 
@@ -1197,14 +1178,14 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
             {/* Gemini API 模型设定 */}
             <div style={{ marginBottom: 24 }}>
               <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600 }}>
-                Gemini API 模型设定
+                {t('featureManagement.geminiModelSettings')}
               </Text>
               <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginTop: 8, marginBottom: 16 }}>
-                选择用于 AI 雪茄识别的 Gemini 模型列表。系统会按顺序尝试这些模型，直到找到一个可用的模型。
+                {t('featureManagement.geminiModelDesc')}
               </Text>
 
               <Form.Item
-                label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>可用模型</span>}
+                label={<span style={{ color: '#f8f8f8', fontSize: '16px' }}>{t('featureManagement.availableModels')}</span>}
                 name="geminiModels"
                 extra={
                   <Text style={{ color: '#999', fontSize: '12px' }}>
@@ -1215,7 +1196,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               >
                 <Select
                   mode="multiple"
-                  placeholder="选择 Gemini 模型（推荐前3个）"
+                  placeholder={t('featureManagement.selectGeminiModelsPlaceholder')}
                   allowClear
                   popupClassName="gemini-models-dropdown"
                   style={{
@@ -1310,17 +1291,17 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                       'gemini-2.5-flash'
                     ];
                     appConfigForm.setFieldsValue({ geminiModels: recommendedModels });
-                    message.success('已应用推荐配置（Top 5 模型）');
+                    message.success(t('featureManagement.appliedRecommendedModels'));
                   }}
                   style={{
                     borderColor: 'rgba(244, 175, 37, 0.5)',
                     color: '#f4af25'
                   }}
                 >
-                  应用推荐配置（Top 5 模型）
+                  {t('featureManagement.applyRecommendedModels')}
                 </Button>
                 <Text style={{ color: '#999', fontSize: '12px', marginLeft: 12 }}>
-                  将自动选择测试结果中表现最佳的5个模型
+                  {t('featureManagement.recommendedModelsHint')}
                 </Text>
               </div>
             </div>
@@ -1333,7 +1314,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                 borderBottom: '1px solid rgba(244, 175, 37, 0.2)'
               }}>
                 <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600 }}>
-                  颜色主题管理
+                  {t('featureManagement.colorThemeManagement')}
                 </Text>
               </div>
 
@@ -1386,7 +1367,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               layout="vertical"
               onFinish={async () => {
                 if (!user?.id) {
-                  message.error('用户未登录');
+                  message.error(t('auth.notLoggedIn'));
                   return;
                 }
 
@@ -1411,7 +1392,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                   );
 
                   if (result.success) {
-                    message.success('WhatsApp 配置已保存');
+                    message.success(t('featureManagement.whapiConfigSaved'));
 
                     // 直接更新本地 appConfig 状态，避免重新加载导致其他字段被重置
                     if (appConfig) {
@@ -1425,10 +1406,10 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                     const { initWhapiClient } = await import('../../../services/whapi');
                     await initWhapiClient(whapiConfig);
                   } else {
-                    message.error(result.error || '保存失败');
+                    message.error(result.error || t('common.saveFailed'));
                   }
                 } catch (error) {
-                  message.error('保存失败');
+                  message.error(t('common.saveFailed'));
                 } finally {
                   setSavingAppConfig(false);
                 }
@@ -1439,26 +1420,26 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                 valuePropName="checked"
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600 }}>启用 WhatsApp</span>
+                  <span style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600 }}>{t('featureManagement.enableWhatsapp')}</span>
                   <Switch
-                    checkedChildren={<span style={{ color: '#000' }}>启用</span>}
-                    unCheckedChildren={<span style={{ color: '#000' }}>禁用</span>}
+                    checkedChildren={<span style={{ color: '#000' }}>{t('featureManagement.enable')}</span>}
+                    unCheckedChildren={<span style={{ color: '#000' }}>{t('featureManagement.disable')}</span>}
                   />
                 </div>
               </Form.Item>
 
               <Form.Item
-                label={<span style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600 }}>API 配置</span>}
+                label={<span style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600 }}>{t('featureManagement.apiConfig')}</span>}
               >
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
                   <Form.Item
                     label={<span style={{ color: '#f8f8f8', fontSize: '14px', fontWeight: 600 }}>API Token</span>}
                     name="whapiApiToken"
-                    rules={[{ required: true, message: '请输入 API Token' }]}
+                    rules={[{ required: true, message: t('featureManagement.apiTokenRequired') }]}
                     style={{ marginBottom: 0 }}
                   >
                     <Input.Password
-                      placeholder="输入 Whapi.Cloud API Token"
+                      placeholder={t('featureManagement.whapiApiTokenPlaceholder')}
                       style={{
                         background: 'rgba(255, 255, 255, 0.05)',
                         border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -1473,7 +1454,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                     style={{ marginBottom: 0 }}
                   >
                     <Input
-                      placeholder="输入 Channel ID（可选）"
+                      placeholder={t('featureManagement.channelIdPlaceholder')}
                       style={{
                         background: 'rgba(255, 255, 255, 0.05)',
                         border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -1503,50 +1484,50 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
 
               <div style={{ marginBottom: 16 }}>
                 <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600, display: 'block', marginBottom: 16 }}>
-                  功能开关
+                  {t('featureManagement.featureToggles')}
                 </Text>
                 <Text style={{ color: '#c0c0c0', fontSize: '14px', display: 'block', marginBottom: 16 }}>
-                  控制自动发送消息功能的启用/禁用
+                  {t('featureManagement.featureTogglesDesc')}
                 </Text>
               </div>
 
               <Form.Item
-                label={<span style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600 }}>功能开关</span>}
+                label={<span style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600 }}>{t('featureManagement.featureToggles')}</span>}
               >
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
                   <Form.Item
-                    label={<span style={{ color: '#f8f8f8', fontSize: '14px', fontWeight: 600 }}>活动提醒</span>}
+                    label={<span style={{ color: '#f8f8f8', fontSize: '14px', fontWeight: 600 }}>{t('featureManagement.eventReminder')}</span>}
                     name="whapiEventReminder"
                     valuePropName="checked"
                     style={{ marginBottom: 0 }}
                   >
                     <Switch
-                      checkedChildren={<span style={{ color: '#000' }}>启用</span>}
-                      unCheckedChildren={<span style={{ color: '#000' }}>禁用</span>}
+                      checkedChildren={<span style={{ color: '#000' }}>{t('featureManagement.enable')}</span>}
+                      unCheckedChildren={<span style={{ color: '#000' }}>{t('featureManagement.disable')}</span>}
                     />
                   </Form.Item>
 
                   <Form.Item
-                    label={<span style={{ color: '#f8f8f8', fontSize: '14px', fontWeight: 600 }}>VIP到期提醒</span>}
+                    label={<span style={{ color: '#f8f8f8', fontSize: '14px', fontWeight: 600 }}>{t('featureManagement.vipExpiryReminder')}</span>}
                     name="whapiVipExpiry"
                     valuePropName="checked"
                     style={{ marginBottom: 0 }}
                   >
                     <Switch
-                      checkedChildren={<span style={{ color: '#000' }}>启用</span>}
-                      unCheckedChildren={<span style={{ color: '#000' }}>禁用</span>}
+                      checkedChildren={<span style={{ color: '#000' }}>{t('featureManagement.enable')}</span>}
+                      unCheckedChildren={<span style={{ color: '#000' }}>{t('featureManagement.disable')}</span>}
                     />
                   </Form.Item>
 
                   <Form.Item
-                    label={<span style={{ color: '#f8f8f8', fontSize: '14px', fontWeight: 600 }}>重置密码</span>}
+                    label={<span style={{ color: '#f8f8f8', fontSize: '14px', fontWeight: 600 }}>{t('common.resetPassword')}</span>}
                     name="whapiPasswordReset"
                     valuePropName="checked"
                     style={{ marginBottom: 0 }}
                   >
                     <Switch
-                      checkedChildren={<span style={{ color: '#000' }}>启用</span>}
-                      unCheckedChildren={<span style={{ color: '#000' }}>禁用</span>}
+                      checkedChildren={<span style={{ color: '#000' }}>{t('featureManagement.enable')}</span>}
+                      unCheckedChildren={<span style={{ color: '#000' }}>{t('featureManagement.disable')}</span>}
                     />
                   </Form.Item>
                 </div>
@@ -1708,8 +1689,8 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
           marginBottom: 16,
         }}>
           <Alert
-            message="重要提示"
-            description="此配置不会保存到数据库。您可以生成 .env 文件下载，或直接部署到 Netlify 环境变量。页面刷新后表单将清空。"
+            message={t('featureManagement.importantNote')}
+            description={t('featureManagement.envConfigNotice')}
             type="warning"
             showIcon
             style={{
@@ -1741,7 +1722,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               {/* Firebase 配置代码粘贴区域 */}
               <div style={{ marginBottom: 16 }}>
                 <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 8 }}>
-                  快速填充：粘贴 Firebase 配置代码（从 Firebase 控制台复制的代码）
+                  {t('featureManagement.quickFillHint')}
                 </Text>
                 <TextArea
                   placeholder="粘贴 Firebase 配置代码，例如：const firebaseConfig = { apiKey: '...', authDomain: '...', ... }"
@@ -1765,7 +1746,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                         handlePasteFirebaseConfig(firebaseConfigCode);
                         setFirebaseConfigCode('');
                       } else {
-                        message.warning('请先粘贴 Firebase 配置代码');
+                        message.warning(t('featureManagement.pasteFirebaseConfigFirst'));
                       }
                     }}
                     style={{
@@ -1774,7 +1755,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                       color: '#000',
                     }}
                   >
-                    解析并填充
+                    {t('featureManagement.parseAndFill')}
                   </Button>
                 </div>
               </div>
@@ -1782,7 +1763,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               <Form.Item
                 label={<span style={{ color: '#c0c0c0' }}>API Key</span>}
                 name="firebaseApiKey"
-                rules={[{ required: true, message: '请输入 Firebase API Key' }]}
+                rules={[{ required: true, message: t('featureManagement.firebaseApiKeyRequired') }]}
               >
                 <Input
                   type={showSecrets.firebaseApiKey ? 'text' : 'password'}
@@ -1806,7 +1787,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               <Form.Item
                 label={<span style={{ color: '#c0c0c0' }}>Auth Domain</span>}
                 name="firebaseAuthDomain"
-                rules={[{ required: true, message: '请输入 Firebase Auth Domain' }]}
+                rules={[{ required: true, message: t('featureManagement.firebaseAuthDomainRequired') }]}
               >
                 <Input
                   placeholder="project.firebaseapp.com"
@@ -1821,7 +1802,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               <Form.Item
                 label={<span style={{ color: '#c0c0c0' }}>Project ID</span>}
                 name="firebaseProjectId"
-                rules={[{ required: true, message: '请输入 Firebase Project ID' }]}
+                rules={[{ required: true, message: t('featureManagement.firebaseProjectIdRequired') }]}
                 extra={
                   <Text style={{ color: '#999', fontSize: '12px' }}>
                     用于部署 Firestore 索引。需要配置 FIREBASE_SERVICE_ACCOUNT 环境变量，并确保 Service Account 具有 'Cloud Datastore Index Admin' 权限。
@@ -1841,7 +1822,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               <Form.Item
                 label={<span style={{ color: '#c0c0c0' }}>Storage Bucket</span>}
                 name="firebaseStorageBucket"
-                rules={[{ required: true, message: '请输入 Firebase Storage Bucket' }]}
+                rules={[{ required: true, message: t('featureManagement.firebaseStorageBucketRequired') }]}
               >
                 <Input
                   placeholder="project.firebasestorage.app"
@@ -1856,7 +1837,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               <Form.Item
                 label={<span style={{ color: '#c0c0c0' }}>Messaging Sender ID</span>}
                 name="firebaseMessagingSenderId"
-                rules={[{ required: true, message: '请输入 Firebase Messaging Sender ID' }]}
+                rules={[{ required: true, message: t('featureManagement.firebaseMessagingSenderIdRequired') }]}
               >
                 <Input
                   placeholder="123456789012"
@@ -1871,7 +1852,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               <Form.Item
                 label={<span style={{ color: '#c0c0c0' }}>App ID</span>}
                 name="firebaseAppId"
-                rules={[{ required: true, message: '请输入 Firebase App ID' }]}
+                rules={[{ required: true, message: t('featureManagement.firebaseAppIdRequired') }]}
               >
                 <Input
                   placeholder="1:123456789012:web:abc123"
@@ -1943,7 +1924,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
             {/* Cloudinary 配置 */}
             <div style={{ marginBottom: 24 }}>
               <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600, display: 'block', marginBottom: 16 }}>
-                Cloudinary 配置
+                {t('featureManagement.cloudinaryConfig')}
               </Text>
               <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 16 }}>
                 可在 <a href="https://console.cloudinary.com" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Cloudinary 控制台</a> 的仪表板中找到这些配置信息。登录后，在仪表板页面即可查看 Cloud Name、API Key 和 API Secret。Upload Preset 可在设置 &gt; 上传预设中创建或查看，Base Folder 是上传文件的默认文件夹路径。
@@ -1952,7 +1933,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               <Form.Item
                 label={<span style={{ color: '#c0c0c0' }}>Cloud Name</span>}
                 name="cloudinaryCloudName"
-                rules={[{ required: true, message: '请输入 Cloudinary Cloud Name' }]}
+                rules={[{ required: true, message: t('featureManagement.cloudinaryCloudNameRequired') }]}
               >
                 <Input
                   placeholder="your-cloud-name"
@@ -1967,7 +1948,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               <Form.Item
                 label={<span style={{ color: '#c0c0c0' }}>API Key</span>}
                 name="cloudinaryApiKey"
-                rules={[{ required: true, message: '请输入 Cloudinary API Key' }]}
+                rules={[{ required: true, message: t('featureManagement.cloudinaryApiKeyRequired') }]}
               >
                 <Input
                   type={showSecrets.cloudinaryApiKey ? 'text' : 'password'}
@@ -1991,7 +1972,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               <Form.Item
                 label={<span style={{ color: '#c0c0c0' }}>API Secret</span>}
                 name="cloudinaryApiSecret"
-                rules={[{ required: true, message: '请输入 Cloudinary API Secret' }]}
+                rules={[{ required: true, message: t('featureManagement.cloudinaryApiSecretRequired') }]}
               >
                 <Input
                   type={showSecrets.cloudinaryApiSecret ? 'text' : 'password'}
@@ -2015,7 +1996,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               <Form.Item
                 label={<span style={{ color: '#c0c0c0' }}>Upload Preset</span>}
                 name="cloudinaryUploadPreset"
-                rules={[{ required: true, message: '请输入 Cloudinary Upload Preset' }]}
+                rules={[{ required: true, message: t('featureManagement.cloudinaryUploadPresetRequired') }]}
               >
                 <Input
                   placeholder="jep-cigar"
@@ -2030,7 +2011,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
               <Form.Item
                 label={<span style={{ color: '#c0c0c0' }}>Base Folder</span>}
                 name="cloudinaryBaseFolder"
-                rules={[{ required: true, message: '请输入 Cloudinary Base Folder' }]}
+                rules={[{ required: true, message: t('featureManagement.cloudinaryBaseFolderRequired') }]}
               >
                 <Input
                   placeholder="jep-cigar"
@@ -2048,13 +2029,13 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
             {/* 应用配置 */}
             <div style={{ marginBottom: 24 }}>
               <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600, display: 'block', marginBottom: 16 }}>
-                应用配置
+                {t('featureManagement.appSettings')}
               </Text>
 
               <Form.Item
                 label={<span style={{ color: '#c0c0c0' }}>App Name</span>}
                 name="appName"
-                rules={[{ required: true, message: '请输入应用名称' }]}
+                rules={[{ required: true, message: t('featureManagement.appNameRequired') }]}
               >
                 <Input
                   placeholder="Cigar Club管理平台"
@@ -2072,7 +2053,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
             {/* FCM 配置 */}
             <div style={{ marginBottom: 24 }}>
               <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600, display: 'block', marginBottom: 16 }}>
-                FCM 配置（可选）
+                {t('featureManagement.fcmConfig')}
               </Text>
               <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 16 }}>
                 可在 <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Firebase 控制台</a> 的项目设置中找到 VAPID Key。进入项目设置 &gt; 云消息传递 &gt; Web 配置，即可查看 VAPID 密钥。此配置为可选，仅在使用推送通知功能时需要。
@@ -2108,7 +2089,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
             {/* Gemini 配置 */}
             <div style={{ marginBottom: 24 }}>
               <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600, display: 'block', marginBottom: 16 }}>
-                Gemini API 配置（可选）
+                {t('featureManagement.geminiApiConfig')}
               </Text>
               <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 16 }}>
                 可在 <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Google AI Studio</a> 中获取 Gemini API Key。此配置用于 AI 雪茄识别功能。
@@ -2144,7 +2125,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
             {/* Netlify 配置 */}
             <div style={{ marginBottom: 24 }}>
               <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600, display: 'block', marginBottom: 16 }}>
-                Netlify 配置（可选）
+                {t('featureManagement.netlifyConfig')}
               </Text>
               <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 16 }}>
                 用于将环境变量部署到 Netlify。Access Token 可在 <a href="https://app.netlify.com/user/applications" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Netlify 用户设置</a> 中生成，Site ID 可在站点设置中找到。此配置为可选，仅在需要部署到 Netlify 时需要。
@@ -2229,7 +2210,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                           rel="noopener noreferrer"
                           style={{ color: '#ffd700' }}
                         >
-                          查看部署详情
+                          {t('featureManagement.viewDeployDetails')}
                         </a>
                       </div>
                     ) : null
@@ -2242,7 +2223,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
             {generatedEnv && (
               <div style={{ marginBottom: 24 }}>
                 <Text style={{ color: '#f8f8f8', fontSize: '16px', fontWeight: 600, display: 'block', marginBottom: 16 }}>
-                  生成的配置文件
+                  {t('featureManagement.generatedConfigFile')}
                 </Text>
                 <div style={{
                   background: 'rgba(0, 0, 0, 0.3)',
@@ -2277,7 +2258,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                 }}
                 disabled={deploying}
               >
-                清空表单
+                {t('featureManagement.clearForm')}
               </Button>
               <Button
                 icon={<FileTextOutlined />}
@@ -2286,14 +2267,14 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                     const values = await envForm.validateFields();
                     const envContent = generateEnvFile(values);
                     setGeneratedEnv(envContent);
-                    message.success('配置文件已生成');
+                    message.success(t('featureManagement.configGenerated'));
                   } catch (error) {
-                    message.error('请填写所有必填字段');
+                    message.error(t('common.fillAllRequired'));
                   }
                 }}
                 disabled={deploying}
               >
-                生成配置文件
+                {t('featureManagement.generateConfigFile')}
               </Button>
               {generatedEnv && (
                 <>
@@ -2302,14 +2283,14 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                     onClick={async () => {
                       try {
                         await navigator.clipboard.writeText(generatedEnv);
-                        message.success('已复制到剪贴板');
+                        message.success(t('common.copiedToClipboard'));
                       } catch (error) {
-                        message.error('复制失败');
+                        message.error(t('common.copyFailed'));
                       }
                     }}
                     disabled={deploying}
                   >
-                    复制到剪贴板
+                    {t('featureManagement.copyToClipboard')}
                   </Button>
                   <Button
                     type="primary"
@@ -2322,7 +2303,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                       a.download = '.env';
                       a.click();
                       URL.revokeObjectURL(url);
-                      message.success('文件已下载');
+                      message.success(t('featureManagement.fileDownloaded'));
                     }}
                     disabled={deploying}
                     style={{
@@ -2330,7 +2311,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                       border: 'none',
                     }}
                   >
-                    下载 .env
+                    {t('featureManagement.downloadEnv')}
                   </Button>
                 </>
               )}
@@ -2345,7 +2326,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                   border: 'none',
                 }}
               >
-                {deploying ? '部署中...' : '部署到 Netlify'}
+                {deploying ? t('featureManagement.deploying') : t('featureManagement.deployToNetlify')}
               </Button>
               <Button
                 type="primary"
@@ -2358,7 +2339,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                   border: 'none',
                 }}
               >
-                {indexDeploying ? '部署中...' : '一键部署firestore indexes'}
+                {indexDeploying ? t('featureManagement.deploying') : t('featureManagement.deployFirestoreIndexes')}
               </Button>
             </div>
 
@@ -2398,7 +2379,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                       {indexDeployStatus.summary && (
                         <div style={{ marginBottom: 12 }}>
                           <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 4 }}>
-                            部署摘要：
+                            {t('featureManagement.deploySummary')}
                           </Text>
                           <div style={{
                             display: 'flex',
@@ -2429,7 +2410,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                       {indexDeployStatus.results && indexDeployStatus.results.length > 0 && (
                         <div style={{ marginBottom: 12 }}>
                           <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 8 }}>
-                            详细结果：
+                            {t('featureManagement.deployDetailedResults')}
                           </Text>
                           <div style={{
                             maxHeight: '200px',
@@ -2497,7 +2478,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                             rel="noopener noreferrer"
                             style={{ color: '#ffd700', fontSize: '12px' }}
                           >
-                            在 Firebase Console 中查看索引状态 →
+                            {t('featureManagement.viewFirebaseConsole')}
                           </a>
                         </div>
                       )}
@@ -2506,7 +2487,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                       {indexDeployStatus.links && indexDeployStatus.links.length > 0 && !indexDeployStatus.consoleUrl && (
                         <div style={{ marginTop: 8 }}>
                           <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 8 }}>
-                            请通过以下链接在 Firebase Console 中创建索引：
+                            {t('featureManagement.createIndexViaLinks')}
                           </Text>
                           {indexDeployStatus.links.map((link, idx) => (
                             <div key={idx} style={{ marginTop: 4 }}>
@@ -2530,19 +2511,19 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
 
             {/* 部署 Firestore 索引预览 Modal */}
             <Modal
-              title="预览将要部署的 Firestore 索引"
+              title={t('featureManagement.firestoreIndexPreview')}
               open={isIndexModalVisible}
               onCancel={() => setIsIndexModalVisible(false)}
               onOk={() => {
                 setIsIndexModalVisible(false);
                 handleDeployFirestoreIndexes();
               }}
-              okText="确认部署"
-              cancelText="取消"
+              okText={t('featureManagement.confirmDeploy')}
+              cancelText={t('common.cancel')}
               width={800}
             >
-              <Alert 
-                message="以下索引将部署到您的 Firebase 项目中。此过程可能需要几分钟，已有索引将被跳过。" 
+              <Alert
+                message={t('featureManagement.firestoreIndexDeployNotice')}
                 type="info" 
                 showIcon 
                 style={{ marginBottom: 16 }} 
@@ -2674,11 +2655,11 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                                             });
                                           }
                                         } else {
-                                          message.error(result.error || '保存失败');
+                                          message.error(result.error || t('common.saveFailed'));
                                           setAiCigarStorageEnabled(previousValue); // 恢复原值
                                         }
                                       } catch (error) {
-                                        message.error('保存失败');
+                                        message.error(t('common.saveFailed'));
                                         setAiCigarStorageEnabled(previousValue); // 恢复原值
                                       }
                                     } else {
@@ -2736,11 +2717,11 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                                             });
                                           }
                                         } else {
-                                          message.error(result.error || '保存失败');
+                                          message.error(result.error || t('common.saveFailed'));
                                           setAiCigarImageSearchEnabled(previousValue);
                                         }
                                       } catch (error) {
-                                        message.error('保存失败');
+                                        message.error(t('common.saveFailed'));
                                         setAiCigarImageSearchEnabled(previousValue);
                                       }
                                     } else {
@@ -2796,11 +2777,11 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                                               });
                                             }
                                           } else {
-                                            message.error(result.error || '保存失败');
+                                            message.error(result.error || t('common.saveFailed'));
                                             setAiCigarImageSearchOrder(previousValue);
                                           }
                                         } catch (error) {
-                                          message.error('保存失败');
+                                          message.error(t('common.saveFailed'));
                                           setAiCigarImageSearchOrder(previousValue);
                                         }
                                       } else {

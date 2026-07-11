@@ -11,6 +11,8 @@ import { getAllStores } from '../../../services/firebase/stores'
 import ImageUpload from '../../../components/common/ImageUpload'
 import { getModalTheme, getResponsiveModalConfig, getModalThemeStyles } from '../../../config/modalTheme'
 import { useCloudinary } from '../../../hooks/useCloudinary'
+import { useDetailDrawer } from '../../../hooks/useDetailDrawer'
+import { useFirestoreQuery } from '../../../hooks/useFirestoreQuery'
 import { analyzeCigarByName } from '../../../services/gemini/cigarRecognition'
 import { CigarRatingBadge } from '../../../components/common/CigarRatingBadge'
 import { getAggregatedCigarData, saveRecognitionToCigarDatabase, generateProductName, forceUpdateCigarDatabase, type AggregatedCigarData } from '../../../services/cigar/cigarDataAggregation'
@@ -29,11 +31,20 @@ const AdminInventory: React.FC = () => {
   const { t } = useTranslation()
   const { user: currentUser, isSuperAdmin } = useAuthStore()
   const { modal } = App.useApp() // Use App.useApp() to get modal instance for React 19 support
-  const [items, setItems] = useState<Cigar[]>([])
+  const { data: items, loading: listLoading, error: itemsError, refresh: refreshItems } = useFirestoreQuery<Cigar>(getCigars)
+  const { data: orders, refresh: refreshOrders } = useFirestoreQuery<any>(() => getAllOrders(isSuperAdmin ? undefined : currentUser?.storeId), [isSuperAdmin, currentUser?.storeId])
+  const { data: users, refresh: refreshUsers } = useFirestoreQuery<any>(getUsers)
+  const { data: brandList, refresh: refreshBrandList } = useFirestoreQuery<Brand>(getBrands)
+  const { data: transactions, refresh: refreshTransactions } = useFirestoreQuery<any>(() => getAllTransactions(isSuperAdmin ? undefined : currentUser?.storeId), [isSuperAdmin, currentUser?.storeId])
+  const { data: events, refresh: refreshEvents } = useFirestoreQuery<Event>(() => getEvents(isSuperAdmin ? undefined : currentUser?.id) as Promise<Event[]>, [isSuperAdmin, currentUser?.id])
+  const { data: stores, refresh: refreshStores } = useFirestoreQuery<Store>(getAllStores)
+  const { data: inboundOrders, refresh: refreshInboundOrders } = useFirestoreQuery<InboundOrder>(() => getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId), [isSuperAdmin, currentUser?.storeId])
+  const { data: outboundOrders, refresh: refreshOutboundOrders } = useFirestoreQuery<OutboundOrder>(() => getAllOutboundOrders(isSuperAdmin ? undefined : currentUser?.storeId), [isSuperAdmin, currentUser?.storeId])
+  const { data: inventoryMovements, refresh: refreshInventoryMovements } = useFirestoreQuery<InventoryMovement>(() => getAllInventoryMovements(isSuperAdmin ? undefined : currentUser?.storeId), [isSuperAdmin, currentUser?.storeId])
   const [loading, setLoading] = useState(false)
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<Cigar | null>(null)
-  const [deleting, setDeleting] = useState<Cigar | null>(null)
+  const { item: deleting, open: deletingOpen, openDrawer: openDeleteCigar, closeDrawer: closeDeleteCigar } = useDetailDrawer<Cigar>()
   const [adjustingIn, setAdjustingIn] = useState<Cigar | null>(null)
   const [adjustingOut, setAdjustingOut] = useState<Cigar | null>(null)
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
@@ -42,16 +53,7 @@ const AdminInventory: React.FC = () => {
   const [inForm] = Form.useForm()
   const [outForm] = Form.useForm()
   const [activeTab, setActiveTab] = useState<string>('list')
-  const [orders, setOrders] = useState<any[]>([])
-  const [users, setUsers] = useState<any[]>([])
-  const [transactions, setTransactions] = useState<any[]>([])
-  const [events, setEvents] = useState<Event[]>([])
-  const [stores, setStores] = useState<Store[]>([])
-
   // New architecture data
-  const [inboundOrders, setInboundOrders] = useState<InboundOrder[]>([])
-  const [outboundOrders, setOutboundOrders] = useState<OutboundOrder[]>([])
-  const [inventoryMovements, setInventoryMovements] = useState<InventoryMovement[]>([])
   const [viewingReference, setViewingReference] = useState<string | null>(null)
   const [viewingProductLogs, setViewingProductLogs] = useState<string | null>(null)
   const [imageList, setImageList] = useState<any[]>([])
@@ -73,8 +75,7 @@ const AdminInventory: React.FC = () => {
   const [inBrandFilter, setInBrandFilter] = useState<string | undefined>()
   const [outSearchKeyword, setOutSearchKeyword] = useState('')
   const [outBrandFilter, setOutBrandFilter] = useState<string | undefined>()
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [deleteTargetOrder, setDeleteTargetOrder] = useState<{ id: string; referenceNo: string; productCount: number } | null>(null)
+  const { item: deleteTargetOrder, open: deleteConfirmOpen, openDrawer: openDeleteOrder, closeDrawer: closeDeleteOrder } = useDetailDrawer<{ id: string; referenceNo: string; productCount: number }>()
 
   // File upload related
   const { upload: cloudinaryUpload, uploading: uploadingFile } = useCloudinary()
@@ -121,7 +122,6 @@ const AdminInventory: React.FC = () => {
   })
 
   // 品牌管理相关状态
-  const [brandList, setBrandList] = useState<Brand[]>([])
   const [creatingBrand, setCreatingBrand] = useState(false)
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null)
   const [deletingBrand, setDeletingBrand] = useState<Brand | null>(null)
@@ -160,49 +160,16 @@ const AdminInventory: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    ; (async () => {
-      setLoading(true)
-      try {
-        const list = await getCigars()
-        setItems(list)
-
-        // 加载新架构数据
-        const [inOrders, outOrders, movements, os, us, bs, txs, evts, activeStores] = await Promise.all([
-          getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId),
-          getAllOutboundOrders(isSuperAdmin ? undefined : currentUser?.storeId),
-          getAllInventoryMovements(isSuperAdmin ? undefined : currentUser?.storeId),
-          getAllOrders(isSuperAdmin ? undefined : currentUser?.storeId),
-          getUsers(),
-          getBrands(),
-          getAllTransactions(isSuperAdmin ? undefined : currentUser?.storeId),
-          getEvents(isSuperAdmin ? undefined : currentUser?.id),
-          getAllStores()
-        ])
-
-        setInboundOrders(inOrders)
-        setOutboundOrders(outOrders)
-        setInventoryMovements(movements)
-        setOrders(os)
-        setUsers(us)
-        setBrandList(bs)
-        setTransactions(txs)
-        setEvents(evts)
-        setStores(activeStores)
-
-        // 初始化分页（本地持久化）
-        try {
-          const raw = localStorage.getItem('inventory_pagination')
-          if (raw) {
-            const saved = JSON.parse(raw)
-            if (saved?.current && saved?.pageSize) {
-              setPagination({ current: Number(saved.current) || 1, pageSize: Number(saved.pageSize) || 10 })
-            }
-          }
-        } catch { }
-      } finally {
-        setLoading(false)
+    // 初始化分页（本地持久化）
+    try {
+      const raw = localStorage.getItem('inventory_pagination')
+      if (raw) {
+        const saved = JSON.parse(raw)
+        if (saved?.current && saved?.pageSize) {
+          setPagination({ current: Number(saved.current) || 1, pageSize: Number(saved.pageSize) || 10 })
+        }
       }
-    })()
+    } catch { }
   }, [])
 
   // 统一处理编辑时的数据加载
@@ -1395,8 +1362,7 @@ const AdminInventory: React.FC = () => {
                           try {
                             await Promise.all(selectedRowKeys.map(id => updateDocument(COLLECTIONS.CIGARS, String(id), { status: 'inactive' } as any)))
                             message.success(t('inventory.batchDisabled'))
-                            const list = await getCigars()
-                            setItems(list)
+                            refreshItems()
                             setSelectedRowKeys([])
                           } finally {
                             setLoading(false)
@@ -1437,8 +1403,7 @@ const AdminInventory: React.FC = () => {
 
                               message.success(t('inventory.batchDeleted'))
 
-                              const list = await getCigars()
-                              setItems(list)
+                              refreshItems()
                               setSelectedRowKeys([])
                             } catch (error) {
                               message.error(t('inventory.batchDeleteFailed') + ': ' + (error as Error).message)
@@ -1898,7 +1863,7 @@ const AdminInventory: React.FC = () => {
                                 dataSource={group.items}
                                 rowKey="id"
                                 size="small"
-                                loading={loading}
+                                loading={listLoading || loading}
                                 rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys, preserveSelectedRowKeys: true }}
                                 pagination={false}
                                 style={{
@@ -1909,8 +1874,14 @@ const AdminInventory: React.FC = () => {
                           </div>
                         </div>
                       ))}
-                      {groupedByBrand.length === 0 && (
-                        <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
+                      {groupedByBrand.length === 0 && !listLoading && (
+                        <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                          {itemsError ? (
+                            <div style={{ color: '#ff4d4f' }}>加载失败: {itemsError}</div>
+                          ) : (
+                            <div style={{ color: 'rgba(255, 255, 255, 0.6)' }}>{t('common.noData')}</div>
+                          )}
+                        </div>
                       )}
                     </div>
                   ) : (
@@ -2034,8 +2005,14 @@ const AdminInventory: React.FC = () => {
                           </div>
                         </div>
                       ))}
-                      {groupedByBrand.length === 0 && (
-                        <div style={{ color: 'rgba(255, 255, 255, 0.6)', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
+                      {groupedByBrand.length === 0 && !listLoading && (
+                        <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                          {itemsError ? (
+                            <div style={{ color: '#ff4d4f' }}>加载失败: {itemsError}</div>
+                          ) : (
+                            <div style={{ color: 'rgba(255, 255, 255, 0.6)' }}>{t('common.noData')}</div>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}
@@ -2331,7 +2308,7 @@ const AdminInventory: React.FC = () => {
 
                                       if (result.success) {
                                         message.success(t('inventory.brandDeleted'))
-                                        setBrandList(await getBrands())
+                                        refreshBrandList()
                                       } else {
                                         message.error(t('inventory.brandDeleteFailed'))
                                       }
@@ -2641,9 +2618,9 @@ const AdminInventory: React.FC = () => {
                     }
 
                     inForm.resetFields()
-                    setItems(await getCigars())
-                    setInboundOrders(await getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
-                    setInventoryMovements(await getAllInventoryMovements(isSuperAdmin ? undefined : currentUser?.storeId))
+                    refreshItems()
+                    refreshInboundOrders()
+                    refreshInventoryMovements()
                     setInModalOpen(false)
                     setEditingOrder(null)
                     setAttachmentFileList([])
@@ -3422,7 +3399,7 @@ const AdminInventory: React.FC = () => {
                                         if (order) {
                                           await updateInboundOrder(order.id, { status: 'cancelled' })
                                           message.success(t('inventory.orderCancelled'))
-                                          setInboundOrders(await getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
+                                          refreshInboundOrders()
                                         } else {
                                           message.error(t('inventory.orderNotFound'))
                                         }
@@ -3485,8 +3462,8 @@ const AdminInventory: React.FC = () => {
 
                                         await createInboundOrder(returnOrderData)
                                         message.success(t('inventory.returnOrderCreated'))
-                                        setInboundOrders(await getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
-                                        setInventoryMovements(await getAllInventoryMovements(isSuperAdmin ? undefined : currentUser?.storeId))
+                                        refreshInboundOrders()
+                                        refreshInventoryMovements()
                                       } catch (error: any) {
                                         message.error(t('common.error') + ': ' + error.message)
                                       } finally {
@@ -3510,12 +3487,11 @@ const AdminInventory: React.FC = () => {
                                 onClick={() => {
 
                                   // 使用受控的 Modal 替代 modal.confirm，以解决 React 19 兼容性问题
-                                  setDeleteTargetOrder({
+                                  openDeleteOrder({
                                     id: group.id,
                                     referenceNo: group.referenceNo,
                                     productCount: group.productCount
                                   })
-                                  setDeleteConfirmOpen(true)
                                 }}
                               />
                             </Space>
@@ -3746,7 +3722,7 @@ const AdminInventory: React.FC = () => {
                                           if (order) {
                                             await updateInboundOrder(order.id, { status: 'cancelled' })
                                             message.success(t('inventory.orderCancelled'))
-                                            setInboundOrders(await getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
+                                            refreshInboundOrders()
                                           } else {
                                             message.error(t('inventory.orderNotFound'))
                                           }
@@ -3817,8 +3793,8 @@ const AdminInventory: React.FC = () => {
 
                                           await createInboundOrder(returnOrderData)
                                           message.success(t('inventory.returnOrderCreated'))
-                                          setInboundOrders(await getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
-                                          setInventoryMovements(await getAllInventoryMovements(isSuperAdmin ? undefined : currentUser?.storeId))
+                                          refreshInboundOrders()
+                                          refreshInventoryMovements()
                                         } catch (error: any) {
                                           message.error(t('common.error') + ': ' + error.message)
                                         } finally {
@@ -3850,12 +3826,11 @@ const AdminInventory: React.FC = () => {
                                     e.stopPropagation()
 
                                     // 使用受控的 Modal 替代 modal.confirm，以解决 React 19 兼容性问题
-                                    setDeleteTargetOrder({
+                                    openDeleteOrder({
                                       id: group.id,
                                       referenceNo: group.referenceNo,
                                       productCount: group.productCount
                                     })
-                                    setDeleteConfirmOpen(true)
                                   }}
                                   style={{
                                     flex: 1,
@@ -4184,9 +4159,9 @@ const AdminInventory: React.FC = () => {
                     message.success(t('inventory.outStockSuccess'))
                     outForm.resetFields()
                     setOutModalOpen(false)
-                    setItems(await getCigars())
-                    setOutboundOrders(await getAllOutboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
-                    setInventoryMovements(await getAllInventoryMovements(isSuperAdmin ? undefined : currentUser?.storeId))
+                    refreshItems()
+                    refreshOutboundOrders()
+                    refreshInventoryMovements()
                   } finally {
                     setLoading(false)
                   }
@@ -4463,7 +4438,7 @@ const AdminInventory: React.FC = () => {
                     }
 
                     // 使用受控 Modal 替代 modal.confirm，以解决 React 19 兼容性问题
-                    setDeleting(editing)
+                    openDeleteCigar(editing)
                   }}>{t('common.delete')}</Button>
                 </>
               )}
@@ -4586,8 +4561,7 @@ const AdminInventory: React.FC = () => {
               await createDocument<Cigar>(COLLECTIONS.CIGARS, { ...payload, createdAt: new Date() } as any)
               message.success(t('common.created'))
             }
-            const list = await getCigars()
-            setItems(list)
+            refreshItems()
             setCreating(false)
             setEditing(null)
             form.resetFields()
@@ -5228,10 +5202,10 @@ const AdminInventory: React.FC = () => {
             }
 
             message.success(t('inventory.stockUpdated'))
-            setItems(await getCigars())
-            setInboundOrders(await getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
-            setOutboundOrders(await getAllOutboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
-            setInventoryMovements(await getAllInventoryMovements(isSuperAdmin ? undefined : currentUser?.storeId))
+            refreshItems()
+            refreshInboundOrders()
+            refreshOutboundOrders()
+            refreshInventoryMovements()
             setAdjustingIn(null)
             setAdjustingOut(null)
           } finally {
@@ -5255,8 +5229,8 @@ const AdminInventory: React.FC = () => {
       {/* 删除确认 - 使用受控 Modal 替代 modal.confirm 以解决 React 19 兼容性问题 */}
       <Modal
         title={t('common.deleteProduct')}
-        open={!!deleting}
-        onCancel={() => setDeleting(null)}
+        open={deletingOpen}
+        onCancel={closeDeleteCigar}
         onOk={async () => {
           if (!deleting) return
 
@@ -5267,7 +5241,7 @@ const AdminInventory: React.FC = () => {
 
             if (res.success) {
               message.success(t('common.deleted'))
-              setItems(await getCigars())
+              refreshItems()
               setSelectedRowKeys([])
               // 如果正在编辑被删除的产品，重置编辑状态
               if (editing && (editing as any).id === productId) {
@@ -5283,7 +5257,7 @@ const AdminInventory: React.FC = () => {
             message.error(t('common.deleteFailed') + ': ' + (error as Error).message)
           } finally {
             setLoading(false)
-            setDeleting(null)
+            closeDeleteCigar()
           }
         }}
         okButtonProps={{ danger: true }}
@@ -5755,7 +5729,7 @@ const AdminInventory: React.FC = () => {
                 const result = await updateDocument(COLLECTIONS.BRANDS, editingBrand.id, brandData)
                 if (result.success) {
                   message.success(t('inventory.brandUpdated'))
-                  setBrandList(await getBrands())
+                  refreshBrandList()
                   setEditingBrand(null)
                   brandForm.resetFields()
                 } else {
@@ -5765,7 +5739,7 @@ const AdminInventory: React.FC = () => {
                 const result = await createDocument(COLLECTIONS.BRANDS, brandData)
                 if (result.success) {
                   message.success(t('inventory.brandCreated'))
-                  setBrandList(await getBrands())
+                  refreshBrandList()
                   setCreatingBrand(false)
                   brandForm.resetFields()
                 } else {
@@ -5877,7 +5851,7 @@ const AdminInventory: React.FC = () => {
             const result = await deleteDocument(COLLECTIONS.BRANDS, deletingBrand.id)
             if (result.success) {
               message.success(t('inventory.brandDeleted'))
-              setBrandList(await getBrands())
+              refreshBrandList()
             } else {
               message.error(t('inventory.brandDeleteFailed'))
             }
@@ -6382,8 +6356,8 @@ const AdminInventory: React.FC = () => {
               orderEditForm.resetFields()
               setEditAttachmentFileList([])
               setEditUploadedAttachments([])
-              setInboundOrders(await getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
-              setInventoryMovements(await getAllInventoryMovements(isSuperAdmin ? undefined : currentUser?.storeId))
+              refreshInboundOrders()
+              refreshInventoryMovements()
             } catch (error: any) {
               message.error(t('inventory.orderUpdateFailed', { error: error.message }))
             } finally {
@@ -6699,14 +6673,12 @@ const AdminInventory: React.FC = () => {
               await deleteInboundOrder(order.id)
               message.success(t('inventory.deleteSuccess'))
               // 刷新数据
-              setInboundOrders(await getAllInboundOrders(isSuperAdmin ? undefined : currentUser?.storeId))
-              setInventoryMovements(await getAllInventoryMovements(isSuperAdmin ? undefined : currentUser?.storeId))
-              setDeleteConfirmOpen(false)
-              setDeleteTargetOrder(null)
+              refreshInboundOrders()
+              refreshInventoryMovements()
+              closeDeleteOrder()
             } else {
               message.error(t('inventory.orderNotFound'))
-              setDeleteConfirmOpen(false)
-              setDeleteTargetOrder(null)
+              closeDeleteOrder()
             }
           } catch (error: any) {
             message.error(t('common.deleteFailed') + ': ' + (error.message || String(error)))
@@ -6714,10 +6686,7 @@ const AdminInventory: React.FC = () => {
             setLoading(false)
           }
         }}
-        onCancel={() => {
-          setDeleteConfirmOpen(false)
-          setDeleteTargetOrder(null)
-        }}
+        onCancel={closeDeleteOrder}
         okText={t('common.confirm')}
         cancelText={t('common.cancel')}
         okType="danger"
