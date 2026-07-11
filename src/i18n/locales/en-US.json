@@ -177,7 +177,9 @@
     "clearAll": "Clear All",
     "allWithCount": "All ({{count}})",
     "unreadWithCount": "Unread ({{count}})",
-    "failed": "Failed"
+    "failed": "Failed",
+    "checkoutFailed": "Check-out failed",
+    "savedSuccess": "Configuration saved"
   },
   "container": {
     "loadFailed": "Load failed",
@@ -275,7 +277,10 @@
     "backToLogin": "Back to Login",
     "completeProfileNote": "After completing your profile, you can log in with Google or email and password",
     "completeProfileWarning": "Please complete your account profile first",
-    "notLoggedIn": "User not logged in"
+    "notLoggedIn": "User not logged in",
+    "phonePlaceholder": "Phone (e.g. 0123456789)",
+    "phoneFormatInvalid": "Invalid phone format (10-12 digits required)",
+    "referralCodePlaceholder": "Referral code (optional)"
   },
   "featureManagement": {
     "title": "Feature Management",
@@ -406,7 +411,14 @@
     "cloudinaryApiKeyRequired": "Please enter Cloudinary API Key",
     "cloudinaryApiSecretRequired": "Please enter Cloudinary API Secret",
     "cloudinaryUploadPresetRequired": "Please enter Cloudinary Upload Preset",
-    "cloudinaryBaseFolderRequired": "Please enter Cloudinary Base Folder"
+    "cloudinaryBaseFolderRequired": "Please enter Cloudinary Base Folder",
+    "netlifyConfigRequired": "Please fill in Netlify Access Token and Site ID to deploy",
+    "updatingEnvVars": "Updating environment variables...",
+    "envUpdatedDeploying": "Environment variables updated, triggering deploy...",
+    "deployFailedCheckConfig": "Deploy failed, please check configuration",
+    "deployingIndexes": "Deploying Firestore indexes...",
+    "indexesDeployedSuccess": "Indexes deployed successfully!",
+    "indexesPartialFail": "Some indexes failed to deploy"
   },
   "navigation": {
     "home": "Home",
@@ -690,7 +702,15 @@
     "descriptionPlaceholder": "Please enter event description",
     "locationPlaceholder": "Please enter event location",
     "feePlaceholder": "Fee",
-    "maxParticipantsPlaceholder": "Max participants"
+    "maxParticipantsPlaceholder": "Max participants",
+    "orderPending": "Order Pending",
+    "ordersMissing": "Orders Pending ({{count}}/{{total}})",
+    "allPaid": "All Paid",
+    "unpaid": "Unpaid",
+    "partiallyPaid": "Partially Paid ({{paid}}/{{total}})",
+    "eventImages": "Event Images",
+    "registrationClosed": "Registration Closed",
+    "cancelRegistration": "Cancel Registration"
   },
   "shop": {
     "title": "Cigar Shop",
@@ -1031,7 +1051,8 @@
     "totalUsers": "Total Users",
     "noReferralData": "No referral relationship data",
     "clickToReturnAvatar": "Click to return to avatar",
-    "clickToViewMemberCard": "Click to view member card"
+    "clickToViewMemberCard": "Click to view member card",
+    "storeAdmin": "Store Admin"
   },
   "storeManagement": {
     "title": "Store Management",
@@ -2312,7 +2333,8 @@
     "flashOn": "Turn on flash",
     "uploadImage": "Upload Image",
     "brandOptionLabel": "Brand: {{name}}",
-    "cigarOptionLabel": "Cigar: {{name}}"
+    "cigarOptionLabel": "Cigar: {{name}}",
+    "cigarImage": "Cigar image"
   },
   "colorPicker": {
     "editTitle": "Edit {{title}} Color",
@@ -2423,7 +2445,9 @@
     "colCount": "Count",
     "colPercentage": "Percentage",
     "noData": "(No data)",
-    "notReturned": "Not returned:"
+    "notReturned": "Not returned:",
+    "imageSelected": "Image selected: {{name}}",
+    "testFailed": "Test failed: {{error}}"
   },
   "orphanedUsers": {
     "title": "Orphaned User Cleanup Tool",

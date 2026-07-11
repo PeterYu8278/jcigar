@@ -717,9 +717,9 @@ const Home: React.FC = () => {
                             onClick={() => handleEventRegistration(ev.id, !!isRegistered)}
                           >
                             {isPastDeadline
-                              ? '报名已截止'
+                              ? t('events.registrationClosed')
                               : isRegistered
-                                ? '取消报名'
+                                ? t('events.cancelRegistration')
                                 : t('events.join')
                             }
                           </Button>

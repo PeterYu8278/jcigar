@@ -452,6 +452,7 @@ const AdminInventory: React.FC = () => {
   }
 
   const filtered = useMemo(() => {
+    console.log('[Inventory] items.length=', items.length, 'filters:', { keyword, brandFilter, originFilter, statusFilter, strengthFilter })
     return items.filter(i => {
       const kw = keyword.trim().toLowerCase()
       const passKw = !kw || i.name?.toLowerCase().includes(kw) || i.brand?.toLowerCase().includes(kw)

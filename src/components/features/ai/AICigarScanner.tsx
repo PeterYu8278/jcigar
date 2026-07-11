@@ -1219,7 +1219,7 @@ export const AICigarScanner: React.FC = () => {
                                                         >
                                                             <Image
                                                                 src={imgUrl}
-                                                                alt={`雪茄图片 ${index + 1}`}
+                                                                alt={`${t('aiScanner.cigarImage')} ${index + 1}`}
                                                                 style={{
                                                                     width: '100%',
                                                                     height: '100%',
@@ -1334,7 +1334,7 @@ export const AICigarScanner: React.FC = () => {
                         boxShadow: '0 4px 16px rgba(255, 215, 0, 0.3)'
                     }}
                 >
-                    重新拍摄
+                    {t('aiScanner.retake')}
                 </Button>
             )}
         </div>

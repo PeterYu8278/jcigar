@@ -517,7 +517,7 @@ const Login: React.FC = () => {
               >
                 <Input
                   prefix={<UserOutlined style={{ color: loginError ? '#ff4d4f' : '#ffd700' }} />}
-                  placeholder={loginError || (appConfig?.auth?.disableEmailLogin ? "手机号 (例: 0123456789)" : "邮箱 / 手机号 (例: admin@example.com 或 0123456789)")}
+                  placeholder={loginError || (appConfig?.auth?.disableEmailLogin ? t('auth.phonePlaceholder') : t('auth.emailOrPhonePlaceholder'))}
                   onInput={(e) => {
                     const input = e.currentTarget
                     // 清除错误状态

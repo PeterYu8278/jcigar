@@ -6,6 +6,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { createVisitSession, completeVisitSession, getPendingVisitSession } from '../../services/firebase/visitSessions';
 import { getUserByMemberId } from '../../utils/memberId';
 import { useAuthStore } from '../../store/modules/auth';
+import { useTranslation } from 'react-i18next';
 
 const { Text } = Typography;
 
@@ -18,6 +19,7 @@ interface QRScannerViewProps {
 }
 
 export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onModeChange, onSuccess, onClose }) => {
+  const { t } = useTranslation();
   const { user: adminUser } = useAuthStore();
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const isStoppingRef = useRef<boolean>(false);
@@ -281,7 +283,7 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
           message.success(`Check-out 成功！扣除积分: ${result.pointsDeducted || 0}`);
           onSuccess?.();
         } else {
-          message.error(result.error || 'Check-out 失败');
+          message.error(result.error || t('common.checkoutFailed'));
           setProcessing(false);
           setScannedData(null);
           // 重新启动扫描

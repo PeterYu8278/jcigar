@@ -440,7 +440,7 @@ const CompleteProfile: React.FC = () => {
             >
               <Input
                 prefix={<PhoneOutlined style={{ color: '#ffd700' }} />}
-                placeholder="手机号 (例: 0123456789)"
+                placeholder={t('auth.phonePlaceholder')}
                 onInput={(e) => {
                   const input = e.currentTarget
                   // 只保留数字、加号和空格

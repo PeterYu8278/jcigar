@@ -6,6 +6,7 @@
 import React from 'react'
 import { Space, Button, Divider } from 'antd'
 import { useTranslation } from 'react-i18next'
+import i18next from 'i18next'
 import { COMMON_ACTIONS } from '../../i18n/constants'
 
 export interface FormAction {
@@ -227,25 +228,25 @@ export const useFormActionPresets = () => {
  */
 export const FormActionPresets = {
   saveCancel: (onSave: () => void, onCancel: () => void, loading = false): FormAction[] => [
-    { key: 'cancel', label: '取消', onClick: onCancel, disabled: loading },
-    { key: 'save', label: '保存', type: 'primary', onClick: onSave, loading, htmlType: 'submit' }
+    { key: 'cancel', label: i18next.t('common.cancel'), onClick: onCancel, disabled: loading },
+    { key: 'save', label: i18next.t('common.save'), type: 'primary', onClick: onSave, loading, htmlType: 'submit' }
   ],
   createCancel: (onCreate: () => void, onCancel: () => void, loading = false): FormAction[] => [
-    { key: 'cancel', label: '取消', onClick: onCancel, disabled: loading },
-    { key: 'create', label: '创建', type: 'primary', onClick: onCreate, loading, htmlType: 'submit' }
+    { key: 'cancel', label: i18next.t('common.cancel'), onClick: onCancel, disabled: loading },
+    { key: 'create', label: i18next.t('common.create'), type: 'primary', onClick: onCreate, loading, htmlType: 'submit' }
   ],
   editDeleteCancel: (onEdit: () => void, onDelete: () => void, onCancel: () => void, loading = false): FormAction[] => [
-    { key: 'cancel', label: '取消', onClick: onCancel, disabled: loading },
-    { key: 'delete', label: '删除', type: 'primary', danger: true, onClick: onDelete, disabled: loading },
-    { key: 'edit', label: '编辑', type: 'primary', onClick: onEdit, loading, htmlType: 'submit' }
+    { key: 'cancel', label: i18next.t('common.cancel'), onClick: onCancel, disabled: loading },
+    { key: 'delete', label: i18next.t('common.delete'), type: 'primary', danger: true, onClick: onDelete, disabled: loading },
+    { key: 'edit', label: i18next.t('common.edit'), type: 'primary', onClick: onEdit, loading, htmlType: 'submit' }
   ],
   submitReset: (onSubmit: () => void, onReset: () => void, loading = false): FormAction[] => [
-    { key: 'reset', label: '重置', onClick: onReset, disabled: loading },
-    { key: 'submit', label: '提交', type: 'primary', onClick: onSubmit, loading, htmlType: 'submit' }
+    { key: 'reset', label: i18next.t('common.reset'), onClick: onReset, disabled: loading },
+    { key: 'submit', label: i18next.t('common.submit'), type: 'primary', onClick: onSubmit, loading, htmlType: 'submit' }
   ],
   confirmCancel: (onConfirm: () => void, onCancel: () => void, loading = false): FormAction[] => [
-    { key: 'cancel', label: '取消', onClick: onCancel, disabled: loading },
-    { key: 'confirm', label: '确认', type: 'primary', onClick: onConfirm, loading, htmlType: 'submit' }
+    { key: 'cancel', label: i18next.t('common.cancel'), onClick: onCancel, disabled: loading },
+    { key: 'confirm', label: i18next.t('common.confirm'), type: 'primary', onClick: onConfirm, loading, htmlType: 'submit' }
   ]
 }
 

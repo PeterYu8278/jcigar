@@ -507,7 +507,7 @@ const AdminEvents: React.FC = () => {
     })
     
     if (orderIds.length === 0) {
-      return { status: 'no_orders', text: lang === 'zh' ? '未生成订单' : 'Order Pending', color: 'orange' }
+      return { status: 'no_orders', text: t('events.orderPending'), color: 'orange' }
     }
     
     // 检查所有订单的匹配状态
@@ -548,22 +548,22 @@ const AdminEvents: React.FC = () => {
     if (missingOrderCount > 0) {
       return {
         status: 'partial_generated',
-        text: lang === 'zh' ? `订单未齐 (${totalOrders}/${registered.length})` : `Incomplete (${totalOrders}/${registered.length})`,
+        text: t('events.ordersMissing', { count: totalOrders, total: registered.length }),
         color: 'warning'
       }
     }
     
     if (fullyPaidCount === totalOrders) {
-      return { status: 'all_paid', text: lang === 'zh' ? '已全额付款' : 'All Paid', color: 'green' }
+      return { status: 'all_paid', text: t('events.allPaid'), color: 'green' }
     }
     
     if (unpaidCount === totalOrders && partialPaidCount === 0) {
-      return { status: 'all_unpaid', text: lang === 'zh' ? '全额未付' : 'Unpaid', color: 'red' }
+      return { status: 'all_unpaid', text: t('events.unpaid'), color: 'red' }
     }
     
     return {
       status: 'partially_paid',
-      text: lang === 'zh' ? `部分已付 (${fullyPaidCount}/${totalOrders})` : `Partially Paid (${fullyPaidCount}/${totalOrders})`,
+      text: t('events.partiallyPaid', { paid: fullyPaidCount, total: totalOrders }),
       color: 'orange'
     }
   }
@@ -841,7 +841,7 @@ const AdminEvents: React.FC = () => {
                   setSelectedRowKeys([])
                 }}
                 buttonText={t('common.batchCancelled')}
-                itemTypeName="活动"
+                itemTypeName={t('events.event')}
                 style={{ 
                   padding: '8px 16px', 
                   borderRadius: 8, 
@@ -860,7 +860,7 @@ const AdminEvents: React.FC = () => {
                   refreshEvents()
                   setSelectedRowKeys([])
                 }}
-                itemTypeName="活动"
+                itemTypeName={t('events.event')}
                 style={{ 
                   padding: '8px 16px', 
                   borderRadius: 8, 
@@ -1486,7 +1486,7 @@ const AdminEvents: React.FC = () => {
             {/* 基本信息卡片 */}
             <div style={theme.card.elevated}>
               <div style={theme.text.subtitle}>
-                基本信息
+                {t('events.basicInfo')}
               </div>
               
               <Form.Item 
@@ -1495,7 +1495,7 @@ const AdminEvents: React.FC = () => {
                 rules={[{ required: true, message: t('common.pleaseInputEventName') }]}
                 style={{ marginBottom: 12 }}
               >
-                <Input placeholder="请输入活动名称" />
+                <Input placeholder={t('events.namePlaceholder')} />
           </Form.Item>
               
               <Form.Item 
@@ -1503,7 +1503,7 @@ const AdminEvents: React.FC = () => {
                 name="description"
                 style={{ marginBottom: 12 }}
               >
-                <Input.TextArea rows={2} placeholder="请输入活动描述" />
+                <Input.TextArea rows={2} placeholder={t('events.descriptionPlaceholder')} />
           </Form.Item>
               
               <Form.Item 
@@ -1512,14 +1512,14 @@ const AdminEvents: React.FC = () => {
                 rules={[{ required: true, message: t('common.pleaseInputLocationName') }]}
                 style={{ marginBottom: 0 }}
               >
-                <Input placeholder="请输入活动地点" />
+                <Input placeholder={t('events.locationPlaceholder')} />
           </Form.Item>
             </div>
             
             {/* 时间设置卡片 */}
             <div style={theme.card.elevated}>
               <div style={theme.text.subtitle}>
-                📅 时间设置
+                {t('events.timeSettings')}
               </div>
               
           <Form.Item 
@@ -1578,7 +1578,7 @@ const AdminEvents: React.FC = () => {
             {/* 参与设置卡片 */}
             <div style={theme.card.elevated}>
               <div style={theme.text.subtitle}>
-                参与设置
+                {t('events.participationSettings')}
               </div>
               
               <Row gutter={12}>
@@ -1588,7 +1588,7 @@ const AdminEvents: React.FC = () => {
                     name="fee"
                     style={{ marginBottom: 12 }}
                   >
-                    <InputNumber min={0} style={{ width: '100%' }} placeholder="费用" controls={false} />
+                    <InputNumber min={0} style={{ width: '100%' }} placeholder={t('events.feePlaceholder')} controls={false} />
           </Form.Item>
                 </Col>
                 <Col span={12}>
@@ -1597,7 +1597,7 @@ const AdminEvents: React.FC = () => {
                     name="maxParticipants"
                     style={{ marginBottom: 12 }}
                   >
-                    <InputNumber min={0} style={{ width: '100%' }} placeholder="人数上限" controls={false} />
+                    <InputNumber min={0} style={{ width: '100%' }} placeholder={t('events.maxParticipantsPlaceholder')} controls={false} />
           </Form.Item>
                 </Col>
               </Row>
@@ -1643,7 +1643,7 @@ const AdminEvents: React.FC = () => {
             {!isMobile && (
               <div style={theme.card.elevated}>
                 <div style={theme.text.subtitle}>
-                  活动图片
+                  {t('events.eventImages')}
                 </div>
                 
                 <Form.Item 

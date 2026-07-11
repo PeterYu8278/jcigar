@@ -93,7 +93,7 @@ const PageContainer: React.FC<PageContainerProps> = ({
   header,
   showHeader = true,
   loading = false,
-  loadingTip = '加载中...',
+  loadingTip,
   error = null,
   onErrorRetry,
   isEmpty = false,
@@ -105,7 +105,9 @@ const PageContainer: React.FC<PageContainerProps> = ({
   fixedHeader = false,
   ghost = false
 }) => {
+  const { t } = useTranslation()
   const { isMobile } = useResponsive()
+  const resolvedLoadingTip = loadingTip ?? t('common.loading')
   const [contentHeight, setContentHeight] = useState<number | undefined>(undefined)
 
   /**
@@ -155,7 +157,7 @@ const PageContainer: React.FC<PageContainerProps> = ({
           padding: '40px 0'
         }}
       >
-        <Spin size="large" tip={loadingTip} />
+        <Spin size="large" tip={resolvedLoadingTip} />
       </div>
     )
   }
@@ -164,7 +166,6 @@ const PageContainer: React.FC<PageContainerProps> = ({
    * 渲染错误状态
    */
   const renderError = () => {
-    const { t } = useTranslation()
     const errorMessage = typeof error === 'string' ? error : error?.message || t(CONTAINER_KEYS.LOAD_FAILED)
 
     return (
@@ -189,8 +190,6 @@ const PageContainer: React.FC<PageContainerProps> = ({
    * 渲染空数据状态
    */
   const renderEmpty = () => {
-    const { t } = useTranslation()
-    
     if (emptyComponent) {
       return emptyComponent
     }

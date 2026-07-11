@@ -178,7 +178,9 @@
     "clearAll": "清空",
     "allWithCount": "全部 ({{count}})",
     "unreadWithCount": "未读 ({{count}})",
-    "failed": "失败"
+    "failed": "失败",
+    "checkoutFailed": "Check-out 失败",
+    "savedSuccess": "配置已保存"
   },
   "container": {
     "loadFailed": "加载失败",
@@ -276,7 +278,10 @@
     "backToLogin": "返回登录",
     "completeProfileNote": "完善信息后，您可以使用 Google 或邮箱+密码登录",
     "completeProfileWarning": "请先完善您的账户信息",
-    "notLoggedIn": "用户未登录"
+    "notLoggedIn": "用户未登录",
+    "phonePlaceholder": "手机号 (例: 0123456789)",
+    "phoneFormatInvalid": "手机号格式无效（需10-12位数字）",
+    "referralCodePlaceholder": "引荐码 (可选)"
   },
   "featureManagement": {
     "title": "功能管理",
@@ -407,7 +412,14 @@
     "cloudinaryApiKeyRequired": "请输入 Cloudinary API Key",
     "cloudinaryApiSecretRequired": "请输入 Cloudinary API Secret",
     "cloudinaryUploadPresetRequired": "请输入 Cloudinary Upload Preset",
-    "cloudinaryBaseFolderRequired": "请输入 Cloudinary Base Folder"
+    "cloudinaryBaseFolderRequired": "请输入 Cloudinary Base Folder",
+    "netlifyConfigRequired": "请填写 Netlify Access Token 和 Site ID 以进行部署",
+    "updatingEnvVars": "正在更新环境变量...",
+    "envUpdatedDeploying": "环境变量已更新，正在触发部署...",
+    "deployFailedCheckConfig": "部署失败，请检查配置",
+    "deployingIndexes": "正在部署 Firestore 索引...",
+    "indexesDeployedSuccess": "索引部署成功！",
+    "indexesPartialFail": "部分索引部署失败"
   },
   "navigation": {
     "home": "首页",
@@ -691,7 +703,15 @@
     "descriptionPlaceholder": "请输入活动描述",
     "locationPlaceholder": "请输入活动地点",
     "feePlaceholder": "费用",
-    "maxParticipantsPlaceholder": "人数上限"
+    "maxParticipantsPlaceholder": "人数上限",
+    "orderPending": "未生成订单",
+    "ordersMissing": "订单未齐 ({{count}}/{{total}})",
+    "allPaid": "已全额付款",
+    "unpaid": "全额未付",
+    "partiallyPaid": "部分已付 ({{paid}}/{{total}})",
+    "eventImages": "活动图片",
+    "registrationClosed": "报名已截止",
+    "cancelRegistration": "取消报名"
   },
   "shop": {
     "title": "雪茄商城",
@@ -1032,7 +1052,8 @@
     "totalUsers": "总用户数",
     "noReferralData": "暂无引荐关系数据",
     "clickToReturnAvatar": "点击返回头像",
-    "clickToViewMemberCard": "点击查看会员卡"
+    "clickToViewMemberCard": "点击查看会员卡",
+    "storeAdmin": "门店管理员"
   },
   "storeManagement": {
     "title": "门店管理",
@@ -2313,7 +2334,8 @@
     "flashOn": "打开闪光灯",
     "uploadImage": "上传图片",
     "brandOptionLabel": "品牌: {{name}}",
-    "cigarOptionLabel": "雪茄: {{name}}"
+    "cigarOptionLabel": "雪茄: {{name}}",
+    "cigarImage": "雪茄图片"
   },
   "colorPicker": {
     "editTitle": "编辑 {{title}} 颜色",
@@ -2424,7 +2446,9 @@
     "colCount": "次数",
     "colPercentage": "占比",
     "noData": "(无数据)",
-    "notReturned": "未返回:"
+    "notReturned": "未返回:",
+    "imageSelected": "已选择图片: {{name}}",
+    "testFailed": "测试失败: {{error}}"
   },
   "orphanedUsers": {
     "title": "孤立用户清理工具",

@@ -74,7 +74,7 @@ export default function GeminiModelTester() {
         const file = info.file.originFileObj || info.file;
         if (file && file.type.startsWith('image/')) {
             setConfig({ ...config, testImage: file });
-            message.success(`已选择图片: ${file.name}`);
+            message.success(t('geminiTester.imageSelected', { name: file.name }));
         } else {
             message.error(t('geminiTester.uploadImageRequired'));
         }
@@ -130,7 +130,7 @@ export default function GeminiModelTester() {
             message.success(t('geminiTester.testCompleted'));
             
         } catch (error: any) {
-            message.error(`测试失败: ${error.message}`);
+            message.error(t('geminiTester.testFailed', { error: error.message }));
             setProgress(prev => ({ ...prev, status: 'error' }));
         } finally {
             setIsRunning(false);

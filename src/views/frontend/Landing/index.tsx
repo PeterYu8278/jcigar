@@ -1023,7 +1023,7 @@ const Landing: React.FC = () => {
                     { required: true, message: t('auth.phoneRequired') },
                     {
                       pattern: /^((\+?60[1-9]\d{8,9})|(0[1-9]\d{8,9}))$/,
-                      message: '手机号格式无效（需10-12位数字）'
+                      message: t('auth.phoneFormatInvalid')
                     },
                     {
                       validator: async (_, value) => {
@@ -1041,7 +1041,7 @@ const Landing: React.FC = () => {
                         try {
                           const phoneQuery = query(collection(db, 'users'), where('profile.phone', '==', normalized), limit(1))
                           const phoneSnap = await getDocs(phoneQuery)
-                          if (!phoneSnap.empty) return Promise.reject(new Error('该手机号已被注册'))
+                          if (!phoneSnap.empty) return Promise.reject(new Error(t('auth.phoneAlreadyRegistered')))
                         } catch (e) { }
                         return Promise.resolve()
                       }
@@ -1074,7 +1074,7 @@ const Landing: React.FC = () => {
                         try {
                           const emailQuery = query(collection(db, 'users'), where('email', '==', value.toLowerCase().trim()), limit(1))
                           const emailSnap = await getDocs(emailQuery)
-                          if (!emailSnap.empty) return Promise.reject(new Error('该邮箱已被注册'))
+                          if (!emailSnap.empty) return Promise.reject(new Error(t('auth.emailAlreadyRegistered')))
                         } catch (e) { }
                         return Promise.resolve()
                       }
@@ -1142,7 +1142,7 @@ const Landing: React.FC = () => {
                 <Form.Item name="referralCode" style={{ marginBottom: '12px' }}>
                   <Input
                     prefix={<GiftOutlined style={{ color: '#ffd700' }} />}
-                    placeholder="引荐码 (可选)"
+                    placeholder={t('auth.referralCodePlaceholder')}
                     onInput={(e) => { e.currentTarget.value = e.currentTarget.value.toUpperCase() }}
                     style={{
                       background: 'rgba(45, 45, 45, 0.8)',

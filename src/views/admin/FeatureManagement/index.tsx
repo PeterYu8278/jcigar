@@ -295,7 +295,7 @@ const FeatureManagement: React.FC = () => {
 
       const result = await updateFeatureVisibilityConfig(updates, user.id);
       if (result.success) {
-        message.success('配置已保存');
+        message.success(t('common.savedSuccess'));
         refreshConfig();
       } else {
         message.error(result.error || t('common.saveFailed'));
@@ -594,12 +594,12 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
       const { netlifyAccessToken, netlifySiteId } = values;
 
       if (!netlifyAccessToken || !netlifySiteId) {
-        message.error('请填写 Netlify Access Token 和 Site ID 以进行部署');
+        message.error(t('featureManagement.netlifyConfigRequired'));
         return;
       }
 
       setDeploying(true);
-      setDeployStatus({ state: 'updating', message: '正在更新环境变量...' });
+      setDeployStatus({ state: 'updating', message: t('featureManagement.updatingEnvVars') });
 
       // 构建环境变量数组
       const envVars = [
@@ -667,13 +667,13 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || '部署失败');
+        throw new Error(result.error || t('featureManagement.deployFailed'));
       }
 
       if (result.success) {
         setDeployStatus({
           state: 'deploying',
-          message: '环境变量已更新，正在触发部署...',
+          message: t('featureManagement.envUpdatedDeploying'),
           deployId: result.deploy?.id,
           deployUrl: result.deploy?.url,
         });
@@ -695,9 +695,9 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
       console.error('[Deploy to Netlify] Error:', error);
       setDeployStatus({
         state: 'error',
-        message: error.message || '部署失败，请检查配置',
+        message: error.message || t('featureManagement.deployFailedCheckConfig'),
       });
-      message.error(error.message || '部署失败');
+      message.error(error.message || t('featureManagement.deployFailed'));
       setDeploying(false);
     }
   };
@@ -710,12 +710,12 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
       const { firebaseProjectId } = values;
 
       if (!firebaseProjectId) {
-        message.error('请填写 Firebase Project ID');
+        message.error(t('featureManagement.firebaseProjectIdRequired'));
         return;
       }
 
       setIndexDeploying(true);
-      setIndexDeployStatus({ state: 'deploying', message: '正在部署 Firestore 索引...' });
+      setIndexDeployStatus({ state: 'deploying', message: t('featureManagement.deployingIndexes') });
 
       // 调用 Netlify Function 部署索引（Function 会读取 firestore.indexes.json）
       const deployResponse = await fetch(`/.netlify/functions/deploy-firestore-indexes`, {
@@ -730,7 +730,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
 
       if (!deployResponse.ok) {
         const errorData = await deployResponse.json();
-        throw new Error(errorData.error || '部署失败');
+        throw new Error(errorData.error || t('featureManagement.deployFailed'));
       }
 
       const result = await deployResponse.json();
@@ -739,34 +739,34 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
       if (result.success || (result.summary && result.summary.succeeded > 0)) {
         setIndexDeployStatus({
           state: result.success ? 'success' : 'error',
-          message: result.message || (result.success ? '索引部署成功！' : '部分索引部署失败'),
+          message: result.message || (result.success ? t('featureManagement.indexesDeployedSuccess') : t('featureManagement.indexesPartialFail')),
           links: result.links,
           summary: result.summary,
           results: result.results,
           consoleUrl: result.consoleUrl,
         });
         if (result.success) {
-          message.success(result.message || '索引部署成功！');
+          message.success(result.message || t('featureManagement.indexesDeployedSuccess'));
         } else {
-          message.warning(result.message || '部分索引部署失败');
+          message.warning(result.message || t('featureManagement.indexesPartialFail'));
         }
       } else {
         setIndexDeployStatus({
           state: 'error',
-          message: result.message || '部署失败',
+          message: result.message || t('featureManagement.deployFailed'),
           summary: result.summary,
           results: result.results,
           consoleUrl: result.consoleUrl,
         });
-        message.error(result.message || '部署失败');
+        message.error(result.message || t('featureManagement.deployFailed'));
       }
     } catch (error: any) {
       console.error('[handleDeployFirestoreIndexes] Error:', error);
       setIndexDeployStatus({
         state: 'error',
-        message: error.message || '部署失败，请检查配置',
+        message: error.message || t('featureManagement.deployFailedCheckConfig'),
       });
-      message.error(error.message || '部署失败');
+      message.error(error.message || t('featureManagement.deployFailed'));
     } finally {
       setIndexDeploying(false);
     }
@@ -2641,7 +2641,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                                           user.id
                                         );
                                         if (result.success) {
-                                          message.success('配置已保存');
+                                          message.success(t('common.savedSuccess'));
                                           // 直接更新本地 appConfig 状态，不重新加载避免状态回退
                                           if (appConfig) {
                                             setAppConfig({
@@ -2703,7 +2703,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                                           user.id
                                         );
                                         if (result.success) {
-                                          message.success('配置已保存');
+                                          message.success(t('common.savedSuccess'));
                                           // 直接更新本地 appConfig 状态，不重新加载避免状态回退
                                           if (appConfig) {
                                             setAppConfig({
@@ -2763,7 +2763,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                                             user.id
                                           );
                                           if (result.success) {
-                                            message.success('配置已保存');
+                                            message.success(t('common.savedSuccess'));
                                             // 直接更新本地 appConfig 状态
                                             if (appConfig) {
                                               setAppConfig({

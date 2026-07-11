@@ -52,7 +52,7 @@ const AdminAccountList: React.FC = () => {
         <Space>
           <span>{text || t('subscriptionSettings.noName')}</span>
           {record.role === 'superAdmin' && <Tag color="gold">SUPER</Tag>}
-          {record.role === 'admin' && <Tag color="blue">STORE ADMIN</Tag>}
+          {record.role === 'admin' && <Tag color="blue">{t('users.storeAdmin')}</Tag>}
         </Space>
       )
     },
