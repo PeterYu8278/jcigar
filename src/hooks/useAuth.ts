@@ -11,6 +11,7 @@ import { auth } from '../config/firebase'
 import { AUTH_ROUTES } from '../constants/routes'
 import type { User, UserRole } from '../types'
 import { message } from 'antd'
+import i18n from '../i18n'
 
 /**
  * 认证状态和操作
@@ -122,10 +123,10 @@ export const useAuth = (): UseAuthReturn => {
       // 等待一小段时间确保状态更新
       await new Promise(resolve => setTimeout(resolve, 500))
       
-      message.success('登录成功')
+      message.success(i18n.t('auth.loginSuccess'))
       navigate('/')
     } catch (error: any) {
-      const errorMessage = error.message || '登录失败'
+      const errorMessage = error.message || i18n.t('auth.loginFailed')
       setError(errorMessage)
       message.error(errorMessage)
       throw error
@@ -151,10 +152,10 @@ export const useAuth = (): UseAuthReturn => {
       // 认证状态会由 onAuthStateChange 自动更新
       await new Promise(resolve => setTimeout(resolve, 500))
       
-      message.success('注册成功')
+      message.success(i18n.t('auth.registerSuccess'))
       navigate('/')
     } catch (error: any) {
-      const errorMessage = error.message || '注册失败'
+      const errorMessage = error.message || i18n.t('auth.registerFailed')
       setError(errorMessage)
       message.error(errorMessage)
       throw error
@@ -173,10 +174,10 @@ export const useAuth = (): UseAuthReturn => {
       await signOut(auth)
       logoutStore()
       
-      message.success('已登出')
+      message.success(i18n.t('auth.loggedOut'))
       navigate(AUTH_ROUTES.LOGIN)
     } catch (error: any) {
-      const errorMessage = error.message || '登出失败'
+      const errorMessage = error.message || i18n.t('auth.logoutFailed')
       message.error(errorMessage)
       throw error
     } finally {
@@ -189,7 +190,7 @@ export const useAuth = (): UseAuthReturn => {
    */
   const refreshUser = async (): Promise<void> => {
     if (!firebaseUser) {
-      throw new Error('用户未登录')
+      throw new Error(i18n.t('auth.notLoggedIn'))
     }
 
     try {
@@ -201,10 +202,10 @@ export const useAuth = (): UseAuthReturn => {
       
       if (userData) {
         useAuthStore.getState().setUser(userData)
-        message.success('用户数据已刷新')
+        message.success(i18n.t('auth.userDataRefreshed'))
       }
     } catch (error: any) {
-      const errorMessage = error.message || '刷新用户数据失败'
+      const errorMessage = error.message || i18n.t('auth.refreshFailed')
       message.error(errorMessage)
       throw error
     } finally {
@@ -261,7 +262,7 @@ export const useRequireAuth = (): UseAuthReturn => {
 
   React.useEffect(() => {
     if (!auth.loading && !auth.isAuthenticated) {
-      message.warning('请先登录')
+      message.warning(i18n.t('auth.pleaseLogin'))
       navigate(AUTH_ROUTES.LOGIN)
     }
   }, [auth.loading, auth.isAuthenticated, navigate])
@@ -293,10 +294,10 @@ export const useRequireAdmin = (): UseAuthReturn => {
   React.useEffect(() => {
     if (!auth.loading) {
       if (!auth.isAuthenticated) {
-        message.warning('请先登录')
+        message.warning(i18n.t('auth.pleaseLogin'))
         navigate(AUTH_ROUTES.LOGIN)
       } else if (!auth.isAdmin) {
-        message.error('您没有管理员权限')
+        message.error(i18n.t('auth.noAdminPermission'))
         navigate('/')
       }
     }

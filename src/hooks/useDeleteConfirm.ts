@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react'
 import { Modal, message } from 'antd'
+import i18n from '../i18n'
 
 interface UseDeleteConfirmOptions {
   title?: string
@@ -31,10 +32,10 @@ export function useDeleteConfirm(
   options: UseDeleteConfirmOptions = {}
 ): UseDeleteConfirmResult {
   const {
-    title = '确认删除',
-    content = '此操作不可恢复，是否继续？',
-    successMessage = '删除成功',
-    errorMessage = '删除失败',
+    title = i18n.t('common.confirmDelete'),
+    content = i18n.t('common.irreversibleConfirm'),
+    successMessage = i18n.t('common.deleteSuccess'),
+    errorMessage = i18n.t('common.deleteFailed'),
     onSuccess,
   } = options
 
@@ -43,8 +44,8 @@ export function useDeleteConfirm(
       Modal.confirm({
         title,
         content,
-        okText: '确认',
-        cancelText: '取消',
+        okText: i18n.t('common.confirm'),
+        cancelText: i18n.t('common.cancel'),
         okButtonProps: { danger: true },
         onOk: async () => {
           const result = await onConfirm(id)

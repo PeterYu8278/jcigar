@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react'
 import { Input } from 'antd'
 import { SearchOutlined, CloseCircleOutlined } from '@ant-design/icons'
 import type { InputProps } from 'antd'
+import { useTranslation } from 'react-i18next'
 
 interface SearchInputProps extends Omit<InputProps, 'onChange'> {
   /** 搜索回调 */
@@ -59,9 +60,10 @@ const SearchInput: React.FC<SearchInputProps> = ({
   showClear = true,
   minLength = 0,
   searchOnChange = false,
-  placeholder = '请输入搜索关键词',
+  placeholder,
   ...restProps
 }) => {
+  const { t } = useTranslation()
   const [value, setValue] = useState('')
   const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null)
 
@@ -166,7 +168,7 @@ const SearchInput: React.FC<SearchInputProps> = ({
       value={value}
       onChange={handleChange}
       onPressEnter={handlePressEnter}
-      placeholder={placeholder}
+      placeholder={placeholder ?? t('common.searchPlaceholder')}
       autoFocus={autoFocus}
       prefix={<SearchOutlined style={{ color: 'rgba(255, 255, 255, 0.45)' }} />}
       suffix={
@@ -207,15 +209,16 @@ interface SearchInputWithButtonProps extends SearchInputProps {
 export const SearchInputWithButton: React.FC<SearchInputWithButtonProps> = ({
   onSearch,
   onChange,
-  buttonText = '搜索',
+  buttonText,
   buttonLoading = false,
   ...restProps
 }) => {
+  const { t } = useTranslation()
   const { onChange: restOnChange, ...otherProps } = restProps as any
   return (
     <Input.Search
-      placeholder={otherProps.placeholder || '请输入搜索关键词'}
-      enterButton={buttonText}
+      placeholder={otherProps.placeholder ?? t('common.searchPlaceholder')}
+      enterButton={buttonText ?? t('common.search')}
       loading={buttonLoading}
       onSearch={onSearch}
       {...otherProps}

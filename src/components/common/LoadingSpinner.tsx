@@ -2,6 +2,7 @@ import React from 'react'
 import { Spin } from 'antd'
 import { LoadingOutlined } from '@ant-design/icons'
 import type { SpinProps } from 'antd'
+import { useTranslation } from 'react-i18next'
 
 interface LoadingSpinnerProps extends SpinProps {
   /** 加载提示文本 */
@@ -158,15 +159,17 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 /**
  * 页面加载组件（快捷方式）
  */
-export const PageLoading: React.FC<{ tip?: string }> = ({ tip = '页面加载中...' }) => {
-  return <LoadingSpinner type="page" tip={tip} />
+export const PageLoading: React.FC<{ tip?: string }> = ({ tip }) => {
+  const { t } = useTranslation()
+  return <LoadingSpinner type="page" tip={tip ?? t('common.pageLoading')} />
 }
 
 /**
  * 区块加载组件（快捷方式）
  */
-export const SectionLoading: React.FC<{ tip?: string }> = ({ tip = '加载中...' }) => {
-  return <LoadingSpinner type="section" tip={tip} />
+export const SectionLoading: React.FC<{ tip?: string }> = ({ tip }) => {
+  const { t } = useTranslation()
+  return <LoadingSpinner type="section" tip={tip ?? t('common.loading')} />
 }
 
 /**

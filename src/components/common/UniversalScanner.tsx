@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Tabs } from 'antd';
 import { QrcodeOutlined, EyeOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { QRScannerView } from '../admin/QRScanner';
 import { AICigarScanner } from '../features/ai/AICigarScanner';
 import { useAuthStore } from '../../store/modules/auth';
@@ -18,6 +19,7 @@ export const UniversalScanner: React.FC<UniversalScannerProps> = ({
     onClose,
     defaultTab = 'ai' // Default to AI for members
 }) => {
+    const { t } = useTranslation();
     const { isAdmin, isDeveloper } = useAuthStore();
     const [activeTab, setActiveTab] = useState<string>(defaultTab);
     const [qrMode, setQrMode] = useState<'checkin' | 'checkout'>('checkin');
@@ -81,7 +83,7 @@ export const UniversalScanner: React.FC<UniversalScannerProps> = ({
             label: (
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                     <EyeOutlined style={{ marginRight: 4 }} />
-                    AI 识茄
+                    {t('scanner.aiIdentify')}
                 </span>
             ),
             children: (
@@ -96,7 +98,7 @@ export const UniversalScanner: React.FC<UniversalScannerProps> = ({
             label: (
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                     <QrcodeOutlined style={{ marginRight: 4 }} />
-                    扫码
+                    {t('scanner.scan')}
                 </span>
             ),
             children: (
@@ -111,7 +113,7 @@ export const UniversalScanner: React.FC<UniversalScannerProps> = ({
                     ) : (
                         <div style={{ padding: 20, textAlign: 'center', color: '#aaa', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column' }}>
                             <QrcodeOutlined style={{ fontSize: 48, marginBottom: 16 }} />
-                            <p>普通会员扫码功能即将上线</p>
+                            <p>{t('scanner.memberScanComingSoon')}</p>
                         </div>
                     )}
                 </div>
@@ -143,7 +145,7 @@ export const UniversalScanner: React.FC<UniversalScannerProps> = ({
                     fontWeight: 700,
                     fontSize: 18
                 }}>
-                    智能扫描
+                    {t('scanner.smartScan')}
                 </span>
             }
             open={visible}

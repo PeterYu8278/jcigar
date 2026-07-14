@@ -2,6 +2,7 @@
  * 模拟移动端界面布局组件
  */
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Layout, Space, Typography, Avatar, Tag, Input } from 'antd';
 import {
   HomeOutlined,
@@ -31,6 +32,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
   onElementClick,
   appName = '',
 }) => {
+  const { t } = useTranslation();
   return (
     <div
       style={{
@@ -64,7 +66,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
                 cursor: 'pointer',
               }}
               onClick={() => onElementClick('icon')}
-              title="点击编辑图标颜色"
+              title={t('colorEditor.editIconColor')}
             />
             <Text style={{ color: colorTheme.text.primary, fontSize: 16, fontWeight: 600 }}>
               {appName || 'App Name'}
@@ -78,10 +80,10 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
                 cursor: 'pointer',
               }}
               onClick={() => onElementClick('icon')}
-              title="点击编辑图标颜色"
+              title={t('colorEditor.editIconColor')}
             />
             <div
-              title="点击编辑图标颜色"
+              title={t('colorEditor.editIconColor')}
               onClick={() => onElementClick('icon')}
             >
               <Avatar
@@ -124,9 +126,9 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
                 cursor: 'pointer',
               }}
               onClick={() => onElementClick('text')}
-              title="点击编辑主要文字颜色"
+              title={t('colorEditor.editPrimaryTextColor')}
             >
-              首页
+              {t('nav.home')}
             </Text>
 
             {/* 文字示例 */}
@@ -140,7 +142,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
                   cursor: 'pointer',
                 }}
                 onClick={() => onElementClick('text')}
-                title="点击编辑主要文字颜色"
+                title={t('colorEditor.editPrimaryTextColor')}
               >
                 这是主要文字
               </Text>
@@ -153,7 +155,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
                   cursor: 'pointer',
                 }}
                 onClick={() => onElementClick('text')}
-                title="点击编辑次要文字颜色"
+                title={t('colorEditor.editSecondaryTextColor')}
               >
                 这是次要文字
               </Text>
@@ -166,7 +168,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
                   cursor: 'pointer',
                 }}
                 onClick={() => onElementClick('text')}
-                title="点击编辑第三级文字颜色"
+                title={t('colorEditor.editTertiaryTextColor')}
               >
                 这是第三级文字
               </Text>
@@ -175,7 +177,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
             {/* 搜索框示例 */}
             <div style={{ marginBottom: 20 }}>
               <Input
-                placeholder="搜索..."
+                placeholder={t('common.searchPlaceholder')}
                 prefix={<SearchOutlined style={{ color: colorTheme.icon.primary }} />}
                 style={{
                   background: colorTheme.secondaryButton.backgroundColor,
@@ -185,14 +187,14 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
                   cursor: 'pointer',
                 }}
                 onClick={() => onElementClick('border')}
-                title="点击编辑输入框边框颜色"
+                title={t('colorEditor.editInputBorderColor')}
               />
             </div>
 
             {/* 输入框示例 */}
             <div style={{ marginBottom: 20 }}>
               <Input
-                placeholder="请输入内容"
+                placeholder={t('common.inputPlaceholder')}
                 style={{
                   background: colorTheme.secondaryButton.backgroundColor,
                   border: `1px solid ${colorTheme.border.secondary}`,
@@ -201,7 +203,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
                   cursor: 'pointer',
                 }}
                 onClick={() => onElementClick('border')}
-                title="点击编辑输入框边框颜色"
+                title={t('colorEditor.editInputBorderColor')}
               />
             </div>
 
@@ -226,9 +228,9 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
                     alignItems: 'center',
                   }}
                   onClick={() => onElementClick('border')}
-                  title="点击编辑下拉框边框颜色"
+                  title={t('colorEditor.editDropdownBorderColor')}
                 >
-                  <span>请选择</span>
+                  <span>{t('common.pleaseSelect')}</span>
                   <DownOutlined
                     style={{
                       color: colorTheme.icon.primary,
@@ -252,7 +254,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
                     overflow: 'hidden',
                   }}
                   onClick={() => onElementClick('border')}
-                  title="点击编辑下拉选项边框颜色"
+                  title={t('colorEditor.editDropdownOption')}
                 >
                   <div
                     style={{
@@ -266,7 +268,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
                       e.stopPropagation();
                       onElementClick('text');
                     }}
-                    title="点击编辑下拉选项文字颜色"
+                    title={t('colorEditor.editDropdownOption')}
                   >
                     选项 1
                   </div>
@@ -282,7 +284,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
                       e.stopPropagation();
                       onElementClick('text');
                     }}
-                    title="点击编辑下拉选项文字颜色"
+                    title={t('colorEditor.editDropdownOption')}
                   >
                     选项 2
                   </div>
@@ -297,7 +299,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
                       e.stopPropagation();
                       onElementClick('text');
                     }}
-                    title="点击编辑下拉选项文字颜色"
+                    title={t('colorEditor.editDropdownOption')}
                   >
                     选项 3
                   </div>
@@ -319,7 +321,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
                   width: '100%',
                 }}
                 onClick={() => onElementClick('primaryButton')}
-                title="点击编辑主按键颜色"
+                title={t('colorEditor.editButtonColor')}
               >
                 立即参与
               </button>
@@ -334,7 +336,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
                   width: '100%',
                 }}
                 onClick={() => onElementClick('secondaryButton')}
-                title="点击编辑次按键颜色"
+                title={t('colorEditor.editButtonColor')}
               >
                 查看详情
               </button>
@@ -349,7 +351,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
                   width: '100%',
                 }}
                 onClick={() => onElementClick('warningButton')}
-                title="点击编辑警告按键颜色"
+                title={t('colorEditor.editButtonColor')}
               >
                 警告
               </button>
@@ -390,7 +392,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
                       transition: 'all 0.2s ease',
                     }}
                     onClick={() => onElementClick('primaryButton')}
-                    title="点击编辑主按键颜色"
+                    title={t('colorEditor.editButtonColor')}
                   >
                     <div
                       style={{
@@ -425,7 +427,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
                       transition: 'all 0.2s ease',
                     }}
                     onClick={() => onElementClick('secondaryButton')}
-                    title="点击编辑次按键颜色"
+                    title={t('colorEditor.editButtonColor')}
                   >
                     <div
                       style={{
@@ -496,7 +498,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
                   cursor: 'pointer',
                 }}
                 onClick={() => onElementClick('icon')}
-                title="点击编辑图标颜色"
+                title={t('colorEditor.editIconColor')}
               />
               <BellOutlined
                 style={{
@@ -505,7 +507,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
                   cursor: 'pointer',
                 }}
                 onClick={() => onElementClick('icon')}
-                title="点击编辑图标颜色"
+                title={t('colorEditor.editIconColor')}
               />
               <span
                 style={{
@@ -514,7 +516,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
                   cursor: 'pointer',
                 }}
                 onClick={() => onElementClick('icon')}
-                title="点击编辑图标颜色"
+                title={t('colorEditor.editIconColor')}
               >
                 ✓
               </span>
@@ -525,7 +527,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
                   cursor: 'pointer',
                 }}
                 onClick={() => onElementClick('icon')}
-                title="点击编辑图标颜色"
+                title={t('colorEditor.editIconColor')}
               >
                 ✗
               </span>
@@ -587,7 +589,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
               cursor: 'pointer',
             }}
             onClick={() => onElementClick('icon')}
-            title="点击编辑图标颜色"
+            title={t('colorEditor.editIconColor')}
           >
             <HomeOutlined
               style={{
@@ -596,7 +598,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
                 marginBottom: 4,
               }}
             />
-            <Text style={{ color: colorTheme.text.secondary, fontSize: 11 }}>首页</Text>
+            <Text style={{ color: colorTheme.text.secondary, fontSize: 11 }}>{t('nav.home')}</Text>
           </div>
           <div
             style={{
@@ -606,7 +608,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
               cursor: 'pointer',
             }}
             onClick={() => onElementClick('icon')}
-            title="点击编辑图标颜色"
+            title={t('colorEditor.editIconColor')}
           >
             <CalendarOutlined
               style={{
@@ -615,7 +617,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
                 marginBottom: 4,
               }}
             />
-            <Text style={{ color: colorTheme.text.secondary, fontSize: 11 }}>活动</Text>
+            <Text style={{ color: colorTheme.text.secondary, fontSize: 11 }}>{t('nav.events')}</Text>
           </div>
           <div
             style={{
@@ -625,7 +627,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
               cursor: 'pointer',
             }}
             onClick={() => onElementClick('icon')}
-            title="点击编辑图标颜色"
+            title={t('colorEditor.editIconColor')}
           >
             <ShoppingOutlined
               style={{
@@ -634,7 +636,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
                 marginBottom: 4,
               }}
             />
-            <Text style={{ color: colorTheme.text.secondary, fontSize: 11 }}>商店</Text>
+            <Text style={{ color: colorTheme.text.secondary, fontSize: 11 }}>{t('nav.shop')}</Text>
           </div>
           <div
             style={{
@@ -644,7 +646,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
               cursor: 'pointer',
             }}
             onClick={() => onElementClick('icon')}
-            title="点击编辑图标颜色"
+            title={t('colorEditor.editIconColor')}
           >
             <UserOutlined
               style={{
@@ -653,7 +655,7 @@ const MockMobileLayout: React.FC<MockMobileLayoutProps> = ({
                 marginBottom: 4,
               }}
             />
-            <Text style={{ color: colorTheme.text.secondary, fontSize: 11 }}>个人</Text>
+            <Text style={{ color: colorTheme.text.secondary, fontSize: 11 }}>{t('nav.profile')}</Text>
           </div>
         </Footer>
       </Layout>

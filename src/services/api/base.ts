@@ -4,6 +4,7 @@
  */
 
 import { message } from 'antd'
+import i18n from '../../i18n'
 
 /**
  * API 响应格式
@@ -119,7 +120,7 @@ export async function apiCall<T>(
   try {
     // 显示加载提示
     if (finalConfig.showLoading) {
-      loadingHide = message.loading('加载中...', 0)
+      loadingHide = message.loading(i18n.t('common.loading'), 0)
     }
 
     // 执行 API 调用（带重试）
@@ -134,7 +135,7 @@ export async function apiCall<T>(
           fn(),
           new Promise<never>((_, reject) =>
             setTimeout(
-              () => reject(new ApiError('请求超时', 'NETWORK_ERROR')),
+              () => reject(new ApiError(i18n.t('common.requestTimeout'), 'NETWORK_ERROR')),
               finalConfig.timeout
             )
           )
@@ -148,7 +149,7 @@ export async function apiCall<T>(
 
         // 显示成功提示
         if (finalConfig.showSuccess) {
-          message.success(finalConfig.successMessage || '操作成功')
+          message.success(finalConfig.successMessage || i18n.t('common.operationSuccess'))
         }
 
         return {
@@ -181,14 +182,14 @@ export async function apiCall<T>(
     if (error instanceof ApiError) {
       apiError = error
     } else if (error.code === 'permission-denied') {
-      apiError = new ApiError('您没有权限执行此操作', 'AUTH_ERROR')
+      apiError = new ApiError(i18n.t('common.noPermission'), 'AUTH_ERROR')
     } else if (error.code === 'not-found') {
-      apiError = new ApiError('数据不存在', 'NOT_FOUND')
+      apiError = new ApiError(i18n.t('common.dataNotFound'), 'NOT_FOUND')
     } else if (error.code === 'unavailable') {
-      apiError = new ApiError('网络连接失败，请检查网络设置', 'NETWORK_ERROR')
+      apiError = new ApiError(i18n.t('common.networkError'), 'NETWORK_ERROR')
     } else {
       apiError = new ApiError(
-        error.message || '操作失败',
+        error.message || i18n.t('common.operationFailed'),
         'UNKNOWN_ERROR',
         undefined,
         error

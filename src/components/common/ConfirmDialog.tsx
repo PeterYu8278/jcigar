@@ -1,6 +1,7 @@
 import { Modal } from 'antd'
 import { ExclamationCircleOutlined, QuestionCircleOutlined, InfoCircleOutlined, WarningOutlined } from '@ant-design/icons'
 import type { ModalFuncProps } from 'antd'
+import i18n from '../../i18n'
 
 export interface ConfirmOptions extends Omit<ModalFuncProps, 'type'> {
   /** 确认类型 */
@@ -61,10 +62,10 @@ export interface ConfirmOptions extends Omit<ModalFuncProps, 'type'> {
 export const confirmDialog = (options: ConfirmOptions) => {
   const {
     type = 'confirm',
-    title = '确认操作',
+    title = i18n.t('common.confirmOperation'),
     content,
-    okText = '确定',
-    cancelText = '取消',
+    okText = i18n.t('common.confirm'),
+    cancelText = i18n.t('common.cancel'),
     onOk,
     onCancel,
     okType,
@@ -130,13 +131,13 @@ export const confirmDelete = (
 ) => {
   return confirmDialog({
     type: 'error',
-    title: '确认删除',
-    content: itemName 
-      ? `确定要删除"${itemName}"吗？删除后无法恢复。`
-      : '确定要删除吗？删除后无法恢复。',
-    okText: '确认删除',
+    title: i18n.t('common.confirmDelete'),
+    content: itemName
+      ? i18n.t('common.confirmDeleteNamed', { name: itemName })
+      : i18n.t('common.confirmDeleteGeneric'),
+    okText: i18n.t('common.confirmDelete'),
     okType: 'danger',
-    cancelText: '取消',
+    cancelText: i18n.t('common.cancel'),
     onOk
   })
 }
@@ -150,11 +151,11 @@ export const confirmBatchDelete = (
 ) => {
   return confirmDialog({
     type: 'error',
-    title: '批量删除确认',
-    content: `确定要删除选中的 ${count} 项吗？删除后无法恢复。`,
-    okText: `删除 ${count} 项`,
+    title: i18n.t('common.batchDeleteConfirm'),
+    content: i18n.t('common.confirmBatchDelete', { count }),
+    okText: i18n.t('common.deleteCount', { count }),
     okType: 'danger',
-    cancelText: '取消',
+    cancelText: i18n.t('common.cancel'),
     onOk
   })
 }
@@ -168,10 +169,10 @@ export const confirmSave = (
 ) => {
   return confirmDialog({
     type: 'confirm',
-    title: '确认保存',
-    content: content ?? '确定要保存修改吗？',
-    okText: '保存',
-    cancelText: '取消',
+    title: i18n.t('common.confirmSave'),
+    content: content ?? i18n.t('common.confirmSaveContent'),
+    okText: i18n.t('common.save'),
+    cancelText: i18n.t('common.cancel'),
     onOk
   })
 }
@@ -184,11 +185,11 @@ export const confirmLeave = (
 ) => {
   return confirmDialog({
     type: 'warning',
-    title: '确认离开',
-    content: '有未保存的修改，确定要离开吗？',
-    okText: '离开',
+    title: i18n.t('common.confirmLeave'),
+    content: i18n.t('common.confirmLeaveContent'),
+    okText: i18n.t('common.leave'),
     okType: 'danger',
-    cancelText: '取消',
+    cancelText: i18n.t('common.cancel'),
     onOk
   })
 }
@@ -205,7 +206,7 @@ export const showInfo = (
     type: 'info',
     title,
     content,
-    okText: '知道了',
+    okText: i18n.t('common.understood'),
     showCancel: false,
     onOk
   })

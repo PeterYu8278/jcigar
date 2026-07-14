@@ -31,21 +31,21 @@ interface GenerationStage {
 
 const TestDataGenerator: React.FC = () => {
   const { t } = useTranslation()
-  const [stages, setStages] = useState<GenerationStage[]>([
-    { id: '1.1', name: '品牌', description: '生成300个品牌', count: 300, status: 'pending', progress: 0 },
-    { id: '1.2', name: '用户', description: '生成10,000个用户（含推荐关系）', count: 10000, status: 'pending', progress: 0 },
-    { id: '2.1', name: '雪茄产品', description: '生成3,000个雪茄产品', count: 3000, status: 'pending', progress: 0 },
-    { id: '3.1', name: '雪茄入库记录', description: '生成5,000个入库记录（总库存1,000,000）', count: 5000, status: 'pending', progress: 0 },
-    { id: '4.1', name: '活动', description: '生成2,000个活动（每个15个用户参与）', count: 2000, status: 'pending', progress: 0 },
-    { id: '5.1', name: '会员年费记录', description: '生成10,000个会员年费记录', count: 10000, status: 'pending', progress: 0 },
-    { id: '5.2', name: '充值记录', description: '生成20,000个充值记录', count: 20000, status: 'pending', progress: 0 },
-    { id: '6.1', name: '驻店记录', description: '生成200,000个驻店记录', count: 200000, status: 'pending', progress: 0 },
-    { id: '6.2', name: '驻店雪茄兑换记录', description: '生成400,000个兑换记录', count: 400000, status: 'pending', progress: 0 },
-    { id: '7.1', name: '活动订单', description: '生成30,000个活动订单', count: 30000, status: 'pending', progress: 0 },
-    { id: '7.2', name: '兑换订单', description: '生成200,000个兑换订单', count: 200000, status: 'pending', progress: 0 },
-    { id: '8.1', name: '出库订单', description: '生成200,000个出库订单', count: 200000, status: 'pending', progress: 0 },
-    { id: '9.1', name: '银行交易记录', description: '生成100,000个交易记录', count: 100000, status: 'pending', progress: 0 },
-    { id: '10.1', name: '积分记录', description: '动态生成积分记录', count: 0, status: 'pending', progress: 0 },
+  const [stages, setStages] = useState<GenerationStage[]>(() => [
+    { id: '1.1', name: t('testData.stage1_1Name'), description: t('testData.stage1_1Desc'), count: 300, status: 'pending', progress: 0 },
+    { id: '1.2', name: t('testData.stage1_2Name'), description: t('testData.stage1_2Desc'), count: 10000, status: 'pending', progress: 0 },
+    { id: '2.1', name: t('testData.stage2_1Name'), description: t('testData.stage2_1Desc'), count: 3000, status: 'pending', progress: 0 },
+    { id: '3.1', name: t('testData.stage3_1Name'), description: t('testData.stage3_1Desc'), count: 5000, status: 'pending', progress: 0 },
+    { id: '4.1', name: t('testData.stage4_1Name'), description: t('testData.stage4_1Desc'), count: 2000, status: 'pending', progress: 0 },
+    { id: '5.1', name: t('testData.stage5_1Name'), description: t('testData.stage5_1Desc'), count: 10000, status: 'pending', progress: 0 },
+    { id: '5.2', name: t('testData.stage5_2Name'), description: t('testData.stage5_2Desc'), count: 20000, status: 'pending', progress: 0 },
+    { id: '6.1', name: t('testData.stage6_1Name'), description: t('testData.stage6_1Desc'), count: 200000, status: 'pending', progress: 0 },
+    { id: '6.2', name: t('testData.stage6_2Name'), description: t('testData.stage6_2Desc'), count: 400000, status: 'pending', progress: 0 },
+    { id: '7.1', name: t('testData.stage7_1Name'), description: t('testData.stage7_1Desc'), count: 30000, status: 'pending', progress: 0 },
+    { id: '7.2', name: t('testData.stage7_2Name'), description: t('testData.stage7_2Desc'), count: 200000, status: 'pending', progress: 0 },
+    { id: '8.1', name: t('testData.stage8_1Name'), description: t('testData.stage8_1Desc'), count: 200000, status: 'pending', progress: 0 },
+    { id: '9.1', name: t('testData.stage9_1Name'), description: t('testData.stage9_1Desc'), count: 100000, status: 'pending', progress: 0 },
+    { id: '10.1', name: t('testData.stage10_1Name'), description: t('testData.stage10_1Desc'), count: 0, status: 'pending', progress: 0 },
   ])
 
   const [totalProgress, setTotalProgress] = useState(0)
@@ -139,25 +139,25 @@ const TestDataGenerator: React.FC = () => {
           })
           break
         default:
-          throw new Error(`未知的阶段: ${stageId}`)
+          throw new Error(`Unknown stage: ${stageId}`)
       }
 
       if (result?.success) {
-        updateStage(stageId, { 
-          status: 'completed', 
+        updateStage(stageId, {
+          status: 'completed',
           progress: 100,
           count: result.count || stage.count
         })
-        message.success(`${stage.name}生成完成`)
+        message.success(t('testData.generateSuccess', { name: stage.name }))
       } else {
-        throw new Error(result?.error || '生成失败')
+        throw new Error(result?.error || t('testData.generateFailed'))
       }
     } catch (error: any) {
-      updateStage(stageId, { 
-        status: 'error', 
-        error: error.message || '生成失败'
+      updateStage(stageId, {
+        status: 'error',
+        error: error.message || t('testData.generateFailed')
       })
-      message.error(`${stage.name}生成失败: ${error.message}`)
+      message.error(t('testData.stageGenerateFailed', { name: stage.name, error: error.message }))
     } finally {
       setIsRunning(false)
     }
@@ -177,12 +177,12 @@ const TestDataGenerator: React.FC = () => {
         }}
       >
         <Title level={2} style={{ color: '#ffd700', marginBottom: '24px' }}>
-          测试数据生成器
+          {t('testData.title')}
         </Title>
 
         <Alert
-          message="警告"
-          description="此工具将生成大量测试数据。请确保在测试环境中使用，避免影响生产数据。"
+          message={t('common.warning')}
+          description={t('testData.warningDesc')}
           type="warning"
           showIcon
           style={{ marginBottom: '24px' }}
@@ -191,7 +191,7 @@ const TestDataGenerator: React.FC = () => {
         <Row gutter={16} style={{ marginBottom: '24px' }}>
           <Col span={12}>
             <Statistic
-              title="总进度"
+              title={t('testData.totalProgress')}
               value={totalProgressValue}
               precision={1}
               suffix="%"
@@ -200,7 +200,7 @@ const TestDataGenerator: React.FC = () => {
           </Col>
           <Col span={12}>
             <Statistic
-              title="已完成阶段"
+              title={t('testData.completedStages')}
               value={completedCount}
               suffix={`/ ${totalCount}`}
               valueStyle={{ color: '#ffd700' }}
@@ -243,7 +243,7 @@ const TestDataGenerator: React.FC = () => {
                 </Col>
                 <Col span={4}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Text style={{ color: '#c0c0c0', fontSize: '12px' }}>数量:</Text>
+                    <Text style={{ color: '#c0c0c0', fontSize: '12px' }}>{t('testData.quantity')}</Text>
                     <InputNumber 
                       min={0} 
                       value={stage.count} 
@@ -288,9 +288,9 @@ const TestDataGenerator: React.FC = () => {
                         color: '#000'
                       }}
                     >
-                      {stage.status === 'completed' ? '已完成' : 
-                       stage.status === 'running' ? '生成中...' : 
-                       stage.status === 'error' ? '重试' : '生成'}
+                      {stage.status === 'completed' ? t('testData.statusCompleted') :
+                       stage.status === 'running' ? t('testData.statusRunning') :
+                       stage.status === 'error' ? t('testData.statusRetry') : t('testData.statusGenerate')}
                     </Button>
                   </Space>
                 </Col>

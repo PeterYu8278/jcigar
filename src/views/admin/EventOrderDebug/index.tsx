@@ -61,7 +61,7 @@ const EventOrderDebug: React.FC = () => {
           <Text>{t("eventDebug.checkEventDesc")}</Text>
           <Space.Compact style={{ width: '100%' }}>
             <Input
-              placeholder="输入活动ID (例: event123)"
+              placeholder={t('eventDebug.eventIdPlaceholder')}
               value={eventId}
               onChange={(e) => setEventId(e.target.value)}
               onPressEnter={handleDebugEvent}
@@ -84,7 +84,7 @@ const EventOrderDebug: React.FC = () => {
           <Text>{t("eventDebug.checkUserDesc")}</Text>
           <Space.Compact style={{ width: '100%' }}>
             <Input
-              placeholder="输入用户ID (例: user123)"
+              placeholder={t('eventDebug.userIdPlaceholder')}
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
               onPressEnter={handleDebugUser}
@@ -136,7 +136,7 @@ const EventOrderDebug: React.FC = () => {
           ) : (
             <Alert
               message={t("eventDebug.eventNotFound")}
-              description={`ID为 ${eventId} 的活动未找到`}
+              description={t('eventDebug.eventNotFoundDesc', { id: eventId })}
               type="error"
               showIcon
             />
@@ -160,7 +160,7 @@ const EventOrderDebug: React.FC = () => {
               {debugInfo.summary.missingOrders > 0 && (
                 <Alert
                   message={t("eventDebug.issueFoundAlert")}
-                  description={`有 ${debugInfo.summary.missingOrders} 个用户已报名并分配了雪茄，但没有对应的订单`}
+                  description={t('eventDebug.issueFoundDesc', { count: debugInfo.summary.missingOrders })}
                   type="warning"
                   showIcon
                   style={{ marginTop: '16px' }}
@@ -270,16 +270,16 @@ const EventOrderDebug: React.FC = () => {
                     message={t("eventDebug.eventNotCompleted")}
                     description={
                       <div>
-                        <Paragraph>当前活动状态为 <Tag>{debugInfo.eventStatus}</Tag></Paragraph>
+                        <Paragraph>{t('eventDebug.currentStatus')} <Tag>{debugInfo.eventStatus}</Tag></Paragraph>
                         <Paragraph>
-                          <WarningOutlined /> 订单只会在活动状态改为 <Tag color="success">completed</Tag> 时自动创建
+                          <WarningOutlined /> {t('eventDebug.orderCreationNote')} <Tag color="success">completed</Tag>
                         </Paragraph>
                         <Paragraph>
-                          <strong>解决方案：</strong>
-                          <br />1. 进入 "活动管理" 页面
-                          <br />2. 编辑此活动
-                          <br />3. 将状态改为 "已完成"
-                          <br />4. 保存 → 系统会自动为所有分配创建订单
+                          <strong>{t('common.solution')}</strong>
+                          <br />1. {t('eventDebug.solutionStep1GoToEventMgmt')}
+                          <br />2. {t('eventDebug.solutionStep2EditEvent')}
+                          <br />3. {t('eventDebug.solutionStep3SetCompleted')}
+                          <br />4. {t('eventDebug.solutionStep4SaveAutoCreate')}
                         </Paragraph>
                       </div>
                     }
@@ -293,13 +293,13 @@ const EventOrderDebug: React.FC = () => {
                     message={t("eventDebug.noAllocationAlert")}
                     description={
                       <div>
-                        <Paragraph>该活动还没有为参与者分配雪茄</Paragraph>
+                        <Paragraph>{t('eventDebug.noCigarsAllocated')}</Paragraph>
                         <Paragraph>
-                          <strong>解决方案：</strong>
-                          <br />1. 进入 "活动管理" 页面
-                          <br />2. 点击活动的 "查看" 按钮
-                          <br />3. 在参与者列表中为每个用户分配雪茄
-                          <br />4. 保存分配后，将活动状态改为 "已完成"
+                          <strong>{t('common.solution')}</strong>
+                          <br />1. {t('eventDebug.solutionStep1GoToEventMgmt')}
+                          <br />2. {t('eventDebug.solutionStep2ClickView')}
+                          <br />3. {t('eventDebug.solutionStep3AllocateCigars')}
+                          <br />4. {t('eventDebug.solutionStep4SaveThenComplete')}
                         </Paragraph>
                       </div>
                     }
@@ -310,21 +310,21 @@ const EventOrderDebug: React.FC = () => {
 
                 {debugInfo.summary.missingOrders > 0 && debugInfo.hasAllocations && (
                   <Alert
-                    message={`缺少 ${debugInfo.summary.missingOrders} 个订单`}
+                    message={t('eventDebug.missingOrdersAlert', { count: debugInfo.summary.missingOrders })}
                     description={
                       <div>
                         <Paragraph>
-                          已为用户分配雪茄但订单未创建
+                          {t('eventDebug.missingOrdersDesc')}
                         </Paragraph>
                         <Paragraph>
-                          <strong>可能原因：</strong>
-                          <br />• 活动状态不是 "已完成"
-                          <br />• 订单创建过程出错
-                          <br />• 分配数据格式不正确
+                          <strong>{t('common.possibleReasons')}</strong>
+                          <br />• {t('eventDebug.reasonNotCompleted')}
+                          <br />• {t('eventDebug.reasonCreationError')}
+                          <br />• {t('eventDebug.reasonInvalidFormat')}
                         </Paragraph>
                         <Paragraph>
-                          <strong>解决方案：</strong>
-                          <br />将活动状态改为 "已完成" 并保存，系统会自动创建缺失的订单
+                          <strong>{t('common.solution')}</strong>
+                          <br />{t('eventDebug.solutionSetCompleteAndSave')}
                         </Paragraph>
                       </div>
                     }

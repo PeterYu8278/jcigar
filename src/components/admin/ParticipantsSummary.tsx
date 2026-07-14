@@ -232,8 +232,8 @@ const ParticipantsSummary: React.FC<ParticipantsSummaryProps> = ({
                       {productName}
                     </div>
                     <div style={{ display: 'flex', gap: 8, color: '#999', alignItems: 'center', flexShrink: 0 }}>
-                      <span style={{ width: 24, textAlign: 'right' }}>{productStats.count}人</span>
-                      <span style={{ width: 24, textAlign: 'right' }}>{productStats.totalQuantity}支</span>
+                      <span style={{ width: 24, textAlign: 'right' }}>{productStats.count}{t('common.unitPerson')}</span>
+                      <span style={{ width: 24, textAlign: 'right' }}>{productStats.totalQuantity}{t('common.unitStick')}</span>
                       <span style={{ width: 55, textAlign: 'right', fontWeight: 500, color: '#fa541c' }}>RM{productStats.totalAmount.toFixed(2)}</span>
                       {getCigarCostById && (
                         <span style={{ width: 55, textAlign: 'right', fontSize: 10, color: '#722ed1' }}>
@@ -271,7 +271,7 @@ const ParticipantsSummary: React.FC<ParticipantsSummaryProps> = ({
         <div style={{ fontSize: 14, fontWeight: 600, color: '#722ed1', marginBottom: 8 }}>{t('participants.eventFee')}</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', background: '#f9f0ff', border: '1px solid #d3adf7', borderRadius: 6, padding: '8px 12px', fontSize: 12 }}>
           <div style={{ color: '#722ed1' }}>{(event as any)?.title || t('events.fee')}</div>
-          <div style={{ color: '#595959', width: 32, textAlign: 'right' }}>{feeStats.feeQuantity} 次</div>
+          <div style={{ color: '#595959', width: 32, textAlign: 'right' }}>{feeStats.feeQuantity} {t('common.unitTime')}</div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
             <span style={{ width: 70, textAlign: 'right', fontWeight: 700, color: '#722ed1' }}>RM{feeStats.feeTotal.toFixed(2)}</span>
             {getCigarCostById && (

@@ -2,6 +2,7 @@
  * 模拟电脑端界面布局组件
  */
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Layout, Space, Typography, Avatar, Tag, Input } from 'antd';
 import {
   HomeOutlined,
@@ -32,6 +33,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
   onElementClick,
   appName = '',
 }) => {
+  const { t } = useTranslation();
   return (
     <div
       style={{
@@ -64,7 +66,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                 cursor: 'pointer',
               }}
               onClick={() => onElementClick('icon')}
-              title="点击编辑图标颜色"
+              title={t('colorEditor.editIconColor')}
             />
             <Text style={{ color: colorTheme.text.primary, fontSize: 16, fontWeight: 600 }}>
               {appName || 'App Name'}
@@ -78,7 +80,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                 cursor: 'pointer',
               }}
               onClick={() => onElementClick('icon')}
-              title="点击编辑图标颜色"
+              title={t('colorEditor.editIconColor')}
             />
             <StarOutlined
               style={{
@@ -87,7 +89,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                 cursor: 'pointer',
               }}
               onClick={() => onElementClick('icon')}
-              title="点击编辑图标颜色"
+              title={t('colorEditor.editIconColor')}
             />
             <SettingOutlined
               style={{
@@ -96,10 +98,10 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                 cursor: 'pointer',
               }}
               onClick={() => onElementClick('icon')}
-              title="点击编辑图标颜色"
+              title={t('colorEditor.editIconColor')}
             />
             <div
-              title="点击编辑图标颜色"
+              title={t('colorEditor.editIconColor')}
               onClick={() => onElementClick('icon')}
             >
               <Avatar
@@ -135,7 +137,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                   cursor: 'pointer',
                 }}
                 onClick={() => onElementClick('border')}
-                title="点击编辑边框颜色"
+                title={t('colorEditor.editBorderColor')}
               >
                 <Space>
                   <HomeOutlined
@@ -145,7 +147,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                       onElementClick('icon');
                     }}
                   />
-                  <Text style={{ color: colorTheme.text.primary }}>首页</Text>
+                  <Text style={{ color: colorTheme.text.primary }}>{t('nav.home')}</Text>
                 </Space>
               </div>
               <div
@@ -156,7 +158,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                   cursor: 'pointer',
                 }}
                 onClick={() => onElementClick('border')}
-                title="点击编辑边框颜色"
+                title={t('colorEditor.editBorderColor')}
               >
                 <Space>
                   <CalendarOutlined
@@ -166,7 +168,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                       onElementClick('icon');
                     }}
                   />
-                  <Text style={{ color: colorTheme.text.secondary }}>活动</Text>
+                  <Text style={{ color: colorTheme.text.secondary }}>{t('nav.events')}</Text>
                 </Space>
               </div>
               <div
@@ -177,7 +179,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                   cursor: 'pointer',
                 }}
                 onClick={() => onElementClick('border')}
-                title="点击编辑边框颜色"
+                title={t('colorEditor.editBorderColor')}
               >
                 <Space>
                   <ShoppingOutlined
@@ -187,7 +189,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                       onElementClick('icon');
                     }}
                   />
-                  <Text style={{ color: colorTheme.text.secondary }}>商店</Text>
+                  <Text style={{ color: colorTheme.text.secondary }}>{t('nav.shop')}</Text>
                 </Space>
               </div>
               <div
@@ -198,7 +200,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                   cursor: 'pointer',
                 }}
                 onClick={() => onElementClick('border')}
-                title="点击编辑边框颜色"
+                title={t('colorEditor.editBorderColor')}
               >
                 <Space>
                   <UserOutlined
@@ -208,7 +210,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                       onElementClick('icon');
                     }}
                   />
-                  <Text style={{ color: colorTheme.text.secondary }}>个人</Text>
+                  <Text style={{ color: colorTheme.text.secondary }}>{t('nav.profile')}</Text>
                 </Space>
               </div>
             </div>
@@ -241,7 +243,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                   cursor: 'pointer',
                 }}
                 onClick={() => onElementClick('text')}
-                title="点击编辑主要文字颜色"
+                title={t('colorEditor.editPrimaryTextColor')}
               >
                 欢迎回来
               </Text>
@@ -256,7 +258,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                     cursor: 'pointer',
                   }}
                   onClick={() => onElementClick('text')}
-                  title="点击编辑主要文字颜色"
+                  title={t('colorEditor.editPrimaryTextColor')}
                 >
                   这是主要文字 (text.primary)
                 </Text>
@@ -268,7 +270,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                     cursor: 'pointer',
                   }}
                   onClick={() => onElementClick('text')}
-                  title="点击编辑次要文字颜色"
+                  title={t('colorEditor.editSecondaryTextColor')}
                 >
                   这是次要文字 (text.secondary)
                 </Text>
@@ -280,7 +282,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                     cursor: 'pointer',
                   }}
                   onClick={() => onElementClick('text')}
-                  title="点击编辑第三级文字颜色"
+                  title={t('colorEditor.editTertiaryTextColor')}
                 >
                   这是第三级文字 (text.tertiary)
                 </Text>
@@ -289,7 +291,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
               {/* 搜索框示例 */}
               <div style={{ marginBottom: 24 }}>
                 <Input
-                  placeholder="搜索..."
+                  placeholder={t('common.searchPlaceholder')}
                   prefix={<SearchOutlined style={{ color: colorTheme.icon.primary }} />}
                   style={{
                     background: colorTheme.secondaryButton.backgroundColor,
@@ -299,14 +301,14 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                     cursor: 'pointer',
                   }}
                   onClick={() => onElementClick('border')}
-                  title="点击编辑输入框边框颜色"
+                  title={t('colorEditor.editInputBorderColor')}
                 />
               </div>
 
               {/* 输入框示例 */}
               <div style={{ marginBottom: 24 }}>
                 <Input
-                  placeholder="请输入内容"
+                  placeholder={t('common.inputPlaceholder')}
                   style={{
                     background: colorTheme.secondaryButton.backgroundColor,
                     border: `1px solid ${colorTheme.border.secondary}`,
@@ -315,7 +317,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                     cursor: 'pointer',
                   }}
                   onClick={() => onElementClick('border')}
-                  title="点击编辑输入框边框颜色"
+                  title={t('colorEditor.editInputBorderColor')}
                 />
               </div>
 
@@ -340,9 +342,9 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                       alignItems: 'center',
                     }}
                     onClick={() => onElementClick('border')}
-                    title="点击编辑下拉框边框颜色"
+                    title={t('colorEditor.editDropdownBorderColor')}
                   >
-                    <span>请选择</span>
+                    <span>{t('common.pleaseSelect')}</span>
                     <DownOutlined
                       style={{
                         color: colorTheme.icon.primary,
@@ -366,7 +368,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                       overflow: 'hidden',
                     }}
                     onClick={() => onElementClick('border')}
-                    title="点击编辑下拉选项边框颜色"
+                    title={t('colorEditor.editDropdownOption')}
                   >
                     <div
                       style={{
@@ -379,7 +381,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                         e.stopPropagation();
                         onElementClick('text');
                       }}
-                      title="点击编辑下拉选项文字颜色"
+                      title={t('colorEditor.editDropdownOption')}
                     >
                       选项 1
                     </div>
@@ -394,7 +396,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                         e.stopPropagation();
                         onElementClick('text');
                       }}
-                      title="点击编辑下拉选项文字颜色"
+                      title={t('colorEditor.editDropdownOption')}
                     >
                       选项 2
                     </div>
@@ -408,7 +410,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                         e.stopPropagation();
                         onElementClick('text');
                       }}
-                      title="点击编辑下拉选项文字颜色"
+                      title={t('colorEditor.editDropdownOption')}
                     >
                       选项 3
                     </div>
@@ -429,7 +431,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                     cursor: 'pointer',
                   }}
                   onClick={() => onElementClick('primaryButton')}
-                  title="点击编辑主按键颜色"
+                  title={t('colorEditor.editButtonColor')}
                 >
                   立即参与
                 </button>
@@ -443,7 +445,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                     cursor: 'pointer',
                   }}
                   onClick={() => onElementClick('secondaryButton')}
-                  title="点击编辑次按键颜色"
+                  title={t('colorEditor.editButtonColor')}
                 >
                   查看详情
                 </button>
@@ -457,7 +459,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                     cursor: 'pointer',
                   }}
                   onClick={() => onElementClick('warningButton')}
-                  title="点击编辑警告按键颜色"
+                  title={t('colorEditor.editButtonColor')}
                 >
                   警告
                 </button>
@@ -498,7 +500,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                         transition: 'all 0.2s ease',
                       }}
                       onClick={() => onElementClick('primaryButton')}
-                      title="点击编辑主按键颜色"
+                      title={t('colorEditor.editButtonColor')}
                     >
                       <div
                         style={{
@@ -533,7 +535,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                         transition: 'all 0.2s ease',
                       }}
                       onClick={() => onElementClick('secondaryButton')}
-                      title="点击编辑次按键颜色"
+                      title={t('colorEditor.editButtonColor')}
                     >
                       <div
                         style={{
@@ -604,7 +606,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                     cursor: 'pointer',
                   }}
                   onClick={() => onElementClick('icon')}
-                  title="点击编辑图标颜色"
+                  title={t('colorEditor.editIconColor')}
                 />
                 <BellOutlined
                   style={{
@@ -613,7 +615,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                     cursor: 'pointer',
                   }}
                   onClick={() => onElementClick('icon')}
-                  title="点击编辑图标颜色"
+                  title={t('colorEditor.editIconColor')}
                 />
                 <span
                   style={{
@@ -622,7 +624,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                     cursor: 'pointer',
                   }}
                   onClick={() => onElementClick('icon')}
-                  title="点击编辑图标颜色"
+                  title={t('colorEditor.editIconColor')}
                 >
                   ✓
                 </span>
@@ -633,7 +635,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
                     cursor: 'pointer',
                   }}
                   onClick={() => onElementClick('icon')}
-                  title="点击编辑图标颜色"
+                  title={t('colorEditor.editIconColor')}
                 >
                   ✗
                 </span>
@@ -690,7 +692,7 @@ const MockDesktopLayout: React.FC<MockDesktopLayoutProps> = ({
               cursor: 'pointer',
             }}
             onClick={() => onElementClick('text')}
-            title="点击编辑次要文字颜色"
+            title={t('colorEditor.editSecondaryTextColor')}
           >
             © 2024 {appName || 'App Name'}. All rights reserved.
           </Text>

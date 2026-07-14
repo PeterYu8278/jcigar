@@ -76,7 +76,7 @@ export const AICigarScanner: React.FC = () => {
                 message.success(t('aiScanner.savedToDb'));
             }
         } catch (error) {
-            message.error(`保存失败: ${error instanceof Error ? error.message : '未知错误'}`);
+            message.error(t('aiScanner.saveFailed', { error: error instanceof Error ? error.message : '' }));
         } finally {
             setSaving(false);
         }

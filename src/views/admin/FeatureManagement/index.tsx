@@ -1716,7 +1716,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                 Firebase 配置
               </Text>
               <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 16 }}>
-                可在 <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Firebase 控制台</a> 的项目设置中找到这些配置信息。进入项目设置 &gt; 常规 &gt; 您的应用，即可查看所有配置值。Measurement ID（可选）用于 Google Analytics，可在项目设置 &gt; 集成 &gt; Google Analytics 中找到。
+                {t('featureManagement.firebaseSetupDesc')}
               </Text>
 
               {/* Firebase 配置代码粘贴区域 */}
@@ -1885,7 +1885,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                 rules={[{ required: false, message: '请输入 Firebase Service Account JSON' }]}
                 extra={
                   <Text style={{ color: '#999', fontSize: '12px' }}>
-                    用于 Netlify Functions（如重置密码、部署索引等）。在 <a href="https://console.firebase.google.com/project/_/settings/serviceaccounts/adminsdk" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Firebase 控制台</a> 生成新的私钥，将 JSON 内容粘贴到此处。注意：这是服务器端环境变量，不会包含在 VITE_ 前缀中。
+                    {t('featureManagement.netlifyFunctionsDesc')}
                   </Text>
                 }
               >
@@ -1927,7 +1927,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                 {t('featureManagement.cloudinaryConfig')}
               </Text>
               <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 16 }}>
-                可在 <a href="https://console.cloudinary.com" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Cloudinary 控制台</a> 的仪表板中找到这些配置信息。登录后，在仪表板页面即可查看 Cloud Name、API Key 和 API Secret。Upload Preset 可在设置 &gt; 上传预设中创建或查看，Base Folder 是上传文件的默认文件夹路径。
+                {t('featureManagement.cloudinarySetupDesc')}
               </Text>
 
               <Form.Item
@@ -2056,7 +2056,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                 {t('featureManagement.fcmConfig')}
               </Text>
               <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 16 }}>
-                可在 <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Firebase 控制台</a> 的项目设置中找到 VAPID Key。进入项目设置 &gt; 云消息传递 &gt; Web 配置，即可查看 VAPID 密钥。此配置为可选，仅在使用推送通知功能时需要。
+                {t('featureManagement.vapidKeyDesc')}
               </Text>
 
               <Form.Item
@@ -2092,7 +2092,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                 {t('featureManagement.geminiApiConfig')}
               </Text>
               <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 16 }}>
-                可在 <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Google AI Studio</a> 中获取 Gemini API Key。此配置用于 AI 雪茄识别功能。
+                {t('featureManagement.geminiKeyDesc')}
               </Text>
 
               <Form.Item
@@ -2128,7 +2128,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                 {t('featureManagement.netlifyConfig')}
               </Text>
               <Text style={{ color: '#c0c0c0', fontSize: '12px', display: 'block', marginBottom: 16 }}>
-                用于将环境变量部署到 Netlify。Access Token 可在 <a href="https://app.netlify.com/user/applications" target="_blank" rel="noopener noreferrer" style={{ color: '#ffd700' }}>Netlify 用户设置</a> 中生成，Site ID 可在站点设置中找到。此配置为可选，仅在需要部署到 Netlify 时需要。
+                {t('featureManagement.netlifyDeployDesc')}
               </Text>
 
               <Form.Item
@@ -2388,18 +2388,18 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                             fontSize: '12px',
                             color: '#c0c0c0'
                           }}>
-                            <span>总计: <strong style={{ color: '#f8f8f8' }}>{indexDeployStatus.summary.total}</strong></span>
+                            <span>{t('common.total')}: <strong style={{ color: '#f8f8f8' }}>{indexDeployStatus.summary.total}</strong></span>
                             <span style={{ color: '#52c41a' }}>
-                              成功: <strong>{indexDeployStatus.summary.succeeded}</strong>
+                              {t('common.success')}: <strong>{indexDeployStatus.summary.succeeded}</strong>
                             </span>
                             {indexDeployStatus.summary.failed > 0 && (
                               <span style={{ color: '#ff4d4f' }}>
-                                失败: <strong>{indexDeployStatus.summary.failed}</strong>
+                                {t('common.failed')}: <strong>{indexDeployStatus.summary.failed}</strong>
                               </span>
                             )}
                             {indexDeployStatus.summary.skipped > 0 && (
                               <span style={{ color: '#faad14' }}>
-                                跳过: <strong>{indexDeployStatus.summary.skipped}</strong>
+                                {t('common.skipped')}: <strong>{indexDeployStatus.summary.skipped}</strong>
                               </span>
                             )}
                           </div>

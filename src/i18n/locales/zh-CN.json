@@ -1,6 +1,7 @@
 {
   "common": {
     "loading": "加载中...",
+    "pageLoading": "页面加载中...",
     "save": "保存",
     "saveScreenshot": "保存截图",
     "screenshotSaved": "截图已保存",
@@ -180,7 +181,38 @@
     "unreadWithCount": "未读 ({{count}})",
     "failed": "失败",
     "checkoutFailed": "Check-out 失败",
-    "savedSuccess": "配置已保存"
+    "savedSuccess": "配置已保存",
+    "requestTimeout": "请求超时",
+    "operationSuccess": "操作成功",
+    "noPermission": "您没有权限执行此操作",
+    "dataNotFound": "数据不存在",
+    "networkError": "网络连接失败，请检查网络设置",
+    "operationFailed": "操作失败",
+    "confirmOperation": "确认操作",
+    "confirmDeleteNamed": "确定要删除\"{{name}}\"吗？删除后无法恢复。",
+    "confirmDeleteGeneric": "确定要删除吗？删除后无法恢复。",
+    "confirmBatchDelete": "确定要删除选中的 {{count}} 项吗？删除后无法恢复。",
+    "deleteCount": "删除 {{count}} 项",
+    "confirmSave": "确认保存",
+    "confirmSaveContent": "确定要保存修改吗？",
+    "confirmLeave": "确认离开",
+    "confirmLeaveContent": "有未保存的修改，确定要离开吗？",
+    "leave": "离开",
+    "understood": "知道了",
+    "irreversibleConfirm": "此操作不可恢复，是否继续？",
+    "deleteSuccess": "删除成功",
+    "total": "总计:",
+    "skipped": "跳过:",
+    "inputPlaceholder": "请输入内容",
+    "pleaseSelect": "请选择",
+    "saveChanges": "保存更改",
+    "imageCrop": "图片裁剪",
+    "cropRequirements": "裁剪要求：",
+    "solution": "解决方案：",
+    "possibleReasons": "可能原因：",
+    "unitPerson": "人",
+    "unitStick": "支",
+    "unitTime": "次"
   },
   "container": {
     "loadFailed": "加载失败",
@@ -281,7 +313,10 @@
     "notLoggedIn": "用户未登录",
     "phonePlaceholder": "手机号 (例: 0123456789)",
     "phoneFormatInvalid": "手机号格式无效（需10-12位数字）",
-    "referralCodePlaceholder": "引荐码 (可选)"
+    "referralCodePlaceholder": "引荐码 (可选)",
+    "userDataRefreshed": "用户数据已刷新",
+    "refreshFailed": "刷新用户数据失败",
+    "noAdminPermission": "您没有管理员权限"
   },
   "featureManagement": {
     "title": "功能管理",
@@ -419,7 +454,13 @@
     "deployFailedCheckConfig": "部署失败，请检查配置",
     "deployingIndexes": "正在部署 Firestore 索引...",
     "indexesDeployedSuccess": "索引部署成功！",
-    "indexesPartialFail": "部分索引部署失败"
+    "indexesPartialFail": "部分索引部署失败",
+    "firebaseSetupDesc": "请在 Firebase Console 中配置项目设置和环境变量。",
+    "netlifyFunctionsDesc": "配置 Netlify Functions 和 Firebase Admin SDK 以启用服务端功能。",
+    "cloudinarySetupDesc": "配置 Cloudinary 账户以启用图片存储功能。",
+    "vapidKeyDesc": "配置 VAPID Key 以启用 Firebase Cloud Messaging 推送通知。",
+    "geminiKeyDesc": "配置 Gemini API Key 以启用 AI 雪茄识别功能。",
+    "netlifyDeployDesc": "配置 Netlify 部署设置和环境变量。"
   },
   "navigation": {
     "home": "首页",
@@ -2335,7 +2376,8 @@
     "uploadImage": "上传图片",
     "brandOptionLabel": "品牌: {{name}}",
     "cigarOptionLabel": "雪茄: {{name}}",
-    "cigarImage": "雪茄图片"
+    "cigarImage": "雪茄图片",
+    "saveFailed": "保存失败"
   },
   "colorPicker": {
     "editTitle": "编辑 {{title}} 颜色",
@@ -2473,7 +2515,14 @@
     "scanningCollection": "正在扫描 Firestore users 集合...",
     "alertImportantTitle": "重要说明",
     "alertLimitationTitle": "注意：此工具无法验证 Firebase Auth 状态",
-    "unnamedUser": "未命名"
+    "unnamedUser": "未命名",
+    "foundCount": "找到 {{count}} 个用户，请手动在 Firebase Console 验证其 Auth 状态",
+    "scanFailed": "扫描失败",
+    "userDeleted": "用户 {{email}} 已删除",
+    "deleteFailed": "删除失败",
+    "whatAreOrphans": "什么是孤立用户？",
+    "whyOrphans": "为什么会出现孤立用户？",
+    "howToHandle": "如何处理？"
   },
   "eventDebug": {
     "title": "活动订单调试工具",
@@ -2511,7 +2560,12 @@
     "eventNotCompleted": "活动未完成",
     "onlyCompletedCreatesOrders": "只有\"已完成\"状态才会创建订单",
     "allOrdersCreated": "所有订单已创建",
-    "allOrdersCreatedDesc": "所有参与者的订单都已成功创建"
+    "allOrdersCreatedDesc": "所有参与者的订单都已成功创建",
+    "eventIdPlaceholder": "输入活动ID (例: event123)",
+    "userIdPlaceholder": "输入用户ID (例: user123)",
+    "currentStatus": "当前活动状态为",
+    "orderCreationNote": "订单只会在活动状态改为已完成时自动创建",
+    "noCigarsAllocated": "该活动还没有为参与者分配雪茄"
   },
   "cloudinaryTest": {
     "backToInventory": "返回库存管理",
@@ -2525,5 +2579,56 @@
     "step3Title": "3. 配置信息",
     "step3Desc": "当前配置的 Cloudinary 信息：",
     "apiSecretHidden": "已配置（出于安全考虑不显示）"
+  },
+  "scanner": {
+    "cameraError": "无法启动摄像头",
+    "cameraInUse": "摄像头被占用或无法访问，请关闭其他使用摄像头的应用后重试",
+    "cameraPermissionDenied": "摄像头权限被拒绝，请在浏览器设置中允许访问摄像头",
+    "noCameraFound": "未找到摄像头设备",
+    "videoSourceError": "无法启动视频源，摄像头可能被其他应用占用",
+    "cameraStartFailed": "无法启动摄像头，请检查权限设置",
+    "useManualInput": "无法启动摄像头，请使用手动输入功能",
+    "invalidQRCode": "无法解析QR码，请确保扫描的是会员QR码",
+    "adminNotFound": "管理员信息不存在",
+    "checkinSuccess": "Check-in 成功！Session ID: {{sessionId}}",
+    "noActiveSession": "该用户没有待处理的驻店记录",
+    "checkoutSuccess": "Check-out 成功！扣除积分: {{points}}",
+    "processFailed": "处理失败",
+    "enterMemberNumber": "请输入会员编号:",
+    "checkingStatus": "正在检查用户状态及未完成 Session...",
+    "fetchingRecords": "正在获取驻店记录...",
+    "manualInput": "手动输入",
+    "alignQRCode": "请将QR码对准扫描框",
+    "checkinScan": "Check-in 扫描",
+    "checkoutScan": "Check-out 扫描",
+    "aiIdentify": "AI 识茄",
+    "scan": "扫码",
+    "memberScanComingSoon": "普通会员扫码功能即将上线",
+    "smartScan": "智能扫描"
+  },
+  "colorEditor": {
+    "editIconColor": "点击编辑图标颜色",
+    "editBorderColor": "点击编辑边框颜色",
+    "editPrimaryTextColor": "点击编辑主要文字颜色",
+    "editSecondaryTextColor": "点击编辑次要文字颜色",
+    "editTertiaryTextColor": "点击编辑第三级文字颜色",
+    "editInputBorderColor": "点击编辑输入框边框颜色",
+    "editDropdownBorderColor": "点击编辑下拉框边框颜色",
+    "editDropdownOption": "点击编辑下拉选项...",
+    "editButtonColor": "点击编辑主/次/警告按键颜色",
+    "contentArea": "内容区域",
+    "primaryText": "主要文字",
+    "secondaryText": "次要文字",
+    "tertiaryText": "第三级文字"
+  },
+  "testData": {
+    "title": "测试数据生成器",
+    "warningDesc": "此工具将生成大量测试数据，仅在开发环境中使用。",
+    "totalProgress": "总进度",
+    "completedStages": "已完成阶段",
+    "quantity": "数量:",
+    "generateSuccess": "{{name}}生成完成",
+    "generateFailed": "生成失败",
+    "stageGenerateFailed": "{{name}}生成失败: {{error}}"
   }
 }

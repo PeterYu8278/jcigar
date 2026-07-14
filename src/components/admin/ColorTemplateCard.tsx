@@ -5,6 +5,7 @@
 import React from 'react';
 import { Card, Button, Tag, Typography } from 'antd';
 import { EditOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import type { ColorThemeConfig } from '../../types';
 
 const { Text } = Typography;
@@ -22,6 +23,7 @@ const ColorTemplateCard: React.FC<ColorTemplateCardProps> = ({
   colorTheme,
   onEdit,
 }) => {
+  const { t } = useTranslation();
   // 渲染预览内容
   const renderPreview = () => {
     switch (type) {
@@ -37,7 +39,7 @@ const ColorTemplateCard: React.FC<ColorTemplateCardProps> = ({
                 minWidth: 120,
               }}
             >
-              保存更改
+              {t('common.saveChanges')}
             </Button>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <div
@@ -79,7 +81,7 @@ const ColorTemplateCard: React.FC<ColorTemplateCardProps> = ({
                 minWidth: 120,
               }}
             >
-              取消
+              {t('common.cancel')}
             </Button>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <div
@@ -109,7 +111,7 @@ const ColorTemplateCard: React.FC<ColorTemplateCardProps> = ({
                 minWidth: 120,
               }}
             >
-              警告
+              {t('common.warning')}
             </Button>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <div
@@ -140,7 +142,7 @@ const ColorTemplateCard: React.FC<ColorTemplateCardProps> = ({
                 background: 'rgba(255,255,255,0.05)',
               }}
             >
-              <Text style={{ color: '#f8f8f8' }}>内容区域</Text>
+              <Text style={{ color: '#f8f8f8' }}>{t('colorEditor.contentArea')}</Text>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <div
@@ -174,9 +176,9 @@ const ColorTemplateCard: React.FC<ColorTemplateCardProps> = ({
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
             <div style={{ display: 'flex', gap: 8 }}>
-              <Tag style={{ background: success.backgroundColor, color: success.textColor, border: 'none' }}>成功</Tag>
-              <Tag style={{ background: warning.backgroundColor, color: warning.textColor, border: 'none' }}>警告</Tag>
-              <Tag style={{ background: error.backgroundColor, color: error.textColor, border: 'none' }}>错误</Tag>
+              <Tag style={{ background: success.backgroundColor, color: success.textColor, border: 'none' }}>{t('common.success')}</Tag>
+              <Tag style={{ background: warning.backgroundColor, color: warning.textColor, border: 'none' }}>{t('common.warning')}</Tag>
+              <Tag style={{ background: error.backgroundColor, color: error.textColor, border: 'none' }}>{t('common.error')}</Tag>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <div
@@ -219,9 +221,9 @@ const ColorTemplateCard: React.FC<ColorTemplateCardProps> = ({
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%' }}>
-              <Text style={{ color: primary, fontSize: 14 }}>主要文字</Text>
-              <Text style={{ color: secondary, fontSize: 12 }}>次要文字</Text>
-              <Text style={{ color: tertiary, fontSize: 11 }}>第三级文字</Text>
+              <Text style={{ color: primary, fontSize: 14 }}>{t('colorEditor.primaryText')}</Text>
+              <Text style={{ color: secondary, fontSize: 12 }}>{t('colorEditor.secondaryText')}</Text>
+              <Text style={{ color: tertiary, fontSize: 11 }}>{t('colorEditor.tertiaryText')}</Text>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <div
@@ -310,7 +312,7 @@ const ColorTemplateCard: React.FC<ColorTemplateCardProps> = ({
             style={{ color: '#ffd700' }}
             size="small"
           >
-            编辑
+            {t('common.edit')}
           </Button>
         </div>
         {renderPreview()}

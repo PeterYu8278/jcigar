@@ -12,7 +12,8 @@
       "name": "Netlify Dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "netlify"],
-      "port": 8888
+      "port": 8888,
+      "autoPort": true
     }
   ]
 }

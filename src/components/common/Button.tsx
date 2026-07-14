@@ -318,23 +318,26 @@ export const useButtonPresets = () => {
  * 为保持向后兼容性暂时保留，但会在下个版本移除
  */
 export const ButtonPresets = {
-  Save: (props: Partial<ButtonProps>) => <Button variant="primary" {...props}>{props.children || '保存'}</Button>,
-  Cancel: (props: Partial<ButtonProps>) => <Button variant="secondary" {...props}>{props.children || '取消'}</Button>,
-  Create: (props: Partial<ButtonProps>) => <Button variant="primary" {...props}>{props.children || '创建'}</Button>,
-  Edit: (props: Partial<ButtonProps>) => <Button variant="primary" {...props}>{props.children || '编辑'}</Button>,
-  Delete: (props: Partial<ButtonProps>) => (
-    <Button variant="danger" confirm={{ title: '确定要删除吗？', onConfirm: props.onClick as any }} {...props}>
-      {props.children || '删除'}
-    </Button>
-  ),
-  Confirm: (props: Partial<ButtonProps>) => <Button variant="success" {...props}>{props.children || '确认'}</Button>,
-  Reset: (props: Partial<ButtonProps>) => <Button variant="secondary" {...props}>{props.children || '重置'}</Button>,
-  Submit: (props: Partial<ButtonProps>) => <Button variant="primary" htmlType="submit" {...props}>{props.children || '提交'}</Button>,
-  Close: (props: Partial<ButtonProps>) => <Button variant="text" {...props}>{props.children || '关闭'}</Button>,
-  Download: (props: Partial<ButtonProps>) => <Button variant="primary" {...props}>{props.children || '下载'}</Button>,
-  Upload: (props: Partial<ButtonProps>) => <Button variant="primary" {...props}>{props.children || '上传'}</Button>,
-  Refresh: (props: Partial<ButtonProps>) => <Button variant="secondary" {...props}>{props.children || '刷新'}</Button>,
-  Back: (props: Partial<ButtonProps>) => <Button variant="secondary" {...props}>{props.children || '返回'}</Button>
+  Save: (props: Partial<ButtonProps>) => { const { t } = useTranslation(); return <Button variant="primary" {...props}>{props.children || t(COMMON_ACTIONS.SAVE)}</Button> },
+  Cancel: (props: Partial<ButtonProps>) => { const { t } = useTranslation(); return <Button variant="secondary" {...props}>{props.children || t(COMMON_ACTIONS.CANCEL)}</Button> },
+  Create: (props: Partial<ButtonProps>) => { const { t } = useTranslation(); return <Button variant="primary" {...props}>{props.children || t(COMMON_ACTIONS.CREATE)}</Button> },
+  Edit: (props: Partial<ButtonProps>) => { const { t } = useTranslation(); return <Button variant="primary" {...props}>{props.children || t(COMMON_ACTIONS.EDIT)}</Button> },
+  Delete: (props: Partial<ButtonProps>) => {
+    const { t } = useTranslation()
+    return (
+      <Button variant="danger" confirm={{ title: t(CONTAINER_KEYS.CONFIRM_DELETE), onConfirm: props.onClick as any }} {...props}>
+        {props.children || t(COMMON_ACTIONS.DELETE)}
+      </Button>
+    )
+  },
+  Confirm: (props: Partial<ButtonProps>) => { const { t } = useTranslation(); return <Button variant="success" {...props}>{props.children || t(COMMON_ACTIONS.CONFIRM)}</Button> },
+  Reset: (props: Partial<ButtonProps>) => { const { t } = useTranslation(); return <Button variant="secondary" {...props}>{props.children || t(COMMON_ACTIONS.RESET)}</Button> },
+  Submit: (props: Partial<ButtonProps>) => { const { t } = useTranslation(); return <Button variant="primary" htmlType="submit" {...props}>{props.children || t(COMMON_ACTIONS.SUBMIT)}</Button> },
+  Close: (props: Partial<ButtonProps>) => { const { t } = useTranslation(); return <Button variant="text" {...props}>{props.children || t(COMMON_ACTIONS.CLOSE)}</Button> },
+  Download: (props: Partial<ButtonProps>) => { const { t } = useTranslation(); return <Button variant="primary" {...props}>{props.children || t(COMMON_ACTIONS.DOWNLOAD)}</Button> },
+  Upload: (props: Partial<ButtonProps>) => { const { t } = useTranslation(); return <Button variant="primary" {...props}>{props.children || t(COMMON_ACTIONS.UPLOAD)}</Button> },
+  Refresh: (props: Partial<ButtonProps>) => { const { t } = useTranslation(); return <Button variant="secondary" {...props}>{props.children || t(COMMON_ACTIONS.REFRESH)}</Button> },
+  Back: (props: Partial<ButtonProps>) => { const { t } = useTranslation(); return <Button variant="secondary" {...props}>{props.children || t(COMMON_ACTIONS.BACK)}</Button> }
 }
 
 export default Button

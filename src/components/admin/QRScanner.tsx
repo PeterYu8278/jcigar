@@ -74,20 +74,20 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
       const errorName = error?.name || '';
       
       // 处理不同类型的错误
-      let errorMessage = '无法启动摄像头';
-      
+      let errorMessage = t('scanner.cameraError');
+
       // 检查错误名称或错误消息中是否包含特定错误类型
       if (errorName === 'NotReadableError' || errorString.includes('NotReadableError') || errorString.includes('Could not start video source')) {
-        errorMessage = '摄像头被占用或无法访问，请关闭其他使用摄像头的应用后重试';
+        errorMessage = t('scanner.cameraInUse');
       } else if (errorName === 'NotAllowedError' || errorString.includes('NotAllowedError') || errorString.includes('Permission denied')) {
-        errorMessage = '摄像头权限被拒绝，请在浏览器设置中允许访问摄像头';
+        errorMessage = t('scanner.cameraPermissionDenied');
       } else if (errorName === 'NotFoundError' || errorString.includes('NotFoundError') || errorString.includes('no device')) {
-        errorMessage = '未找到摄像头设备';
+        errorMessage = t('scanner.noCameraFound');
       } else if (errorString.includes('Could not start video source')) {
-        errorMessage = '无法启动视频源，摄像头可能被其他应用占用';
+        errorMessage = t('scanner.videoSourceError');
       } else if (errorString) {
         // 尝试从错误消息中提取有用信息
-        errorMessage = errorString.length > 100 ? '无法启动摄像头，请检查权限设置' : errorString;
+        errorMessage = errorString.length > 100 ? t('scanner.cameraStartFailed') : errorString;
       }
       
       setCameraError(errorMessage);
@@ -101,7 +101,7 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
             setRetrying(false);
           } catch (retryError) {
             setRetrying(false);
-            message.warning('无法启动摄像头，请使用手动输入功能');
+            message.warning(t('scanner.useManualInput'));
           }
         }, 500);
       } else {
@@ -201,7 +201,7 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
     try {
       const memberId = parseQRCode(qrData);
       if (!memberId) {
-        message.error('无法解析QR码，请确保扫描的是会员QR码');
+        message.error(t('scanner.invalidQRCode'));
         setProcessing(false);
         setScannedData(null);
         // 重新启动扫描
@@ -226,7 +226,7 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
       const userId = userResult.user.id;
 
       if (!adminUser?.id) {
-        message.error('管理员信息不存在');
+        message.error(t('scanner.adminNotFound'));
         setProcessing(false);
         setScannedData(null);
         // 重新启动扫描
@@ -240,7 +240,7 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
         // Check-in
         const result = await createVisitSession(userId, adminUser.id, adminUser.storeId || '', '', userResult.user.displayName);
         if (result.success) {
-          message.success(`Check-in 成功！Session ID: ${result.sessionId}`);
+          message.success(t('scanner.checkinSuccess', { sessionId: result.sessionId }));
           setCheckInError(null);
           // 延迟关闭，确保消息显示
           setTimeout(() => {
@@ -268,7 +268,7 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
         // Check-out
         const pendingSession = await getPendingVisitSession(userId);
         if (!pendingSession) {
-          message.error('该用户没有待处理的驻店记录');
+          message.error(t('scanner.noActiveSession'));
           setProcessing(false);
           setScannedData(null);
           // 重新启动扫描
@@ -280,7 +280,7 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
 
         const result = await completeVisitSession(pendingSession.id, adminUser.id, adminUser.storeId);
         if (result.success) {
-          message.success(`Check-out 成功！扣除积分: ${result.pointsDeducted || 0}`);
+          message.success(t('scanner.checkoutSuccess', { points: result.pointsDeducted || 0 }));
           onSuccess?.();
         } else {
           message.error(result.error || t('common.checkoutFailed'));
@@ -293,7 +293,7 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
         }
       }
     } catch (error: any) {
-      message.error(error.message || '处理失败');
+      message.error(error.message || t('scanner.processFailed'));
       setProcessing(false);
       setScannedData(null);
       // 重新启动扫描
@@ -307,7 +307,7 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
 
   // 手动输入memberId
   const handleManualInput = () => {
-    const memberId = prompt('请输入会员编号:');
+    const memberId = prompt(t('scanner.enterMemberNumber'));
     if (memberId) {
       handleScanResult(memberId);
     }
@@ -368,7 +368,7 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
           <div style={{ padding: '24px 0' }}>
             <CheckCircleOutlined style={{ fontSize: 48, color: '#34d399', marginBottom: 16 }} />
             <Text style={{ display: 'block', color: '#FFFFFF', fontSize: 14 }}>
-              {mode === 'checkin' ? '正在检查用户状态及未完成 Session...' : '正在获取驻店记录...'}
+              {mode === 'checkin' ? t('scanner.checkingStatus') : t('scanner.fetchingRecords')}
             </Text>
             {scannedData && (
               <Text type="secondary" style={{ display: 'block', marginTop: 8, fontSize: 12, color: 'rgba(255, 255, 255, 0.45)' }}>
@@ -395,7 +395,7 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
                   borderRadius: 8
                 }}
               >
-                重试
+                {t('common.retry')}
               </Button>
               <Button
                 onClick={handleManualInput}
@@ -406,7 +406,7 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
                   borderRadius: 8
                 }}
               >
-                手动输入
+                {t('scanner.manualInput')}
               </Button>
             </Space>
           </div>
@@ -428,7 +428,7 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
               <div id="qr-reader-view" style={{ width: '100%', height: '100%' }}></div>
             </div>
             <Text type="secondary" style={{ display: 'block', marginTop: 12, fontSize: 12, color: 'rgba(255, 255, 255, 0.45)' }}>
-              请将QR码对准扫描框
+              {t('scanner.alignQRCode')}
             </Text>
           </div>
         )}
@@ -490,11 +490,11 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
               borderRadius: 8
             }}
           >
-            手动输入
+            {t('scanner.manualInput')}
           </Button>
           {onClose && (
-            <Button 
-              onClick={onClose} 
+            <Button
+              onClick={onClose}
               disabled={processing}
               style={{
                 background: 'rgba(255, 255, 255, 0.05)',
@@ -503,7 +503,7 @@ export const QRScannerView: React.FC<QRScannerViewProps> = ({ active, mode, onMo
                 borderRadius: 8
               }}
             >
-              关闭
+              {t('common.close')}
             </Button>
           )}
         </Space>
@@ -520,6 +520,7 @@ interface QRScannerProps {
 }
 
 export const QRScanner: React.FC<QRScannerProps> = ({ visible, onClose, mode: initialMode, onSuccess }) => {
+  const { t } = useTranslation();
   const [mode, setQrScannerMode] = useState<'checkin' | 'checkout'>(initialMode);
 
   useEffect(() => {
@@ -531,7 +532,7 @@ export const QRScanner: React.FC<QRScannerProps> = ({ visible, onClose, mode: in
       title={
         <span style={{ color: '#FFFFFF', fontSize: 17, fontWeight: 700 }}>
           <QrcodeOutlined style={{ marginRight: 8, color: '#FFD700' }} />
-          {mode === 'checkin' ? 'Check-in 扫描' : 'Check-out 扫描'}
+          {mode === 'checkin' ? t('scanner.checkinScan') : t('scanner.checkoutScan')}
         </span>
       }
       open={visible}

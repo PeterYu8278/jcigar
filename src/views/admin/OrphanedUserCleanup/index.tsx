@@ -72,11 +72,11 @@ const OrphanedUserCleanup: React.FC = () => {
       if (orphaned.length === 0) {
         message.success(t('orphanedUsers.noOrphanedFound'));
       } else {
-        message.warning(`找到 ${orphaned.length} 个用户，请手动在 Firebase Console 验证其 Auth 状态`);
+        message.warning(t('orphanedUsers.foundCount', { count: orphaned.length }));
       }
     } catch (error: any) {
       console.error('❌ 扫描失败:', error);
-      message.error('扫描失败: ' + error.message);
+      message.error(t('orphanedUsers.scanFailed') + ': ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -143,14 +143,14 @@ const OrphanedUserCleanup: React.FC = () => {
         }
       }
       
-      message.success(`用户 ${email} 已删除`);
+      message.success(t('orphanedUsers.userDeleted', { email }));
       
       // 刷新列表
       setOrphanedUsers(prev => prev.filter(u => u.uid !== uid));
       
     } catch (error: any) {
       console.error(`❌ 删除失败:`, error);
-      message.error('删除失败: ' + error.message);
+      message.error(t('orphanedUsers.deleteFailed') + ': ' + error.message);
     } finally {
       setDeleting(null);
     }
@@ -199,7 +199,7 @@ const OrphanedUserCleanup: React.FC = () => {
           title={t('orphanedUsers.deletePopconfirmTitle')}
           description={
             <div style={{ maxWidth: 300 }}>
-              <p>确定要删除用户 <Text strong>{record.email}</Text> 的所有数据吗？</p>
+              <p>{t('orphanedUsers.confirmDelete', { email: record.email })}</p>
               <p style={{ marginTop: 8, color: '#ff4d4f' }}>
                 {t('orphanedUsers.deleteWillRemove')}
               </p>
@@ -240,7 +240,7 @@ const OrphanedUserCleanup: React.FC = () => {
           <div>
             <Title level={4}>{t('orphanedUsers.title')}</Title>
             <Text type="secondary">
-              查找 Firestore 中存在但 Firebase Authentication 中不存在的用户，并提供清理功能
+              {t('orphanedUsers.subtitle')}
             </Text>
           </div>
 
@@ -248,18 +248,18 @@ const OrphanedUserCleanup: React.FC = () => {
             message={t('orphanedUsers.alertImportantTitle')}
             description={
               <div>
-                <p><strong>什么是孤立用户？</strong></p>
-                <p>孤立用户是指在 Firestore 数据库中有用户文档，但在 Firebase Authentication 中没有对应账户的用户。</p>
-                <p style={{ marginTop: 8 }}><strong>为什么会出现孤立用户？</strong></p>
+                <p><strong>{t('orphanedUsers.whatAreOrphans')}</strong></p>
+                <p>{t('orphanedUsers.whatAreOrphansDesc')}</p>
+                <p style={{ marginTop: 8 }}><strong>{t('orphanedUsers.whyOrphans')}</strong></p>
                 <ul style={{ marginTop: 4 }}>
-                  <li>Firebase Console 中手动删除了 Auth 用户，但未删除 Firestore 数据</li>
-                  <li>测试期间删除用户未完整清理</li>
-                  <li>数据迁移过程中出现不一致</li>
+                  <li>{t('orphanedUsers.whyOrphansReason1')}</li>
+                  <li>{t('orphanedUsers.whyOrphansReason2')}</li>
+                  <li>{t('orphanedUsers.whyOrphansReason3')}</li>
                 </ul>
-                <p style={{ marginTop: 8 }}><strong>如何处理？</strong></p>
+                <p style={{ marginTop: 8 }}><strong>{t('orphanedUsers.howToHandle')}</strong></p>
                 <ul style={{ marginTop: 4 }}>
-                  <li><strong>方法 1（推荐）</strong>：删除 Firestore 数据，让用户重新注册（会获得新的会员编号）</li>
-                  <li><strong>方法 2</strong>：使用 Firebase Admin SDK 恢复 Auth 用户（保留原 UID 和会员编号）</li>
+                  <li><strong>{t('orphanedUsers.howToHandleMethod1Label')}</strong>：{t('orphanedUsers.howToHandleMethod1Desc')}</li>
+                  <li><strong>{t('orphanedUsers.howToHandleMethod2Label')}</strong>：{t('orphanedUsers.howToHandleMethod2Desc')}</li>
                 </ul>
               </div>
             }
@@ -269,7 +269,7 @@ const OrphanedUserCleanup: React.FC = () => {
 
           <Alert
             message={t('orphanedUsers.alertLimitationTitle')}
-            description="由于客户端 SDK 限制，此工具只能列出所有 Firestore 用户。请手动在 Firebase Console 的 Authentication 页面验证哪些用户缺失 Auth 记录。"
+            description={t('orphanedUsers.alertLimitationDesc')}
             type="info"
             showIcon
           />
@@ -299,8 +299,8 @@ const OrphanedUserCleanup: React.FC = () => {
           {orphanedUsers.length > 0 && (
             <>
               <Alert
-                message={`找到 ${orphanedUsers.length} 个用户`}
-                description="请在 Firebase Console > Authentication 中验证这些用户是否缺失 Auth 记录"
+                message={t('orphanedUsers.foundCount', { count: orphanedUsers.length })}
+                description={t('orphanedUsers.foundCountDesc')}
                 type="info"
                 showIcon
               />
@@ -311,7 +311,7 @@ const OrphanedUserCleanup: React.FC = () => {
                 rowKey="uid"
                 pagination={{
                   pageSize: 10,
-                  showTotal: (total) => `共 ${total} 个用户`
+                  showTotal: (total) => t('orphanedUsers.tableTotal', { total })
                 }}
                 size="small"
               />
@@ -319,37 +319,37 @@ const OrphanedUserCleanup: React.FC = () => {
           )}
 
           {/* 使用说明 */}
-          <Card type="inner" title="使用 Firebase Admin SDK 恢复用户（推荐）">
+          <Card type="inner" title={t('orphanedUsers.adminSdkCardTitle')}>
             <Space direction="vertical" style={{ width: '100%' }}>
-              <Text>如果需要保留用户的历史数据（订单、积分、引荐等），请使用以下方法：</Text>
-              
+              <Text>{t('orphanedUsers.adminSdkDesc')}</Text>
+
               <div style={{ marginTop: 8 }}>
-                <Text strong>步骤 1: 准备 Service Account Key</Text>
+                <Text strong>{t('orphanedUsers.adminSdkStep1')}</Text>
                 <ol style={{ marginTop: 4 }}>
-                  <li>访问 <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer">Firebase Console</a></li>
-                  <li>项目设置 → 服务账号</li>
-                  <li>点击"生成新的私钥"</li>
-                  <li>下载 JSON 文件并重命名为 <Text code>serviceAccountKey.json</Text></li>
-                  <li>放置到项目的 <Text code>scripts/</Text> 目录</li>
+                  <li>{t('orphanedUsers.adminSdkStep1Item1')} <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer">Firebase Console</a></li>
+                  <li>{t('orphanedUsers.adminSdkStep1Item2')}</li>
+                  <li>{t('orphanedUsers.adminSdkStep1Item3')}</li>
+                  <li>{t('orphanedUsers.adminSdkStep1Item4')} <Text code>serviceAccountKey.json</Text></li>
+                  <li>{t('orphanedUsers.adminSdkStep1Item5')} <Text code>scripts/</Text> {t('orphanedUsers.adminSdkStep1Item5Suffix')}</li>
                 </ol>
               </div>
 
               <div style={{ marginTop: 8 }}>
-                <Text strong>步骤 2: 安装 Firebase Admin SDK</Text>
+                <Text strong>{t('orphanedUsers.adminSdkStep2')}</Text>
                 <pre style={{ background: '#f5f5f5', padding: 8, borderRadius: 4, marginTop: 4 }}>
                   npm install firebase-admin
                 </pre>
               </div>
 
               <div style={{ marginTop: 8 }}>
-                <Text strong>步骤 3: 运行恢复脚本</Text>
+                <Text strong>{t('orphanedUsers.adminSdkStep3')}</Text>
                 <pre style={{ background: '#f5f5f5', padding: 8, borderRadius: 4, marginTop: 4 }}>
                   node scripts/restore-missing-auth-user.js
                 </pre>
               </div>
 
               <Alert
-                message="脚本已创建在 scripts/restore-missing-auth-user.js"
+                message={t('orphanedUsers.adminSdkScriptCreated')}
                 type="success"
                 showIcon
                 style={{ marginTop: 8 }}

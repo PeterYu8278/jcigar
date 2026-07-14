@@ -1,6 +1,7 @@
 {
   "common": {
     "loading": "Loading...",
+    "pageLoading": "Page loading...",
     "save": "Save",
     "saveScreenshot": "Save Screenshot",
     "screenshotSaved": "Screenshot saved",
@@ -179,7 +180,38 @@
     "unreadWithCount": "Unread ({{count}})",
     "failed": "Failed",
     "checkoutFailed": "Check-out failed",
-    "savedSuccess": "Configuration saved"
+    "savedSuccess": "Configuration saved",
+    "requestTimeout": "Request timed out",
+    "operationSuccess": "Operation successful",
+    "noPermission": "You do not have permission to perform this action",
+    "dataNotFound": "Data not found",
+    "networkError": "Network connection failed, please check your network settings",
+    "operationFailed": "Operation failed",
+    "confirmOperation": "Confirm Operation",
+    "confirmDeleteNamed": "Are you sure you want to delete \"{{name}}\"? This cannot be undone.",
+    "confirmDeleteGeneric": "Are you sure you want to delete? This cannot be undone.",
+    "confirmBatchDelete": "Are you sure you want to delete the selected {{count}} items? This cannot be undone.",
+    "deleteCount": "Delete {{count}} items",
+    "confirmSave": "Confirm Save",
+    "confirmSaveContent": "Are you sure you want to save the changes?",
+    "confirmLeave": "Confirm Leave",
+    "confirmLeaveContent": "You have unsaved changes. Are you sure you want to leave?",
+    "leave": "Leave",
+    "understood": "Got it",
+    "irreversibleConfirm": "This action cannot be undone. Continue?",
+    "deleteSuccess": "Deleted successfully",
+    "total": "Total:",
+    "skipped": "Skipped:",
+    "inputPlaceholder": "Enter content",
+    "pleaseSelect": "Please select",
+    "saveChanges": "Save Changes",
+    "imageCrop": "Image Crop",
+    "cropRequirements": "Crop requirements:",
+    "solution": "Solution:",
+    "possibleReasons": "Possible reasons:",
+    "unitPerson": " people",
+    "unitStick": " sticks",
+    "unitTime": " times"
   },
   "container": {
     "loadFailed": "Load failed",
@@ -280,7 +312,10 @@
     "notLoggedIn": "User not logged in",
     "phonePlaceholder": "Phone (e.g. 0123456789)",
     "phoneFormatInvalid": "Invalid phone format (10-12 digits required)",
-    "referralCodePlaceholder": "Referral code (optional)"
+    "referralCodePlaceholder": "Referral code (optional)",
+    "userDataRefreshed": "User data refreshed",
+    "refreshFailed": "Failed to refresh user data",
+    "noAdminPermission": "You do not have admin permission"
   },
   "featureManagement": {
     "title": "Feature Management",
@@ -418,7 +453,13 @@
     "deployFailedCheckConfig": "Deploy failed, please check configuration",
     "deployingIndexes": "Deploying Firestore indexes...",
     "indexesDeployedSuccess": "Indexes deployed successfully!",
-    "indexesPartialFail": "Some indexes failed to deploy"
+    "indexesPartialFail": "Some indexes failed to deploy",
+    "firebaseSetupDesc": "Set up Firebase project and configure environment variables.",
+    "netlifyFunctionsDesc": "Configure Netlify Functions and Firebase Admin SDK.",
+    "cloudinarySetupDesc": "Set up Cloudinary account for image storage.",
+    "vapidKeyDesc": "Configure VAPID Key for Firebase Cloud Messaging push notifications.",
+    "geminiKeyDesc": "Configure Gemini API Key for AI cigar recognition.",
+    "netlifyDeployDesc": "Configure Netlify deployment settings and environment variables."
   },
   "navigation": {
     "home": "Home",
@@ -2334,7 +2375,8 @@
     "uploadImage": "Upload Image",
     "brandOptionLabel": "Brand: {{name}}",
     "cigarOptionLabel": "Cigar: {{name}}",
-    "cigarImage": "Cigar image"
+    "cigarImage": "Cigar image",
+    "saveFailed": "Save failed"
   },
   "colorPicker": {
     "editTitle": "Edit {{title}} Color",
@@ -2472,7 +2514,14 @@
     "scanningCollection": "Scanning Firestore users collection...",
     "alertImportantTitle": "Important Notes",
     "alertLimitationTitle": "Note: This tool cannot verify Firebase Auth status",
-    "unnamedUser": "Unnamed"
+    "unnamedUser": "Unnamed",
+    "foundCount": "Found {{count}} users. Please manually verify Auth status in Firebase Console.",
+    "scanFailed": "Scan failed",
+    "userDeleted": "User {{email}} deleted",
+    "deleteFailed": "Delete failed",
+    "whatAreOrphans": "What are orphaned users?",
+    "whyOrphans": "Why do orphaned users occur?",
+    "howToHandle": "How to handle them?"
   },
   "eventDebug": {
     "title": "Event Order Debug Tool",
@@ -2510,7 +2559,12 @@
     "eventNotCompleted": "Event Not Completed",
     "onlyCompletedCreatesOrders": "Orders are only created when event status is set to \"completed\"",
     "allOrdersCreated": "All Orders Created",
-    "allOrdersCreatedDesc": "Orders for all participants have been successfully created"
+    "allOrdersCreatedDesc": "Orders for all participants have been successfully created",
+    "eventIdPlaceholder": "Enter event ID (e.g. event123)",
+    "userIdPlaceholder": "Enter user ID (e.g. user123)",
+    "currentStatus": "Current event status:",
+    "orderCreationNote": "Orders will only be created automatically when event status is changed to completed",
+    "noCigarsAllocated": "No cigars have been allocated to participants for this event"
   },
   "cloudinaryTest": {
     "backToInventory": "Back to Inventory",
@@ -2524,5 +2578,56 @@
     "step3Title": "3. Configuration Info",
     "step3Desc": "Current Cloudinary configuration:",
     "apiSecretHidden": "Configured (hidden for security)"
+  },
+  "scanner": {
+    "cameraError": "Unable to start camera",
+    "cameraInUse": "Camera is in use or inaccessible. Please close other apps using the camera and try again.",
+    "cameraPermissionDenied": "Camera permission denied. Please allow camera access in browser settings.",
+    "noCameraFound": "No camera device found",
+    "videoSourceError": "Unable to start video source. Camera may be in use by another app.",
+    "cameraStartFailed": "Unable to start camera. Please check permission settings.",
+    "useManualInput": "Unable to start camera. Please use manual input.",
+    "invalidQRCode": "Unable to parse QR code. Please ensure this is a member QR code.",
+    "adminNotFound": "Admin information not found",
+    "checkinSuccess": "Check-in successful! Session ID: {{sessionId}}",
+    "noActiveSession": "This user has no active visit session",
+    "checkoutSuccess": "Check-out successful! Points deducted: {{points}}",
+    "processFailed": "Processing failed",
+    "enterMemberNumber": "Enter member number:",
+    "checkingStatus": "Checking user status and active sessions...",
+    "fetchingRecords": "Fetching visit records...",
+    "manualInput": "Manual Input",
+    "alignQRCode": "Align QR code with the scan frame",
+    "checkinScan": "Check-in Scan",
+    "checkoutScan": "Check-out Scan",
+    "aiIdentify": "AI Identify",
+    "scan": "Scan",
+    "memberScanComingSoon": "Member scan feature coming soon",
+    "smartScan": "Smart Scan"
+  },
+  "colorEditor": {
+    "editIconColor": "Click to edit icon color",
+    "editBorderColor": "Click to edit border color",
+    "editPrimaryTextColor": "Click to edit primary text color",
+    "editSecondaryTextColor": "Click to edit secondary text color",
+    "editTertiaryTextColor": "Click to edit tertiary text color",
+    "editInputBorderColor": "Click to edit input border color",
+    "editDropdownBorderColor": "Click to edit dropdown border color",
+    "editDropdownOption": "Click to edit dropdown option...",
+    "editButtonColor": "Click to edit button color",
+    "contentArea": "Content Area",
+    "primaryText": "Primary Text",
+    "secondaryText": "Secondary Text",
+    "tertiaryText": "Tertiary Text"
+  },
+  "testData": {
+    "title": "Test Data Generator",
+    "warningDesc": "This tool will generate a large amount of test data. Use only in development environment.",
+    "totalProgress": "Total Progress",
+    "completedStages": "Completed Stages",
+    "quantity": "Quantity:",
+    "generateSuccess": "{{name}} generated successfully",
+    "generateFailed": "Generation failed",
+    "stageGenerateFailed": "{{name}} generation failed: {{error}}"
   }
 }

@@ -31,10 +31,11 @@ const ImageCrop: React.FC<ImageCropProps> = ({
   minHeight = 100,
   maxWidth = 800,
   maxHeight = 800,
-  title = '图片裁剪',
+  title,
   originalFileType
 }) => {
   const { t } = useTranslation()
+  const modalTitle = title ?? t('common.imageCrop')
   const [crop, setCrop] = useState<Crop>()
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>()
   const [loading, setLoading] = useState(false)
@@ -193,7 +194,7 @@ const ImageCrop: React.FC<ImageCropProps> = ({
 
   return (
     <Modal
-      title={<span style={{ color: '#ffd700', fontWeight: 600 }}>{title}</span>}
+      title={<span style={{ color: '#ffd700', fontWeight: 600 }}>{modalTitle}</span>}
       open={visible}
       onCancel={onCancel}
       style={{ width: '300px' }}
@@ -266,9 +267,9 @@ const ImageCrop: React.FC<ImageCropProps> = ({
           fontSize: '14px',
           color: '#ffd700'
         }}>
-          <p style={{ margin: '0 0 8px 0', fontWeight: '600', color: '#ffd700' }}>裁剪要求：</p>
+          <p style={{ margin: '0 0 8px 0', fontWeight: '600', color: '#ffd700' }}>{t('common.cropRequirements')}</p>
           <p style={{ margin: '0', color: '#c0c0c0' }}>
-            {aspectRatio ? `宽高比: ${aspectRatio}:1 | ` : '自由裁剪 | '}最小尺寸: {minWidth}x{minHeight} | 最大尺寸: {maxWidth}x{maxHeight}
+            {aspectRatio ? t('common.cropAspectRatio', { ratio: `${aspectRatio}:1` }) + ' | ' : t('common.cropFree') + ' | '}{t('common.cropMinSize', { width: minWidth, height: minHeight })} | {t('common.cropMaxSize', { width: maxWidth, height: maxHeight })}
           </p>
         </div>
 
