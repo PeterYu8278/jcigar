@@ -599,33 +599,49 @@ const Profile: React.FC = () => {
             }
           }}
         >
-          {/* Mobile: stacked sections with cards */}
-          <div style={{ marginBottom: 12, ...(theme.card.elevated as React.CSSProperties) }}>
-            <div style={{ ...(theme.text.subtitle as React.CSSProperties), marginBottom: 12 }}>
-              <UserOutlined style={{ marginRight: 8, color: '#F4AF25' }} />
-              {t('profile.nameLabel') || '基本信息'}
-            </div>
-            {renderBasicSection()}
-          </div>
+          <Tabs
+            activeKey={activeTab}
+            onChange={setActiveTab}
+            size="small"
+            style={{ minHeight: 320 }}
+            tabBarStyle={{ marginBottom: 16 }}
+            items={[
+              {
+                key: 'basic',
+                label: <span><UserOutlined style={{ marginRight: 4 }} />{t('profile.nameLabel')}</span>,
+                children: (
+                  <div style={{ paddingBottom: 80 }}>
+                    {renderBasicSection()}
+                  </div>
+                )
+              },
+              {
+                key: 'security',
+                label: <span><LockOutlined style={{ marginRight: 4 }} />{t('auth.security')}</span>,
+                children: (
+                  <div style={{ paddingBottom: 80 }}>
+                    {renderSecuritySection()}
+                  </div>
+                )
+              },
+              {
+                key: 'preferences',
+                label: <span><SettingOutlined style={{ marginRight: 4 }} />{t('profile.settings')}</span>,
+                children: (
+                  <div style={{ paddingBottom: 80 }}>
+                    {renderPreferencesSection()}
+                  </div>
+                )
+              }
+            ]}
+          />
 
-          <div style={{ marginBottom: 12, ...(theme.card.elevated as React.CSSProperties) }}>
-            <div style={{ ...(theme.text.subtitle as React.CSSProperties), marginBottom: 12 }}>
-              <LockOutlined style={{ marginRight: 8, color: '#F4AF25' }} />
-              🔐 {t('auth.security')}
-            </div>
-            {renderSecuritySection()}
-          </div>
-
-          <div style={{ ...(theme.card.elevated as React.CSSProperties) }}>
-            <div style={{ ...(theme.text.subtitle as React.CSSProperties), marginBottom: 12 }}>
-              <SettingOutlined style={{ marginRight: 8, color: '#F4AF25' }} />
-              {t('profile.settings')}
-            </div>
-            {renderPreferencesSection()}
-          </div>
-
-          {/* Bottom save button for easy thumb reach */}
-          <div style={{ marginTop: 24, paddingBottom: 8 }}>
+          {/* Fixed bottom save button */}
+          <div style={{
+            position: 'fixed', bottom: 0, left: 0, right: 0,
+            padding: '12px 16px', background: '#0d0d0d',
+            borderTop: '1px solid rgba(244,175,37,0.2)'
+          }}>
             <Button
               type="primary"
               block
@@ -633,7 +649,7 @@ const Profile: React.FC = () => {
               loading={saving}
               onClick={handleSave}
               style={{
-                height: 52, fontSize: 16, fontWeight: 700,
+                height: 48, fontSize: 16, fontWeight: 700,
                 background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
                 border: 'none', color: '#111', borderRadius: 10
               }}
