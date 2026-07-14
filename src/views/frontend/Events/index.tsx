@@ -23,12 +23,14 @@ const Events: React.FC = () => {
   const { t, i18n } = useTranslation()
   const isMobile = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 991px)').matches : false
   const { data: allEvents, refresh } = useFirestoreQuery(getEvents)
-  const events = (allEvents ?? []).filter(event => !event.isPrivate)
+  const events = (allEvents ?? []).filter(event =>
+    !event.isPrivate && event.status !== 'draft' && event.status !== 'cancelled'
+  )
   const [loadingId, setLoadingId] = useState<string | null>(null)
 
   // 获取所有已完成的活动，用于计算社交关系
   const completedEvents = useMemo(() => {
-    return events.filter(e => e.status === 'completed')
+    return events.filter(e => getDisplayStatus(e) === 'completed')
   }, [events])
 
   // 计算参与者社交关系（基于当前登录用户）
@@ -99,12 +101,21 @@ const Events: React.FC = () => {
     }
   }
 
-  const getStatusText = (status: string) => {
-    switch (status) {
+  const getDisplayStatus = (event: Event): 'upcoming' | 'ongoing' | 'completed' => {
+    const now = new Date()
+    const start = event.schedule?.startDate ? new Date(event.schedule.startDate as any) : null
+    const end = event.schedule?.endDate ? new Date(event.schedule.endDate as any) : null
+    if (end && now > end) return 'completed'
+    if (start && now >= start) return 'ongoing'
+    return 'upcoming'
+  }
+
+  const getStatusText = (event: Event) => {
+    const display = getDisplayStatus(event)
+    switch (display) {
       case 'upcoming': return t('events.upcoming')
       case 'ongoing': return t('events.ongoing')
       case 'completed': return t('events.completed')
-      default: return t('events.unknown')
     }
   }
 
@@ -250,7 +261,7 @@ const Events: React.FC = () => {
                 </p>
 
                 <button
-                  disabled={event.status === 'completed' || !user}
+                  disabled={getDisplayStatus(event) === 'completed' || !user}
                   style={{
                     alignSelf: 'flex-start',
                     background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
@@ -258,18 +269,18 @@ const Events: React.FC = () => {
                     fontWeight: 'bold',
                     padding: '8px 24px',
                     borderRadius: '9999px',
-                    cursor: event.status === 'completed' || !user ? 'not-allowed' : 'pointer',
+                    cursor: getDisplayStatus(event) === 'completed' || !user ? 'not-allowed' : 'pointer',
                     boxShadow: '0 4px 15px rgba(244, 175, 37, 0.6)',
                     transition: 'all 0.3s ease',
-                    opacity: event.status === 'completed' || !user ? 0.6 : 1
+                    opacity: getDisplayStatus(event) === 'completed' || !user ? 0.6 : 1
                   }}
                   onMouseEnter={(e) => {
-                    if (event.status !== 'completed' && user) {
+                    if (getDisplayStatus(event) !== 'completed' && user) {
                       e.currentTarget.style.boxShadow = '0 6px 20px rgba(244, 175, 37, 0.6)'
                     }
                   }}
                   onMouseLeave={(e) => {
-                    if (event.status !== 'completed' && user) {
+                    if (getDisplayStatus(event) !== 'completed' && user) {
                       e.currentTarget.style.boxShadow = '0 4px 15px rgba(244, 175, 37, 0.6)'
                     }
                   }}
@@ -305,7 +316,7 @@ const Events: React.FC = () => {
                   }}
                 >
                   {loadingId === event.id ? t('events.processing') : (() => {
-                    if (event.status === 'completed') return t('events.completed')
+                    if (getDisplayStatus(event) === 'completed') return t('events.completed')
                     if (!user) return t('auth.pleaseLogin')
                     const registeredIds = event.participants?.registered || []
                     return registeredIds.includes(user.id) ? t('events.leave') : t('events.join')

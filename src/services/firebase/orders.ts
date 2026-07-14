@@ -85,7 +85,7 @@ export const createOrder = async (
         return { success: true, orderId: orderRef.id };
       });
     } else {
-      // 在线支付，先创建待支付订单
+      // 非积分支付：创建待支付订单，并异步奖励消费积分
       const docRef = await addDoc(collection(db, GLOBAL_COLLECTIONS.ORDERS), {
         ...orderData,
         orderNo,
@@ -94,6 +94,36 @@ export const createOrder = async (
         updatedAt: Timestamp.fromDate(now)
       });
       result = { success: true, orderId: docRef.id };
+
+      // 奖励消费积分（异步，不阻塞主流程）
+      try {
+        const { getPointsConfig } = await import('./pointsConfig');
+        const config = await getPointsConfig();
+        const perRinggit = config?.purchase?.perRinggit ?? 0;
+        const earnedPoints = perRinggit > 0 ? Math.floor(orderData.total * perRinggit) : 0;
+        if (earnedPoints > 0) {
+          const userRef = doc(db, GLOBAL_COLLECTIONS.USERS, orderData.userId);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            const userData = userSnap.data();
+            const currentPoints = userData?.membership?.points ?? 0;
+            const newPoints = currentPoints + earnedPoints;
+            await updateDoc(userRef, { 'membership.points': newPoints, updatedAt: now });
+            await createPointsRecord({
+              userId: orderData.userId,
+              userName: userData?.displayName || '',
+              type: 'earn',
+              amount: earnedPoints,
+              source: 'purchase',
+              description: `消费奖励积分: ${orderNo}`,
+              relatedId: docRef.id,
+              balance: newPoints,
+            });
+          }
+        }
+      } catch (pointsError) {
+        console.warn('[createOrder] 消费积分奖励失败:', pointsError);
+      }
     }
 
     // 创建出库记录（Stock Card）

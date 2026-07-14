@@ -338,7 +338,39 @@ export const registerForEvent = async (eventId: string, userId: string) => {
       'participants.registered': arrayUnion(userId),
       updatedAt: new Date(),
     });
-    
+
+    // 奖励报名积分（异步，不阻塞主流程）
+    try {
+      const { getPointsConfig } = await import('./pointsConfig');
+      const { createPointsRecord } = await import('./pointsRecords');
+      const config = await getPointsConfig();
+      const registrationPoints = config?.event?.registration ?? 0;
+      if (registrationPoints > 0) {
+        const userSnap = await getDoc(doc(db, COLLECTIONS.USERS, userId));
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          const currentPoints = userData?.membership?.points ?? 0;
+          const newPoints = currentPoints + registrationPoints;
+          await updateDoc(doc(db, COLLECTIONS.USERS, userId), {
+            'membership.points': newPoints,
+            updatedAt: new Date(),
+          });
+          await createPointsRecord({
+            userId,
+            userName: userData?.displayName || '',
+            type: 'earn',
+            amount: registrationPoints,
+            source: 'event_registration',
+            description: `活动报名积分奖励`,
+            relatedId: eventId,
+            balance: newPoints,
+          });
+        }
+      }
+    } catch (pointsError) {
+      console.warn('[registerForEvent] 积分奖励失败:', pointsError);
+    }
+
     // 发送活动提醒（异步，不阻塞主流程）
     try {
       const event = await getEventById(eventId);
@@ -349,10 +381,9 @@ export const registerForEvent = async (eventId: string, userId: string) => {
         });
       }
     } catch (whapiError) {
-      // 静默失败，不影响主流程
       console.warn('[registerForEvent] Whapi 集成失败:', whapiError);
     }
-    
+
     return { success: true };
   } catch (error) {
     return { success: false, error: error as Error };
