@@ -182,12 +182,12 @@ const Profile: React.FC = () => {
   const renderBasicSection = () => (
     <Form
       form={form}
-      layout="horizontal"
-      labelCol={{ flex: labelFlex }}
-      wrapperCol={{ flex: '1 0 0' }}
+      layout={isMobile ? 'vertical' : 'horizontal'}
+      labelCol={isMobile ? undefined : { flex: labelFlex }}
+      wrapperCol={isMobile ? undefined : { flex: '1 0 0' }}
       labelAlign="left"
       labelWrap={false}
-      style={{ rowGap: 8 }}
+      style={{ rowGap: isMobile ? 0 : 8 }}
     >
       <Form.Item label={<span style={{ color: '#fff' }}>{t('profile.avatar')}</span>} style={{ marginBottom: 8 }}>
         <ImageUpload
@@ -291,12 +291,12 @@ const Profile: React.FC = () => {
   const renderSecuritySection = () => (
     <Form
       form={form}
-      layout="horizontal"
-      labelCol={{ flex: labelFlex }}
-      wrapperCol={{ flex: '1 0 0' }}
+      layout={isMobile ? 'vertical' : 'horizontal'}
+      labelCol={isMobile ? undefined : { flex: labelFlex }}
+      wrapperCol={isMobile ? undefined : { flex: '1 0 0' }}
       labelAlign="left"
       labelWrap={false}
-      style={{ rowGap: 8 }}
+      style={{ rowGap: isMobile ? 0 : 8 }}
     >
       <Form.Item
         name="currentPassword"
@@ -338,9 +338,9 @@ const Profile: React.FC = () => {
     <>
       <Form
         form={form}
-        layout="horizontal"
-        labelCol={{ flex: labelFlex }}
-        wrapperCol={{ flex: '1 0 0' }}
+        layout={isMobile ? 'vertical' : 'horizontal'}
+        labelCol={isMobile ? undefined : { flex: labelFlex }}
+        wrapperCol={isMobile ? undefined : { flex: '1 0 0' }}
         labelAlign="left"
         labelWrap={false}
       >
