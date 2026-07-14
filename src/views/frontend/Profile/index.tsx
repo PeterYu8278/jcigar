@@ -493,18 +493,7 @@ const Profile: React.FC = () => {
       <span style={{ color: '#fff', fontWeight: 600, fontSize: 16 }}>
         {t('profile.editProfile')}
       </span>
-      <Button
-        type="primary"
-        icon={<SaveOutlined />}
-        loading={saving}
-        onClick={handleSave}
-        style={{
-          background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-          border: 'none', color: '#111', fontWeight: 600
-        }}
-      >
-        {t('common.save')}
-      </Button>
+      <div style={{ width: 40 }} />
     </div>
   )
 
