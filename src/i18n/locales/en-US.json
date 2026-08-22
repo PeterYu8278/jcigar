@@ -209,6 +209,26 @@
     "cropRequirements": "Crop requirements:",
     "solution": "Solution:",
     "possibleReasons": "Possible reasons:",
+    "private": "Private",
+    "createdAt": "Created At",
+    "cropAspectRatio": "Aspect ratio: {{ratio}}",
+    "cropFree": "Free crop",
+    "cropMinSize": "Min size: {{width}}x{{height}}",
+    "cropMaxSize": "Max size: {{width}}x{{height}}",
+    "export": "Export",
+    "createFailed": "Creation failed",
+    "batchCancelled": "Batch cancelled",
+    "条": "items",
+    "unauthorized": "Unauthorized",
+    "month": "Month",
+    "updateFailed": "Update failed",
+    "store": "Store",
+    "pleaseSelectStore": "Please select store",
+    "defaultStore": "Default Store",
+    "image": "Image",
+    "pending": "Pending",
+    "appName": "App Name",
+    "loadMore": "Load More",
     "unitPerson": " people",
     "unitStick": " sticks",
     "unitTime": " times"
@@ -236,7 +256,9 @@
     "pleaseLogin": "Please login first",
     "invalidCredentials": "Invalid username or password",
     "emailRequired": "Please enter email",
+    "nameRequired": "Please enter name",
     "passwordRequired": "Please enter password",
+    "phoneRequired": "Please enter phone number",
     "passwordTooShort": "Password must be at least 6 characters",
     "passwordMismatch": "Passwords do not match",
     "emailInvalid": "Invalid email format",
@@ -496,6 +518,12 @@
     "subscription": "Subscriptions",
     "stores": "Stores",
     "reports": "Reports"
+  },
+  "nav": {
+    "home": "Home",
+    "events": "Events",
+    "shop": "Shop",
+    "profile": "Profile"
   },
   "roomManagement": {
     "roomConfigTitle": "Room Management",
@@ -760,7 +788,18 @@
     "partiallyPaid": "Partially Paid ({{paid}}/{{total}})",
     "eventImages": "Event Images",
     "registrationClosed": "Registration Closed",
-    "cancelRegistration": "Cancel Registration"
+    "cancelRegistration": "Cancel Registration",
+    "event": "Event",
+    "processing": "Processing..."
+  },
+  "aiHistory": {
+    "pleaseLogin": "Please log in first",
+    "searchPlaceholder": "Search brand or cigar name",
+    "reset": "Reset",
+    "emptyHistory": "No AI cigar history yet",
+    "noResults": "No matching recognition records",
+    "other": "Other",
+    "viewDetail": "View {{name}} details"
   },
   "shop": {
     "title": "Cigar Shop",
@@ -812,7 +851,11 @@
     "orderSuccess": "Order submitted successfully!",
     "noMatchingProducts": "No matching products found",
     "noProductData": "No product data available",
-    "createOrderFailed": "Failed to create order"
+    "createOrderFailed": "Failed to create order",
+    "backToShop": "Back to Shop",
+    "noProducts": "No products available",
+    "other": "Other",
+    "processing": "Processing..."
   },
   "address": {
     "loadFailed": "Failed to load addresses",
@@ -1025,7 +1068,8 @@
     "periodDay": "Daily",
     "periodMonth": "Monthly",
     "periodYear": "Yearly",
-    "dataDetails": "Data Details"
+    "dataDetails": "Data Details",
+    "createEvent": "Create Event"
   },
   "usersAdmin": {
     "userList": "User List",
@@ -1102,6 +1146,15 @@
     "noReferralData": "No referral relationship data",
     "clickToReturnAvatar": "Click to return to avatar",
     "clickToViewMemberCard": "Click to view member card",
+    "storeAdmin": "Store Admin",
+    "expandAll": "Expand All",
+    "collapseAll": "Collapse All",
+    "createFailed": "Creation failed",
+    "deleteUserConfirm": "Are you sure you want to delete user \"{{name}}\"? This action cannot be undone.",
+    "noPhoneForReset": "This user has no phone number linked, cannot reset via WhatsApp",
+    "userNotFound": "User not found"
+  },
+  "users": {
     "storeAdmin": "Store Admin"
   },
   "storeManagement": {
@@ -1178,6 +1231,7 @@
     "trackingNumber": "Tracking Number",
     "enterTrackingNo": "Enter tracking number",
     "transactionIds": "Transaction Records",
+    "financialStatus": "Financial Status",
     "note": "Note",
     "itemDetails": "Item Details",
     "item": {
@@ -1193,6 +1247,8 @@
     "pleaseEnterQuantity": "Please enter quantity",
     "quantity": "Quantity",
     "price": "Price",
+    "products": "Products",
+    "pleaseEnterPrice": "Please enter price",
     "customFee": "Custom Fee",
     "batchConfirm": "Batch Confirm",
     "batchConfirmed": "Batch confirmed",
@@ -1208,6 +1264,8 @@
     "cancelOrder": "Cancel Order",
     "orderCancelled": "Order cancelled",
     "pointsRefunded": "{{points}} points refunded",
+    "trackingNumberUpdated": "Tracking number updated",
+    "updateFailed": "Update failed",
     "deleteConfirm": "Delete Order Confirmation",
     "deleteContent": "Confirm deleting order {{id}}?",
     "selectUser": "Select User",
@@ -1263,7 +1321,10 @@
       "addressRequired": "Please input address",
       "phone": "Phone",
       "phoneRequired": "Please input phone",
-      "terms": "Terms"
+      "terms": "Terms",
+      "generateSelected": "Generate Selected Invoice",
+      "previewTitle": "Invoice Preview & Generation",
+      "termsRequired": "Please enter payment terms"
     },
     "orderTotal": "Order Total"
   },
@@ -1502,26 +1563,37 @@
     "aiRecognitionSuccess": "AI recognition success",
     "aiRecognitionTitle": "AI Recognition",
     "batchDeleteConfirmText": "Are you sure you want to delete the selected {{count}} items?",
+    "binder": "Binder",
+    "binderPlaceholder": "e.g., Dominican, Nicaragua",
     "bodyNotes": "Body Notes",
     "constructionInfo": "Construction Info",
     "deleteBrandConfirmText": "Are you sure you want to delete this brand?",
+    "descriptionPlaceholder": "Enter product description",
+    "filler": "Filler",
     "fillerPlaceholder": "e.g., Dominican, Nicaragua",
+    "flavorProfile": "Flavor Profile",
     "flavorProfilePlaceholder": "e.g., Spicy, Wood, Creamy",
     "footNotes": "Foot Notes",
     "headNotes": "Head Notes",
     "inputOrSelectProductName": "Input or select product name",
     "maxImagesCount": "Upload up to {{count}} images",
+    "notes": "Notes",
+    "notesPlaceholder": "Enter notes",
     "otherInfo": "Other Info",
     "pleaseInputProductName": "Please input product name",
     "rating": "Rating",
     "saveToDbFailed": "Failed to save to database",
+    "tastingNotes": "Tasting Notes",
     "tastingNotesPlaceholder": "Record your tasting notes...",
     "totalInStockQuantity": "Total Inbound Quantity",
     "totalProductTypes": "Total Product Types",
-    "upload": "Upload"
+    "upload": "Upload",
+    "wrapper": "Wrapper",
+    "wrapperPlaceholder": "e.g., Ecuador Connecticut"
   },
   "financeAdmin": {
     "title": "Financial Management",
+    "superAdminOnly": "Only super admins can access financial management",
     "financialReport": "Financial Report",
     "revenueAnalysis": "Revenue Analysis",
     "addTransaction": "Add Transaction",
@@ -1678,6 +1750,9 @@
     "productRevenue": "Product Revenue",
     "eventFee": "Event Fee"
   },
+  "eventsAdmin": {
+    "eventFee": "Event Fee"
+  },
   "upload": {
     "fileTooLarge": "File size cannot exceed {{size}}MB",
     "selectImageFile": "Please select an image file",
@@ -1689,7 +1764,8 @@
     "deleteFailed": "Delete failed",
     "uploading": "Uploading...",
     "clickToUpload": "Click to upload",
-    "imagePreview": "Image Preview"
+    "imagePreview": "Image Preview",
+    "cropImage": "Image Crop"
   },
   "cloudinary": {
     "testSuccess": "Cloudinary test succeeded!",
@@ -1710,7 +1786,9 @@
     "confirm": "Confirm Crop"
   },
   "brand": {
-    "loadFailed": "Failed to load brand information"
+    "loadFailed": "Failed to load brand information",
+    "notFound": "Brand Not Found",
+    "notFoundDesc": "Sorry, the brand you are looking for does not exist."
   },
   "profile": {
     "title": "Profile",
@@ -1731,7 +1809,9 @@
     "nameRequired": "Please enter your name",
     "namePlaceholder": "Enter name",
     "phoneLabel": "Phone",
+    "phoneRequired": "Please enter phone number",
     "phonePlaceholder": "Enter phone number",
+    "unknown": "Unknown",
     "notificationsToggle": "Enable Notifications",
     "pushNotifications": {
       "title": "Push Notification Settings",
@@ -2062,6 +2142,9 @@
       "productName": "Product Name",
       "recognitions": "Recognitions",
       "strength": "Strength",
+      "origin": "Origin",
+      "avgRating": "Avg. Rating",
+      "lastRecognized": "Last Recognized",
       "actions": "Actions"
     },
     "details": {
@@ -2079,12 +2162,24 @@
       "description": "Product Description",
       "noDescription": "No description available",
       "loadFailed": "Failed to load details",
-      "consistency": "Consistency"
+      "consistency": "Consistency",
+      "timeFormatError": "Time format error",
+      "totalRecognitions": "{{count}} total recognitions",
+      "lastRecognized": "Last recognized: {{time}}",
+      "contributorsCount": "{{count}} contributors",
+      "contributorsList": "Contributors",
+      "avgRating": "Average Rating",
+      "basedOnCount": "Based on {{count}} ratings",
+      "tobaccoConstruction": "Tobacco Construction"
     },
     "stats": {
       "count": "{{count}} times",
       "unit": "times",
-      "unitPerType": "times/type"
+      "unitPerType": "times/type",
+      "totalCigars": "Total Cigars",
+      "type": "Type",
+      "totalRecognitions": "Total Recognitions",
+      "avgRecognitions": "Avg. Recognitions"
     },
     "form": {
       "basicInfo": "Basic Info",
@@ -2106,9 +2201,92 @@
       "binder": "Binder",
       "binderPlaceholder": "Enter binder origin",
       "filler": "Filler",
+      "fillerPlaceholder": "Enter filler origin",
+      "flavorStrength": "Flavor & Strength",
+      "strength": "Strength",
+      "strengthPlaceholder": "Select strength",
+      "flavorProfile": "Flavor Profile",
+      "flavorProfilePlaceholder": "Select or enter flavor profile",
+      "tastingNotes": "Tasting Notes",
+      "foot": "Foot",
+      "footPlaceholder": "Enter foot tasting notes",
+      "body": "Body",
+      "bodyPlaceholder": "Enter body tasting notes",
+      "head": "Head",
+      "headPlaceholder": "Enter head tasting notes",
+      "ratingInfo": "Rating Info",
+      "rating": "Rating",
+      "ratingRangeError": "Rating must be between 0 and 100",
+      "ratingPlaceholder": "Enter rating",
+      "ratingSource": "Rating Source",
+      "ratingSourcePlaceholder": "e.g., Cigar Aficionado 2022",
+      "ratingDate": "Rating Date",
+      "updateSuccess": "Cigar information updated",
+      "addSuccess": "Cigar information added",
+      "update": "Update",
+      "save": "Save",
       "pleaseLogin": "Please login first",
       "saveFailed": "Save failed"
     },
+    "import": {
+      "errors": {
+        "brandRequired": "Brand is required",
+        "nameRequired": "Product name is required",
+        "invalidStrength": "Invalid strength value: {{value}}",
+        "invalidRating": "Rating must be a number between 0 and 100",
+        "invalidDate": "Invalid rating date format",
+        "duplicateInFile": "Duplicate with line {{line}}",
+        "duplicateInDb": "The same brand and product name already exist in the database"
+      },
+      "status": {
+        "mild": "Mild",
+        "medium-mild": "Medium-Mild",
+        "medium": "Medium",
+        "medium-full": "Medium-Full",
+        "full": "Full",
+        "valid": "Valid",
+        "warning": "Warning",
+        "error": "Error",
+        "duplicate": "Duplicate"
+      },
+      "columns": {
+        "line": "Line",
+        "status": "Status",
+        "brand": "Brand",
+        "name": "Product Name",
+        "strength": "Strength",
+        "rating": "Rating",
+        "issues": "Issues"
+      },
+      "parseSuccess": "{{count}} records parsed",
+      "parseFailed": "Parse failed: {{error}}",
+      "noValidRecords": "No valid records to import",
+      "importSuccess": "{{count}} records imported successfully",
+      "importFailed": "Import failed",
+      "importNotice": "CSV Import Notes",
+      "notice1": "Use the column names from the template and avoid changing the headers.",
+      "notice2": "brand and name are required fields.",
+      "notice3": "strength supports: mild, medium-mild, medium, medium-full, full.",
+      "notice4": "Separate multiple flavorProfile values with commas.",
+      "notice5": "rating must be between 0 and 100.",
+      "notice6": "Duplicate records will be flagged. Errors and duplicates are skipped during import.",
+      "template": "Download Template",
+      "onlyCsv": "Please select a CSV file",
+      "selectFile": "Select File",
+      "summary": "{{total}} total, {{valid}} valid, {{warning}} warnings, {{error}} errors, {{duplicate}} duplicates",
+      "importValid": "Import {{count}} valid records"
+    },
+    "actions": {
+      "details": "Details",
+      "close": "Close",
+      "deleteSuccess": "Deleted successfully",
+      "deleteFailed": "Delete failed",
+      "confirmDeleteTitle": "Confirm Delete",
+      "confirmDeleteContent": "Are you sure you want to delete this cigar record? This action cannot be undone.",
+      "confirmDeleteOk": "Confirm Delete",
+      "confirmDeleteCancel": "Cancel"
+    },
+    "readonlyNotice": "The cigar database summarizes AI recognition data and manually maintained records. Please edit with care.",
     "aiDatabaseTitle": "AI Recognition Database"
   },
   "flavors": {
@@ -2546,8 +2724,31 @@
     "userDeleted": "User {{email}} deleted",
     "deleteFailed": "Delete failed",
     "whatAreOrphans": "What are orphaned users?",
+    "whatAreOrphansDesc": "Orphaned users are users that have a Firestore user document but no matching account in Firebase Authentication.",
     "whyOrphans": "Why do orphaned users occur?",
-    "howToHandle": "How to handle them?"
+    "whyOrphansReason1": "Authentication account creation failed during registration, but the database document was already written.",
+    "whyOrphansReason2": "The authentication account was manually deleted, but Firestore user data was not cleaned up.",
+    "whyOrphansReason3": "Historical migration or test data generation produced incomplete records.",
+    "howToHandle": "How to handle them?",
+    "howToHandleMethod1Label": "Manual verification",
+    "howToHandleMethod1Desc": "Confirm in Firebase Console that the user is missing from Authentication before deleting.",
+    "howToHandleMethod2Label": "Use Admin SDK",
+    "howToHandleMethod2Desc": "Run a server-side script to validate Auth users and clean them up in bulk.",
+    "alertLimitationDesc": "The client cannot read the full Firebase Authentication user list directly, so scan results should be confirmed with Firebase Console or Admin SDK.",
+    "foundCountDesc": "Please verify each user is truly missing a Firebase Auth account before deleting.",
+    "tableTotal": "{{total}} records total",
+    "adminSdkCardTitle": "Use Firebase Admin SDK for Accurate Checks",
+    "adminSdkDesc": "To automatically confirm orphaned users, configure Admin SDK locally and run the cleanup script.",
+    "adminSdkStep1": "1. Prepare a service account key",
+    "adminSdkStep1Item1": "Open",
+    "adminSdkStep1Item2": "Go to Project Settings > Service Accounts.",
+    "adminSdkStep1Item3": "Generate a new private key.",
+    "adminSdkStep1Item4": "Rename the downloaded file to",
+    "adminSdkStep1Item5": "Place it in the project",
+    "adminSdkStep1Item5Suffix": "directory.",
+    "adminSdkStep2": "2. Install dependencies and run the orphaned user check script.",
+    "adminSdkStep3": "3. Review the output before deleting anything.",
+    "adminSdkScriptCreated": "Admin SDK check script has been created. You can find it in the scripts directory."
   },
   "eventDebug": {
     "title": "Event Order Debug Tool",
@@ -2590,7 +2791,22 @@
     "userIdPlaceholder": "Enter user ID (e.g. user123)",
     "currentStatus": "Current event status:",
     "orderCreationNote": "Orders will only be created automatically when event status is changed to completed",
-    "noCigarsAllocated": "No cigars have been allocated to participants for this event"
+    "noCigarsAllocated": "No cigars have been allocated to participants for this event",
+    "eventNotFoundDesc": "Event {{id}} was not found. Please confirm the Event ID is correct.",
+    "issueFoundDesc": "{{count}} participants are missing orders.",
+    "solutionStep1GoToEventMgmt": "Go to Event Management",
+    "solutionStep2EditEvent": "Edit this event",
+    "solutionStep3SetCompleted": "Set the status to completed",
+    "solutionStep4SaveAutoCreate": "Save and the system will create orders automatically",
+    "solutionStep2ClickView": "Open the event details",
+    "solutionStep3AllocateCigars": "Allocate cigars to participants",
+    "solutionStep4SaveThenComplete": "Save allocations, then mark the event as completed",
+    "missingOrdersAlert": "{{count}} orders are missing",
+    "missingOrdersDesc": "Some registered participants with allocated cigars do not have corresponding orders yet.",
+    "reasonNotCompleted": "The event status has not been set to completed.",
+    "reasonCreationError": "An error occurred during order creation.",
+    "reasonInvalidFormat": "The event allocation data is incomplete or malformed.",
+    "solutionSetCompleteAndSave": "Confirm cigar allocations, set the event status to completed, and save."
   },
   "cloudinaryTest": {
     "backToInventory": "Back to Inventory",
@@ -2652,8 +2868,40 @@
     "totalProgress": "Total Progress",
     "completedStages": "Completed Stages",
     "quantity": "Quantity:",
+    "stage1_1Name": "Create Base Users",
+    "stage1_1Desc": "Generate basic members, admins, and test accounts.",
+    "stage1_2Name": "Create User Activity Data",
+    "stage1_2Desc": "Generate user behavior, login, and profile test data.",
+    "stage2_1Name": "Create Cigar Products",
+    "stage2_1Desc": "Generate cigar brands, specifications, prices, and stock data.",
+    "stage3_1Name": "Create Order Data",
+    "stage3_1Desc": "Generate shop orders, order items, and payment status data.",
+    "stage4_1Name": "Create Event Data",
+    "stage4_1Desc": "Generate events, registrations, and participant data.",
+    "stage5_1Name": "Create Points Records",
+    "stage5_1Desc": "Generate points earning, spending, and adjustment records.",
+    "stage5_2Name": "Create Reload Records",
+    "stage5_2Desc": "Generate member reloads, reviews, and payment proof data.",
+    "stage6_1Name": "Create Inbound Inventory Logs",
+    "stage6_1Desc": "Generate purchase inbound, adjustment inbound, and supply source records.",
+    "stage6_2Name": "Create Outbound Inventory Logs",
+    "stage6_2Desc": "Generate sales outbound, event outbound, and stock deduction records.",
+    "stage7_1Name": "Create Visit Sessions",
+    "stage7_1Desc": "Generate member check-in, stay, and checkout session data.",
+    "stage7_2Name": "Create Redemption Records",
+    "stage7_2Desc": "Generate cigar redemption and visit session consumption records.",
+    "stage8_1Name": "Create Financial Transactions",
+    "stage8_1Desc": "Generate income, expense, reconciliation, and related order transaction data.",
+    "stage9_1Name": "Create Report Data",
+    "stage9_1Desc": "Generate historical data for exports and analytics.",
+    "stage10_1Name": "Validate Generated Data",
+    "stage10_1Desc": "Check generated results and summarize abnormal records.",
     "generateSuccess": "{{name}} generated successfully",
     "generateFailed": "Generation failed",
-    "stageGenerateFailed": "{{name}} generation failed: {{error}}"
+    "stageGenerateFailed": "{{name}} generation failed: {{error}}",
+    "statusCompleted": "Completed",
+    "statusRunning": "Running",
+    "statusRetry": "Retry",
+    "statusGenerate": "Generate"
   }
 }

@@ -210,6 +210,25 @@
     "cropRequirements": "裁剪要求：",
     "solution": "解决方案：",
     "possibleReasons": "可能原因：",
+    "private": "私密",
+    "createdAt": "创建时间",
+    "cropAspectRatio": "裁剪比例：{{ratio}}",
+    "cropFree": "自由裁剪",
+    "cropMinSize": "最小尺寸：{{width}}x{{height}}",
+    "cropMaxSize": "最大尺寸：{{width}}x{{height}}",
+    "export": "导出",
+    "createFailed": "创建失败",
+    "batchCancelled": "已批量取消",
+    "unauthorized": "无权限",
+    "month": "月",
+    "updateFailed": "更新失败",
+    "store": "门店",
+    "pleaseSelectStore": "请选择门店",
+    "defaultStore": "默认门店",
+    "image": "图片",
+    "pending": "待处理",
+    "appName": "应用名称",
+    "loadMore": "加载更多",
     "unitPerson": "人",
     "unitStick": "支",
     "unitTime": "次"
@@ -237,7 +256,9 @@
     "pleaseLogin": "请先登录",
     "invalidCredentials": "用户名或密码错误",
     "emailRequired": "请输入邮箱",
+    "nameRequired": "请输入姓名",
     "passwordRequired": "请输入密码",
+    "phoneRequired": "请输入手机号",
     "passwordTooShort": "密码至少6位",
     "passwordMismatch": "两次密码输入不一致",
     "emailInvalid": "邮箱格式不正确",
@@ -497,6 +518,12 @@
     "subscription": "订阅管理",
     "stores": "门店管理",
     "reports": "报表导出"
+  },
+  "nav": {
+    "home": "首页",
+    "events": "活动",
+    "shop": "商城",
+    "profile": "个人中心"
   },
   "roomManagement": {
     "roomConfigTitle": "房间配置管理",
@@ -761,7 +788,18 @@
     "partiallyPaid": "部分已付 ({{paid}}/{{total}})",
     "eventImages": "活动图片",
     "registrationClosed": "报名已截止",
-    "cancelRegistration": "取消报名"
+    "cancelRegistration": "取消报名",
+    "event": "活动",
+    "processing": "处理中..."
+  },
+  "aiHistory": {
+    "pleaseLogin": "请先登录",
+    "searchPlaceholder": "搜索品牌或雪茄名称",
+    "reset": "重置",
+    "emptyHistory": "暂无 AI 识茄历史记录",
+    "noResults": "未找到匹配的识别记录",
+    "other": "其他",
+    "viewDetail": "查看 {{name}} 详情"
   },
   "shop": {
     "title": "雪茄商城",
@@ -813,7 +851,11 @@
     "orderSuccess": "订单提交成功！",
     "noMatchingProducts": "未找到匹配的商品",
     "noProductData": "暂无商品数据",
-    "createOrderFailed": "创建订单失败"
+    "createOrderFailed": "创建订单失败",
+    "backToShop": "返回商城",
+    "noProducts": "暂无商品",
+    "other": "其他",
+    "processing": "处理中..."
   },
   "address": {
     "loadFailed": "加载地址失败",
@@ -1026,7 +1068,8 @@
     "periodDay": "日",
     "periodMonth": "月",
     "periodYear": "年",
-    "dataDetails": "数据明细"
+    "dataDetails": "数据明细",
+    "createEvent": "创建活动"
   },
   "usersAdmin": {
     "userList": "用户列表",
@@ -1103,6 +1146,15 @@
     "noReferralData": "暂无引荐关系数据",
     "clickToReturnAvatar": "点击返回头像",
     "clickToViewMemberCard": "点击查看会员卡",
+    "storeAdmin": "门店管理员",
+    "expandAll": "全部展开",
+    "collapseAll": "全部收起",
+    "createFailed": "创建失败",
+    "deleteUserConfirm": "确定要删除用户「{{name}}」吗？删除后无法恢复。",
+    "noPhoneForReset": "该用户未绑定手机号，无法通过 WhatsApp 重置",
+    "userNotFound": "用户不存在"
+  },
+  "users": {
     "storeAdmin": "门店管理员"
   },
   "storeManagement": {
@@ -1180,6 +1232,7 @@
     "trackingNumber": "运单号",
     "enterTrackingNo": "输入运单号",
     "transactionIds": "交易流水记录",
+    "financialStatus": "财务状态",
     "note": "备注",
     "itemDetails": "商品明细",
     "item": {
@@ -1195,6 +1248,8 @@
     "pleaseEnterQuantity": "请输入数量",
     "quantity": "数量",
     "price": "价格",
+    "products": "商品",
+    "pleaseEnterPrice": "请输入价格",
     "customFee": "自定义费用",
     "batchConfirm": "批量确认",
     "batchConfirmed": "已批量确认",
@@ -1209,6 +1264,8 @@
     "batchDeleteContent": "确定删除选中的 {{count}} 个订单吗？",
     "cancelOrder": "取消订单",
     "pointsRefunded": "已退还 {{points}} 积分",
+    "trackingNumberUpdated": "运单号已更新",
+    "updateFailed": "更新失败",
     "deleteConfirm": "删除订单确认",
     "deleteContent": "确认删除订单 {{id}} 吗？",
     "selectUser": "选择用户",
@@ -1264,7 +1321,10 @@
       "addressRequired": "请输入地址",
       "phone": "电话",
       "phoneRequired": "请输入电话",
-      "terms": "条款"
+      "terms": "条款",
+      "generateSelected": "生成所选发票",
+      "previewTitle": "发票预览与生成",
+      "termsRequired": "请输入付款条款"
     },
     "orderTotal": "订单总计"
   },
@@ -1503,26 +1563,37 @@
     "aiRecognitionSuccess": "AI 识别成功",
     "aiRecognitionTitle": "AI 识别",
     "batchDeleteConfirmText": "确定要删除选中的 {{count}} 个项目吗？",
+    "binder": "茄套",
+    "binderPlaceholder": "例如：Dominican, Nicaragua",
     "bodyNotes": "茄身笔记",
     "constructionInfo": "构造信息",
     "deleteBrandConfirmText": "确定要删除该品牌吗？",
+    "descriptionPlaceholder": "请输入产品描述",
+    "filler": "茄芯",
     "fillerPlaceholder": "例如：Dominican, Nicaragua",
+    "flavorProfile": "风味特征",
     "flavorProfilePlaceholder": "例如：辛辣、木质、奶油",
     "footNotes": "茄脚笔记",
     "headNotes": "茄头笔记",
     "inputOrSelectProductName": "输入或选择产品名称",
     "maxImagesCount": "最多上传 {{count}} 张图片",
+    "notes": "备注",
+    "notesPlaceholder": "请输入备注",
     "otherInfo": "其他信息",
     "pleaseInputProductName": "请输入产品名称",
     "rating": "评分",
     "saveToDbFailed": "保存到数据库失败",
+    "tastingNotes": "品吸笔记",
     "tastingNotesPlaceholder": "记录您的品吸笔记...",
     "totalInStockQuantity": "总入库数量",
     "totalProductTypes": "总产品品种",
-    "upload": "上传"
+    "upload": "上传",
+    "wrapper": "茄衣",
+    "wrapperPlaceholder": "例如：Ecuador Connecticut"
   },
   "financeAdmin": {
     "title": "财务管理",
+    "superAdminOnly": "仅超级管理员可访问财务管理",
     "financialReport": "财务报表",
     "revenueAnalysis": "收入分析",
     "addTransaction": "添加交易",
@@ -1679,6 +1750,9 @@
     "productRevenue": "产品收入",
     "eventFee": "活动费用"
   },
+  "eventsAdmin": {
+    "eventFee": "活动费用"
+  },
   "upload": {
     "fileTooLarge": "文件大小不能超过 {{size}}MB",
     "selectImageFile": "请选择图片文件",
@@ -1690,7 +1764,8 @@
     "deleteFailed": "删除失败",
     "uploading": "上传中...",
     "clickToUpload": "点击上传",
-    "imagePreview": "图片预览"
+    "imagePreview": "图片预览",
+    "cropImage": "图片裁剪"
   },
   "cloudinary": {
     "testSuccess": "Cloudinary 测试成功！",
@@ -1711,7 +1786,9 @@
     "confirm": "确认裁剪"
   },
   "brand": {
-    "loadFailed": "加载品牌信息失败"
+    "loadFailed": "加载品牌信息失败",
+    "notFound": "未找到品牌",
+    "notFoundDesc": "抱歉，您查找的品牌不存在。"
   },
   "profile": {
     "title": "个人资料",
@@ -1733,7 +1810,9 @@
     "nameRequired": "请输入您的姓名",
     "namePlaceholder": "请输入姓名",
     "phoneLabel": "手机",
+    "phoneRequired": "请输入手机号",
     "phonePlaceholder": "请输入手机号码",
+    "unknown": "未知",
     "notificationsToggle": "开启通知",
     "pushNotifications": {
       "title": "推送通知设置",
@@ -2063,6 +2142,9 @@
       "productName": "产品名称",
       "recognitions": "识别次数",
       "strength": "强度",
+      "origin": "产地",
+      "avgRating": "平均评分",
+      "lastRecognized": "最后识别",
       "actions": "操作"
     },
     "details": {
@@ -2080,12 +2162,24 @@
       "description": "产品描述",
       "noDescription": "暂无描述",
       "loadFailed": "加载详情失败",
-      "consistency": "一致性"
+      "consistency": "一致性",
+      "timeFormatError": "时间格式错误",
+      "totalRecognitions": "总识别 {{count}} 次",
+      "lastRecognized": "最后识别：{{time}}",
+      "contributorsCount": "{{count}} 位贡献者",
+      "contributorsList": "贡献者列表",
+      "avgRating": "平均评分",
+      "basedOnCount": "基于 {{count}} 条评分",
+      "tobaccoConstruction": "烟叶结构"
     },
     "stats": {
       "count": "{{count}} 次",
       "unit": "次",
-      "unitPerType": "次/类型"
+      "unitPerType": "次/类型",
+      "totalCigars": "雪茄总数",
+      "type": "类型",
+      "totalRecognitions": "总识别次数",
+      "avgRecognitions": "平均识别次数"
     },
     "form": {
       "basicInfo": "基础信息",
@@ -2107,9 +2201,92 @@
       "binder": "内包叶 (Binder)",
       "binderPlaceholder": "请输入内包叶来源",
       "filler": "茄芯 (Filler)",
+      "fillerPlaceholder": "请输入茄芯来源",
+      "flavorStrength": "风味与强度",
+      "strength": "强度",
+      "strengthPlaceholder": "请选择强度",
+      "flavorProfile": "风味特征",
+      "flavorProfilePlaceholder": "选择或输入风味特征",
+      "tastingNotes": "品鉴笔记",
+      "foot": "前段",
+      "footPlaceholder": "请输入前段品鉴笔记",
+      "body": "中段",
+      "bodyPlaceholder": "请输入中段品鉴笔记",
+      "head": "后段",
+      "headPlaceholder": "请输入后段品鉴笔记",
+      "ratingInfo": "评分信息",
+      "rating": "评分",
+      "ratingRangeError": "评分必须在 0 到 100 之间",
+      "ratingPlaceholder": "请输入评分",
+      "ratingSource": "评分来源",
+      "ratingSourcePlaceholder": "例如：Cigar Aficionado 2022",
+      "ratingDate": "评分日期",
+      "updateSuccess": "雪茄信息已更新",
+      "addSuccess": "雪茄信息已添加",
+      "update": "更新",
+      "save": "保存",
       "pleaseLogin": "请先登录",
       "saveFailed": "保存失败"
     },
+    "import": {
+      "errors": {
+        "brandRequired": "品牌不能为空",
+        "nameRequired": "产品名称不能为空",
+        "invalidStrength": "强度值无效：{{value}}",
+        "invalidRating": "评分必须是 0 到 100 之间的数字",
+        "invalidDate": "评分日期格式无效",
+        "duplicateInFile": "与第 {{line}} 行重复",
+        "duplicateInDb": "数据库中已存在相同品牌和产品名称"
+      },
+      "status": {
+        "mild": "温和",
+        "medium-mild": "中等偏温和",
+        "medium": "中等",
+        "medium-full": "中等偏浓郁",
+        "full": "浓郁",
+        "valid": "有效",
+        "warning": "警告",
+        "error": "错误",
+        "duplicate": "重复"
+      },
+      "columns": {
+        "line": "行号",
+        "status": "状态",
+        "brand": "品牌",
+        "name": "产品名称",
+        "strength": "强度",
+        "rating": "评分",
+        "issues": "问题"
+      },
+      "parseSuccess": "已解析 {{count}} 条记录",
+      "parseFailed": "解析失败：{{error}}",
+      "noValidRecords": "没有可导入的有效记录",
+      "importSuccess": "成功导入 {{count}} 条记录",
+      "importFailed": "导入失败",
+      "importNotice": "CSV 导入说明",
+      "notice1": "请使用模板中的列名，避免修改表头。",
+      "notice2": "brand 和 name 为必填字段。",
+      "notice3": "strength 可选值：mild、medium-mild、medium、medium-full、full。",
+      "notice4": "flavorProfile 多个风味请用英文逗号分隔。",
+      "notice5": "rating 范围为 0 到 100。",
+      "notice6": "重复记录会被标记，导入时将跳过错误和重复项。",
+      "template": "下载模板",
+      "onlyCsv": "请选择 CSV 文件",
+      "selectFile": "选择文件",
+      "summary": "共 {{total}} 条，{{valid}} 条有效，{{warning}} 条警告，{{error}} 条错误，{{duplicate}} 条重复",
+      "importValid": "导入 {{count}} 条有效记录"
+    },
+    "actions": {
+      "details": "详情",
+      "close": "关闭",
+      "deleteSuccess": "删除成功",
+      "deleteFailed": "删除失败",
+      "confirmDeleteTitle": "确认删除",
+      "confirmDeleteContent": "确定要删除这条雪茄记录吗？此操作不可撤销。",
+      "confirmDeleteOk": "确认删除",
+      "confirmDeleteCancel": "取消"
+    },
+    "readonlyNotice": "雪茄知识库用于汇总 AI 识别数据和人工维护数据，请谨慎修改。",
     "aiDatabaseTitle": "AI识别数据库"
   },
   "flavors": {
@@ -2547,8 +2724,31 @@
     "userDeleted": "用户 {{email}} 已删除",
     "deleteFailed": "删除失败",
     "whatAreOrphans": "什么是孤立用户？",
+    "whatAreOrphansDesc": "孤立用户是指 Firestore 数据库中存在用户文档，但 Firebase Authentication 中没有对应认证账户的用户。",
     "whyOrphans": "为什么会出现孤立用户？",
-    "howToHandle": "如何处理？"
+    "whyOrphansReason1": "用户注册过程中认证账户创建失败，但数据库文档已写入。",
+    "whyOrphansReason2": "认证账户被手动删除，但 Firestore 用户数据未同步清理。",
+    "whyOrphansReason3": "历史数据迁移或测试数据生成过程中产生了不完整记录。",
+    "howToHandle": "如何处理？",
+    "howToHandleMethod1Label": "手动验证",
+    "howToHandleMethod1Desc": "在 Firebase Console 中确认该用户确实不存在于 Authentication 后再删除。",
+    "howToHandleMethod2Label": "使用 Admin SDK",
+    "howToHandleMethod2Desc": "运行服务端脚本批量校验 Auth 用户并执行清理。",
+    "alertLimitationDesc": "客户端无法直接读取 Firebase Authentication 全量用户列表，因此扫描结果需要结合 Firebase Console 或 Admin SDK 进一步确认。",
+    "foundCountDesc": "请逐一确认这些用户是否真的缺少 Firebase Auth 账户，确认后再执行删除。",
+    "tableTotal": "共 {{total}} 条记录",
+    "adminSdkCardTitle": "使用 Firebase Admin SDK 精确检查",
+    "adminSdkDesc": "如需自动化确认孤立用户，请在本地配置 Admin SDK 后运行清理脚本。",
+    "adminSdkStep1": "1. 准备服务账号密钥",
+    "adminSdkStep1Item1": "打开",
+    "adminSdkStep1Item2": "进入项目设置 > 服务账号。",
+    "adminSdkStep1Item3": "生成新的私钥。",
+    "adminSdkStep1Item4": "将下载的文件重命名为",
+    "adminSdkStep1Item5": "放入项目",
+    "adminSdkStep1Item5Suffix": "目录。",
+    "adminSdkStep2": "2. 安装依赖并运行孤立用户检查脚本。",
+    "adminSdkStep3": "3. 确认输出结果后再执行删除操作。",
+    "adminSdkScriptCreated": "Admin SDK 检查脚本已创建，可在 scripts 目录中查看。"
   },
   "eventDebug": {
     "title": "活动订单调试工具",
@@ -2591,7 +2791,22 @@
     "userIdPlaceholder": "输入用户ID (例: user123)",
     "currentStatus": "当前活动状态为",
     "orderCreationNote": "订单只会在活动状态改为已完成时自动创建",
-    "noCigarsAllocated": "该活动还没有为参与者分配雪茄"
+    "noCigarsAllocated": "该活动还没有为参与者分配雪茄",
+    "eventNotFoundDesc": "未找到活动 {{id}}，请确认活动 ID 是否正确。",
+    "issueFoundDesc": "发现 {{count}} 个参与者缺少订单。",
+    "solutionStep1GoToEventMgmt": "进入活动管理页面",
+    "solutionStep2EditEvent": "编辑该活动",
+    "solutionStep3SetCompleted": "将状态设为 completed",
+    "solutionStep4SaveAutoCreate": "保存后系统会自动创建订单",
+    "solutionStep2ClickView": "点击查看活动详情",
+    "solutionStep3AllocateCigars": "为参与者分配雪茄",
+    "solutionStep4SaveThenComplete": "保存分配后再将活动设为已完成",
+    "missingOrdersAlert": "有 {{count}} 个订单缺失",
+    "missingOrdersDesc": "部分已报名且已分配雪茄的参与者还没有生成对应订单。",
+    "reasonNotCompleted": "活动状态尚未设为 completed。",
+    "reasonCreationError": "订单创建流程执行时发生错误。",
+    "reasonInvalidFormat": "活动分配数据格式不完整或不正确。",
+    "solutionSetCompleteAndSave": "建议确认雪茄分配后，将活动状态设为 completed 并保存。"
   },
   "cloudinaryTest": {
     "backToInventory": "返回库存管理",
@@ -2653,8 +2868,40 @@
     "totalProgress": "总进度",
     "completedStages": "已完成阶段",
     "quantity": "数量:",
+    "stage1_1Name": "创建基础用户",
+    "stage1_1Desc": "生成基础会员、管理员和测试账户。",
+    "stage1_2Name": "创建用户活动数据",
+    "stage1_2Desc": "生成用户行为、登录和资料相关测试数据。",
+    "stage2_1Name": "创建雪茄产品",
+    "stage2_1Desc": "生成雪茄品牌、规格、价格和库存基础数据。",
+    "stage3_1Name": "创建订单数据",
+    "stage3_1Desc": "生成商城订单、订单明细和支付状态数据。",
+    "stage4_1Name": "创建活动数据",
+    "stage4_1Desc": "生成活动、报名记录和参与者数据。",
+    "stage5_1Name": "创建积分记录",
+    "stage5_1Desc": "生成积分获取、消耗和调整记录。",
+    "stage5_2Name": "创建充值记录",
+    "stage5_2Desc": "生成会员充值、审核和支付凭证数据。",
+    "stage6_1Name": "创建库存入库记录",
+    "stage6_1Desc": "生成采购入库、调整入库和供应来源记录。",
+    "stage6_2Name": "创建库存出库记录",
+    "stage6_2Desc": "生成销售出库、活动出库和库存扣减记录。",
+    "stage7_1Name": "创建访问会话",
+    "stage7_1Desc": "生成会员到店、驻店和结账会话数据。",
+    "stage7_2Name": "创建兑换记录",
+    "stage7_2Desc": "生成雪茄兑换和会话消费记录。",
+    "stage8_1Name": "创建财务交易",
+    "stage8_1Desc": "生成收入、支出、对账和关联订单交易数据。",
+    "stage9_1Name": "创建报表数据",
+    "stage9_1Desc": "生成用于导出和统计分析的历史数据。",
+    "stage10_1Name": "完成数据校验",
+    "stage10_1Desc": "检查生成结果并汇总异常记录。",
     "generateSuccess": "{{name}}生成完成",
     "generateFailed": "生成失败",
-    "stageGenerateFailed": "{{name}}生成失败: {{error}}"
+    "stageGenerateFailed": "{{name}}生成失败: {{error}}",
+    "statusCompleted": "已完成",
+    "statusRunning": "运行中",
+    "statusRetry": "重试",
+    "statusGenerate": "生成"
   }
 }
