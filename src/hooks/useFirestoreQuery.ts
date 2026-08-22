@@ -52,6 +52,7 @@ export function useFirestoreQuery<T>(
   // 防止组件卸载后 setState
   const mountedRef = useRef(true)
   useEffect(() => {
+    mountedRef.current = true
     return () => { mountedRef.current = false }
   }, [])
 
@@ -114,6 +115,7 @@ export function useFirestoreDoc<T>(
   const mountedRef = useRef(true)
 
   useEffect(() => {
+    mountedRef.current = true
     return () => { mountedRef.current = false }
   }, [])
 
