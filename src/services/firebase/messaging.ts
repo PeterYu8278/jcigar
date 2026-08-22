@@ -205,12 +205,6 @@ export const getFCMToken = async (): Promise<string | null> => {
     const permission = await requestNotificationPermission();
     
     if (permission !== 'granted') {
-      console.warn('[FCM] ⚠️ 通知权限未授予，当前状态:', permission);
-      if (permission === 'default') {
-        console.warn('[FCM] 提示：用户未响应权限请求，或权限请求被阻止');
-      } else if (permission === 'denied') {
-        console.warn('[FCM] 提示：用户拒绝了通知权限，需要在浏览器设置中手动开启');
-      }
       return null;
     }
 
@@ -545,7 +539,6 @@ export const initializePushNotifications = async (user: User): Promise<boolean> 
     const currentPermission = Notification.permission;
     
     if (currentPermission === 'denied') {
-      console.warn('[FCM] ⚠️ 通知权限已被拒绝，无法获取 Token。请在浏览器设置中手动开启通知权限');
       return false;
     }
     

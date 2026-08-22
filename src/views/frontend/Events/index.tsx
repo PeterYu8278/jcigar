@@ -59,6 +59,12 @@ const Events: React.FC = () => {
     )
   }
 
+  const getRegistrationClosedText = (event: Event): string => {
+    return getDisplayStatus(event) === 'completed' || event.status === 'completed'
+      ? t('events.completed')
+      : t('events.registrationClosed')
+  }
+
   // 获取所有已完成的活动，用于计算社交关系
   const completedEvents = useMemo(() => {
     return events.filter(e => getDisplayStatus(e) === 'completed')
@@ -283,7 +289,7 @@ const Events: React.FC = () => {
 
                 <button
                   type="button"
-                  disabled={isRegistrationClosed(event) || !user}
+                  disabled={isRegistrationClosed(event) || loadingId === event.id}
                   style={{
                     alignSelf: 'flex-start',
                     background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
@@ -291,10 +297,10 @@ const Events: React.FC = () => {
                     fontWeight: 'bold',
                     padding: '8px 24px',
                     borderRadius: '9999px',
-                    cursor: isRegistrationClosed(event) || !user ? 'not-allowed' : 'pointer',
+                    cursor: isRegistrationClosed(event) ? 'not-allowed' : 'pointer',
                     boxShadow: '0 4px 15px rgba(244, 175, 37, 0.6)',
                     transition: 'all 0.3s ease',
-                    opacity: isRegistrationClosed(event) || !user ? 0.6 : 1
+                    opacity: isRegistrationClosed(event) ? 0.6 : 1
                   }}
                   onMouseEnter={(e) => {
                     if (!isRegistrationClosed(event) && user) {
@@ -312,7 +318,7 @@ const Events: React.FC = () => {
                       return
                     }
                     if (isRegistrationClosed(event)) {
-                      message.warning(t('events.completed'))
+                      message.warning(getRegistrationClosedText(event))
                       return
                     }
                     const max = (event as any)?.participants?.maxParticipants || 0
@@ -342,7 +348,7 @@ const Events: React.FC = () => {
                   }}
                 >
                   {loadingId === event.id ? t('events.processing') : (() => {
-                    if (isRegistrationClosed(event)) return t('events.completed')
+                    if (isRegistrationClosed(event)) return getRegistrationClosedText(event)
                     if (!user) return t('auth.pleaseLogin')
                     const registeredIds = event.participants?.registered || []
                     return registeredIds.includes(user.id) ? t('events.leave') : t('events.join')
