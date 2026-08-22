@@ -28,6 +28,15 @@ const Events: React.FC = () => {
   )
   const [loadingId, setLoadingId] = useState<string | null>(null)
 
+  const getDisplayStatus = (event: Event): 'upcoming' | 'ongoing' | 'completed' => {
+    const now = new Date()
+    const start = event.schedule?.startDate ? new Date(event.schedule.startDate as any) : null
+    const end = event.schedule?.endDate ? new Date(event.schedule.endDate as any) : null
+    if (end && now > end) return 'completed'
+    if (start && now >= start) return 'ongoing'
+    return 'upcoming'
+  }
+
   // 获取所有已完成的活动，用于计算社交关系
   const completedEvents = useMemo(() => {
     return events.filter(e => getDisplayStatus(e) === 'completed')
@@ -99,15 +108,6 @@ const Events: React.FC = () => {
       case 'completed': return 'default'
       default: return 'default'
     }
-  }
-
-  const getDisplayStatus = (event: Event): 'upcoming' | 'ongoing' | 'completed' => {
-    const now = new Date()
-    const start = event.schedule?.startDate ? new Date(event.schedule.startDate as any) : null
-    const end = event.schedule?.endDate ? new Date(event.schedule.endDate as any) : null
-    if (end && now > end) return 'completed'
-    if (start && now >= start) return 'ongoing'
-    return 'upcoming'
   }
 
   const getStatusText = (event: Event) => {
