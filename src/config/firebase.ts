@@ -1,5 +1,5 @@
 // Firebase配置文件
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps } from 'firebase/app';
 import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
@@ -42,19 +42,23 @@ if (missingKeys.length > 0) {
   );
 }
 
-// 初始化Firebase
-const app = initializeApp(firebaseConfig);
+// 初始化Firebase（防止 Vite HMR 重复初始化）
+const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
 // 初始化Firebase服务
-// 使用新的 FirestoreSettings.cache API 替代已弃用的 enableIndexedDbPersistence
-// 启用多标签页同步以避免持久化缓存错误
-export const db = typeof window !== 'undefined'
-  ? initializeFirestore(app, {
+// try-catch 防止 Vite HMR 重复调用 initializeFirestore 报错
+// HMR 重新执行时 fallback 到已有 Firestore 实例（已带 persistentLocalCache）
+export const db = (() => {
+  try {
+    return initializeFirestore(app, {
       localCache: persistentLocalCache({
-        tabManager: persistentMultipleTabManager() // 启用多标签页同步
+        tabManager: persistentMultipleTabManager()
       })
-    })
-  : getFirestore(app);
+    });
+  } catch {
+    return getFirestore(app);
+  }
+})();
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 

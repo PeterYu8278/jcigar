@@ -48,6 +48,7 @@
     "@types/react-image-crop": "^8.1.6",
     "antd": "^5.27.4",
     "axios": "^1.12.2",
+    "baseline-browser-mapping": "^2.11.17",
     "cloudinary": "^2.7.0",
     "dayjs": "^1.11.18",
     "firebase": "^12.3.0",

@@ -1,13 +1,71 @@
 /**
  * 功能可见性配置服务
  */
-import { doc, getDoc, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, getDocFromCache, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { GLOBAL_COLLECTIONS } from '../../config/globalCollections';
 import type { FeatureVisibilityConfig } from '../../types';
 import { getDefaultFeatureVisibilityConfig, FEATURE_DEFINITIONS } from '../../config/featureDefinitions';
 
 const CONFIG_ID = 'default';
+const FIRESTORE_READ_TIMEOUT_MS = 3000;
+const FIRESTORE_WRITE_TIMEOUT_MS = 10000;
+
+const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error(`${label} timed out after ${timeoutMs}ms`));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+};
+
+const createDefaultConfig = (): FeatureVisibilityConfig => ({
+  id: CONFIG_ID,
+  ...getDefaultFeatureVisibilityConfig(),
+  updatedAt: new Date(),
+  updatedBy: '',
+});
+
+const serializeConfigForFirestore = (config: FeatureVisibilityConfig) => ({
+  ...config,
+  features: Object.fromEntries(
+    Object.entries(config.features).map(([key, value]) => [
+      key,
+      {
+        ...value,
+        updatedAt: Timestamp.fromDate(value.updatedAt),
+      }
+    ])
+  ),
+  updatedAt: Timestamp.fromDate(config.updatedAt),
+});
+
+const parseFeatureVisibilityConfig = (id: string, data: any): FeatureVisibilityConfig => {
+  const features: FeatureVisibilityConfig['features'] = {};
+
+  Object.entries(data.features || {}).forEach(([key, value]: [string, any]) => {
+    features[key] = {
+      ...value,
+      updatedAt: value.updatedAt?.toDate?.() || new Date(value.updatedAt),
+    };
+  });
+
+  return {
+    id,
+    features,
+    updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
+    updatedBy: data.updatedBy || '',
+  };
+};
 
 /**
  * 获取功能可见性配置
@@ -15,32 +73,31 @@ const CONFIG_ID = 'default';
 export const getFeatureVisibilityConfig = async (): Promise<FeatureVisibilityConfig | null> => {
   try {
     const docRef = doc(db, GLOBAL_COLLECTIONS.FEATURE_VISIBILITY, CONFIG_ID);
-    const docSnap = await getDoc(docRef);
+    let docSnap;
+
+    try {
+      docSnap = await withTimeout(getDoc(docRef), FIRESTORE_READ_TIMEOUT_MS, 'Feature visibility read');
+    } catch (readError) {
+      try {
+        const cachedSnap = await withTimeout(getDocFromCache(docRef), 3000, 'Feature visibility cache read');
+        if (cachedSnap.exists()) {
+          console.warn('[getFeatureVisibilityConfig] using cached config after read failure:', readError);
+          return parseFeatureVisibilityConfig(cachedSnap.id, cachedSnap.data());
+        }
+      } catch (cacheError) {
+        console.warn('[getFeatureVisibilityConfig] cache read failed after read failure:', cacheError);
+      }
+
+      console.warn('[getFeatureVisibilityConfig] using default config after read failure:', readError);
+      return createDefaultConfig();
+    }
     
     if (!docSnap.exists()) {
-      // 如果不存在，创建默认配置
-      const defaultConfig = getDefaultFeatureVisibilityConfig();
-      const newConfig: FeatureVisibilityConfig = {
-        id: CONFIG_ID,
-        ...defaultConfig,
-        updatedAt: new Date(),
-        updatedBy: '',
-      };
-      
-      await setDoc(docRef, {
-        ...newConfig,
-        features: Object.fromEntries(
-          Object.entries(newConfig.features).map(([key, value]) => [
-            key,
-            {
-              ...value,
-              updatedAt: Timestamp.fromDate(value.updatedAt),
-            }
-          ])
-        ),
-        updatedAt: Timestamp.fromDate(newConfig.updatedAt),
+      // 如果不存在，创建默认配置并异步写入（不阻塞返回）
+      const newConfig = createDefaultConfig();
+      setDoc(docRef, serializeConfigForFirestore(newConfig)).catch(writeError => {
+        console.warn('[getFeatureVisibilityConfig] default config write failed:', writeError);
       });
-      
       return newConfig;
     }
     
@@ -63,7 +120,7 @@ export const getFeatureVisibilityConfig = async (): Promise<FeatureVisibilityCon
     };
   } catch (error) {
     console.error('[getFeatureVisibilityConfig] 获取配置失败:', error);
-    return null;
+    return createDefaultConfig();
   }
 };
 
