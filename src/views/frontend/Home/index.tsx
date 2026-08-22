@@ -33,11 +33,34 @@ import type { AppConfig } from '../../../types'
 import { CigarRatingBadge } from '../../../components/common/CigarRatingBadge'
 import { RoomBookingSection } from '../../../components/home/RoomBookingSection'
 
+const usePrefersReducedMotion = () => {
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return
+    }
+
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const handleChange = () => setPrefersReducedMotion(mediaQuery.matches)
+
+    handleChange()
+    mediaQuery.addEventListener('change', handleChange)
+
+    return () => {
+      mediaQuery.removeEventListener('change', handleChange)
+    }
+  }, [])
+
+  return prefersReducedMotion
+}
+
 const Home: React.FC = () => {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const { user } = useAuthStore()
   const isMobile = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 991px)').matches : false
+  const prefersReducedMotion = usePrefersReducedMotion()
   const [featuresReady, setFeaturesReady] = useState<boolean>(false)
   const [eventsFeatureVisibleForQuery, setEventsFeatureVisibleForQuery] = useState<boolean>(false)
   const [shopFeatureVisibleForQuery, setShopFeatureVisibleForQuery] = useState<boolean>(false)
@@ -59,12 +82,19 @@ const Home: React.FC = () => {
     [featuresReady, shopFeatureVisibleForQuery]
   )
   const [registeringEvents, setRegisteringEvents] = useState<Set<string>>(new Set())
-  const [swiperInstance, setSwiperInstance] = useState<any>(null)
   const [eventsFeatureVisible, setEventsFeatureVisible] = useState<boolean>(true)
   const [shopFeatureVisible, setShopFeatureVisible] = useState<boolean>(true)
   const [visitSessionsFeatureVisible, setVisitSessionsFeatureVisible] = useState<boolean>(true)
   const [roomsBookingFeatureVisible, setRoomsBookingFeatureVisible] = useState<boolean>(false)
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
+  const activeBrands = brands.filter(brand => brand.status === 'active')
+  const carouselAutoplay = prefersReducedMotion ? false : {
+    delay: 0,
+    disableOnInteraction: false,
+    pauseOnMouseEnter: true,
+    reverseDirection: false
+  }
+  const carouselSpeed = prefersReducedMotion ? 300 : 8000
 
   // 会员等级文本获取函数
   const getMembershipText = (level: string) => {
@@ -193,9 +223,14 @@ const Home: React.FC = () => {
         .swiper-slide-brands {
           width: 90px !important;
         }
-        .swiper-wrapper {
+        .home-carousel-swiper .swiper-wrapper {
           margin-top: 12px;
           transition-timing-function: linear !important;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .home-carousel-swiper .swiper-wrapper {
+            transition-timing-function: ease !important;
+          }
         }
         .swiper-button-next-custom,
         .swiper-button-prev-custom {
@@ -366,17 +401,13 @@ const Home: React.FC = () => {
           ) : (
             <div style={{ position: 'relative' }}>
               <Swiper
+                className="home-carousel-swiper"
                 modules={[Autoplay, Navigation, Pagination, A11y]}
                 slidesPerView="auto"
                 spaceBetween={12}
-                loop={brands.filter(brand => brand.status === 'active').length > 16}
-                autoplay={{
-                  delay: 0,
-                  disableOnInteraction: false,
-                  pauseOnMouseEnter: true,
-                  reverseDirection: false
-                }}
-                speed={8000}
+                loop={!prefersReducedMotion && activeBrands.length > 16}
+                autoplay={carouselAutoplay}
+                speed={carouselSpeed}
                 navigation={{
                   nextEl: '.swiper-button-next-custom-brands',
                   prevEl: '.swiper-button-prev-custom-brands',
@@ -391,8 +422,7 @@ const Home: React.FC = () => {
                   '--swiper-pagination-bullet-inactive-opacity': '0.3'
                 } as any}
               >
-                {brands
-                  .filter(brand => brand.status === 'active')
+                {activeBrands
                   .map((brand) => (
                     <SwiperSlide key={brand.id} className="swiper-slide-brands">
                       <div
@@ -503,17 +533,13 @@ const Home: React.FC = () => {
           ) : (
             <div style={{ position: 'relative' }}>
               <Swiper
+                className="home-carousel-swiper"
                 modules={[Autoplay, Navigation, Pagination, A11y]}
                 slidesPerView="auto"
                 spaceBetween={12}
-                loop={cigars.length > 16}
-                autoplay={{
-                  delay: 0,
-                  disableOnInteraction: false,
-                  pauseOnMouseEnter: true,
-                  reverseDirection: false
-                }}
-                speed={8000}
+                loop={!prefersReducedMotion && cigars.length > 16}
+                autoplay={carouselAutoplay}
+                speed={carouselSpeed}
                 navigation={{
                   nextEl: '.swiper-button-next-custom',
                   prevEl: '.swiper-button-prev-custom',
@@ -521,7 +547,6 @@ const Home: React.FC = () => {
 
                 keyboard={{ enabled: true }}
                 a11y={{ enabled: true }}
-                onSwiper={setSwiperInstance}
                 style={{
                   paddingBottom: '40px',
                   '--swiper-navigation-color': '#F4AF25',

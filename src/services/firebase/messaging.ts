@@ -671,7 +671,6 @@ export const testFCMToken = async (options?: {
   token?: string;
 }): Promise<{ success: boolean; message: string; data?: any }> => {
   try {
-    const { getAuth } = await import('firebase/auth');
     const auth = getAuth();
     const userId = auth.currentUser?.uid;
 
@@ -829,7 +828,6 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
     
     Object.defineProperty(window, 'getCurrentDeviceFCMToken', {
       value: async () => {
-        const { getAuth } = await import('firebase/auth');
         const auth = getAuth();
         const userId = auth.currentUser?.uid;
         if (!userId) {
@@ -848,7 +846,6 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
     // 回退到直接赋值
     (window as any).testFCMToken = testFCMToken;
     (window as any).getCurrentDeviceFCMToken = async () => {
-      const { getAuth } = await import('firebase/auth');
       const auth = getAuth();
       const userId = auth.currentUser?.uid;
       if (!userId) {
@@ -915,4 +912,3 @@ export const unsubscribeFromTopic = async (topic: string): Promise<boolean> => {
     return false;
   }
 };
-

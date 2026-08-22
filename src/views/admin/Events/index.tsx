@@ -1020,6 +1020,7 @@ const AdminEvents: React.FC = () => {
       >
         {viewing && (
           <Tabs
+            className="cigar-equal-tabs"
             activeKey={activeViewTab}
             onChange={(k) => setActiveViewTab(k)}
             tabBarStyle={{

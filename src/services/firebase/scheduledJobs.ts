@@ -1,4 +1,7 @@
 // 定时任务函数（可在客户端调用或后端 Cloud Functions 使用）
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../config/firebase';
+import { GLOBAL_COLLECTIONS } from '../../config/globalCollections';
 import { getExpiredVisitSessions, completeVisitSession } from './visitSessions';
 import { getPendingMembershipFeeRecords, deductMembershipFee } from './membershipFee';
 
@@ -72,10 +75,6 @@ export const processPendingMembershipFees = async (): Promise<{
         if (result.success) {
           processed++;
           // 检查记录状态以确定是否成功扣费
-          const { getDoc } = await import('firebase/firestore');
-          const { doc } = await import('firebase/firestore');
-          const { db } = await import('../../config/firebase');
-          const { GLOBAL_COLLECTIONS } = await import('../../config/globalCollections');
           const recordDoc = await getDoc(doc(db, GLOBAL_COLLECTIONS.MEMBERSHIP_FEE_RECORDS, record.id));
           if (recordDoc.exists()) {
             const data = recordDoc.data();
@@ -116,4 +115,3 @@ export const runAllScheduledJobs = async (): Promise<{
     membershipFees
   };
 };
-

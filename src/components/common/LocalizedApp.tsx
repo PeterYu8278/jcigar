@@ -1,9 +1,11 @@
 import React, { useEffect } from 'react'
 import { ConfigProvider } from 'antd'
+import { CloseOutlined } from '@ant-design/icons'
 import zhCN from 'antd/locale/zh_CN'
 import enUS from 'antd/locale/en_US'
 import { useTranslation } from 'react-i18next'
 import dayjs from 'dayjs'
+import { cigarTheme } from '../../config/theme'
 
 interface LocalizedAppProps {
   children: React.ReactNode
@@ -25,7 +27,22 @@ const LocalizedApp: React.FC<LocalizedAppProps> = ({ children }) => {
   }, [i18n.language])
 
   return (
-    <ConfigProvider locale={antdLocale}>
+    <ConfigProvider
+      locale={antdLocale}
+      theme={cigarTheme}
+      modal={{
+        closeIcon: <CloseOutlined style={{ color: '#FFFFFF' }} />,
+        styles: {
+          content: {
+            margin: 0,
+            padding: 12,
+          },
+          footer: {
+            columnGap: 8,
+          },
+        },
+      }}
+    >
       {children}
     </ConfigProvider>
   )

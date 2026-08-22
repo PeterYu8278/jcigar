@@ -12,7 +12,11 @@ export const CigarRatingBadge: React.FC<CigarRatingBadgeProps> = ({
   size = 'medium' 
 }) => {
   // 如果没有 rating 数据，不显示 badge
-  if (!rating || rating === 0) {
+  const displayRating = typeof rating === 'number' && Number.isFinite(rating)
+    ? Math.min(100, Math.max(0, Math.round(rating)))
+    : null
+
+  if (!displayRating) {
     return null
   }
 
@@ -76,7 +80,7 @@ export const CigarRatingBadge: React.FC<CigarRatingBadgeProps> = ({
           lineHeight: 1
         }}
       >
-        {rating}
+        {displayRating}
       </span>
     </div>
   )

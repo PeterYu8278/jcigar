@@ -467,11 +467,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 padding: '10px 0',
                 fontWeight: 800,
                 fontSize: 12,
-                outline: 'none',
                 borderBottom: isActive ? '2px solid transparent' : '2px solid transparent',
                 cursor: 'pointer',
                 border: 'none',
-                background: 'none',
+                backgroundColor: 'transparent',
                 position: 'relative' as const,
               }
               const activeStyle: React.CSSProperties = {
@@ -498,6 +497,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               return (
                 <button
                   key={tabKey}
+                  type="button"
+                  className="profile-record-tab"
+                  aria-current={isActive ? 'page' : undefined}
                   style={{
                     ...baseStyle,
                     ...(isActive ? activeStyle : inactiveStyle),
@@ -1206,4 +1208,3 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     </div>
   )
 }
-

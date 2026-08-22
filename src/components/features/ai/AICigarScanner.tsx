@@ -559,6 +559,9 @@ export const AICigarScanner: React.FC = () => {
     const videoConstraints = facingMode === 'environment' 
         ? { facingMode: 'environment' } // 不使用 exact，允许回退
         : { facingMode: 'user' };
+    const displayRating = typeof result?.rating === 'number' && Number.isFinite(result.rating)
+        ? Math.min(100, Math.max(0, Math.round(result.rating)))
+        : null;
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', alignItems: 'center' }}>
@@ -781,7 +784,7 @@ export const AICigarScanner: React.FC = () => {
                                 <Tag color={result!.strength === 'Full' ? 'red' : result!.strength === 'Medium' ? 'orange' : 'green'}>
                                     {result!.strength}
                                 </Tag>
-                                {result!.rating && (
+                                {displayRating ? (
                                     <Tag 
                                         color="gold"
                                         style={{ 
@@ -800,9 +803,9 @@ export const AICigarScanner: React.FC = () => {
                                             borderRadius: '12px'
                                         }}
                                     >
-                                        {result!.rating}
+                                        {displayRating}
                                     </Tag>
-                                )}
+                                ) : null}
                             </div>
                         </div>
 

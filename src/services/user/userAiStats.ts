@@ -2,7 +2,7 @@
  * 用户 AI 功能使用统计服务
  */
 
-import { doc, updateDoc, increment, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, increment, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { GLOBAL_COLLECTIONS } from '@/config/globalCollections';
 
@@ -37,7 +37,6 @@ export async function getUserAiStats(userId: string): Promise<{
     lastCigarScanAt: Date | null;
 } | null> {
     try {
-        const { getDoc } = await import('firebase/firestore');
         const userRef = doc(db, GLOBAL_COLLECTIONS.USERS, userId);
         const userSnap = await getDoc(userRef);
         

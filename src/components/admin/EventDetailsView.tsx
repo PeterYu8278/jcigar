@@ -268,6 +268,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
         {/* 左侧：活动名称和描述 */}
         <div style={{ flex: 1 }}>
           <Descriptions 
+            className="cigar-bordered-descriptions"
             bordered 
             column={1} 
             size="small"
@@ -371,6 +372,7 @@ const EventDetailsView: React.FC<EventDetailsViewProps> = ({
       
       {/* 其他活动信息 - 手机端单列，桌面端两列 */}
       <Descriptions 
+        className="cigar-bordered-descriptions"
         bordered 
         column={isMobile ? 1 : 2} 
         size="small"

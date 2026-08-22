@@ -30,9 +30,32 @@ import { identifyInputType, normalizePhoneNumber, isValidEmail } from '../../../
 
 const { Title, Paragraph, Text } = Typography
 
+const usePrefersReducedMotion = () => {
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return false
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  })
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const handleChange = (event: MediaQueryListEvent) => {
+      setPrefersReducedMotion(event.matches)
+    }
+
+    setPrefersReducedMotion(mediaQuery.matches)
+    mediaQuery.addEventListener('change', handleChange)
+    return () => mediaQuery.removeEventListener('change', handleChange)
+  }, [])
+
+  return prefersReducedMotion
+}
+
 const Landing: React.FC = () => {
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const prefersReducedMotion = usePrefersReducedMotion()
   const { data: brands = [] } = useFirestoreQuery(
     async () => {
       const data = await getBrands()
@@ -58,12 +81,13 @@ const Landing: React.FC = () => {
   const [loginError, setLoginError] = useState<string>('')
 
   useEffect(() => {
-    // 延迟 1.5 秒弹出沙龙广告
+    if (prefersReducedMotion || isMobile) return
+
     const timer = setTimeout(() => {
       setSalonModalVisible(true)
     }, 1500)
     return () => clearTimeout(timer)
-  }, [])
+  }, [isMobile, prefersReducedMotion])
 
   useEffect(() => {
     const handleScroll = () => {
@@ -171,7 +195,7 @@ const Landing: React.FC = () => {
   }
 
   return (
-    <div className="landing-page" style={{
+    <div className={`landing-page${prefersReducedMotion ? ' motion-reduced' : ''}`} style={{
       backgroundColor: '#0A0A0A',
       color: '#E5E5E5',
       fontFamily: "'Manrope', sans-serif",
@@ -258,6 +282,44 @@ const Landing: React.FC = () => {
         }
         .nav-link:hover {
           color: var(--gold);
+        }
+
+        .mobile-menu-icon-button {
+          width: 44px;
+          height: 44px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          margin-left: 12px;
+          padding: 0;
+          border: 0;
+          background: transparent;
+          color: var(--gold);
+          cursor: pointer;
+        }
+
+        .mobile-menu-icon-button:focus-visible {
+          outline: 2px solid var(--gold);
+          outline-offset: 4px;
+        }
+
+        .motion-reduced .animate-fade-in-up,
+        .motion-reduced .marquee,
+        .motion-reduced .error-shake {
+          animation: none !important;
+        }
+
+        .motion-reduced .animate-fade-in-up {
+          opacity: 1;
+          transform: none;
+        }
+
+        .motion-reduced .hero-split-left,
+        .motion-reduced .btn-gold,
+        .motion-reduced .nav-link,
+        .motion-reduced .card-glow,
+        .motion-reduced .mobile-menu-icon-button {
+          transition: none !important;
         }
 
         .navbar-container {
@@ -364,10 +426,15 @@ const Landing: React.FC = () => {
               </Button>
             )}
             {isMobile && (
-              <MenuOutlined
+              <button
+                type="button"
+                className="mobile-menu-icon-button"
+                aria-label="Open navigation menu"
+                aria-expanded={mobileMenuVisible}
                 onClick={() => setMobileMenuVisible(true)}
-                style={{ fontSize: '24px', color: 'var(--gold)', marginLeft: '12px', cursor: 'pointer' }}
-              />
+              >
+                <MenuOutlined style={{ fontSize: '24px' }} aria-hidden="true" />
+              </button>
             )}
           </Space>
         </div>
@@ -449,7 +516,20 @@ const Landing: React.FC = () => {
           </p>
           <Button
             className="btn-gold animate-fade-in-up"
-            style={{ height: '60px', padding: '0 48px', fontSize: '16px', animationDelay: '0.3s' }}
+            style={{
+              minHeight: isMobile ? '52px' : '60px',
+              height: 'auto',
+              width: isMobile ? '100%' : 'auto',
+              maxWidth: isMobile ? 'min(100%, 312px)' : 'none',
+              padding: isMobile ? '12px 18px' : '0 48px',
+              fontSize: isMobile ? '14px' : '16px',
+              lineHeight: 1.25,
+              whiteSpace: 'normal',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              animationDelay: '0.3s'
+            }}
             onClick={() => {
               window.open('https://api.whatsapp.com/send?phone=601157288278&text=Name%3A%0AContact%3A%0ABudget%3A%0APreferred%20date%3A%0A/', '_blank')
             }}
@@ -774,10 +854,15 @@ const Landing: React.FC = () => {
             </span>
             <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', letterSpacing: '0.3em', marginTop: '4px' }}>#BEYONDBUSINESS</span>
           </div>
-          <CloseOutlined
+          <button
+            type="button"
+            className="mobile-menu-icon-button"
+            aria-label="Close navigation menu"
             onClick={() => setMobileMenuVisible(false)}
-            style={{ fontSize: '24px', color: 'var(--gold)', cursor: 'pointer' }}
-          />
+            style={{ marginLeft: 0 }}
+          >
+            <CloseOutlined style={{ fontSize: '24px' }} aria-hidden="true" />
+          </button>
         </div>
 
         <div style={{
@@ -1201,21 +1286,21 @@ const Landing: React.FC = () => {
         open={salonModalVisible}
         onCancel={() => setSalonModalVisible(false)}
         footer={null}
-        width={500}
+        width={isMobile ? 'calc(100vw - 32px)' : 500}
         centered
         styles={{
           mask: { backdropFilter: 'blur(12px)', background: 'rgba(0, 0, 0, 0.6)' },
           content: {
             padding: 0,
             background: '#111',
-            borderRadius: '24px',
+            borderRadius: isMobile ? '18px' : '24px',
             overflow: 'hidden',
             border: '1px solid rgba(197, 165, 90, 0.4)'
           }
         }}
       >
         <div style={{ position: 'relative' }}>
-          <div style={{ height: '300px', overflow: 'hidden' }}>
+          <div style={{ height: isMobile ? '180px' : '300px', overflow: 'hidden' }}>
             <img
               src="https://images.pexels.com/photos/25747045/pexels-photo-25747045.jpeg"
               alt="Monthly Taste Salon"
@@ -1238,16 +1323,26 @@ const Landing: React.FC = () => {
             </div>
           </div>
 
-          <div style={{ padding: '40px 32px', textAlign: 'center' }}>
-            <p style={{ color: 'var(--gold)', fontSize: '14px', letterSpacing: '0.4em', textTransform: 'uppercase', marginBottom: '16px' }}>Exclusive Experience</p>
-            <h2 className="font-serif" style={{ fontSize: '36px', marginBottom: '16px', color: '#FFF' }}>Monthly Taste <span className="gold-text">Salon</span></h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '16px', lineHeight: 1.8, marginBottom: '32px' }}>
+          <div style={{ padding: isMobile ? '24px 18px' : '40px 32px', textAlign: 'center' }}>
+            <p style={{ color: 'var(--gold)', fontSize: isMobile ? '12px' : '14px', letterSpacing: isMobile ? '0.22em' : '0.4em', textTransform: 'uppercase', marginBottom: '16px' }}>Exclusive Experience</p>
+            <h2 className="font-serif" style={{ fontSize: isMobile ? '28px' : '36px', marginBottom: '16px', color: '#FFF' }}>Monthly Taste <span className="gold-text">Salon</span></h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: isMobile ? '14px' : '16px', lineHeight: isMobile ? 1.6 : 1.8, marginBottom: isMobile ? '24px' : '32px' }}>
               Join our monthly gathering of connoisseurs. Indulge in premium cigars, curated food, and spirits for only <span style={{ color: '#FFF', fontWeight: 600 }}>RM 150</span>.
             </p>
 
             <Button
               className="btn-gold"
-              style={{ height: '54px', width: '100%', fontSize: '16px', fontWeight: 600, letterSpacing: '0.1em' }}
+              style={{
+                minHeight: '50px',
+                height: 'auto',
+                width: '100%',
+                padding: isMobile ? '12px 14px' : '0 18px',
+                fontSize: isMobile ? '14px' : '16px',
+                fontWeight: 600,
+                letterSpacing: isMobile ? '0.05em' : '0.1em',
+                lineHeight: 1.25,
+                whiteSpace: 'normal'
+              }}
               onClick={() => {
                 window.open('https://api.whatsapp.com/send?phone=601157288278&text=I%20am%20interested%20in%20joining%20the%20Monthly%20Taste%20Salon!/', '_blank');
                 setSalonModalVisible(false);
@@ -1256,13 +1351,14 @@ const Landing: React.FC = () => {
               BOOK YOUR SEAT NOW
             </Button>
 
-            <a
+            <button
+              type="button"
               className="nav-link"
-              style={{ marginTop: '20px', display: 'inline-block', fontSize: '14px', opacity: 0.6 }}
+              style={{ marginTop: '20px', display: 'inline-block', fontSize: '14px', opacity: 0.6, border: 0, background: 'transparent', cursor: 'pointer' }}
               onClick={() => setSalonModalVisible(false)}
             >
               Maybe later
-            </a>
+            </button>
           </div>
         </div>
       </Modal>

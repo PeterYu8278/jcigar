@@ -289,15 +289,15 @@ export const CartModal: React.FC<CartModalProps> = ({
         footer={null}
         width={getModalWidth(isMobile)}
         style={{
-          top: 0,
-          paddingBottom: 0,
+          top: isMobile ? 12 : 0,
           maxWidth: '100%'
         }}
         styles={{
           ...getModalThemeStyles(isMobile, true),
           body: {
             ...(getModalThemeStyles(isMobile, true)?.body || {}),
-            height: '100vh',
+            height: isMobile ? 'calc(100vh - 24px)' : '100vh',
+            maxHeight: isMobile ? 'calc(100vh - 24px)' : '100vh',
             display: 'flex',
             flexDirection: 'column',
             padding: 0
@@ -309,7 +309,8 @@ export const CartModal: React.FC<CartModalProps> = ({
         <div style={{
           display: 'flex',
           flexDirection: 'column',
-          height: '100vh',
+          height: isMobile ? 'calc(100vh - 24px)' : '100vh',
+          maxHeight: isMobile ? 'calc(100vh - 24px)' : '100vh',
           overflow: 'hidden'
         }}>
           {/* Modal Header */}
@@ -335,7 +336,7 @@ export const CartModal: React.FC<CartModalProps> = ({
                   color: 'transparent',
                   backgroundClip: 'text'
                 } as React.CSSProperties}>
-                  {t('shop.cart')} ({cartItemCount === 1 ? t('shop.item') : t('shop.items', { count: cartItemCount })})
+                  {t('shop.cart')} ({t('shop.items', { count: cartItemCount })})
                 </span>
               ) : (
                 <span style={{
@@ -922,4 +923,3 @@ export const CartModal: React.FC<CartModalProps> = ({
     </>
   )
 }
-

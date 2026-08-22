@@ -468,7 +468,7 @@ const AdminUsers: React.FC = () => {
       flexDirection: 'column',
       overflow: isMobile ? 'hidden' : 'visible',
       paddingRight: isMobile && activeTab === 'list' ? '32px' : '0',
-      paddingBottom: isMobile ? '60px' : '0'
+      paddingBottom: isMobile ? '112px' : '0'
     }}>
       {/* 标签页 */}
       <div>
@@ -484,9 +484,8 @@ const AdminUsers: React.FC = () => {
               padding: '10px 0',
               fontWeight: 800,
               fontSize: 12,
-              outline: 'none',
               cursor: 'pointer',
-              background: 'none',
+              backgroundColor: 'transparent',
               border: 'none',
               position: 'relative' as const,
             }
@@ -510,6 +509,8 @@ const AdminUsers: React.FC = () => {
             return (
               <button
                 key={tabKey}
+                type="button"
+                aria-current={isActive ? 'page' : undefined}
                 style={{
                   ...baseStyle,
                   ...(isActive ? activeStyle : inactiveStyle),

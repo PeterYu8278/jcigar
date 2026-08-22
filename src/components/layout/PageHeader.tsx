@@ -133,6 +133,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
           <Breadcrumb.Item key={index}>
             {item.path ? (
               <a
+                href={item.path}
                 onClick={(e) => {
                   e.preventDefault()
                   navigate(item.path!)

@@ -479,11 +479,8 @@ export const updateRedemptionRecord = async (
 
     // 更新 visitSessions 文档中对应的记录（将 '待选择' 的记录更新为实际的雪茄信息）
     // 由于用户点击redeem时已经添加了记录，这里需要更新而不是添加
-    const { getDoc, updateDoc: updateDocFirestore, Timestamp: FirestoreTimestamp } = await import('firebase/firestore');
-    const { GLOBAL_COLLECTIONS: VISIT_COLLECTIONS } = await import('../../config/globalCollections');
-    
     try {
-      const visitSessionRef = doc(db, VISIT_COLLECTIONS.VISIT_SESSIONS, foundDoc.data.visitSessionId);
+      const visitSessionRef = doc(db, GLOBAL_COLLECTIONS.VISIT_SESSIONS, foundDoc.data.visitSessionId);
       const visitSessionDoc = await getDoc(visitSessionRef);
       
       if (visitSessionDoc.exists()) {
@@ -520,9 +517,9 @@ export const updateRedemptionRecord = async (
           return r;
         });
         
-        await updateDocFirestore(visitSessionRef, {
+        await updateDoc(visitSessionRef, {
           redemptions: updatedRedemptions,
-          updatedAt: FirestoreTimestamp.fromDate(now)
+          updatedAt: Timestamp.fromDate(now)
         });
       }
     } catch (error: any) {

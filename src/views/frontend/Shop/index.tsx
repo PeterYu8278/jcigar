@@ -531,10 +531,7 @@ const Shop: React.FC = () => {
           {/* 顶部搜索栏 - 固定不滚动 */}
           <div style={{
             flexShrink: 0,
-            paddingTop: isMobile ? '12px' : '16px',
-            paddingRight: isMobile ? '12px' : '16px',
-            paddingLeft: isMobile ? '12px' : '16px',
-            paddingBottom: '12px',
+            padding: isMobile ? '12px 12px 12px' : '16px 16px 12px',
             borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
           }}>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -1273,7 +1270,7 @@ const Shop: React.FC = () => {
                     color: 'transparent',
                     backgroundClip: 'text'
                   } as React.CSSProperties}>
-                    {t('shop.cart')} ({cartItemCount === 1 ? t('shop.item') : t('shop.items', { count: cartItemCount })})
+                    {t('shop.cart')} ({t('shop.items', { count: cartItemCount })})
                   </span>
                 ) : (
                   <span style={{
@@ -1945,16 +1942,16 @@ const Shop: React.FC = () => {
           bottom: '60px',
           left: 0,
           right: 0,
-          padding: '12px 16px',
-          zIndex: 100,
-          pointerEvents: 'none'
+              padding: '12px 16px',
+              zIndex: 100,
+              pointerEvents: 'none'
         }}>
           {cartItemCount === 0 ? (
             // 空状态：显示购物车图标按钮
             <div style={{
               display: 'flex',
-              justifyContent: 'flex-end',
-              pointerEvents: 'auto'
+                justifyContent: 'flex-end',
+                pointerEvents: 'auto'
             }}>
               <Button
                 style={{
@@ -1988,7 +1985,9 @@ const Shop: React.FC = () => {
                 fontWeight: 600,
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
-                width: '100%',
+                width: 'calc(50% - 44px)',
+                minWidth: 156,
+                marginLeft: 'auto',
                 boxShadow: '0 8px 24px rgba(244, 175, 37, 0.6)',
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -2003,7 +2002,7 @@ const Shop: React.FC = () => {
                 gap: '12px'
               }}>
                 <span style={{ fontSize: '16px', fontWeight: '600' }}>
-                  {cartItemCount === 1 ? t('shop.item') : t('shop.items', { count: cartItemCount })}
+                  {t('shop.items', { count: cartItemCount })}
                 </span>
               </div>
 

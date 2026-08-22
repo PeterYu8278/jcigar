@@ -638,8 +638,8 @@ const AdminOrders: React.FC = () => {
                             return (
                               <div key={order.id} style={{ border: '1px solid rgba(244,175,37,0.2)', borderRadius: 12, padding: 12, background: 'rgba(34,28,16,0.5)', backdropFilter: 'blur(10px)' }}>
                                 {/* 订单号和日期同行 */}
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                                  <div style={{ fontSize: 12, color: '#FFFFFF', fontWeight: 500 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginBottom: 8 }}>
+                                  <div style={{ minWidth: 0, flex: 1, fontSize: 12, color: '#FFFFFF', fontWeight: 500 }}>
                                     {t('ordersAdmin.orderNo')}: <Button
                                       type="link"
                                       style={{
@@ -649,13 +649,17 @@ const AdminOrders: React.FC = () => {
                                         fontSize: 12,
                                         color: '#FDE08D',
                                         fontWeight: 600,
+                                        maxWidth: '100%',
+                                        whiteSpace: 'normal',
+                                        overflowWrap: 'anywhere',
+                                        textAlign: 'left',
                                       }}
                                       onClick={() => handleViewOrder(order)}
                                     >
                                       {order.id.substring(0, 20)}
                                     </Button>
                                   </div>
-                                  <div style={{ fontSize: 12, color: '#CCCCCC' }}>
+                                  <div style={{ flexShrink: 0, fontSize: 12, color: '#CCCCCC', textAlign: 'right' }}>
                                     {formattedDate}
                                   </div>
                                 </div>

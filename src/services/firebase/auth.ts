@@ -8,10 +8,14 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signInWithRedirect,
-  getRedirectResult
+  getRedirectResult,
+  updatePassword,
+  EmailAuthProvider,
+  linkWithCredential,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { doc, setDoc, getDoc, getDocFromCache, collection, getDocs, query, where, limit, updateDoc, arrayUnion, increment } from 'firebase/firestore';
+import { doc, setDoc, getDoc, getDocFromCache, collection, getDocs, query, where, limit, updateDoc, arrayUnion, increment, deleteDoc } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
 import type { User } from '../../types';
 import { getAppConfig } from './appConfig';
@@ -575,7 +579,6 @@ const findUserByPhone = async (phone: string): Promise<{ id: string; data: User 
 const deleteUserDocument = async (userId: string): Promise<boolean> => {
   try {
     const userRef = doc(db, 'users', userId);
-    const { deleteDoc } = await import('firebase/firestore');
     await deleteDoc(userRef);
     return true;
   } catch (error) {
@@ -666,7 +669,6 @@ export const completeGoogleUserProfile = async (
         sessionStorage.setItem('firestoreUserId', existingPhoneUser.id);
     
         // 为用户设置密码
-        const { updatePassword, EmailAuthProvider, linkWithCredential } = await import('firebase/auth');
         try {
           const credential = EmailAuthProvider.credential(googleEmail, password);
           await linkWithCredential(currentAuthUser, credential);
@@ -765,7 +767,6 @@ export const completeGoogleUserProfile = async (
     await setDoc(userRef, updateData, { merge: true });
 
       // 为用户设置密码
-      const { updatePassword, EmailAuthProvider, linkWithCredential } = await import('firebase/auth');
         try {
         const credential = EmailAuthProvider.credential(googleEmail, password);
         await linkWithCredential(currentAuthUser, credential);
@@ -920,7 +921,6 @@ export const getUserData = async (uid: string, useCache: boolean = true): Promis
 // 管理员触发密码重置邮件
 export const sendPasswordResetEmailFor = async (email: string) => {
   try {
-    const { sendPasswordResetEmail } = await import('firebase/auth')
     await sendPasswordResetEmail(auth, email)
     
     // 尝试通过 WhatsApp 发送重置密码消息（异步，不阻塞主流程）
@@ -1018,7 +1018,6 @@ const resetPasswordByPhoneCore = async (phone: string): Promise<ResetPasswordByP
       return { success: false, error: '重置密码服务暂时不可用，请稍后重试' };
     }
 
-    const { getAppConfig } = await import('./appConfig');
     const appConfig = await getAppConfig();
     const appName = appConfig?.appName || 'Cigar Club';
     const displayName = (userData as any).displayName || '用户';
@@ -1104,4 +1103,3 @@ const generateTempPassword = (): string => {
   }
   return password;
 }
-

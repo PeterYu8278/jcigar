@@ -397,8 +397,7 @@ const AICigarHistory: React.FC = () => {
                 {/* 顶部搜索栏 - 固定不滚动 */}
                 <div style={{
                     flexShrink: 0,
-                    padding: isMobile ? '12px' : '16px',
-                    paddingBottom: '12px',
+                    padding: isMobile ? '12px 12px 12px' : '16px 16px 12px',
                     borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
                 }}>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -558,7 +557,7 @@ const AICigarHistory: React.FC = () => {
                                                                 border: '2px solid #B8860B'
                                                             }}
                                                         />
-                                                        {item.aggregatedData.rating && (
+                                                        {typeof item.aggregatedData.rating === 'number' && item.aggregatedData.rating > 0 && (
                                                             <CigarRatingBadge rating={item.aggregatedData.rating} size="small" />
                                                         )}
                                                     </div>
@@ -629,4 +628,3 @@ const AICigarHistory: React.FC = () => {
 };
 
 export default AICigarHistory;
-

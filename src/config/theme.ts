@@ -96,6 +96,20 @@ export const cigarTheme: ThemeConfig = {
       colorBorder: '#444444',
       colorText: '#f8f8f8',
       colorTextPlaceholder: '#666666',
+      addonBg: '#1a1a1a',
+      hoverBorderColor: '#ffd700',
+      activeBorderColor: '#ffd700',
+      activeShadow: '0 0 0 2px rgba(255, 215, 0, 0.2)',
+    },
+    InputNumber: {
+      colorBgContainer: '#2d2d2d',
+      colorBorder: '#444444',
+      colorText: '#f8f8f8',
+      colorTextPlaceholder: '#666666',
+      addonBg: '#1a1a1a',
+      hoverBorderColor: '#ffd700',
+      activeBorderColor: '#ffd700',
+      activeShadow: '0 0 0 2px rgba(255, 215, 0, 0.2)',
     },
     Select: {
       colorBgContainer: '#2d2d2d',
@@ -133,6 +147,11 @@ export const cigarTheme: ThemeConfig = {
     },
     Modal: {
       colorBgElevated: '#1a1a1a',
+      contentBg: '#1a1a1a',
+      headerBg: 'transparent',
+      titleColor: '#FFFFFF',
+      titleFontSize: 18,
+      fontWeightStrong: 700,
     },
     Drawer: {
       colorBgElevated: '#1a1a1a',
@@ -142,6 +161,13 @@ export const cigarTheme: ThemeConfig = {
       colorTextSecondary: '#ffd700',
       colorBorderSecondary: '#333333',
       inkBarColor: '#ffd700',
+    },
+    Descriptions: {
+      labelBg: 'transparent',
+      labelColor: 'rgba(255, 255, 255, 0.7)',
+      titleColor: '#FFFFFF',
+      contentColor: '#FFFFFF',
+      extraColor: '#FFFFFF',
     },
     Breadcrumb: {
       colorText: '#c0c0c0',
@@ -186,6 +212,8 @@ export const cigarTheme: ThemeConfig = {
       colorSuccess: '#52c41a',
       colorWarning: '#faad14',
       colorError: '#ff4d4f',
+      remainingColor: '#d9d9d9',
+      circleTextColor: '#FFFFFF',
     },
     Badge: {
       colorBgContainer: '#ffd700',
@@ -197,8 +225,9 @@ export const cigarTheme: ThemeConfig = {
       colorBorder: '#444444',
     },
     Switch: {
-      colorPrimary: '#ffd700',
+      colorPrimary: '#C48D3A',
       colorPrimaryHover: '#ffed4e',
+      handleBg: '#FFFFFF',
     },
     Slider: {
       colorPrimary: '#ffd700',

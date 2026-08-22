@@ -184,7 +184,6 @@ const Events: React.FC = () => {
                 height: '192px',
                 width: '100%',
                 boxSizing: 'border-box',
-                cursor: 'pointer',
                 transition: 'transform 0.3s ease'
               }}
               onMouseEnter={(e) => {
@@ -283,6 +282,7 @@ const Events: React.FC = () => {
                 </p>
 
                 <button
+                  type="button"
                   disabled={isRegistrationClosed(event) || !user}
                   style={{
                     alignSelf: 'flex-start',

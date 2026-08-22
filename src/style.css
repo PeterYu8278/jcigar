@@ -43,6 +43,8 @@
   --cigar-transition-fast: 0.2s ease-in-out;
   --cigar-transition-normal: 0.3s ease-in-out;
   --cigar-transition-slow: 0.5s ease-in-out;
+
+  --cigar-focus-ring: 0 0 0 3px rgba(255, 215, 0, 0.28);
 }
 
 html,
@@ -68,6 +70,23 @@ a {
 
 a:hover {
   color: var(--cigar-gold-secondary);
+}
+
+:where(a, button, [role="button"], input, select, textarea, .ant-btn, .ant-dropdown-trigger):focus-visible {
+  outline: 2px solid var(--cigar-gold-primary);
+  outline-offset: 3px;
+  box-shadow: var(--cigar-focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* Ant Design layout background normalization */
@@ -207,42 +226,7 @@ a:hover {
   margin-left: 8px;
 }
 
-.ant-modal-footer>*+* {
-  margin-left: 8px;
-}
-
-button+button {
-  margin-left: 8px;
-}
-
 /* 暗色主题弹窗样式 */
-.ant-modal-content {
-  margin: 0 !important;
-  padding: 12px !important;
-}
-
-.ant-modal-title {
-  color: #FFFFFF !important;
-  font-size: 18px !important;
-  font-weight: bold !important;
-}
-
-.ant-modal-header {
-  background: transparent !important;
-  border-bottom: 1px solid rgba(244, 175, 37, 0.6) !important;
-}
-
-/* Space 组件间距调整 */
-.ant-space-item {
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-/* Form Item 间距调整 */
-.ant-form-item {
-  margin-bottom: 8px !important;
-}
-
 /* 暗色主题弹窗表单样式 */
 .dark-theme-form {
   color: #FFFFFF !important;
@@ -610,6 +594,10 @@ button+button {
 .mobile-nav-item {
   background: transparent !important;
   border: none !important;
+  appearance: none;
+  color: inherit;
+  font: inherit;
+  margin: 0 !important;
 }
 
 .mobile-nav-item:hover {
@@ -622,6 +610,54 @@ button+button {
   transform: translateY(0);
   background: transparent !important;
   border: none !important;
+}
+
+.mobile-bottom-nav .mobile-nav-item:focus {
+  outline: none;
+}
+
+.mobile-bottom-nav .mobile-nav-item:focus-visible {
+  outline: 2px solid rgba(255, 215, 0, 0.9);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.mobile-bottom-nav .mobile-nav-item:disabled {
+  cursor: not-allowed !important;
+  opacity: 0.45;
+  transform: none;
+}
+
+.mobile-nav-scan-button:focus {
+  outline: none;
+}
+
+.mobile-nav-scan-button:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.95);
+  outline-offset: 3px;
+  box-shadow: 0 4px 16px rgba(255, 215, 0, 0.3), 0 0 0 6px rgba(255, 215, 0, 0.35) !important;
+}
+
+.mobile-nav-scan-button:disabled {
+  cursor: not-allowed !important;
+  opacity: 0.55;
+}
+
+.profile-record-tab {
+  appearance: none;
+  background-color: transparent !important;
+}
+
+.profile-record-tab:hover,
+.profile-record-tab:focus,
+.profile-record-tab:active {
+  background-color: transparent !important;
+}
+
+.profile-record-tab:focus-visible {
+  outline: 2px solid rgba(255, 215, 0, 0.9);
+  outline-offset: 4px;
+  border-radius: 6px;
 }
 
 /* 底部导航徽章样式 */
@@ -727,38 +763,38 @@ button+button {
 }
 
 /* Descriptions 组件深色主题样式 */
-.ant-descriptions {
+.cigar-bordered-descriptions.ant-descriptions {
   color: #FFFFFF !important;
 }
 
-.ant-descriptions .ant-descriptions-item-label {
+.cigar-bordered-descriptions.ant-descriptions .ant-descriptions-item-label {
   color: rgba(255, 255, 255, 0.7) !important;
 }
 
-.ant-descriptions .ant-descriptions-item-content {
+.cigar-bordered-descriptions.ant-descriptions .ant-descriptions-item-content {
   color: #FFFFFF !important;
 }
 
-.ant-descriptions .ant-descriptions-view {
+.cigar-bordered-descriptions.ant-descriptions .ant-descriptions-view {
   border-color: rgba(244, 175, 37, 0.6) !important;
 }
 
-.ant-descriptions .ant-descriptions-row>th,
-.ant-descriptions .ant-descriptions-row>td {
+.cigar-bordered-descriptions.ant-descriptions .ant-descriptions-row>th,
+.cigar-bordered-descriptions.ant-descriptions .ant-descriptions-row>td {
   border-color: rgba(244, 175, 37, 0.6) !important;
 }
 
 /* 活动详情弹窗 Tabs 样式 - 参考仪表板页面的 active tab 格式 */
-.ant-tabs-nav {
+.cigar-equal-tabs .ant-tabs-nav {
   margin-bottom: 10px !important;
 }
 
-.ant-tabs-nav-list {
+.cigar-equal-tabs .ant-tabs-nav-list {
   display: flex !important;
   width: 100% !important;
 }
 
-.ant-tabs-tab {
+.cigar-equal-tabs .ant-tabs-tab {
   flex: 1 !important;
   padding: 10px 0 !important;
   font-weight: 800 !important;
@@ -769,19 +805,19 @@ button+button {
   text-align: center !important;
 }
 
-.ant-tabs-tab-btn {
+.cigar-equal-tabs .ant-tabs-tab-btn {
   width: 100% !important;
   text-align: center !important;
 }
 
-.ant-tabs-tab.ant-tabs-tab-active {
+.cigar-equal-tabs .ant-tabs-tab.ant-tabs-tab-active {
   color: transparent !important;
   background-image: linear-gradient(to right, #FDE08D, #C48D3A) !important;
   -webkit-background-clip: text !important;
   background-clip: text !important;
 }
 
-.ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+.cigar-equal-tabs .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
   color: transparent !important;
   background-image: linear-gradient(to right, #FDE08D, #C48D3A) !important;
   -webkit-background-clip: text !important;
@@ -789,101 +825,24 @@ button+button {
 }
 
 /* Active tab 图标颜色 - 使用渐变起始色以匹配文字渐变效果 */
-.ant-tabs-tab.ant-tabs-tab-active .anticon {
+.cigar-equal-tabs .ant-tabs-tab.ant-tabs-tab-active .anticon {
   color: #FDE08D !important;
 }
 
 /* Active tab 图标 SVG 填充颜色 */
-.ant-tabs-tab.ant-tabs-tab-active .anticon svg {
+.cigar-equal-tabs .ant-tabs-tab.ant-tabs-tab-active .anticon svg {
   fill: #FDE08D !important;
 }
 
-.ant-tabs-ink-bar {
+.cigar-equal-tabs .ant-tabs-ink-bar {
   height: 2px !important;
   background: linear-gradient(to right, #FDE08D, #C48D3A) !important;
   border-radius: 1px !important;
 }
 
-/* 报名进度条样式 - 浅灰色背景，金色渐变进度，白色百分比文字 */
-.ant-progress-bg {
-  background: linear-gradient(to right, #FDE08D, #C48D3A) !important;
-}
-
-.ant-progress-inner {
-  background-color: #d9d9d9 !important;
-}
-
-.ant-progress-text {
-  color: #FFFFFF !important;
-}
-
 /* 私人活动 Switch 样式 - 浅灰色背景，金色渐变 toggle */
-.ant-switch {
-  background-color: #d9d9d9 !important;
-}
-
-.ant-switch-checked {
-  background-color: #FDE08D !important;
-  background-image: linear-gradient(to right, #FDE08D, #C48D3A) !important;
-}
-
-.ant-switch-handle {
-  background-color: transparent !important;
-}
-
-.ant-switch-checked .ant-switch-handle {
-  background-color: transparent !important;
-}
-
-.ant-switch-checked::before {
-  background-color: transparent !important;
-}
-
 /* InputNumber addonAfter 文字颜色为白色 */
-.ant-input-number-group-addon {
-  color: #FFFFFF !important;
-}
-
-.ant-input-number-group-addon .ant-input-number-group-addon {
-  color: #FFFFFF !important;
-}
-
 /* InputNumber 文本右对齐 */
-.ant-input-number-input {
-  text-align: right !important;
-}
-
-.ant-input-number {
-  text-align: right !important;
-}
-
-.ant-input-number .ant-input-number-input {
-  text-align: right !important;
-}
-
-/* Modal 关闭按钮 X 为白色 */
-.ant-modal-close {
-  color: #FFFFFF !important;
-}
-
-.ant-modal-close:hover {
-  color: #FFFFFF !important;
-  opacity: 0.8;
-}
-
-.ant-modal-close-icon {
-  color: #FFFFFF !important;
-}
-
-.ant-modal-close .anticon {
-  color: #FFFFFF !important;
-}
-
-.ant-modal-close:hover .anticon {
-  color: #FFFFFF !important;
-  opacity: 0.8;
-}
-
 /* QR 图标大小（全局，确保在所有情况下都生效） */
 .qr-icon-large.anticon,
 .qr-icon-large {

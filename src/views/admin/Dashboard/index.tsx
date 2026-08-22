@@ -47,7 +47,7 @@ const PlanSelector: React.FC<{ value?: string; onChange?: (val: string) => void;
       overflowX: isMobile ? 'auto' : 'visible',
       gridTemplateColumns: isMobile ? 'unset' : 'repeat(auto-fit, minmax(200px, 1fr))',
       gap: isMobile ? 8 : 12,
-      paddingBottom: isMobile ? 4 : 0,
+      padding: isMobile ? '0 0 4px' : 0,
       width: '100%',
       maxWidth: '100%'
     }}>
@@ -337,6 +337,222 @@ const TrendChart: React.FC<{ data: Array<{ label: string; value: number }>; isMo
     </div>
   );
 };
+
+type QuickActionButtonProps = {
+  label: string
+  icon: React.ReactNode
+  onClick: () => void
+  variant?: 'primary' | 'secondary'
+  primaryGradient: string
+  secondaryBackground: string
+  secondaryColor: string
+  isMobile: boolean
+}
+
+const QuickActionButton: React.FC<QuickActionButtonProps> = ({
+  label,
+  icon,
+  onClick,
+  variant = 'secondary',
+  primaryGradient,
+  secondaryBackground,
+  secondaryColor,
+  isMobile,
+}) => {
+  const isPrimary = variant === 'primary'
+  const color = isPrimary ? '#111' : secondaryColor
+
+  const buttonStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    minWidth: 0,
+    minHeight: isMobile ? 84 : 92,
+    borderRadius: 12,
+    padding: isMobile ? '10px 8px' : '12px 10px',
+    border: isPrimary ? '1px solid rgba(253,224,141,0.55)' : '1px solid rgba(255,255,255,0.08)',
+    background: isPrimary ? primaryGradient : secondaryBackground,
+    color,
+    fontWeight: 700,
+    boxShadow: isPrimary ? '0 4px 15px rgba(244,175,37,0.35)' : 'none',
+    cursor: 'pointer',
+    transition: 'transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease',
+    WebkitTapHighlightColor: 'transparent',
+  }
+
+  return (
+    <button
+      type="button"
+      className="dashboard-quick-action"
+      onClick={onClick}
+      style={buttonStyle}
+    >
+      <span style={{ display: 'flex', lineHeight: 0, color }}>{icon}</span>
+      <span style={{
+        maxWidth: '100%',
+        color,
+        fontSize: isMobile ? 12 : 13,
+        lineHeight: 1.25,
+        textAlign: 'center',
+        overflowWrap: 'anywhere',
+      }}>
+        {label}
+      </span>
+    </button>
+  )
+}
+
+type MetricCardProps = {
+  label: string
+  value: string
+  subText?: string
+  extraInfo?: string
+  isSubscription?: boolean
+  isExpired?: boolean
+  actionLabel?: string
+  onAction?: () => void
+  onClick?: () => void
+  isMobile: boolean
+}
+
+const MetricCard: React.FC<MetricCardProps> = ({
+  label,
+  value,
+  subText,
+  extraInfo,
+  isSubscription,
+  isExpired,
+  actionLabel,
+  onAction,
+  onClick,
+  isMobile,
+}) => {
+  const Wrapper = onClick ? 'button' : 'div'
+  const hasRatioValue = value.includes('/')
+  const [primaryValue, secondaryValue] = hasRatioValue ? value.split('/') : [value, '']
+
+  const cardStyle: React.CSSProperties = {
+    textAlign: 'center',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    minWidth: 0,
+    minHeight: isMobile ? 96 : 110,
+    padding: isMobile ? '10px 8px' : 12,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 12,
+    border: '1px solid rgba(255,255,255,0.05)',
+    position: 'relative',
+    cursor: onClick ? 'pointer' : 'default',
+    transition: 'all 0.2s ease',
+    width: '100%',
+    WebkitTapHighlightColor: 'transparent',
+  }
+
+  return (
+    <Wrapper
+      type={onClick ? 'button' : undefined}
+      onClick={onClick}
+      style={cardStyle}
+      className={onClick ? 'dashboard-clickable-card dashboard-metric-card' : 'dashboard-metric-card'}
+    >
+      <div style={{
+        fontSize: isMobile ? 11 : 12,
+        color: '#A0A0A0',
+        marginBottom: 4,
+        lineHeight: 1.25,
+        overflowWrap: 'anywhere',
+      }}>
+        {label}
+      </div>
+
+      <div style={{
+        fontSize: isMobile ? (isSubscription ? 14 : 18) : (isSubscription ? 18 : 24),
+        fontWeight: 800,
+        backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+        WebkitBackgroundClip: 'text',
+        color: 'transparent',
+        lineHeight: 1.2,
+        display: 'flex',
+        alignItems: 'baseline',
+        justifyContent: 'center',
+        minWidth: 0,
+        overflowWrap: 'anywhere',
+      }}>
+        {hasRatioValue ? (
+          <>
+            <span>{primaryValue}</span>
+            <span style={{
+              fontSize: isMobile ? '11px' : '14px',
+              color: 'rgba(255,255,255,0.7)',
+              WebkitTextFillColor: 'rgba(255,255,255,0.7)',
+              marginLeft: 2,
+              fontWeight: 500
+            }}>
+              /{secondaryValue}
+            </span>
+          </>
+        ) : value}
+      </div>
+
+      {subText && (
+        <div style={{
+          fontSize: isMobile ? 10 : 12,
+          color: isExpired ? '#ff4d4f' : '#EAEAEA',
+          marginTop: isMobile ? 2 : 4,
+          fontWeight: 600,
+          lineHeight: 1.25,
+          overflowWrap: 'anywhere',
+        }}>
+          {subText}
+        </div>
+      )}
+
+      {extraInfo && (
+        <div style={{
+          fontSize: isMobile ? 10 : 11,
+          color: '#888',
+          marginTop: 2,
+          lineHeight: 1.25,
+          overflowWrap: 'anywhere',
+        }}>
+          {extraInfo}
+        </div>
+      )}
+
+      {isSubscription && actionLabel && onAction && (
+        <Button
+          size="small"
+          type="primary"
+          onClick={(e) => {
+            e.stopPropagation()
+            onAction()
+          }}
+          style={{
+            marginTop: 6,
+            fontSize: isMobile ? 10 : 11,
+            minHeight: isMobile ? 24 : 22,
+            height: 'auto',
+            padding: isMobile ? '2px 8px' : '0 12px',
+            background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+            color: '#111',
+            border: 'none',
+            fontWeight: 600,
+            width: 'fit-content',
+            maxWidth: '100%',
+            marginInline: 'auto',
+            whiteSpace: 'normal',
+            lineHeight: 1.2,
+          }}
+        >
+          {actionLabel}
+        </Button>
+      )}
+    </Wrapper>
+  )
+}
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate()
@@ -665,6 +881,10 @@ const AdminDashboard: React.FC = () => {
           background: rgba(255, 255, 255, 0.1) !important;
           transform: translateY(-1px);
         }
+        .dashboard-order-card:focus-visible {
+          outline: 2px solid rgba(253, 224, 141, 0.9);
+          outline-offset: 3px;
+        }
         .dashboard-clickable-card {
           transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
         }
@@ -673,6 +893,14 @@ const AdminDashboard: React.FC = () => {
           border-color: rgba(244, 175, 37, 0.4) !important;
           transform: translateY(-2px);
           box-shadow: 0 4px 12px rgba(244, 175, 37, 0.1);
+        }
+        .dashboard-clickable-card:focus-visible {
+          border-color: rgba(253, 224, 141, 0.75) !important;
+          box-shadow: 0 0 0 3px rgba(253, 224, 141, 0.28), 0 4px 12px rgba(244, 175, 37, 0.14);
+        }
+        .dashboard-metric-card {
+          appearance: none;
+          font: inherit;
         }
       `}</style>
       {/* 顶部 */}
@@ -690,12 +918,12 @@ const AdminDashboard: React.FC = () => {
         padding: '12px',
         border: '1px solid rgba(244, 175, 37, 0.3)',
         display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: '8px',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(124px, 1fr))',
+        gap: '10px',
         marginBottom: 16
       } : {
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
         gap: 12,
         marginBottom: 16
       }}>
@@ -738,10 +966,19 @@ const AdminDashboard: React.FC = () => {
             isExpired?: boolean;
             extraInfo?: string;
             showButton?: boolean;
+            actionLabel?: string;
             onClick?: () => void;
           }> = [
             { label: t('dashboard.totalMembers'), value: `${totalUsers}/${currentPlan.maxMembers || 50}` },
-            { label: '', value: statusValue, subText, isSubscription: true, isExpired: isExpired || !isActive, showButton },
+            {
+              label: t('dashboard.subscriptionLabel'),
+              value: statusValue,
+              subText,
+              isSubscription: true,
+              isExpired: isExpired || !isActive,
+              showButton,
+              actionLabel: isOverlimit || hasHigherPlan ? t('dashboard.planUpgrade') : (isExpired ? t('dashboard.planActivate') : t('dashboard.planRenew'))
+            },
             { label: t('dashboard.currentCheckedInMembers'), value: currentCheckedIn.toString(), onClick: () => { setTrendType('members'); setTrendPeriod('daily'); setTrendDrawerVisible(true); } },
             { label: t('dashboard.activeRoomBookings'), value: activeBookingsCount.toString(), onClick: () => { setTrendType('bookings'); setTrendPeriod('daily'); setTrendDrawerVisible(true); } },
             { label: t('dashboard.monthlyOrders'), value: monthlyOrders.toLocaleString() },
@@ -749,102 +986,19 @@ const AdminDashboard: React.FC = () => {
           ].filter(Boolean) as any[];
 
           return cards.map((card: any, idx) => (
-            <div 
-              key={idx} 
+            <MetricCard
+              key={idx}
+              label={card.label}
+              value={card.value}
+              subText={card.subText}
+              extraInfo={card.extraInfo}
+              isSubscription={card.isSubscription}
+              isExpired={card.isExpired}
+              actionLabel={card.showButton ? card.actionLabel : undefined}
+              onAction={card.showButton ? () => setShowRenewModal(true) : undefined}
               onClick={card.onClick}
-              style={{
-                textAlign: 'center',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                minHeight: isMobile ? 85 : 110,
-                padding: isMobile ? '8px 4px' : 12,
-                backgroundColor: 'rgba(255,255,255,0.05)',
-                borderRadius: 12,
-                border: '1px solid rgba(255,255,255,0.05)',
-                position: 'relative',
-                cursor: card.onClick ? 'pointer' : 'default',
-                transition: 'all 0.2s ease',
-              }}
-              className={card.onClick ? 'dashboard-clickable-card' : ''}
-            >
-              <div style={{ fontSize: isMobile ? 10 : 12, color: '#A0A0A0', marginBottom: 4 }}>
-                {card.label || t('dashboard.subscriptionLabel')}
-              </div>
-
-              <div style={{
-                fontSize: isMobile ? (card.isSubscription ? 11 : 16) : (card.isSubscription ? 18 : 24),
-                fontWeight: 800,
-                backgroundImage: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-                WebkitBackgroundClip: 'text',
-                color: 'transparent',
-                lineHeight: 1.2,
-                display: 'flex',
-                alignItems: 'baseline',
-                justifyContent: 'center'
-              }}>
-                {typeof card.value === 'string' && card.value.includes('/') ? (
-                  <>
-                    <span>{card.value.split('/')[0]}</span>
-                    <span style={{
-                      fontSize: isMobile ? '10px' : '14px',
-                      color: 'rgba(255,255,255,0.7)',
-                      WebkitTextFillColor: 'rgba(255,255,255,0.7)',
-                      marginLeft: 2,
-                      fontWeight: 500
-                    }}>
-                      /{card.value.split('/')[1]}
-                    </span>
-                  </>
-                ) : card.value}
-              </div>
-
-              {card.subText && (
-                <div style={{
-                  fontSize: isMobile ? 9 : 12,
-                  color: card.isExpired ? '#ff4d4f' : '#EAEAEA',
-                  marginTop: isMobile ? 2 : 4,
-                  fontWeight: 600
-                }}>
-                  {card.subText}
-                </div>
-              )}
-
-              {card.extraInfo && (
-                <div style={{
-                  fontSize: isMobile ? 8 : 11,
-                  color: '#888',
-                  marginTop: 2
-                }}>
-                  {card.extraInfo}
-                </div>
-              )}
-
-              {card.isSubscription && card.showButton && (
-                <Button
-                  size="small"
-                  type="primary"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowRenewModal(true);
-                  }}
-                  style={{
-                    marginTop: 6,
-                    fontSize: isMobile ? 8 : 11,
-                    height: isMobile ? 16 : 22,
-                    padding: isMobile ? '0 4px' : '0 12px',
-                    background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-                    color: '#111',
-                    border: 'none',
-                    fontWeight: 600,
-                    width: 'auto',
-                    marginInline: 'auto'
-                  }}
-                >
-                  {isOverlimit || hasHigherPlan ? t('dashboard.planUpgrade') : (isExpired ? t('dashboard.planActivate') : t('dashboard.planRenew'))}
-                </Button>
-              )}
-            </div>
+              isMobile={isMobile}
+            />
           ));
         })()}
       </div>
@@ -892,41 +1046,80 @@ const AdminDashboard: React.FC = () => {
 
       {/* 快速操作 */}
       <div style={{ marginBottom: 16 }}>
+        <style>
+          {`
+            .dashboard-quick-action:hover {
+              transform: translateY(-1px);
+              border-color: rgba(253, 224, 141, 0.45) !important;
+            }
+
+            .dashboard-quick-action:focus-visible {
+              box-shadow: 0 0 0 3px rgba(253, 224, 141, 0.32), 0 4px 15px rgba(244, 175, 37, 0.24) !important;
+              border-color: rgba(253, 224, 141, 0.75) !important;
+            }
+
+            .dashboard-quick-action:active {
+              transform: translateY(0);
+            }
+          `}
+        </style>
         <h2 style={{ fontSize: 16, fontWeight: 800, color: '#EAEAEA', paddingInline: 8 }}>{t('dashboard.quickActions')}</h2>
         <div style={{
           marginTop: 8,
           display: 'grid',
-          gridTemplateColumns: (() => {
-            // 基础按钮：用户管理（始终显示）
-            const baseButtons = 1
-            // 可选按钮：创建活动、订单管理、库存管理
-            const optionalButtons = (eventsAdminFeatureVisible ? 1 : 0) + (ordersFeatureVisible ? 1 : 0) + (inventoryFeatureVisible ? 1 : 0)
-            const totalButtons = baseButtons + optionalButtons
-            return `repeat(${totalButtons}, 1fr)`
-          })()
+          gridTemplateColumns: `repeat(auto-fit, minmax(${isMobile ? 128 : 150}px, 1fr))`,
+          gap: isMobile ? 10 : 12,
+          paddingInline: 8,
         }}>
-          {eventsAdminFeatureVisible && (
-            <button onClick={() => navigate('/admin/events')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 12, padding: 8, background: appConfig?.colorTheme?.primaryButton ? `linear-gradient(to right, ${appConfig.colorTheme.primaryButton.startColor}, ${appConfig.colorTheme.primaryButton.endColor})` : 'linear-gradient(to right,#FDE08D,#C48D3A)', color: '#111', fontWeight: 700, boxShadow: '0 4px 15px rgba(244,175,37,0.35)', cursor: 'pointer' }}>
-              <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v6h6a1 1 0 110 2h-6v6a1 1 0 11-2 0v-6H3a1 1 0 110-2h6V3a1 1 0 011-1z" /></svg>
-              <span>{t('dashboard.event')}</span>
-            </button>
-          )}
-          {ordersFeatureVisible && (
-            <button onClick={() => navigate('/admin/orders')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 12, padding: 8, background: appConfig?.colorTheme?.secondaryButton?.backgroundColor || 'rgba(255,255,255,0.05)', color: appConfig?.colorTheme?.secondaryButton?.textColor || '#EAEAEA', cursor: 'pointer' }}>
-              <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path clipRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h14a1 1 0 001-1V4a1 1 0 00-1-1H3zm12 11H5V5h10v9z" fillRule="evenodd"></path><path d="M9 7a1 1 0 100 2h2a1 1 0 100-2H9z"></path></svg>
-              <span>{t('dashboard.orders')}</span>
-            </button>
-          )}
-          <button onClick={() => navigate('/admin/users')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 12, padding: 8, background: appConfig?.colorTheme?.secondaryButton?.backgroundColor || 'rgba(255,255,255,0.05)', color: appConfig?.colorTheme?.secondaryButton?.textColor || '#EAEAEA', cursor: 'pointer' }}>
-            <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path clipRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" fillRule="evenodd"></path></svg>
-            <span>{t('dashboard.user')}</span>
-          </button>
-          {inventoryFeatureVisible && (
-            <button onClick={() => navigate('/admin/inventory')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, borderRadius: 12, padding: 8, background: appConfig?.colorTheme?.secondaryButton?.backgroundColor || 'rgba(255,255,255,0.05)', color: appConfig?.colorTheme?.secondaryButton?.textColor || '#EAEAEA', cursor: 'pointer' }}>
-              <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M5 8a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z"></path><path clipRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V3zm2 2v10h10V5H5z" fillRule="evenodd"></path></svg>
-              <span>{t('dashboard.inventory')}</span>
-            </button>
-          )}
+          {(() => {
+            const primaryGradient = appConfig?.colorTheme?.primaryButton
+              ? `linear-gradient(to right, ${appConfig.colorTheme.primaryButton.startColor}, ${appConfig.colorTheme.primaryButton.endColor})`
+              : 'linear-gradient(to right,#FDE08D,#C48D3A)'
+            const secondaryBackground = appConfig?.colorTheme?.secondaryButton?.backgroundColor || 'rgba(255,255,255,0.05)'
+            const secondaryColor = appConfig?.colorTheme?.secondaryButton?.textColor || '#EAEAEA'
+            const quickActionSharedProps = {
+              primaryGradient,
+              secondaryBackground,
+              secondaryColor,
+              isMobile,
+            }
+
+            return (
+              <>
+                {eventsAdminFeatureVisible && (
+                  <QuickActionButton
+                    {...quickActionSharedProps}
+                    variant="primary"
+                    label={t('dashboard.event')}
+                    onClick={() => navigate('/admin/events')}
+                    icon={<svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v6h6a1 1 0 110 2h-6v6a1 1 0 11-2 0v-6H3a1 1 0 110-2h6V3a1 1 0 011-1z" /></svg>}
+                  />
+                )}
+                {ordersFeatureVisible && (
+                  <QuickActionButton
+                    {...quickActionSharedProps}
+                    label={t('dashboard.orders')}
+                    onClick={() => navigate('/admin/orders')}
+                    icon={<svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path clipRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h14a1 1 0 001-1V4a1 1 0 00-1-1H3zm12 11H5V5h10v9z" fillRule="evenodd"></path><path d="M9 7a1 1 0 100 2h2a1 1 0 100-2H9z"></path></svg>}
+                  />
+                )}
+                <QuickActionButton
+                  {...quickActionSharedProps}
+                  label={t('dashboard.user')}
+                  onClick={() => navigate('/admin/users')}
+                  icon={<svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path clipRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" fillRule="evenodd"></path></svg>}
+                />
+                {inventoryFeatureVisible && (
+                  <QuickActionButton
+                    {...quickActionSharedProps}
+                    label={t('dashboard.inventory')}
+                    onClick={() => navigate('/admin/inventory')}
+                    icon={<svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M5 8a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z"></path><path clipRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V3zm2 2v10h10V5H5z" fillRule="evenodd"></path></svg>}
+                  />
+                )}
+              </>
+            )
+          })()}
         </div>
       </div>
 
@@ -941,7 +1134,6 @@ const AdminDashboard: React.FC = () => {
                 padding: '10px 0',
                 fontWeight: 800,
                 fontSize: 12,
-                outline: 'none',
                 borderBottom: '2px solid transparent',
                 cursor: 'pointer',
                 background: 'transparent',
@@ -960,6 +1152,7 @@ const AdminDashboard: React.FC = () => {
               return (
                 <button
                   key={tabKey}
+                  type="button"
                   onClick={() => setActiveTab(tabKey)}
                   style={{ ...baseStyle, ...(isActive ? activeStyle : inactiveStyle) }}
                 >
@@ -981,7 +1174,7 @@ const AdminDashboard: React.FC = () => {
           </div>
           <div style={{ marginTop: 12 }}>
             {(activeTab === 'completed' ? completedOrders : pendingOrders).map((order) => (
-              <div key={order.id} className="dashboard-order-card" onClick={() => openDrawer(order)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, borderRadius: 12, background: 'rgba(255,255,255,0.05)', marginBottom: 8 }}>
+              <button key={order.id} type="button" className="dashboard-order-card" onClick={() => openDrawer(order)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, borderRadius: 12, background: 'rgba(255,255,255,0.05)', marginBottom: 8, border: 'none', width: '100%', color: 'inherit', font: 'inherit', textAlign: 'left' }}>
                 <div style={{ width: 48, height: 48, borderRadius: 9999, background: 'rgba(45,39,26,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <img alt="avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqh6yOfMjU5qQSoCZPZvRqAiz-okAgrdu0FpYXfw5uHOQsuU4n9sXB0tgWxKp0S0CeRoIfGobj8db5AYyR99MzIRYRhGQ6FTM8hDdbqiekQypZbWKI-hdGzfS2pxYZNJ6bYvPj6CXp9XlDHxFyPDtN3i6CETf5OL_Cwg7QBM79IF0fAn-CPEBxheKV9HTDuDr0eao0xcYzNAf_ho8FNb9cgnap5ZOygDZktOCV_aV3y2MBiYrxtLFdefqLos7npLS50yvMaM7cH9MK" style={{ width: 48, height: 48, borderRadius: 9999 }} />
                 </div>
@@ -1005,7 +1198,7 @@ const AdminDashboard: React.FC = () => {
                     })()}
                   </div>
                 </div>
-              </div>
+              </button>
             ))}
             {(activeTab === 'completed' ? completedOrders : pendingOrders).length === 0 && (
               <div style={{ color: '#999', textAlign: 'center', padding: '20px 0' }}>{t('dashboard.noCompletedOrders')}</div>
@@ -1134,6 +1327,7 @@ const AdminDashboard: React.FC = () => {
               return (
                 <button
                   key={period}
+                  type="button"
                   onClick={() => setTrendPeriod(period)}
                   style={{
                     padding: '6px 16px',
@@ -1145,7 +1339,6 @@ const AdminDashboard: React.FC = () => {
                     background: isActive ? 'linear-gradient(to right, #FDE08D, #C48D3A)' : 'transparent',
                     color: isActive ? '#111' : 'rgba(255, 255, 255, 0.6)',
                     transition: 'all 0.2s ease',
-                    outline: 'none'
                   }}
                 >
                   {period === 'daily' ? t('dashboard.periodDay') : period === 'monthly' ? t('dashboard.periodMonth') : t('dashboard.periodYear')}

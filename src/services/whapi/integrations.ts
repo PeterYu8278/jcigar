@@ -3,6 +3,7 @@
  * 在系统关键流程中自动发送 WhatsApp 消息
  */
 import { getUserById } from '../firebase/firestore';
+import { getAppConfig } from '../firebase/appConfig';
 import { sendEventReminder, sendVipExpiryReminder, sendPasswordReset } from './index';
 import type { User, Event } from '../../types';
 import { getMessageTemplate, renderMessageTemplate } from './index';
@@ -42,7 +43,6 @@ export const sendEventReminderToUser = async (
     const eventDateStr = `${dateStr} ${timeStr}`;
 
     // 获取应用名称
-    const { getAppConfig } = await import('../firebase/appConfig');
     const appConfig = await getAppConfig();
     const appName = appConfig?.appName || 'Cigar Club';
 
@@ -89,7 +89,6 @@ export const sendVipExpiryReminderToUser = async (
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     // 检查功能是否启用
-    const { getAppConfig } = await import('../firebase/appConfig');
     const appConfig = await getAppConfig();
     if (!appConfig?.whapi?.enabled || !appConfig?.whapi?.features?.vipExpiry) {
       return { success: false, error: 'VIP到期提醒功能未启用' };
@@ -146,7 +145,6 @@ export const sendPasswordResetToUser = async (
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     // 检查功能是否启用
-    const { getAppConfig } = await import('../firebase/appConfig');
     const appConfig = await getAppConfig();
     if (!appConfig?.whapi?.enabled || !appConfig?.whapi?.features?.passwordReset) {
       return { success: false, error: '重置密码功能未启用' };
@@ -194,4 +192,3 @@ export const sendPasswordResetToUser = async (
     return { success: false, error: error.message || '发送失败' };
   }
 };
-

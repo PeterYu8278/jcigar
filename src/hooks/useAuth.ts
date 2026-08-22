@@ -5,7 +5,7 @@
 
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/modules/auth'
-import { loginUser, registerUser } from '../services/firebase/auth'
+import { getUserData, loginUser, registerUser } from '../services/firebase/auth'
 import { signOut } from 'firebase/auth'
 import { auth } from '../config/firebase'
 import { AUTH_ROUTES } from '../constants/routes'
@@ -197,7 +197,6 @@ export const useAuth = (): UseAuthReturn => {
       setLoading(true)
       
       // 重新获取用户数据
-      const { getUserData } = await import('../services/firebase/auth')
       const userData = await getUserData(firebaseUser.uid)
       
       if (userData) {

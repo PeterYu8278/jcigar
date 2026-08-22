@@ -144,12 +144,129 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom', 'zustand'],
-          'vendor-antd': ['antd', '@ant-design/icons'],
-          'vendor-firebase': ['firebase/app', 'firebase/firestore', 'firebase/auth', 'firebase/storage', 'firebase/messaging'],
-          'vendor-utils': ['dayjs', 'axios', 'i18next', 'react-i18next'],
-          'vendor-ui': ['swiper', 'react-rnd', 'react-webcam', 'react-image-crop'],
+        manualChunks(id) {
+          if (!id.includes('node_modules')) {
+            return undefined
+          }
+
+          const normalizedId = id.replace(/\\/g, '/')
+
+          if (/[\\/]node_modules[\\/](react|react-dom|react-router-dom)[\\/]/.test(id)) {
+            return 'vendor-react'
+          }
+
+          if (normalizedId.includes('/node_modules/@ant-design/icons/')) {
+            return 'vendor-antd-icons'
+          }
+
+          if (
+            normalizedId.includes('/node_modules/@rc-component/') ||
+            /\/node_modules\/rc-[^/]+\//.test(normalizedId)
+          ) {
+            return 'vendor-antd-rc'
+          }
+
+          if (
+            normalizedId.includes('/node_modules/@ant-design/cssinjs/') ||
+            normalizedId.includes('/node_modules/@ant-design/cssinjs-utils/')
+          ) {
+            return 'vendor-antd-cssinjs'
+          }
+
+          if (/\/node_modules\/antd\/(es|lib)\/(table|list|pagination|tree|transfer)\//.test(normalizedId)) {
+            return 'vendor-antd-data'
+          }
+
+          if (
+            /\/node_modules\/antd\/(es|lib)\/(form|input|input-number|select|checkbox|radio|switch|upload|date-picker|time-picker|cascader|auto-complete|mentions|rate|slider)\//.test(normalizedId)
+          ) {
+            return 'vendor-antd-form'
+          }
+
+          if (
+            /\/node_modules\/antd\/(es|lib)\/(modal|drawer|message|notification|popconfirm|popover|tooltip|alert|spin|skeleton|progress|result)\//.test(normalizedId)
+          ) {
+            return 'vendor-antd-feedback'
+          }
+
+          if (/\/node_modules\/antd\/(es|lib)\/(layout|menu|tabs|breadcrumb|steps|grid|flex|space|divider)\//.test(normalizedId)) {
+            return 'vendor-antd-layout'
+          }
+
+          if (
+            /\/node_modules\/antd\/(es|lib)\/(card|avatar|badge|tag|typography|image|carousel|statistic|descriptions|empty|qr-code)\//.test(normalizedId)
+          ) {
+            return 'vendor-antd-display'
+          }
+
+          if (
+            normalizedId.includes('/node_modules/antd/') ||
+            normalizedId.includes('/node_modules/@ant-design/')
+          ) {
+            return 'vendor-antd'
+          }
+
+          if (
+            normalizedId.includes('/node_modules/@firebase/firestore/') ||
+            normalizedId.includes('/node_modules/firebase/firestore/')
+          ) {
+            return 'vendor-firebase-firestore'
+          }
+
+          if (normalizedId.includes('/node_modules/@firebase/auth/') || normalizedId.includes('/node_modules/firebase/auth/')) {
+            return 'vendor-firebase-auth'
+          }
+
+          if (
+            normalizedId.includes('/node_modules/@firebase/storage/') ||
+            normalizedId.includes('/node_modules/@firebase/messaging/') ||
+            normalizedId.includes('/node_modules/firebase/storage/') ||
+            normalizedId.includes('/node_modules/firebase/messaging/')
+          ) {
+            return 'vendor-firebase-extra'
+          }
+
+          if (normalizedId.includes('/node_modules/@firebase/') || normalizedId.includes('/node_modules/firebase/')) {
+            return 'vendor-firebase-core'
+          }
+
+          if (normalizedId.includes('/node_modules/xlsx/')) {
+            return 'vendor-xlsx'
+          }
+
+          if (normalizedId.includes('/node_modules/html2canvas/')) {
+            return 'vendor-html2canvas'
+          }
+
+          if (normalizedId.includes('/node_modules/jspdf/') || normalizedId.includes('/node_modules/jspdf-autotable/')) {
+            return 'vendor-jspdf'
+          }
+
+          if (
+            normalizedId.includes('/node_modules/dayjs/') ||
+            normalizedId.includes('/node_modules/axios/') ||
+            normalizedId.includes('/node_modules/i18next/') ||
+            normalizedId.includes('/node_modules/react-i18next/') ||
+            normalizedId.includes('/node_modules/zustand/')
+          ) {
+            return 'vendor-utils'
+          }
+
+          if (normalizedId.includes('/node_modules/swiper/')) {
+            return 'vendor-swiper'
+          }
+
+          if (
+            normalizedId.includes('/node_modules/react-rnd/') ||
+            normalizedId.includes('/node_modules/react-webcam/') ||
+            normalizedId.includes('/node_modules/react-image-crop/') ||
+            normalizedId.includes('/node_modules/html5-qrcode/') ||
+            normalizedId.includes('/node_modules/qrcode/')
+          ) {
+            return 'vendor-media'
+          }
+
+          return undefined
         }
       }
     }

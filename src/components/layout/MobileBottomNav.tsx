@@ -165,9 +165,12 @@ const MobileBottomNav: React.FC = () => {
   const renderNavItem = (item: typeof navItems[0]) => {
     const active = isActive(item.key)
     return (
-      <div
+      <button
         key={item.key}
+        type="button"
         onClick={() => handleNavClick(item.key)}
+        aria-current={active ? 'page' : undefined}
+        aria-label={item.label}
         style={{
           display: 'flex',
           flexDirection: 'column',
@@ -179,7 +182,7 @@ const MobileBottomNav: React.FC = () => {
           transition: 'all 0.3s ease',
           position: 'relative'
         }}
-        className="mobile-nav-item"
+        className={`mobile-nav-item${active ? ' mobile-nav-item-active' : ''}`}
       >
         <div style={{
           display: 'flex',
@@ -225,7 +228,7 @@ const MobileBottomNav: React.FC = () => {
         }}>
           {item.label}
         </div>
-      </div>
+      </button>
     )
   }
 
@@ -247,6 +250,7 @@ const MobileBottomNav: React.FC = () => {
         justifyContent: 'space-around'
       }}
       className="mobile-bottom-nav"
+      data-nav-count={totalItemsCount}
     >
       {/* 背景装饰 */}
       <div style={{
@@ -277,7 +281,10 @@ const MobileBottomNav: React.FC = () => {
         className="mobile-nav-item"
       >
         <button
+          type="button"
           onClick={handleScanClick}
+          aria-label={canAccessQR ? 'Open QR scanner' : 'Open AI cigar scanner'}
+          className="mobile-nav-scan-button"
           style={{
             position: 'relative',
             top: '-14px',
@@ -292,8 +299,7 @@ const MobileBottomNav: React.FC = () => {
             boxShadow: '0 4px 16px rgba(255, 215, 0, 0.3)',
             transition: 'all 0.3s ease',
             cursor: 'pointer',
-            padding: 0,
-            outline: 'none'
+            padding: 0
           }}
         >
           <QrcodeOutlined

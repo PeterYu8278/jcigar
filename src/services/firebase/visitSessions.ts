@@ -19,6 +19,7 @@ import {
 import { db } from '../../config/firebase';
 import { GLOBAL_COLLECTIONS } from '../../config/globalCollections';
 import type { VisitSession, User, Order, OutboundOrder } from '../../types';
+import { COLLECTIONS, createOutboundOrder, getCigarById } from './firestore';
 
 /**
  * 处理 visit session 数据，转换日期字段和 redemptions
@@ -360,23 +361,20 @@ export const completeVisitSession = async (
         // 如果有需要添加的记录，使用事务更新文档
         if (recordsToAdd.length > 0) {
           try {
-            const { runTransaction, arrayUnion, Timestamp: RedemptionTimestamp } = await import('firebase/firestore');
-            const { GLOBAL_COLLECTIONS: REDEMPTION_COLLECTIONS } = await import('../../config/globalCollections');
-            
             await runTransaction(db, async (transaction) => {
-              const docRef = doc(db, REDEMPTION_COLLECTIONS.REDEMPTION_RECORDS, sessionId);
+              const docRef = doc(db, GLOBAL_COLLECTIONS.REDEMPTION_RECORDS, sessionId);
               const docSnap = await transaction.get(docRef);
               
               if (docSnap.exists()) {
                 // 文档已存在，使用 arrayUnion 添加新记录
                 const itemsToAdd = recordsToAdd.map(item => ({
                   ...item,
-                  redeemedAt: RedemptionTimestamp.fromDate(item.redeemedAt),
-                  createdAt: RedemptionTimestamp.fromDate(item.createdAt)
+                  redeemedAt: Timestamp.fromDate(item.redeemedAt),
+                  createdAt: Timestamp.fromDate(item.createdAt)
                 }));
                 transaction.update(docRef, {
                   redemptions: arrayUnion(...itemsToAdd),
-                  updatedAt: RedemptionTimestamp.fromDate(now)
+                  updatedAt: Timestamp.fromDate(now)
                 });
               } else {
                 // 文档不存在，创建新文档
@@ -389,11 +387,11 @@ export const completeVisitSession = async (
                   userName: session.userName || userData?.displayName,
                   redemptions: recordsToAdd.map(item => ({
                     ...item,
-                    redeemedAt: RedemptionTimestamp.fromDate(item.redeemedAt),
-                    createdAt: RedemptionTimestamp.fromDate(item.createdAt)
+                    redeemedAt: Timestamp.fromDate(item.redeemedAt),
+                    createdAt: Timestamp.fromDate(item.createdAt)
                   })),
-                  createdAt: RedemptionTimestamp.fromDate(now),
-                  updatedAt: RedemptionTimestamp.fromDate(now)
+                  createdAt: Timestamp.fromDate(now),
+                  updatedAt: Timestamp.fromDate(now)
                 };
                 transaction.set(docRef, newDoc);
               }
@@ -427,7 +425,6 @@ export const completeVisitSession = async (
         }
 
         // 2. 获取雪茄信息并准备订单项
-        const { getCigarById } = await import('./firestore');
         const orderItems: Array<{ cigarId: string; quantity: number; price: number }> = [];
         const outboundItems: Array<{
           cigarId: string;
@@ -470,8 +467,6 @@ export const completeVisitSession = async (
 
         // 3. 创建订单（金额为0）
         if (orderItems.length > 0) {
-          const { COLLECTIONS } = await import('./firestore');
-          
           // 生成订单ID
           const year = now.getFullYear();
           const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -540,7 +535,6 @@ export const completeVisitSession = async (
 
           // 4. 创建出库记录（会自动扣除库存）
           if (outboundItems.length > 0) {
-            const { createOutboundOrder } = await import('./firestore');
             const outboundOrderData: Omit<OutboundOrder, 'id' | 'updatedAt'> = {
               referenceNo: newOrderId,
               type: 'sale',
@@ -963,4 +957,3 @@ export const purchaseDayPass = async (
     return { success: false, error: error.message || '购买失败' };
   }
 };
-

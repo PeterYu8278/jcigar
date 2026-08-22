@@ -1,6 +1,6 @@
 // 认证状态管理
 import { create } from 'zustand'
-import { onAuthStateChange, getUserData, convertFirestoreTimestamps } from '../../services/firebase/auth'
+import { onAuthStateChange, getUserData, convertFirestoreTimestamps, findUserByEmail } from '../../services/firebase/auth'
 import type { User, UserRole, Permission } from '../../types'
 import { hasPermission } from '../../config/permissions'
 import { initializePushNotifications } from '../../services/firebase/messaging'
@@ -201,7 +201,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                   // 如果使用 UID 找不到，再尝试通过邮箱查找（兼容旧数据）
                   const normalizedEmail = firebaseUser.email?.toLowerCase().trim();
                   if (normalizedEmail) {
-                    const { findUserByEmail } = await import('../../services/firebase/auth');
                     const existingUser = await findUserByEmail(normalizedEmail);
                     if (existingUser) {
                       firestoreUserId = existingUser.id;
