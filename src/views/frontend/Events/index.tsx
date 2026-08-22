@@ -1,6 +1,6 @@
 // 活动页面
 import React, { useMemo, useState } from 'react'
-import { Row, Col, Card, Typography, Button, Tag, Space, Avatar, message } from 'antd'
+import { Row, Col, Card, Typography, Button, Tag, Space, Avatar, Empty, Spin, message } from 'antd'
 import {
   CalendarOutlined,
   EnvironmentOutlined,
@@ -30,7 +30,7 @@ const Events: React.FC = () => {
   const { user } = useAuthStore()
   const { t, i18n } = useTranslation()
   const isMobile = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 991px)').matches : false
-  const { data: allEvents, refresh } = useFirestoreQuery(getEvents)
+  const { data: allEvents, loading, error, refresh } = useFirestoreQuery(getEvents)
   const events = (allEvents ?? []).filter(event =>
     !event.isPrivate && event.status !== 'draft' && event.status !== 'cancelled'
   )
@@ -177,6 +177,49 @@ const Events: React.FC = () => {
         width: '100%',
         boxSizing: 'border-box'
       }}>
+        {loading && (
+          <div
+            role="status"
+            aria-live="polite"
+            style={{
+              minHeight: '240px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#FDE08D'
+            }}
+          >
+            <Spin tip={t('common.loading')} />
+          </div>
+        )}
+
+        {!loading && error && (
+          <div style={{
+            minHeight: '240px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 16,
+            padding: '24px',
+            textAlign: 'center',
+            color: 'rgba(255, 255, 255, 0.82)'
+          }}>
+            <Text style={{ color: 'rgba(255, 255, 255, 0.82)' }}>{t('common.loadFailed')}</Text>
+            <Button type="primary" onClick={refresh}>
+              {t('common.retry')}
+            </Button>
+          </div>
+        )}
+
+        {!loading && !error && events.length === 0 && (
+          <Empty
+            description={<span style={{ color: 'rgba(255, 255, 255, 0.72)' }}>{t('events.noEvents')}</span>}
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            style={{ padding: '72px 16px' }}
+          />
+        )}
+
         {events.map((event) => {
           const socialTag = getSocialRelationTag(event)
           return (
@@ -296,6 +339,7 @@ const Events: React.FC = () => {
                     color: '#111',
                     fontWeight: 'bold',
                     padding: '8px 24px',
+                    minHeight: '44px',
                     borderRadius: '9999px',
                     cursor: isRegistrationClosed(event) ? 'not-allowed' : 'pointer',
                     boxShadow: '0 4px 15px rgba(244, 175, 37, 0.6)',
