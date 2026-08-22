@@ -2620,7 +2620,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                             <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <Text style={{ color: '#c0c0c0', fontSize: '13px' }}>
-                                  启用数据存储
+                                  {t('featureManagement.enableAiDataStorage')}
                                 </Text>
                                 <Switch
                                   checked={aiCigarStorageEnabled}
@@ -2667,13 +2667,13 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                                       setAiCigarStorageEnabled(previousValue);
                                     }
                                   }}
-                                  checkedChildren="启用"
-                                  unCheckedChildren="禁用"
+                                  checkedChildren={t('featureManagement.enable')}
+                                  unCheckedChildren={t('featureManagement.disable')}
                                   size="small"
                                 />
                               </div>
                               <Text style={{ color: '#999', fontSize: '12px', display: 'block', marginTop: '4px' }}>
-                                控制AI识茄功能是否将识别结果保存到数据库
+                                {t('featureManagement.aiDataStorageDesc')}
                               </Text>
                             </div>
                           )}
@@ -2682,7 +2682,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                             <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <Text style={{ color: '#c0c0c0', fontSize: '13px' }}>
-                                  启用图片URL搜索
+                                  {t('featureManagement.enableAiImageSearch')}
                                 </Text>
                                 <Switch
                                   checked={aiCigarImageSearchEnabled}
@@ -2728,20 +2728,20 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                                       setAiCigarImageSearchEnabled(previousValue);
                                     }
                                   }}
-                                  checkedChildren="启用"
-                                  unCheckedChildren="禁用"
+                                  checkedChildren={t('featureManagement.enable')}
+                                  unCheckedChildren={t('featureManagement.disable')}
                                   size="small"
                                 />
                               </div>
                               <Text style={{ color: '#999', fontSize: '12px', display: 'block', marginTop: '4px' }}>
-                                控制AI识茄功能是否自动搜索雪茄图片URL（Google + Gemini）
+                                {t('featureManagement.aiImageSearchDesc')}
                               </Text>
 
                               {/* 搜索引擎顺序选择器（仅在启用图片搜索时显示） */}
                               {aiCigarImageSearchEnabled && (
                                 <div style={{ marginTop: '8px' }}>
                                   <Text style={{ color: '#c0c0c0', fontSize: '13px', display: 'block', marginBottom: '4px' }}>
-                                    搜索引擎顺序
+                                    {t('featureManagement.imageSearchOrder')}
                                   </Text>
                                   <Select
                                     value={aiCigarImageSearchOrder}
@@ -2792,16 +2792,16 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
                                     size="small"
                                   >
                                     <Select.Option value="google-first">
-                                      <span>Google 优先 → Gemini 回退</span>
+                                      <span>{t('featureManagement.googleFirstOption')}</span>
                                     </Select.Option>
                                     <Select.Option value="gemini-first">
-                                      <span>✨ Gemini 优先 → Google 回退</span>
+                                      <span>{t('featureManagement.geminiFirstOption')}</span>
                                     </Select.Option>
                                   </Select>
                                   <Text style={{ color: '#999', fontSize: '11px', display: 'block', marginTop: '4px' }}>
                                     {aiCigarImageSearchOrder === 'google-first'
-                                      ? '优先使用 Google Custom Search，失败时回退到 Gemini'
-                                      : '优先使用 Gemini，失败时回退到 Google Custom Search'}
+                                      ? t('featureManagement.googleFirstDesc')
+                                      : t('featureManagement.geminiFirstDesc')}
                                   </Text>
                                 </div>
                               )}
@@ -2861,4 +2861,3 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
 };
 
 export default FeatureManagement;
-

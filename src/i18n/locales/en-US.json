@@ -400,6 +400,15 @@
     "geminiModelDesc": "Select the Gemini model list for AI cigar recognition. The system tries these models in order until a working one is found.",
     "availableModels": "Available Models",
     "selectGeminiModelsPlaceholder": "Select Gemini models (first 3 recommended)",
+    "enableAiDataStorage": "Enable Data Storage",
+    "aiDataStorageDesc": "Control whether AI cigar recognition saves recognition results to the database",
+    "enableAiImageSearch": "Enable Image URL Search",
+    "aiImageSearchDesc": "Control whether AI cigar recognition automatically searches for cigar image URLs (Google + Gemini)",
+    "imageSearchOrder": "Search Engine Order",
+    "googleFirstOption": "Google First → Gemini Fallback",
+    "geminiFirstOption": "✨ Gemini First → Google Fallback",
+    "googleFirstDesc": "Use Google Custom Search first, then fall back to Gemini if it fails",
+    "geminiFirstDesc": "Use Gemini first, then fall back to Google Custom Search if it fails",
     "colorThemeManagement": "Color Theme Management",
     "enableWhatsapp": "Enable WhatsApp",
     "apiConfig": "API Configuration",
@@ -2401,6 +2410,15 @@
     "tertiaryText": "Tertiary Text",
     "iconColor": "Icon Color"
   },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "subtitle": "Sorry, the app encountered an unexpected error. We have recorded this issue.",
+    "reloadPage": "Reload Page",
+    "errorDetails": "Error Details",
+    "errorMessage": "Error message:",
+    "errorStack": "Error stack:",
+    "componentStack": "Component stack:"
+  },
   "whapiTester": {
     "connectionStatus": "Connection Status",
     "checkConnection": "Check Connection",
@@ -2433,7 +2451,15 @@
     "checkConnectionFailed": "Check connection failed: ",
     "messageSentSuccess": "Message sent successfully",
     "messageSendFailed": "Message send failed: ",
-    "sendFailed": "Send failed: "
+    "sendFailed": "Send failed: ",
+    "phonePlaceholder": "e.g. 60123456789 or +60123456789",
+    "defaultUserName": "User",
+    "defaultEventName": "Test Event",
+    "defaultEventLocation": "Test Location",
+    "eventReminderTimeLine": "\nTime: {{time}}",
+    "eventReminderPreview": "[{{appName}}] Event Reminder:\nHi {{userName}}, you have registered for \"{{eventName}}\" at \"{{appName}}\". We look forward to seeing you!\n\nDate: {{date}}{{timeLine}}\nLocation: {{eventLocation}}",
+    "vipExpiryPreview": "[{{appName}}] VIP Expiry Reminder\nHi {{userName}}, your VIP membership will expire on {{expiryDate}}.\nPlease renew in time to continue enjoying member benefits.",
+    "passwordResetPreview": "[{{appName}}] Reset Password\nHi {{userName}}, you requested a password reset. If this was not you, please ignore this message.\nReset link: {{resetLink}} (valid for 24 hours)"
   },
   "geminiTester": {
     "uploadImageRequired": "Please upload an image file",

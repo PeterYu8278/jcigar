@@ -5,13 +5,15 @@
 
 import React, { Component } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
+import { withTranslation } from 'react-i18next'
+import type { WithTranslation } from 'react-i18next'
 import { Result, Button, Typography, Card, Collapse } from 'antd'
 import { CloseCircleOutlined, ReloadOutlined, BugOutlined } from '@ant-design/icons'
 
 const { Paragraph, Text } = Typography
 const { Panel } = Collapse
 
-interface ErrorBoundaryProps {
+interface ErrorBoundaryProps extends WithTranslation {
   children: ReactNode
   fallback?: ReactNode
   onError?: (error: Error, errorInfo: ErrorInfo) => void
@@ -102,7 +104,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       }
 
       const { error, errorInfo } = this.state
-      const { showDetails = true } = this.props
+      const { showDetails = true, t } = this.props
 
       return (
         <div
@@ -128,12 +130,12 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
               icon={<CloseCircleOutlined style={{ color: '#ff4d4f' }} />}
               title={
                 <span style={{ color: 'var(--cigar-text-primary)' }}>
-                  应用出现错误
+                  {t('errorBoundary.title')}
                 </span>
               }
               subTitle={
                 <span style={{ color: 'var(--cigar-text-secondary)' }}>
-                  抱歉，应用遇到了一个意外错误。我们已经记录了这个问题。
+                  {t('errorBoundary.subtitle')}
                 </span>
               }
               extra={[
@@ -143,13 +145,13 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
                   icon={<ReloadOutlined />}
                   onClick={this.handleReset}
                 >
-                  重试
+                  {t('common.retry')}
                 </Button>,
                 <Button
                   key="reload"
                   onClick={this.handleReload}
                 >
-                  刷新页面
+                  {t('errorBoundary.reloadPage')}
                 </Button>
               ]}
             >
@@ -165,14 +167,14 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
                     <Panel
                       header={
                         <span style={{ color: 'var(--cigar-text-primary)' }}>
-                          <BugOutlined /> 错误详情
+                          <BugOutlined /> {t('errorBoundary.errorDetails')}
                         </span>
                       }
                       key="1"
                     >
                       <div style={{ marginBottom: 16 }}>
                         <Text strong style={{ color: '#ff4d4f' }}>
-                          错误消息:
+                          {t('errorBoundary.errorMessage')}
                         </Text>
                         <Paragraph
                           copyable
@@ -193,7 +195,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
                       {error.stack && (
                         <div style={{ marginBottom: 16 }}>
                           <Text strong style={{ color: '#ff4d4f' }}>
-                            错误堆栈:
+                            {t('errorBoundary.errorStack')}
                           </Text>
                           <Paragraph
                             copyable
@@ -217,7 +219,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
                       {errorInfo?.componentStack && (
                         <div>
                           <Text strong style={{ color: '#ff4d4f' }}>
-                            组件堆栈:
+                            {t('errorBoundary.componentStack')}
                           </Text>
                           <Paragraph
                             copyable
@@ -251,4 +253,4 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 }
 
-export default ErrorBoundary
+export default withTranslation()(ErrorBoundary)

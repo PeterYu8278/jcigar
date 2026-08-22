@@ -70,23 +70,23 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
         case 'event_reminder':
           result = await sendEventReminder(
             formattedPhone,
-            userName || '用户',
-            eventName || '测试活动',
-            eventDate || new Date().toLocaleString('zh-CN'),
-            eventLocation || '测试地点'
+            userName || t('whapiTester.defaultUserName'),
+            eventName || t('whapiTester.defaultEventName'),
+            eventDate || new Date().toLocaleString(),
+            eventLocation || t('whapiTester.defaultEventLocation')
           );
           break;
         case 'vip_expiry':
           result = await sendVipExpiryReminder(
             formattedPhone,
-            userName || '用户',
-            expiryDate || new Date().toLocaleString('zh-CN')
+            userName || t('whapiTester.defaultUserName'),
+            expiryDate || new Date().toLocaleString()
           );
           break;
         case 'password_reset':
           result = await sendPasswordReset(
             formattedPhone,
-            userName || '用户',
+            userName || t('whapiTester.defaultUserName'),
             resetLink || 'https://example.com/reset-password'
           );
           break;
@@ -231,7 +231,7 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
             rules={[{ required: true, message: t('whapiTester.phoneRequired') }]}
           >
             <Input
-              placeholder="例如: 60123456789 或 +60123456789"
+              placeholder={t('whapiTester.phonePlaceholder')}
               style={{
                 background: 'rgba(255, 255, 255, 0.05)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -426,11 +426,11 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
             {({ getFieldValue }) => {
               const messageType = getFieldValue('messageType') || 'custom';
               const customMessage = getFieldValue('customMessage') || '';
-              const userName = getFieldValue('userName') || '用户';
-              const eventName = getFieldValue('eventName') || '测试活动';
-              const eventDate = getFieldValue('eventDate') || new Date().toLocaleString('zh-CN');
-              const eventLocation = getFieldValue('eventLocation') || '测试地点';
-              const expiryDate = getFieldValue('expiryDate') || new Date().toLocaleString('zh-CN');
+              const userName = getFieldValue('userName') || t('whapiTester.defaultUserName');
+              const eventName = getFieldValue('eventName') || t('whapiTester.defaultEventName');
+              const eventDate = getFieldValue('eventDate') || new Date().toLocaleString();
+              const eventLocation = getFieldValue('eventLocation') || t('whapiTester.defaultEventLocation');
+              const expiryDate = getFieldValue('expiryDate') || new Date().toLocaleString();
               const resetLink = getFieldValue('resetLink') || 'https://example.com/reset-password';
 
               let previewMessage = '';
@@ -468,23 +468,29 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
                     timeStr = '';
                   }
 
-                  previewMessage = `[${appName}] 活动温馨提醒：
-您好 ${userName}，您已报名"${appName}"的"${eventName}"，期待您的参与!
-
-日期: ${dateStr}${timeStr ? `
-时间: ${timeStr}` : ''}
-地点: ${eventLocation}`;
+                  previewMessage = t('whapiTester.eventReminderPreview', {
+                    appName,
+                    userName,
+                    eventName,
+                    date: dateStr,
+                    timeLine: timeStr ? t('whapiTester.eventReminderTimeLine', { time: timeStr }) : '',
+                    eventLocation,
+                  });
                   break;
                 }
                 case 'vip_expiry':
-                  previewMessage = `[${appName}] VIP到期温馨提醒
-您好 ${userName}，您的VIP会员资格将于 ${expiryDate} 到期。
-请及时续费以继续享受会员权益。`;
+                  previewMessage = t('whapiTester.vipExpiryPreview', {
+                    appName,
+                    userName,
+                    expiryDate,
+                  });
                   break;
                 case 'password_reset':
-                  previewMessage = `[${appName}] 重置密码
-您好 ${userName}，您已申请重置密码。如非本人操作，请忽略此消息。
-重置链接：${resetLink} (有效期24小时)`;
+                  previewMessage = t('whapiTester.passwordResetPreview', {
+                    appName,
+                    userName,
+                    resetLink,
+                  });
                   break;
                 default:
                   previewMessage = '';
@@ -574,4 +580,3 @@ const WhapiMessageTester: React.FC<WhapiMessageTesterProps> = ({ whapiConfig }) 
 };
 
 export default WhapiMessageTester;
-

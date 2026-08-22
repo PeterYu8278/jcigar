@@ -401,6 +401,15 @@
     "geminiModelDesc": "选择用于 AI 雪茄识别的 Gemini 模型列表。系统会按顺序尝试这些模型，直到找到一个可用的模型。",
     "availableModels": "可用模型",
     "selectGeminiModelsPlaceholder": "选择 Gemini 模型（推荐前3个）",
+    "enableAiDataStorage": "启用数据存储",
+    "aiDataStorageDesc": "控制 AI 识茄功能是否将识别结果保存到数据库",
+    "enableAiImageSearch": "启用图片 URL 搜索",
+    "aiImageSearchDesc": "控制 AI 识茄功能是否自动搜索雪茄图片 URL（Google + Gemini）",
+    "imageSearchOrder": "搜索引擎顺序",
+    "googleFirstOption": "Google 优先 → Gemini 回退",
+    "geminiFirstOption": "✨ Gemini 优先 → Google 回退",
+    "googleFirstDesc": "优先使用 Google Custom Search，失败时回退到 Gemini",
+    "geminiFirstDesc": "优先使用 Gemini，失败时回退到 Google Custom Search",
     "colorThemeManagement": "颜色主题管理",
     "enableWhatsapp": "启用 WhatsApp",
     "apiConfig": "API 配置",
@@ -2402,6 +2411,15 @@
     "tertiaryText": "第三级文字",
     "iconColor": "图标颜色"
   },
+  "errorBoundary": {
+    "title": "应用出现错误",
+    "subtitle": "抱歉，应用遇到了一个意外错误。我们已经记录了这个问题。",
+    "reloadPage": "刷新页面",
+    "errorDetails": "错误详情",
+    "errorMessage": "错误消息:",
+    "errorStack": "错误堆栈:",
+    "componentStack": "组件堆栈:"
+  },
   "whapiTester": {
     "connectionStatus": "连接状态",
     "checkConnection": "检查连接",
@@ -2434,7 +2452,15 @@
     "checkConnectionFailed": "检查连接失败: ",
     "messageSentSuccess": "消息发送成功",
     "messageSendFailed": "消息发送失败: ",
-    "sendFailed": "发送失败: "
+    "sendFailed": "发送失败: ",
+    "phonePlaceholder": "例如: 60123456789 或 +60123456789",
+    "defaultUserName": "用户",
+    "defaultEventName": "测试活动",
+    "defaultEventLocation": "测试地点",
+    "eventReminderTimeLine": "\n时间: {{time}}",
+    "eventReminderPreview": "[{{appName}}] 活动温馨提醒：\n您好 {{userName}}，您已报名\"{{appName}}\"的\"{{eventName}}\"，期待您的参与!\n\n日期: {{date}}{{timeLine}}\n地点: {{eventLocation}}",
+    "vipExpiryPreview": "[{{appName}}] VIP到期温馨提醒\n您好 {{userName}}，您的VIP会员资格将于 {{expiryDate}} 到期。\n请及时续费以继续享受会员权益。",
+    "passwordResetPreview": "[{{appName}}] 重置密码\n您好 {{userName}}，您已申请重置密码。如非本人操作，请忽略此消息。\n重置链接：{{resetLink}} (有效期24小时)"
   },
   "geminiTester": {
     "uploadImageRequired": "请上传图片文件",
