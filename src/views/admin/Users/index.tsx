@@ -11,8 +11,6 @@ const { Search } = Input
 const { Option } = Select
 
 import { getUsers, createDocument, updateDocument, deleteDocument, COLLECTIONS, getEventsByUser, getOrdersByUser } from '../../../services/firebase/firestore'
-import { getUsersPaginated } from '../../../services/firebase/paginatedQueries'
-import { usePaginatedData } from '../../../hooks/usePaginatedData'
 import { useFirestoreQuery } from '../../../hooks/useFirestoreQuery'
 import { useDetailDrawer } from '../../../hooks/useDetailDrawer'
 import type { User, Event, Order } from '../../../types'
@@ -52,26 +50,7 @@ const AdminUsers: React.FC = () => {
   const { user: currentUser } = useAuthStore()
   const canManageDiscount = currentUser?.role === 'developer' || currentUser?.role === 'superAdmin'
 
-  // 服务端分页
-  const {
-    data: paginatedUsers,
-    loading: paginatedLoading,
-    hasMore,
-    currentPage,
-    loadPage,
-    loadNext,
-    refresh: refreshPaginated
-  } = usePaginatedData(
-    async (pageSize, lastDoc, filters) => {
-      const result = await getUsersPaginated(pageSize, lastDoc, filters)
-      return result
-    },
-    {
-      pageSize: 20, // 桌面端20条/页
-      mobilePageSize: 10, // 移动端10条/页
-      initialLoad: false // 手动控制加载
-    }
-  )
+  const { data: users = [], loading: usersLoading, refresh: refreshUsers } = useFirestoreQuery(getUsers)
   const { item: editing, open: editingOpen, openDrawer: openEditing, closeDrawer: closeEditing } = useDetailDrawer<User>()
   const { item: resettingPassword, open: resettingPasswordOpen, openDrawer: openResettingPassword, closeDrawer: closeResettingPassword } = useDetailDrawer<User>()
   const [actionLoading, setLoading] = useState(false)
@@ -133,29 +112,6 @@ const AdminUsers: React.FC = () => {
   const [activeIndex, setActiveIndex] = useState<string>('') // 当前高亮的字母
   const [showBubble, setShowBubble] = useState(false) // 字母气泡显示
   const [bubbleLetter, setBubbleLetter] = useState('') // 气泡字母
-
-  const [appConfig, setAppConfig] = useState<any>(null)
-
-  // 加载应用配置
-  useEffect(() => {
-    ; (async () => {
-      try {
-        const config = await import('../../../services/firebase/appConfig').then(m => m.getAppConfig())
-        setAppConfig(config)
-      } catch (e) {
-        message.error(t('messages.dataLoadFailed'))
-      }
-    })()
-  }, [])
-
-  // 初始加载第一页分页数据
-  useEffect(() => {
-    loadPage(1, {
-      role: roleFilter,
-      status: statusFilter,
-      level: levelFilter
-    })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const update = () => setIsMobile(window.innerWidth < 768)
@@ -331,7 +287,7 @@ const AdminUsers: React.FC = () => {
                 if (res.success) {
                   message.success(t('usersAdmin.statusUpdated'))
                   // 刷新用户列表以显示角色变化
-                  await refreshPaginated()
+                  await refreshUsers()
                 }
               }}
               size="small"
@@ -417,7 +373,7 @@ const AdminUsers: React.FC = () => {
 
   const filteredUsers = useMemo(() => {
     const kw = keyword.trim().toLowerCase()
-    const filtered = paginatedUsers.filter(u => {
+    const filtered = users.filter(u => {
       // 如果不是开发者，过滤掉开发者角色的用户
       if (currentUser?.role !== 'developer' && u.role === 'developer') {
         return false
@@ -446,15 +402,8 @@ const AdminUsers: React.FC = () => {
       const nameA = (a.displayName || '').toLowerCase()
       const nameB = (b.displayName || '').toLowerCase()
       return nameA.localeCompare(nameB)
-    }).slice(0, (() => {
-      if (!appConfig?.subscription?.isActive) return undefined;
-      const activePlanId = appConfig.subscription.planId || appConfig.subscription.plan;
-      const activePlan = appConfig.subscription.plans?.find((p: any) => p.id === activePlanId);
-      if (activePlan) return activePlan.maxMembers;
-      // 回退到旧的硬编码值
-      return appConfig.subscription.plan === 'premium' ? 300 : (appConfig.subscription.plan === 'pro' ? 150 : 50);
-    })())
-  }, [paginatedUsers, keyword, statusFilter, roleFilter, levelFilter, statusMap, currentUser?.role, appConfig])
+    })
+  }, [users, keyword, statusFilter, roleFilter, levelFilter, statusMap, currentUser?.role])
 
   const groupedByInitial = useMemo(() => {
     const groups: Record<string, User[]> = {}
@@ -604,13 +553,13 @@ const AdminUsers: React.FC = () => {
                           setLoading(true)
                           try {
                             await Promise.all(selectedRowKeys.map(id => {
-                              const user = paginatedUsers.find(u => u.id === String(id))
+                              const user = users.find(u => u.id === String(id))
                               const updateData: Partial<User> = { status: 'inactive' }
                               if (user?.role === 'vip') updateData.role = 'member'
                               return updateDocument<User>(COLLECTIONS.USERS, String(id), updateData as any)
                             }))
                             message.success(t('usersAdmin.batchDisabled'))
-                            await refreshPaginated()
+                            await refreshUsers()
                             setSelectedRowKeys([])
                           } finally {
                             setLoading(false)
@@ -632,7 +581,7 @@ const AdminUsers: React.FC = () => {
                                 const results = await Promise.all(selectedRowKeys.map(id => deleteDocument(COLLECTIONS.USERS, String(id))))
                                 if (results.every(r => r.success)) message.success(t('usersAdmin.batchDeleted'))
                                 else message.error(t('usersAdmin.batchDeleteFailed'))
-                                await refreshPaginated()
+                                await refreshUsers()
                                 setSelectedRowKeys([])
                               } finally {
                                 setLoading(false)
@@ -677,7 +626,6 @@ const AdminUsers: React.FC = () => {
                     style={{ width: 140 }}
                     onChange={(v) => {
                       setRoleFilter(v)
-                      loadPage(1, { role: v, status: statusFilter, level: levelFilter })
                     }}
                     className="points-config-form"
                   >
@@ -695,7 +643,6 @@ const AdminUsers: React.FC = () => {
                     style={{ width: 140 }}
                     onChange={(v) => {
                       setLevelFilter(v)
-                      loadPage(1, { role: roleFilter, status: statusFilter, level: v })
                     }}
                     className="points-config-form"
                   >
@@ -711,7 +658,6 @@ const AdminUsers: React.FC = () => {
                     style={{ width: 140 }}
                     onChange={(v) => {
                       setStatusFilter(v)
-                      loadPage(1, { role: roleFilter, status: v, level: levelFilter })
                     }}
                     className="points-config-form"
                   >
@@ -725,7 +671,6 @@ const AdminUsers: React.FC = () => {
                       setLevelFilter(undefined)
                       setStatusFilter(undefined)
                       setSelectedRowKeys([])
-                      loadPage(1, {})
                     }}
                     style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.2)', color: '#FFFFFF' }}
                   >
@@ -781,9 +726,9 @@ const AdminUsers: React.FC = () => {
               <div className="points-config-form">
                   <Table
                     columns={columns}
-                    dataSource={keyword ? filteredUsers : paginatedUsers}
+                    dataSource={filteredUsers}
                     rowKey="id"
-                    loading={paginatedLoading}
+                    loading={usersLoading}
                     virtual
                     rowSelection={{
                       selectedRowKeys,
@@ -793,16 +738,10 @@ const AdminUsers: React.FC = () => {
                       y: isMobile ? 'calc(100vh - 250px)' : 'calc(100vh - 350px)',
                       x: 'max-content'
                     }}
-                    pagination={keyword ? {
+                    pagination={{
                       pageSize: isMobile ? 10 : 20,
                       total: filteredUsers.length,
                       showSizeChanger: true,
-                    } : {
-                      current: currentPage,
-                      pageSize: isMobile ? 10 : 20,
-                      total: undefined, // 服务端分页不一定知道总数
-                      onChange: (page) => loadPage(page, { role: roleFilter, status: statusFilter, level: levelFilter }),
-                      showSizeChanger: false,
                     }}
                     style={{
                       background: 'transparent'
@@ -851,7 +790,6 @@ const AdminUsers: React.FC = () => {
                         onClick: ({ key }) => {
                           const v = key === 'all' ? undefined : (key as string)
                           setRoleFilter(v)
-                          loadPage(1, { role: v, status: statusFilter, level: levelFilter })
                         },
                       }}
                     >
@@ -879,7 +817,6 @@ const AdminUsers: React.FC = () => {
                         onClick: ({ key }) => {
                           const v = key === 'all' ? undefined : (key as string)
                           setLevelFilter(v)
-                          loadPage(1, { role: roleFilter, status: statusFilter, level: v })
                         },
                       }}
                     >
@@ -905,7 +842,6 @@ const AdminUsers: React.FC = () => {
                         onClick: ({ key }) => {
                           const v = key === 'all' ? undefined : (key as string)
                           setStatusFilter(v)
-                          loadPage(1, { role: roleFilter, status: v, level: levelFilter })
                         },
                       }}
                     >
@@ -950,7 +886,7 @@ const AdminUsers: React.FC = () => {
                     zIndex: 1
                   }}
                 >
-                  {paginatedLoading && !paginatedUsers.length ? (
+                  {usersLoading && !users.length ? (
                     <div style={{ padding: '0 16px' }}>
                       <UserSkeletonList count={10} />
                     </div>
@@ -1028,23 +964,6 @@ const AdminUsers: React.FC = () => {
                       ))}
                       {groupedByInitial.length === 0 && (
                         <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>{t('common.noData')}</div>
-                      )}
-                      
-                      {hasMore && !keyword && (
-                        <div style={{ padding: '16px', textAlign: 'center' }}>
-                          <Button 
-                            onClick={() => loadNext({ role: roleFilter, status: statusFilter, level: levelFilter })}
-                            loading={paginatedLoading}
-                            style={{ 
-                              background: 'rgba(255, 255, 255, 0.1)', 
-                              border: '1px solid rgba(244, 175, 37, 0.4)', 
-                              color: '#f4af25',
-                              borderRadius: 8
-                            }}
-                          >
-                            {t('common.loadMore')}
-                          </Button>
-                        </div>
                       )}
                     </>
                   )}
@@ -1368,7 +1287,7 @@ const AdminUsers: React.FC = () => {
                   message.error(t('messages.dataLoadFailed'))
                 }
               }
-              await refreshPaginated()
+              await refreshUsers()
               setCreating(false)
               closeEditing()
             } finally {
@@ -1582,7 +1501,7 @@ const AdminUsers: React.FC = () => {
             const res = await deleteDocument(COLLECTIONS.USERS, deleting.id)
             if (res.success) {
               message.success(t('common.deleted'))
-              await refreshPaginated()
+              await refreshUsers()
             }
           } finally {
             setLoading(false)

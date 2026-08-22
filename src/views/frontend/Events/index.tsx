@@ -18,6 +18,14 @@ import { useAuthStore } from '../../../store/modules/auth'
 import type { Event } from '../../../types'
 import { useTranslation } from 'react-i18next'
 
+const toDateOrNull = (value: any): Date | null => {
+  if (!value) return null
+  if (value?.toDate) return value.toDate()
+
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
 const Events: React.FC = () => {
   const { user } = useAuthStore()
   const { t, i18n } = useTranslation()
@@ -30,11 +38,25 @@ const Events: React.FC = () => {
 
   const getDisplayStatus = (event: Event): 'upcoming' | 'ongoing' | 'completed' => {
     const now = new Date()
-    const start = event.schedule?.startDate ? new Date(event.schedule.startDate as any) : null
-    const end = event.schedule?.endDate ? new Date(event.schedule.endDate as any) : null
+    const start = toDateOrNull(event.schedule?.startDate)
+    const end = toDateOrNull(event.schedule?.endDate)
     if (end && now > end) return 'completed'
     if (start && now >= start) return 'ongoing'
     return 'upcoming'
+  }
+
+  const isRegistrationClosed = (event: Event): boolean => {
+    const now = new Date()
+    const displayStatus = getDisplayStatus(event)
+    const registrationDeadline = toDateOrNull(event.schedule?.registrationDeadline)
+
+    return (
+      displayStatus === 'completed' ||
+      event.status === 'completed' ||
+      event.status === 'cancelled' ||
+      event.status === 'draft' ||
+      !!(registrationDeadline && now > registrationDeadline)
+    )
   }
 
   // 获取所有已完成的活动，用于计算社交关系
@@ -261,7 +283,7 @@ const Events: React.FC = () => {
                 </p>
 
                 <button
-                  disabled={getDisplayStatus(event) === 'completed' || !user}
+                  disabled={isRegistrationClosed(event) || !user}
                   style={{
                     alignSelf: 'flex-start',
                     background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
@@ -269,24 +291,28 @@ const Events: React.FC = () => {
                     fontWeight: 'bold',
                     padding: '8px 24px',
                     borderRadius: '9999px',
-                    cursor: getDisplayStatus(event) === 'completed' || !user ? 'not-allowed' : 'pointer',
+                    cursor: isRegistrationClosed(event) || !user ? 'not-allowed' : 'pointer',
                     boxShadow: '0 4px 15px rgba(244, 175, 37, 0.6)',
                     transition: 'all 0.3s ease',
-                    opacity: getDisplayStatus(event) === 'completed' || !user ? 0.6 : 1
+                    opacity: isRegistrationClosed(event) || !user ? 0.6 : 1
                   }}
                   onMouseEnter={(e) => {
-                    if (getDisplayStatus(event) !== 'completed' && user) {
+                    if (!isRegistrationClosed(event) && user) {
                       e.currentTarget.style.boxShadow = '0 6px 20px rgba(244, 175, 37, 0.6)'
                     }
                   }}
                   onMouseLeave={(e) => {
-                    if (getDisplayStatus(event) !== 'completed' && user) {
+                    if (!isRegistrationClosed(event) && user) {
                       e.currentTarget.style.boxShadow = '0 4px 15px rgba(244, 175, 37, 0.6)'
                     }
                   }}
                   onClick={async () => {
                     if (!user) {
                       message.info(t('auth.pleaseLogin'))
+                      return
+                    }
+                    if (isRegistrationClosed(event)) {
+                      message.warning(t('events.completed'))
                       return
                     }
                     const max = (event as any)?.participants?.maxParticipants || 0
@@ -308,7 +334,7 @@ const Events: React.FC = () => {
                         message.success(isRegistered ? t('events.unregistered') : t('events.registered'))
                         refresh()
                       } else {
-                        message.error(t('messages.operationFailed'))
+                        message.error(res.error?.message || t('messages.operationFailed'))
                       }
                     } finally {
                       setLoadingId(null)
@@ -316,7 +342,7 @@ const Events: React.FC = () => {
                   }}
                 >
                   {loadingId === event.id ? t('events.processing') : (() => {
-                    if (getDisplayStatus(event) === 'completed') return t('events.completed')
+                    if (isRegistrationClosed(event)) return t('events.completed')
                     if (!user) return t('auth.pleaseLogin')
                     const registeredIds = event.participants?.registered || []
                     return registeredIds.includes(user.id) ? t('events.leave') : t('events.join')

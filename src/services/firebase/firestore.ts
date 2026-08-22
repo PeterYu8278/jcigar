@@ -63,6 +63,26 @@ export const COLLECTIONS = {
 // toDateOrNull 已从 core/sanitize 重新导出，此处保留本地别名供文件内部使用
 const toDateOrNull = _toDateOrNull;
 
+const isEventOpenForRegistration = (event: Event): boolean => {
+  const now = new Date();
+  const status = event.status;
+  if (status === 'draft' || status === 'cancelled' || status === 'completed') {
+    return false;
+  }
+
+  const endDate = toDateOrNull((event as any)?.schedule?.endDate);
+  if (endDate && now > endDate) {
+    return false;
+  }
+
+  const registrationDeadline = toDateOrNull((event as any)?.schedule?.registrationDeadline);
+  if (registrationDeadline && now > registrationDeadline) {
+    return false;
+  }
+
+  return true;
+};
+
 // 通用CRUD操作
 export const createDocument = async <T>(collectionName: string, data: Omit<T, 'id'>) => {
   
@@ -334,6 +354,23 @@ export const getUpcomingEvents = async (): Promise<Event[]> => {
 export const registerForEvent = async (eventId: string, userId: string) => {
   try {
     const eventRef = doc(db, COLLECTIONS.EVENTS, eventId);
+    const eventSnap = await getDoc(eventRef);
+
+    if (!eventSnap.exists()) {
+      return { success: false, error: new Error('Event not found') };
+    }
+
+    const event = { id: eventSnap.id, ...eventSnap.data() } as Event;
+    if (!isEventOpenForRegistration(event)) {
+      return { success: false, error: new Error('Event registration is closed') };
+    }
+
+    const registeredUsers = event.participants?.registered || [];
+    const maxParticipants = event.participants?.maxParticipants || 0;
+    if (maxParticipants > 0 && registeredUsers.length >= maxParticipants && !registeredUsers.includes(userId)) {
+      return { success: false, error: new Error('Event is full') };
+    }
+
     await updateDoc(eventRef, {
       'participants.registered': arrayUnion(userId),
       updatedAt: new Date(),
@@ -1302,4 +1339,3 @@ export const getInventoryMovementsByCigarId = async (cigarId: string): Promise<I
     return [];
   }
 };
-
