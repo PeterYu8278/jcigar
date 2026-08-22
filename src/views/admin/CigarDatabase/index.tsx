@@ -36,14 +36,10 @@ import {
 import {
   collection,
   query,
-  where,
   orderBy,
   getDocs,
   deleteDoc,
-  doc,
-  limit as firestoreLimit,
-  startAfter,
-  QueryDocumentSnapshot
+  doc
 } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { GLOBAL_COLLECTIONS } from '@/config/globalCollections';
@@ -94,6 +90,21 @@ function getMostFrequentValue(stats: Record<string, number>): { value: string; c
   return { value, count, percentage: (count / total) * 100 };
 }
 
+const getPrimaryBrand = (cigar: CigarDatabaseRecord) => getMostFrequentValue(cigar.brandStats)?.value || '';
+
+const compareBrandThenProductName = (a: CigarDatabaseRecord, b: CigarDatabaseRecord) => {
+  const brandA = getPrimaryBrand(a);
+  const brandB = getPrimaryBrand(b);
+
+  if (brandA && !brandB) return -1;
+  if (!brandA && brandB) return 1;
+
+  const brandComparison = brandA.localeCompare(brandB, undefined, { sensitivity: 'base', numeric: true });
+  if (brandComparison !== 0) return brandComparison;
+
+  return a.productName.localeCompare(b.productName, undefined, { sensitivity: 'base', numeric: true });
+};
+
 export const CigarDatabase: React.FC = () => {
   const { t } = useTranslation();
   const [searchText, setSearchText] = useState('');
@@ -113,6 +124,35 @@ export const CigarDatabase: React.FC = () => {
   const [searchLoading, setSearchLoading] = useState(false);
   const { item: selectedCigar, open: detailModalVisible, openDrawer, closeDrawer } = useDetailDrawer<CigarDatabaseRecord>();
 
+  const mapCigarDatabaseDoc = (docSnap: any): CigarDatabaseRecord => {
+    const data = docSnap.data();
+    return {
+      id: docSnap.id,
+      productName: data.productName || '',
+      normalizedName: data.normalizedName || '',
+      brandStats: data.brandStats || {},
+      originStats: data.originStats || {},
+      strengthStats: data.strengthStats || {},
+      wrapperStats: data.wrapperStats || {},
+      binderStats: data.binderStats || {},
+      fillerStats: data.fillerStats || {},
+      flavorProfileStats: data.flavorProfileStats || {},
+      footTasteNotesStats: data.footTasteNotesStats || {},
+      bodyTasteNotesStats: data.bodyTasteNotesStats || {},
+      headTasteNotesStats: data.headTasteNotesStats || {},
+      ratingSum: data.ratingSum || 0,
+      ratingCount: data.ratingCount || 0,
+      description: data.description || '',
+      descriptionConfidence: data.descriptionConfidence,
+      descriptionUpdatedAt: data.descriptionUpdatedAt,
+      totalRecognitions: data.totalRecognitions || 0,
+      lastRecognizedAt: data.lastRecognizedAt,
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
+      contributors: data.contributors || {}
+    };
+  };
+
   // 纯 fetch 函数，返回 CigarDatabaseRecord[]
   const fetchCigarsData = async (): Promise<CigarDatabaseRecord[]> => {
     const cigarsRef = collection(db, GLOBAL_COLLECTIONS.CIGAR_DATABASE);
@@ -121,44 +161,11 @@ export const CigarDatabase: React.FC = () => {
     // 搜索功能通过前端过滤实现
     const q = query(
       cigarsRef,
-      orderBy('createdAt', 'desc'),
-      firestoreLimit(pagination.pageSize)
+      orderBy('createdAt', 'desc')
     );
 
     const snapshot = await getDocs(q);
-    const cigarList: CigarDatabaseRecord[] = [];
-
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      cigarList.push({
-        id: docSnap.id,
-        productName: data.productName || '',
-        normalizedName: data.normalizedName || '',
-        brandStats: data.brandStats || {},
-        originStats: data.originStats || {},
-        strengthStats: data.strengthStats || {},
-        wrapperStats: data.wrapperStats || {},
-        binderStats: data.binderStats || {},
-        fillerStats: data.fillerStats || {},
-        flavorProfileStats: data.flavorProfileStats || {},
-        footTasteNotesStats: data.footTasteNotesStats || {},
-        bodyTasteNotesStats: data.bodyTasteNotesStats || {},
-        headTasteNotesStats: data.headTasteNotesStats || {},
-        ratingSum: data.ratingSum || 0,
-        ratingCount: data.ratingCount || 0,
-        description: data.description || '',
-        descriptionConfidence: data.descriptionConfidence,
-        descriptionUpdatedAt: data.descriptionUpdatedAt,
-        totalRecognitions: data.totalRecognitions || 0,
-        lastRecognizedAt: data.lastRecognizedAt,
-        createdAt: data.createdAt,
-        updatedAt: data.updatedAt,
-        // 🆕 贡献者信息
-        contributors: data.contributors || {}
-      });
-    });
-
-    return cigarList;
+    return snapshot.docs.map(mapCigarDatabaseDoc).sort(compareBrandThenProductName);
   };
 
   const { data: fetchedCigars = [], loading: fetchLoading, refresh } = useFirestoreQuery(
@@ -170,16 +177,17 @@ export const CigarDatabase: React.FC = () => {
   useEffect(() => {
     setPagination(prev => ({
       ...prev,
-      total: fetchedCigars.length
+      total: (searchMode ? searchResults : fetchedCigars).length
     }));
-    const total = fetchedCigars.length;
-    const totalRecognitions = fetchedCigars.reduce((sum, c) => sum + (c.totalRecognitions || 0), 0);
+    const displayedCigars = searchMode ? searchResults : fetchedCigars;
+    const total = displayedCigars.length;
+    const totalRecognitions = displayedCigars.reduce((sum, c) => sum + (c.totalRecognitions || 0), 0);
     setStats({
       total,
       totalRecognitions,
       avgRecognitionsPerCigar: total > 0 ? Math.round(totalRecognitions / total) : 0
     });
-  }, [fetchedCigars]);
+  }, [fetchedCigars, searchMode, searchResults]);
 
   // 合并后的展示数据与 loading
   const cigars = searchMode ? searchResults : fetchedCigars;
@@ -199,39 +207,14 @@ export const CigarDatabase: React.FC = () => {
     try {
       const cigarsRef = collection(db, GLOBAL_COLLECTIONS.CIGAR_DATABASE);
       // TODO: use Algolia/Typesense for proper text search
-      const snapshot = await getDocs(query(cigarsRef, firestoreLimit(1000)));
+      const snapshot = await getDocs(query(cigarsRef, orderBy('createdAt', 'desc')));
 
       const filtered = snapshot.docs
-        .map(docSnap => {
-          const data = docSnap.data();
-          return {
-            id: docSnap.id,
-            productName: data.productName || '',
-            normalizedName: data.normalizedName || '',
-            brandStats: data.brandStats || {},
-            originStats: data.originStats || {},
-            strengthStats: data.strengthStats || {},
-            wrapperStats: data.wrapperStats || {},
-            binderStats: data.binderStats || {},
-            fillerStats: data.fillerStats || {},
-            flavorProfileStats: data.flavorProfileStats || {},
-            footTasteNotesStats: data.footTasteNotesStats || {},
-            bodyTasteNotesStats: data.bodyTasteNotesStats || {},
-            headTasteNotesStats: data.headTasteNotesStats || {},
-            ratingSum: data.ratingSum || 0,
-            ratingCount: data.ratingCount || 0,
-            description: data.description || '',
-            descriptionConfidence: data.descriptionConfidence,
-            descriptionUpdatedAt: data.descriptionUpdatedAt,
-            totalRecognitions: data.totalRecognitions || 0,
-            lastRecognizedAt: data.lastRecognizedAt,
-            createdAt: data.createdAt,
-            updatedAt: data.updatedAt
-          };
-        })
+        .map(mapCigarDatabaseDoc)
         .filter(cigar =>
           cigar.productName.toLowerCase().includes(value.toLowerCase())
-        );
+        )
+        .sort(compareBrandThenProductName);
 
       setSearchResults(filtered);
     } catch (error) {
@@ -679,6 +662,7 @@ export const CigarDatabase: React.FC = () => {
       dataIndex: 'productName',
       key: 'productName',
       width: 250,
+      sorter: compareBrandThenProductName,
       render: (text: string, record: CigarDatabaseRecord) => {
         const brandResult = getMostFrequentValue(record.brandStats);
         return (
@@ -1084,11 +1068,18 @@ export const CigarDatabase: React.FC = () => {
           dataSource={cigars}
           rowKey="id"
           loading={loading}
+          onChange={(nextPagination) => {
+            setPagination(prev => ({
+              ...prev,
+              current: nextPagination.current || 1,
+              pageSize: nextPagination.pageSize || prev.pageSize
+            }));
+          }}
           pagination={{
             ...pagination,
             showSizeChanger: true,
-            showTotal: (total) => (
-              <span style={{ color: '#c0c0c0' }}>{t('common.paginationTotal', { start: (pagination.current - 1) * pagination.pageSize + 1, end: Math.min(pagination.current * pagination.pageSize, pagination.total), total: pagination.total })}</span>
+            showTotal: (total, range) => (
+              <span style={{ color: '#c0c0c0' }}>{t('common.paginationTotal', { start: range[0], end: range[1], total })}</span>
             ),
             itemRender: (page, type, originalElement) => {
               if (type === 'prev') {
@@ -1221,4 +1212,3 @@ export const CigarDatabase: React.FC = () => {
 };
 
 export default CigarDatabase;
-
