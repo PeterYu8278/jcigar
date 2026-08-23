@@ -1,7 +1,7 @@
 // 首页组件 - Cigar Club黑金主题
 import React, { useEffect, useState } from 'react'
 import { useFirestoreQuery } from '../../../hooks/useFirestoreQuery'
-import { Row, Col, Card, Typography, Button, Space, Statistic, Badge, Spin, message } from 'antd'
+import { Row, Col, Card, Typography, Button, Space, Statistic, Badge, Spin, Empty, message } from 'antd'
 import {
   CalendarOutlined,
   ShoppingOutlined,
@@ -65,7 +65,7 @@ const Home: React.FC = () => {
   const [eventsFeatureVisibleForQuery, setEventsFeatureVisibleForQuery] = useState<boolean>(false)
   const [shopFeatureVisibleForQuery, setShopFeatureVisibleForQuery] = useState<boolean>(false)
 
-  const { data: fetchedEvents = [], loading: loadingEvents } = useFirestoreQuery(
+  const { data: fetchedEvents = [], loading: loadingEvents, error: eventsError, refresh: refreshEvents } = useFirestoreQuery(
     () => featuresReady && eventsFeatureVisibleForQuery ? getUpcomingEvents() : Promise.resolve([]),
     [featuresReady, eventsFeatureVisibleForQuery]
   )
@@ -73,11 +73,11 @@ const Home: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([])
   useEffect(() => { setEvents(fetchedEvents as Event[]) }, [fetchedEvents])
 
-  const { data: cigars = [], loading: loadingCigars } = useFirestoreQuery(
+  const { data: cigars = [], loading: loadingCigars, error: cigarsError, refresh: refreshCigars } = useFirestoreQuery(
     () => featuresReady && shopFeatureVisibleForQuery ? getCigars({ limit: 10 }) : Promise.resolve([]),
     [featuresReady, shopFeatureVisibleForQuery]
   )
-  const { data: brands = [], loading: loadingBrands } = useFirestoreQuery(
+  const { data: brands = [], loading: loadingBrands, error: brandsError, refresh: refreshBrands } = useFirestoreQuery(
     () => featuresReady && shopFeatureVisibleForQuery ? getBrands() : Promise.resolve([]),
     [featuresReady, shopFeatureVisibleForQuery]
   )
@@ -95,6 +95,51 @@ const Home: React.FC = () => {
     reverseDirection: false
   }
   const carouselSpeed = prefersReducedMotion ? 300 : 8000
+
+  const renderSectionFeedback = (
+    loading: boolean,
+    error: string | null,
+    empty: boolean,
+    emptyText: string,
+    onRetry: () => void
+  ) => {
+    if (loading) {
+      return (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}
+        >
+          <Spin tip={t('common.loading')} />
+        </div>
+      )
+    }
+
+    if (error) {
+      return (
+        <Card style={{ background: 'rgba(30,30,30,0.6)', borderRadius: 12, border: '1px solid rgba(255,215,0,0.2)' }}>
+          <Space direction="vertical" size={12} style={{ width: '100%', alignItems: 'center', textAlign: 'center' }}>
+            <Text style={{ color: 'rgba(255,255,255,0.82)' }}>{t('common.loadFailed')}</Text>
+            <Button type="primary" onClick={onRetry}>
+              {t('common.retry')}
+            </Button>
+          </Space>
+        </Card>
+      )
+    }
+
+    if (empty) {
+      return (
+        <Empty
+          description={<span style={{ color: 'rgba(255,255,255,0.72)' }}>{emptyText}</span>}
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          style={{ padding: '32px 16px' }}
+        />
+      )
+    }
+
+    return null
+  }
 
   // 会员等级文本获取函数
   const getMembershipText = (level: string) => {
@@ -394,11 +439,7 @@ const Home: React.FC = () => {
               {t('home.viewAll')}
             </Button>
           </div>
-          {loadingBrands ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
-              <Spin />
-            </div>
-          ) : (
+          {renderSectionFeedback(loadingBrands, brandsError, activeBrands.length === 0, t('common.noData'), refreshBrands) || (
             <div style={{ position: 'relative' }}>
               <Swiper
                 className="home-carousel-swiper"
@@ -425,7 +466,8 @@ const Home: React.FC = () => {
                 {activeBrands
                   .map((brand) => (
                     <SwiperSlide key={brand.id} className="swiper-slide-brands">
-                      <div
+                      <button
+                        type="button"
                         style={{
                           display: 'flex',
                           flexDirection: 'column',
@@ -437,7 +479,10 @@ const Home: React.FC = () => {
                           border: '1px solid rgba(255, 255, 255, 0.1)',
                           transition: 'all 0.3s ease',
                           cursor: 'pointer',
-                          height: '100%'
+                          height: '100%',
+                          width: '100%',
+                          font: 'inherit',
+                          color: 'inherit'
                         }}
                         onClick={() => navigate(`/brand/${brand.id}`)}
                         onMouseEnter={(e) => {
@@ -497,7 +542,7 @@ const Home: React.FC = () => {
                             {brand.country || ''}
                           </p>
                         </div>
-                      </div>
+                      </button>
                     </SwiperSlide>
                   ))}
               </Swiper>
@@ -526,11 +571,7 @@ const Home: React.FC = () => {
               {t('home.viewAll')}
             </Button>
           </div>
-          {loadingCigars ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
-              <Spin />
-            </div>
-          ) : (
+          {renderSectionFeedback(loadingCigars, cigarsError, cigars.length === 0, t('common.noData'), refreshCigars) || (
             <div style={{ position: 'relative' }}>
               <Swiper
                 className="home-carousel-swiper"
@@ -557,7 +598,8 @@ const Home: React.FC = () => {
               >
                 {cigars.slice(0, 10).map((cigar) => (
                   <SwiperSlide key={cigar.id}>
-                    <div
+                    <button
+                      type="button"
                       style={{
                         display: 'flex',
                         flexDirection: 'column',
@@ -569,7 +611,10 @@ const Home: React.FC = () => {
                         border: '1px solid rgba(255, 255, 255, 0.1)',
                         transition: 'all 0.3s ease',
                         cursor: 'pointer',
-                        height: '100%'
+                        height: '100%',
+                        width: '100%',
+                        font: 'inherit',
+                        color: 'inherit'
                       }}
                       onClick={() => navigate('/shop')}
                       onMouseEnter={(e) => {
@@ -647,7 +692,7 @@ const Home: React.FC = () => {
                           {cigar.origin}
                         </p>
                       </div>
-                    </div>
+                    </button>
                   </SwiperSlide>
                 ))}
               </Swiper>
@@ -695,14 +740,9 @@ const Home: React.FC = () => {
               {t('home.viewAll')}
             </Button>
           </div>
-          {loadingEvents ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
-              <Spin />
-            </div>
-          ) : (
+          {renderSectionFeedback(loadingEvents, eventsError, !events || events.length === 0, t('home.noEvents'), refreshEvents) || (
             <Space direction="vertical" size={16} style={{ width: '100%' }}>
-              {events && events.length > 0 ? (
-                (events.slice(0, 5)).map((ev) => {
+              {(events.slice(0, 5)).map((ev) => {
                   const name = (ev as any)?.name || (ev as any)?.title || '活动'
                   const start = (ev as any)?.schedule?.startDate
                   const dateObj = start?.toDate && typeof start.toDate === 'function' ? start.toDate() : (start ? new Date(start) : undefined)
@@ -737,6 +777,7 @@ const Home: React.FC = () => {
                                 : 'linear-gradient(to right,#FDE08D,#C48D3A)',
                               color: '#0a0a0a',
                               fontWeight: 700,
+                              minHeight: isMobile ? 44 : undefined,
                               opacity: isPastDeadline ? 0.5 : 1
                             }}
                             onClick={() => handleEventRegistration(ev.id, !!isRegistered)}
@@ -752,12 +793,7 @@ const Home: React.FC = () => {
                       })()}
                     </div>
                   )
-                })
-              ) : (
-                <Card style={{ background: 'rgba(30,30,30,0.6)', borderRadius: 12, border: '1px solid rgba(255,215,0,0.2)', color: '#c0c0c0' }}>
-                  {t('home.noEvents')}
-                </Card>
-              )}
+                })}
             </Space>
           )}
         </div>

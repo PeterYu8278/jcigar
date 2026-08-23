@@ -548,6 +548,7 @@ const Shop: React.FC = () => {
                   <SearchOutlined />
                 </div>
                 <Input
+                  aria-label={t('shop.searchBrand')}
                   placeholder={t('shop.searchBrand')}
                   value={searchKeyword}
                   onChange={(e) => setSearchKeyword(e.target.value)}
@@ -1939,7 +1940,7 @@ const Shop: React.FC = () => {
       {isMobile && (
         <div style={{
           position: 'fixed',
-          bottom: '60px',
+          bottom: 'calc(70px + env(safe-area-inset-bottom, 0px))',
           left: 0,
           right: 0,
               padding: '12px 16px',

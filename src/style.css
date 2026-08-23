@@ -514,7 +514,7 @@ a:hover {
   .ant-layout-content {
     margin-left: 0 !important;
     padding: 16px;
-    padding-bottom: 90px;
+    padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
     /* 为底部导航留出空间 */
   }
 }

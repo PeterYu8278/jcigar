@@ -414,6 +414,7 @@ const AICigarHistory: React.FC = () => {
                                 <SearchOutlined />
                             </div>
                             <Input
+                                aria-label={t('aiHistory.searchPlaceholder')}
                                 placeholder={t('aiHistory.searchPlaceholder')}
                                 value={searchKeyword}
                                 onChange={(e) => setSearchKeyword(e.target.value)}
@@ -489,7 +490,18 @@ const AICigarHistory: React.FC = () => {
                                 </Text>
                             }
                             style={{ marginTop: '60px' }}
-                        />
+                        >
+                            {(searchKeyword || selectedBrand !== 'all') && (
+                                <Button
+                                    onClick={() => {
+                                        setSearchKeyword('');
+                                        setSelectedBrand('all');
+                                    }}
+                                >
+                                    {t('aiHistory.reset')}
+                                </Button>
+                            )}
+                        </Empty>
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                             {Object.entries(groupedHistory).map(([brandName, items]) => (

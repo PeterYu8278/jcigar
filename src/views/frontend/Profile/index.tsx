@@ -599,7 +599,7 @@ const Profile: React.FC = () => {
                 key: 'basic',
                 label: <span><UserOutlined style={{ marginRight: 4 }} />{t('profile.nameLabel')}</span>,
                 children: (
-                  <div style={{ paddingBottom: 80 }}>
+                  <div style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}>
                     {renderBasicSection()}
                   </div>
                 )
@@ -608,7 +608,7 @@ const Profile: React.FC = () => {
                 key: 'security',
                 label: <span><LockOutlined style={{ marginRight: 4 }} />{t('auth.security')}</span>,
                 children: (
-                  <div style={{ paddingBottom: 80 }}>
+                  <div style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}>
                     {renderSecuritySection()}
                   </div>
                 )
@@ -617,7 +617,7 @@ const Profile: React.FC = () => {
                 key: 'preferences',
                 label: <span><SettingOutlined style={{ marginRight: 4 }} />{t('profile.settings')}</span>,
                 children: (
-                  <div style={{ paddingBottom: 80 }}>
+                  <div style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}>
                     {renderPreferencesSection()}
                   </div>
                 )
@@ -628,7 +628,7 @@ const Profile: React.FC = () => {
           {/* Fixed bottom save button */}
           <div style={{
             position: 'fixed', bottom: 0, left: 0, right: 0,
-            padding: '12px 16px', background: '#0d0d0d',
+            padding: '12px 16px calc(12px + env(safe-area-inset-bottom, 0px))', background: '#0d0d0d',
             borderTop: '1px solid rgba(244,175,37,0.2)'
           }}>
             <Button

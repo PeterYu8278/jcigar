@@ -217,7 +217,11 @@ const Events: React.FC = () => {
             description={<span style={{ color: 'rgba(255, 255, 255, 0.72)' }}>{t('events.noEvents')}</span>}
             image={Empty.PRESENTED_IMAGE_SIMPLE}
             style={{ padding: '72px 16px' }}
-          />
+          >
+            <Button type="primary" onClick={refresh}>
+              {t('common.retry')}
+            </Button>
+          </Empty>
         )}
 
         {events.map((event) => {
