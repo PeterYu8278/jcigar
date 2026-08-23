@@ -163,6 +163,8 @@ export default defineConfig({
           if (
             /\/node_modules\/(react|react-dom|react-is|react-router|react-router-dom|react-i18next|zustand|rc-[^/]+)\//.test(normalizedId) ||
             normalizedId.includes('/node_modules/@ant-design/v5-patch-for-react-19/') ||
+            normalizedId.includes('/node_modules/@ant-design/cssinjs/') ||
+            normalizedId.includes('/node_modules/@ant-design/cssinjs-utils/') ||
             normalizedId.includes('/node_modules/@rc-component/')
           ) {
             return 'vendor-react'
