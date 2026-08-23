@@ -160,7 +160,10 @@ export default defineConfig({
 
           const normalizedId = id.replace(/\\/g, '/')
 
-          if (/[\\/]node_modules[\\/](react|react-dom|react-router-dom)[\\/]/.test(id)) {
+          if (
+            /\/node_modules\/(react|react-dom|react-router|react-router-dom|react-i18next|zustand)\//.test(normalizedId) ||
+            normalizedId.includes('/node_modules/@ant-design/v5-patch-for-react-19/')
+          ) {
             return 'vendor-react'
           }
 
@@ -212,9 +215,7 @@ export default defineConfig({
           if (
             normalizedId.includes('/node_modules/dayjs/') ||
             normalizedId.includes('/node_modules/axios/') ||
-            normalizedId.includes('/node_modules/i18next/') ||
-            normalizedId.includes('/node_modules/react-i18next/') ||
-            normalizedId.includes('/node_modules/zustand/')
+            normalizedId.includes('/node_modules/i18next/')
           ) {
             return 'vendor-utils'
           }
