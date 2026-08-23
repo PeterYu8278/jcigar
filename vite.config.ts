@@ -131,6 +131,14 @@ export default defineConfig({
     },
     dedupe: ['react', 'react-dom'],
   },
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      '@ant-design/cssinjs',
+      '@ant-design/cssinjs-utils',
+    ],
+  },
   server: {
     port: parseInt(process.env.PORT || '3000'),
     open: true,
