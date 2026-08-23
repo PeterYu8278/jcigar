@@ -1979,20 +1979,22 @@ const Shop: React.FC = () => {
             <button
               onClick={() => setCartModalVisible(true)}
               style={{
-                padding: '16px 20px',
+                padding: '10px 14px',
                 borderRadius: 16,
                 background: 'linear-gradient(to right, rgb(253, 224, 141), rgb(196, 141, 58))',
                 color: 'rgb(34, 28, 16)',
                 fontWeight: 600,
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
-                width: 'calc(50% - 44px)',
-                minWidth: 156,
+                width: 'clamp(148px, 38vw, 190px)',
+                minHeight: 64,
                 marginLeft: 'auto',
                 boxShadow: '0 8px 24px rgba(244, 175, 37, 0.6)',
                 display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'stretch',
+                gap: 2,
                 pointerEvents: 'auto'
               }}
             >
@@ -2000,15 +2002,16 @@ const Shop: React.FC = () => {
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '12px'
               }}>
-                <span style={{ fontSize: '16px', fontWeight: '600' }}>
+                <span style={{ fontSize: '12px', fontWeight: 800, lineHeight: 1.1, whiteSpace: 'nowrap' }}>
                   {t('shop.items', { count: cartItemCount })}
                 </span>
               </div>
 
               {/* 右侧：总价 */}
-              <div style={{ fontSize: '18px', fontWeight: 'bold' }}>
+              <div style={{ fontSize: '16px', fontWeight: 900, lineHeight: 1.1, textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 RM {cartTotal.toFixed(2)}
               </div>
             </button>

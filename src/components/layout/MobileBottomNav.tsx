@@ -14,6 +14,7 @@ import {
   ClockCircleOutlined
 } from '@ant-design/icons'
 import { useAuthStore } from '../../store/modules/auth'
+import { useCartStore } from '../../store/modules'
 import { useTranslation } from 'react-i18next'
 import { UniversalScanner } from '../common/UniversalScanner'
 import { getFeaturesVisibility } from '../../services/firebase/featureVisibility'
@@ -25,9 +26,11 @@ const MobileBottomNav: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { isAdmin, isDeveloper } = useAuthStore()
+  const quantities = useCartStore((state) => state.quantities)
   const { t } = useTranslation()
   const [scannerVisible, setScannerVisible] = useState(false)
   const [featuresVisibility, setFeaturesVisibility] = useState<Record<string, boolean>>({})
+  const cartItemCount = Object.values(quantities).reduce((sum, qty) => sum + qty, 0)
 
   // 只有管理员和开发者可以访问扫码功能
   const canAccessQR = isAdmin || isDeveloper
@@ -66,7 +69,7 @@ const MobileBottomNav: React.FC = () => {
       key: '/shop',
       icon: <ShoppingCartOutlined />,
       label: t('navigation.shop'),
-      badge: 2
+      badge: cartItemCount > 0 ? cartItemCount : null
     },
     {
       key: '/profile',
@@ -113,7 +116,7 @@ const MobileBottomNav: React.FC = () => {
       const featureKey = getFeatureKeyByRoute(item.key)
       return featureKey ? (featuresVisibility[featureKey] ?? true) : true
     })
-  }, [featuresVisibility, isDeveloper, t])
+  }, [featuresVisibility, isDeveloper, t, cartItemCount])
 
   const adminNavItems = useMemo(() => {
     if (isDeveloper) {
