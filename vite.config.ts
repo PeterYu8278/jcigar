@@ -175,13 +175,6 @@ export default defineConfig({
             return 'vendor-antd-rc'
           }
 
-          if (
-            normalizedId.includes('/node_modules/@ant-design/cssinjs/') ||
-            normalizedId.includes('/node_modules/@ant-design/cssinjs-utils/')
-          ) {
-            return 'vendor-antd-cssinjs'
-          }
-
           if (/\/node_modules\/antd\/(es|lib)\/(table|list|pagination|tree|transfer)\//.test(normalizedId)) {
             return 'vendor-antd-data'
           }
