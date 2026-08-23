@@ -164,46 +164,11 @@ export default defineConfig({
             return 'vendor-react'
           }
 
-          if (normalizedId.includes('/node_modules/@ant-design/icons/')) {
-            return 'vendor-antd-icons'
-          }
-
-          if (
-            normalizedId.includes('/node_modules/@rc-component/') ||
-            /\/node_modules\/rc-[^/]+\//.test(normalizedId)
-          ) {
-            return 'vendor-antd-rc'
-          }
-
-          if (/\/node_modules\/antd\/(es|lib)\/(table|list|pagination|tree|transfer)\//.test(normalizedId)) {
-            return 'vendor-antd-data'
-          }
-
-          if (
-            /\/node_modules\/antd\/(es|lib)\/(form|input|input-number|select|checkbox|radio|switch|upload|date-picker|time-picker|cascader|auto-complete|mentions|rate|slider)\//.test(normalizedId)
-          ) {
-            return 'vendor-antd-form'
-          }
-
-          if (
-            /\/node_modules\/antd\/(es|lib)\/(modal|drawer|message|notification|popconfirm|popover|tooltip|alert|spin|skeleton|progress|result)\//.test(normalizedId)
-          ) {
-            return 'vendor-antd-feedback'
-          }
-
-          if (/\/node_modules\/antd\/(es|lib)\/(layout|menu|tabs|breadcrumb|steps|grid|flex|space|divider)\//.test(normalizedId)) {
-            return 'vendor-antd-layout'
-          }
-
-          if (
-            /\/node_modules\/antd\/(es|lib)\/(card|avatar|badge|tag|typography|image|carousel|statistic|descriptions|empty|qr-code)\//.test(normalizedId)
-          ) {
-            return 'vendor-antd-display'
-          }
-
           if (
             normalizedId.includes('/node_modules/antd/') ||
-            normalizedId.includes('/node_modules/@ant-design/')
+            normalizedId.includes('/node_modules/@ant-design/') ||
+            normalizedId.includes('/node_modules/@rc-component/') ||
+            /\/node_modules\/rc-[^/]+\//.test(normalizedId)
           ) {
             return 'vendor-antd'
           }
