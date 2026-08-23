@@ -129,6 +129,7 @@ export default defineConfig({
     alias: {
       '@': resolve(__dirname, './src'),
     },
+    dedupe: ['react', 'react-dom'],
   },
   server: {
     port: parseInt(process.env.PORT || '3000'),
