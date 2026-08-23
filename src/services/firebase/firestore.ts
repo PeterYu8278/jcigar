@@ -898,14 +898,26 @@ export const createDirectSaleOrder = async (params: { userId: string; items: { c
 // 财务相关操作
 export const getAllTransactions = async (storeId?: string, options?: { limit?: number; startDate?: Date | null; endDate?: Date | null }): Promise<Transaction[]> => {
   try {
-    const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc')];
+    const constraints: QueryConstraint[] = [];
+    const hasDateFilter = Boolean(options?.startDate || options?.endDate);
+
     if (storeId) constraints.push(where('storeId', '==', storeId));
     if (options?.startDate) constraints.push(where('createdAt', '>=', Timestamp.fromDate(options.startDate)));
     if (options?.endDate) constraints.push(where('createdAt', '<=', Timestamp.fromDate(options.endDate)));
-    if (options?.limit) constraints.push(limit(options.limit));
+    if (hasDateFilter) constraints.push(orderBy('createdAt', 'desc'));
+    if (options?.limit && hasDateFilter) constraints.push(limit(options.limit));
+
     const q = query(collection(db, COLLECTIONS.TRANSACTIONS), ...constraints);
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+    const transactions = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+
+    transactions.sort((a, b) => {
+      const dateA = toDateOrNull((a as any)?.createdAt)?.getTime() || 0;
+      const dateB = toDateOrNull((b as any)?.createdAt)?.getTime() || 0;
+      return dateB - dateA;
+    });
+
+    return options?.limit && !hasDateFilter ? transactions.slice(0, options.limit) : transactions;
   } catch (error) {
     return [];
   }

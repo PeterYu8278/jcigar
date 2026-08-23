@@ -50,8 +50,8 @@ const AdminFinance: React.FC = () => {
   const [financeEndDate] = useState<Date>(() => new Date())
 
   const { data: transactions, loading: txLoading, refresh: refreshTransactions } = useFirestoreQuery(
-    () => getAllTransactions(isSuperAdmin ? undefined : currentUser?.storeId, { startDate: financeStartDate, endDate: financeEndDate, limit: 1000 }),
-    [isSuperAdmin, currentUser?.storeId, financeStartDate, financeEndDate]
+    () => getAllTransactions(isSuperAdmin ? undefined : currentUser?.storeId),
+    [isSuperAdmin, currentUser?.storeId]
   )
   const { data: orders, refresh: refreshOrders } = useFirestoreQuery(
     () => getAllOrders(isSuperAdmin ? undefined : currentUser?.storeId, { startDate: financeStartDate, endDate: financeEndDate, limit: 500 }),
