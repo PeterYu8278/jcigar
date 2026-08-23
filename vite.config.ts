@@ -161,7 +161,7 @@ export default defineConfig({
           const normalizedId = id.replace(/\\/g, '/')
 
           if (
-            /\/node_modules\/(react|react-dom|react-is|react-router|react-router-dom|react-i18next|zustand|rc-[^/]+)\//.test(normalizedId) ||
+            /\/node_modules\/(react|react-dom|react-is|react-router|react-router-dom|react-i18next|react-[^/]+|swiper|zustand|rc-[^/]+)\//.test(normalizedId) ||
             normalizedId.includes('/node_modules/antd/') ||
             normalizedId.includes('/node_modules/@ant-design/') ||
             normalizedId.includes('/node_modules/@ant-design/v5-patch-for-react-19/') ||
@@ -225,14 +225,7 @@ export default defineConfig({
             return 'vendor-utils'
           }
 
-          if (normalizedId.includes('/node_modules/swiper/')) {
-            return 'vendor-swiper'
-          }
-
           if (
-            normalizedId.includes('/node_modules/react-rnd/') ||
-            normalizedId.includes('/node_modules/react-webcam/') ||
-            normalizedId.includes('/node_modules/react-image-crop/') ||
             normalizedId.includes('/node_modules/html5-qrcode/') ||
             normalizedId.includes('/node_modules/qrcode/')
           ) {
