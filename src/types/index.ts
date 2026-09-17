@@ -2,7 +2,7 @@
 export type { ServiceResponse, ServiceListResponse } from './api'
 
 // 用户相关类型
-export type UserRole = 'superAdmin' | 'admin' | 'member' | 'guest' | 'vip' | 'developer';
+export type UserRole = 'superAdmin' | 'admin' | 'storeAdmin' | 'member' | 'guest' | 'vip' | 'developer';
 
 export interface User {
   id: string;
