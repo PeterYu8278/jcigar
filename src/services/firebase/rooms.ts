@@ -221,6 +221,21 @@ export const getBookingsByDate = async (date: string, roomId?: string) => {
   }
 };
 
+export const getAllBookings = async () => {
+  try {
+    const q = query(collection(db, ROOM_BOOKINGS_COLLECTION));
+    const querySnapshot = await getDocs(q);
+    const bookings = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...convertFirestoreTimestamps(doc.data())
+    })) as RoomBooking[];
+    return bookings.sort((a, b) => b.date.localeCompare(a.date));
+  } catch (error) {
+    console.error('[Rooms Service] getAllBookings error:', error);
+    return [];
+  }
+};
+
 export const getUserBookings = async (userId: string) => {
   try {
     const q = query(

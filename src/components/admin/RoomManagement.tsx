@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Space, Tag, Modal, Form, Input, InputNumber, Select, Switch, message, Typography, Popconfirm, Tabs, DatePicker, Spin } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, CalendarOutlined, AppstoreOutlined } from '@ant-design/icons';
-import { getAllRooms, createRoom, updateRoom, deleteRoom, Room, getBookingsByDate, cancelBooking, RoomBooking, checkInBooking } from '../../services/firebase/rooms';
+import { getAllRooms, createRoom, updateRoom, deleteRoom, Room, getBookingsByDate, getAllBookings, cancelBooking, RoomBooking, checkInBooking } from '../../services/firebase/rooms';
 import { getAllStores } from '../../services/firebase/stores';
 import { useTranslation } from 'react-i18next';
 import { Store } from '../../types';
@@ -63,7 +63,7 @@ export const RoomManagement: React.FC<RoomManagementProps> = ({
     }
   };
 
-  const [viewDate, setViewDate] = useState<dayjs.Dayjs>(dayjs());
+  const [viewDate, setViewDate] = useState<dayjs.Dayjs | null>(null);
   const [dailyBookings, setDailyBookings] = useState<RoomBooking[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
 
@@ -74,14 +74,15 @@ export const RoomManagement: React.FC<RoomManagementProps> = ({
   const loadDailyBookings = async () => {
     setLoadingBookings(true);
     try {
-      const formattedDate = viewDate.format('YYYY-MM-DD');
-      const bookingsData = await getBookingsByDate(formattedDate);
-      const filteredBookings = filterStoreId 
-        ? bookingsData.filter(b => b.storeId === filterStoreId) 
+      const bookingsData = viewDate
+        ? await getBookingsByDate(viewDate.format('YYYY-MM-DD'))
+        : await getAllBookings();
+      const filteredBookings = filterStoreId
+        ? bookingsData.filter(b => b.storeId === filterStoreId)
         : bookingsData;
       setDailyBookings(filteredBookings);
     } catch (error) {
-      console.error('Failed to load daily bookings:', error);
+      console.error('Failed to load bookings:', error);
       message.error(t('roomManagement.loadBookingsFailed'));
     } finally {
       setLoadingBookings(false);
@@ -538,8 +539,9 @@ export const RoomManagement: React.FC<RoomManagementProps> = ({
           <span style={{ color: '#fff', fontSize: 14, whiteSpace: 'nowrap' }}>{t('roomManagement.selectDate')}</span>
           <DatePicker
             value={viewDate}
-            onChange={(date) => date && setViewDate(date)}
-            allowClear={false}
+            onChange={(date) => setViewDate(date)}
+            allowClear
+            placeholder={t('roomManagement.allDates', { defaultValue: 'All dates' })}
             style={{
               flex: 1,
               background: 'rgba(255, 255, 255, 0.05)',
