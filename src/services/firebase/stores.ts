@@ -1,14 +1,14 @@
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  getDoc, 
-  getDocs, 
-  query, 
-  where, 
-  orderBy,
+import {
+  collection,
+  doc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  getDoc,
+  getDocs,
+  setDoc,
+  query,
+  where,
   Timestamp
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
@@ -17,11 +17,31 @@ import { convertFirestoreTimestamps } from './auth';
 
 const STORES_COLLECTION = 'stores';
 
+const DEFAULT_STORE_ID = 'default';
+
+const ensureDefaultStore = async () => {
+  const ref = doc(db, STORES_COLLECTION, DEFAULT_STORE_ID);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) {
+    const now = Timestamp.fromDate(new Date());
+    await setDoc(ref, {
+      name: 'HQ',
+      status: 'active',
+      address: '',
+      phone: '',
+      email: '',
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+};
+
 /**
  * 获取所有门店
  */
 export const getAllStores = async () => {
   try {
+    await ensureDefaultStore();
     const q = query(collection(db, STORES_COLLECTION));
     const querySnapshot = await getDocs(q);
     const stores = querySnapshot.docs.map(doc => ({
