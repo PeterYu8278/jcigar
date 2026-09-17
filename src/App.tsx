@@ -307,23 +307,23 @@ const AppContent: React.FC = () => {
                   {/* 前端路由 */}
                   <Route path="/" element={user ? <Home /> : <Landing />} />
                   <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
-                  <Route path="/shop" element={<ProtectedRoute roles={['member', 'vip', 'superAdmin', 'developer']}><Shop /></ProtectedRoute>} />
-                  <Route path="/profile" element={<ProtectedRoute roles={['member', 'vip', 'superAdmin', 'developer']}><Profile /></ProtectedRoute>} />
-                  <Route path="/ai-cigar-history" element={<ProtectedRoute roles={['member', 'vip', 'superAdmin', 'developer']}><AICigarHistory /></ProtectedRoute>} />
-                  <Route path="/reload" element={<ProtectedRoute roles={['member', 'vip', 'superAdmin', 'developer']}><ReloadPage /></ProtectedRoute>} />
+                  <Route path="/shop" element={<ProtectedRoute roles={['guest', 'member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer']}><Shop /></ProtectedRoute>} />
+                  <Route path="/profile" element={<ProtectedRoute roles={['guest', 'member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer']}><Profile /></ProtectedRoute>} />
+                  <Route path="/ai-cigar-history" element={<ProtectedRoute roles={['guest', 'member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer']}><AICigarHistory /></ProtectedRoute>} />
+                  <Route path="/reload" element={<ProtectedRoute roles={['guest', 'member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer']}><ReloadPage /></ProtectedRoute>} />
                   <Route path="/payment/result" element={<PaymentResult />} />
-                  <Route path="/brand/:brandId" element={<ProtectedRoute roles={['member', 'vip', 'superAdmin', 'developer']}><BrandDetail /></ProtectedRoute>} />
+                  <Route path="/brand/:brandId" element={<ProtectedRoute roles={['guest', 'member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer']}><BrandDetail /></ProtectedRoute>} />
 
                   {/* 管理后台路由 */}
-                  <Route path="/admin" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminDashboard /></ProtectedRoute>} />
-                  <Route path="/admin/users" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminUsers /></ProtectedRoute>} />
-                  <Route path="/admin/inventory" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminInventory /></ProtectedRoute>} />
-                  <Route path="/admin/events" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminEvents /></ProtectedRoute>} />
-                  <Route path="/admin/orders" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminOrders /></ProtectedRoute>} />
-                  <Route path="/admin/reports" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><AdminReports /></ProtectedRoute>} />
+                  <Route path="/admin" element={<ProtectedRoute roles={['storeAdmin', 'admin', 'superAdmin', 'developer']}><AdminDashboard /></ProtectedRoute>} />
+                  <Route path="/admin/users" element={<ProtectedRoute roles={['storeAdmin', 'admin', 'superAdmin', 'developer']}><AdminUsers /></ProtectedRoute>} />
+                  <Route path="/admin/inventory" element={<ProtectedRoute roles={['storeAdmin', 'admin', 'superAdmin', 'developer']}><AdminInventory /></ProtectedRoute>} />
+                  <Route path="/admin/events" element={<ProtectedRoute roles={['storeAdmin', 'admin', 'superAdmin', 'developer']}><AdminEvents /></ProtectedRoute>} />
+                  <Route path="/admin/orders" element={<ProtectedRoute roles={['storeAdmin', 'admin', 'superAdmin', 'developer']}><AdminOrders /></ProtectedRoute>} />
+                  <Route path="/admin/reports" element={<ProtectedRoute roles={['storeAdmin', 'admin', 'superAdmin', 'developer']}><AdminReports /></ProtectedRoute>} />
                   <Route path="/admin/finance" element={<ProtectedRoute roles={['superAdmin', 'developer']}><AdminFinance /></ProtectedRoute>} />
-                  <Route path="/admin/points-config" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><PointsConfigPage /></ProtectedRoute>} />
-                  <Route path="/admin/visit-sessions" element={<ProtectedRoute roles={['admin', 'superAdmin', 'developer']}><VisitSessionsPage /></ProtectedRoute>} />
+                  <Route path="/admin/points-config" element={<ProtectedRoute roles={['storeAdmin', 'admin', 'superAdmin', 'developer']}><PointsConfigPage /></ProtectedRoute>} />
+                  <Route path="/admin/visit-sessions" element={<ProtectedRoute roles={['storeAdmin', 'admin', 'superAdmin', 'developer']}><VisitSessionsPage /></ProtectedRoute>} />
                   <Route path="/admin/stores" element={<ProtectedRoute roles={['superAdmin', 'developer']}><StoreManagement /></ProtectedRoute>} />
                   <Route path="/developer/orphaned-users" element={<ProtectedRoute roles={['developer']}><OrphanedUserCleanup /></ProtectedRoute>} />
                   <Route path="/developer/performance" element={<ProtectedRoute roles={['developer']}><PerformanceMonitor /></ProtectedRoute>} />
