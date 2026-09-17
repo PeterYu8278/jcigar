@@ -13,7 +13,6 @@ import { AddressSelector } from '../../../components/common/AddressSelector'
 import { getModalThemeStyles } from '../../../config/modalTheme'
 import { CigarRatingBadge } from '../../../components/common/CigarRatingBadge'
 import { useAuthStore } from '../../../store/modules/auth'
-import { createBill } from '../../../services/billplz'
 import { createOrder } from '../../../services/firebase/orders'
 
 const { Title, Text } = Typography
@@ -1725,49 +1724,7 @@ const Shop: React.FC = () => {
                 alignItems: 'center',
                 background: 'rgba(0, 0, 0, 0.3)'
               }}>
-                {/* 支付方式 */}
-                <div style={{ width: '100%', marginBottom: '12px' }}>
-                  <Button.Group style={{ width: '100%', display: 'flex' }}>
-                    <Button
-                      type={paymentMethod === 'points' ? 'primary' : 'default'}
-                      onClick={() => setPaymentMethod('points')}
-                      style={{
-                        flex: 1,
-                        height: '32px',
-                        fontSize: '11px',
-                        background: paymentMethod === 'points'
-                          ? 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)'
-                          : 'rgba(255, 255, 255, 0.03)',
-                        border: paymentMethod === 'points'
-                          ? 'none'
-                          : '1px solid rgba(255, 255, 255, 0.1)',
-                        color: paymentMethod === 'points' ? '#000' : '#fff',
-                        fontWeight: paymentMethod === 'points' ? 'bold' : 'normal'
-                      }}
-                    >
-                      {t('shop.pointsRedemption')}
-                    </Button>
-                    <Button
-                      type={paymentMethod === 'online' ? 'primary' : 'default'}
-                      onClick={() => setPaymentMethod('online')}
-                      style={{
-                        flex: 1,
-                        height: '32px',
-                        fontSize: '11px',
-                        background: paymentMethod === 'online'
-                          ? 'linear-gradient(135deg, #FDE08D 0%, #C48D3A 100%)'
-                          : 'rgba(255, 255, 255, 0.03)',
-                        border: paymentMethod === 'online'
-                          ? 'none'
-                          : '1px solid rgba(255, 255, 255, 0.1)',
-                        color: paymentMethod === 'online' ? '#000' : '#fff',
-                        fontWeight: paymentMethod === 'online' ? 'bold' : 'normal'
-                      }}
-                    >
-                      {t('shop.onlinePayment')}
-                    </Button>
-                  </Button.Group>
-                </div>
+                {/* 支付方式：仅积分兑换 */}
 
                 {/* 总计 */}
                 <div style={{
@@ -1855,47 +1812,7 @@ const Shop: React.FC = () => {
                           }
                         }
 
-                        // 如果是在线支付，先创建 Billplz 账单
-                        if (paymentMethod === 'online') {
-                          const billResponse = await createBill(
-                            cartTotal,
-                            `Shop Order for ${user.displayName || 'Member'}`,
-                            user.displayName || 'Member',
-                            user.email || '',
-                            user.phone || ''
-                          );
-
-                          if (billResponse.success && billResponse.data?.url) {
-                            // 创建待支付订单并关联 Billplz ID
-                            const orderResult = await createOrder({
-                              ...orderPayload,
-                              payment: {
-                                ...orderPayload.payment,
-                                billplzId: billResponse.data.id
-                              }
-                            });
-
-                            if (orderResult.success) {
-                              clearCart()
-                              setSidebarMode('cart')
-                              setSelectedAddressId(null)
-                              setSelectedEventId(null)
-                              setDeliveryMethod('address')
-                              
-                              message.loading(t('common.redirectingToPayment'), 2);
-                              setTimeout(() => {
-                                window.location.href = billResponse.data!.url;
-                              }, 1000);
-                              return;
-                            } else {
-                              throw new Error(orderResult.error || t('shop.createOrderFailed'));
-                            }
-                          } else {
-                            throw new Error(billResponse.error || t('common.paymentInitFailed'));
-                          }
-                        }
-
-                        // 积分支付或传统模式
+                        // 积分兑换
                         const result = await createOrder(orderPayload);
                         
                         if (result.success) {
