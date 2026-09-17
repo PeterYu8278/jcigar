@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Space, Tag, Modal, Form, Input, InputNumber, Select, Switch, message, Typography, Popconfirm, Tabs, DatePicker, Spin } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, CalendarOutlined, AppstoreOutlined, ReloadOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, CalendarOutlined, AppstoreOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { getAllRooms, createRoom, updateRoom, deleteRoom, Room, getBookingsByDate, getAllBookings, cancelBooking, RoomBooking, checkInBooking } from '../../services/firebase/rooms';
 import { getAllStores } from '../../services/firebase/stores';
 import { useTranslation } from 'react-i18next';
@@ -64,6 +64,7 @@ export const RoomManagement: React.FC<RoomManagementProps> = ({
   };
 
   const [viewDate, setViewDate] = useState<dayjs.Dayjs | null>(null);
+  const [userSearch, setUserSearch] = useState<string>('');
   const [dailyBookings, setDailyBookings] = useState<RoomBooking[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
 
@@ -538,10 +539,18 @@ export const RoomManagement: React.FC<RoomManagementProps> = ({
       return t('roomManagement.statusCancelled');
     };
 
+    const q = userSearch.trim().toLowerCase();
+    const visibleBookings = q
+      ? dailyBookings.filter(b =>
+          b.userName?.toLowerCase().includes(q) ||
+          b.userId?.toLowerCase().includes(q)
+        )
+      : dailyBookings;
+
     return (
     <>
       {/* Filter bar */}
-      <div style={{ marginBottom: 14, display: 'flex', gap: 8, alignItems: 'center' }}>
+      <div style={{ marginBottom: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
         <DatePicker
           value={viewDate}
           onChange={(date) => setViewDate(date)}
@@ -566,15 +575,30 @@ export const RoomManagement: React.FC<RoomManagementProps> = ({
             height: 36,
             flexShrink: 0,
           }}
-        >
-          {!isMobile && t('roomManagement.refreshRecords')}
-        </Button>
+        />
       </div>
+
+      {/* User search */}
+      <Input
+        prefix={<SearchOutlined style={{ color: 'rgba(255,255,255,0.3)' }} />}
+        placeholder={t('roomManagement.searchUser', { defaultValue: 'Search by name or user ID…' })}
+        value={userSearch}
+        onChange={e => setUserSearch(e.target.value)}
+        allowClear
+        style={{
+          marginBottom: 10,
+          background: 'rgba(255,255,255,0.05)',
+          border: '1px solid rgba(255,255,255,0.12)',
+          color: '#fff',
+          height: 34,
+          borderRadius: 8,
+        }}
+      />
 
       {/* Count summary */}
       {dailyBookings.length > 0 && (
         <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 10 }}>
-          {dailyBookings.length} {t('roomManagement.records', { defaultValue: 'records' })}
+          {visibleBookings.length}{q ? `/${dailyBookings.length}` : ''} {t('roomManagement.records', { defaultValue: 'records' })}
           {viewDate ? ` · ${viewDate.format('YYYY-MM-DD')}` : ''}
         </div>
       )}
@@ -582,7 +606,7 @@ export const RoomManagement: React.FC<RoomManagementProps> = ({
       {isMobile ? (
         <Spin spinning={loadingBookings}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {dailyBookings.map(record => {
+            {visibleBookings.map(record => {
               const accent = statusAccent(record.status);
               return (
                 <div key={record.id} style={{
@@ -717,7 +741,7 @@ export const RoomManagement: React.FC<RoomManagementProps> = ({
         </Spin>
       ) : (
         <Table
-          dataSource={dailyBookings}
+          dataSource={visibleBookings}
           columns={bookingColumns}
           rowKey="id"
           loading={loadingBookings}
