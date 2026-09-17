@@ -929,6 +929,14 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                             {/* Start / End Time + Legend */}
                             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
                               {/* Start + End Time side by side */}
+                              {(() => {
+                                const myBooking = bookings.find(b => b.userId === user?.id && b.status === 'confirmed');
+                                const existParts = myBooking ? myBooking.timeslot.split('-').map(s => s.trim()) : null;
+                                const displayStart = startTime || existParts?.[0] || null;
+                                const displayEnd = endTime || existParts?.[1] || null;
+                                const isExistingStart = !startTime && !!existParts?.[0];
+                                const isExistingEnd = !endTime && !!existParts?.[1];
+                                return (
                               <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                                 {/* Start Time */}
                                 <div style={{ flex: 1 }}>
@@ -938,10 +946,10 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                                   <div style={{
                                     fontSize: 22, fontWeight: 800, letterSpacing: 2,
                                     fontVariantNumeric: 'tabular-nums',
-                                    color: startTime ? '#FFD700' : 'rgba(255,255,255,0.12)',
+                                    color: displayStart ? (isExistingStart ? '#52c41a' : '#FFD700') : 'rgba(255,255,255,0.12)',
                                     textShadow: startTime ? '0 0 14px rgba(255,215,0,0.35)' : 'none',
                                   }}>
-                                    {startTime || '--:--'}
+                                    {displayStart || '--:--'}
                                   </div>
                                 </div>
 
@@ -955,12 +963,14 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                                   <div style={{
                                     fontSize: 22, fontWeight: 800, letterSpacing: 2,
                                     fontVariantNumeric: 'tabular-nums',
-                                    color: endTime ? '#ff7a35' : 'rgba(255,255,255,0.12)',
+                                    color: displayEnd ? (isExistingEnd ? '#52c41a' : '#ff7a35') : 'rgba(255,255,255,0.12)',
                                   }}>
-                                    {endTime || '--:--'}
+                                    {displayEnd || '--:--'}
                                   </div>
                                 </div>
                               </div>
+                                );
+                              })()}
 
                               <div style={{ fontSize: 8.5, color: 'rgba(255,255,255,0.28)', lineHeight: 1.5 }}>
                                 {!sliderValue
