@@ -84,8 +84,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission> = {
 export const ROUTE_PERMISSIONS = {
   '/': ['guest', 'member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer'],
   '/events': ['guest', 'member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer'],
-  '/shop': ['member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer'],
-  '/profile': ['member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer'],
+  '/shop': ['guest', 'member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer'],
+  '/profile': ['guest', 'member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer'],
   '/ai-cigar-history': ['member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer'], // AI识茄历史记录页面权限
   '/reload': ['guest', 'member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer'], // 充值页面权限
   '/brand': ['member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer'], // brand list
