@@ -968,6 +968,28 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                                 }
                               </div>
 
+                              {/* Existing booking reminder */}
+                              {(() => {
+                                const myBooking = bookings.find(b => b.userId === user?.id && b.status === 'confirmed');
+                                if (!myBooking) return null;
+                                return (
+                                  <div style={{
+                                    marginTop: 2,
+                                    padding: '5px 8px',
+                                    borderRadius: 6,
+                                    background: 'rgba(82,196,26,0.1)',
+                                    border: '1px solid rgba(82,196,26,0.3)',
+                                  }}>
+                                    <div style={{ fontSize: 8, color: 'rgba(82,196,26,0.7)', letterSpacing: 0.5, marginBottom: 2 }}>
+                                      {t('roomBooking.existingBooking', { defaultValue: 'CURRENT BOOKING' })}
+                                    </div>
+                                    <div style={{ fontSize: 12, fontWeight: 700, color: '#52c41a', fontVariantNumeric: 'tabular-nums' }}>
+                                      {myBooking.timeslot}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+
                               {/* Legend */}
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                                 {([
