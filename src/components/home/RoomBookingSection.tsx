@@ -928,34 +928,37 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
 
                             {/* Start / End Time + Legend */}
                             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                              {/* Start Time */}
-                              <div>
-                                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.38)', letterSpacing: 1, marginBottom: 3 }}>
-                                  {t('roomBooking.startTime', { defaultValue: 'START TIME' }).toUpperCase()}
+                              {/* Start + End Time side by side */}
+                              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                                {/* Start Time */}
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.38)', letterSpacing: 1, marginBottom: 3 }}>
+                                    {t('roomBooking.startTime', { defaultValue: 'START TIME' }).toUpperCase()}
+                                  </div>
+                                  <div style={{
+                                    fontSize: 22, fontWeight: 800, letterSpacing: 2,
+                                    fontVariantNumeric: 'tabular-nums',
+                                    color: startTime ? '#FFD700' : 'rgba(255,255,255,0.12)',
+                                    textShadow: startTime ? '0 0 14px rgba(255,215,0,0.35)' : 'none',
+                                  }}>
+                                    {startTime || '--:--'}
+                                  </div>
                                 </div>
-                                <div style={{
-                                  fontSize: 26, fontWeight: 800, letterSpacing: 2,
-                                  fontVariantNumeric: 'tabular-nums',
-                                  color: startTime ? '#FFD700' : 'rgba(255,255,255,0.12)',
-                                  textShadow: startTime ? '0 0 14px rgba(255,215,0,0.35)' : 'none',
-                                }}>
-                                  {startTime || '--:--'}
-                                </div>
-                              </div>
 
-                              <div style={{ width: '100%', height: 1, background: 'rgba(255,255,255,0.06)' }} />
+                                <div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,0.06)', margin: '2px 0' }} />
 
-                              {/* End Time */}
-                              <div>
-                                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.38)', letterSpacing: 1, marginBottom: 3 }}>
-                                  {t('roomBooking.endTime', { defaultValue: 'END TIME' }).toUpperCase()}
-                                </div>
-                                <div style={{
-                                  fontSize: 26, fontWeight: 800, letterSpacing: 2,
-                                  fontVariantNumeric: 'tabular-nums',
-                                  color: endTime ? '#ff7a35' : 'rgba(255,255,255,0.12)',
-                                }}>
-                                  {endTime || '--:--'}
+                                {/* End Time */}
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.38)', letterSpacing: 1, marginBottom: 3 }}>
+                                    {t('roomBooking.endTime', { defaultValue: 'END TIME' }).toUpperCase()}
+                                  </div>
+                                  <div style={{
+                                    fontSize: 22, fontWeight: 800, letterSpacing: 2,
+                                    fontVariantNumeric: 'tabular-nums',
+                                    color: endTime ? '#ff7a35' : 'rgba(255,255,255,0.12)',
+                                  }}>
+                                    {endTime || '--:--'}
+                                  </div>
                                 </div>
                               </div>
 
