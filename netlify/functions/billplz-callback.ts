@@ -5,6 +5,7 @@
 import { Handler } from '@netlify/functions';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { createHmac } from 'crypto';
 import { GLOBAL_COLLECTIONS } from '../../src/config/globalCollections';
 
 // Initialize Firebase Admin
@@ -25,6 +26,27 @@ if (!getApps().length) {
 
 const db = getFirestore();
 
+/**
+ * Verify Billplz X-Signature
+ * Spec: HMAC-SHA256 of alphabetically-sorted key=value pairs (excluding x_signature itself)
+ * joined by "|", using the X-Signature Key as secret.
+ */
+function verifyXSignature(params: URLSearchParams, xSignatureKey: string): boolean {
+  const receivedSig = params.get('x_signature');
+  if (!receivedSig) return false;
+
+  // Collect all params except x_signature, sort alphabetically by key
+  const entries: [string, string][] = [];
+  params.forEach((value, key) => {
+    if (key !== 'x_signature') entries.push([key, value]);
+  });
+  entries.sort(([a], [b]) => a.localeCompare(b));
+
+  const source = entries.map(([, v]) => v).join('|');
+  const computed = createHmac('sha256', xSignatureKey).update(source).digest('hex');
+  return computed === receivedSig;
+}
+
 export const handler: Handler = async (event) => {
   // Only allow POST
   if (event.httpMethod !== 'POST') {
@@ -37,6 +59,22 @@ export const handler: Handler = async (event) => {
     const billId = params.get('id');
     const paid = params.get('paid');
     const status = params.get('state');
+
+    // --- X-Signature verification ---
+    // Read both possible xSignatureKeys from appConfig
+    const appConfigDoc = await db.collection(GLOBAL_COLLECTIONS.APP_CONFIG).doc('default').get();
+    const appConfigData = appConfigDoc.data() || {};
+    const clientXSigKey = appConfigData?.payment?.billplz?.xSignatureKey as string | undefined;
+    const platformXSigKey = appConfigData?.paymentPlatform?.billplz?.xSignatureKey as string | undefined;
+
+    const clientValid = clientXSigKey ? verifyXSignature(params, clientXSigKey) : false;
+    const platformValid = platformXSigKey ? verifyXSignature(params, platformXSigKey) : false;
+
+    if (!clientValid && !platformValid) {
+      console.error(`[billplz-callback] X-Signature verification failed for Bill ID: ${billId}`);
+      return { statusCode: 401, body: 'Unauthorized: Invalid X-Signature' };
+    }
+    // --------------------------------
 
     console.log(`[billplz-callback] Received callback for Bill ID: ${billId}, Paid: ${paid}, Status: ${status}`);
 
@@ -146,11 +184,11 @@ export const handler: Handler = async (event) => {
           const appConfigRef = db.collection(GLOBAL_COLLECTIONS.APP_CONFIG).doc('default');
           const appConfigDoc = await transaction.get(appConfigRef);
           const appConfigData = appConfigDoc.data();
-          
+
           const plan = appConfigData?.subscription?.plans?.find((p: any) => p.id === subData.planId);
           const validMonths = plan?.validPeriodMonth || 12;
-          
-          // Calculate new expiry date using basic Date arithmetic
+
+          // Calculate new expiry date
           const now = new Date();
           const newExpiry = new Date(now.getFullYear(), now.getMonth() + validMonths, now.getDate());
 
@@ -162,16 +200,28 @@ export const handler: Handler = async (event) => {
             expiryDate: newExpiry,
             updatedAt: FieldValue.serverTimestamp()
           });
-          
+
           // Update AppConfig
           transaction.update(appConfigRef, {
             'subscription.isActive': true,
             'subscription.planId': subData.planId,
-            'subscription.plan': subData.planId, // Legacy sync
+            'subscription.plan': subData.planId,
             'subscription.expiryDate': newExpiry,
             updatedAt: FieldValue.serverTimestamp(),
             updatedBy: 'system_billplz'
           });
+
+          // Sync user-level subscription record if userId present
+          const userId = subData.userId as string | undefined;
+          if (userId) {
+            const userRef = db.collection(GLOBAL_COLLECTIONS.USERS).doc(userId);
+            transaction.update(userRef, {
+              'membership.subscriptionPlanId': subData.planId,
+              'membership.subscriptionExpiresAt': newExpiry,
+              'membership.subscriptionStatus': 'active',
+              updatedAt: FieldValue.serverTimestamp()
+            });
+          }
         });
 
         console.log(`[billplz-callback] Successfully processed subscription request ${subDoc.id}`);

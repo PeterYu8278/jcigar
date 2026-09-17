@@ -16,7 +16,8 @@ export const FRONTEND_ROUTES = {
   SHOP: '/shop',
   EVENTS: '/events',
   PROFILE: '/profile',
-  MY_ORDERS: '/my-orders'
+  MY_ORDERS: '/my-orders',
+  PAYMENT_RESULT: '/payment/result'
 } as const
 
 // 后台路由

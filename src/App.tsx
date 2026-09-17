@@ -22,6 +22,7 @@ const BrandDetail = lazy(() => import('./views/frontend/BrandDetail'))
 const ReloadPage = lazy(() => import('./views/frontend/Reload'))
 const AICigarHistory = lazy(() => import('./views/frontend/AICigarHistory'))
 const Landing = lazy(() => import('./views/frontend/Landing'))
+const PaymentResult = lazy(() => import('./views/frontend/PaymentResult'))
 
 // --- 管理后台页面 (Lazy Loaded) ---
 const AdminDashboard = lazy(() => import('./views/admin/Dashboard'))
@@ -310,6 +311,7 @@ const AppContent: React.FC = () => {
                   <Route path="/profile" element={<ProtectedRoute roles={['member', 'vip', 'superAdmin', 'developer']}><Profile /></ProtectedRoute>} />
                   <Route path="/ai-cigar-history" element={<ProtectedRoute roles={['member', 'vip', 'superAdmin', 'developer']}><AICigarHistory /></ProtectedRoute>} />
                   <Route path="/reload" element={<ProtectedRoute roles={['member', 'vip', 'superAdmin', 'developer']}><ReloadPage /></ProtectedRoute>} />
+                  <Route path="/payment/result" element={<PaymentResult />} />
                   <Route path="/brand/:brandId" element={<ProtectedRoute roles={['member', 'vip', 'superAdmin', 'developer']}><BrandDetail /></ProtectedRoute>} />
 
                   {/* 管理后台路由 */}
