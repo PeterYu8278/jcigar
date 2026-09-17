@@ -171,8 +171,8 @@ const Events: React.FC = () => {
       <div style={{
         flex: 1,
         overflowY: 'auto',
-        display: 'flex',
-        flexDirection: 'column',
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
         gap: '24px',
         width: '100%',
         boxSizing: 'border-box'
@@ -182,6 +182,7 @@ const Events: React.FC = () => {
             role="status"
             aria-live="polite"
             style={{
+              gridColumn: '1 / -1',
               minHeight: '240px',
               display: 'flex',
               alignItems: 'center',
@@ -195,6 +196,7 @@ const Events: React.FC = () => {
 
         {!loading && error && (
           <div style={{
+            gridColumn: '1 / -1',
             minHeight: '240px',
             display: 'flex',
             flexDirection: 'column',
@@ -216,7 +218,7 @@ const Events: React.FC = () => {
           <Empty
             description={<span style={{ color: 'rgba(255, 255, 255, 0.72)' }}>{t('events.noEvents')}</span>}
             image={Empty.PRESENTED_IMAGE_SIMPLE}
-            style={{ padding: '72px 16px' }}
+            style={{ gridColumn: '1 / -1', padding: '72px 16px' }}
           >
             <Button type="primary" onClick={refresh}>
               {t('common.retry')}
@@ -234,7 +236,7 @@ const Events: React.FC = () => {
                 overflow: 'hidden',
                 borderRadius: '12px',
                 boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)',
-                height: '192px',
+                aspectRatio: '21/9',
                 width: '100%',
                 boxSizing: 'border-box',
                 transition: 'transform 0.3s ease'
