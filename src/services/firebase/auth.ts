@@ -34,7 +34,7 @@ const createGoogleTempUserData = (
   return {
     email,
     displayName: displayName || '未命名用户',
-    role: 'member',
+    role: 'guest',
     status: 'inactive',
     memberId,
     profile: {
@@ -124,7 +124,7 @@ export const registerUser = async (
     const userData: Omit<User, 'id'> = {
       email: normalizedEmail,  // ✅ 邮箱必填（使用标准化格式）
       displayName,
-      role: 'member',
+      role: 'guest',
       status: 'inactive',  // ✅ 默认状态为非活跃
       memberId,  // ✅ 会员编号（用作引荐码）
       profile: {

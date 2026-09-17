@@ -87,7 +87,7 @@ export const ROUTE_PERMISSIONS = {
   '/shop': ['member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer'],
   '/profile': ['member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer'],
   '/ai-cigar-history': ['member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer'], // AI识茄历史记录页面权限
-  '/reload': ['member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer'], // 充值页面权限
+  '/reload': ['guest', 'member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer'], // 充值页面权限
   '/brand': ['member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer'], // brand list
   '/admin': ['storeAdmin', 'admin', 'superAdmin', 'developer'],
   '/admin/users': ['storeAdmin', 'admin', 'superAdmin', 'developer'],

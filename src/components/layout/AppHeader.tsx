@@ -188,13 +188,15 @@ const AppHeader: React.FC<AppHeaderProps> = ({ siderCollapsed = false, isDesktop
                 {user?.displayName || user?.email || 'User'}
               </Text>
               <Text style={{ color: 'rgb(255,215,0)', fontSize: 12, fontWeight: 500 }}>
-                {user?.role === 'developer'
-                  ? t('auth.developer', { defaultValue: '开发者' })
-                  : user?.role === 'superAdmin' 
-                  ? t('auth.admin', { defaultValue: '管理员' })
-                  : user?.role === 'vip'
-                  ? t('auth.vip', { defaultValue: 'VIP' })
-                  : t('auth.member', { defaultValue: '会员' })}
+                {(() => {
+                  const role = user?.role as string | undefined;
+                  if (role === 'developer') return t('auth.developer', { defaultValue: 'Developer' });
+                  if (role === 'superAdmin') return t('auth.superAdmin', { defaultValue: 'Super Admin' });
+                  if (role === 'admin' || role === 'storeAdmin') return t('auth.storeAdmin', { defaultValue: 'Store Admin' });
+                  if (role === 'vip') return t('auth.vip', { defaultValue: 'VIP' });
+                  if (role === 'member') return t('auth.member', { defaultValue: 'Member' });
+                  return t('auth.guest', { defaultValue: 'Guest' });
+                })()}
               </Text>
             </div>
           </Space>
