@@ -22,12 +22,20 @@ const STORES_COLLECTION = 'stores';
  */
 export const getAllStores = async () => {
   try {
-    const q = query(collection(db, STORES_COLLECTION), orderBy('createdAt', 'desc'));
+    const q = query(collection(db, STORES_COLLECTION));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
+    const stores = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...convertFirestoreTimestamps(doc.data())
     })) as Store[];
+    // HQ (id: 'default') first, then by createdAt desc
+    return stores.sort((a, b) => {
+      if (a.id === 'default') return -1;
+      if (b.id === 'default') return 1;
+      const aTime = (a as any).createdAt?.getTime?.() ?? 0;
+      const bTime = (b as any).createdAt?.getTime?.() ?? 0;
+      return bTime - aTime;
+    });
   } catch (error) {
     console.error('[Stores Service] getAllStores error:', error);
     throw error;
@@ -39,16 +47,19 @@ export const getAllStores = async () => {
  */
 export const getActiveStores = async () => {
   try {
-    const q = query(
-      collection(db, STORES_COLLECTION), 
-      where('status', '==', 'active'),
-      orderBy('createdAt', 'desc')
-    );
+    const q = query(collection(db, STORES_COLLECTION), where('status', '==', 'active'));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
+    const stores = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...convertFirestoreTimestamps(doc.data())
     })) as Store[];
+    return stores.sort((a, b) => {
+      if (a.id === 'default') return -1;
+      if (b.id === 'default') return 1;
+      const aTime = (a as any).createdAt?.getTime?.() ?? 0;
+      const bTime = (b as any).createdAt?.getTime?.() ?? 0;
+      return bTime - aTime;
+    });
   } catch (error) {
     console.error('[Stores Service] getActiveStores error:', error);
     throw error;
