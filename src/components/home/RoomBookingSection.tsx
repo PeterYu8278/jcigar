@@ -1068,16 +1068,22 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                       </div>
                     </div>
 
-                    {isMinDurationInvalid && (
-                      <div style={{ color: '#f87171', fontSize: 10, marginTop: 2, fontWeight: 600, textAlign: 'center' }}>
-                        {t('roomBooking.minBookingHoursError', { count: minHours })}
-                      </div>
-                    )}
-                    {isInsufficient && !isMinDurationInvalid && (
-                      <div style={{ color: '#f87171', fontSize: 10, marginTop: 2, fontWeight: 600, textAlign: 'center' }}>
-                        {t('roomBooking.insufficientPointsError')}
-                      </div>
-                    )}
+                    <div style={{
+                      fontSize: 10,
+                      marginTop: 2,
+                      fontWeight: 600,
+                      textAlign: 'center',
+                      color: isMinDurationInvalid
+                        ? '#f87171'
+                        : isInsufficient
+                          ? '#f87171'
+                          : 'transparent',
+                      minHeight: 16,
+                    }}>
+                      {isMinDurationInvalid
+                        ? t('roomBooking.minBookingHoursError', { count: minHours })
+                        : t('roomBooking.insufficientPointsError')}
+                    </div>
                   </div>
 
                   {/* Modal Actions */}
