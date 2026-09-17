@@ -275,6 +275,50 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
     }
   };
 
+  const handleStartHour = (h: number) => {
+    if (!selectedRoom) return;
+    const currentEnd = sliderValue ? sliderValue[1] : h + 1;
+    const newEnd = Math.max(currentEnd, h + 1);
+    setSelectedStartPoint(h);
+    setSliderValue([h, newEnd]);
+    setStartTime(`${String(h).padStart(2, '0')}:00`);
+    setEndTime(`${String(newEnd).padStart(2, '0')}:00`);
+    setIsRangeFinalized(false);
+  };
+
+  const handleEndHour = (h: number) => {
+    if (!selectedRoom) return;
+    const start = sliderValue ? sliderValue[0] : selectedStartPoint;
+    if (start === null || h <= start) return;
+
+    const bookedByOthers = bookings
+      .filter(b => (b.status === 'confirmed' || b.status === 'checked_in') && b.userId !== user?.id)
+      .map(b => {
+        const parts = b.timeslot.split('-').map(s => s.trim());
+        return { start: timeToMinutes(parts[0]), end: timeToMinutes(parts[1]) };
+      });
+    if (selectedRoom.unavailablePeriods) {
+      selectedRoom.unavailablePeriods.forEach(p => {
+        bookedByOthers.push({ start: timeToMinutes(p.start), end: timeToMinutes(p.end) });
+      });
+    }
+
+    for (let checkH = start; checkH < h; checkH++) {
+      const checkStartMins = checkH * 60;
+      const checkEndMins = (checkH + 1) * 60;
+      if (bookedByOthers.some(i => checkStartMins < i.end && i.start < checkEndMins) ||
+          isTimePast(`${String(checkH + 1).padStart(2, '0')}:00`)) {
+        message.warning(t('roomBooking.slotUnavailable'));
+        return;
+      }
+    }
+
+    setSliderValue([start, h]);
+    setStartTime(`${String(start).padStart(2, '0')}:00`);
+    setEndTime(`${String(h).padStart(2, '0')}:00`);
+    setIsRangeFinalized(true);
+  };
+
   // Generate date options for the next 7 days
   const dateOptions = Array.from({ length: 7 }, (_, i) => {
     const d = dayjs().add(i, 'day');
@@ -800,163 +844,181 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
                       </div>
                     </div>
 
-                    {/* Clickable Hourly Grid Selector */}
+                    {/* Clock-based Time Selection */}
                     <div>
-                      <div style={{ marginBottom: 6, fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>
+                      <div style={{ marginBottom: 8, fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>
                         {t('roomBooking.selectTimeslot')}
                       </div>
+
+                      {/* Digital Clock Display */}
                       <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(4, 1fr)',
-                        gap: 6,
-                        marginBottom: 4
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 16,
+                        padding: '10px 0 14px',
+                        borderBottom: '1px solid rgba(255,255,255,0.06)',
+                        marginBottom: 12,
                       }}>
-                        {(() => {
-                          const segments = [];
-                          for (let h = open; h < close; h++) {
-                            const startMins = h * 60;
-                            const endMins = (h + 1) * 60;
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', marginBottom: 3, letterSpacing: 1 }}>
+                            {t('roomBooking.startTime', { defaultValue: 'START' }).toUpperCase()}
+                          </div>
+                          <div style={{
+                            fontSize: 28,
+                            fontWeight: 800,
+                            color: startTime ? '#FFD700' : 'rgba(255,255,255,0.15)',
+                            fontVariantNumeric: 'tabular-nums',
+                            letterSpacing: 2,
+                            minWidth: 70,
+                            textAlign: 'center',
+                            textShadow: startTime ? '0 0 20px rgba(255,215,0,0.3)' : 'none',
+                          }}>
+                            {startTime || '--:--'}
+                          </div>
+                        </div>
 
-                            // Find matching booking to determine ownership
-                            const matchingBooking = bookings.find(b => {
-                              if (b.status !== 'confirmed' && b.status !== 'checked_in') return false;
-                              const parts = b.timeslot.split('-').map(s => s.trim());
-                              const bStart = timeToMinutes(parts[0]);
-                              const bEnd = timeToMinutes(parts[1]);
-                              return startMins >= bStart && endMins <= bEnd;
-                            });
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                          <ClockCircleOutlined style={{ fontSize: 20, color: 'rgba(255,255,255,0.25)' }} />
+                          <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 14, lineHeight: 1 }}>→</span>
+                        </div>
 
-                            const isUnavailable = selectedRoom.unavailablePeriods?.some(p => {
-                              const pStart = timeToMinutes(p.start);
-                              const pEnd = timeToMinutes(p.end);
-                              return startMins >= pStart && endMins <= pEnd;
-                            });
-
-                            let isBookedByOthers = false;
-                            let isBookedByMe = false;
-                            let isCheckedInByMe = false;
-
-                            if (matchingBooking) {
-                              if (matchingBooking.userId === user?.id) {
-                                if (matchingBooking.status === 'checked_in') {
-                                  isCheckedInByMe = true;
-                                } else {
-                                  isBookedByMe = true;
-                                }
-                              } else {
-                                isBookedByOthers = true;
-                              }
-                            }
-
-                            const isPast = isTimePast(`${String(h + 1).padStart(2, '0')}:00`);
-                            const isSlotSelected = sliderValue && h >= sliderValue[0] && h < sliderValue[1];
-
-                            segments.push(
-                              <div
-                                key={h}
-                                onClick={() => {
-                                  if (isPast || isBookedByOthers || isUnavailable) return;
-                                  handleCellClick(h);
-                                }}
-                                style={{
-                                  padding: '6px 2px',
-                                  borderRadius: 8,
-                                  cursor: (isPast || isBookedByOthers || isUnavailable) ? 'not-allowed' : 'pointer',
-                                  textAlign: 'center',
-                                  transition: 'all 0.2s ease',
-                                  border: isSlotSelected
-                                    ? '1px solid #FFD700'
-                                    : '1px solid rgba(255,255,255,0.06)',
-                                  background: isSlotSelected
-                                    ? 'rgba(254,224,141,0.15)'
-                                    : isCheckedInByMe
-                                      ? 'rgba(212,175,55,0.12)'
-                                      : isBookedByMe
-                                        ? 'rgba(82,196,26,0.1)'
-                                        : isBookedByOthers
-                                          ? 'rgba(255,77,79,0.05)'
-                                          : isUnavailable
-                                            ? 'rgba(255,255,255,0.03)'
-                                            : isPast
-                                              ? 'rgba(255,255,255,0.02)'
-                                              : 'rgba(255,255,255,0.04)',
-                                }}
-                              >
-                                <div style={{
-                                  fontSize: 9,
-                                  fontWeight: 600,
-                                  color: isSlotSelected
-                                    ? '#FFD700'
-                                    : isCheckedInByMe
-                                      ? '#D4AF37'
-                                      : isBookedByMe
-                                        ? '#52c41a'
-                                        : (isPast || isBookedByOthers || isUnavailable)
-                                          ? 'rgba(255,255,255,0.2)'
-                                          : '#fff',
-                                  textDecoration: (isPast || isBookedByOthers) ? 'line-through' : 'none'
-                                }}>
-                                  {`${String(h).padStart(2, '0')}:00`}
-                                </div>
-                                <div style={{
-                                  fontSize: 7,
-                                  marginTop: 1,
-                                  color: isSlotSelected
-                                    ? '#FFD700'
-                                    : isCheckedInByMe
-                                      ? '#D4AF37'
-                                      : isBookedByMe
-                                        ? '#52c41a'
-                                        : isBookedByOthers
-                                          ? '#ff4d4f'
-                                          : isUnavailable
-                                            ? 'rgba(255,255,255,0.25)'
-                                            : isPast
-                                              ? 'rgba(255,255,255,0.15)'
-                                              : 'rgba(255,255,255,0.4)',
-                                  fontWeight: (isSlotSelected || isBookedByMe || isCheckedInByMe) ? 600 : 400
-                                }}>
-                                  {isSlotSelected
-                                    ? t('roomBooking.statusSelected')
-                                    : isCheckedInByMe
-                                      ? t('roomBooking.statusCheckedIn')
-                                      : isBookedByMe
-                                        ? t('roomBooking.statusMyBooking')
-                                        : isBookedByOthers
-                                          ? t('roomBooking.statusBooked')
-                                          : isUnavailable
-                                            ? t('roomBooking.statusUnavailable')
-                                            : isPast
-                                              ? t('roomBooking.statusPast')
-                                              : t('roomBooking.statusAvailable')}
-                                </div>
-                              </div>
-                            );
-                          }
-                          return segments;
-                        })()}
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', marginBottom: 3, letterSpacing: 1 }}>
+                            {t('roomBooking.endTime', { defaultValue: 'END' }).toUpperCase()}
+                          </div>
+                          <div style={{
+                            fontSize: 28,
+                            fontWeight: 800,
+                            color: endTime ? '#FFD700' : 'rgba(255,255,255,0.15)',
+                            fontVariantNumeric: 'tabular-nums',
+                            letterSpacing: 2,
+                            minWidth: 70,
+                            textAlign: 'center',
+                            textShadow: endTime ? '0 0 20px rgba(255,215,0,0.3)' : 'none',
+                          }}>
+                            {endTime || '--:--'}
+                          </div>
+                        </div>
                       </div>
 
-                      {/* Color keys legend */}
-                      <div style={{ display: 'flex', justifyContent: 'center', gap: 6, fontSize: 8, color: 'rgba(255,255,255,0.4)', marginTop: 4, flexWrap: 'wrap' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      {/* Two-column hour picker */}
+                      {(() => {
+                        const bookedByOthers = bookings
+                          .filter(b => (b.status === 'confirmed' || b.status === 'checked_in') && b.userId !== user?.id)
+                          .map(b => {
+                            const parts = b.timeslot.split('-').map(s => s.trim());
+                            return { start: timeToMinutes(parts[0]), end: timeToMinutes(parts[1]) };
+                          });
+                        if (selectedRoom.unavailablePeriods) {
+                          selectedRoom.unavailablePeriods.forEach(p => {
+                            bookedByOthers.push({ start: timeToMinutes(p.start), end: timeToMinutes(p.end) });
+                          });
+                        }
+
+                        const isHourBlocked = (h: number) => {
+                          const startMins = h * 60;
+                          const endMins = (h + 1) * 60;
+                          return isTimePast(`${String(h + 1).padStart(2, '0')}:00`) ||
+                            bookedByOthers.some(i => startMins < i.end && i.start < endMins);
+                        };
+
+                        const myBooking = bookings.find(b => b.userId === user?.id && b.status === 'confirmed');
+                        const myStartH = myBooking ? timeToMinutes(myBooking.timeslot.split('-')[0].trim()) / 60 : null;
+                        const myEndH = myBooking ? timeToMinutes(myBooking.timeslot.split('-')[1].trim()) / 60 : null;
+
+                        const startHours = Array.from({ length: close - open }, (_, i) => open + i);
+                        const endHours = Array.from({ length: close - open }, (_, i) => open + i + 1);
+
+                        const cellStyle = (isSelected: boolean, isBlocked: boolean, isMyBooking: boolean): React.CSSProperties => ({
+                          padding: '6px 2px',
+                          borderRadius: 6,
+                          cursor: isBlocked ? 'not-allowed' : 'pointer',
+                          textAlign: 'center',
+                          border: isSelected
+                            ? '1px solid #FFD700'
+                            : isMyBooking
+                              ? '1px solid rgba(82,196,26,0.4)'
+                              : '1px solid rgba(255,255,255,0.06)',
+                          background: isSelected
+                            ? 'rgba(254,224,141,0.18)'
+                            : isMyBooking
+                              ? 'rgba(82,196,26,0.08)'
+                              : isBlocked
+                                ? 'rgba(255,255,255,0.01)'
+                                : 'rgba(255,255,255,0.04)',
+                          fontSize: 10,
+                          fontWeight: 600,
+                          color: isSelected
+                            ? '#FFD700'
+                            : isMyBooking
+                              ? '#52c41a'
+                              : isBlocked
+                                ? 'rgba(255,255,255,0.18)'
+                                : '#fff',
+                          textDecoration: isBlocked ? 'line-through' : 'none',
+                          transition: 'all 0.15s',
+                        });
+
+                        return (
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', gap: 0, alignItems: 'start' }}>
+                            {/* Start Time Column */}
+                            <div style={{ paddingRight: 8 }}>
+                              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginBottom: 6, fontWeight: 700, letterSpacing: 1 }}>
+                                {t('roomBooking.startTime', { defaultValue: 'START' }).toUpperCase()}
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
+                                {startHours.map(h => {
+                                  const isBlocked = isHourBlocked(h);
+                                  const isSelected = sliderValue ? h === sliderValue[0] : false;
+                                  const isMyBookingHour = myStartH !== null && myEndH !== null && h >= myStartH && h < myEndH && !isSelected;
+                                  return (
+                                    <div key={h} onClick={() => !isBlocked && handleStartHour(h)} style={cellStyle(isSelected, isBlocked, isMyBookingHour)}>
+                                      {`${String(h).padStart(2, '0')}:00`}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* Vertical Divider */}
+                            <div style={{ background: 'rgba(255,255,255,0.08)', minHeight: 120 }} />
+
+                            {/* End Time Column */}
+                            <div style={{ paddingLeft: 8 }}>
+                              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginBottom: 6, fontWeight: 700, letterSpacing: 1 }}>
+                                {t('roomBooking.endTime', { defaultValue: 'END' }).toUpperCase()}
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
+                                {endHours.map(h => {
+                                  const currentStart = sliderValue ? sliderValue[0] : null;
+                                  const isBeforeStart = currentStart === null || h <= currentStart;
+                                  const isSelected = sliderValue ? h === sliderValue[1] : false;
+                                  const isMyBookingHour = myEndH !== null && h === myEndH && !isSelected;
+                                  return (
+                                    <div key={h} onClick={() => !isBeforeStart && handleEndHour(h)} style={cellStyle(isSelected, isBeforeStart, isMyBookingHour)}>
+                                      {`${String(h).padStart(2, '0')}:00`}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Legend */}
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: 8, fontSize: 8, color: 'rgba(255,255,255,0.4)', marginTop: 10, flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                           <span style={{ width: 6, height: 6, borderRadius: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }} />
                           <span>{t('roomBooking.legendAvailable')}</span>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <span style={{ width: 6, height: 6, borderRadius: 1, background: 'rgba(255,77,79,0.05)', border: '1px solid rgba(255,77,79,0.2)' }} />
-                          <span>{t('roomBooking.legendBooked')}</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <span style={{ width: 6, height: 6, borderRadius: 1, background: 'rgba(82,196,26,0.1)', border: '1px solid rgba(82,196,26,0.3)' }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <span style={{ width: 6, height: 6, borderRadius: 1, background: 'rgba(82,196,26,0.08)', border: '1px solid rgba(82,196,26,0.4)' }} />
                           <span>{t('roomBooking.legendMyBooking')}</span>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <span style={{ width: 6, height: 6, borderRadius: 1, background: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.3)' }} />
-                          <span>{t('roomBooking.legendCheckedIn')}</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <span style={{ width: 6, height: 6, borderRadius: 1, background: 'rgba(254,224,141,0.15)', border: '1px solid #FFD700' }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <span style={{ width: 6, height: 6, borderRadius: 1, background: 'rgba(254,224,141,0.18)', border: '1px solid #FFD700' }} />
                           <span>{t('roomBooking.legendSelected')}</span>
                         </div>
                       </div>
