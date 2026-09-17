@@ -928,39 +928,47 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
 
                             {/* Start / End Time + Legend */}
                             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                              {/* Start + End Time side by side */}
-                              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                                {/* Start Time */}
-                                <div style={{ flex: 1 }}>
-                                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.38)', letterSpacing: 1, marginBottom: 3 }}>
-                                    {t('roomBooking.startTime', { defaultValue: 'START TIME' }).toUpperCase()}
+                              {/* Start + End Time stacked, label left / value right */}
+                              {(() => {
+                                const myBooking = bookings.find(b => b.userId === user?.id && b.status === 'confirmed');
+                                const existParts = myBooking ? myBooking.timeslot.split('-').map(s => s.trim()) : null;
+                                const displayStart = startTime || existParts?.[0] || null;
+                                const displayEnd = endTime || existParts?.[1] || null;
+                                const isExistStart = !startTime && !!existParts?.[0];
+                                const isExistEnd = !endTime && !!existParts?.[1];
+                                return (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    {/* START TIME row */}
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.38)', letterSpacing: 1 }}>
+                                        {t('roomBooking.startTime', { defaultValue: 'START TIME' }).toUpperCase()}
+                                      </div>
+                                      <div style={{
+                                        fontSize: 22, fontWeight: 800, letterSpacing: 2,
+                                        fontVariantNumeric: 'tabular-nums',
+                                        color: displayStart ? (isExistStart ? '#52c41a' : '#FFD700') : 'rgba(255,255,255,0.12)',
+                                        textShadow: startTime ? '0 0 14px rgba(255,215,0,0.35)' : 'none',
+                                      }}>
+                                        {displayStart || '--:--'}
+                                      </div>
+                                    </div>
+                                    <div style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
+                                    {/* END TIME row */}
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.38)', letterSpacing: 1 }}>
+                                        {t('roomBooking.endTime', { defaultValue: 'END TIME' }).toUpperCase()}
+                                      </div>
+                                      <div style={{
+                                        fontSize: 22, fontWeight: 800, letterSpacing: 2,
+                                        fontVariantNumeric: 'tabular-nums',
+                                        color: displayEnd ? (isExistEnd ? '#52c41a' : '#ff7a35') : 'rgba(255,255,255,0.12)',
+                                      }}>
+                                        {displayEnd || '--:--'}
+                                      </div>
+                                    </div>
                                   </div>
-                                  <div style={{
-                                    fontSize: 22, fontWeight: 800, letterSpacing: 2,
-                                    fontVariantNumeric: 'tabular-nums',
-                                    color: startTime ? '#FFD700' : 'rgba(255,255,255,0.12)',
-                                    textShadow: startTime ? '0 0 14px rgba(255,215,0,0.35)' : 'none',
-                                  }}>
-                                    {startTime || '--:--'}
-                                  </div>
-                                </div>
-
-                                <div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,0.06)', margin: '2px 0' }} />
-
-                                {/* End Time */}
-                                <div style={{ flex: 1 }}>
-                                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.38)', letterSpacing: 1, marginBottom: 3 }}>
-                                    {t('roomBooking.endTime', { defaultValue: 'END TIME' }).toUpperCase()}
-                                  </div>
-                                  <div style={{
-                                    fontSize: 22, fontWeight: 800, letterSpacing: 2,
-                                    fontVariantNumeric: 'tabular-nums',
-                                    color: endTime ? '#ff7a35' : 'rgba(255,255,255,0.12)',
-                                  }}>
-                                    {endTime || '--:--'}
-                                  </div>
-                                </div>
-                              </div>
+                                );
+                              })()}
 
                               <div style={{ fontSize: 8.5, color: 'rgba(255,255,255,0.28)', lineHeight: 1.5 }}>
                                 {!sliderValue
