@@ -1,16 +1,10 @@
 // 活动页面
 import React, { useMemo, useState } from 'react'
-import { Row, Col, Card, Typography, Button, Tag, Space, Avatar, Empty, Spin, message } from 'antd'
-import {
-  CalendarOutlined,
-  EnvironmentOutlined,
-  TeamOutlined,
-  ClockCircleOutlined,
-  DollarOutlined,
-  ArrowLeftOutlined
-} from '@ant-design/icons'
+import { Typography, Button, Empty, Spin, message } from 'antd'
+import { CalendarOutlined, TeamOutlined, RightOutlined } from '@ant-design/icons'
+import { useNavigate } from 'react-router-dom'
 
-const { Title, Paragraph, Text } = Typography
+const { Text } = Typography
 
 import { getEvents, registerForEvent, unregisterFromEvent } from '../../../services/firebase/firestore'
 import { useFirestoreQuery } from '../../../hooks/useFirestoreQuery'
@@ -228,182 +222,223 @@ const Events: React.FC = () => {
 
         {events.map((event) => {
           const socialTag = getSocialRelationTag(event)
+          const registeredIds = event.participants?.registered || []
+          const isUserRegistered = user ? registeredIds.includes(user.id) : false
+          const closed = isRegistrationClosed(event)
+          const displayStatus = getDisplayStatus(event)
+
+          const formattedDate = (() => {
+            const d = (event as any)?.schedule?.startDate as any
+            const dateVal = d?.toDate ? d.toDate() : d
+            if (!dateVal) return '-'
+            const dateObj = new Date(dateVal)
+            const currentLang = i18n.language || 'zh-CN'
+            if (currentLang === 'zh-CN') {
+              return dateObj.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
+            }
+            return `${dateObj.getDate()} ${dateObj.toLocaleString('en-US', { month: 'short' })}, ${dateObj.getFullYear()}`
+          })()
+
+          const statusColors: Record<string, string> = {
+            upcoming: '#3b82f6',
+            ongoing: '#22c55e',
+            completed: 'rgba(255,255,255,0.35)',
+          }
+          const statusColor = statusColors[displayStatus] ?? 'rgba(255,255,255,0.35)'
+
           return (
             <div
               key={event.id}
               style={{
-                position: 'relative',
-                overflow: 'hidden',
                 borderRadius: '12px',
-                boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)',
-                aspectRatio: '21/9',
-                width: '100%',
-                boxSizing: 'border-box',
-                transition: 'transform 0.3s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.02)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)'
-              }}
-            >
-              {/* Background Image */}
-              <div style={{
-                position: 'absolute',
-                inset: 0,
-                backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuCHkrz9j7PM4w5oJ-Ev89VkzHjq_v56FKnoLokAM_pzgzM6iNfbhlUqD41_YlPuL4JuB_cB8FzngJx-Ha2y__35Q0NvH6BwubyOXdY9GvnvbwOpdZ6Edy1OyMJPkfG6-efD4YBYLZSO1BFlMu6u6T3Vujsd4rKIgWOwxgLHVkDsWwS72e271qwxZ4vothKhf_zW-CiGBhoIQQsvWO9zQCYJuVevXIVGOwLdkBIDO_b0EdZISgCxP0RGVW71K71lUAE_lwj27PQZiuVb")',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                transition: 'transform 0.5s ease'
-              }} />
-
-              {/* Overlay */}
-              <div style={{
-                position: 'absolute',
-                inset: 0,
-                background: 'rgba(0, 0, 0, 0.3)',
-                backdropFilter: 'blur(1px)'
-              }} />
-
-              {/* Content */}
-              <div style={{
-                position: 'relative',
+                overflow: 'hidden',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
                 display: 'flex',
                 flexDirection: 'column',
-                justifyContent: 'flex-end',
-                padding: '24px',
-                height: '100%'
+                background: '#1a1a1a',
+                transition: 'transform 0.25s ease, box-shadow 0.25s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-3px)'
+                e.currentTarget.style.boxShadow = '0 8px 28px rgba(0,0,0,0.55)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.4)'
+              }}
+            >
+              {/* Hero image */}
+              <div style={{
+                position: 'relative',
+                width: '100%',
+                aspectRatio: '16/9',
+                flexShrink: 0,
+                backgroundImage: `url("${(event as any).imageUrl || (event as any).coverImage || 'https://lh3.googleusercontent.com/aida-public/AB6AXuCHkrz9j7PM4w5oJ-Ev89VkzHjq_v56FKnoLokAM_pzgzM6iNfbhlUqD41_YlPuL4JuB_cB8FzngJx-Ha2y__35Q0NvH6BwubyOXdY9GvnvbwOpdZ6Edy1OyMJPkfG6-efD4YBYLZSO1BFlMu6u6T3Vujsd4rKIgWOwxgLHVkDsWwS72e271qwxZ4vothKhf_zW-CiGBhoIQQsvWO9zQCYJuVevXIVGOwLdkBIDO_b0EdZISgCxP0RGVW71K71lUAE_lwj27PQZiuVb'}"})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
               }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  marginBottom: '4px'
+                {/* Status badge */}
+                <span style={{
+                  position: 'absolute',
+                  top: 10,
+                  right: 10,
+                  background: statusColor,
+                  color: '#fff',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  padding: '2px 10px',
+                  borderRadius: 99,
+                  letterSpacing: '0.04em',
+                  backdropFilter: 'blur(4px)',
                 }}>
-                  <h2 style={{
-                    fontSize: '24px',
-                    fontWeight: 'bold',
-                    lineHeight: '1.2',
-                    margin: 0,
-                    flex: 1,
-                    backgroundImage: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                    WebkitBackgroundClip: 'text',
-                    color: 'transparent'
-                  }}>
-                    {event.title}
-                  </h2>
-                  {/* 社交关系 tag */}
-                  {socialTag && (
-                    <span style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      background: socialTag.color,
-                      flexShrink: 0,
-                      display: 'inline-block'
-                    }} />
-                  )}
+                  {getStatusText(event)}
+                </span>
+                {/* Social dot */}
+                {socialTag && (
+                  <span style={{
+                    position: 'absolute',
+                    top: 10,
+                    left: 10,
+                    width: 10,
+                    height: 10,
+                    borderRadius: '50%',
+                    background: socialTag.color,
+                    boxShadow: `0 0 6px ${socialTag.color}`,
+                  }} />
+                )}
+              </div>
+
+              {/* Details */}
+              <div style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                padding: '16px',
+                gap: 8,
+              }}>
+                <h2 style={{
+                  fontSize: 17,
+                  fontWeight: 700,
+                  lineHeight: 1.3,
+                  margin: 0,
+                  backgroundImage: 'linear-gradient(to right, #FDE08D, #C48D3A)',
+                  WebkitBackgroundClip: 'text',
+                  color: 'transparent',
+                }}>
+                  {event.title}
+                </h2>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>
+                  <CalendarOutlined style={{ fontSize: 12 }} />
+                  <span>{formattedDate}</span>
                 </div>
 
-                <p style={{
-                  color: 'rgba(255, 255, 255, 0.8)',
-                  fontSize: '14px',
-                  margin: 0,
-                  marginBottom: '16px'
-                }}>
-                  {(() => {
-                    const d = (event as any)?.schedule?.startDate as any
-                    const dateVal = (d as any)?.toDate ? (d as any).toDate() : d
-                    if (!dateVal) return '-'
-                    
-                    const dateObj = new Date(dateVal)
-                    const currentLang = i18n.language || 'zh-CN'
-                    
-                    if (currentLang === 'zh-CN') {
-                      return dateObj.toLocaleDateString('zh-CN', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })
-                    }
-                    
-                    // 英文格式: 9 Apr, 2025
-                    const day = dateObj.getDate()
-                    const month = dateObj.toLocaleString('en-US', { month: 'short' })
-                    const year = dateObj.getFullYear()
-                    return `${day} ${month}, ${year}`
-                  })()}
-                </p>
+                {registeredIds.length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
+                    <TeamOutlined style={{ fontSize: 12 }} />
+                    <span>{registeredIds.length} {t('events.registered')}</span>
+                  </div>
+                )}
 
-                <button
-                  type="button"
-                  disabled={isRegistrationClosed(event) || loadingId === event.id}
-                  style={{
-                    alignSelf: 'flex-start',
-                    background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
-                    color: '#111',
-                    fontWeight: 'bold',
-                    padding: '8px 24px',
-                    minHeight: '44px',
-                    borderRadius: '9999px',
-                    cursor: isRegistrationClosed(event) ? 'not-allowed' : 'pointer',
-                    boxShadow: '0 4px 15px rgba(244, 175, 37, 0.6)',
-                    transition: 'all 0.3s ease',
-                    opacity: isRegistrationClosed(event) ? 0.6 : 1
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isRegistrationClosed(event) && user) {
-                      e.currentTarget.style.boxShadow = '0 6px 20px rgba(244, 175, 37, 0.6)'
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isRegistrationClosed(event) && user) {
-                      e.currentTarget.style.boxShadow = '0 4px 15px rgba(244, 175, 37, 0.6)'
-                    }
-                  }}
-                  onClick={async () => {
-                    if (!user) {
-                      message.info(t('auth.pleaseLogin'))
-                      return
-                    }
-                    if (isRegistrationClosed(event)) {
-                      message.warning(getRegistrationClosedText(event))
-                      return
-                    }
-                    const max = (event as any)?.participants?.maxParticipants || 0
-                    const registeredIds = event.participants?.registered || []
-                    const isFull = max > 0 && registeredIds.length >= max
-                    if (!isFull) {
-                      // ok
-                    } else if (!registeredIds.includes(user.id)) {
-                      message.warning(t('events.fullCapacity'))
-                      return
-                    }
-                    try {
-                      setLoadingId(event.id)
-                      const isRegistered = registeredIds.includes(user.id)
-                      const res = isRegistered
-                        ? await unregisterFromEvent(event.id, user.id)
-                        : await registerForEvent(event.id, user.id)
-                      if (res.success) {
-                        message.success(isRegistered ? t('events.unregistered') : t('events.registered'))
-                        refresh()
-                      } else {
-                        message.error(res.error?.message || t('messages.operationFailed'))
+                {/* Spacer */}
+                <div style={{ flex: 1 }} />
+
+                {/* Button row */}
+                <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                  <button
+                    type="button"
+                    style={{
+                      flex: 1,
+                      background: 'transparent',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      color: 'rgba(255,255,255,0.75)',
+                      borderRadius: 8,
+                      padding: '7px 0',
+                      fontSize: 13,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 4,
+                      transition: 'border-color 0.2s, color 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = '#FDE08D'
+                      e.currentTarget.style.color = '#FDE08D'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'
+                      e.currentTarget.style.color = 'rgba(255,255,255,0.75)'
+                    }}
+                    onClick={() => {
+                      message.info(t('events.viewMoreComingSoon', 'Coming soon'))
+                    }}
+                  >
+                    {t('events.viewMore', 'View More')}
+                    <RightOutlined style={{ fontSize: 10 }} />
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={closed || loadingId === event.id}
+                    style={{
+                      flex: 1,
+                      background: closed
+                        ? 'rgba(255,255,255,0.08)'
+                        : isUserRegistered
+                          ? 'rgba(239,68,68,0.15)'
+                          : 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                      border: closed
+                        ? '1px solid rgba(255,255,255,0.1)'
+                        : isUserRegistered
+                          ? '1px solid rgba(239,68,68,0.4)'
+                          : 'none',
+                      color: closed
+                        ? 'rgba(255,255,255,0.35)'
+                        : isUserRegistered
+                          ? '#f87171'
+                          : '#111',
+                      borderRadius: 8,
+                      padding: '7px 0',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: closed ? 'not-allowed' : 'pointer',
+                      transition: 'opacity 0.2s',
+                    }}
+                    onClick={async () => {
+                      if (!user) { message.info(t('auth.pleaseLogin')); return }
+                      if (closed) { message.warning(getRegistrationClosedText(event)); return }
+                      const max = (event as any)?.participants?.maxParticipants || 0
+                      if (!isUserRegistered && max > 0 && registeredIds.length >= max) {
+                        message.warning(t('events.fullCapacity')); return
                       }
-                    } finally {
-                      setLoadingId(null)
-                    }
-                  }}
-                >
-                  {loadingId === event.id ? t('events.processing') : (() => {
-                    if (isRegistrationClosed(event)) return getRegistrationClosedText(event)
-                    if (!user) return t('auth.pleaseLogin')
-                    const registeredIds = event.participants?.registered || []
-                    return registeredIds.includes(user.id) ? t('events.leave') : t('events.join')
-                  })()}
-                </button>
+                      try {
+                        setLoadingId(event.id)
+                        const res = isUserRegistered
+                          ? await unregisterFromEvent(event.id, user.id)
+                          : await registerForEvent(event.id, user.id)
+                        if (res.success) {
+                          message.success(isUserRegistered ? t('events.unregistered') : t('events.registered'))
+                          refresh()
+                        } else {
+                          message.error(res.error?.message || t('messages.operationFailed'))
+                        }
+                      } finally {
+                        setLoadingId(null)
+                      }
+                    }}
+                  >
+                    {loadingId === event.id
+                      ? t('events.processing')
+                      : closed
+                        ? getRegistrationClosedText(event)
+                        : !user
+                          ? t('auth.pleaseLogin')
+                          : isUserRegistered
+                            ? t('events.leave')
+                            : t('events.join')}
+                  </button>
+                </div>
               </div>
             </div>
           )
