@@ -73,23 +73,11 @@ export const RoomBookingSection: React.FC<RoomBookingSectionProps> = ({ style })
   // Reset selection when room or date changes, or pre-populate if user has an existing booking
   useEffect(() => {
     if (selectedRoom) {
-      const myExistingBooking = bookings.find(b => b.userId === user?.id && b.status === 'confirmed');
-      if (myExistingBooking) {
-        const parts = myExistingBooking.timeslot.split('-').map(s => s.trim());
-        const startH = timeToMinutes(parts[0]) / 60;
-        const endH = timeToMinutes(parts[1]) / 60;
-        setSliderValue([startH, endH]);
-        setStartTime(parts[0]);
-        setEndTime(parts[1]);
-        setSelectedStartPoint(startH);
-        setIsRangeFinalized(true);
-      } else {
-        setSliderValue(null);
-        setStartTime(null);
-        setEndTime(null);
-        setSelectedStartPoint(null);
-        setIsRangeFinalized(false);
-      }
+      setSliderValue(null);
+      setStartTime(null);
+      setEndTime(null);
+      setSelectedStartPoint(null);
+      setIsRangeFinalized(false);
     }
   }, [selectedRoom, selectedDate, bookings]);
 
