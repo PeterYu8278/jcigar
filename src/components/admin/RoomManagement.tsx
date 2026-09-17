@@ -526,146 +526,190 @@ export const RoomManagement: React.FC<RoomManagementProps> = ({
     </>
   );
 
-  const renderViewBookings = () => (
+  const renderViewBookings = () => {
+    const statusAccent = (status: string) => {
+      if (status === 'checked_in') return '#D4AF37';
+      if (status === 'confirmed') return '#52c41a';
+      return '#ff4d4f';
+    };
+    const statusLabel = (status: string) => {
+      if (status === 'checked_in') return t('roomManagement.statusCheckedIn');
+      if (status === 'confirmed') return t('roomManagement.statusConfirmed');
+      return t('roomManagement.statusCancelled');
+    };
+
+    return (
     <>
-      <div style={{ 
-        marginBottom: 16, 
-        display: 'flex', 
-        flexDirection: isMobile ? 'column' : 'row', 
-        alignItems: isMobile ? 'stretch' : 'center', 
-        gap: 12 
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ color: '#fff', fontSize: 14, whiteSpace: 'nowrap' }}>{t('roomManagement.selectDate')}</span>
-          <DatePicker
-            value={viewDate}
-            onChange={(date) => setViewDate(date)}
-            allowClear
-            placeholder={t('roomManagement.allDates', { defaultValue: 'All dates' })}
-            style={{
-              flex: 1,
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-              color: '#fff'
-            }}
-          />
-        </div>
+      {/* Filter bar */}
+      <div style={{ marginBottom: 14, display: 'flex', gap: 8, alignItems: 'center' }}>
+        <DatePicker
+          value={viewDate}
+          onChange={(date) => setViewDate(date)}
+          allowClear
+          placeholder={t('roomManagement.allDates', { defaultValue: 'All dates' })}
+          style={{
+            flex: 1,
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.15)',
+            color: '#fff',
+            height: 36,
+          }}
+        />
         <Button
           onClick={loadDailyBookings}
           loading={loadingBookings}
+          icon={<CalendarOutlined />}
           style={{
-            background: 'rgba(255, 255, 255, 0.1)',
+            background: 'rgba(255,255,255,0.08)',
             color: '#fff',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            width: isMobile ? '100%' : 'auto'
+            border: '1px solid rgba(255,255,255,0.18)',
+            height: 36,
+            flexShrink: 0,
           }}
         >
-          {t('roomManagement.refreshRecords')}
+          {!isMobile && t('roomManagement.refreshRecords')}
         </Button>
       </div>
 
+      {/* Count summary */}
+      {dailyBookings.length > 0 && (
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 10 }}>
+          {dailyBookings.length} {t('roomManagement.records', { defaultValue: 'records' })}
+          {viewDate ? ` · ${viewDate.format('YYYY-MM-DD')}` : ''}
+        </div>
+      )}
+
       {isMobile ? (
         <Spin spinning={loadingBookings}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {dailyBookings.map(record => (
-              <div key={record.id} style={{
-                background: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                borderRadius: 12,
-                padding: 16,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 10
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontWeight: 700, fontSize: 15, color: '#FFD700' }}>{record.roomName}</span>
-                  {record.status === 'checked_in' ? (
-                    <Tag color="gold" style={{ marginRight: 0 }}>{t('roomManagement.statusCheckedIn')}</Tag>
-                  ) : (
-                    <Tag color={record.status === 'confirmed' ? 'green' : 'red'} style={{ marginRight: 0 }}>
-                      {record.status === 'confirmed' ? t('roomManagement.statusConfirmed') : t('roomManagement.statusCancelled')}
-                    </Tag>
-                  )}
-                </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {dailyBookings.map(record => {
+              const accent = statusAccent(record.status);
+              return (
+                <div key={record.id} style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.07)',
+                  borderLeft: `3px solid ${accent}`,
+                  borderRadius: 12,
+                  overflow: 'hidden',
+                }}>
+                  {/* Card header */}
+                  <div style={{
+                    padding: '10px 14px 8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                  }}>
+                    <div>
+                      <span style={{ fontWeight: 700, fontSize: 14, color: '#FFD700' }}>{record.roomName}</span>
+                      <span style={{ marginLeft: 8, fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+                        {getStoreName(record.storeId)}
+                      </span>
+                    </div>
+                    <span style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: accent,
+                      background: `${accent}18`,
+                      border: `1px solid ${accent}50`,
+                      borderRadius: 6,
+                      padding: '2px 7px',
+                    }}>
+                      {statusLabel(record.status)}
+                    </span>
+                  </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomManagement.store')}</span>
-                    <span style={{ color: '#fff' }}>{getStoreName(record.storeId)}</span>
+                  {/* Timeslot highlight */}
+                  <div style={{
+                    margin: '10px 14px 6px',
+                    background: 'rgba(30,220,255,0.06)',
+                    border: '1px solid rgba(30,200,255,0.15)',
+                    borderRadius: 8,
+                    padding: '7px 12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}>
+                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
+                      {record.date}
+                    </span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#7dd3fc', letterSpacing: 1 }}>
+                      {record.timeslot}
+                    </span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomManagement.bookingDate')}</span>
-                    <span style={{ color: '#fff' }}>{record.date}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomManagement.bookedBy')}</span>
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{ color: '#fff', display: 'block' }}>{record.userName}</span>
-                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>ID: {record.userId}</span>
+
+                  {/* Detail rows */}
+                  <div style={{ padding: '4px 14px 10px', display: 'flex', flexDirection: 'column', gap: 5, fontSize: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.4)' }}>{t('roomManagement.bookedBy')}</span>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ color: '#fff', fontWeight: 600 }}>{record.userName}</span>
+                        <span style={{ display: 'block', fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace' }}>
+                          {record.userId.slice(0, 16)}…
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.4)' }}>{t('roomManagement.pointsUsed')}</span>
+                      <span style={{ color: '#FFD700', fontWeight: 600 }}>{record.paidFee ?? record.fee} pts</span>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomManagement.bookingSlot')}</span>
-                    <Tag color="blue" style={{ marginRight: 0 }}>{record.timeslot}</Tag>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.45)' }}>{t('roomManagement.pointsUsed')}</span>
-                    <span style={{ color: '#fff' }}>{record.fee} {t('roomManagement.points')}</span>
-                  </div>
-                </div>
 
-                {record.status === 'confirmed' && (
-                  <div style={{ display: 'flex', gap: 10, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12, marginTop: 4 }}>
-                    <Popconfirm
-                      title={t('roomManagement.checkInConfirm')}
-                      onConfirm={() => record.id && handleAdminCheckInBooking(record.id)}
-                      okText={t('common.confirm')}
-                      cancelText={t('common.cancel')}
-                      style={{ flex: 1 }}
-                    >
-                      <Button
-                        size="middle"
-                        type="primary"
-                        style={{
-                          width: '100%',
-                          background: 'linear-gradient(to right, #FDE08D, #C48D3A)',
-                          border: 'none',
-                          color: '#111',
-                          fontWeight: 600,
-                          borderRadius: 8
-                        }}
+                  {/* Actions */}
+                  {record.status === 'confirmed' && (
+                    <div style={{ display: 'flex', gap: 8, padding: '0 14px 12px' }}>
+                      <Popconfirm
+                        title={t('roomManagement.checkInConfirm')}
+                        onConfirm={() => record.id && handleAdminCheckInBooking(record.id)}
+                        okText={t('common.confirm')}
+                        cancelText={t('common.cancel')}
                       >
-                        {t('roomManagement.checkIn')}
-                      </Button>
-                    </Popconfirm>
-                    <Popconfirm
-                      title={t('roomManagement.cancelBookingConfirm')}
-                      onConfirm={() => record.id && handleAdminCancelBooking(record.id)}
-                      okText={t('common.confirm')}
-                      cancelText={t('common.cancel')}
-                      okButtonProps={{ danger: true }}
-                      style={{ flex: 1 }}
-                    >
-                      <Button
-                        size="middle"
-                        danger
-                        style={{
-                          width: '100%',
-                          background: 'rgba(255, 77, 79, 0.1)',
-                          border: '1px solid rgba(255, 77, 79, 0.2)',
-                          color: '#ff4d4f',
-                          borderRadius: 8
-                        }}
+                        <Button
+                          size="small"
+                          type="primary"
+                          style={{
+                            flex: 1,
+                            background: 'linear-gradient(to right,#FDE08D,#C48D3A)',
+                            border: 'none',
+                            color: '#111',
+                            fontWeight: 700,
+                            borderRadius: 8,
+                            height: 32,
+                            fontSize: 12,
+                          }}
+                        >
+                          {t('roomManagement.checkIn')}
+                        </Button>
+                      </Popconfirm>
+                      <Popconfirm
+                        title={t('roomManagement.cancelBookingConfirm')}
+                        onConfirm={() => record.id && handleAdminCancelBooking(record.id)}
+                        okText={t('common.confirm')}
+                        cancelText={t('common.cancel')}
+                        okButtonProps={{ danger: true }}
                       >
-                        {t('roomManagement.cancelBooking')}
-                      </Button>
-                    </Popconfirm>
-                  </div>
-                )}
-              </div>
-            ))}
-            {dailyBookings.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '24px 0', color: 'rgba(255,255,255,0.45)' }}>
+                        <Button
+                          size="small"
+                          style={{
+                            flex: 1,
+                            background: 'rgba(255,77,79,0.08)',
+                            border: '1px solid rgba(255,77,79,0.25)',
+                            color: '#ff4d4f',
+                            borderRadius: 8,
+                            height: 32,
+                            fontSize: 12,
+                          }}
+                        >
+                          {t('roomManagement.cancelBooking')}
+                        </Button>
+                      </Popconfirm>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {dailyBookings.length === 0 && !loadingBookings && (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.35)', fontSize: 13 }}>
                 {t('common.noData')}
               </div>
             )}
@@ -683,7 +727,8 @@ export const RoomManagement: React.FC<RoomManagementProps> = ({
         />
       )}
     </>
-  );
+    );
+  };
 
   return (
     <div style={{ marginTop: hideRoomConfig || hideViewBookings ? 0 : 16 }}>
