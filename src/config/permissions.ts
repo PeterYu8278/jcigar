@@ -82,21 +82,21 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission> = {
 
 // 路由权限配置
 export const ROUTE_PERMISSIONS = {
-  '/': ['guest', 'member', 'vip', 'admin', 'superAdmin', 'developer'],
-  '/events': ['guest', 'member', 'vip', 'admin', 'superAdmin', 'developer'],
-  '/shop': ['member', 'vip', 'admin', 'superAdmin', 'developer'],
-  '/profile': ['member', 'vip', 'admin', 'superAdmin', 'developer'],
-  '/ai-cigar-history': ['member', 'vip', 'admin', 'superAdmin', 'developer'], // AI识茄历史记录页面权限
-  '/reload': ['member', 'vip', 'admin', 'superAdmin', 'developer'], // 充值页面权限
-  '/brand': ['member', 'vip', 'admin', 'superAdmin', 'developer'], // brand list
-  '/admin': ['admin', 'superAdmin', 'developer'],
-  '/admin/users': ['admin', 'superAdmin', 'developer'],
-  '/admin/inventory': ['admin', 'superAdmin', 'developer'],
-  '/admin/events': ['admin', 'superAdmin', 'developer'],
-  '/admin/orders': ['admin', 'superAdmin', 'developer'],
-  '/admin/visit-sessions': ['admin', 'superAdmin', 'developer'],
+  '/': ['guest', 'member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer'],
+  '/events': ['guest', 'member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer'],
+  '/shop': ['member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer'],
+  '/profile': ['member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer'],
+  '/ai-cigar-history': ['member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer'], // AI识茄历史记录页面权限
+  '/reload': ['member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer'], // 充值页面权限
+  '/brand': ['member', 'vip', 'storeAdmin', 'admin', 'superAdmin', 'developer'], // brand list
+  '/admin': ['storeAdmin', 'admin', 'superAdmin', 'developer'],
+  '/admin/users': ['storeAdmin', 'admin', 'superAdmin', 'developer'],
+  '/admin/inventory': ['storeAdmin', 'admin', 'superAdmin', 'developer'],
+  '/admin/events': ['storeAdmin', 'admin', 'superAdmin', 'developer'],
+  '/admin/orders': ['storeAdmin', 'admin', 'superAdmin', 'developer'],
+  '/admin/visit-sessions': ['storeAdmin', 'admin', 'superAdmin', 'developer'],
   '/admin/finance': ['superAdmin', 'developer'], // 财务仅限超级管理员和开发者
-  '/admin/points-config': ['admin', 'superAdmin', 'developer'], // 积分配置支持管理员验证充值
+  '/admin/points-config': ['storeAdmin', 'admin', 'superAdmin', 'developer'], // 积分配置支持管理员验证充值
   
   // Developer 专属路由
   '/developer/feature-management': ['developer'],
