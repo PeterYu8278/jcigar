@@ -30,3 +30,11 @@ service-account-formatted.txt
 
 # Local Netlify folder
 .netlify
+
+# Local credentials and incident evidence
+.env
+.env.*
+!env.example
+service-account*.json
+*-firebase-adminsdk-*.json
+appeal-submitted.png

@@ -1,3 +1,4 @@
+import { requireUser, errorResponse } from '../lib/security';
 // Netlify Function: 测试单个 FCM Token
 // 用于诊断推送通知问题
 import { Handler } from '@netlify/functions';
@@ -21,6 +22,7 @@ if (!getApps().length) {
 }
 
 export const handler: Handler = async (event, context) => {
+  try { await requireUser(event, true); } catch (error) { return errorResponse(error); }
   // 处理 OPTIONS 请求（CORS 预检）
   if (event.httpMethod === 'OPTIONS') {
     return {

@@ -1,3 +1,4 @@
+import { requireUser, errorResponse } from '../lib/security';
 // Netlify Function: 发送推送通知
 import { Handler } from '@netlify/functions';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
@@ -21,6 +22,7 @@ if (!getApps().length) {
 }
 
 export const handler: Handler = async (event, context) => {
+  try { await requireUser(event, true); } catch (error) { return errorResponse(error); }
   // 只允许 POST 请求
   if (event.httpMethod !== 'POST') {
     return {

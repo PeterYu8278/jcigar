@@ -1,54 +1,11 @@
-﻿import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, geminiFetch as fetch } from './client';
 import { getAppConfig } from "../firebase/appConfig";
 import { searchCigarImageWithGoogle } from "./googleImageSearch";
 import { getCigarDetails } from "../cigar/cigarDatabase";
 import { updateRecognitionStats } from "../cigar/cigarRecognitionStats";
 
-/**
- * 获取 Gemini API Key
- * 优先级：
- * 1. 从环境变量 VITE_GEMINI_API_KEY 获取（支持 Netlify 环境变量）
- * 2. 从 Netlify Functions 获取（如果配置了）
- * 
- * Netlify 环境变量配置：
- * - 在 Netlify 控制台的 Site settings > Environment variables 中设置
- * - 变量名: VITE_GEMINI_API_KEY
- * - 构建时会自动注入到 import.meta.env 中
- */
-function getGeminiApiKey(): string | undefined {
-    // 首先尝试从环境变量获取（支持本地开发和 Netlify 构建时注入）
-    let apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    
-    // 如果是在 Netlify 环境中且环境变量未设置，尝试从运行时环境获取
-    // 注意：Netlify 在构建时会将环境变量注入，所以这里主要是作为后备方案
-    if (!apiKey && typeof window !== 'undefined') {
-        // 检测是否在 Netlify 环境中
-        const isNetlify = window.location.hostname.includes('netlify.app') || 
-                         window.location.hostname.includes('netlify.com');
-        
-        if (isNetlify) {
-            console.warn(
-                '⚠️ Gemini API Key 未在环境变量中找到。' +
-                '请在 Netlify 控制台的 Environment variables 中设置 VITE_GEMINI_API_KEY'
-            );
-        }
-    }
-    
-    return apiKey;
-}
-
-// 获取 API Key
-const API_KEY = getGeminiApiKey();
-
-if (!API_KEY) {
-    const envHint = typeof window !== 'undefined' && window.location.hostname.includes('netlify')
-        ? '请在 Netlify 控制台的 Environment variables 中设置 VITE_GEMINI_API_KEY'
-        : '请在 .env 文件中设置 VITE_GEMINI_API_KEY 或在 Netlify 环境变量中配置';
-    
-    console.warn(`⚠️ Gemini API Key 缺失！AI 识茄功能将不可用。\n${envHint}`);
-}
-
-const genAI = new GoogleGenerativeAI(API_KEY || "");
+// AI credentials and authorization are handled by Netlify Functions.
+const genAI = new GoogleGenerativeAI();
 /**
  * 默认模型列表（基于 Gemini 模型测试系统实测结果）
  * 
@@ -106,12 +63,11 @@ async function callGeminiRESTAPI(
     prompt: string, 
     imagePart: any
 ): Promise<CigarAnalysisResult | null> {
-    if (!API_KEY) return null;
     
     try {
         // 使用 v1 API 端点
         const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${API_KEY}`,
+            `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent`,
             {
                 method: 'POST',
                 headers: {
@@ -235,7 +191,6 @@ function filterModelsWithQuota(models: string[]): string[] {
 
 // 辅助函数：通过 REST API 获取可用模型列表
 async function getAvailableModels(): Promise<string[]> {
-    if (!API_KEY) return [];
     
     // 尝试 v1 和 v1beta API，合并所有可用模型
     const apiVersions = ['v1', 'v1beta'];
@@ -246,7 +201,7 @@ async function getAvailableModels(): Promise<string[]> {
         try {
             // 直接调用 REST API 获取模型列表
             const response = await fetch(
-                `https://generativelanguage.googleapis.com/${version}/models?key=${API_KEY}`
+                `https://generativelanguage.googleapis.com/${version}/models`
             );
             
             if (!response.ok) {
@@ -341,21 +296,6 @@ export async function analyzeCigarImage(
     imageBase64: string,
     userHint?: string
 ): Promise<CigarAnalysisResult> {
-    if (!API_KEY) {
-        const envHint = typeof window !== 'undefined' && window.location.hostname.includes('netlify')
-            ? '请在 Netlify 控制台的 Environment variables 中设置 VITE_GEMINI_API_KEY，然后重新部署。'
-            : '请在 .env 文件中设置 VITE_GEMINI_API_KEY 或在 Netlify 环境变量中配置。';
-        
-        throw new Error(
-            `Gemini API Key 未配置。${envHint}\n` +
-            `获取 API Key: https://aistudio.google.com/app/apikey`
-        );
-    }
-
-    // 验证 API Key 格式
-    if (!API_KEY.startsWith('AIza')) {
-        console.warn('⚠️  API Key 格式可能不正确。Gemini API Key 通常以 "AIza" 开头');
-    }
 
     // 构建场景化的提示词
     // 场景 1: 仅图片
@@ -796,8 +736,8 @@ Analyze this cigar image and provide detailed information.
     const errorMsg = lastError?.message || '未知错误';
     const isNetlify = typeof window !== 'undefined' && window.location.hostname.includes('netlify');
     const envConfigHint = isNetlify
-        ? '1. API Key 是否正确配置在 Netlify 环境变量中（VITE_GEMINI_API_KEY）\n   2. 如果刚添加了环境变量，请重新部署应用'
-        : '1. API Key 是否正确配置在 .env 文件中（VITE_GEMINI_API_KEY）';
+        ? '1. API Key 是否正确配置在 Netlify 环境变量中（GEMINI_API_KEY（仅服务器端））\n   2. 如果刚添加了环境变量，请重新部署应用'
+        : '1. API Key 是否正确配置在 .env 文件中（GEMINI_API_KEY（仅服务器端））';
     
     throw new Error(
         `所有 Gemini 模型都不可用。最后错误: ${errorMsg}\n` +
@@ -938,9 +878,6 @@ async function searchCigarImageUrl(brand: string, name: string): Promise<string 
  * @returns 可用的图片 URL 或 null
  */
 async function searchCigarImageUrlWithGemini(brand: string, name: string): Promise<string | null> {
-    if (!API_KEY) {
-        return null;
-    }
 
     const searchPrompt = `
 Find a high-quality, publicly accessible image URL for "${brand} ${name}" cigar.
@@ -1254,7 +1191,7 @@ OUTPUT: Return ONLY the image URL as plain text, or "null" if you cannot find a 
                 // 尝试使用 REST API
                 try {
                     const restResponse = await fetch(
-                        `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${API_KEY}`,
+                        `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent`,
                         {
                             method: 'POST',
                             headers: {
@@ -1384,16 +1321,6 @@ export async function analyzeCigarByName(
     cigarName: string,
     brand?: string
 ): Promise<CigarAnalysisResult> {
-    if (!API_KEY) {
-        const envHint = typeof window !== 'undefined' && window.location.hostname.includes('netlify')
-            ? '请在 Netlify 控制台的 Environment variables 中设置 VITE_GEMINI_API_KEY，然后重新部署。'
-            : '请在 .env 文件中设置 VITE_GEMINI_API_KEY 或在 Netlify 环境变量中配置。';
-        
-        throw new Error(
-            `Gemini API Key 未配置。${envHint}\n` +
-            `获取 API Key: https://aistudio.google.com/app/apikey`
-        );
-    }
 
     if (!cigarName || !cigarName.trim()) {
         throw new Error('产品名称不能为空');

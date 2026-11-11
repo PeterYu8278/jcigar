@@ -1,5 +1,6 @@
 // Netlify Function: 订阅/取消订阅主题
 import { Handler } from '@netlify/functions';
+import { requireUser, errorResponse } from '../lib/security';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
 
@@ -20,6 +21,7 @@ if (!getApps().length) {
 }
 
 export const handler: Handler = async (event, context) => {
+  try { await requireUser(event, true); } catch (error) { return errorResponse(error); }
   // 只允许 POST 请求
   if (event.httpMethod !== 'POST') {
     return {

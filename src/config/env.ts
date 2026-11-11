@@ -149,7 +149,6 @@ const envVarMap: Record<string, string> = {
   // Cloudinary
   'VITE_CLOUDINARY_CLOUD_NAME': 'cloudinary.cloudName',
   'VITE_CLOUDINARY_API_KEY': 'cloudinary.apiKey',
-  'VITE_CLOUDINARY_API_SECRET': 'cloudinary.apiSecret',
   
   // 应用信息
   'VITE_APP_NAME': 'app.name',

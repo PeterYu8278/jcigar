@@ -1,5 +1,6 @@
 // Netlify Function: 保存 FCM Token
 import { Handler } from '@netlify/functions';
+import { requireUser, errorResponse } from '../lib/security';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
@@ -21,6 +22,8 @@ if (!getApps().length) {
 }
 
 export const handler: Handler = async (event, context) => {
+  let caller;
+  try { caller = await requireUser(event); } catch (error) { return errorResponse(error); }
   // 只允许 POST 请求
   if (event.httpMethod !== 'POST') {
     return {
@@ -31,6 +34,7 @@ export const handler: Handler = async (event, context) => {
 
   try {
     const { token, userId, deviceId, deviceInfo } = JSON.parse(event.body || '{}');
+    if (userId !== caller.uid) return { statusCode: 403, body: JSON.stringify({ error: 'Cannot save tokens for another user' }) };
 
     if (!token || !userId) {
       return {

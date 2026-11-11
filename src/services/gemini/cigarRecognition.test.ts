@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { analyzeCigarImage } from './cigarRecognition';
 
+vi.mock('../firebase/appConfig', () => ({ getAppConfig: vi.fn().mockResolvedValue(null) }));
+vi.mock('./googleImageSearch', () => ({ searchCigarImageWithGoogle: vi.fn().mockResolvedValue('https://example.com/cigar.jpg') }));
+vi.mock('../cigar/cigarDatabase', () => ({ getCigarDetails: vi.fn().mockResolvedValue(null) }));
+vi.mock('../cigar/cigarRecognitionStats', () => ({ updateRecognitionStats: vi.fn().mockResolvedValue(undefined) }));
+
 // Use vi.hoisted to ensure mocks are initialized before vi.mock
 const { mockGenerateContent, mockGetGenerativeModel } = vi.hoisted(() => {
     const mockGenerateContent = vi.fn();
@@ -11,8 +16,9 @@ const { mockGenerateContent, mockGetGenerativeModel } = vi.hoisted(() => {
 });
 
 // Mock the GoogleGenerativeAI class
-vi.mock('@google/generative-ai', () => {
+vi.mock('./client', () => {
     return {
+        geminiFetch: vi.fn().mockResolvedValue({ ok: true, json: async () => ({ models: [{ name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] }] }) }),
         GoogleGenerativeAI: class {
             getGenerativeModel = mockGetGenerativeModel;
         },

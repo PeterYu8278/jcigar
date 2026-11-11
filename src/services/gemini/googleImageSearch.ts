@@ -4,8 +4,7 @@
  */
 
 // Google Custom Search API 配置
-const GOOGLE_SEARCH_API_KEY = import.meta.env.VITE_GOOGLE_SEARCH_API_KEY || '';
-const GOOGLE_SEARCH_ENGINE_ID = import.meta.env.VITE_GOOGLE_SEARCH_ENGINE_ID || '';
+import { authenticatedFetch } from '../serverFetch';
 
 export interface GoogleImageSearchResult {
     url: string;
@@ -25,9 +24,6 @@ export async function searchGoogleImages(
     query: string,
     maxResults: number = 10
 ): Promise<string[]> {
-    if (!GOOGLE_SEARCH_API_KEY || !GOOGLE_SEARCH_ENGINE_ID) {
-        return [];
-    }
 
     if (!query || !query.trim()) {
         return [];
@@ -96,18 +92,8 @@ export async function searchGoogleImages(
         // - fileType: 指定图片格式
         // - imgColorType=color: 优先彩色图片（茄标通常是彩色的）
         // - imgDominantColor: 不指定，让搜索引擎自动选择
-        const apiUrl = `https://www.googleapis.com/customsearch/v1?` +
-            `key=${GOOGLE_SEARCH_API_KEY}&` +
-            `cx=${GOOGLE_SEARCH_ENGINE_ID}&` +
-            `q=${encodeURIComponent(searchQuery)}&` +
-            `searchType=image&` +
-            `num=${Math.min(maxResults, 10)}&` + // Google API 限制每次最多 10 个结果
-            `safe=active&` +
-            `imgType=photo&` + // 只搜索照片类型（排除剪贴画）
-            `imgColorType=color&` + // 优先彩色图片（茄标通常是彩色的）
-            `fileType=jpg,png,webp`; // 指定文件类型
-
-        const response = await fetch(apiUrl);
+        const params = new URLSearchParams({ q: searchQuery, num: String(Math.max(1, Math.min(maxResults, 10))) });
+        const response = await authenticatedFetch('/.netlify/functions/google-image-search?' + params);
 
         if (!response.ok) {
             return [];
@@ -350,10 +336,6 @@ export async function searchCigarImageWithGoogle(
     // 添加 'cigar stick' 关键词以提高搜索精确度（优先单支雪茄）
     const query = `${baseQuery} cigar stick`;
     
-    if (!GOOGLE_SEARCH_API_KEY || !GOOGLE_SEARCH_ENGINE_ID) {
-        return null;
-    }
-
     // 搜索图片
     const imageUrls = await searchGoogleImages(query, 10);
 

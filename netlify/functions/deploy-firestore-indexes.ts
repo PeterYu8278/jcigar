@@ -1,3 +1,4 @@
+import { requireUser, errorResponse } from '../lib/security';
 // Netlify Function: 部署 Firebase Firestore 索引
 import { Handler } from '@netlify/functions';
 import { GoogleAuth } from 'google-auth-library';
@@ -207,6 +208,7 @@ async function deployIndexes(
 }
 
 export const handler: Handler = async (event, context) => {
+  try { await requireUser(event, true); } catch (error) { return errorResponse(error); }
   // 处理 CORS 预检请求
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -263,6 +265,10 @@ export const handler: Handler = async (event, context) => {
           error: 'Invalid FIREBASE_SERVICE_ACCOUNT format. It should be a valid JSON string.' 
         })
       };
+    }
+
+    if (projectId !== serviceAccount.project_id) {
+      return { statusCode: 403, headers: corsHeaders, body: JSON.stringify({ error: 'Project does not match server credentials' }) };
     }
 
     // 读取索引定义

@@ -1,3 +1,4 @@
+import { authenticatedFetch } from '../../../services/serverFetch';
 // 功能管理页面
 import React, { useState, useEffect } from 'react';
 import { useFirestoreDoc } from '../../../hooks/useFirestoreQuery';
@@ -550,7 +551,7 @@ const FeatureManagement: React.FC = () => {
       : '';
 
     const geminiApiKeyLine = values.geminiApiKey
-      ? `\n# Gemini API 配置\nVITE_GEMINI_API_KEY=${values.geminiApiKey}`
+      ? `\n# Gemini API 配置\nGEMINI_API_KEY=${values.geminiApiKey}`
       : '';
 
     // FIREBASE_SERVICE_ACCOUNT 是服务器端环境变量，需要单独处理（JSON 格式）
@@ -579,7 +580,9 @@ VITE_FIREBASE_APP_ID=${values.firebaseAppId}${measurementIdLine ? '\n' + measure
 # Cloudinary配置
 VITE_CLOUDINARY_CLOUD_NAME=${values.cloudinaryCloudName}
 VITE_CLOUDINARY_API_KEY=${values.cloudinaryApiKey}
-VITE_CLOUDINARY_API_SECRET=${values.cloudinaryApiSecret}
+CLOUDINARY_API_SECRET=${values.cloudinaryApiSecret}
+CLOUDINARY_CLOUD_NAME=${values.cloudinaryCloudName}
+CLOUDINARY_API_KEY=${values.cloudinaryApiKey}
 VITE_CLOUDINARY_UPLOAD_PRESET=${values.cloudinaryUploadPreset}
 VITE_CLOUDINARY_BASE_FOLDER=${values.cloudinaryBaseFolder}
 
@@ -611,7 +614,9 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
         { key: 'VITE_FIREBASE_APP_ID', value: values.firebaseAppId, scopes: ['all'] },
         { key: 'VITE_CLOUDINARY_CLOUD_NAME', value: values.cloudinaryCloudName, scopes: ['all'] },
         { key: 'VITE_CLOUDINARY_API_KEY', value: values.cloudinaryApiKey, scopes: ['all'] },
-        { key: 'VITE_CLOUDINARY_API_SECRET', value: values.cloudinaryApiSecret, scopes: ['all'] },
+        { key: 'CLOUDINARY_API_SECRET', value: values.cloudinaryApiSecret, scopes: ['functions'] },
+        { key: 'CLOUDINARY_CLOUD_NAME', value: values.cloudinaryCloudName, scopes: ['functions'] },
+        { key: 'CLOUDINARY_API_KEY', value: values.cloudinaryApiKey, scopes: ['functions'] },
         { key: 'VITE_CLOUDINARY_UPLOAD_PRESET', value: values.cloudinaryUploadPreset, scopes: ['all'] },
         { key: 'VITE_CLOUDINARY_BASE_FOLDER', value: values.cloudinaryBaseFolder, scopes: ['all'] },
         { key: 'VITE_APP_NAME', value: values.appName, scopes: ['all'] },
@@ -629,7 +634,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
 
       // 如果提供了 Gemini API Key，添加到环境变量数组
       if (values.geminiApiKey) {
-        envVars.push({ key: 'VITE_GEMINI_API_KEY', value: values.geminiApiKey, scopes: ['all'] });
+        envVars.push({ key: 'GEMINI_API_KEY', value: values.geminiApiKey, scopes: ['functions'] });
       }
 
       // 如果提供了 Firebase Service Account，添加到环境变量数组（服务器端变量，不使用 VITE_ 前缀）
@@ -650,7 +655,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
       }
 
       // 调用 Netlify Function
-      const response = await fetch('/.netlify/functions/update-netlify-env', {
+      const response = await authenticatedFetch('/.netlify/functions/update-netlify-env', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -718,7 +723,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
       setIndexDeployStatus({ state: 'deploying', message: t('featureManagement.deployingIndexes') });
 
       // 调用 Netlify Function 部署索引（Function 会读取 firestore.indexes.json）
-      const deployResponse = await fetch(`/.netlify/functions/deploy-firestore-indexes`, {
+      const deployResponse = await authenticatedFetch(`/.netlify/functions/deploy-firestore-indexes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -779,7 +784,7 @@ VITE_APP_NAME=${values.appName}${fcmVapidKeyLine ? '\n\n' + fcmVapidKeyLine : ''
 
     const poll = async () => {
       try {
-        const response = await fetch(`/.netlify/functions/update-netlify-env`, {
+        const response = await authenticatedFetch(`/.netlify/functions/update-netlify-env`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

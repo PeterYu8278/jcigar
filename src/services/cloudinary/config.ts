@@ -30,13 +30,13 @@ export interface CloudinaryConfig {
 export const getCloudinaryConfig = (): CloudinaryConfig => {
   const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
   const apiKey = import.meta.env.VITE_CLOUDINARY_API_KEY
-  const apiSecret = import.meta.env.VITE_CLOUDINARY_API_SECRET
+  const apiSecret = '' // Signing secrets are only available to server functions.
   const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
   const baseFolder = import.meta.env.VITE_CLOUDINARY_BASE_FOLDER
   const secure = true
 
-  if (!cloudName || !apiKey || !apiSecret) {
-    console.warn('Cloudinary 配置不完整。请检查环境变量 VITE_CLOUDINARY_CLOUD_NAME, VITE_CLOUDINARY_API_KEY, VITE_CLOUDINARY_API_SECRET')
+  if (!cloudName || !apiKey) {
+    console.warn('Cloudinary 配置不完整。请检查公开的 Cloud Name 和 API Key；Secret 仅在服务器配置。')
   }
 
   return {
@@ -120,7 +120,7 @@ export const formatFileSize = (bytes: number): string => {
 const cloudinaryConfig = {
   cloud_name: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME,
   api_key: import.meta.env.VITE_CLOUDINARY_API_KEY,
-  api_secret: import.meta.env.VITE_CLOUDINARY_API_SECRET,
+  api_secret: '',
   secure: true
 }
 

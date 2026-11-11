@@ -1,3 +1,4 @@
+import { requireUser, errorResponse } from '../lib/security';
 // Netlify Function: 重置用户密码
 import { Handler } from '@netlify/functions';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
@@ -21,6 +22,7 @@ if (!getApps().length) {
 }
 
 export const handler: Handler = async (event, context) => {
+  try { await requireUser(event, true); } catch (error) { return errorResponse(error); }
   // 统一的 CORS headers
   const corsHeaders = {
     'Content-Type': 'application/json',
@@ -121,6 +123,7 @@ export const handler: Handler = async (event, context) => {
     await auth.updateUser(user.uid, {
       password: newPassword
     });
+    await auth.revokeRefreshTokens(user.uid);
 
     console.log(`[reset-password] Password reset successfully for user: ${userIdentifier} (uid: ${user.uid})`);
 

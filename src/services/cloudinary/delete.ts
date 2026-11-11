@@ -2,25 +2,14 @@
 // 注意：删除功能需要 Admin API 和签名，通常在服务器端使用
 // 这里提供基础实现，提示需要通过后端 API 实现
 
-import { getCloudinaryConfig, getCloudinaryDeleteUrl } from './config'
+import { authenticatedFetch } from '../serverFetch'
 import type { DeleteOptions, DeleteResult, BulkDeleteOptions, BulkDeleteResult, ResourceType } from './types'
 import { CloudinaryError } from './types'
 
 /**
- * 生成 SHA-1 哈希（浏览器端实现）
- */
-const sha1 = async (message: string): Promise<string> => {
-  const msgBuffer = new TextEncoder().encode(message)
-  const hashBuffer = await crypto.subtle.digest('SHA-1', msgBuffer)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-  return hashHex
-}
-
-/**
  * 删除单个资源
- * 注意：此功能在浏览器端实现，需要 API Secret（不推荐，但可以使用）
- * 生产环境建议通过后端 API 代理删除请求以确保安全性
+ * 删除请求通过已认证的服务器接口执行。
+ * 管理员权限和签名均在服务器端验证。
  * @param publicId 资源的 public_id
  * @param options 删除选项
  * @returns Promise<DeleteResult>
@@ -34,49 +23,10 @@ export const deleteResource = async (
       throw new CloudinaryError('public_id 不能为空', 'INVALID_PUBLIC_ID', 400)
     }
 
-    const config = getCloudinaryConfig()
-    const resourceType = options.resourceType || 'image'
-
-    // 生成时间戳
-    const timestamp = Math.round(Date.now() / 1000)
-
-    // 构建参数字典（用于签名和 formData）
-    const params: { [key: string]: string } = {
-      public_id: publicId,
-      timestamp: timestamp.toString()
-    }
-
-    // 如果设置了 invalidate，添加到参数中
-    if (options.invalidate) {
-      params.invalidate = 'true'
-    }
-
-    // 按字母顺序排序参数，构建签名字符串
-    const sortedKeys = Object.keys(params).sort()
-    const stringToSign = sortedKeys
-      .map(key => `${key}=${params[key]}`)
-      .join('&') + config.apiSecret
-
-    // 生成 SHA-1 签名
-    const signature = await sha1(stringToSign)
-
-    // 构建删除请求
-    const formData = new FormData()
-    formData.append('public_id', publicId)
-    formData.append('timestamp', timestamp.toString())
-    formData.append('api_key', config.apiKey)
-    formData.append('signature', signature)
-
-    // 添加其他参数（如 invalidate）
-    if (options.invalidate) {
-      formData.append('invalidate', 'true')
-    }
-
-    // 调用删除 API
-    const deleteUrl = getCloudinaryDeleteUrl(config, resourceType)
-    const response = await fetch(deleteUrl, {
+    const response = await authenticatedFetch('/.netlify/functions/cloudinary-delete', {
       method: 'POST',
-      body: formData
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ publicId, resourceType: options.resourceType || 'image', invalidate: !!options.invalidate })
     })
 
     if (!response.ok) {

@@ -3,7 +3,7 @@
  * 用于测试所有 Gemini 模型的可用性和性能
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, geminiFetch as fetch } from './client';
 import type { 
     ModelTestResult, 
     TestConfig, 
@@ -13,14 +13,9 @@ import type {
 } from '@/types/geminiTest';
 import { calculateFieldValueStatsForModel } from './modelStatistics';
 
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
 
 // 获取所有可用的 Gemini 模型（不过滤）
 export async function fetchAllGeminiModels(config: TestConfig): Promise<string[]> {
-    if (!GEMINI_API_KEY) {
-        console.error('[ModelTester] ❌ 未配置 GEMINI_API_KEY');
-        return [];
-    }
     
     // 尝试 v1 和 v1beta API，合并所有可用模型
     const apiVersions = ['v1', 'v1beta'];
@@ -30,7 +25,7 @@ export async function fetchAllGeminiModels(config: TestConfig): Promise<string[]
         try {
             // 直接调用 REST API 获取模型列表
             const response = await fetch(
-                `https://generativelanguage.googleapis.com/${version}/models?key=${GEMINI_API_KEY}`
+                `https://generativelanguage.googleapis.com/${version}/models`
             );
             
             if (!response.ok) {
@@ -113,7 +108,7 @@ async function testModelOnce(
     const startTime = Date.now();
     
     try {
-        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+        const genAI = new GoogleGenerativeAI();
         const model = genAI.getGenerativeModel({ model: modelName });
         
         const prompt = `

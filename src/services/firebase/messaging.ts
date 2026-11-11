@@ -1,3 +1,4 @@
+import { authenticatedFetch } from '../serverFetch';
 // Firebase Cloud Messaging 服务
 import { getMessaging, getToken, onMessage, isSupported, Messaging } from 'firebase/messaging';
 import { getAuth } from 'firebase/auth';
@@ -590,7 +591,7 @@ export const initializePushNotifications = async (user: User): Promise<boolean> 
     if (!import.meta.env.DEV) {
       try {
         const deviceId = getOrCreateDeviceId();
-        const response = await fetch('/.netlify/functions/save-token', {
+        const response = await authenticatedFetch('/.netlify/functions/save-token', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -714,7 +715,7 @@ export const testFCMToken = async (options?: {
     }
 
     // 调用测试函数
-    const response = await fetch('/.netlify/functions/test-token', {
+    const response = await authenticatedFetch('/.netlify/functions/test-token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -756,7 +757,7 @@ export const testFCMToken = async (options?: {
           
           // 自动重试一次
           try {
-            const retryResponse = await fetch('/.netlify/functions/test-token', {
+            const retryResponse = await authenticatedFetch('/.netlify/functions/test-token', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -859,7 +860,7 @@ export const subscribeToTopic = async (topic: string): Promise<boolean> => {
     if (!token) return false;
 
     // 调用 Netlify Function 订阅主题
-    const response = await fetch('/.netlify/functions/subscribe-topic', {
+    const response = await authenticatedFetch('/.netlify/functions/subscribe-topic', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -887,7 +888,7 @@ export const unsubscribeFromTopic = async (topic: string): Promise<boolean> => {
     if (!token) return false;
 
     // 调用 Netlify Function 取消订阅
-    const response = await fetch('/.netlify/functions/subscribe-topic', {
+    const response = await authenticatedFetch('/.netlify/functions/subscribe-topic', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

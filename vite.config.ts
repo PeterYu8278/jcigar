@@ -9,6 +9,15 @@ import { execSync } from 'child_process'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // Only public configuration may enter import.meta.env (including dynamic reads).
+  envPrefix: [
+    'VITE_FIREBASE_API_KEY', 'VITE_FIREBASE_AUTH_DOMAIN', 'VITE_FIREBASE_PROJECT_ID',
+    'VITE_FIREBASE_STORAGE_BUCKET', 'VITE_FIREBASE_MESSAGING_SENDER_ID',
+    'VITE_FIREBASE_APP_ID', 'VITE_FIREBASE_MEASUREMENT_ID', 'VITE_FCM_VAPID_KEY',
+    'VITE_CLOUDINARY_CLOUD_NAME', 'VITE_CLOUDINARY_API_KEY',
+    'VITE_CLOUDINARY_UPLOAD_PRESET', 'VITE_CLOUDINARY_BASE_FOLDER',
+    'VITE_APP_', 'VITE_API_', 'VITE_ENV', 'VITE_FEATURE_', 'VITE_SECURITY_', 'VITE_UI_',
+  ],
   plugins: [
     // Inject Service Worker config before build
     {

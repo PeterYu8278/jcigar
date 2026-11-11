@@ -1,3 +1,4 @@
+import { requireUser, errorResponse } from '../lib/security';
 // Netlify Function: 更新 Netlify 环境变量并触发部署
 import { Handler } from '@netlify/functions';
 
@@ -101,6 +102,7 @@ async function getDeployStatus(
 }
 
 export const handler: Handler = async (event, context) => {
+  try { await requireUser(event, true); } catch (error) { return errorResponse(error); }
   // 处理 CORS 预检请求
   if (event.httpMethod === 'OPTIONS') {
     return {

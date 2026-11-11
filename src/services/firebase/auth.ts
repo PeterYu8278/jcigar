@@ -1,3 +1,4 @@
+import { authenticatedFetch } from '../serverFetch';
 // Firebase认证服务
 import { 
   signInWithEmailAndPassword, 
@@ -1001,7 +1002,7 @@ const resetPasswordByPhoneCore = async (phone: string): Promise<ResetPasswordByP
         requestBody.phoneNumber = normalizedPhone;
       }
 
-      const response = await fetch('/.netlify/functions/reset-password', {
+      const response = await authenticatedFetch('/.netlify/functions/reset-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
